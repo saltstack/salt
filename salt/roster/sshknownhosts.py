@@ -10,6 +10,7 @@ Sample configuration:
     use ``roster_defaults``.
 
 .. code-block:: yaml
+
     ssh_known_hosts_file: /Users/user1/.ssh/known_hosts
     roster_defaults:
       user: user1
@@ -58,7 +59,7 @@ def _parse_ssh_known_hosts_line(line):
     fields = line_unicode.split(" ")
 
     if len(fields) < 3:
-        log.warn("Not enough fields found in known_hosts in line : %s", line)
+        log.warning("Not enough fields found in known_hosts in line : %s", line)
         return None
 
     fields = fields[:3]

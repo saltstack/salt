@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only load if kernel is AIX
     '''
-    if __grains__['kernel'] == ('AIX'):
+    if __grains__.get('kernel') == 'AIX':
         return __virtualname__
 
     return (False, 'The aix_account beacon module failed to load: '

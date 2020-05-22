@@ -71,7 +71,7 @@ def __virtual__():
         'McAfee  OS Server',
         'VirtuozzoLinux'
     ))
-    if __grains__['os'] in enable:
+    if __grains__.get('os') in enable:
 
         if __grains__['os'] == 'SUSE':
             if six.text_type(__grains__['osrelease']).startswith('11'):

@@ -37,7 +37,7 @@ def __virtual__():
     '''
     if 'rbac.profile_list' in __salt__ and \
         'user.list_users' in __salt__ and \
-         __grains__['kernel'] == 'SunOS':
+         __grains__.get('kernel') == 'SunOS':
         return True
     else:
         return (

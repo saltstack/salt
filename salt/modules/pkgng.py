@@ -68,11 +68,11 @@ def __virtual__():
     Load as 'pkg' on FreeBSD 9 when config option
     ``providers:pkg`` is set to 'pkgng'.
     '''
-    if __grains__['kernel'] == 'DragonFly':
+    if __grains__.get('kernel') == 'DragonFly':
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
+    if __grains__.get('os') == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
+    if __grains__.get('os') == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']

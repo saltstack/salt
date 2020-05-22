@@ -100,7 +100,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions()
     def test_check_permissions_group_can_write_not_permissive(self):
         '''
-        Assert that a file is accepted, when group can write to it and perkissive_pki_access=False
+        Assert that a file is accepted, when group can write to it and permissive_pki_access=False
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         if salt.utils.platform.is_windows():
@@ -111,7 +111,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(permissive_pki=True)
     def test_check_permissions_group_can_write_permissive(self):
         '''
-        Assert that a file is accepted, when group can write to it and perkissive_pki_access=True
+        Assert that a file is accepted, when group can write to it and permissive_pki_access=True
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         self.assertTrue(self.auto_key.check_permissions('testfile'))
@@ -119,7 +119,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_in_group(self):
         '''
-        Assert that a file is accepted, when group can write to it, perkissive_pki_access=False,
+        Assert that a file is accepted, when group can write to it, permissive_pki_access=False,
         salt is root and in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 0}
@@ -128,7 +128,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_not_in_group(self):
         '''
-        Assert that no file is accepted, when group can write to it, perkissive_pki_access=False,
+        Assert that no file is accepted, when group can write to it, permissive_pki_access=False,
         salt is root and **not** in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}

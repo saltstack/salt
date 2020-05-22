@@ -8,72 +8,58 @@
 
 # This file uses an fnmatch-style matching pattern.
 
-# Team Boto
-salt/*/*boto*                       @saltstack/team-boto
-
 # Team Core
-requirements/*                      @saltstack/team-core
-rfcs/*                              @saltstack/team-core
-salt/auth/*                         @saltstack/team-core
-salt/cache/*                        @saltstack/team-core
-salt/cli/*                          @saltstack/team-core
-salt/client/*                       @saltstack/team-core
-salt/config/*                       @saltstack/team-core
-salt/daemons/*                      @saltstack/team-core
-salt/pillar/*                       @saltstack/team-core
-salt/loader.py                      @saltstack/team-core
-salt/payload.py                     @saltstack/team-core
-salt/master.py                      @saltstack/team-core
-salt/*/master*                      @saltstack/team-core
-salt/minion.py                      @saltstack/team-core
-salt/*/minion*                      @saltstack/team-core
+*                                   @saltstack/team-core
+
+# Team Boto
+salt/*/*boto*                       @saltstack/team-boto @saltstack/team-core
 
 # Team Cloud
-salt/cloud/*                        @saltstack/team-cloud
-salt/utils/openstack/*              @saltstack/team-cloud
-salt/utils/aws.py                   @saltstack/team-cloud
-salt/*/*cloud*                      @saltstack/team-cloud
+salt/cloud/*                        @saltstack/team-cloud @saltstack/team-core
+salt/utils/openstack/*              @saltstack/team-cloud @saltstack/team-core
+salt/utils/aws.py                   @saltstack/team-cloud @saltstack/team-core
+salt/*/*cloud*                      @saltstack/team-cloud @saltstack/team-core
 
 # Team NetAPI
-salt/cli/api.py                     @saltstack/team-netapi
-salt/client/netapi.py               @saltstack/team-netapi
-salt/netapi/*                       @saltstack/team-netapi
+salt/cli/api.py                     @saltstack/team-netapi @saltstack/team-core
+salt/client/netapi.py               @saltstack/team-netapi @saltstack/team-core
+salt/netapi/*                       @saltstack/team-netapi @saltstack/team-core
 
 # Team Network
-salt/proxy/*                        @saltstack/team-proxy
+salt/proxy/*                        @saltstack/team-proxy @saltstack/team-core
 
 # Team SPM
-salt/cli/spm.py                     @saltstack/team-spm
-salt/spm/*                          @saltstack/team-spm
+salt/cli/spm.py                     @saltstack/team-spm @saltstack/team-core
+salt/spm/*                          @saltstack/team-spm @saltstack/team-core
 
 # Team SSH
-salt/cli/ssh.py                     @saltstack/team-ssh
-salt/client/ssh/*                   @saltstack/team-ssh
-salt/roster/*                       @saltstack/team-ssh
-salt/runners/ssh.py                 @saltstack/team-ssh
-salt/*/thin.py                      @saltstack/team-ssh
+salt/cli/ssh.py                     @saltstack/team-ssh @saltstack/team-core
+salt/client/ssh/*                   @saltstack/team-ssh @saltstack/team-core
+salt/roster/*                       @saltstack/team-ssh @saltstack/team-core
+salt/runners/ssh.py                 @saltstack/team-ssh @saltstack/team-core
+salt/*/thin.py                      @saltstack/team-ssh @saltstack/team-core
 
 # Team State
-salt/state.py                       @saltstack/team-state
+salt/state.py                       @saltstack/team-state @saltstack/team-core
 
 # Team SUSE
-salt/*/*btrfs*                      @saltstack/team-suse
-salt/*/*kubernetes*                 @saltstack/team-suse
-salt/*/*pkg*                        @saltstack/team-suse
-salt/*/*snapper*                    @saltstack/team-suse
-salt/*/*xfs*                        @saltstack/team-suse
-salt/*/*zypper*                     @saltstack/team-suse
+salt/*/*btrfs*                      @saltstack/team-suse @saltstack/team-core
+salt/*/*kubernetes*                 @saltstack/team-suse @saltstack/team-core
+salt/*/*pkg*                        @saltstack/team-suse @saltstack/team-core
+salt/*/*snapper*                    @saltstack/team-suse @saltstack/team-core
+salt/*/*xfs*                        @saltstack/team-suse @saltstack/team-core
+salt/*/*zypper*                     @saltstack/team-suse @saltstack/team-core
 
 # Team Transport
-salt/transport/*                    @saltstack/team-transport
-salt/utils/zeromq.py                @saltstack/team-transport
+salt/transport/*                    @saltstack/team-transport @saltstack/team-core
+salt/utils/zeromq.py                @saltstack/team-transport @saltstack/team-core
 
 # Team Windows
-salt/*/*win*                        @saltstack/team-windows
-salt/modules/reg.py                 @saltstack/team-windows
-salt/states/reg.py                  @saltstack/team-windows
-tests/*/*win*                       @saltstack/team-windows
-tests/*/test_reg.py                 @saltstack/team-windows
+salt/*/*win*                        @saltstack/team-windows @saltstack/team-core
+salt/modules/reg.py                 @saltstack/team-windows @saltstack/team-core
+salt/states/reg.py                  @saltstack/team-windows @saltstack/team-core
+tests/*/*win*                       @saltstack/team-windows @saltstack/team-core
+tests/*/test_reg.py                 @saltstack/team-windows @saltstack/team-core
 
 # Jenkins Integration
 .ci/*                               @saltstack/saltstack-sre-team @saltstack/team-core

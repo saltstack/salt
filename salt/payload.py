@@ -249,10 +249,15 @@ class Serial(object):
             def verylong_encoder(obj, context):
                 # Make sure we catch recursion here.
                 objid = id(obj)
-                if objid in context:
+                # This instance list needs to correspond to the types recursed
+                # in the below if/elif chain. Also update
+                # tests/unit/test_payload.py
+                if objid in context and isinstance(obj, (dict, list, tuple)):
                     return '<Recursion on {} with id={}>'.format(type(obj).__name__, id(obj))
                 context.add(objid)
 
+                # The isinstance checks in this if/elif chain need to be
+                # kept in sync with the above recursion check.
                 if isinstance(obj, dict):
                     for key, value in six.iteritems(obj.copy()):
                         obj[key] = verylong_encoder(value, context)

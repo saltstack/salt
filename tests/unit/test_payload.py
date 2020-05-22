@@ -9,10 +9,11 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import time
+import copy
+import datetime
 import errno
 import threading
-import datetime
+import time
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
@@ -163,6 +164,43 @@ class PayloadTestCase(TestCase):
         sdata = payload.dumps(data)
         odata = payload.loads(sdata)
         self.assertTrue('recursion' in odata['data'].lower())
+
+    def test_recursive_dump_load_with_identical_non_recursive_types(self):
+        '''
+        If identical objects are nested anywhere, they should not be
+        marked recursive unless they're one of the types we iterate
+        over.
+        '''
+        payload = salt.payload.Serial('msgpack')
+        repeating = 'repeating element'
+        data = {
+            'a': 'a',  # Test CPython implementation detail. Short
+            'b': 'a',  # strings are interned.
+            'c': 13,   # So are small numbers.
+            'd': 13,
+            'fnord': repeating,
+            # Let's go for broke and make a crazy nested structure
+            'repeating': [
+                [[[
+                    [{'one': repeating, 'two': repeating}],
+                    repeating,
+                    13,
+                    'a',
+                ]]],
+                repeating,
+                repeating,
+                repeating,
+            ],
+        }
+        # We need a nested dictionary to trigger the exception
+        data['repeating'][0][0][0].append(data)
+        # If we don't deepcopy the data it gets mutated
+        sdata = payload.dumps(copy.deepcopy(data))
+        odata = payload.loads(sdata)
+        # Delete the recursive piece - it's served its purpose, and our
+        # other test tests that it's actually marked as recursive.
+        del odata['repeating'][0][0][0][-1], data['repeating'][0][0][0][-1]
+        self.assertDictEqual(odata, data)
 
 
 class SREQTestCase(TestCase):

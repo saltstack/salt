@@ -32,7 +32,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
-    if __grains__['os_family'] == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
+    if __grains__.get('os_family') == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
         return __virtualname__
     return (False,
             'The solarispkg execution module failed to load: only available '

@@ -49,7 +49,7 @@ def __virtual__():
     '''
     Confine this module to Debian-based distros
     '''
-    if __grains__['os_family'] == 'Debian':
+    if __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'The debian_ip module could not be loaded: '
             'unsupported OS family')
@@ -475,7 +475,7 @@ IPV6_ATTR_MAP = {
     'dhcp':  __within([0, 1], dtype=int),
     # inet6 static & manual & dhcp
     'media': __anything,
-    'accept_ra':  __within([0, 1], dtype=int),
+    'accept_ra':  __within([0, 1, 2], dtype=int),
     'autoconf':  __within([0, 1], dtype=int),
     'preferred-lifetime':  __int,
     'dad-attempts': __int,  # 0 to disable

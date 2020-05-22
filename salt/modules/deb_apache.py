@@ -28,7 +28,7 @@ def __virtual__():
     Only load the module if apache is installed
     '''
     cmd = _detect_os()
-    if salt.utils.path.which(cmd) and __grains__['os_family'] == 'Debian':
+    if salt.utils.path.which(cmd) and __grains__.get('os_family') == 'Debian':
         return __virtualname__
     return (False, 'apache execution module not loaded: apache not installed.')
 
@@ -38,9 +38,9 @@ def _detect_os():
     Apache commands and paths differ depending on packaging
     '''
     # TODO: Add pillar support for the apachectl location
-    if __grains__['os_family'] == 'RedHat':
+    if __grains__.get('os_family') == 'RedHat':
         return 'apachectl'
-    elif __grains__['os_family'] == 'Debian':
+    elif __grains__.get('os_family') == 'Debian':
         return 'apache2ctl'
     else:
         return 'apachectl'

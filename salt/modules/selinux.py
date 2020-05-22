@@ -52,7 +52,7 @@ def __virtual__():
         if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
-    if __grains__['kernel'] == 'Linux':
+    if __grains__.get('kernel') == 'Linux':
         return 'selinux'
     return (False, 'Module only works on Linux with selinux installed')
 

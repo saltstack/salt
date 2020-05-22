@@ -49,7 +49,7 @@ __virtualname__ = 'virt'
 
 
 def _check_xenapi():
-    if __grains__['os'] == 'Debian':
+    if __grains__.get('os') == 'Debian':
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__

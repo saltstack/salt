@@ -60,7 +60,7 @@ def __virtual__():
     '''
     Only work on systems that have been booted with systemd
     '''
-    if __grains__['kernel'] == 'Linux' \
+    if __grains__.get('kernel') == 'Linux' \
        and salt.utils.systemd.booted(__context__):
         return __virtualname__
     return (
@@ -1346,3 +1346,58 @@ def execs(root=None):
             continue
         ret[service] = data['ExecStart']['path']
     return ret
+
+
+def firstboot(locale=None, locale_message=None, keymap=None,
+              timezone=None, hostname=None, machine_id=None,
+              root=None):
+    '''
+    .. versionadded:: TBD
+
+    Call systemd-firstboot to configure basic settings of the system
+
+    locale
+        Set primary locale (LANG=)
+
+    locale_message
+        Set message locale (LC_MESSAGES=)
+
+    keymap
+        Set keymap
+
+    timezone
+        Set timezone
+
+    hostname
+        Set host name
+
+    machine_id
+        Set machine ID
+
+    root
+        Operate on an alternative filesystem root
+
+    CLI Example:
+
+        salt '*' service.firstboot keymap=jp locale=en_US.UTF-8
+
+    '''
+    cmd = ['systemd-firstboot']
+    parameters = [('locale', locale),
+                  ('locale-message', locale_message),
+                  ('keymap', keymap),
+                  ('timezone', timezone),
+                  ('hostname', hostname),
+                  ('machine-ID', machine_id),
+                  ('root', root)]
+    for parameter, value in parameters:
+        if value:
+            cmd.extend(['--{}'.format(parameter), str(value)])
+
+    out = __salt__['cmd.run_all'](cmd)
+
+    if out['retcode'] != 0:
+        raise CommandExecutionError(
+            'systemd-firstboot error: {}'.format(out['stderr']))
+
+    return True

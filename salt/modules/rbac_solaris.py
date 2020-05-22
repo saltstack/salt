@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Provides rbac if we are running on a solaris like system
     '''
-    if __grains__['kernel'] == 'SunOS' and salt.utils.path.which('profiles'):
+    if __grains__.get('kernel') == 'SunOS' and salt.utils.path.which('profiles'):
         return __virtualname__
     return (
         False,
