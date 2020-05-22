@@ -12,10 +12,13 @@ import logging
 import os
 import re
 import socket
+import time
+from multiprocessing.pool import ThreadPool
 
 # Import salt libs
 import salt.utils.decorators.path
 import salt.utils.functools
+import salt.utils.network
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
@@ -1225,7 +1228,7 @@ def ip_in_subnet(ip_addr, cidr):
 
 def convert_cidr(cidr):
     """
-    returns the network and subnet mask of a cidr addr
+    returns the network address, subnet mask and broadcast address of a cidr address
 
     .. versionadded:: 2016.3.0
 
@@ -1235,11 +1238,12 @@ def convert_cidr(cidr):
 
         salt '*' network.convert_cidr 172.31.0.0/16
     """
-    ret = {"network": None, "netmask": None}
+    ret = {"network": None, "netmask": None, "broadcast": None}
     cidr = calc_net(cidr)
     network_info = ipaddress.ip_network(cidr)
     ret["network"] = six.text_type(network_info.network_address)
     ret["netmask"] = six.text_type(network_info.netmask)
+    ret["broadcast"] = six.text_type(network_info.broadcast_address)
     return ret
 
 
@@ -2056,3 +2060,65 @@ def ip_networks6(interface=None, include_loopback=False, verbose=False):
     return __utils__["network.ip_networks6"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
     )
+
+
+def fqdns():
+    """
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    """
+    # Provides:
+    # fqdns
+
+    # Possible value for h_errno defined in netdb.h
+    HOST_NOT_FOUND = 1
+    NO_DATA = 4
+
+    grains = {}
+    fqdns = set()
+
+    def _lookup_fqdn(ip):
+        try:
+            return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
+        except socket.herror as err:
+            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
+
+    start = time.time()
+
+    addresses = salt.utils.network.ip_addrs(
+        include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+    )
+    addresses.extend(
+        salt.utils.network.ip_addrs6(
+            include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+        )
+    )
+    err_message = "Exception during resolving address: %s"
+
+    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
+    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
+    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
+
+    results = []
+    try:
+        pool = ThreadPool(8)
+        results = pool.map(_lookup_fqdn, addresses)
+        pool.close()
+        pool.join()
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
+
+    for item in results:
+        if item:
+            fqdns.update(item)
+
+    elapsed = time.time() - start
+    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
+
+    return {"fqdns": sorted(list(fqdns))}

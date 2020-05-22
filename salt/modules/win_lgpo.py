@@ -4511,7 +4511,7 @@ class _policy_info(object):
             return "true"
         elif val.upper() == "Run Windows PowerShell scripts last".upper():
             return "false"
-        elif val is "Not Configured":
+        elif val == "Not Configured":
             return None
         else:
             return "Invalid Value"
@@ -7039,7 +7039,7 @@ def _build_parent_list(policy_definition, return_full_policy_names, adml_languag
     policy
     """
     parent_list = []
-    policy_namespace = list(policy_definition.nsmap.keys())[0]
+    policy_namespace = next(iter(policy_definition.nsmap))
     parent_category = policy_definition.xpath(
         "{0}:parentCategory/@ref".format(policy_namespace),
         namespaces=policy_definition.nsmap,

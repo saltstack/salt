@@ -14,11 +14,11 @@ import salt.utils.platform
 import salt.utils.schedule
 from salt.modules.test import ping
 from salt.utils.process import SubprocessList
-from tests.support.case import TestCase
+from saltfactories.utils.processes.helpers import terminate_process
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 

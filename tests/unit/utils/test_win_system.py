@@ -7,11 +7,27 @@ import os
 
 # Import Salt Libs
 import salt.utils.platform
-import salt.utils.win_system as win_system
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
+
+try:
+    import salt.utils.win_system as win_system
+except Exception as exc:  # pylint: disable=broad-except
+    win_system = exc
+
+
+class WinSystemImportTestCase(TestCase):
+    """
+    Simply importing should not raise an error, especially on Linux
+    """
+
+    def test_import(self):
+        if isinstance(win_system, Exception):
+            raise Exception(
+                "Importing win_system caused traceback: {0}".format(win_system)
+            )
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")

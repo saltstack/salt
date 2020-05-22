@@ -2,21 +2,17 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import os.path
 import tempfile
 
-# Import Salt Libs
 import salt.modules.qemu_nbd as qemu_nbd
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
@@ -66,7 +62,7 @@ class QemuNbdTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'init' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_init(self):
         """
         Test if it mount the named image via qemu-nbd
