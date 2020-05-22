@@ -193,10 +193,11 @@ class Batch(object):
                         "\nExecuting run on {0}\n".format(sorted(next_))
                     )
                 # create a new iterator for this batch of minions
+                return_value = self.opts.get("return", self.opts.get("ret", ""))
                 new_iter = self.local.cmd_iter_no_block(
                     *args,
                     raw=self.opts.get("raw", False),
-                    ret=self.opts.get("return", ""),
+                    ret=return_value,
                     show_jid=show_jid,
                     verbose=show_verbose,
                     gather_job_timeout=self.opts["gather_job_timeout"],
