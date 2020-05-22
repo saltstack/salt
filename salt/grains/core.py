@@ -2919,8 +2919,8 @@ def get_server_id():
     if salt.utils.platform.is_proxy():
         return {}
     id_ = __opts__.get("id", "")
-    id_hash = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
-    return {"server_id": abs(id_hash % (2 ** 31))}
+    hash_ = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
+    return {"server_id": abs(hash_ % (2 ** 31))}
 
 
 def get_master():
