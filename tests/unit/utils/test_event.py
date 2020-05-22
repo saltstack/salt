@@ -14,7 +14,6 @@ import hashlib
 import os
 import shutil
 import time
-import warnings
 
 # Import salt libs
 import salt.config
@@ -363,17 +362,11 @@ class TestEventReturn(TestCase):
     def test_event_return(self):
         evt = None
         try:
-            # Cause all warnings to always be triggered.
-            warnings.simplefilter("always")
-            evt = None
-            try:
-                evt = salt.utils.event.EventReturn(
-                    salt.config.DEFAULT_MASTER_OPTS.copy()
-                )
-                evt.start()
-            except TypeError as exc:
-                if "object" in str(exc):
-                    self.fail("'{}' TypeError should have not been raised".format(exc))
+            evt = salt.utils.event.EventReturn(salt.config.DEFAULT_MASTER_OPTS.copy())
+            evt.start()
+        except TypeError as exc:
+            if "object" in str(exc):
+                self.fail("'{}' TypeError should have not been raised".format(exc))
         finally:
             if evt is not None:
                 terminate_process(evt.pid, kill_children=True)
