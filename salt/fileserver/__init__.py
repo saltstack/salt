@@ -11,7 +11,6 @@ import fnmatch
 import logging
 import os
 import re
-import sys
 import time
 from collections.abc import Sequence
 

@@ -41,19 +41,12 @@ try:
 
     # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
-    HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
     try:
         NAPALM_MAJOR = int(napalm.__version__.split(".")[0])
     except AttributeError:
         NAPALM_MAJOR = 0
 except ImportError:
     HAS_NAPALM = False
-    try:
-        import napalm_base
-
-        HAS_NAPALM_BASE = True
-    except ImportError:
-        HAS_NAPALM_BASE = False
 
 try:
     # try importing ConnectionClosedException
@@ -103,9 +96,7 @@ def virtual(opts, virtualname, filename):
     """
     Returns the __virtual__.
     """
-    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (
-        is_proxy(opts) or is_minion(opts)
-    ):
+    if (HAS_NAPALM and NAPALM_MAJOR >= 2) and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (
