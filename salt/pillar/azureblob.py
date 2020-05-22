@@ -57,8 +57,6 @@ from salt.ext.six.moves import filter
 # Import Salt libs
 from salt.pillar import Pillar
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 # Import Azure libs
 HAS_LIBS = False
 try:
@@ -67,6 +65,8 @@ try:
     HAS_LIBS = True
 except ImportError:
     pass
+
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 __virtualname__ = "azureblob"
