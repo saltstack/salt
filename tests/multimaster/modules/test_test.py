@@ -1,17 +1,11 @@
 # -*- coding: utf-8 -*-
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.config
-
-# Import salt libs
 import salt.version
-
-# Import Salt Testing libs
 from tests.support.case import MultimasterModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.unit import skipIf
 
 
 class TestModuleTest(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
@@ -71,7 +65,7 @@ class TestModuleTest(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret[0][0], 6765)
         self.assertEqual(ret[1][0], 6765)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_collatz(self):
         """
         test.collatz

@@ -14,8 +14,8 @@ from tests.support.helpers import (
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
+    slowTest,
 )
-from tests.support.unit import skipIf
 
 TEST_USER = random_string("RS-", lowercase=False)
 NO_USER = random_string("RS-", lowercase=False)
@@ -41,7 +41,7 @@ class MacShadowModuleTest(ModuleCase):
         """
         self.run_function("user.delete", [TEST_USER])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_info(self):
         """
         Test shadow.info
@@ -55,7 +55,7 @@ class MacShadowModuleTest(ModuleCase):
         self.assertEqual(ret["name"], "")
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_account_created(self):
         """
         Test shadow.get_account_created
@@ -73,7 +73,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_last_change(self):
         """
         Test shadow.get_last_change
@@ -91,7 +91,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_login_failed_last(self):
         """
         Test shadow.get_login_failed_last
@@ -109,7 +109,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_login_failed_count(self):
         """
         Test shadow.get_login_failed_count
@@ -126,7 +126,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_set_maxdays(self):
         """
         Test shadow.get_maxdays
@@ -147,7 +147,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_set_change(self):
         """
         Test shadow.get_change
@@ -172,7 +172,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_set_expire(self):
         """
         Test shadow.get_expire
@@ -197,7 +197,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_del_password(self):
         """
         Test shadow.del_password
@@ -213,7 +213,7 @@ class MacShadowModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_set_password(self):
         """
         Test shadow.set_password

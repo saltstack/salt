@@ -24,6 +24,7 @@ from tests.support.helpers import (
     requires_salt_states,
     requires_system_grains,
     runs_on,
+    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
@@ -48,7 +49,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         cls._PKG_TARGETS = ["figlet", "sl"]
         if grains["os"] == "Windows":
             cls._PKG_TARGETS = ["7zip", "putty"]
-        elif grains["os"] == "freebsd":
+        elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
         elif grains["os_family"] in ("Arch", "Debian"):
             cls._WILDCARDS_SUPPORTED = True
@@ -125,7 +126,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_001_installed(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -144,14 +145,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
     def test_pkg_002_installed_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target = self._PKG_TARGETS[0]
         version = self.latest_version(target)
 
@@ -168,7 +167,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_003_installed_multipkg(self):
         """
         This is a destructive test as it installs and then removes two packages
@@ -193,14 +192,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
     def test_pkg_004_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         version = self.latest_version(self._PKG_TARGETS[0])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -326,7 +323,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
     @not_runs_on(os="Amazon")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_009_latest_with_epoch(self):
         """
         This tests for the following issue:
@@ -344,7 +341,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(pkgquery in six.text_type(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_010_latest(self):
         """
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -366,7 +363,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.list_pkgs", "pkg.list_upgrades", "pkg.version")
     @requires_salt_states("pkg.latest")
     @runs_on(kernel="linux", os_family="Debian")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_011_latest_only_upgrade(self):
         """
         WARNING: This test will pick a package with an available upgrade (if
@@ -462,7 +459,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.version", "pkg.latest_version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux", os_family=["Debian", "RedHat"])
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_013_installed_with_comparison_operator(self):
         """
         This is a destructive test as it installs and then removes a package
@@ -524,7 +521,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
     @requires_salt_states("pkg.installed", "pkg.removed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkg_015_installed_held(self, grains=None):
         """
         Tests that a package can be held even when the package is already installed.
@@ -566,7 +563,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat":
+        if grains["os_family"] == "RedHat" or grains["os"] == "FreeBSD":
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
@@ -716,17 +713,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
+    @skipIf(not _PKG_CAP_TARGETS, "Capability not available")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
-        if not self._PKG_CAP_TARGETS:
-            self.skipTest("Capability not provided")
-
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target, realpkg = self._PKG_CAP_TARGETS[0]
         version = self.latest_version(target)
         realver = self.latest_version(realpkg)

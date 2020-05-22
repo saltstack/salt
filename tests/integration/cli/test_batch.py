@@ -7,10 +7,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 import salt.utils.platform
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.helpers import slowTest
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class BatchTest(ShellCase):
     """
     Integration tests for the salt.cli.batch module
@@ -21,7 +22,7 @@ class BatchTest(ShellCase):
     else:
         run_timeout = 30
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_run(self):
         """
         Tests executing a simple batch command to help catch regressions
@@ -32,7 +33,7 @@ class BatchTest(ShellCase):
         )
         self.assertIn(ret, cmd)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_run_number(self):
         """
         Tests executing a simple batch command using a number division instead of
@@ -44,7 +45,7 @@ class BatchTest(ShellCase):
         )
         self.assertIn(ret, cmd)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_run_grains_targeting(self):
         """
         Tests executing a batch command using a percentage divisor as well as grains
@@ -66,7 +67,7 @@ class BatchTest(ShellCase):
         self.assertIn(sub_min_ret, cmd)
         self.assertIn(min_ret, cmd)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_exit_code(self):
         """
         Test that a failed state returns a non-zero exit code in batch mode
@@ -82,7 +83,7 @@ class BatchTest(ShellCase):
     # assertRaises(StopIteration)
     # But it's impossible due to nature of the tests execution via fork()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_module_stopping_after_error(self):
         """
         Test that a failed command stops the batch run
@@ -111,7 +112,7 @@ class BatchTest(ShellCase):
         # We expect retcode to be non-zero
         self.assertNotEqual(0, retcode)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_batch_state_stopping_after_error(self):
         """
         Test that a failed state stops the batch run

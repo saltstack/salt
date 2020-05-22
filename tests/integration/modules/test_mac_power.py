@@ -2,11 +2,8 @@
 """
 integration tests for mac_power
 """
-
 from __future__ import absolute_import, print_function, unicode_literals
 
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -14,8 +11,8 @@ from tests.support.helpers import (
     runs_on,
     skip_if_binaries_missing,
     skip_if_not_root,
+    slowTest,
 )
-from tests.support.unit import skipIf
 
 
 @skip_if_not_root
@@ -45,7 +42,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function("power.set_harddisk_sleep", [self.HARD_DISK_SLEEP])
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_computer_sleep(self):
         """
         Test power.get_computer_sleep
@@ -79,7 +76,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_display_sleep(self):
         """
         Test power.get_display_sleep
@@ -113,7 +110,7 @@ class MacPowerModuleTest(ModuleCase):
         )
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_harddisk_sleep(self):
         """
         Test power.get_harddisk_sleep
@@ -146,7 +143,7 @@ class MacPowerModuleTest(ModuleCase):
             self.run_function("power.set_harddisk_sleep", [True]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_restart_freeze(self):
         """
         Test power.get_restart_freeze
@@ -191,7 +188,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
         if self.SLEEP_ON_BUTTON is not None:
             self.run_function("power.set_sleep_on_power_button", [self.SLEEP_ON_BUTTON])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_sleep_on_power_button(self):
         """
         Test power.get_sleep_on_power_button
@@ -311,7 +308,6 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 @skip_if_not_root
 @flaky(attempts=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
 class MacPowerModuleTestWakeOnModem(ModuleCase):

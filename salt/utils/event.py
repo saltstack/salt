@@ -60,6 +60,7 @@ import logging
 # Import python libs
 import os
 import time
+from collections.abc import MutableMapping
 from multiprocessing.util import Finalize
 
 # Import salt libs
@@ -83,15 +84,6 @@ import salt.utils.zeromq
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
-
 
 log = logging.getLogger(__name__)
 
@@ -1127,6 +1119,17 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         Bind the pub and pull sockets for events
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if (
+            self.opts["event_publisher_niceness"]
+            and not salt.utils.platform.is_windows()
+        ):
+            log.info(
+                "setting EventPublisher niceness to %i",
+                self.opts["event_publisher_niceness"],
+            )
+            os.nice(self.opts["event_publisher_niceness"])
+
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts["ipc_mode"] == "tcp":
@@ -1259,7 +1262,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         else:
             # Only a single event returner
             log.debug(
-                "Calling event returner %s, only one " "configured.",
+                "Calling event returner %s, only one configured.",
                 self.opts["event_return"],
             )
             event_return = "{0}.event_return".format(self.opts["event_return"])
@@ -1293,6 +1296,13 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         Spin up the multiprocess event returner
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if self.opts["event_return_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting EventReturn niceness to %i", self.opts["event_return_niceness"]
+            )
+            os.nice(self.opts["event_return_niceness"])
+
         self.event = get_event("master", opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, "salt/event_listen/start")

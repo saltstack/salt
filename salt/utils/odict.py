@@ -23,17 +23,10 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+from collections.abc import Callable
+
 # Import 3rd-party libs
 from salt.ext import six
-
-try:
-    from collections.abc import Callable
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Callable
-
-    # pylint: enable=no-name-in-module
-
 
 try:
     # pylint: disable=E0611,minimum-python-version

@@ -94,6 +94,7 @@ MOCK_MODULES = [
     "Crypto.Random",
     "Crypto.Signature",
     "Crypto.Signature.PKCS1_v1_5",
+    "distro",
     "M2Crypto",
     "msgpack",
     "yaml",

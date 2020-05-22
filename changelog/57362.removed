@@ -1,0 +1,3 @@
+napalm_network.load_template module - removed deprecated arguments
+template_user, template_attrs, template_group, template_mode, and native NAPALM
+template support. Use Salt's rendering pipeline instead.

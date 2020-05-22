@@ -666,6 +666,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         except ValueError:
             _raise_error_iface(iface, "mtu", ["integer"])
 
+    if "hwaddr" in opts and "macaddr" in opts:
+        msg = "Cannot pass both hwaddr and macaddr. Must use either hwaddr or macaddr"
+        log.error(msg)
+        raise AttributeError(msg)
+
     if iface_type not in ["bridge"]:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
@@ -874,6 +879,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if "clonenum_start" in opts:
         result["clonenum_start"] = opts["clonenum_start"]
+
+    if "hwaddr" in opts:
+        result["hwaddr"] = opts["hwaddr"]
+
+    if "macaddr" in opts:
+        result["macaddr"] = opts["macaddr"]
 
     # If NetworkManager is available, we can control whether we use
     # it or not
