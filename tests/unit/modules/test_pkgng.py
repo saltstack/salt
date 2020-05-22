@@ -18,7 +18,7 @@ class ListPackages(object):
     def __init__(self):
         self._iteration = 0
 
-    def __call__(self, **kwargs):
+    def __call__(self, jail=None, chroot=None, root=None):
         pkg_lists = [
             {"openvpn": "2.4.8_2"},
             {
