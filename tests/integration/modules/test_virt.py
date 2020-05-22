@@ -23,24 +23,71 @@ class VirtTest(ModuleCase):
         """
         profiles = self.run_function("virt.get_profiles", ["kvm"])
         self.assertIsInstance(profiles, dict)
-        nicp = profiles["nic"]["default"]
-        self.assertTrue(nicp[0].get("model", "") == "virtio")
-        self.assertTrue(nicp[0].get("source", "") == "br0")
-        diskp = profiles["disk"]["default"]
-        self.assertTrue(diskp[0]["system"].get("model", "") == "virtio")
-        self.assertTrue(diskp[0]["system"].get("format", "") == "qcow2")
-        self.assertTrue(diskp[0]["system"].get("size", "") == "8192")
+        nic = profiles["nic"]["default"][0]
+        disk = profiles["disk"]["default"][0]
 
-    def test_default_esxi_profile(self):
+        self.assertEqual(nic["name"], "eth0")
+        self.assertEqual(nic["type"], "bridge")
+        self.assertEqual(nic["model"], "virtio")
+        self.assertEqual(nic["source"], "br0")
+
+        self.assertEqual(disk["name"], "system")
+        self.assertEqual(disk["model"], "virtio")
+        self.assertEqual(disk["size"], 8192)
+
+    def test_default_vmware_profile(self):
         """
-        Test virt.get_profiles with the ESX profile
+        Test virt.get_profiles with the VMware profile
         """
-        profiles = self.run_function("virt.get_profiles", ["esxi"])
+        profiles = self.run_function("virt.get_profiles", ["vmware"])
         self.assertIsInstance(profiles, dict)
-        nicp = profiles["nic"]["default"]
-        self.assertTrue(nicp[0].get("model", "") == "e1000")
-        self.assertTrue(nicp[0].get("source", "") == "DEFAULT")
-        diskp = profiles["disk"]["default"]
-        self.assertTrue(diskp[0]["system"].get("model", "") == "scsi")
-        self.assertTrue(diskp[0]["system"].get("format", "") == "vmdk")
-        self.assertTrue(diskp[0]["system"].get("size", "") == "8192")
+        nic = profiles["nic"]["default"][0]
+        disk = profiles["disk"]["default"][0]
+
+        self.assertEqual(nic["name"], "eth0")
+        self.assertEqual(nic["type"], "bridge")
+        self.assertEqual(nic["model"], "e1000")
+        self.assertEqual(nic["source"], "DEFAULT")
+
+        self.assertEqual(disk["name"], "system")
+        self.assertEqual(disk["model"], "scsi")
+        self.assertEqual(disk["format"], "vmdk")
+        self.assertEqual(disk["size"], 8192)
+
+    def test_default_xen_profile(self):
+        """
+        Test virt.get_profiles with the XEN profile
+        """
+        profiles = self.run_function("virt.get_profiles", ["xen"])
+        self.assertIsInstance(profiles, dict)
+        nic = profiles["nic"]["default"][0]
+        disk = profiles["disk"]["default"][0]
+
+        self.assertEqual(nic["name"], "eth0")
+        self.assertEqual(nic["type"], "bridge")
+        self.assertEqual(nic["model"], None)
+        self.assertEqual(nic["source"], "br0")
+
+        self.assertEqual(disk["name"], "system")
+        self.assertEqual(disk["model"], "xen")
+        self.assertEqual(disk["size"], 8192)
+
+    def test_default_bhyve_profile(self):
+        """
+        Test virt.get_profiles with the Bhyve profile
+        """
+        profiles = self.run_function("virt.get_profiles", ["bhyve"])
+        self.assertIsInstance(profiles, dict)
+        nic = profiles["nic"]["default"][0]
+        disk = profiles["disk"]["default"][0]
+
+        self.assertEqual(nic["name"], "eth0")
+        self.assertEqual(nic["type"], "bridge")
+        self.assertEqual(nic["model"], "virtio")
+        self.assertEqual(nic["source"], "bridge0")
+
+        self.assertEqual(disk["name"], "system")
+        self.assertEqual(disk["model"], "virtio")
+        self.assertEqual(disk["format"], "raw")
+        self.assertEqual(disk["sparse_volume"], False)
+        self.assertEqual(disk["size"], 8192)

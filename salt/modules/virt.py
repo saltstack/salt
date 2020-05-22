@@ -1242,7 +1242,7 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
         overlay = {"device": "disk", "model": "virtio"}
     elif hypervisor == "xen":
         overlay = {"device": "disk", "model": "xen"}
-    elif hypervisor in ["bhyve"]:
+    elif hypervisor == "bhyve":
         overlay = {"format": "raw", "model": "virtio", "sparse_volume": False}
     else:
         overlay = {}
@@ -1285,7 +1285,7 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
             disk["filename"] = os.path.basename(disk["source_file"])
             if not disk.get("format"):
                 disk["format"] = "qcow2"
-        elif disk.get("device", "disk") == "disk":
+        elif vm_name and disk.get("device", "disk") == "disk":
             _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
     return disklist
@@ -3226,13 +3226,12 @@ def get_profiles(hypervisor=None, **kwargs):
     .. code-block:: bash
 
         salt '*' virt.get_profiles
-        salt '*' virt.get_profiles hypervisor=esxi
+        salt '*' virt.get_profiles hypervisor=vmware
     """
-    ret = {}
-
     # Use the machine types as possible values
     # Prefer 'kvm' over the others if available
-    caps = capabilities(**kwargs)
+    conn = __get_conn(**kwargs)
+    caps = _capabilities(conn)
     hypervisors = sorted(
         {
             x
@@ -3245,16 +3244,19 @@ def get_profiles(hypervisor=None, **kwargs):
 
     if not hypervisor:
         hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
+
+    ret = {
+        "disk": {"default": _disk_profile(conn, "default", hypervisor, [], None)},
+        "nic": {"default": _nic_profile("default", hypervisor)},
+    }
     virtconf = __salt__["config.get"]("virt", {})
-    for typ in ["disk", "nic"]:
-        _func = getattr(sys.modules[__name__], "_{0}_profile".format(typ))
-        ret[typ] = {
-            "default": _func("default", hypervisor)
-        }
-        if typ in virtconf:
-            ret.setdefault(typ, {})
-            for prf in virtconf[typ]:
-                ret[typ][prf] = _func(prf, hypervisor)
+
+    for profile in virtconf.get("disk", []):
+        ret["disk"][profile] = _disk_profile(conn, profile, hypervisor, [], None)
+
+    for profile in virtconf.get("nic", []):
+        ret["nic"][profile] = _nic_profile(profile, hypervisor)
+
     return ret
 
 
