@@ -22,6 +22,7 @@ class VirtTest(ModuleCase):
         Test virt.get_profiles with the KVM profile
         """
         profiles = self.run_function("virt.get_profiles", ["kvm"])
+        self.assertIsInstance(profiles, dict)
         nicp = profiles["nic"]["default"]
         self.assertTrue(nicp[0].get("model", "") == "virtio")
         self.assertTrue(nicp[0].get("source", "") == "br0")
@@ -35,6 +36,7 @@ class VirtTest(ModuleCase):
         Test virt.get_profiles with the ESX profile
         """
         profiles = self.run_function("virt.get_profiles", ["esxi"])
+        self.assertIsInstance(profiles, dict)
         nicp = profiles["nic"]["default"]
         self.assertTrue(nicp[0].get("model", "") == "e1000")
         self.assertTrue(nicp[0].get("source", "") == "DEFAULT")
