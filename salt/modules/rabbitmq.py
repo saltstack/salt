@@ -24,7 +24,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
 
