@@ -1659,12 +1659,12 @@ def init(
     loader
         The path to the UEFI binary loader to use.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     nvram
         The path to the UEFI data template. The file will be copied when creating the virtual machine.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     .. _init-nic-def:
 
@@ -1708,7 +1708,7 @@ def init(
         Path to the folder or name of the pool where disks should be created.
         (Default: depends on hypervisor and the virt:storagepool configuration)
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         If the value contains no '/', it is considered a pool name where to create a volume.
         Using volumes will be mandatory for some pools types like rdb, iscsi, etc.
@@ -1729,7 +1729,7 @@ def init(
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         This property is only valid on path-based disks, not on volumes. To create a volume with a
         backing store, set the ``backing_store_path`` and ``backing_store_format`` properties.
@@ -1738,20 +1738,20 @@ def init(
         Path to the backing store image to use. This can also be the name of a volume to use as
         backing store within the same pool.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     backing_store_format
         Image format of the disk or volume to use as backing store. This property is mandatory when
         using ``backing_store_path`` to avoid `problems <https://libvirt.org/kbase/backing_chains.html#troubleshooting>`_
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
         parameter is useful to use disk images that are created outside of this module. Can also
         be ``None`` for devices that have no associated image like cdroms.
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         For volume disks, this can be the name of a volume already existing in the storage pool.
 
@@ -2222,7 +2222,7 @@ def update(
 
     :param test: run in dry-run mode if set to True
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     :return:
 
@@ -3576,7 +3576,7 @@ def define_vol_xml_str(
         storage pool name to define the volume in.
         If defined, this parameter will override the configuration setting.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3621,7 +3621,7 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         storage pool name to define the volume in.
         If defined, this parameter will override the configuration setting.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -4967,7 +4967,7 @@ def all_capabilities(**kwargs):
     """
     Return the host and domain capabilities in a single call.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
@@ -6647,7 +6647,7 @@ def volume_define(
                             backing_store="{'path': '/path/to/base.img', 'format': 'raw'}" \
                             nocow=True
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     ret = False
     try:
@@ -6789,7 +6789,7 @@ def volume_upload(pool, volume, file, offset=0, length=0, sparse=False, **kwargs
 
         salt '*' virt.volume_upload default myvm.qcow2 /path/to/disk.qcow2
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     conn = __get_conn(**kwargs)
 

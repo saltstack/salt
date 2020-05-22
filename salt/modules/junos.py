@@ -1174,7 +1174,7 @@ def install_os(path=None, **kwargs):
         When True (default), executes the software install on all Routing Engines of the Junos
         device. When False, execute the software install only on the current Routing Engine.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
@@ -1536,7 +1536,7 @@ def get_table(
     table_args=None,
 ):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Retrieve data from a Junos device using Tables/Views
 

@@ -448,7 +448,7 @@ def cql_query_with_prepare(
     :param asynchronous:          Run this query in asynchronous mode
     :type  asynchronous:          bool
     :param async:                 Run this query in asynchronous mode (an alias to 'asynchronous')
-                                  NOTE: currently it overrides 'asynchronous' and it will be dropped in version Sodium!
+                                  NOTE: currently it overrides 'asynchronous' and it will be dropped in version 3001!
     :type  async:          bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable

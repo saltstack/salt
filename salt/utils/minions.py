@@ -645,7 +645,7 @@ class CkMinions(object):
         """
         if include_localhost is not None:
             salt.utils.versions.warn_until(
-                "Sodium",
+                "3001",
                 "The 'include_localhost' argument is no longer required; any"
                 "connected localhost minion will always be included.",
             )

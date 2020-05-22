@@ -4103,7 +4103,7 @@ def recurse(
           - include_pat: E@hello      :: regexp matches 'otherhello',
                                          'hello01' ...
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
 
             List patterns are now supported
 
@@ -4130,7 +4130,7 @@ def recurse(
           - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                    or TEMPDATA for exclusion
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
 
             List patterns are now supported
 
@@ -5213,7 +5213,7 @@ def keyvalue(
     """
     Key/Value based editing of a file.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     This function differs from ``file.replace`` in that it is able to search for
     keys, followed by a customizable separator, and replace the value with the
