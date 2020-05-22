@@ -362,6 +362,7 @@ class TestEventReturn(TestCase):
     def test_event_return(self):
         evt = None
         try:
+            x = 45
             evt = salt.utils.event.EventReturn(salt.config.DEFAULT_MASTER_OPTS.copy())
             evt.start()
         except TypeError as exc:
