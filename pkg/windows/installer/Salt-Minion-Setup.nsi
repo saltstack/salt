@@ -545,7 +545,6 @@ Function InstallVCRedist
         # error flag if an error occurs; if an error occurs, the contents
         # of the user variable are undefined).
         # http://nsis.sourceforge.net/Reference/ExecWait
-        installVCRedist:
         ClearErrors
         detailPrint "Installing $VcRedistName..."
         ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
