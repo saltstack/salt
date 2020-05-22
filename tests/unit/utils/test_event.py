@@ -380,7 +380,11 @@ class TestEventReturn(TestCase):
                         )
                 for warning in w:
                     if warning.category is DeprecationWarning:
-                        assert "object() takes no parameters" not in warning.message
+                        assert (
+                            "object() takes no parameters" not in warning.message
+                            or "argument of type 'DeprecationWarning' is not iterable"
+                            not in warning.message
+                        )
         finally:
             if evt is not None:
                 terminate_process(evt.pid, kill_children=True)
