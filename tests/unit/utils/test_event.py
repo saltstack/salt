@@ -358,7 +358,6 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
 
 class TestEventReturn(TestCase):
-    x =2 
     @skipIf(True, "SLOWTEST skip")
     def test_event_return(self):
         evt = None
