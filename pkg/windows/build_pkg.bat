@@ -205,15 +205,6 @@ set Name=vcredist_x64_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
-:vcredist_2013_x86
-@echo.
-@echo Copying VCRedist 2013 X86 to Prerequisites
-@echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2013.exe
-set Name=vcredist_x86_2013.exe
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 :prereq_end
 
 :: Remove the fixed path in .exe files
