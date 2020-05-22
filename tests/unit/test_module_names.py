@@ -55,6 +55,8 @@ EXCLUDED_FILES = [
     os.path.join("tests", "unit", "utils", "scheduler", "base.py"),
     os.path.join("tests", "unit", "transport", "mixins.py"),
     os.path.join("tests", "integration", "utils", "testprogram.py"),
+    os.path.join("tests", "unit", "test_pytest_pass_fail.py"),
+    os.path.join("tests", "unit", "utils", "scheduler", "base.py"),
 ]
 
 
@@ -120,6 +122,7 @@ class BadTestModuleNamesTestCase(TestCase):
         consider mapping it to files manually via tests/filename_map.yml.
         """
         ignore = (
+            "unit.test_pytest_pass_fail",
             "unit.test_doc",
             "unit.test_mock",
             "unit.test_module_names",

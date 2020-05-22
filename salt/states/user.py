@@ -307,7 +307,7 @@ def present(
         .. note::
             Only supported on GNU/Linux distributions
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     groups
         A list of groups to assign the user to, pass a list object. If a group

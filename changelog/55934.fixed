@@ -1,0 +1,1 @@
+Follow up on https://github.com/saltstack/salt/pull/49832 and remove remaning `pchanges` occurrences from state modules

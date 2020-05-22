@@ -175,7 +175,7 @@ def available(
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -285,7 +285,7 @@ def get(name, download=False, install=False, online=True):
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -436,7 +436,7 @@ def list(
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
 
@@ -527,7 +527,7 @@ def list(
 
 def installed(summary=False, kbs_only=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Get a list of all updates that are currently installed on the system.
 

@@ -346,7 +346,7 @@ VALID_OPTS = immutabletypes.freeze(
         "log_rotate_backup_count": int,
         # If an event is above this size, it will be trimmed before putting it on the event bus
         "max_event_size": int,
-        # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
+        # Enable old style events to be sent on minion_startup. Change default to False in 3001 release
         "enable_legacy_startup_events": bool,
         # Always execute states with test=True if this flag is set
         "test": bool,
@@ -463,6 +463,16 @@ VALID_OPTS = immutabletypes.freeze(
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
+        # various subprocess niceness levels
+        "req_server_niceness": (type(None), int),
+        "pub_server_niceness": (type(None), int),
+        "fileserver_update_niceness": (type(None), int),
+        "maintenance_niceness": (type(None), int),
+        "mworker_niceness": (type(None), int),
+        "mworker_queue_niceness": (type(None), int),
+        "event_return_niceness": (type(None), int),
+        "event_publisher_niceness": (type(None), int),
+        "reactor_niceness": (type(None), int),
         # The number of MWorker processes for a master to startup. This number needs to scale up as
         # the number of connected minions increases.
         "worker_threads": int,
@@ -1413,6 +1423,16 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        # various subprocess niceness levels
+        "req_server_niceness": None,
+        "pub_server_niceness": None,
+        "fileserver_update_niceness": None,
+        "mworker_niceness": None,
+        "mworker_queue_niceness": None,
+        "maintenance_niceness": None,
+        "event_return_niceness": None,
+        "event_publisher_niceness": None,
+        "reactor_niceness": None,
         "ipv6": None,
         "tcp_master_pub_port": 4512,
         "tcp_master_pull_port": 4513,
