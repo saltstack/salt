@@ -119,7 +119,7 @@ The other key under an event, is the "tag" key. The "tag" key simply contains
 the path to the package that was registered as the tag attribute for the event.
 The value of the "index" key corresponds to the modifiedIndex of this particular
 path.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
