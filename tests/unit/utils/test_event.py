@@ -361,30 +361,19 @@ class TestAsyncEventPublisher(AsyncTestCase):
 class TestEventReturn(TestCase):
     @skipIf(True, "SLOWTEST skip")
     def test_event_return(self):
-        # Once salt is py3 only, the warnings part of this test no longer applies
         evt = None
         try:
-            with warnings.catch_warnings(record=True) as w:
-                # Cause all warnings to always be triggered.
-                warnings.simplefilter("always")
-                evt = None
-                try:
-                    evt = salt.utils.event.EventReturn(
-                        salt.config.DEFAULT_MASTER_OPTS.copy()
-                    )
-                    evt.start()
-                except TypeError as exc:
-                    if "object" in str(exc):
-                        self.fail(
-                            "'{}' TypeError should have not been raised".format(exc)
-                        )
-                for warning in w:
-                    if warning.category is DeprecationWarning:
-                        assert (
-                            "object() takes no parameters" not in warning.message
-                            or "argument of type 'DeprecationWarning' is not iterable"
-                            not in warning.message
-                        )
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+            evt = None
+            try:
+                evt = salt.utils.event.EventReturn(
+                    salt.config.DEFAULT_MASTER_OPTS.copy()
+                )
+                evt.start()
+            except TypeError as exc:
+                if "object" in str(exc):
+                    self.fail("'{}' TypeError should have not been raised".format(exc))
         finally:
             if evt is not None:
                 terminate_process(evt.pid, kill_children=True)
