@@ -8,9 +8,10 @@ import salt.runners.bgp as bgp
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not bgp.HAS_NAPALM, "napalm module required for this test")
 class BGPTest(TestCase, LoaderModuleMockMixin):
     """
     Test the bgp runner

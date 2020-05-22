@@ -13,9 +13,10 @@ import salt.runners.net as net
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not net.HAS_NAPALM, "napalm module required for this test")
 class NetTest(TestCase, LoaderModuleMockMixin):
     """
     Test the net runner
