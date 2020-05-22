@@ -197,7 +197,7 @@ def rollback(name, id, **kwargs):
 @resultdecorator
 def diff(name, d_id=0, **kwargs):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
     Gets the difference between the candidate and the current configuration.
 
@@ -551,7 +551,7 @@ def commit_check(name):
 @resultdecorator
 def get_table(name, table, table_file, **kwargs):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Retrieve data from a Junos device using Tables/Views
 

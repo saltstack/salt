@@ -218,7 +218,7 @@ def _setup_conn(**kwargs):
     if not (kubeconfig and context):
         if kwargs.get("api_url") or __salt__["config.option"]("kubernetes.api_url"):
             salt.utils.versions.warn_until(
-                "Sodium",
+                "3001",
                 "Kubernetes configuration via url, certificate, username and password will be removed in Sodiom. "
                 "Use 'kubeconfig' and 'context' instead.",
             )

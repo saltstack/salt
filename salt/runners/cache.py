@@ -46,7 +46,7 @@ def grains(tgt, tgt_type="glob", **kwargs):
         .. versionchanged:: 2017.7.5,2018.3.0
             The ``tgt`` argument is now required to display cached grains. If
             not used, the function will not return grains. This optional
-            argument will become mandatory in the Salt ``Sodium`` release.
+            argument will become mandatory in the Salt ``3001`` release.
 
     tgt_type
         The type of targeting to use for matching, such as ``glob``, ``list``,
