@@ -15,8 +15,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-
-
 RABBITMQ_3_5_7_STATUS = """Status of node rabbit@gandalf ...
 [{pid,2988},
  {running_applications,
@@ -179,7 +177,7 @@ def no_more_cmds(cmd, *args, **kwargs):
 
 def mock_run_rabbitmqctl_status(output, default=no_more_cmds):
     def cmd_run(cmd, *args, **kwargs):
-        if cmd == [rabbitmq.RABBITMQCTL, 'status']:
+        if cmd == [rabbitmq.RABBITMQCTL, "status"]:
             return output
         else:
             return default(cmd, *args, **kwargs)
@@ -700,33 +698,39 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it return a dictionary of policies nested by vhost
         and name based on the data returned from rabbitmqctl list_policies.
-        '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
+        """
+        mock_run = MagicMock(
+            return_value={"retcode": 0, "stdout": "saltstack", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}), patch.dict(
+            rabbitmq.__grains__, {"os_family": ""}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 8, 2]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_freebsd(self):
         """
         Test if it return a dictionary of policies nested by vhost
         and name based on the data returned from rabbitmqctl list_policies.
-        '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
+        """
+        mock_run = MagicMock(
+            return_value={"retcode": 0, "stdout": "saltstack", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}), patch.dict(
+            rabbitmq.__grains__, {"os_family": "FreeBSD"}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 8, 2]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_old_version(self):
         """
         Test if it return a dictionary of policies nested by vhost
         and name based on the data returned from rabbitmqctl list_policies.
-        '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 7]):
+        """
+        mock_run = MagicMock(
+            return_value={"retcode": 0, "stdout": "saltstack", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}), patch.dict(
+            rabbitmq.__grains__, {"os_family": ""}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 5, 7]):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     # 'set_policy' function tests: 1
@@ -764,12 +768,14 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test if it return whether the policy exists
         based on rabbitmqctl list_policies.
-        '''
-        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 8, 2]):
-            self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
+        """
+        mock_run = MagicMock(
+            return_value={"retcode": 0, "stdout": "saltstack", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}), patch.dict(
+            rabbitmq.__grains__, {"os_family": ""}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 8, 2]):
+            self.assertFalse(rabbitmq.policy_exists("/", "HA"))
 
     # 'list_available_plugins' function tests: 2
 
@@ -1049,43 +1055,53 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
     # '_get_server_version' function tests: 2
 
     def test__get_server_version_old(self):
-        '''
+        """
         Test if the version from the old (pre-3.7) rabbitmqctl status is parsed correctly
-        '''
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run_rabbitmqctl_status(RABBITMQ_3_5_7_STATUS)}):
+        """
+        with patch.dict(
+            rabbitmq.__salt__,
+            {"cmd.run": mock_run_rabbitmqctl_status(RABBITMQ_3_5_7_STATUS)},
+        ):
             self.assertListEqual(rabbitmq._get_server_version(), [3, 5, 7])
 
     def test__get_server_version_post_3_7(self):
-        '''
+        """
         Test if the version from the new (post-3.7) rabbitmqctl status is parsed correctly
-        '''
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run_rabbitmqctl_status(RABBITMQ_3_8_2_STATUS)}):
+        """
+        with patch.dict(
+            rabbitmq.__salt__,
+            {"cmd.run": mock_run_rabbitmqctl_status(RABBITMQ_3_8_2_STATUS)},
+        ):
             self.assertListEqual(rabbitmq._get_server_version(), [3, 8, 2])
 
     # 'check_password' function tests: 2
 
     def test_check_password_old_api(self):
-        '''
+        """
         Test if check_password uses the old API on old versions (pre-3.5.7)
-        '''
-        mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': '', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run_all}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 6]):
-            result = rabbitmq.check_password('saltstack', 'dummy')
+        """
+        mock_run_all = MagicMock(
+            return_value={"retcode": 0, "stdout": "", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run_all}), patch.dict(
+            rabbitmq.__grains__, {"os_family": ""}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 5, 6]):
+            result = rabbitmq.check_password("saltstack", "dummy")
             self.assertTrue(result)
             # Ensure "authenticate_user" API is NOT being used
-            self.assertNotEqual(mock_run_all.call_args.args[0][1], 'authenticate_user')
+            self.assertNotEqual(mock_run_all.call_args.args[0][1], "authenticate_user")
 
     def test_check_password_new_api(self):
-        '''
+        """
         Test if check_password uses the new API on new versions (post-3.5.7)
-        '''
-        mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': '', 'stderr': ''})
-        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run_all}), \
-                patch.dict(rabbitmq.__grains__, {'os_family': ''}), \
-                patch.object(rabbitmq, '_get_server_version', return_value=[3, 5, 7]):
-            result = rabbitmq.check_password('saltstack', 'dummy')
+        """
+        mock_run_all = MagicMock(
+            return_value={"retcode": 0, "stdout": "", "stderr": ""}
+        )
+        with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run_all}), patch.dict(
+            rabbitmq.__grains__, {"os_family": ""}
+        ), patch.object(rabbitmq, "_get_server_version", return_value=[3, 5, 7]):
+            result = rabbitmq.check_password("saltstack", "dummy")
             self.assertTrue(result)
             # Ensure "authenticate_user" API is being used
-            self.assertEqual(mock_run_all.call_args.args[0][1], 'authenticate_user')
+            self.assertEqual(mock_run_all.call_args.args[0][1], "authenticate_user")
