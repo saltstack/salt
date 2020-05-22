@@ -599,7 +599,7 @@ def _fix_cask_namespace(name=None, pkgs=None):
     and replace it by the new one.
 
     This function also warns about the correct namespace for this packages
-    and it will stop working with the release of Sodium.
+    and it will stop working with the release of 3001.
 
     :param name: The name of the package to check
     :param pkgs: A list of packages to check
@@ -627,7 +627,7 @@ def _fix_cask_namespace(name=None, pkgs=None):
 
     if show_warning:
         salt.utils.versions.warn_until(
-            "Sodium",
+            "3001",
             "The 'caskroom/cask/' namespace for brew-cask packages "
             "is deprecated. Use 'homebrew/cask/' instead.",
         )
@@ -639,7 +639,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
     Set package in 'hold' state, meaning it will not be upgraded.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     name
         The name of the package, e.g., 'tmux'
@@ -717,7 +717,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     name
         The name of the package, e.g., 'tmux'

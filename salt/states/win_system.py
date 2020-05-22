@@ -174,7 +174,7 @@ def hostname(name):
 
 def workgroup(name):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Manage the workgroup of the computer
 
