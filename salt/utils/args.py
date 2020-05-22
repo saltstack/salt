@@ -244,7 +244,12 @@ def yamlify_arg(arg):
 
 def get_function_argspec(func, is_class_method=None):
     """
-    A small wrapper around getargspec that also supports callable classes
+    A small wrapper around getargspec that also supports callable classes and wrapped functions
+
+    If the given function is a wrapper around another function (i.e. has a
+    ``__wrapped__`` attribute), return the functions specification of the underlying
+    function.
+
     :param is_class_method: Pass True if you are sure that the function being passed
                             is a class method. The reason for this is that on Python 3
                             ``inspect.ismethod`` only returns ``True`` for bound methods,
@@ -255,6 +260,9 @@ def get_function_argspec(func, is_class_method=None):
     """
     if not callable(func):
         raise TypeError("{0} is not a callable".format(func))
+
+    if hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
 
     if is_class_method is True:
         aspec = _getargspec(func)
