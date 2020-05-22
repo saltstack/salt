@@ -4,6 +4,13 @@
 Salt Release Notes - Codename Sodium
 ====================================
 
+Python 2 Deprecation
+====================
+
+Python 2 support has been dropped in Salt 3001. See
+https://community.saltstack.com/blog/sunsetting-python-2-support/ for more
+info.
+
 
 Salt mine updates
 =================

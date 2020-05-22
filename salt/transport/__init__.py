@@ -34,20 +34,6 @@ def iter_transport_opts(opts):
         yield opts["transport"], opts
 
 
-# for backwards compatibility
-class Channel(object):
-    @staticmethod
-    def factory(opts, **kwargs):
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Stop using salt.transport.Channel and instead use salt.transport.client.ReqChannel",
-            stacklevel=3,
-        )
-        from salt.transport.client import ReqChannel
-
-        return ReqChannel.factory(opts, **kwargs)
-
-
 class MessageClientPool(object):
     def __init__(self, tgt, opts, args=None, kwargs=None):
         sock_pool_size = opts["sock_pool_size"] if "sock_pool_size" in opts else 1

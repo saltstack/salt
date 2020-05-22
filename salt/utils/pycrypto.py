@@ -30,8 +30,6 @@ except ImportError:
     HAS_RANDOM = False
 
 try:
-    # Windows does not have the crypt module
-    # consider using passlib.hash instead
     import crypt
 
     HAS_CRYPT = True
@@ -83,7 +81,7 @@ else:
 known_methods = ["sha512", "sha256", "blowfish", "md5", "crypt"]
 
 
-def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
+def _gen_hash_passlib(crypt_salt=None, password=None, algorithm=None):
     """
     Generate a /etc/shadow-compatible hash for a non-local system
     """
@@ -91,12 +89,37 @@ def _fallback_gen_hash(crypt_salt=None, password=None, algorithm=None):
     schemes = ["sha512_crypt", "sha256_crypt", "bcrypt", "md5_crypt", "des_crypt"]
 
     ctx = passlib.context.CryptContext(schemes=schemes)
-    return ctx.hash(
-        password, salt=crypt_salt, scheme=schemes[known_methods.index(algorithm)]
-    )
+
+    kwargs = {"secret": password, "scheme": schemes[known_methods.index(algorithm)]}
+    if crypt_salt and "$" in crypt_salt:
+        # this salt has a rounds specifier.
+        #  passlib takes it as a separate parameter, split it out
+        roundsstr, split_salt = crypt_salt.split("$")
+        rounds = int(roundsstr.split("=")[-1])
+        kwargs.update({"salt": split_salt, "rounds": rounds})
+    else:
+        # relaxed = allow salts that are too long
+        kwargs.update({"salt": crypt_salt, "relaxed": True})
+    return ctx.hash(**kwargs)
 
 
-def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
+def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
+    """
+    Generate /etc/shadow hash using the native crypt module
+    """
+    if crypt_salt is None:
+        # setting crypt_salt to the algorithm makes crypt generate
+        #  a salt compatible with the specified algorithm.
+        crypt_salt = methods[algorithm]
+    else:
+        if algorithm != "crypt":
+            # all non-crypt algorithms are specified as part of the salt
+            crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
+
+    return crypt.crypt(password, crypt_salt)
+
+
+def gen_hash(crypt_salt=None, password=None, algorithm=None):
     """
     Generate /etc/shadow hash
     """
@@ -104,27 +127,25 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None, force=False):
         password = secure_password()
 
     if algorithm is None:
-        # use the most secure natively supported method
+        # prefer the most secure natively supported method
         algorithm = crypt.methods[0].name.lower() if HAS_CRYPT else known_methods[0]
 
-    if algorithm not in methods:
-        if force and HAS_PASSLIB:
-            return _fallback_gen_hash(crypt_salt, password, algorithm)
-        else:
-            raise SaltInvocationError(
-                "Algorithm '{}' is not natively supported by this platform, use force=True with passlib installed to override.".format(
-                    algorithm
-                )
-            )
+    if algorithm == "crypt" and crypt_salt and len(crypt_salt) != 2:
+        log.warning("Hash salt is too long for 'crypt' hash.")
 
-    if crypt_salt is None:
-        crypt_salt = methods[algorithm]
-    elif methods[algorithm].ident:
-        crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
-    else:  # method is crypt (DES)
-        if len(crypt_salt) != 2:
-            raise ValueError(
-                "Invalid salt for hash, 'crypt' salt must be 2 characters."
+    if HAS_CRYPT and algorithm in methods:
+        return _gen_hash_crypt(
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
+        )
+    elif HAS_PASSLIB and algorithm in known_methods:
+        return _gen_hash_passlib(
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
+        )
+    else:
+        raise SaltInvocationError(
+            "Cannot hash using '{0}' hash algorithm. Natively supported "
+            "algorithms are: {1}. If passlib is installed ({2}), the supported "
+            "algorithms are: {3}.".format(
+                algorithm, list(methods), HAS_PASSLIB, known_methods
             )
-
-    return crypt.crypt(password, crypt_salt)
+        )

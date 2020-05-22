@@ -268,7 +268,32 @@ def get_function_argspec(func, is_class_method=None):
         aspec = _getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        try:
+            sig = inspect.signature(func)
+        except TypeError:
+            raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        else:
+            # argspec-related functions are deprecated in Python 3 in favor of
+            # the new inspect.Signature class, and will be removed at some
+            # point in the Python 3 lifecycle. So, build a namedtuple which
+            # looks like the result of a Python 2 argspec.
+            _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+            args = []
+            defaults = []
+            varargs = keywords = None
+            for param in sig.parameters.values():
+                if param.kind == param.POSITIONAL_OR_KEYWORD:
+                    args.append(param.name)
+                    if param.default is not inspect._empty:
+                        defaults.append(param.default)
+                elif param.kind == param.VAR_POSITIONAL:
+                    varargs = param.name
+                elif param.kind == param.VAR_KEYWORD:
+                    keywords = param.name
+            if is_class_method:
+                del args[0]
+            aspec = _ArgSpec(args, varargs, keywords, tuple(defaults) or None)
+
     return aspec
 
 
