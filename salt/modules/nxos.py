@@ -78,7 +78,7 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.get_user username=admin
 
     For backwards compatibility, the following syntax will be supported
-    until the Sodium release.
+    until the 3001 release.
 
     salt '*' nxos.cmd <function>
     salt '*' nxos.cmd get_user username=admin

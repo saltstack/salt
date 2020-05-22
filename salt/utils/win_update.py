@@ -301,7 +301,7 @@ class WindowsUpdateAgent(object):
                 update database. ``True`` will go online. ``False`` will use the
                 local update database as is. Default is ``True``
 
-                .. versionadded:: Sodium
+                .. versionadded:: 3001
 
         Need to look at the possibility of loading this into ``__context__``
         """
@@ -362,7 +362,7 @@ class WindowsUpdateAgent(object):
                 update database. ``True`` will go online. ``False`` will use the
                 local update database as is. Default is ``True``
 
-                .. versionadded:: Sodium
+                .. versionadded:: 3001
 
         Code Example:
 

@@ -28,7 +28,7 @@ def gen_jid(opts=None):
     """
     if opts is None:
         salt.utils.versions.warn_until(
-            "Sodium",
+            "3001",
             "The `opts` argument was not passed into salt.utils.jid.gen_jid(). "
             "This will be required starting in {version}.",
         )
