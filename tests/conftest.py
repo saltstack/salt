@@ -14,7 +14,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import pathlib
 import pprint
+import re
 import sys
 from functools import partial, wraps
 
@@ -32,28 +34,29 @@ import salt.utils.platform
 import salt.utils.win_functions
 import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
+from salt.serializers import yaml
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
-TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-CODE_DIR = os.path.dirname(TESTS_DIR)
+TESTS_DIR = pathlib.Path(__file__).resolve().parent
+CODE_DIR = TESTS_DIR.parent
 
 # Change to code checkout directory
-os.chdir(CODE_DIR)
+os.chdir(str(CODE_DIR))
 
 # Make sure the current directory is the first item in sys.path
-if CODE_DIR in sys.path:
-    sys.path.remove(CODE_DIR)
-sys.path.insert(0, CODE_DIR)
+if str(CODE_DIR) in sys.path:
+    sys.path.remove(str(CODE_DIR))
+sys.path.insert(0, str(CODE_DIR))
 
 # Coverage
 if "COVERAGE_PROCESS_START" in os.environ:
     MAYBE_RUN_COVERAGE = True
     COVERAGERC_FILE = os.environ["COVERAGE_PROCESS_START"]
 else:
-    COVERAGERC_FILE = os.path.join(CODE_DIR, ".coveragerc")
+    COVERAGERC_FILE = str(CODE_DIR / ".coveragerc")
     MAYBE_RUN_COVERAGE = (
         sys.argv[0].endswith("pytest.py") or "_COVERAGE_RCFILE" in os.environ
     )
@@ -62,7 +65,7 @@ else:
         os.environ[str("COVERAGE_PROCESS_START")] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace", "salt-runtests-bridge"]
+pytest_plugins = ["tempdir", "helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -124,12 +127,26 @@ def pytest_addoption(parser):
     """
     test_selection_group = parser.getgroup("Tests Selection")
     test_selection_group.addoption(
+        "--from-filenames",
+        default=None,
+        help=(
+            "Pass a comma-separated list of file paths, and any test module which corresponds to the "
+            "specified file(s) will run. For example, if 'setup.py' was passed, then the corresponding "
+            "test files defined in 'tests/filename_map.yml' would run. Absolute paths are assumed to be "
+            "files containing relative paths, one per line. Providing the paths in a file can help get "
+            "around shell character limits when the list of files is long."
+        ),
+    )
+    # Add deprecated CLI flag until we completely switch to PyTest
+    test_selection_group.addoption(
+        "--names-file", default=None, help="Deprecated option"
+    )
+    test_selection_group.addoption(
         "--transport",
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, "
-            "zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
         ),
     )
     test_selection_group.addoption(
@@ -196,11 +213,11 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
-    for dirname in os.listdir(CODE_DIR):
-        if not os.path.isdir(dirname):
+    for dirname in CODE_DIR.iterdir():
+        if not dirname.is_dir():
             continue
-        if dirname != "tests":
-            config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, dirname))
+        if dirname != TESTS_DIR:
+            config.addinivalue_line("norecursedirs", str(CODE_DIR / dirname))
 
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
@@ -297,6 +314,7 @@ def pytest_collection_modifyitems(config, items):
     # Let PyTest or other plugins handle the initial collection
     yield
     groups_collection_modifyitems(config, items)
+    from_filenames_collection_modifyitems(config, items)
 
     log.warning("Mofifying collected tests to keep track of fixture usage")
     for item in items:
@@ -415,9 +433,7 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = os.path.join(
-        CODE_DIR, "tests", "integration", "utils"
-    )
+    integration_utils_tests_path = str(CODE_DIR / "tests" / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
         and PRE_PYTEST_SKIP_OR_NOT is True
@@ -481,7 +497,7 @@ def pytest_runtest_setup(item):
             )
 
     if salt.utils.platform.is_windows():
-        if not item.fspath.fnmatch(os.path.join(CODE_DIR, "tests", "unit", "*")):
+        if not item.fspath.fnmatch(str(CODE_DIR / "tests" / "unit" / "*")):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -554,7 +570,7 @@ def salt_factories_config():
     """
     return {
         "executable": sys.executable,
-        "code_dir": CODE_DIR,
+        "code_dir": str(CODE_DIR),
         "inject_coverage": MAYBE_RUN_COVERAGE,
         "inject_sitecustomize": MAYBE_RUN_COVERAGE,
         "start_timeout": 120
@@ -565,6 +581,119 @@ def salt_factories_config():
 
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
 
+# ----- From Filenames Test Selection ------------------------------------------------------------------------------->
+def _match_to_test_file(match):
+    parts = match.split(".")
+    parts[-1] += ".py"
+    return TESTS_DIR.joinpath(*parts).relative_to(CODE_DIR)
+
+
+def from_filenames_collection_modifyitems(config, items):
+    from_filenames = config.getoption("--from-filenames")
+    if not from_filenames:
+        # Don't do anything
+        return
+
+    test_categories_paths = (
+        (CODE_DIR / "tests" / "integration").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "multimaster").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "unit").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "e2e").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "functional").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "integration").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "unit").relative_to(CODE_DIR),
+    )
+
+    test_module_paths = set()
+    from_filenames_listing = set()
+    for path in [pathlib.Path(path.strip()) for path in from_filenames.split(",")]:
+        if path.is_absolute():
+            # In this case, this path is considered to be a file containing a line separated list
+            # of files to consider
+            with salt.utils.files.fopen(str(path)) as rfh:
+                for line in rfh:
+                    line_path = pathlib.Path(line.strip())
+                    if not line_path.exists():
+                        continue
+                    from_filenames_listing.add(line_path)
+            continue
+        from_filenames_listing.add(path)
+
+    filename_map = yaml.deserialize(
+        (CODE_DIR / "tests" / "filename_map.yml").read_text()
+    )
+    # Let's add the match all rule
+    for rule, matches in filename_map.items():
+        if rule == "*":
+            for match in matches:
+                test_module_paths.add(_match_to_test_file(match))
+            break
+
+    # Let's now go through the list of files gathered
+    for filename in from_filenames_listing:
+        if str(filename).startswith("tests/"):
+            # Tests in the listing don't require additional matching and will be added to the
+            # list of tests to run
+            test_module_paths.add(filename)
+            continue
+        if filename.name == "setup.py" or str(filename).startswith("salt/"):
+            if path.name == "__init__.py":
+                # No direct macthing
+                continue
+            # Now let's try a direct match between the passed file and possible test modules
+            for test_categories_path in test_categories_paths:
+                test_module_path = test_categories_path / "test_{}".format(path.name)
+                if test_module_path.is_file():
+                    test_module_paths.add(test_module_path)
+                    continue
+
+            # Do we have an entry in tests/filename_map.yml
+            for rule, matches in filename_map.items():
+                if rule == "*":
+                    continue
+                elif "|" in rule:
+                    # This is regex
+                    if re.match(rule, str(filename)):
+                        for match in matches:
+                            test_module_paths.add(_match_to_test_file(match))
+                elif "*" in rule or "\\" in rule:
+                    # Glob matching
+                    for filerule in CODE_DIR.glob(rule):
+                        if not filerule.exists():
+                            continue
+                        filerule = filerule.relative_to(CODE_DIR)
+                        if filerule != filename:
+                            continue
+                        for match in matches:
+                            test_module_paths.add(_match_to_test_file(match))
+                else:
+                    if str(filename) != rule:
+                        continue
+                    # Direct file paths as rules
+                    filerule = pathlib.Path(rule)
+                    if not filerule.exists():
+                        continue
+                    for match in matches:
+                        test_module_paths.add(_match_to_test_file(match))
+            continue
+        else:
+            log.debug("Don't know what to do with path %s", filename)
+
+    selected = []
+    deselected = []
+    for item in items:
+        itempath = pathlib.Path(str(item.fspath)).relative_to(CODE_DIR)
+        if itempath in test_module_paths:
+            selected.append(item)
+        else:
+            deselected.append(item)
+
+    items[:] = selected
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+
+
+# <---- From Filenames Test Selection --------------------------------------------------------------------------------
 
 # ----- Custom Grains Mark Evaluator -------------------------------------------------------------------------------->
 class GrainsMarkEvaluator(MarkEvaluator):
