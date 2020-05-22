@@ -19,21 +19,18 @@ class PycryptoTestCase(TestCase):
     passwd = "test_password"
     expecteds = {
         "sha512": {
-            "hashed": "$6$rounds=656000$goodsalt$25xEV0IAcghzQbu8TF5KdDMYk3b4u9nR/38xYU/26xvPgirDavreGhtLfYRYW.RngLmRtD9i8S8XP3dPx4.PV.",
-            "salt_crypt": "rounds=656000$goodsalt",
-            "salt_passlib": "goodsalt",
+            "hashed": "$6$rounds=65601$goodsalt$lZFhiN5M8RTLd9WKDin50H4lF4F8HGMIdwvKs.nTG7f8F0Y4P447Zb9/E8SkUWjY.K10QT3NuHZNDgc/P/NjT1",
+            "salt": "rounds=65601$goodsalt",
             "badsalt": "badsalt",
         },
         "sha256": {
-            "hashed": "$5$rounds=535000$goodsalt$2tSwAugenFhj2sHC1EHyGo.7razFvRhlK0c11k4.xG7",
-            "salt_crypt": "rounds=535000$goodsalt",
-            "salt_passlib": "goodsalt",
+            "hashed": "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7",
+            "salt": "rounds=53501$goodsalt",
             "badsalt": "badsalt",
         },
         "blowfish": {
-            "hashed": "$2b$12$goodsaltgoodsaltgoodsOaeGcaoZ.j.ugFo3vJZv5uk3W2zf2166",
-            "salt_crypt": "12$goodsaltgoodsaltgoodsa",
-            "salt_passlib": "goodsaltgoodsaltgoodsa",
+            "hashed": "$2b$10$goodsaltgoodsaltgoodsObFfGrJwfV.13QddrZIh2w1ccESmvj8K",
+            "salt": "10$goodsaltgoodsaltgoodsa",
             "badsalt": "badsaltbadsaltbadsaltb",
         },
         "md5": {
@@ -43,7 +40,7 @@ class PycryptoTestCase(TestCase):
         },
         "crypt": {"hashed": "goVHulDpuGA7w", "salt": "go", "badsalt": "ba"},
     }
-    invalid_salt = "thissaltistoolongthissaltistoolongthissaltistoolongthissaltistoolongthissaltistoolong"
+    invalid_salt = "thissaltistoolong" * 10
 
     @skipIf(not salt.utils.pycrypto.HAS_CRYPT, "crypt not available")
     def test_gen_hash_crypt(self):
@@ -55,9 +52,7 @@ class PycryptoTestCase(TestCase):
         for algorithm in methods:
             expected = self.expecteds[algorithm]
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected.get("salt") or expected["salt_crypt"],
-                password=self.passwd,
-                algorithm=algorithm,
+                crypt_salt=expected["salt"], password=self.passwd, algorithm=algorithm,
             )
             self.assertEqual(ret, expected["hashed"])
 
@@ -73,22 +68,14 @@ class PycryptoTestCase(TestCase):
             )
             self.assertNotEqual(ret, expected["hashed"])
 
-        with self.assertRaises(ValueError):
-            ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt="long", password=self.passwd, algorithm="crypt"
-            )
-
-        with self.assertRaises(SaltInvocationError):
-            salt.utils.pycrypto.gen_hash(algorithm="garbage")
-
         # Assert it works without arguments passed
         self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
+
         # Assert it works without algorithm passed
         default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
         expected = self.expecteds[default_algorithm]
         ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected.get("salt") or expected["salt_crypt"],
-            password=self.passwd,
+            crypt_salt=expected["salt"], password=self.passwd,
         )
         self.assertEqual(ret, expected["hashed"])
 
@@ -104,10 +91,7 @@ class PycryptoTestCase(TestCase):
         for algorithm in methods:
             expected = self.expecteds[algorithm]
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected.get("salt") or expected["salt_passlib"],
-                password=self.passwd,
-                algorithm=algorithm,
-                force=True,
+                crypt_salt=expected["salt"], password=self.passwd, algorithm=algorithm,
             )
             self.assertEqual(ret, expected["hashed"])
 
@@ -115,44 +99,70 @@ class PycryptoTestCase(TestCase):
                 crypt_salt=expected["badsalt"],
                 password=self.passwd,
                 algorithm=algorithm,
-                force=True,
             )
             self.assertNotEqual(ret, expected["hashed"])
 
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=None, password=self.passwd, algorithm=algorithm, force=True
+                crypt_salt=None, password=self.passwd, algorithm=algorithm
             )
             self.assertNotEqual(ret, expected["hashed"])
 
-            with self.assertRaises(ValueError):
-                ret = salt.utils.pycrypto.gen_hash(
-                    crypt_salt=self.invalid_salt,
-                    password=self.passwd,
-                    algorithm=algorithm,
-                    force=True,
-                )
-
-        with self.assertRaises(SaltInvocationError):
-            salt.utils.pycrypto.gen_hash(algorithm="garbage")
-
         # Assert it works without arguments passed
-        self.assertIsNotNone(salt.utils.pycrypto.gen_hash(force=True))
+        self.assertIsNotNone(salt.utils.pycrypto.gen_hash())
+
         # Assert it works without algorithm passed
         default_algorithm = salt.utils.pycrypto.known_methods[0]
         expected = self.expecteds[default_algorithm]
         if default_algorithm in self.expecteds:
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected["salt_passlib"], password=self.passwd, force=True,
+                crypt_salt=expected["salt"], password=self.passwd
             )
             self.assertEqual(ret, expected["hashed"])
 
-    @patch("salt.utils.pycrypto.methods", {})
+    @patch("salt.utils.pycrypto.HAS_CRYPT", False)
+    @patch("salt.utils.pycrypto.HAS_PASSLIB", False)
     def test_gen_hash_no_lib(self):
         """
         test gen_hash with no crypt library available
         """
         with self.assertRaises(SaltInvocationError):
             salt.utils.pycrypto.gen_hash()
+
+    @patch("salt.utils.pycrypto.HAS_CRYPT", True)
+    @patch("salt.utils.pycrypto.methods", {"crypt": None})
+    @patch("salt.utils.pycrypto.HAS_PASSLIB", True)
+    def test_gen_hash_selection(self):
+        """
+        verify the hash backend selection works correctly
+        """
+        with patch("salt.utils.pycrypto._gen_hash_crypt", autospec=True) as gh_crypt:
+            with patch(
+                "salt.utils.pycrypto._gen_hash_passlib", autospec=True
+            ) as gh_passlib:
+                with self.assertRaises(SaltInvocationError):
+                    salt.utils.pycrypto.gen_hash(algorithm="doesntexist")
+
+                salt.utils.pycrypto.gen_hash(algorithm="crypt")
+                gh_crypt.assert_called_once()
+                gh_passlib.assert_not_called()
+
+                gh_crypt.reset_mock()
+                salt.utils.pycrypto.gen_hash(algorithm="sha512")
+                gh_crypt.assert_not_called()
+                gh_passlib.assert_called_once()
+
+    def test_gen_hash_crypt_warning(self):
+        """
+        Verify that a bad crypt salt triggers a warning
+        """
+        with patch("salt.utils.pycrypto.log", autospec=True) as log:
+            try:
+                salt.utils.pycrypto.gen_hash(
+                    crypt_salt="toolong", password=self.passwd, algorithm="crypt"
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+        log.warning.assert_called_with("Hash salt is too long for 'crypt' hash.")
 
     def test_secure_password(self):
         """
