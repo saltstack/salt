@@ -4,7 +4,7 @@
 @echo.
 
 :: Get Passed Parameters
-@echo %0 :: Get Passed Parameters...
+@echo Get Passed Parameters...
 @echo ---------------------------------------------------------------------
 Set "Version="
 Set "Python="
@@ -34,16 +34,17 @@ if "%Version%"=="" (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 )
 
-:: If Python not defined, Assume Python 2
+:: If Python not defined, Assume Python 3
 if "%Python%"=="" (
-    set Python=2
+    set Python=3
 )
 
-:: Verify valid Python value (2 or 3)
+:: Verify valid Python value (3)
+:: We may need to add Python 4 in the future (delims=34)
 set "x="
-for /f "delims=23" %%i in ("%Python%") do set x=%%i
+for /f "delims=3" %%i in ("%Python%") do set x=%%i
 if Defined x (
-    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
+    echo Invalid Python Version specified. Must be 3. Passed %Python%
     goto eof
 )
 @echo.
@@ -51,14 +52,15 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==2 (
-    Set "PyDir=C:\Python27"
-    Set "PyVerMajor=2"
+if %Python%==3 (
+    Set "PyDir=C:\Python37"
+    Set "PyVerMajor=3"
     Set "PyVerMinor=7"
 ) else (
-    Set "PyDir=C:\Python35"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=5"
+    :: Placeholder for future version
+    :: Set "PyDir=C:\Python4"
+    :: Set "PyVerMajor=0"
+    :: Set "PyVerMinor=0"
 )
 
 :: Verify the Python Installation
@@ -132,9 +134,6 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: Skip KB2999226 if on Py3
-If %Python%==2 goto get_vcredist
-
 :: For PY 3, include KB2999226
 @echo Copying KB2999226 to Prerequisites
 @echo ----------------------------------------------------------------------
@@ -179,25 +178,6 @@ powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
 @echo - Downloading %Name81%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
-
-goto prereq_end
-
-:: For PY 2, include VCRedist
-:get_vcredist
-@echo Copying VCRedist to Prerequisites
-@echo ----------------------------------------------------------------------
-
-:: Set the location of the vcredist to download
-Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-
-:: Check for 64 bit by finding the Program Files (x86) directory
-If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
-) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
-)
-@echo.
 
 :prereq_end
 

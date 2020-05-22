@@ -93,7 +93,7 @@ the ``-M`` and ``-N`` flags:
 Installing Using PyPI
 =====================
 
-Installing from the source archive on `PyPI <https://pypi.python.org/pypi>`_
+Installing from the source archive on `PyPI <https://pypi.org/>`_
 is fairly straightforward.
 
 .. note::

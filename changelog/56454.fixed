@@ -1,0 +1,1 @@
+Better handle virt.pool_rebuild in virt.pool_running and virt.pool_defined states

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Directly manage the Salt fileserver plugins
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
@@ -9,7 +9,7 @@ import salt.fileserver
 
 
 def envs(backend=None, sources=False):
-    '''
+    """
     Return the available fileserver environments. If no backend is provided,
     then the environments for all configured backends will be returned.
 
@@ -34,13 +34,13 @@ def envs(backend=None, sources=False):
         salt-run fileserver.envs
         salt-run fileserver.envs backend=roots,git
         salt-run fileserver.envs git
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
     return sorted(fileserver.envs(back=backend, sources=sources))
 
 
 def clear_file_list_cache(saltenv=None, backend=None):
-    '''
+    """
     .. versionadded:: 2016.11.0
 
     The Salt fileserver caches the files/directories/symlinks for each
@@ -141,14 +141,14 @@ def clear_file_list_cache(saltenv=None, backend=None):
         salt-run fileserver.clear_file_list_cache saltenv=base backend=roots
         # Clear all file list caches from the 'roots' fileserver backend
         salt-run fileserver.clear_file_list_cache backend=roots
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv, 'fsbackend': backend}
+    load = {"saltenv": saltenv, "fsbackend": backend}
     return fileserver.clear_file_list_cache(load=load)
 
 
-def file_list(saltenv='base', backend=None):
-    '''
+def file_list(saltenv="base", backend=None):
+    """
     Return a list of files from the salt fileserver
 
     saltenv : base
@@ -187,14 +187,14 @@ def file_list(saltenv='base', backend=None):
         salt-run fileserver.file_list saltenv=dev backend=git
         salt-run fileserver.file_list base hg,roots
         salt-run fileserver.file_list -git
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv, 'fsbackend': backend}
+    load = {"saltenv": saltenv, "fsbackend": backend}
     return fileserver.file_list(load=load)
 
 
-def symlink_list(saltenv='base', backend=None):
-    '''
+def symlink_list(saltenv="base", backend=None):
+    """
     Return a list of symlinked files and dirs
 
     saltenv : base
@@ -233,14 +233,14 @@ def symlink_list(saltenv='base', backend=None):
         salt-run fileserver.symlink_list saltenv=dev backend=git
         salt-run fileserver.symlink_list base hg,roots
         salt-run fileserver.symlink_list -git
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv, 'fsbackend': backend}
+    load = {"saltenv": saltenv, "fsbackend": backend}
     return fileserver.symlink_list(load=load)
 
 
-def dir_list(saltenv='base', backend=None):
-    '''
+def dir_list(saltenv="base", backend=None):
+    """
     Return a list of directories in the given environment
 
     saltenv : base
@@ -279,14 +279,14 @@ def dir_list(saltenv='base', backend=None):
         salt-run fileserver.dir_list saltenv=dev backend=git
         salt-run fileserver.dir_list base hg,roots
         salt-run fileserver.dir_list -git
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv, 'fsbackend': backend}
+    load = {"saltenv": saltenv, "fsbackend": backend}
     return fileserver.dir_list(load=load)
 
 
-def empty_dir_list(saltenv='base', backend=None):
-    '''
+def empty_dir_list(saltenv="base", backend=None):
+    """
     .. versionadded:: 2015.5.0
 
     Return a list of empty directories in the given environment
@@ -316,14 +316,14 @@ def empty_dir_list(saltenv='base', backend=None):
         salt-run fileserver.empty_dir_list
         salt-run fileserver.empty_dir_list saltenv=prod
         salt-run fileserver.empty_dir_list backend=roots
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv, 'fsbackend': backend}
+    load = {"saltenv": saltenv, "fsbackend": backend}
     return fileserver.file_list_emptydirs(load=load)
 
 
 def update(backend=None):
-    '''
+    """
     Update the fileserver cache. If no backend is provided, then the cache for
     all configured backends will be updated.
 
@@ -347,14 +347,14 @@ def update(backend=None):
 
         salt-run fileserver.update
         salt-run fileserver.update backend=roots,git
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
     fileserver.update(back=backend)
     return True
 
 
 def clear_cache(backend=None):
-    '''
+    """
     .. versionadded:: 2015.5.0
 
     Clear the fileserver cache from VCS fileserver backends (:mod:`git
@@ -378,21 +378,21 @@ def clear_cache(backend=None):
         salt-run fileserver.clear_cache backend=git,hg
         salt-run fileserver.clear_cache hg
         salt-run fileserver.clear_cache -roots
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
     cleared, errors = fileserver.clear_cache(back=backend)
     ret = {}
     if cleared:
-        ret['cleared'] = cleared
+        ret["cleared"] = cleared
     if errors:
-        ret['errors'] = errors
+        ret["errors"] = errors
     if not ret:
-        return 'No cache was cleared'
+        return "No cache was cleared"
     return ret
 
 
 def clear_lock(backend=None, remote=None):
-    '''
+    """
     .. versionadded:: 2015.5.0
 
     Clear the fileserver update lock from VCS fileserver backends (:mod:`git
@@ -419,21 +419,21 @@ def clear_lock(backend=None, remote=None):
         salt-run fileserver.clear_lock backend=git,hg
         salt-run fileserver.clear_lock backend=git remote=github
         salt-run fileserver.clear_lock remote=bitbucket
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
     cleared, errors = fileserver.clear_lock(back=backend, remote=remote)
     ret = {}
     if cleared:
-        ret['cleared'] = cleared
+        ret["cleared"] = cleared
     if errors:
-        ret['errors'] = errors
+        ret["errors"] = errors
     if not ret:
-        return 'No locks were removed'
+        return "No locks were removed"
     return ret
 
 
 def lock(backend=None, remote=None):
-    '''
+    """
     .. versionadded:: 2015.5.0
 
     Set a fileserver update lock for VCS fileserver backends (:mod:`git
@@ -461,14 +461,14 @@ def lock(backend=None, remote=None):
         salt-run fileserver.lock backend=git,hg
         salt-run fileserver.lock backend=git remote='*github.com*'
         salt-run fileserver.lock remote=bitbucket
-    '''
+    """
     fileserver = salt.fileserver.Fileserver(__opts__)
     locked, errors = fileserver.lock(back=backend, remote=remote)
     ret = {}
     if locked:
-        ret['locked'] = locked
+        ret["locked"] = locked
     if errors:
-        ret['errors'] = errors
+        ret["errors"] = errors
     if not ret:
-        return 'No locks were set'
+        return "No locks were set"
     return ret

@@ -1,47 +1,56 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Beacon to fire event when we notice a AIX user is locked due to many failed login attempts.
 
 .. versionadded:: 2018.3.0
 
 :depends: none
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals
+
 import logging
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'aix_account'
+__virtualname__ = "aix_account"
 
 
 def __virtual__():
-    '''
+    """
     Only load if kernel is AIX
-    '''
-    if __grains__['kernel'] == ('AIX'):
+    """
+    if __grains__["kernel"] == ("AIX"):
         return __virtualname__
 
-    return (False, 'The aix_account beacon module failed to load: '
-                   'only available on AIX systems.')
+    return (
+        False,
+        "The aix_account beacon module failed to load: "
+        "only available on AIX systems.",
+    )
 
 
 def validate(config):
-    '''
+    """
     Validate the beacon configuration
-    '''
+    """
     # Configuration for aix_account beacon should be a dictionary
     if not isinstance(config, dict):
-        return False, ('Configuration for aix_account beacon must be a dict.')
-    if 'user' not in config:
-        return False, ('Configuration for aix_account beacon must '
-                       'include a user or ALL for all users.')
-    return True, 'Valid beacon configuration'
+        return False, ("Configuration for aix_account beacon must be a dict.")
+    if "user" not in config:
+        return (
+            False,
+            (
+                "Configuration for aix_account beacon must "
+                "include a user or ALL for all users."
+            ),
+        )
+    return True, "Valid beacon configuration"
 
 
 def beacon(config):
-    '''
+    """
     Checks for locked accounts due to too many invalid login attempts, 3 or higher.
 
     .. code-block:: yaml
@@ -51,13 +60,13 @@ def beacon(config):
             user: ALL
             interval: 120
 
-    '''
+    """
 
     ret = []
 
-    user = config['user']
+    user = config["user"]
 
-    locked_accounts = __salt__['shadow.login_failures'](user)
-    ret.append({'accounts': locked_accounts})
+    locked_accounts = __salt__["shadow.login_failures"](user)
+    ret.append({"accounts": locked_accounts})
 
     return ret
