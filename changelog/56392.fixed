@@ -1,0 +1,1 @@
+Fixed issue with exeption being raised on `virt._get_domain` when there's no VM.

@@ -1,0 +1,1 @@
+Fallback to ASCII sorting when pillar keys are integers.

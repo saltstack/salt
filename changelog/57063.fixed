@@ -1,0 +1,1 @@
+Fixed error with `fileserver.update` failing with `gitfs` backend was `git`, and `fileserver.clear_file_list_cache` not clearing gitfs cache when the backend was *not* `git`.

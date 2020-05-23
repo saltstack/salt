@@ -1,0 +1,1 @@
+Fixed issue with `raid.destroy` when zero-superblock is not executed.

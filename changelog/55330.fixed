@@ -1,0 +1,1 @@
+Fixed error trying to treat binary files as text when doing spm install under Python 3.

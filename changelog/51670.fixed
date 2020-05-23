@@ -1,0 +1,1 @@
+Fixed `extract_hash` to use the correct value.

@@ -1,0 +1,1 @@
+Fixed opkg install/remove to return potential changes, rather than always an empty dictionary.

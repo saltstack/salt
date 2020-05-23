@@ -1,0 +1,1 @@
+Now provides a more meaningful error for `win_groupadd` for unmapped accounts.

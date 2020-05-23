@@ -1,0 +1,1 @@
+Re-added `onfail_all`, fixed onfail always triggering with other reqs, and onfail and onchanges not working when both present.

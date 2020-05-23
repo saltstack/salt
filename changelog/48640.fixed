@@ -1,0 +1,1 @@
+Fixed failure in `user.present` when `gid_from_name` is True. Argument was removed and replaced by the `usergroup` argument.

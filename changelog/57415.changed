@@ -1,0 +1,1 @@
+Use Python's hashlib (sha256) instead of shelling out (SipHash24) to generate server_id.

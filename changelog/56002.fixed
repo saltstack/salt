@@ -1,0 +1,1 @@
+Fixed `seed.apply` not waiting for the disk to be free.

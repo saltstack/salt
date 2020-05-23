@@ -1,0 +1,1 @@
+Add vcredist_2013 (specifically msvcr120.dll) for OpenSSL/M2Crypto support on Windows. Fixes x509 module support.

@@ -1,0 +1,1 @@
+Fixed hard failure if `chocolately.installed` is for a non-existent package.

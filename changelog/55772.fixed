@@ -1,0 +1,1 @@
+Fixed failure to cache gpg data when `gpg_cache=True`.

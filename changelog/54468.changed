@@ -1,0 +1,1 @@
+Use lazy loading to get SLS data from master - significantly improves `state.apply` times when using gitfs with many branches.

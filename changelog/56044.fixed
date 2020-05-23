@@ -1,0 +1,1 @@
+Fixed `shadow.set_password` failing to set password when user isn't in `/etc/shadow`.
