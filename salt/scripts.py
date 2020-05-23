@@ -109,7 +109,7 @@ def salt_master():
 
         # Message borrowed from pip's deprecation warning
         warn_until(
-            "3001",
+            "Sodium",
             "Python 2.7 will reach the end of its life on January 1st,"
             " 2020. Please upgrade your Python as Python 2.7 won't be"
             " maintained after that date.  Salt will drop support for"
@@ -218,7 +218,7 @@ def salt_minion():
 
         # Message borrowed from pip's deprecation warning
         warn_until(
-            "3001",
+            "Sodium",
             "Python 2.7 will reach the end of its life on January 1st,"
             " 2020. Please upgrade your Python as Python 2.7 won't be"
             " maintained after that date.  Salt will drop support for"
