@@ -134,6 +134,7 @@ from salt.ext.six.moves import range
 try:
     import salt.utils.etcd_util
     from salt.utils.etcd_util import etcd
+
     HAS_LIBS = True
 
 except ImportError:
@@ -424,7 +425,9 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         "sdstack_etcd returner <save_minions> adding minions {syndics:s} for job {jid:s} to {path:s}".format(
             jid=jid,
             path=jobp,
-            syndics="" if syndic_id is None else " from syndic {0}".format(syndic_id),
+            syndics=""
+            if syndic_id is None
+            else " from syndic {0}".format(syndic_id),
         )
     )
 
@@ -443,7 +446,8 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
                 jid=jid,
                 path=minionp,
                 minion=minion,
-                syndics="" if syndic_id is None
+                syndics=""
+                if syndic_id is None
                 else " from syndic {0}".format(syndic_id),
             )
         )
@@ -625,7 +629,9 @@ def _purge_events():
     # Try and read the event cache directory. If we have a missing key exception then no
     # events have been cached and so we can simply leave.
     log.trace(
-        "sdstack_etcd returner <_purge_events> reading event cache at {path:s}".format(path=cachep)
+        "sdstack_etcd returner <_purge_events> reading event cache at {path:s}".format(
+            path=cachep
+        )
     )
     try:
         cache = client.read(cachep)
@@ -883,7 +889,11 @@ def get_load(jid):
             )
         )
         return None
-    log.debug("sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}".format(jid=jid, path=res.key, data=res.value))
+    log.debug(
+        "sdstack_etcd returner <get_load> found load data for job {jid:s} at {path:s} with value {data}".format(
+            jid=jid, path=res.key, data=res.value
+        )
+    )
     return salt.utils.json.loads(res.value)
 
 
@@ -1193,7 +1203,7 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache=False, passed_jid=None):   # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):    # pylint: disable=unused-argument
     """
     Do any work necessary to prepare a JID, including sending a custom id.
     """
