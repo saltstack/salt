@@ -425,9 +425,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         "sdstack_etcd returner <save_minions> adding minions {syndics:s} for job {jid:s} to {path:s}".format(
             jid=jid,
             path=jobp,
-            syndics=""
-            if syndic_id is None
-            else " from syndic {0}".format(syndic_id),
+            syndics="" if syndic_id is None else " from syndic {0}".format(syndic_id),
         )
     )
 
@@ -465,7 +463,8 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
                     minion=minion,
                     jid=jid,
                     path=node.key,
-                    syndics="" if syndic_id is None
+                    syndics=""
+                    if syndic_id is None
                     else " from syndic {0}".format(syndic_id),
                 )
             )
@@ -560,7 +559,11 @@ def _purge_jobs():
     try:
         jobs = client.read(jobp)
     except etcd.EtcdKeyNotFound as E:
-        log.debug("sdstack_etcd returner <_purge_jobs> no jobs were found at {path:s}".format(path=jobp))
+        log.debug(
+            "sdstack_etcd returner <_purge_jobs> no jobs were found at {path:s}".format(
+                path=jobp
+            )
+        )
         return 0
 
     # Iterate through all of the children at our job path while looking for
@@ -1203,7 +1206,7 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache=False, passed_jid=None):    # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     """
     Do any work necessary to prepare a JID, including sending a custom id.
     """
