@@ -1,1 +1,0 @@
-Fixed issue with incorrect msgpack version string check.

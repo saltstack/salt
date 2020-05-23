@@ -1,1 +1,0 @@
-selinux.fcontext_add_or_delete_policy module removed - use selinux.fcontext_add_policy or selinux.fcontext_delete_pollicy instead.

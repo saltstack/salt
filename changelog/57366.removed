@@ -1,1 +1,0 @@
-Deprecated `refresh_db` removed from pkgrepo state. Use `refresh` instead.

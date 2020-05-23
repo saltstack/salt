@@ -1,1 +1,0 @@
-Fixed error when trying to delete more than one key using `ini.options_absent`.

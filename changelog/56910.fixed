@@ -1,1 +1,0 @@
-Fixed `hwaddr` and `macaddr` not being added to RedHat network config, even if they were provided.

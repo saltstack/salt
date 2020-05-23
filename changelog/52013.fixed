@@ -1,1 +1,0 @@
-Fixed proxy module for Windows by using `__utils__` instead of `__salt__` for code that accesses the registry.

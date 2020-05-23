@@ -1,1 +1,0 @@
-`fetchonly` parameter added for `pkg.upgrade` when using `pkgng` (FreeBSD).

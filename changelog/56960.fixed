@@ -1,1 +1,0 @@
-OpenStack driver can now attach to multiple networks, also now respects provided `conn`.

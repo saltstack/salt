@@ -1,1 +1,0 @@
-Fixed `reg.present` to respect `(Default)` REG_SZ value of an empty string.

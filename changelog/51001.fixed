@@ -1,1 +1,0 @@
-Allows clone_from setting in proxmox salt-cloud to be able to be an integer.

@@ -1,1 +1,0 @@
-Fixed error leaving an empty first line on `.ini` file edits.

@@ -1,1 +1,0 @@
-Added ability to turn off FQDNs grains with `enable_fqdns_grains: False`.

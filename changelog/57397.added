@@ -1,1 +1,0 @@
-Added `efi` parameter to virt module, so `uefi` firmware can be auto selected.

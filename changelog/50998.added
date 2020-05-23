@@ -1,1 +1,0 @@
-Added advanced initdb option support to `postgres_cluster.present`.

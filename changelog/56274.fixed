@@ -1,1 +1,0 @@
-Added salt-api log file to log rotation to prevent filling up the disk.

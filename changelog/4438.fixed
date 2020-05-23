@@ -1,1 +1,0 @@
-`pkgrepo.managed` now checks for a changed `key_url`.

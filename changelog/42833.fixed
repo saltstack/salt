@@ -1,1 +1,0 @@
-Changed error message on `postgres_database.absent` to report correct error when database is in use.

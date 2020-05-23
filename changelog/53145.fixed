@@ -1,1 +1,0 @@
-Use correct output in `zpool.present` when `test=true`.

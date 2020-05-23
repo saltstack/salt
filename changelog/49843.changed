@@ -1,1 +1,0 @@
-`file.rename` no longer returns False when `force:False`.

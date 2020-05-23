@@ -1,1 +1,0 @@
-Added default argumetn to `vault.read_secret` and `vault.list_secrets`.

@@ -1,1 +1,0 @@
-Fixed issue when Vultr API returns "not supported" as default password during VM setup.

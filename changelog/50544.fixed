@@ -1,1 +1,0 @@
-Fixed `pycrypto.gen_hash` to use strongest available `algorithm` by default.

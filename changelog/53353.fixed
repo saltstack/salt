@@ -1,1 +1,0 @@
-Fixed issue with encoding/decoding on circular references, discovered with iptables when `state_aggregate` was enabled.

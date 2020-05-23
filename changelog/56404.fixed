@@ -1,1 +1,0 @@
-Fixed keyword mismatch with `cassandra_cql` and `cassandra_cql_return`.

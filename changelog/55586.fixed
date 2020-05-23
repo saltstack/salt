@@ -1,1 +1,0 @@
-Fixed traceback on `http.query` when errors with the URL.

@@ -1,1 +1,0 @@
-Fixed `check_password` for newer RabbitMQ versions.

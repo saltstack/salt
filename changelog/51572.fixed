@@ -1,1 +1,0 @@
-Fixed error handling for route53 to ignore `SignatureDoesNotMatch` errors (which cannot be retried).

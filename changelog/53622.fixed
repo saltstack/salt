@@ -1,1 +1,0 @@
-Changed to match repo paramter against repo name on `salt-run git_pillar.update`, so remote name can be used instead of full remote URL.

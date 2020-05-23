@@ -1,1 +1,0 @@
-Changed to use Salt's CaseInsensitiveDict, so it can be msgpack serialized.
