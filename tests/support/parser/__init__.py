@@ -464,7 +464,8 @@ class SaltTestingParser(optparse.OptionParser):
                 if match.group(1) == "salt/":
                     if comps[-1] == "__init__.py":
                         comps.pop(-1)
-                        comps[-1] = "test_" + comps[-1]
+                        if comps:
+                            comps[-1] = "test_" + comps[-1]
                     else:
                         comps[-1] = "test_{0}".format(comps[-1][:-3])
 
