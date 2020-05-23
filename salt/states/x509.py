@@ -643,6 +643,16 @@ def certificate_managed(
         return _certificate_file_managed(ret, file_args)
 
     if __opts__["test"]:
+        file_args, extra_args = _get_file_args(name, **kwargs)
+        # Use empty contents for file.managed in test mode.
+        # We don't want generate a new certificate, even in memory,
+        # for security reasons.
+        # Using an empty string instead of omitting it will at least
+        # show the old certificate in the diff.
+        file_args["contents"] = ""
+
+        ret = _certificate_file_managed(ret, file_args)
+
         ret["result"] = None
         ret["comment"] = "Certificate {0} will be created".format(name)
         ret["changes"]["Status"] = {
