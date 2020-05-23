@@ -9,6 +9,7 @@ import textwrap
 import salt.modules.pkgng as pkgng
 
 # Import Salt Testing Libs
+from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -284,7 +285,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package without arguments
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -312,7 +313,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with local=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -340,7 +341,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with fromrepo=FreeBSD argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -376,7 +377,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with glob=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -404,7 +405,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with reinstall_requires=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -432,7 +433,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with regex=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -460,7 +461,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with batch=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -488,7 +489,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with pcre=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
@@ -516,7 +517,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         Test pkg.install to install a package with orphan=True argument
         """
         parsed_targets = (
-            {"gettext-runtime": None, "p5-Mojolicious": None},
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
             "repository",
         )
         pkg_cmd = MagicMock(return_value={"retcode": 0})
