@@ -102,12 +102,10 @@ def trim_dict(
                         return data
             except ValueError:
                 pass
-        if is_msgpacked:
-            if use_bin_type:
-                return serializer.dumps(data, use_bin_type=True)
-            else:
-                return serializer.dumps(data)
+    if is_msgpacked:
+        if use_bin_type:
+            return serializer.dumps(data, use_bin_type=True)
         else:
-            return data
+            return serializer.dumps(data)
     else:
         return data
