@@ -222,7 +222,7 @@ def send(
     """
     if "async" in kwargs:  # Remove this in 3001
         salt.utils.versions.warn_until(
-            "3001",
+            "Sodium",
             'Parameter "async" is renamed to "asynchronous" '
             "and will be removed in version {version}.",
         )
