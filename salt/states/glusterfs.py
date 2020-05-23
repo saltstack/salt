@@ -124,6 +124,8 @@ def volume_present(
     start=False,
     force=False,
     arbiter=False,
+    disperse=False,
+    redundancy=False,
 ):
     """
     Ensure that the volume exists
@@ -141,6 +143,16 @@ def volume_present(
         use every third brick as arbiter (metadata only)
 
         .. versionadded:: 2019.2.0
+
+    disperse
+        brick count for disperse set
+
+        .. versionadded:: neon
+
+    redundancy
+        number of redundant bricks for disperse set
+
+        .. versionadded:: neon
 
     start
         ensure that the volume is also started
@@ -173,6 +185,17 @@ def volume_present(
             - arbiter: True
             - start: True
 
+        Disperse Volume with specified redundancy:
+          glusterfs.volume_present:
+            - name: volume4
+            - bricks:
+              - host1:/srv/gluster/drive5
+              - host2:/srv/gluster/drive6
+              - host3:/srv/gluster/drive7
+            - disperse: 3
+            - redundancy: 1
+            - start: True
+
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": False}
 
@@ -191,7 +214,7 @@ def volume_present(
             return ret
 
         vol_created = __salt__["glusterfs.create_volume"](
-            name, bricks, stripe, replica, device_vg, transport, start, force, arbiter
+            name, bricks, stripe, replica, device_vg, transport, start, force, arbiter, disperse, redundancy
         )
 
         if not vol_created:
