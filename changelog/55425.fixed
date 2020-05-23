@@ -1,1 +1,0 @@
-Fixed `config_data` parameter when compiling DSC via `win_dsc` module.

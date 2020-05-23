@@ -1,1 +1,0 @@
-Fixed broken sdb.get_or_set_hash when using Hashicorp's Vault.

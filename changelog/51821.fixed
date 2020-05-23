@@ -1,1 +1,0 @@
-`fail_with` and `succeed_with` now correctly use `comment` argument.

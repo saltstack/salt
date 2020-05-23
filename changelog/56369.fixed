@@ -1,1 +1,0 @@
-Fixed vendored tornado to use `salt.ext.backports_abc`.

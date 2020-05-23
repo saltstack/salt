@@ -1,1 +1,0 @@
-Brought localclient command line args functionality into line with regular `salt` calls.

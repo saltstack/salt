@@ -1,1 +1,0 @@
-Fixed `aptpkg` to use `force-confnew` on it's own, and `force-confold` with `force-confdef`.

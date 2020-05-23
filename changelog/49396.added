@@ -1,1 +1,0 @@
-Added slsutil.banner for creating managed by salt message in files, and `slsutil.boolstr` for converting Pillar bool values to appropriate string representation.

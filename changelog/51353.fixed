@@ -1,1 +1,0 @@
-salt-ssh no longer ignores pillar argument on `state.sls_id`.

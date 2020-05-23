@@ -1,1 +1,0 @@
-Added `win_wua.installed` to check a list of updates that apply to the current Windows build.

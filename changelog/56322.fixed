@@ -1,1 +1,0 @@
-Fixed failure for returner only working via cli and not LocalClient.

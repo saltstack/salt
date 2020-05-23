@@ -1,1 +1,0 @@
-Added support for ipaddr/ipv6ipaddrs, loopback devices, dns_nameservers/dns_serach lists or strings, and multiple addresses per interface.

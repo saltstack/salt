@@ -1,1 +1,0 @@
-Fixed incorrect handling of `renew=force` by `acme.cert` function.

@@ -1,1 +1,0 @@
-Properly handle multibyte characters that span blocks of data.
