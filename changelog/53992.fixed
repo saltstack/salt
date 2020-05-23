@@ -1,0 +1,1 @@
+Fixed error with cmd.run when run in a chroot environment.

@@ -1,0 +1,1 @@
+Add `fat` as a valid `fs_type` for `parted` module.

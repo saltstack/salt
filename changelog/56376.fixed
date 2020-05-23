@@ -1,0 +1,1 @@
+Fixed error doing a `pip install salt` on Windows.

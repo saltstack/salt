@@ -1,0 +1,1 @@
+Now `__salt__` is automatically refreshed when a package is `pip` installed, allowing pip installing a dependency and using that dependency in the same state run.

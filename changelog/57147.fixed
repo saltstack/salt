@@ -1,0 +1,1 @@
+Fixed `acl.present` to properly detect changes for default ACLs and recursive folders.

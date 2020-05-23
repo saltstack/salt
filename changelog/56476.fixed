@@ -1,0 +1,1 @@
+Fixed infinite recursion in `pkg.group_info`.

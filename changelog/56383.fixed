@@ -1,0 +1,1 @@
+Fixed issue `toxml` error in `virt.cpu_baseline`.

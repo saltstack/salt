@@ -1,0 +1,1 @@
+Added support for list in `include_pat/exclude_pat` in `file.recurse`.

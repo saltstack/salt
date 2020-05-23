@@ -1,0 +1,1 @@
+Added support for extra modules that will be loaded before checking the rest of the path.

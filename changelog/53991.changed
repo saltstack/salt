@@ -1,0 +1,1 @@
+No longer emit extra logs when checking `alternatives.display` and `.check_exists`.

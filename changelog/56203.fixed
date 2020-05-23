@@ -1,0 +1,1 @@
+Fixed timeout parameter not being passed to cmd_subset and cmd_batch, and misnamed (sub -> subset) parameter.

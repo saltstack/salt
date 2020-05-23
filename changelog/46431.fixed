@@ -1,0 +1,1 @@
+Log error when reactor tasks go to a full queue instead of silently fail.

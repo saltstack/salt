@@ -1,0 +1,1 @@
+Fixed LazyLoader crashing when using ssh client via salt-api.

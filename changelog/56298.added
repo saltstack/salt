@@ -1,0 +1,1 @@
+Added `state.test` as an alias for `state.apply ... test=True`.

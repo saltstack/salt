@@ -1,0 +1,1 @@
+Avoid throwing exception for missing security group in boto under test mode.

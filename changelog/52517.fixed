@@ -1,0 +1,1 @@
+Fixed issue with `artifactory` not correctly evaluating `has_classifier` first.

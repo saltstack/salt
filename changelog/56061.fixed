@@ -1,0 +1,1 @@
+Fixed failure in `user` state when moving the user's default group into the `groups` arg.

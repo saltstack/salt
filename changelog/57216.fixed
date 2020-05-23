@@ -1,0 +1,1 @@
+Fix `ps.top` failures on macOS when iterating over zombie processes.

@@ -1,0 +1,1 @@
+Fixed issue that ignored `trim_output` argument intermittently.

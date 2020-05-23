@@ -1,0 +1,1 @@
+Significantly improve call times by only checking one frame in `depends`.

@@ -1,0 +1,1 @@
+Added support for virtualenv>=20.0.0 `--version` strings.

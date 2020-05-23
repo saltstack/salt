@@ -1,0 +1,1 @@
+Fixed issue with file.line doing a partial comparison to determine replacement need, instead compare actual content of lines.

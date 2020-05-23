@@ -1,0 +1,1 @@
+Fixed `postfix.show_queue` issue where queue_id, size, timestamp, sender, and recipient must exist before trying to append them.

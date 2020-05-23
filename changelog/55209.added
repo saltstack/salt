@@ -1,0 +1,1 @@
+Added btrfs and xfs as valid fstypes for parted and mkfs.
