@@ -540,6 +540,8 @@ class CMDModuleTest(ModuleCase):
             user = RUNTIME_VARS.RUNTIME_CONFIGS["master"]["user"]
         else:
             user = salt.utils.user.get_specific_user()
+        if user.startswith("sudo_"):
+            user = user.replace("sudo_", "")
         cmd = self.run_function("cmd.run", ["whoami"])
         self.assertEqual(user.lower(), cmd.lower())
 
