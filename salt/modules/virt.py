@@ -2268,10 +2268,17 @@ def update(
 
         Refer to :ref:`init-boot-def` for the complete boot parameter description.
 
-        To update any boot parameters, specify the new path for each. To remove any boot parameters,
-        pass a None object, for instance: 'kernel': ``None``.
+        To update any boot parameters, specify the new path for each. To remove any boot parameters, pass ``None`` object,
+        for instance: 'kernel': ``None``. To switch back to BIOS boot, specify ('loader': ``None`` and 'nvram': ``None``)
+        or 'efi': ``False``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
 
-        To switch back to BIOS boot, specify ('loader': ``None`` and 'nvram': ``None``)  or 'efi': ``False``
+        SLS file Example:
+
+        .. code-block:: yaml
+
+            - boot:
+                loader: null
+                nvram: null
 
         .. versionadded:: 3000
 
@@ -2365,7 +2372,7 @@ def update(
             # If the existing tag is found, but the new value is None
             # remove it. If the existing tag is found, and the new value
             # doesn't match update it. In either case, mark for update.
-            if boot_tag_value == "None" and boot is not None and parent_tag is not None:
+            if boot_tag_value is None and boot is not None and parent_tag is not None:
                 parent_tag.remove(found_tag)
             else:
                 found_tag.text = boot_tag_value
