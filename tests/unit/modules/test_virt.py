@@ -864,12 +864,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.mock_conn,
                 None,
                 "kvm",
-                [{"name": "mydisk", "device": "cdrom"}],
+                [
+                    {
+                        "name": "mydisk",
+                        "device": "cdrom",
+                        "source_file": "/path/to/my.iso",
+                    }
+                ],
                 "hello",
             )
 
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["model"], "ide")
+            self.assertEqual(diskp[0]["format"], "raw")
 
     def test_disk_profile_pool_disk_type(self):
         """

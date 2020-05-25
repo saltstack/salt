@@ -1283,7 +1283,9 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
         if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
             if not disk.get("format"):
-                disk["format"] = "qcow2"
+                disk["format"] = (
+                    "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
+                )
         elif disk.get("device", "disk") == "disk":
             _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
