@@ -2475,12 +2475,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         kernel_none = {
-            "kernel": "None",
-            "initrd": "None",
-            "cmdline": "None",
+            "kernel": None,
+            "initrd": None,
+            "cmdline": None,
         }
 
-        uefi_none = {"loader": "None", "nvram": "None"}
+        uefi_none = {"loader": None, "nvram": None}
 
         self.assertEqual(
             {
