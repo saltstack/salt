@@ -206,6 +206,36 @@ class TestRun(cptc.BaseRestCherryPyTest):
         self.assertEqual(response.status, '200 OK')
 
 
+class TestFlush(cptc.BaseRestCherryPyTest):
+    auth_creds = (
+        ('username','saltdev_auto'),
+        ('password','saltdev'),
+        ('eauth','auto')
+    )
+
+    @property
+    def _token(self):
+        '''
+        Return the token
+        '''
+        body = urlencode(self.auth_creds)
+        request, response = self.request(
+            '/login',
+            method='POST',
+            body=body,
+            headers={'content-type': 'application/x-www-form-urlencoded'}
+        )
+        return response.headers['X-Auth-Token']
+
+    def test_flush(self):
+        request, response = self.request(
+            '/flush',
+            method='GET',
+            headers={'Accept': 'application/json','X-Auth-Token': self._token}
+        )
+        self.assertEqual(response.status, '200 OK')
+
+
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
 
     def __get_opts__(self):
