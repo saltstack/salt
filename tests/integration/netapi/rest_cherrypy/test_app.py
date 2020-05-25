@@ -228,6 +228,9 @@ class TestFlush(cptc.BaseRestCherryPyTest):
         return response.headers['X-Auth-Token']
 
     def test_flush(self):
+        '''
+        Test flush url
+        '''
         request, response = self.request(
             '/flush',
             method='GET',
