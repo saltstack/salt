@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon Kinesis
 
 .. versionadded:: 2017.7.0
@@ -41,27 +41,30 @@ Connection module for Amazon Kinesis
 
 :depends: boto3
 
-'''
+"""
 # keep lint from choking on _get_conn
 # pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
-import time
 import random
 import sys
+import time
+
+import salt.utils.versions
 
 # Import Salt libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-import salt.utils.versions
 
 # Import third party libs
 # pylint: disable=unused-import
 try:
     import boto3
     import botocore
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -69,60 +72,66 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'boto_kinesis'
+__virtualname__ = "boto_kinesis"
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto3 libraries exist.
-    '''
+    """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        __utils__['boto3.assign_funcs'](__name__, 'kinesis')
+        __utils__["boto3.assign_funcs"](__name__, "kinesis")
         return __virtualname__
     return has_boto_reqs
 
 
 def _get_basic_stream(stream_name, conn):
-    '''
+    """
     Stream info from AWS, via describe_stream
     Only returns the first "page" of shards (up to 100); use _get_full_stream() for all shards.
 
     CLI example::
 
         salt myminion boto_kinesis._get_basic_stream my_stream existing_conn
-    '''
+    """
     return _execute_with_retries(conn, "describe_stream", StreamName=stream_name)
 
 
 def _get_full_stream(stream_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Get complete stream info from AWS, via describe_stream, including all shards.
 
     CLI example::
 
         salt myminion boto_kinesis._get_full_stream my_stream region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
-    stream = _get_basic_stream(stream_name, conn)['result']
+    stream = _get_basic_stream(stream_name, conn)["result"]
     full_stream = stream
 
     # iterate through if there are > 100 shards (max that AWS will return from describe_stream)
     while stream["StreamDescription"]["HasMoreShards"]:
-        stream = _execute_with_retries(conn,
-                                       "describe_stream",
-                                       StreamName=stream_name,
-                                       ExclusiveStartShardId=stream["StreamDescription"]["Shards"][-1]["ShardId"])
-        stream = stream['result']
-        full_stream["StreamDescription"]["Shards"] += stream["StreamDescription"]["Shards"]
+        stream = _execute_with_retries(
+            conn,
+            "describe_stream",
+            StreamName=stream_name,
+            ExclusiveStartShardId=stream["StreamDescription"]["Shards"][-1]["ShardId"],
+        )
+        stream = stream["result"]
+        full_stream["StreamDescription"]["Shards"] += stream["StreamDescription"][
+            "Shards"
+        ]
 
-    r['result'] = full_stream
+    r["result"] = full_stream
     return r
 
 
-def get_stream_when_active(stream_name, region=None, key=None, keyid=None, profile=None):
-    '''
+def get_stream_when_active(
+    stream_name, region=None, key=None, keyid=None, profile=None
+):
+    """
     Get complete stream info from AWS, returning only when the stream is in the ACTIVE state.
     Continues to retry when stream is updating or creating.
     If the stream is deleted during retries, the loop will catch the error and break.
@@ -130,7 +139,7 @@ def get_stream_when_active(stream_name, region=None, key=None, keyid=None, profi
     CLI example::
 
         salt myminion boto_kinesis.get_stream_when_active my_stream region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     stream_status = None
@@ -142,148 +151,159 @@ def get_stream_when_active(stream_name, region=None, key=None, keyid=None, profi
         time.sleep(_jittered_backoff(attempt, max_retry_delay))
         attempt += 1
         stream_response = _get_basic_stream(stream_name, conn)
-        if 'error' in stream_response:
+        if "error" in stream_response:
             return stream_response
-        stream_status = stream_response['result']["StreamDescription"]["StreamStatus"]
+        stream_status = stream_response["result"]["StreamDescription"]["StreamStatus"]
 
     # now it's active, get the full stream if necessary
-    if stream_response['result']["StreamDescription"]["HasMoreShards"]:
+    if stream_response["result"]["StreamDescription"]["HasMoreShards"]:
         stream_response = _get_full_stream(stream_name, region, key, keyid, profile)
 
     return stream_response
 
 
 def exists(stream_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Check if the stream exists. Returns False and the error if it does not.
 
     CLI example::
 
         salt myminion boto_kinesis.exists my_stream region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
 
     stream = _get_basic_stream(stream_name, conn)
-    if 'error' in stream:
-        r['result'] = False
-        r['error'] = stream['error']
+    if "error" in stream:
+        r["result"] = False
+        r["error"] = stream["error"]
     else:
-        r['result'] = True
+        r["result"] = True
 
     return r
 
 
-def create_stream(stream_name, num_shards, region=None, key=None, keyid=None, profile=None):
-    '''
+def create_stream(
+    stream_name, num_shards, region=None, key=None, keyid=None, profile=None
+):
+    """
     Create a stream with name stream_name and initial number of shards num_shards.
 
     CLI example::
 
         salt myminion boto_kinesis.create_stream my_stream N region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "create_stream",
-                              ShardCount=num_shards,
-                              StreamName=stream_name)
-    if 'error' not in r:
-        r['result'] = True
+    r = _execute_with_retries(
+        conn, "create_stream", ShardCount=num_shards, StreamName=stream_name
+    )
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
 def delete_stream(stream_name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Delete the stream with name stream_name. This cannot be undone! All data will be lost!!
 
     CLI example::
 
         salt myminion boto_kinesis.delete_stream my_stream region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "delete_stream",
-                              StreamName=stream_name)
-    if 'error' not in r:
-        r['result'] = True
+    r = _execute_with_retries(conn, "delete_stream", StreamName=stream_name)
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
-def increase_stream_retention_period(stream_name, retention_hours,
-                                     region=None, key=None, keyid=None, profile=None):
-    '''
+def increase_stream_retention_period(
+    stream_name, retention_hours, region=None, key=None, keyid=None, profile=None
+):
+    """
     Increase stream retention period to retention_hours
 
     CLI example::
 
         salt myminion boto_kinesis.increase_stream_retention_period my_stream N region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "increase_stream_retention_period",
-                              StreamName=stream_name,
-                              RetentionPeriodHours=retention_hours)
-    if 'error' not in r:
-        r['result'] = True
+    r = _execute_with_retries(
+        conn,
+        "increase_stream_retention_period",
+        StreamName=stream_name,
+        RetentionPeriodHours=retention_hours,
+    )
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
-def decrease_stream_retention_period(stream_name, retention_hours,
-                                     region=None, key=None, keyid=None, profile=None):
-    '''
+def decrease_stream_retention_period(
+    stream_name, retention_hours, region=None, key=None, keyid=None, profile=None
+):
+    """
     Decrease stream retention period to retention_hours
 
     CLI example::
 
         salt myminion boto_kinesis.decrease_stream_retention_period my_stream N region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "decrease_stream_retention_period",
-                              StreamName=stream_name,
-                              RetentionPeriodHours=retention_hours)
-    if 'error' not in r:
-        r['result'] = True
+    r = _execute_with_retries(
+        conn,
+        "decrease_stream_retention_period",
+        StreamName=stream_name,
+        RetentionPeriodHours=retention_hours,
+    )
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
-def enable_enhanced_monitoring(stream_name, metrics,
-                               region=None, key=None, keyid=None, profile=None):
-    '''
+def enable_enhanced_monitoring(
+    stream_name, metrics, region=None, key=None, keyid=None, profile=None
+):
+    """
     Enable enhanced monitoring for the specified shard-level metrics on stream stream_name
 
     CLI example::
 
         salt myminion boto_kinesis.enable_enhanced_monitoring my_stream ["metrics", "to", "enable"] region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "enable_enhanced_monitoring",
-                              StreamName=stream_name,
-                              ShardLevelMetrics=metrics)
+    r = _execute_with_retries(
+        conn,
+        "enable_enhanced_monitoring",
+        StreamName=stream_name,
+        ShardLevelMetrics=metrics,
+    )
 
-    if 'error' not in r:
-        r['result'] = True
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
-def disable_enhanced_monitoring(stream_name, metrics,
-                                region=None, key=None, keyid=None, profile=None):
-    '''
+def disable_enhanced_monitoring(
+    stream_name, metrics, region=None, key=None, keyid=None, profile=None
+):
+    """
     Disable enhanced monitoring for the specified shard-level metrics on stream stream_name
 
     CLI example::
 
         salt myminion boto_kinesis.disable_enhanced_monitoring my_stream ["metrics", "to", "disable"] region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    r = _execute_with_retries(conn,
-                              "disable_enhanced_monitoring",
-                              StreamName=stream_name,
-                              ShardLevelMetrics=metrics)
+    r = _execute_with_retries(
+        conn,
+        "disable_enhanced_monitoring",
+        StreamName=stream_name,
+        ShardLevelMetrics=metrics,
+    )
 
-    if 'error' not in r:
-        r['result'] = True
+    if "error" not in r:
+        r["result"] = True
     return r
 
 
@@ -308,15 +328,18 @@ def get_info_for_reshard(stream_details):
             continue
         stream_details["OpenShards"].append(shard)
         shard["HashKeyRange"]["StartingHashKey"] = long_int(
-            shard["HashKeyRange"]["StartingHashKey"])
+            shard["HashKeyRange"]["StartingHashKey"]
+        )
         shard["HashKeyRange"]["EndingHashKey"] = long_int(
-            shard["HashKeyRange"]["EndingHashKey"])
+            shard["HashKeyRange"]["EndingHashKey"]
+        )
         if shard["HashKeyRange"]["StartingHashKey"] < min_hash_key:
             min_hash_key = shard["HashKeyRange"]["StartingHashKey"]
         if shard["HashKeyRange"]["EndingHashKey"] > max_hash_key:
             max_hash_key = shard["HashKeyRange"]["EndingHashKey"]
-    stream_details["OpenShards"].sort(key=lambda shard: long_int(
-        shard["HashKeyRange"]["StartingHashKey"]))
+    stream_details["OpenShards"].sort(
+        key=lambda shard: long_int(shard["HashKeyRange"]["StartingHashKey"])
+    )
     return min_hash_key, max_hash_key, stream_details
 
 
@@ -338,8 +361,15 @@ def long_int(hash_key):
         return int(hash_key)
 
 
-def reshard(stream_name, desired_size, force=False,
-            region=None, key=None, keyid=None, profile=None):
+def reshard(
+    stream_name,
+    desired_size,
+    force=False,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
     """
     Reshard a kinesis stream.  Each call to this function will wait until the stream is ACTIVE,
     then make a single split or merge operation. This function decides where to split or merge
@@ -357,14 +387,18 @@ def reshard(stream_name, desired_size, force=False,
     r = {}
 
     stream_response = get_stream_when_active(stream_name, region, key, keyid, profile)
-    if 'error' in stream_response:
+    if "error" in stream_response:
         return stream_response
 
-    stream_details = stream_response['result']["StreamDescription"]
+    stream_details = stream_response["result"]["StreamDescription"]
     min_hash_key, max_hash_key, stream_details = get_info_for_reshard(stream_details)
 
-    log.debug("found %s open shards, min_hash_key %s max_hash_key %s",
-              len(stream_details["OpenShards"]), min_hash_key, max_hash_key)
+    log.debug(
+        "found %s open shards, min_hash_key %s max_hash_key %s",
+        len(stream_details["OpenShards"]),
+        min_hash_key,
+        max_hash_key,
+    )
 
     # find the first open shard that doesn't match the desired pattern. When we find it,
     # either split or merge (depending on if it's too big or too small), and then return.
@@ -380,26 +414,32 @@ def reshard(stream_name, desired_size, force=False,
         # this weird math matches what AWS does when you create a kinesis stream
         # with an initial number of shards.
         expected_starting_hash_key = (
-            max_hash_key - min_hash_key) / desired_size * shard_num + shard_num
-        expected_ending_hash_key = (
-            max_hash_key - min_hash_key) / desired_size * (shard_num + 1) + shard_num
+            max_hash_key - min_hash_key
+        ) / desired_size * shard_num + shard_num
+        expected_ending_hash_key = (max_hash_key - min_hash_key) / desired_size * (
+            shard_num + 1
+        ) + shard_num
         # fix an off-by-one at the end
         if expected_ending_hash_key > max_hash_key:
             expected_ending_hash_key = max_hash_key
 
         log.debug(
             "Shard %s (%s) should start at %s: %s",
-            shard_num, shard_id, expected_starting_hash_key,
-            starting_hash_key == expected_starting_hash_key
+            shard_num,
+            shard_id,
+            expected_starting_hash_key,
+            starting_hash_key == expected_starting_hash_key,
         )
         log.debug(
             "Shard %s (%s) should end at %s: %s",
-            shard_num, shard_id, expected_ending_hash_key,
-            ending_hash_key == expected_ending_hash_key
+            shard_num,
+            shard_id,
+            expected_ending_hash_key,
+            ending_hash_key == expected_ending_hash_key,
         )
 
         if starting_hash_key != expected_starting_hash_key:
-            r['error'] = "starting hash keys mismatch, don't know what to do!"
+            r["error"] = "starting hash keys mismatch, don't know what to do!"
             return r
 
         if ending_hash_key == expected_ending_hash_key:
@@ -408,49 +448,69 @@ def reshard(stream_name, desired_size, force=False,
         if ending_hash_key > expected_ending_hash_key + 1:
             # split at expected_ending_hash_key
             if force:
-                log.debug("%s should end at %s, actual %s, splitting",
-                          shard_id, expected_ending_hash_key, ending_hash_key)
-                r = _execute_with_retries(conn,
-                                          "split_shard",
-                                          StreamName=stream_name,
-                                          ShardToSplit=shard_id,
-                                          NewStartingHashKey=str(expected_ending_hash_key + 1))  # future lint: disable=blacklisted-function
+                log.debug(
+                    "%s should end at %s, actual %s, splitting",
+                    shard_id,
+                    expected_ending_hash_key,
+                    ending_hash_key,
+                )
+                r = _execute_with_retries(
+                    conn,
+                    "split_shard",
+                    StreamName=stream_name,
+                    ShardToSplit=shard_id,
+                    NewStartingHashKey=str(expected_ending_hash_key + 1),
+                )  # future lint: disable=blacklisted-function
             else:
-                log.debug("%s should end at %s, actual %s would split",
-                          shard_id, expected_ending_hash_key, ending_hash_key)
+                log.debug(
+                    "%s should end at %s, actual %s would split",
+                    shard_id,
+                    expected_ending_hash_key,
+                    ending_hash_key,
+                )
 
-            if 'error' not in r:
-                r['result'] = True
+            if "error" not in r:
+                r["result"] = True
             return r
         else:
             # merge
             next_shard_id = _get_next_open_shard(stream_details, shard_id)
             if not next_shard_id:
-                r['error'] = "failed to find next shard after {0}".format(shard_id)
+                r["error"] = "failed to find next shard after {0}".format(shard_id)
                 return r
             if force:
-                log.debug("%s should continue past %s, merging with %s",
-                          shard_id, ending_hash_key, next_shard_id)
-                r = _execute_with_retries(conn,
-                                          "merge_shards",
-                                          StreamName=stream_name,
-                                          ShardToMerge=shard_id,
-                                          AdjacentShardToMerge=next_shard_id)
+                log.debug(
+                    "%s should continue past %s, merging with %s",
+                    shard_id,
+                    ending_hash_key,
+                    next_shard_id,
+                )
+                r = _execute_with_retries(
+                    conn,
+                    "merge_shards",
+                    StreamName=stream_name,
+                    ShardToMerge=shard_id,
+                    AdjacentShardToMerge=next_shard_id,
+                )
             else:
-                log.debug("%s should continue past %s, would merge with %s",
-                          shard_id, ending_hash_key, next_shard_id)
+                log.debug(
+                    "%s should continue past %s, would merge with %s",
+                    shard_id,
+                    ending_hash_key,
+                    next_shard_id,
+                )
 
-            if 'error' not in r:
-                r['result'] = True
+            if "error" not in r:
+                r["result"] = True
             return r
 
     log.debug("No split or merge action necessary")
-    r['result'] = False
+    r["result"] = False
     return r
 
 
 def list_streams(region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Return a list of all streams visible to the current account
 
     CLI example:
@@ -458,29 +518,35 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
     .. code-block:: bash
 
         salt myminion boto_kinesis.list_streams
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     streams = []
-    exclusive_start_stream_name = ''
+    exclusive_start_stream_name = ""
     while exclusive_start_stream_name is not None:
-        args = {'ExclusiveStartStreamName': exclusive_start_stream_name} if exclusive_start_stream_name else {}
-        ret = _execute_with_retries(conn, 'list_streams', **args)
-        if 'error' in ret:
+        args = (
+            {"ExclusiveStartStreamName": exclusive_start_stream_name}
+            if exclusive_start_stream_name
+            else {}
+        )
+        ret = _execute_with_retries(conn, "list_streams", **args)
+        if "error" in ret:
             return ret
-        ret = ret['result'] if ret and ret.get('result') else {}
-        streams += ret.get('StreamNames', [])
-        exclusive_start_stream_name = streams[-1] if ret.get('HasMoreStreams', False) in (True, 'true') else None
-    return {'result': streams}
+        ret = ret["result"] if ret and ret.get("result") else {}
+        streams += ret.get("StreamNames", [])
+        exclusive_start_stream_name = (
+            streams[-1] if ret.get("HasMoreStreams", False) in (True, "true") else None
+        )
+    return {"result": streams}
 
 
 def _get_next_open_shard(stream_details, shard_id):
-    '''
+    """
     Return the next open shard after shard_id
 
     CLI example::
 
         salt myminion boto_kinesis._get_next_open_shard existing_stream_details shard_id
-    '''
+    """
     found = False
     for shard in stream_details["OpenShards"]:
         current_shard_id = shard["ShardId"]
@@ -492,7 +558,7 @@ def _get_next_open_shard(stream_details, shard_id):
 
 
 def _execute_with_retries(conn, function, **kwargs):
-    '''
+    """
     Retry if we're rate limited by AWS or blocked by another call.
     Give up and return error message if resource not found or argument is invalid.
 
@@ -514,7 +580,7 @@ def _execute_with_retries(conn, function, **kwargs):
 
         salt myminion boto_kinesis._execute_with_retries existing_conn function_name function_kwargs
 
-    '''
+    """
     r = {}
     max_attempts = 18
     max_retry_delay = 10
@@ -522,33 +588,38 @@ def _execute_with_retries(conn, function, **kwargs):
         log.info("attempt: %s function: %s", attempt, function)
         try:
             fn = getattr(conn, function)
-            r['result'] = fn(**kwargs)
+            r["result"] = fn(**kwargs)
             return r
         except botocore.exceptions.ClientError as e:
-            error_code = e.response['Error']['Code']
-            if "LimitExceededException" in error_code or "ResourceInUseException" in error_code:
+            error_code = e.response["Error"]["Code"]
+            if (
+                "LimitExceededException" in error_code
+                or "ResourceInUseException" in error_code
+            ):
                 # could be rate limited by AWS or another command is blocking,
                 # retry with exponential backoff
                 log.debug("Retrying due to AWS exception", exc_info=True)
                 time.sleep(_jittered_backoff(attempt, max_retry_delay))
             else:
                 # ResourceNotFoundException or InvalidArgumentException
-                r['error'] = e.response['Error']
-                log.error(r['error'])
-                r['result'] = None
+                r["error"] = e.response["Error"]
+                log.error(r["error"])
+                r["result"] = None
                 return r
 
-    r['error'] = "Tried to execute function {0} {1} times, but was unable".format(function, max_attempts)
-    log.error(r['error'])
+    r["error"] = "Tried to execute function {0} {1} times, but was unable".format(
+        function, max_attempts
+    )
+    log.error(r["error"])
     return r
 
 
 def _jittered_backoff(attempt, max_retry_delay):
-    '''
+    """
     Basic exponential backoff
 
     CLI example::
 
         salt myminion boto_kinesis._jittered_backoff current_attempt_number max_delay_in_seconds
-    '''
+    """
     return min(random.random() * (2 ** attempt), max_retry_delay)

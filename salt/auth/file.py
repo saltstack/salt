@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Provide authentication using local files
 
 .. versionadded:: 2018.3.0
@@ -93,10 +93,11 @@ When using ``htdigest`` the ``^realm`` must be set:
         cory:
           - .*
 
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -106,7 +107,7 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'file'
+__virtualname__ = "file"
 
 
 def __virtual__():
@@ -114,75 +115,86 @@ def __virtual__():
 
 
 def _get_file_auth_config():
-    '''
+    """
     Setup defaults and check configuration variables for auth backends
-    '''
+    """
 
     config = {
-        'filetype': 'text',
-        'hashtype': 'plaintext',
-        'field_separator': ':',
-        'username_field': 1,
-        'password_field': 2,
+        "filetype": "text",
+        "hashtype": "plaintext",
+        "field_separator": ":",
+        "username_field": 1,
+        "password_field": 2,
     }
 
-    for opt in __opts__['external_auth'][__virtualname__]:
-        if opt.startswith('^'):
-            config[opt[1:]] = __opts__['external_auth'][__virtualname__][opt]
+    for opt in __opts__["external_auth"][__virtualname__]:
+        if opt.startswith("^"):
+            config[opt[1:]] = __opts__["external_auth"][__virtualname__][opt]
 
-    if 'filename' not in config:
-        log.error('salt.auth.file: An authentication file must be specified '
-                  'via external_auth:file:^filename')
+    if "filename" not in config:
+        log.error(
+            "salt.auth.file: An authentication file must be specified "
+            "via external_auth:file:^filename"
+        )
         return False
 
-    if not os.path.exists(config['filename']):
-        log.error('salt.auth.file: The configured external_auth:file:^filename (%s)'
-                  'does not exist on the filesystem', config['filename'])
+    if not os.path.exists(config["filename"]):
+        log.error(
+            "salt.auth.file: The configured external_auth:file:^filename (%s)"
+            "does not exist on the filesystem",
+            config["filename"],
+        )
         return False
 
-    config['username_field'] = int(config['username_field'])
-    config['password_field'] = int(config['password_field'])
+    config["username_field"] = int(config["username_field"])
+    config["password_field"] = int(config["password_field"])
 
     return config
 
 
 def _text(username, password, **kwargs):
-    '''
+    """
     The text file function can authenticate plaintext and digest methods
     that are available in the :py:func:`hashutil.digest <salt.modules.hashutil.digest>`
     function.
-    '''
+    """
 
-    filename = kwargs['filename']
-    hashtype = kwargs['hashtype']
-    field_separator = kwargs['field_separator']
-    username_field = kwargs['username_field']-1
-    password_field = kwargs['password_field']-1
+    filename = kwargs["filename"]
+    hashtype = kwargs["hashtype"]
+    field_separator = kwargs["field_separator"]
+    username_field = kwargs["username_field"] - 1
+    password_field = kwargs["password_field"] - 1
 
-    with salt.utils.files.fopen(filename, 'r') as pwfile:
+    with salt.utils.files.fopen(filename, "r") as pwfile:
         for line in pwfile.readlines():
             fields = line.strip().split(field_separator)
 
             try:
                 this_username = fields[username_field]
             except IndexError:
-                log.error('salt.auth.file: username field (%s) does not exist '
-                          'in file %s', username_field, filename)
+                log.error(
+                    "salt.auth.file: username field (%s) does not exist " "in file %s",
+                    username_field,
+                    filename,
+                )
                 return False
             try:
                 this_password = fields[password_field]
             except IndexError:
-                log.error('salt.auth.file: password field (%s) does not exist '
-                          'in file %s', password_field, filename)
+                log.error(
+                    "salt.auth.file: password field (%s) does not exist " "in file %s",
+                    password_field,
+                    filename,
+                )
                 return False
 
             if this_username == username:
-                if hashtype == 'plaintext':
+                if hashtype == "plaintext":
                     if this_password == password:
                         return True
                 else:
                     # Exceptions for unknown hash types will be raised by hashutil.digest
-                    if this_password == __salt__['hashutil.digest'](password, hashtype):
+                    if this_password == __salt__["hashutil.digest"](password, hashtype):
                         return True
 
                 # Short circuit if we've already found the user but the password was wrong
@@ -191,73 +203,74 @@ def _text(username, password, **kwargs):
 
 
 def _htpasswd(username, password, **kwargs):
-    '''
+    """
     Provide authentication via Apache-style htpasswd files
-    '''
+    """
 
     from passlib.apache import HtpasswdFile
 
-    pwfile = HtpasswdFile(kwargs['filename'])
+    pwfile = HtpasswdFile(kwargs["filename"])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if salt.utils.versions.version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.versions.version_cmp(kwargs["passlib_version"], "1.6") < 0:
         return pwfile.verify(username, password)
     else:
         return pwfile.check_password(username, password)
 
 
 def _htdigest(username, password, **kwargs):
-    '''
+    """
     Provide authentication via Apache-style htdigest files
-    '''
+    """
 
-    realm = kwargs.get('realm', None)
+    realm = kwargs.get("realm", None)
     if not realm:
-        log.error('salt.auth.file: A ^realm must be defined in '
-                  'external_auth:file for htdigest filetype')
+        log.error(
+            "salt.auth.file: A ^realm must be defined in "
+            "external_auth:file for htdigest filetype"
+        )
         return False
 
     from passlib.apache import HtdigestFile
 
-    pwfile = HtdigestFile(kwargs['filename'])
+    pwfile = HtdigestFile(kwargs["filename"])
 
     # passlib below version 1.6 uses 'verify' function instead of 'check_password'
-    if salt.utils.versions.version_cmp(kwargs['passlib_version'], '1.6') < 0:
+    if salt.utils.versions.version_cmp(kwargs["passlib_version"], "1.6") < 0:
         return pwfile.verify(username, realm, password)
     else:
         return pwfile.check_password(username, realm, password)
 
 
 def _htfile(username, password, **kwargs):
-    '''
+    """
     Gate function for _htpasswd and _htdigest authentication backends
-    '''
+    """
 
-    filetype = kwargs.get('filetype', 'htpasswd').lower()
+    filetype = kwargs.get("filetype", "htpasswd").lower()
 
     try:
         import passlib
-        kwargs['passlib_version'] = passlib.__version__
+
+        kwargs["passlib_version"] = passlib.__version__
     except ImportError:
-        log.error('salt.auth.file: The python-passlib library is required '
-                  'for %s filetype', filetype)
+        log.error(
+            "salt.auth.file: The python-passlib library is required " "for %s filetype",
+            filetype,
+        )
         return False
 
-    if filetype == 'htdigest':
+    if filetype == "htdigest":
         return _htdigest(username, password, **kwargs)
     else:
         return _htpasswd(username, password, **kwargs)
 
 
-FILETYPE_FUNCTION_MAP = {
-    'text':     _text,
-    'htpasswd': _htfile,
-    'htdigest': _htfile
-}
+FILETYPE_FUNCTION_MAP = {"text": _text, "htpasswd": _htfile, "htdigest": _htfile}
 
 
 def auth(username, password):
-    '''
+    """
     File based authentication
 
     ^filename
@@ -296,13 +309,13 @@ def auth(username, password):
         numbering beginning at 1 (one).
 
         Default: ``2``
-    '''
+    """
 
     config = _get_file_auth_config()
 
     if not config:
         return False
 
-    auth_function = FILETYPE_FUNCTION_MAP.get(config['filetype'], 'text')
+    auth_function = FILETYPE_FUNCTION_MAP.get(config["filetype"], "text")
 
     return auth_function(username, password, **config)

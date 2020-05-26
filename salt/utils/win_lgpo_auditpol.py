@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+r"""
 A salt util for modifying the audit policies on the machine. This util is used
 by the ``win_auditpol`` and ``win_lgpo`` modules.
 
@@ -58,9 +58,10 @@ Usage:
     # Set the state of the "Credential Validation" setting to No Auditing
     salt.utils.win_lgpo_auditpol.set_setting(name='Credential Validation',
                                              value='No Auditing')
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import re
 import tempfile
@@ -75,38 +76,42 @@ from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'auditpol'
+__virtualname__ = "auditpol"
 
-categories = ['Account Logon',
-              'Account Management',
-              'Detailed Tracking',
-              'DS Access',
-              'Logon/Logoff',
-              'Object Access',
-              'Policy Change',
-              'Privilege Use',
-              'System']
+categories = [
+    "Account Logon",
+    "Account Management",
+    "Detailed Tracking",
+    "DS Access",
+    "Logon/Logoff",
+    "Object Access",
+    "Policy Change",
+    "Privilege Use",
+    "System",
+]
 
-settings = {'No Auditing': '/success:disable /failure:disable',
-            'Success': '/success:enable /failure:disable',
-            'Failure': '/success:disable /failure:enable',
-            'Success and Failure': '/success:enable /failure:enable'}
+settings = {
+    "No Auditing": "/success:disable /failure:disable",
+    "Success": "/success:enable /failure:disable",
+    "Failure": "/success:disable /failure:enable",
+    "Success and Failure": "/success:enable /failure:enable",
+}
 
 
 # Although utils are often directly imported, it is also possible to use the
 # loader.
 def __virtual__():
-    '''
+    """
     Only load if on a Windows system
-    '''
+    """
     if not salt.utils.platform.is_windows():
-        return False, 'This utility only available on Windows'
+        return False, "This utility only available on Windows"
 
     return __virtualname__
 
 
 def _auditpol_cmd(cmd):
-    '''
+    """
     Helper function for running the auditpol command
 
     Args:
@@ -117,19 +122,18 @@ def _auditpol_cmd(cmd):
 
     Raises:
         CommandExecutionError: If the command encounters an error
-    '''
-    ret = salt.modules.cmdmod.run_all(cmd='auditpol {0}'.format(cmd),
-                                      python_shell=True)
-    if ret['retcode'] == 0:
-        return ret['stdout'].splitlines()
+    """
+    ret = salt.modules.cmdmod.run_all(cmd="auditpol {0}".format(cmd), python_shell=True)
+    if ret["retcode"] == 0:
+        return ret["stdout"].splitlines()
 
-    msg = 'Error executing auditpol command: {0}\n'.format(cmd)
-    msg += '\n'.join(ret['stdout'])
+    msg = "Error executing auditpol command: {0}\n".format(cmd)
+    msg += "\n".join(ret["stdout"])
     raise CommandExecutionError(msg)
 
 
-def get_settings(category='All'):
-    '''
+def get_settings(category="All"):
+    """
     Get the current configuration for all audit settings specified in the
     category
 
@@ -171,10 +175,10 @@ def get_settings(category='All'):
         # Get the current state of all audit settings in the "Account Logon"
         # category
         salt.utils.win_lgpo_auditpol.get_settings(category="Account Logon")
-    '''
+    """
     # Parameter validation
-    if category.lower() in ['all', '*']:
-        category = '*'
+    if category.lower() in ["all", "*"]:
+        category = "*"
     elif category.lower() not in [x.lower() for x in categories]:
         raise KeyError('Invalid category: "{0}"'.format(category))
 
@@ -184,13 +188,13 @@ def get_settings(category='All'):
     ret = {}
     # Skip the first 2 lines
     for line in results[3:]:
-        if '  ' in line.strip():
-            ret.update(dict(list(zip(*[iter(re.split(r"\s{2,}", line.strip()))]*2))))
+        if "  " in line.strip():
+            ret.update(dict(list(zip(*[iter(re.split(r"\s{2,}", line.strip()))] * 2))))
     return ret
 
 
 def get_setting(name):
-    '''
+    """
     Get the current configuration for the named audit setting
 
     Args:
@@ -211,23 +215,23 @@ def get_setting(name):
 
         # Get current state of the "Credential Validation" setting
         salt.utils.win_lgpo_auditpol.get_setting(name='Credential Validation')
-    '''
-    current_settings = get_settings(category='All')
+    """
+    current_settings = get_settings(category="All")
     for setting in current_settings:
         if name.lower() == setting.lower():
             return current_settings[setting]
-    raise KeyError('Invalid name: {0}'.format(name))
+    raise KeyError("Invalid name: {0}".format(name))
 
 
 def _get_valid_names():
-    if 'auditpol.valid_names' not in __context__:
-        settings = get_settings(category='All')
-        __context__['auditpol.valid_names'] = [k.lower() for k in settings]
-    return __context__['auditpol.valid_names']
+    if "auditpol.valid_names" not in __context__:
+        settings = get_settings(category="All")
+        __context__["auditpol.valid_names"] = [k.lower() for k in settings]
+    return __context__["auditpol.valid_names"]
 
 
 def set_setting(name, value):
-    '''
+    """
     Set the configuration for the named audit setting
 
     Args:
@@ -264,16 +268,16 @@ def set_setting(name, value):
         # Set the state of the "Credential Validation" setting to No Auditing
         salt.utils.win_lgpo_auditpol.set_setting(name='Credential Validation',
                                                  value='No Auditing')
-    '''
+    """
     # Input validation
     if name.lower() not in _get_valid_names():
-        raise KeyError('Invalid name: {0}'.format(name))
+        raise KeyError("Invalid name: {0}".format(name))
     for setting in settings:
         if value.lower() == setting.lower():
             cmd = '/set /subcategory:"{0}" {1}'.format(name, settings[setting])
             break
     else:
-        raise KeyError('Invalid setting value: {0}'.format(value))
+        raise KeyError("Invalid setting value: {0}".format(value))
 
     _auditpol_cmd(cmd)
 
@@ -281,7 +285,7 @@ def set_setting(name, value):
 
 
 def get_auditpol_dump():
-    '''
+    """
     Gets the contents of an auditpol /backup. Used by the LGPO module to get
     fieldnames and GUIDs for Advanced Audit policies.
 
@@ -295,13 +299,13 @@ def get_auditpol_dump():
         import salt.utils.win_lgpo_auditpol
 
         dump = salt.utils.win_lgpo_auditpol.get_auditpol_dump()
-    '''
+    """
     # Just get a temporary file name
     # NamedTemporaryFile will delete the file it creates by default on Windows
-    with tempfile.NamedTemporaryFile(suffix='.csv') as tmp_file:
+    with tempfile.NamedTemporaryFile(suffix=".csv") as tmp_file:
         csv_file = tmp_file.name
 
-    cmd = '/backup /file:{0}'.format(csv_file)
+    cmd = "/backup /file:{0}".format(csv_file)
     _auditpol_cmd(cmd)
 
     with salt.utils.files.fopen(csv_file) as fp:

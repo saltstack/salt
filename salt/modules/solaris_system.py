@@ -1,38 +1,37 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for reboot, shutdown, etc
 
 This module is assumes we are using solaris-like shutdown
 
 .. versionadded:: 2016.3.0
-'''
+"""
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 
 # Define the module's virtual name
-__virtualname__ = 'system'
+__virtualname__ = "system"
 
 
 def __virtual__():
-    '''
+    """
     Only supported on Solaris-like systems
-    '''
-    if not salt.utils.platform.is_sunos() \
-            or not salt.utils.path.which('shutdown'):
+    """
+    if not salt.utils.platform.is_sunos() or not salt.utils.path.which("shutdown"):
         return (
             False,
-            'The system execution module failed to load: only available on '
-            'Solaris-like ystems with shutdown command.'
+            "The system execution module failed to load: only available on "
+            "Solaris-like ystems with shutdown command.",
         )
     return __virtualname__
 
 
 def halt():
-    '''
+    """
     Halt a running system
 
     CLI Example:
@@ -40,12 +39,12 @@ def halt():
     .. code-block:: bash
 
         salt '*' system.halt
-    '''
+    """
     return shutdown()
 
 
 def init(state):
-    '''
+    """
     Change the system runlevel on sysV compatible systems
 
     CLI Example:
@@ -89,14 +88,14 @@ def init(state):
              Stop the operating system and reboot to the state defined
              by the initdefault entry in /etc/inittab. The rc6
              procedure is called to perform this task.
-    '''
-    cmd = ['shutdown', '-i', state, '-g', '0', '-y']
-    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    """
+    cmd = ["shutdown", "-i", state, "-g", "0", "-y"]
+    ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
 
 def poweroff():
-    '''
+    """
     Poweroff a running system
 
     CLI Example:
@@ -104,12 +103,12 @@ def poweroff():
     .. code-block:: bash
 
         salt '*' system.poweroff
-    '''
+    """
     return shutdown()
 
 
 def reboot(delay=0, message=None):
-    '''
+    """
     Reboot the system
 
     delay : int
@@ -123,16 +122,16 @@ def reboot(delay=0, message=None):
 
         salt '*' system.reboot
         salt '*' system.reboot 60 "=== system upgraded ==="
-    '''
-    cmd = ['shutdown', '-i', '6', '-g', delay, '-y']
+    """
+    cmd = ["shutdown", "-i", "6", "-g", delay, "-y"]
     if message:
         cmd.append(message)
-    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret
 
 
 def shutdown(delay=0, message=None):
-    '''
+    """
     Shutdown a running system
 
     delay : int
@@ -146,9 +145,9 @@ def shutdown(delay=0, message=None):
 
         salt '*' system.shutdown
         salt '*' system.shutdown 60 "=== disk replacement ==="
-    '''
-    cmd = ['shutdown', '-i', '5', '-g', delay, '-y']
+    """
+    cmd = ["shutdown", "-i", "5", "-g", delay, "-y"]
     if message:
         cmd.append(message)
-    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    ret = __salt__["cmd.run"](cmd, python_shell=False)
     return ret

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     Log4Mongo Logging Handler
     =========================
 
@@ -33,11 +33,12 @@
 
         This work was inspired by the Salt logging handlers for LogStash and
         Sentry and by the log4mongo Python implementation.
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import socket
+
 import logging
+import socket
 
 # Import salt libs
 from salt.ext import six
@@ -47,11 +48,12 @@ from salt.log.setup import LOG_LEVELS
 # Import third party libs
 try:
     from log4mongo.handlers import MongoHandler, MongoFormatter
+
     HAS_MONGO = True
 except ImportError:
     HAS_MONGO = False
 
-__virtualname__ = 'mongo'
+__virtualname__ = "mongo"
 
 
 def __virtual__():
@@ -64,38 +66,32 @@ class FormatterWithHost(logging.Formatter, NewStyleClassMixIn):
     def format(self, record):
         mongoformatter = MongoFormatter()
         document = mongoformatter.format(record)
-        document['hostname'] = socket.gethostname()
+        document["hostname"] = socket.gethostname()
         return document
 
 
 def setup_handlers():
-    handler_id = 'log4mongo_handler'
+    handler_id = "log4mongo_handler"
     if handler_id in __opts__:
         config_fields = {
-            'host': 'host',
-            'port': 'port',
-            'database_name': 'database_name',
-            'collection': 'collection',
-            'username': 'username',
-            'password': 'password',
-            'write_concern': 'w'
+            "host": "host",
+            "port": "port",
+            "database_name": "database_name",
+            "collection": "collection",
+            "username": "username",
+            "password": "password",
+            "write_concern": "w",
         }
 
         config_opts = {}
         for config_opt, arg_name in six.iteritems(config_fields):
             config_opts[arg_name] = __opts__[handler_id].get(config_opt)
 
-        config_opts['level'] = LOG_LEVELS[
-            __opts__[handler_id].get(
-                'log_level',
-                __opts__.get('log_level', 'error')
-            )
+        config_opts["level"] = LOG_LEVELS[
+            __opts__[handler_id].get("log_level", __opts__.get("log_level", "error"))
         ]
 
-        handler = MongoHandler(
-            formatter=FormatterWithHost(),
-            **config_opts
-        )
+        handler = MongoHandler(formatter=FormatterWithHost(), **config_opts)
         yield handler
     else:
         yield False

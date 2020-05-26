@@ -48,11 +48,26 @@ if [%1]==[] (
 
 for /F "tokens=1,2 delims=." %%a in ("%Version%") do (set Series=%%a.%%b)
 
+:: See if the Series Directory exists (uses new versioning)
+if not exist .\%Series%\ (
+    echo - Series %Series% was not found, trying new naming convention
+    for /F "tokens=1,2 delims=." %%a in ("%Version%") do (set Series=%%a)
+)
+if not exist .\%Series%\ (
+    echo - Series %Series% is not valid
+    exit 1
+)
+
+:: If it ends in a '.' trim it
+if "%Series:~-1%"=="." (
+    set Series=%Series:~0,-1%
+)
+
 :: Sign Installer Files
 echo ===========================================================================
 echo Signing...
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-signtool.exe sign /t http://timestamp.digicert.com ^
+signtool.exe sign /a /t http://timestamp.digicert.com ^
                      "%Series%\Salt-Minion-%Version%-AMD64-Setup.exe" ^
                      "%Series%\Salt-Minion-%Version%-x86-Setup.exe" ^
                      "%Series%\Salt-%Version%-AMD64-Setup.exe" ^
@@ -65,6 +80,8 @@ signtool.exe sign /t http://timestamp.digicert.com ^
                      "%Series%\Salt-Minion-%Version%-Py2-x86-Setup.exe" ^
                      "%Series%\Salt-Minion-%Version%-Py3-AMD64-Setup.exe" ^
                      "%Series%\Salt-Minion-%Version%-Py3-x86-Setup.exe"
+
+echo %ERRORLEVEL%
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo Signing Complete
 echo ===========================================================================
@@ -77,86 +94,86 @@ set "file_name=Salt-Minion-%Version%-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 
 set "file_name=Salt-Minion-%Version%-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-Py2-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-Py2-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-Py3-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-%Version%-Py3-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-Minion-%Version%-Py2-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-Minion-%Version%-Py2-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 	
 set "file_name=Salt-Minion-%Version%-Py3-AMD64-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 set "file_name=Salt-Minion-%Version%-Py3-x86-Setup.exe"
 set "file=.\%Series%\%file_name%"
 if exist "%file%" (
     echo - %file_name%
-    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\""
-    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"")
+    powershell -c "$hash = (Get-FileHash -Algorithm MD5 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.md5\"" -NoNewLine
+    powershell -c "$hash = (Get-FileHash -Algorithm SHA256 \"%file%\").Hash; Out-File -InputObject $hash\" %file_name%\" -FilePath \"%file%.sha256\"" -NoNewLine)
 
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo Hashing Complete
