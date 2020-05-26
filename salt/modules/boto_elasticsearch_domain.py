@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon Elasticsearch Service
 
 .. versionadded:: 2016.11.0
@@ -70,20 +70,22 @@ Connection module for Amazon Elasticsearch Service
 
 :depends: boto3
 
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import Salt libs
-from salt.ext import six
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
+
+# Import Salt libs
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -91,13 +93,15 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
-    logging.getLogger('boto').setLevel(logging.CRITICAL)
-    logging.getLogger('boto3').setLevel(logging.CRITICAL)
+
+    logging.getLogger("boto").setLevel(logging.CRITICAL)
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -105,28 +109,24 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
-    '''
+    """
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    return salt.utils.versions.check_boto_reqs(
-        boto_ver='2.8.0',
-        boto3_ver='1.4.0'
-    )
+    return salt.utils.versions.check_boto_reqs(boto_ver="2.8.0", boto3_ver="1.4.0")
 
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto3.assign_funcs'](__name__, 'es')
+        __utils__["boto3.assign_funcs"](__name__, "es")
 
 
-def exists(DomainName,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def exists(DomainName, region=None, key=None, keyid=None, profile=None):
+    """
     Given a domain name, check to see if the given domain exists.
 
     Returns True if the given domain exists and returns False if the given
@@ -138,21 +138,20 @@ def exists(DomainName,
 
         salt myminion boto_elasticsearch_domain.exists mydomain
 
-    '''
+    """
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         domain = conn.describe_elasticsearch_domain(DomainName=DomainName)
-        return {'exists': True}
+        return {"exists": True}
     except ClientError as e:
-        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
-            return {'exists': False}
-        return {'error': __utils__['boto3.get_error'](e)}
+        if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
+            return {"exists": False}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
-def status(DomainName,
-             region=None, key=None, keyid=None, profile=None):
-    '''
+def status(DomainName, region=None, key=None, keyid=None, profile=None):
+    """
     Given a domain name describe its status.
 
     Returns a dictionary of interesting properties.
@@ -163,27 +162,36 @@ def status(DomainName,
 
         salt myminion boto_elasticsearch_domain.status mydomain
 
-    '''
+    """
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         domain = conn.describe_elasticsearch_domain(DomainName=DomainName)
-        if domain and 'DomainStatus' in domain:
-            domain = domain.get('DomainStatus', {})
-            keys = ('Endpoint', 'Created', 'Deleted',
-                    'DomainName', 'DomainId', 'EBSOptions', 'SnapshotOptions',
-                    'AccessPolicies', 'Processing', 'AdvancedOptions', 'ARN',
-                    'ElasticsearchVersion')
-            return {'domain': dict([(k, domain.get(k)) for k in keys if k in domain])}
+        if domain and "DomainStatus" in domain:
+            domain = domain.get("DomainStatus", {})
+            keys = (
+                "Endpoint",
+                "Created",
+                "Deleted",
+                "DomainName",
+                "DomainId",
+                "EBSOptions",
+                "SnapshotOptions",
+                "AccessPolicies",
+                "Processing",
+                "AdvancedOptions",
+                "ARN",
+                "ElasticsearchVersion",
+            )
+            return {"domain": dict([(k, domain.get(k)) for k in keys if k in domain])}
         else:
-            return {'domain': None}
+            return {"domain": None}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
-def describe(DomainName,
-             region=None, key=None, keyid=None, profile=None):
-    '''
+def describe(DomainName, region=None, key=None, keyid=None, profile=None):
+    """
     Given a domain name describe its properties.
 
     Returns a dictionary of interesting properties.
@@ -194,27 +202,45 @@ def describe(DomainName,
 
         salt myminion boto_elasticsearch_domain.describe mydomain
 
-    '''
+    """
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         domain = conn.describe_elasticsearch_domain_config(DomainName=DomainName)
-        if domain and 'DomainConfig' in domain:
-            domain = domain['DomainConfig']
-            keys = ('ElasticsearchClusterConfig', 'EBSOptions', 'AccessPolicies',
-                    'SnapshotOptions', 'AdvancedOptions')
-            return {'domain': dict([(k, domain.get(k, {}).get('Options')) for k in keys if k in domain])}
+        if domain and "DomainConfig" in domain:
+            domain = domain["DomainConfig"]
+            keys = (
+                "ElasticsearchClusterConfig",
+                "EBSOptions",
+                "AccessPolicies",
+                "SnapshotOptions",
+                "AdvancedOptions",
+            )
+            return {
+                "domain": dict(
+                    [(k, domain.get(k, {}).get("Options")) for k in keys if k in domain]
+                )
+            }
         else:
-            return {'domain': None}
+            return {"domain": None}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}
 
 
-def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
-           AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None,
-           ElasticsearchVersion=None):
-    '''
+def create(
+    DomainName,
+    ElasticsearchClusterConfig=None,
+    EBSOptions=None,
+    AccessPolicies=None,
+    SnapshotOptions=None,
+    AdvancedOptions=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    ElasticsearchVersion=None,
+):
+    """
     Given a valid config, create a domain.
 
     Returns {created: true} if the domain was created and returns
@@ -234,38 +260,48 @@ def create(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
                "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]} \\
               {"AutomatedSnapshotStartHour": 0} \\
               {"rest.action.multi.allow_explicit_index": "true"}
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
-        for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                    'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions',
-                    'ElasticsearchVersion'):
+        for k in (
+            "ElasticsearchClusterConfig",
+            "EBSOptions",
+            "AccessPolicies",
+            "SnapshotOptions",
+            "AdvancedOptions",
+            "ElasticsearchVersion",
+        ):
             if locals()[k] is not None:
                 val = locals()[k]
                 if isinstance(val, six.string_types):
                     try:
                         val = salt.utils.json.loads(val)
                     except ValueError as e:
-                        return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
+                        return {
+                            "updated": False,
+                            "error": "Error parsing {0}: {1}".format(k, e.message),
+                        }
                 kwargs[k] = val
-        if 'AccessPolicies' in kwargs:
-            kwargs['AccessPolicies'] = salt.utils.json.dumps(kwargs['AccessPolicies'])
-        if 'ElasticsearchVersion' in kwargs:
-            kwargs['ElasticsearchVersion'] = six.text_type(kwargs['ElasticsearchVersion'])
+        if "AccessPolicies" in kwargs:
+            kwargs["AccessPolicies"] = salt.utils.json.dumps(kwargs["AccessPolicies"])
+        if "ElasticsearchVersion" in kwargs:
+            kwargs["ElasticsearchVersion"] = six.text_type(
+                kwargs["ElasticsearchVersion"]
+            )
         domain = conn.create_elasticsearch_domain(DomainName=DomainName, **kwargs)
-        if domain and 'DomainStatus' in domain:
-            return {'created': True}
+        if domain and "DomainStatus" in domain:
+            return {"created": True}
         else:
-            log.warning('Domain was not created')
-            return {'created': False}
+            log.warning("Domain was not created")
+            return {"created": False}
     except ClientError as e:
-        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"created": False, "error": __utils__["boto3.get_error"](e)}
 
 
 def delete(DomainName, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Given a domain name, delete it.
 
     Returns {deleted: true} if the domain was deleted and returns
@@ -277,20 +313,29 @@ def delete(DomainName, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticsearch_domain.delete mydomain
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.delete_elasticsearch_domain(DomainName=DomainName)
-        return {'deleted': True}
+        return {"deleted": True}
     except ClientError as e:
-        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"deleted": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
-           AccessPolicies=None, SnapshotOptions=None, AdvancedOptions=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def update(
+    DomainName,
+    ElasticsearchClusterConfig=None,
+    EBSOptions=None,
+    AccessPolicies=None,
+    SnapshotOptions=None,
+    AdvancedOptions=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Update the named domain to the configuration.
 
     Returns {updated: true} if the domain was updated and returns
@@ -311,35 +356,46 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
               {"AutomatedSnapshotStartHour": 0} \\
               {"rest.action.multi.allow_explicit_index": "true"}
 
-    '''
+    """
 
     call_args = {}
-    for k in ('ElasticsearchClusterConfig', 'EBSOptions',
-                'AccessPolicies', 'SnapshotOptions', 'AdvancedOptions'):
+    for k in (
+        "ElasticsearchClusterConfig",
+        "EBSOptions",
+        "AccessPolicies",
+        "SnapshotOptions",
+        "AdvancedOptions",
+    ):
         if locals()[k] is not None:
             val = locals()[k]
             if isinstance(val, six.string_types):
                 try:
                     val = salt.utils.json.loads(val)
                 except ValueError as e:
-                    return {'updated': False, 'error': 'Error parsing {0}: {1}'.format(k, e.message)}
+                    return {
+                        "updated": False,
+                        "error": "Error parsing {0}: {1}".format(k, e.message),
+                    }
             call_args[k] = val
-    if 'AccessPolicies' in call_args:
-        call_args['AccessPolicies'] = salt.utils.json.dumps(call_args['AccessPolicies'])
+    if "AccessPolicies" in call_args:
+        call_args["AccessPolicies"] = salt.utils.json.dumps(call_args["AccessPolicies"])
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        domain = conn.update_elasticsearch_domain_config(DomainName=DomainName, **call_args)
-        if not domain or 'DomainConfig' not in domain:
-            log.warning('Domain was not updated')
-            return {'updated': False}
-        return {'updated': True}
+        domain = conn.update_elasticsearch_domain_config(
+            DomainName=DomainName, **call_args
+        )
+        if not domain or "DomainConfig" not in domain:
+            log.warning("Domain was not updated")
+            return {"updated": False}
+        return {"updated": True}
     except ClientError as e:
-        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"updated": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def add_tags(DomainName=None, ARN=None,
-           region=None, key=None, keyid=None, profile=None, **kwargs):
-    '''
+def add_tags(
+    DomainName=None, ARN=None, region=None, key=None, keyid=None, profile=None, **kwargs
+):
+    """
     Add tags to a domain
 
     Returns {tagged: true} if the domain was tagged and returns
@@ -351,38 +407,45 @@ def add_tags(DomainName=None, ARN=None,
 
         salt myminion boto_elasticsearch_domain.add_tags mydomain tag_a=tag_value tag_b=tag_value
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
         for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith('__'):
+            if six.text_type(k).startswith("__"):
                 continue
-            tagslist.append({'Key': six.text_type(k), 'Value': six.text_type(v)})
+            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
         if ARN is None:
             if DomainName is None:
-                raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
-            domaindata = status(DomainName=DomainName,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile)
-            if not domaindata or 'domain' not in domaindata:
-                log.warning('Domain tags not updated')
-                return {'tagged': False}
-            ARN = domaindata.get('domain', {}).get('ARN')
+                raise SaltInvocationError(
+                    "One (but not both) of ARN or " "domain must be specified."
+                )
+            domaindata = status(
+                DomainName=DomainName,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if not domaindata or "domain" not in domaindata:
+                log.warning("Domain tags not updated")
+                return {"tagged": False}
+            ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
-            raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
+            raise SaltInvocationError(
+                "One (but not both) of ARN or " "domain must be specified."
+            )
         conn.add_tags(ARN=ARN, TagList=tagslist)
-        return {'tagged': True}
+        return {"tagged": True}
     except ClientError as e:
-        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def remove_tags(TagKeys, DomainName=None, ARN=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def remove_tags(
+    TagKeys, DomainName=None, ARN=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     Remove tags from a trail
 
     Returns {tagged: true} if the trail was tagged and returns
@@ -394,34 +457,40 @@ def remove_tags(TagKeys, DomainName=None, ARN=None,
 
         salt myminion boto_cloudtrail.remove_tags my_trail tag_a=tag_value tag_b=tag_value
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if ARN is None:
             if DomainName is None:
-                raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
-            domaindata = status(DomainName=DomainName,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile)
-            if not domaindata or 'domain' not in domaindata:
-                log.warning('Domain tags not updated')
-                return {'tagged': False}
-            ARN = domaindata.get('domain', {}).get('ARN')
+                raise SaltInvocationError(
+                    "One (but not both) of ARN or " "domain must be specified."
+                )
+            domaindata = status(
+                DomainName=DomainName,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if not domaindata or "domain" not in domaindata:
+                log.warning("Domain tags not updated")
+                return {"tagged": False}
+            ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
-            raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
-        conn.remove_tags(ARN=domaindata.get('domain', {}).get('ARN'),
-                         TagKeys=TagKeys)
-        return {'tagged': True}
+            raise SaltInvocationError(
+                "One (but not both) of ARN or " "domain must be specified."
+            )
+        conn.remove_tags(ARN=domaindata.get("domain", {}).get("ARN"), TagKeys=TagKeys)
+        return {"tagged": True}
     except ClientError as e:
-        return {'tagged': False, 'error': __utils__['boto3.get_error'](e)}
+        return {"tagged": False, "error": __utils__["boto3.get_error"](e)}
 
 
-def list_tags(DomainName=None, ARN=None,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def list_tags(
+    DomainName=None, ARN=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     List tags of a trail
 
     Returns:
@@ -435,30 +504,36 @@ def list_tags(DomainName=None, ARN=None,
 
         salt myminion boto_cloudtrail.list_tags my_trail
 
-    '''
+    """
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if ARN is None:
             if DomainName is None:
-                raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
-            domaindata = status(DomainName=DomainName,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile)
-            if not domaindata or 'domain' not in domaindata:
-                log.warning('Domain tags not updated')
-                return {'tagged': False}
-            ARN = domaindata.get('domain', {}).get('ARN')
+                raise SaltInvocationError(
+                    "One (but not both) of ARN or " "domain must be specified."
+                )
+            domaindata = status(
+                DomainName=DomainName,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if not domaindata or "domain" not in domaindata:
+                log.warning("Domain tags not updated")
+                return {"tagged": False}
+            ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
-            raise SaltInvocationError('One (but not both) of ARN or '
-                         'domain must be specified.')
+            raise SaltInvocationError(
+                "One (but not both) of ARN or " "domain must be specified."
+            )
         ret = conn.list_tags(ARN=ARN)
         log.warning(ret)
-        tlist = ret.get('TagList', [])
+        tlist = ret.get("TagList", [])
         tagdict = {}
         for tag in tlist:
-            tagdict[tag.get('Key')] = tag.get('Value')
-        return {'tags': tagdict}
+            tagdict[tag.get("Key")] = tag.get("Value")
+        return {"tags": tagdict}
     except ClientError as e:
-        return {'error': __utils__['boto3.get_error'](e)}
+        return {"error": __utils__["boto3.get_error"](e)}

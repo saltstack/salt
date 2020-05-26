@@ -96,10 +96,11 @@ include option.
 slspath
 =======
 
-The `slspath` variable contains the path to the current sls file. The value
-of `slspath` in files referenced in the current sls depends on the reference
-method. For jinja includes `slspath` is the path to the current file. For
-salt includes `slspath` is the path to the included file.
+The `slspath` variable contains the path to the directory of the current sls
+file. The value of `slspath` in files referenced in the current sls depends on
+the reference method. For jinja includes `slspath` is the path to the current
+directory of the file. For salt includes `slspath` is the path to the directory
+of the included file.
 
 .. code-block:: jinja
 

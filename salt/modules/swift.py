@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for handling OpenStack Swift calls
 Author: Anthony Stanton <anthony.stanton@gmail.com>
 
@@ -44,8 +44,8 @@ Inspired by the S3 and Nova modules
         salt '*' swift.get mycontainer myfile /tmp/file profile=openstack1
 
     NOTE: For Rackspace cloud files setting keystone.auth_version = 1 is recommended.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -58,10 +58,10 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if swift
     is installed on this minion.
-    '''
+    """
     return suos.check_swift()
 
 
@@ -69,43 +69,43 @@ __opts__ = {}
 
 
 def _auth(profile=None):
-    '''
+    """
     Set up openstack credentials
-    '''
+    """
     if profile:
-        credentials = __salt__['config.option'](profile)
-        user = credentials['keystone.user']
-        password = credentials.get('keystone.password', None)
-        tenant = credentials['keystone.tenant']
-        auth_url = credentials['keystone.auth_url']
-        auth_version = credentials.get('keystone.auth_version', 2)
-        region_name = credentials.get('keystone.region_name', None)
-        api_key = credentials.get('keystone.api_key', None)
-        os_auth_system = credentials.get('keystone.os_auth_system', None)
+        credentials = __salt__["config.option"](profile)
+        user = credentials["keystone.user"]
+        password = credentials.get("keystone.password", None)
+        tenant = credentials["keystone.tenant"]
+        auth_url = credentials["keystone.auth_url"]
+        auth_version = credentials.get("keystone.auth_version", 2)
+        region_name = credentials.get("keystone.region_name", None)
+        api_key = credentials.get("keystone.api_key", None)
+        os_auth_system = credentials.get("keystone.os_auth_system", None)
     else:
-        user = __salt__['config.option']('keystone.user')
-        password = __salt__['config.option']('keystone.password', None)
-        tenant = __salt__['config.option']('keystone.tenant')
-        auth_url = __salt__['config.option']('keystone.auth_url')
-        auth_version = __salt__['config.option']('keystone.auth_version', 2)
-        region_name = __salt__['config.option']('keystone.region_name')
-        api_key = __salt__['config.option']('keystone.api_key')
-        os_auth_system = __salt__['config.option']('keystone.os_auth_system')
+        user = __salt__["config.option"]("keystone.user")
+        password = __salt__["config.option"]("keystone.password", None)
+        tenant = __salt__["config.option"]("keystone.tenant")
+        auth_url = __salt__["config.option"]("keystone.auth_url")
+        auth_version = __salt__["config.option"]("keystone.auth_version", 2)
+        region_name = __salt__["config.option"]("keystone.region_name")
+        api_key = __salt__["config.option"]("keystone.api_key")
+        os_auth_system = __salt__["config.option"]("keystone.os_auth_system")
     kwargs = {
-        'user': user,
-        'password': password,
-        'key': api_key,
-        'tenant_name': tenant,
-        'auth_url': auth_url,
-        'auth_version': auth_version,
-        'region_name': region_name
+        "user": user,
+        "password": password,
+        "key": api_key,
+        "tenant_name": tenant,
+        "auth_url": auth_url,
+        "auth_version": auth_version,
+        "region_name": region_name,
     }
 
     return suos.SaltSwift(**kwargs)
 
 
 def delete(cont, path=None, profile=None):
-    '''
+    """
     Delete a container, or delete an object from a container.
 
     CLI Example to delete a container::
@@ -115,7 +115,7 @@ def delete(cont, path=None, profile=None):
     CLI Example to delete an object from a container::
 
         salt myminion swift.delete mycontainer remoteobject
-    '''
+    """
     swift_conn = _auth(profile)
 
     if path is None:
@@ -125,7 +125,7 @@ def delete(cont, path=None, profile=None):
 
 
 def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
-    '''
+    """
     List the contents of a container, or return an object from a container. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
@@ -154,7 +154,7 @@ def get(cont=None, path=None, local_file=None, return_bin=False, profile=None):
 
         salt myminion swift.get mycontainer myfile.png local_file=/tmp/myfile.png
 
-    '''
+    """
     swift_conn = _auth(profile)
 
     if cont is None:
@@ -177,7 +177,7 @@ def head():
 
 
 def put(cont, path=None, local_file=None, profile=None):
-    '''
+    """
     Create a new container, or upload an object to a container.
 
     CLI Example to create a container:
@@ -191,7 +191,7 @@ def put(cont, path=None, local_file=None, profile=None):
     .. code-block:: bash
 
         salt myminion swift.put mycontainer remotepath local_file=/path/to/file
-    '''
+    """
     swift_conn = _auth(profile)
 
     if path is None:

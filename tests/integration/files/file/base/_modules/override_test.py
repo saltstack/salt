@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for running arbitrary tests
-'''
+"""
 from __future__ import absolute_import
 
-__virtualname__ = 'test'
+__virtualname__ = "test"
 
 
 def __virtual__():
@@ -12,7 +12,7 @@ def __virtual__():
 
 
 def recho(text):
-    '''
+    """
     Return a reversed string
 
     CLI Example:
@@ -20,5 +20,5 @@ def recho(text):
     .. code-block:: bash
 
         salt '*' test.recho 'foo bar baz quo qux'
-    '''
+    """
     return text[::-1]

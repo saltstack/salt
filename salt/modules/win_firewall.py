@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for configuring Windows Firewall using ``netsh``
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import re
 
 # Import Salt libs
 import salt.utils.platform
-from salt.exceptions import CommandExecutionError
 import salt.utils.win_lgpo_netsh
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
-__virtualname__ = 'firewall'
+__virtualname__ = "firewall"
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
+    """
     if not salt.utils.platform.is_windows():
         return False, "Module win_firewall: module only available on Windows"
 
@@ -27,7 +27,7 @@ def __virtual__():
 
 
 def get_config():
-    '''
+    """
     Get the status of all the firewall profiles
 
     Returns:
@@ -41,32 +41,32 @@ def get_config():
     .. code-block:: bash
 
         salt '*' firewall.get_config
-    '''
+    """
     profiles = {}
     curr = None
 
-    cmd = ['netsh', 'advfirewall', 'show', 'allprofiles']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    cmd = ["netsh", "advfirewall", "show", "allprofiles"]
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
     # There may be some problems with this depending on how `netsh` is localized
     # It's looking for lines that contain `Profile Settings` or start with
     # `State` which may be different in different localizations
-    for line in ret['stdout'].splitlines():
+    for line in ret["stdout"].splitlines():
         if not curr:
-            tmp = re.search('(.*) Profile Settings:', line)
+            tmp = re.search("(.*) Profile Settings:", line)
             if tmp:
                 curr = tmp.group(1)
-        elif line.startswith('State'):
-            profiles[curr] = line.split()[1] == 'ON'
+        elif line.startswith("State"):
+            profiles[curr] = line.split()[1] == "ON"
             curr = None
 
     return profiles
 
 
-def disable(profile='allprofiles'):
-    '''
+def disable(profile="allprofiles"):
+    """
     Disable firewall profile
 
     Args:
@@ -89,17 +89,17 @@ def disable(profile='allprofiles'):
     .. code-block:: bash
 
         salt '*' firewall.disable
-    '''
-    cmd = ['netsh', 'advfirewall', 'set', profile, 'state', 'off']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    """
+    cmd = ["netsh", "advfirewall", "set", profile, "state", "off"]
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
     return True
 
 
-def enable(profile='allprofiles'):
-    '''
+def enable(profile="allprofiles"):
+    """
     .. versionadded:: 2015.5.0
 
     Enable firewall profile
@@ -124,17 +124,17 @@ def enable(profile='allprofiles'):
     .. code-block:: bash
 
         salt '*' firewall.enable
-    '''
-    cmd = ['netsh', 'advfirewall', 'set', profile, 'state', 'on']
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    """
+    cmd = ["netsh", "advfirewall", "set", profile, "state", "on"]
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
     return True
 
 
-def get_rule(name='all'):
-    '''
+def get_rule(name="all"):
+    """
     .. versionadded:: 2015.5.0
 
     Display all matching rules as specified by name
@@ -154,19 +154,17 @@ def get_rule(name='all'):
     .. code-block:: bash
 
         salt '*' firewall.get_rule 'MyAppPort'
-    '''
-    cmd = ['netsh', 'advfirewall', 'firewall', 'show', 'rule',
-           'name={0}'.format(name)]
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    """
+    cmd = ["netsh", "advfirewall", "firewall", "show", "rule", "name={0}".format(name)]
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
-    return {name: ret['stdout']}
+    return {name: ret["stdout"]}
 
 
-def add_rule(name, localport, protocol='tcp', action='allow', dir='in',
-             remoteip='any'):
-    '''
+def add_rule(name, localport, protocol="tcp", action="allow", dir="in", remoteip="any"):
+    """
     .. versionadded:: 2015.5.0
 
     Add a new inbound or outbound rule to the firewall policy
@@ -227,31 +225,32 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in',
         salt '*' firewall.add_rule 'test' '8080' 'tcp'
         salt '*' firewall.add_rule 'test' '1' 'icmpv4'
         salt '*' firewall.add_rule 'test_remote_ip' '8000' 'tcp' 'allow' 'in' '192.168.0.1'
-    '''
-    cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
-           'name={0}'.format(name),
-           'protocol={0}'.format(protocol),
-           'dir={0}'.format(dir),
-           'action={0}'.format(action),
-           'remoteip={0}'.format(remoteip)]
+    """
+    cmd = [
+        "netsh",
+        "advfirewall",
+        "firewall",
+        "add",
+        "rule",
+        "name={0}".format(name),
+        "protocol={0}".format(protocol),
+        "dir={0}".format(dir),
+        "action={0}".format(action),
+        "remoteip={0}".format(remoteip),
+    ]
 
-    if protocol is None \
-            or ('icmpv4' not in protocol and 'icmpv6' not in protocol):
-        cmd.append('localport={0}'.format(localport))
+    if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
+        cmd.append("localport={0}".format(localport))
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
     return True
 
 
-def delete_rule(name=None,
-                localport=None,
-                protocol=None,
-                dir=None,
-                remoteip=None):
-    '''
+def delete_rule(name=None, localport=None, protocol=None, dir=None, remoteip=None):
+    """
     .. versionadded:: 2015.8.0
 
     Delete an existing firewall rule identified by name and optionally by ports,
@@ -294,33 +293,32 @@ def delete_rule(name=None,
 
         # Delete a rule called 'allow80':
         salt '*' firewall.delete_rule allow80
-    '''
-    cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule']
+    """
+    cmd = ["netsh", "advfirewall", "firewall", "delete", "rule"]
     if name:
-        cmd.append('name={0}'.format(name))
+        cmd.append("name={0}".format(name))
     if protocol:
-        cmd.append('protocol={0}'.format(protocol))
+        cmd.append("protocol={0}".format(protocol))
     if dir:
-        cmd.append('dir={0}'.format(dir))
+        cmd.append("dir={0}".format(dir))
     if remoteip:
-        cmd.append('remoteip={0}'.format(remoteip))
+        cmd.append("remoteip={0}".format(remoteip))
 
-    if protocol is None \
-            or ('icmpv4' not in protocol and 'icmpv6' not in protocol):
+    if protocol is None or ("icmpv4" not in protocol and "icmpv6" not in protocol):
         if localport:
             if not protocol:
-                cmd.append('protocol=tcp')
-            cmd.append('localport={0}'.format(localport))
+                cmd.append("protocol=tcp")
+            cmd.append("localport={0}".format(localport))
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False, ignore_retcode=True)
-    if ret['retcode'] != 0:
-        raise CommandExecutionError(ret['stdout'])
+    ret = __salt__["cmd.run_all"](cmd, python_shell=False, ignore_retcode=True)
+    if ret["retcode"] != 0:
+        raise CommandExecutionError(ret["stdout"])
 
     return True
 
 
 def rule_exists(name):
-    '''
+    """
     .. versionadded:: 2016.11.6
 
     Checks if a firewall rule exists in the firewall policy
@@ -337,7 +335,7 @@ def rule_exists(name):
 
         # Is there a rule named RemoteDesktop
         salt '*' firewall.rule_exists RemoteDesktop
-    '''
+    """
     try:
         get_rule(name)
         return True
@@ -345,8 +343,8 @@ def rule_exists(name):
         return False
 
 
-def get_settings(profile, section, store='local'):
-    '''
+def get_settings(profile, section, store="local"):
+    """
     Get the firewall property from the specified profile in the specified store
     as returned by ``netsh advfirewall``.
 
@@ -398,14 +396,14 @@ def get_settings(profile, section, store='local'):
         # Get the inbound/outbound firewall settings for connections on the
         # domain profile as defined by local group policy
         salt * win_firewall.get_settings domain firewallpolicy lgpo
-    '''
-    return salt.utils.win_lgpo_netsh.get_settings(profile=profile,
-                                                  section=section,
-                                                  store=store)
+    """
+    return salt.utils.win_lgpo_netsh.get_settings(
+        profile=profile, section=section, store=store
+    )
 
 
-def get_all_settings(domain, store='local'):
-    '''
+def get_all_settings(domain, store="local"):
+    """
     Gets all the properties for the specified profile in the specified store
 
     .. versionadded:: 2018.3.4
@@ -442,13 +440,12 @@ def get_all_settings(domain, store='local'):
         # Get all firewall settings for connections on the domain profile as
         # defined by local group policy
         salt * win_firewall.get_all_settings domain lgpo
-    '''
-    return salt.utils.win_lgpo_netsh.get_all_settings(profile=domain,
-                                                      store=store)
+    """
+    return salt.utils.win_lgpo_netsh.get_all_settings(profile=domain, store=store)
 
 
-def get_all_profiles(store='local'):
-    '''
+def get_all_profiles(store="local"):
+    """
     Gets all properties for all profiles in the specified store
 
     .. versionadded:: 2018.3.4
@@ -479,12 +476,12 @@ def get_all_profiles(store='local'):
         # policy
 
         salt * firewall.get_all_settings lgpo
-    '''
+    """
     return salt.utils.win_lgpo_netsh.get_all_profiles(store=store)
 
 
-def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
-    '''
+def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
+    """
     Set the firewall inbound/outbound settings for the specified profile and
     store
 
@@ -552,15 +549,14 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store='local'):
         # Set inbound/outbound settings for the domain profile in the group
         # policy to block inbound and allow outbound
         salt * firewall.set_firewall_settings domain='domain' inbound='blockinbound' outbound='allowoutbound' store='lgpo'
-    '''
-    return salt.utils.win_lgpo_netsh.set_firewall_settings(profile=profile,
-                                                           inbound=inbound,
-                                                           outbound=outbound,
-                                                           store=store)
+    """
+    return salt.utils.win_lgpo_netsh.set_firewall_settings(
+        profile=profile, inbound=inbound, outbound=outbound, store=store
+    )
 
 
-def set_logging_settings(profile, setting, value, store='local'):
-    r'''
+def set_logging_settings(profile, setting, value, store="local"):
+    r"""
     Configure logging settings for the Windows firewall.
 
     .. versionadded:: 2018.3.4
@@ -646,15 +642,14 @@ def set_logging_settings(profile, setting, value, store='local'):
 
         # Set the max file size of the log to 2048 Kb
         salt * firewall.set_logging_settings domain maxfilesize 2048
-    '''
-    return salt.utils.win_lgpo_netsh.set_logging_settings(profile=profile,
-                                                          setting=setting,
-                                                          value=value,
-                                                          store=store)
+    """
+    return salt.utils.win_lgpo_netsh.set_logging_settings(
+        profile=profile, setting=setting, value=value, store=store
+    )
 
 
-def set_settings(profile, setting, value, store='local'):
-    '''
+def set_settings(profile, setting, value, store="local"):
+    """
     Configure firewall settings.
 
     .. versionadded:: 2018.3.4
@@ -713,15 +708,14 @@ def set_settings(profile, setting, value, store='local'):
 
         # Allow remote management of Windows Firewall
         salt * firewall.set_settings domain remotemanagement enable
-    '''
-    return salt.utils.win_lgpo_netsh.set_settings(profile=profile,
-                                                  setting=setting,
-                                                  value=value,
-                                                  store=store)
+    """
+    return salt.utils.win_lgpo_netsh.set_settings(
+        profile=profile, setting=setting, value=value, store=store
+    )
 
 
-def set_state(profile, state, store='local'):
-    '''
+def set_state(profile, state, store="local"):
+    """
     Configure the firewall state.
 
     .. versionadded:: 2018.3.4
@@ -772,7 +766,7 @@ def set_state(profile, state, store='local'):
         # Turn the firewall on when the public profile is active and set that in
         # the local group policy
         salt * firewall.set_state public on lgpo
-    '''
-    return salt.utils.win_lgpo_netsh.set_state(profile=profile,
-                                               state=state,
-                                               store=store)
+    """
+    return salt.utils.win_lgpo_netsh.set_state(
+        profile=profile, state=state, store=store
+    )
