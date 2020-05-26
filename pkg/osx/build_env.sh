@@ -288,14 +288,6 @@ $PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
              --ignore-installed \
              --no-cache-dir
 
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (build_ext)"
-echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
-             --global-option=build_ext \
-             --global-option="-I$INSTALL_DIR/include" \
-             --no-cache-dir
-
 echo "--------------------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
 echo "--------------------------------------------------------------------------------"
