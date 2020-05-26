@@ -455,11 +455,11 @@ def __save_artifact(artifact_url, target_file, headers):
             if checksum_response['body'] == file_sum:
                 result['status'] = True
                 result['target_file'] = target_file
-                result['comment'] = 'File {0} already exists, checksum matches with Artifactory.\n' \
+                result['comment'] = 'File {0} already exists, checksum matches with Nexus.\n' \
                                     'Checksum URL: {1}'.format(target_file, checksum_url)
                 return result
             else:
-                result['comment'] = 'File {0} already exists, checksum does not match with Artifactory!\n'\
+                result['comment'] = 'File {0} already exists, checksum does not match with Nexus!\n'\
                                     'Checksum URL: {1}'.format(target_file, checksum_url)
 
         else:
