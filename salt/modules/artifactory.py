@@ -451,13 +451,13 @@ def __save_artifact(artifact_url, target_file, headers):
         log.debug("File %s already exists, checking checksum...", target_file)
         checksum_url = artifact_url + ".sha1"
 
-        checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
-        if checksum_success:
-            log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
+        checksum_response = salt.utils.http.query(checksum_url, header_dict=headers)
+        if checksum_response['body']:
+            log.debug("Downloaded SHA1 SUM: %s", checksum_response['body'])
             file_sum = __salt__['file.get_hash'](path=target_file, form='sha1')
             log.debug("Target file (%s) SHA1 SUM: %s", target_file, file_sum)
 
-            if artifact_sum == file_sum:
+            if checksum_response['body'] == file_sum:
                 result['status'] = True
                 result['target_file'] = target_file
                 result['comment'] = 'File {0} already exists, checksum matches with Artifactory.\n' \
@@ -469,7 +469,7 @@ def __save_artifact(artifact_url, target_file, headers):
 
         else:
             result['status'] = False
-            result['comment'] = checksum_comment
+            result['comment'] = checksum_response['error']
             return result
 
     log.debug('Downloading: %s -> %s', artifact_url, target_file)
@@ -500,23 +500,6 @@ def __get_group_id_subpath(group_id, use_literal_group_id=False):
 def __get_classifier_url(classifier):
     has_classifier = classifier is not None and classifier != ""
     return "-" + classifier if has_classifier else ""
-
-
-def __download(request_url, headers):
-    log.debug('Downloading content from %s', request_url)
-
-    success = False
-    content = None
-    comment = None
-    try:
-        request = urllib.request.Request(request_url, None, headers)
-        url = urllib.request.urlopen(request)
-        content = url.read()
-        success = True
-    except HTTPError as e:
-        comment = __get_error_comment(e, request_url)
-
-    return success, content, comment
 
 
 def __get_error_comment(http_error, request_url):
