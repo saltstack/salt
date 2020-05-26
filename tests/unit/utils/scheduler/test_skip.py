@@ -32,6 +32,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
 
     def tearDown(self):
         self.schedule.reset()
+        super(SchedulerSkipTest, self).tearDown()
 
     @slowTest
     def test_skip(self):

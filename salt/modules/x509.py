@@ -1404,13 +1404,13 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         Initial validity date for the certificate. This date must be specified
         in the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     not_after:
         Final validity date for the certificate. This date must be specified in
         the format '%Y-%m-%d %H:%M:%S'.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     CLI Example:
 

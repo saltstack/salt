@@ -82,3 +82,25 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.object(event, "fire_master", return_value="B"):
             self.assertEqual(event.send("tag"), "B")
+
+    def test_send_use_master_when_local_false(self):
+        """
+        Test for Send an event when opts has use_master_when_local and its False
+        """
+        patch_master_opts = patch.dict(event.__opts__, {"use_master_when_local": False})
+        patch_file_client = patch.dict(event.__opts__, {"file_client": "local"})
+        with patch.object(event, "fire", return_value="B") as patch_send:
+            with patch_master_opts, patch_file_client, patch_send:
+                self.assertEqual(event.send("tag"), "B")
+                patch_send.assert_called_once()
+
+    def test_send_use_master_when_local_true(self):
+        """
+        Test for Send an event when opts has use_master_when_local and its True
+        """
+        patch_master_opts = patch.dict(event.__opts__, {"use_master_when_local": True})
+        patch_file_client = patch.dict(event.__opts__, {"file_client": "local"})
+        with patch.object(event, "fire_master", return_value="B") as patch_send:
+            with patch_master_opts, patch_file_client, patch_send:
+                self.assertEqual(event.send("tag"), "B")
+                patch_send.assert_called_once()

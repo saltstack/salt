@@ -31,6 +31,7 @@ def salt_proxy(request, salt_factories, salt_master):
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = request.config.getoption("--transport")
+    config_defaults["root_dir"] = root_dir
     yield salt_factories.spawn_proxy_minion(
         request, proxy_minion_id, master_id="master", config_defaults=config_defaults
     )
