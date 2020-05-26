@@ -185,7 +185,6 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
 #------------------------------------------------------------------------------
 # Install VCRedist
 #------------------------------------------------------------------------------
-Write-Output "$($ini[$bitPrograms]['VCRedistReg'])"
 If (Test-Path "$($ini[$bitPrograms]['VCRedistReg'])") {
     # Found VCRedist 2013, do nothing
     Write-Output " - VCRedist 2013 Found . . ."
