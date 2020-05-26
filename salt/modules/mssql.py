@@ -58,6 +58,22 @@ def __virtual__():
     )
 
 
+def _get_db_args(**kwargs):
+    """
+    Getting the database connection parameters
+    """
+    connection_args = {}
+    for arg in ("server", "port", "user", "password", "database", "as_dict"):
+        if arg in kwargs:
+            connection_args[arg] = kwargs[arg]
+        else:
+            connection_args[arg] = __salt__["config.option"](
+                "mssql." + arg, _DEFAULTS.get(arg, None)
+            )
+    connection_args['autocommit'] = True
+    return connection_args
+
+
 def _get_connection(**kwargs):
     """
     Getting the database connection
@@ -237,19 +253,14 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     sql = "CREATE DATABASE [{0}] CONTAINMENT = {1} ".format(database, containment)
     if new_database_options:
         sql += " WITH " + ", ".join(new_database_options)
-    conn = None
     try:
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        # cur = conn.cursor()
-        # cur.execute(sql)
-        conn.cursor().execute(sql)
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                # cur = conn.cursor()
+                # cur.execute(sql)
+                cursor.execute(sql)
     except Exception as e:  # pylint: disable=broad-except
         return "Could not create the database: {0}".format(e)
-    finally:
-        if conn:
-            conn.autocommit(False)
-            _close_connection(connect=conn)
     return True
 
 
