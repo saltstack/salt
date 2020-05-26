@@ -175,7 +175,7 @@ def auth(profile=None, **connection_args):
         salt '*' keystone.auth
     """
     __utils__["versions.warn_until"](
-        "3001",
+        "Sodium",
         (
             "The keystone module has been deprecated and will be removed in {version}.  "
             "Please update to using the keystoneng module"

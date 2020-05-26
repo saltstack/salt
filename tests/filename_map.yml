@@ -1,8 +1,9 @@
 '*':
-  - unit.test_module_names
-  - unit.utils.test_doc
-  - unit.test_virtualname
   - integration.modules.test_sysmod
+  - unit.test_module_names
+  - unit.test_virtualname
+  - unit.utils.test_doc
+  - unit.utils.test_versions
 
 setup.py:
   - unit.setup.test_man

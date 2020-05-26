@@ -627,7 +627,7 @@ def _fix_cask_namespace(name=None, pkgs=None):
 
     if show_warning:
         salt.utils.versions.warn_until(
-            "3001",
+            "Sodium",
             "The 'caskroom/cask/' namespace for brew-cask packages "
             "is deprecated. Use 'homebrew/cask/' instead.",
         )

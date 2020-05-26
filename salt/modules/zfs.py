@@ -437,7 +437,7 @@ def mount(name=None, **kwargs):
         #       to ```if not name:```
         if name == "-a":
             salt.utils.versions.warn_until(
-                "3001",
+                "Sodium",
                 "Passing '-a' as name is deprecated as of Salt 2019.2.0. This "
                 "warning will be removed in Salt 3001. Please pass name as "
                 "'None' instead to mount all filesystems.",
@@ -911,7 +911,7 @@ def hold(tag, *snapshot, **kwargs):
     ## warn about tag change
     if "," in tag:
         salt.utils.versions.warn_until(
-            "3001",
+            "Sodium",
             "A comma-separated tag is no support as of Salt 2018.3.1 "
             "This warning will be removed in Salt 3001.",
         )
@@ -976,7 +976,7 @@ def release(tag, *snapshot, **kwargs):
     ## warn about tag change
     if "," in tag:
         salt.utils.versions.warn_until(
-            "3001",
+            "Sodium",
             "A comma-separated tag is no support as of Salt 2018.3.1 "
             "This warning will be removed in Salt 3001.",
         )
