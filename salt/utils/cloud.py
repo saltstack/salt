@@ -207,13 +207,6 @@ def __ssh_gateway_arguments(kwargs):
     return extended_arguments
 
 
-def has_winexe():
-    """
-    True when winexe is found on the system
-    """
-    return salt.utils.path.which("winexe")
-
-
 def os_script(os_, vm_=None, opts=None, minion=""):
     """
     Return the script as a string for the specific os
@@ -959,9 +952,6 @@ def run_psexec_command(cmd, args, host, username, password, port=445):
     """
     Run a command remotly using the psexec protocol
     """
-    if has_winexe() and not HAS_PSEXEC:
-        ret_code = run_winexe_command(cmd, args, host, username, password, port)
-        return None, None, ret_code
     service_name = "PS-Exec-{0}".format(uuid.uuid4())
     stdout, stderr, ret_code = "", "", None
     client = Client(
@@ -1007,8 +997,6 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
     """
     Wait until psexec connection can be established.
     """
-    if has_winexe() and not HAS_PSEXEC:
-        return wait_for_winexe(host, port, username, password, timeout)
     start = time.time()
     try_count = 0
     while True:
@@ -1026,8 +1014,10 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
         if time.time() - start > timeout:
             return False
         log.debug(
-            "Retrying psexec connection to host {0} on port {1} "
-            "(try {2})".format(host, port, try_count)
+            "Retrying psexec connection to host %s on port %s (try %s)",
+            host,
+            port,
+            try_count,
         )
         time.sleep(1)
 
@@ -1231,13 +1221,6 @@ def deploy_windows(
     if use_winrm and not HAS_WINRM:
         log.error("WinRM requested but module winrm could not be imported")
         return False
-
-    if not use_winrm and has_winexe() and not HAS_PSEXEC:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Support for winexe has been deprecated and will be removed in "
-            "Sodium, please install pypsexec instead.",
-        )
 
     starttime = time.mktime(time.localtime())
     log.debug("Deploying %s at %s (Windows)", host, starttime)
@@ -1535,7 +1518,7 @@ def deploy_script(
                     )
             if sudo:
                 comps = tmp_dir.lstrip("/").rstrip("/").split("/")
-                if len(comps) > 0:
+                if comps:
                     if len(comps) > 1 or comps[0] != "tmp":
                         ret = root_cmd(
                             'chown {0} "{1}"'.format(username, tmp_dir),

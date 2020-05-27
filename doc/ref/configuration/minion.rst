@@ -223,7 +223,7 @@ the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
 when there are many minions. Set ``enable_legacy_startup_events: False`` in the
 minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``Sodium`` Salt release this option will default to
+sent. Beginning with the ``3001`` Salt release this option will default to
 ``False``.
 
 .. code-block:: yaml
@@ -2895,7 +2895,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
