@@ -717,15 +717,17 @@ def _gen_xml(
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
+    targets = []
     for i, disk in enumerate(diskp):
         prefix = disk_bus_map.get(disk["model"], "sd")
         disk_context = {
             "device": disk.get("device", "disk"),
-            "target_dev": "{}{}".format(prefix, string.ascii_lowercase[i]),
+            "target_dev": _get_disk_target(targets, len(diskp), prefix),
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
         }
+        targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
             url = urlparse(disk["source_file"])
             if not url.scheme or not url.hostname:
@@ -2173,6 +2175,21 @@ def _diff_lists(old, new, comparator):
     return diff
 
 
+def _get_disk_target(targets, disks_count, prefix):
+    """
+    Compute the disk target name for a given prefix.
+
+    :param targets: the list of already computed targets
+    :param disks: the number of disks
+    :param prefix: the prefix of the target name, i.e. "hd"
+    """
+    for i in range(disks_count):
+        ret = "{}{}".format(prefix, string.ascii_lowercase[i])
+        if ret not in targets:
+            return ret
+    return None
+
+
 def _diff_disk_lists(old, new):
     """
     Compare disk definitions to extract the changes and fix target devices
@@ -2189,11 +2206,7 @@ def _diff_disk_lists(old, new):
         target_node = disk.find("target")
         target = target_node.get("dev")
         prefix = [item for item in prefixes if target.startswith(item)][0]
-        new_target = [
-            "{}{}".format(prefix, string.ascii_lowercase[i])
-            for i in range(len(new))
-            if "{}{}".format(prefix, string.ascii_lowercase[i]) not in targets
-        ][0]
+        new_target = _get_disk_target(targets, len(new), prefix)
         target_node.set("dev", new_target)
         targets.append(new_target)
 
