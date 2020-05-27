@@ -1244,7 +1244,7 @@ def run(name, location="\\"):
 
     .. code-block:: bash
 
-        salt 'minion-id' task.list_run <task_name>
+        salt 'minion-id' task.run <task_name>
     """
     # Check for existing folder
     if name not in list_tasks(location):
@@ -1287,7 +1287,7 @@ def run_wait(name, location="\\"):
 
     .. code-block:: bash
 
-        salt 'minion-id' task.list_run_wait <task_name>
+        salt 'minion-id' task.run_wait <task_name>
     """
     # Check for existing folder
     if name not in list_tasks(location):
