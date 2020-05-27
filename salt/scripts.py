@@ -5,6 +5,8 @@ This module contains the function calls to execute command line scripts
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import mimetypes
+mimetypes._winreg = None
 
 import functools
 import logging
