@@ -75,26 +75,6 @@ def _get_connection(**kwargs):
     return conn
 
 
-def _close_connection(cursor=None, connect=None):
-    """
-    Close the database connection and cursor connection
-    Args:
-        cursor (cursor object):
-        connect  (Connection object):
-
-    """
-    try:
-        if cursor:
-            cursor.close()
-    except pymssql.OperationalError:
-        pass
-    try:
-        if connect:
-            connect.close()
-    except pymssql.OperationalError:
-        pass
-
-
 def _to_rawstrings(text):
     """
     Escape an argument string to be suitable to the appropriate caller.
@@ -151,7 +131,7 @@ def tsql_query(query, **kwargs):
     """
     try:
         query = _to_rawstrings(query)
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(query)
                 # Making sure the result is JSON serializable
@@ -234,7 +214,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     if new_database_options:
         sql += " WITH " + ", ".join(new_database_options)
     try:
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql)
     except Exception as e:  # pylint: disable=broad-except
