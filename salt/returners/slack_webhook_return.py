@@ -142,7 +142,7 @@ def _format_task(task):
     return {"value": task, "short": False}
 
 
-def _generate_payload(author_icon, title, report):
+def _generate_payload(author_icon, title, report, event_returner):
     """
     Prepare the payload for Slack
     :param author_icon: The url for the thumbnail to be displayed
@@ -151,7 +151,10 @@ def _generate_payload(author_icon, title, report):
     :return: The payload ready for Slack
     """
 
-    title = _sprinkle(title)
+    if event_returner is True:
+        title = report["id"]
+    else:
+        title = _sprinkle(title)
 
     text = "Function: {}\n".format(report.get("function"))
     if len(report.get("arguments", [])) > 0:
@@ -319,7 +322,7 @@ def _generate_report(ret, show_tasks):
     return report
 
 
-def _post_message(webhook, author_icon, title, report):
+def _post_message(webhook, author_icon, title, report, event_returner):
     """
     Send a message to a Slack room through a webhook
     :param webhook:     The url of the incoming webhook
@@ -329,7 +332,7 @@ def _post_message(webhook, author_icon, title, report):
     :return:            Boolean if message was sent successfully
     """
 
-    payload = _generate_payload(author_icon, title, report)
+    payload = _generate_payload(author_icon, title, report, event_returner)
 
     data = urllib.parse.urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
 
@@ -347,12 +350,18 @@ def _post_message(webhook, author_icon, title, report):
         return {"res": False, "message": query_result.get("body", query_result)}
 
 
-def returner(ret):
+def returner(ret, **kwargs):
     """
     Send a slack message with the data through a webhook
     :param ret: The Salt return
+    :param **kwargs: Dictionary of additional key/value pairs
     :return: The result of the post
     """
+
+    if kwargs:
+        event_returner = kwargs.get('event_returner')
+    else:
+        event_returner = False
 
     _options = _get_options(ret)
 
@@ -371,6 +380,18 @@ def returner(ret):
     else:
         title = _options.get("failure_title")
 
-    slack = _post_message(webhook, author_icon, title, report)
+    slack = _post_message(webhook, author_icon, title, report, event_returner)
 
     return slack
+
+def event_return(events):
+    """
+    Send event data to returner function
+    :param events: The Salt event return
+    """
+
+    for event in events:
+        ret = event.get("data", False)
+
+        if ret:
+            returner(ret, event_returner=True)
