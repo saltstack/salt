@@ -3727,16 +3727,16 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
 
 class PathStringFunctionsTests(TestCase):
     def test__normpath(self):
-        '''
+        """
         The _normpath_ method works
-        '''
-        unnorm = '/tmp/this/is/not/normalized/../../'
+        """
+        unnorm = "/tmp/this/is/not/normalized/../../"
         normalized = filemod.normpath(unnorm)
-        assert normalized == '/tmp/this/is'
+        assert normalized == "/tmp/this/is"
 
-        def test__abspath(self):
-            '''
-            The _abspath_ method works
-            '''
-            absolute = filemod.abspath('.')
-            assert absolute == filemod.normpath(os.getcwd())
+    def test__abspath(self):
+        """
+        The _abspath_ method works
+        """
+        absolute = filemod.abspath(".")
+        assert absolute == filemod.normpath(os.getcwd())
