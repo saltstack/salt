@@ -2,12 +2,18 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+import platform
+
 import pytest
 import salt.config
 import salt.version
+from distro import linux_distribution
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.windows_whitelisted
@@ -83,3 +89,35 @@ class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         test.outputter
         """
         self.assertEqual(self.run_function("test.outputter", ["text"]), "text")
+
+    @slowTest
+    def test_versions_version(self):
+        """
+        test.versions
+        """
+
+        # copied from salt/version.py
+        def _system_version():
+            """
+            Return host system version.
+            """
+
+            lin_ver = linux_distribution()
+            mac_ver = platform.mac_ver()
+            win_ver = platform.win32_ver()
+
+            if lin_ver[0] and not mac_ver[0]:
+                return " ".join(lin_ver)
+            elif mac_ver[0]:
+                if isinstance(mac_ver[1], (tuple, list)) and "".join(mac_ver[1]):
+                    return " ".join([mac_ver[0], ".".join(mac_ver[1]), mac_ver[2]])
+                else:
+                    return " ".join([mac_ver[0], mac_ver[2]])
+            elif win_ver[0]:
+                return " ".join(win_ver)
+            else:
+                return ""
+
+        versions = self.run_function("test.versions")
+        version = "version: {0}".format(_system_version())
+        self.assertIn(version, versions)
