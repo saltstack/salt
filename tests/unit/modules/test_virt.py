@@ -2257,9 +2257,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
               <devices>
-                <disk type='file' device='cdrom'>
+                <disk type='network' device='cdrom'>
                   <driver name='qemu' type='raw' cache='none' io='native'/>
-                  <source file='/srv/dvd-image-1.iso'/>
+                  <source protocol='https' name='/dvd-image-1.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
                   <backingStore/>
                   <target dev='hda' bus='ide'/>
                   <readonly/>
@@ -2290,6 +2292,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <readonly/>
                   <alias name='ide0-0-3'/>
                   <address type='drive' controller='0' bus='0' target='0' unit='3'/>
+                </disk>
+                <disk type='network' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source protocol='https' name='/dvd-image-6.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
+                  <backingStore/>
+                  <target dev='hde' bus='ide'/>
+                  <readonly/>
                 </disk>
               </devices>
             </domain>
@@ -2325,6 +2336,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "name": "dvd4",
                     "device": "cdrom",
                     "source_file": "/srv/dvd-image-5.iso",
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd5",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-6.iso",
                     "model": "ide",
                 },
             ],
@@ -2398,6 +2415,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "unit": "3",
                     },
                     "source": {"file": "/srv/dvd-image-5.iso"},
+                },
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "backingStore": None,
+                    "target": {"dev": "hde", "bus": "ide"},
+                    "readonly": None,
+                    "source": {"file": "/srv/dvd-image-6.iso"},
                 },
             ],
             [

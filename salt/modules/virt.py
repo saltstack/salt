@@ -2541,7 +2541,7 @@ def update(
             new_disks = []
             for new_disk in changes["disk"].get("new", []):
                 device = new_disk.get("device", "disk")
-                if new_disk.get("type") != "file" and device not in ["cdrom", "floppy"]:
+                if device not in ["cdrom", "floppy"]:
                     new_disks.append(new_disk)
                     continue
 
@@ -2549,8 +2549,7 @@ def update(
                 matching = [
                     old_disk
                     for old_disk in changes["disk"].get("deleted", [])
-                    if old_disk.get("type") == "file"
-                    and old_disk.get("device", "disk") == device
+                    if old_disk.get("device", "disk") == device
                     and old_disk.find("target").get("dev") == target_dev
                 ]
                 if not matching:
@@ -2568,15 +2567,13 @@ def update(
                         else None
                     )
 
+                    updated_disk.set("type", "file")
+                    # Detaching device
                     if source_node is not None:
-                        if not source_file:
-                            # Detaching device
-                            updated_disk.remove(source_node)
-                        else:
-                            # Changing device
-                            source_node.set("file", source_file)
-                    else:
-                        # Attaching device
+                        updated_disk.remove(source_node)
+
+                    # Attaching device
+                    if source_file:
                         ElementTree.SubElement(
                             updated_disk, "source", attrib={"file": source_file}
                         )
