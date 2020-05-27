@@ -799,7 +799,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(root.find("vcpu").text, "1")
             self.assertEqual(root.find("memory").text, str(512 * 1024))
             self.assertEqual(root.find("memory").attrib["unit"], "KiB")
-            self.assertTrue(len(root.findall(".//disk")) == 2)
+            disks = root.findall(".//disk")
+            self.assertTrue(len(disks) == 2)
+            self.assertEqual(disks[0].find("target").get("dev"), "vda")
+            self.assertEqual(disks[1].find("target").get("dev"), "vdb")
             self.assertTrue(len(root.findall(".//interface")) == 2)
 
     def test_disk_profile_kvm_disk_pool(self):
@@ -1143,11 +1146,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
         """
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
         diskp = virt._disk_profile(
             self.mock_conn,
             None,
             "kvm",
             [
+                {"name": "system", "pool": "default"},
                 {
                     "name": "tested",
                     "device": "cdrom",
@@ -1168,12 +1175,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
         )
         root = ET.fromstring(xml_data)
-        disk = root.findall(".//disk")[0]
+        disk = root.findall(".//disk")[1]
         self.assertEqual(disk.get("type"), "file")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertIsNone(disk.find("source"))
+        self.assertEqual(disk.find("target").get("dev"), "hda")
 
-        disk = root.findall(".//disk")[1]
+        disk = root.findall(".//disk")[2]
         self.assertEqual(disk.get("type"), "network")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertEqual(
