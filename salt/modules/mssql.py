@@ -58,22 +58,6 @@ def __virtual__():
     )
 
 
-def _get_db_args(**kwargs):
-    """
-    Getting the database connection parameters
-    """
-    connection_args = {}
-    for arg in ("server", "port", "user", "password", "database", "as_dict"):
-        if arg in kwargs:
-            connection_args[arg] = kwargs[arg]
-        else:
-            connection_args[arg] = __salt__["config.option"](
-                "mssql." + arg, _DEFAULTS.get(arg, None)
-            )
-    connection_args['autocommit'] = True
-    return connection_args
-
-
 def _get_connection(**kwargs):
     """
     Getting the database connection
@@ -86,7 +70,7 @@ def _get_connection(**kwargs):
             connection_args[arg] = __salt__["config.option"](
                 "mssql." + arg, _DEFAULTS.get(arg, None)
             )
-    connection_args['autocommit'] = True
+    connection_args["autocommit"] = True
     conn = pymssql.connect(**connection_args)
     return conn
 
@@ -171,9 +155,9 @@ def tsql_query(query, **kwargs):
             with conn.cursor() as cursor:
                 cursor.execute(query)
                 # Making sure the result is JSON serializable
-        return salt.utils.json.loads(
-            _MssqlEncoder().encode({"resultset": cur.fetchall()})
-        )["resultset"]
+                return salt.utils.json.loads(
+                    _MssqlEncoder().encode({"resultset": cursor.fetchall()})
+                )["resultset"]
     except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
         return (("Could not run the query",), (six.text_type(err),))
@@ -252,8 +236,6 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     try:
         with pymssql.connect(_get_db_args(**kwargs)) as conn:
             with conn.cursor() as cursor:
-                # cur = conn.cursor()
-                # cur.execute(sql)
                 cursor.execute(sql)
     except Exception as e:  # pylint: disable=broad-except
         return "Could not create the database: {0}".format(e)
@@ -279,7 +261,7 @@ def db_remove(database_name, **kwargs):
             "tempdb",
         ]:
             database_name = quote_identifier(database_name)
-            with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with _get_connection(**kwargs) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "ALTER DATABASE {0} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
@@ -344,10 +326,8 @@ def role_create(role, owner=None, grants=None, **kwargs):
     if owner:
         sql += " AUTHORIZATION {0}".format(owner)
     try:
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
-                # cur = conn.cursor()
-                # cur.execute(sql)
                 cursor.execute(sql)
                 for grant in grants:
                     cursor.execute("GRANT {0} TO [{1}]".format(grant, role))
@@ -368,7 +348,7 @@ def role_remove(role, **kwargs):
     """
     try:
         role = quote_identifier(role)
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DROP ROLE {0}".format(role))
         return True
@@ -458,10 +438,8 @@ def login_create(
     if new_login_options:
         sql += " WITH " + ", ".join(new_login_options)
     try:
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
-                # cur = conn.cursor()
-                # cur.execute(sql)
                 cursor.execute(sql)
                 for role in new_login_roles:
                     cursor.execute(
@@ -483,7 +461,7 @@ def login_remove(login, **kwargs):
         salt minion mssql.login_remove LOGINNAME
     """
     try:
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DROP LOGIN [{0}]".format(login))
         return True
@@ -577,10 +555,8 @@ def user_create(
     if options:
         sql += " WITH " + ", ".join(options)
     try:
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
-                # cur = conn.cursor()
-                # cur.execute(sql)
                 cursor.execute(sql)
                 for role in roles:
                     cursor.execute(
@@ -606,7 +582,7 @@ def user_remove(username, **kwargs):
         return False
     try:
         username = quote_identifier(username)
-        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+        with _get_connection(**kwargs) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DROP USER {0}".format(username))
         return True
