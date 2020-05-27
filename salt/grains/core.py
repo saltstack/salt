@@ -2050,8 +2050,9 @@ def os_data():
             # https://bugs.centos.org/view.php?id=8359
             # /etc/os-release contains no minor distro release number so we fall back to parse
             # /etc/centos-release file instead.
-            # Commit introducing this comment should be reverted after the upstream bug is released.
-            if "CentOS Linux 7" in grains.get("lsb_distrib_codename", ""):
+            # Starting with CentOS 7 this minor release information is intentionally not provided
+            # At the time of this commit, CentOS 6+ is supported and works the same for 6, 7 and 8.
+            if grains.get("lsb_distrib_id", "").lower().startswith("centos linux"):
                 grains.pop("lsb_distrib_release", None)
             grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
         grains["oscodename"] = (
