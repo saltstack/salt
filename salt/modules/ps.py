@@ -150,7 +150,10 @@ def top(num_processes=5, interval=3):
         except psutil.NoSuchProcess:
             continue
         else:
-            user, system = process.cpu_times()[:2]
+            try:
+                user, system = process.cpu_times()[:2]
+            except psutil.ZombieProcess:
+                user = system = 0.0
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
@@ -320,7 +323,7 @@ def pkill(pattern, user=None, signal=15, full=False):
         return {"killed": killed}
 
 
-def pgrep(pattern, user=None, full=False):
+def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
     """
     Return the pids for processes matching a pattern.
 
@@ -341,6 +344,12 @@ def pgrep(pattern, user=None, full=False):
         A boolean value indicating whether only the name of the command or
         the full command line should be matched against the pattern.
 
+    pattern_is_regex
+        This flag enables ps.pgrep to mirror the regex search functionality
+        found in the pgrep command line utility.
+
+        .. versionadded:: 3001
+
     **Examples:**
 
     Find all httpd processes on all 'www' minions:
@@ -357,15 +366,26 @@ def pgrep(pattern, user=None, full=False):
     """
 
     procs = []
+
+    if pattern_is_regex:
+        pattern = re.compile(str(pattern))
+
     for proc in psutil.process_iter():
-        name_match = (
-            pattern in " ".join(_get_proc_cmdline(proc))
-            if full
-            else pattern in _get_proc_name(proc)
-        )
+        if full:
+            process_line = " ".join(_get_proc_cmdline(proc))
+        else:
+            process_line = _get_proc_name(proc)
+
+        if pattern_is_regex:
+            name_match = re.search(pattern, process_line)
+        else:
+            name_match = pattern in process_line
+
         user_match = True if user is None else user == _get_proc_username(proc)
+
         if name_match and user_match:
             procs.append(_get_proc_pid(proc))
+
     return procs or None
 
 
