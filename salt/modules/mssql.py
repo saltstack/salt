@@ -165,22 +165,18 @@ def tsql_query(query, **kwargs):
 
         salt minion mssql.tsql_query 'SELECT @@version as version' as_dict=True
     """
-    cur = None
-    conn = None
     try:
         query = _to_rawstrings(query)
-        conn = _get_connection(**kwargs)
-        cur = conn.cursor()
-        cur.execute(query)
-        # Making sure the result is JSON serializable
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                # Making sure the result is JSON serializable
         return salt.utils.json.loads(
             _MssqlEncoder().encode({"resultset": cur.fetchall()})
         )["resultset"]
     except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
         return (("Could not run the query",), (six.text_type(err),))
-    finally:
-        _close_connection(cursor=cur, connect=conn)
 
 
 def version(**kwargs):
@@ -283,17 +279,14 @@ def db_remove(database_name, **kwargs):
             "tempdb",
         ]:
             database_name = quote_identifier(database_name)
-            conn = _get_connection(**kwargs)
-            conn.autocommit(True)
-            cur = conn.cursor()
-            cur.execute(
-                "ALTER DATABASE {0} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
-                    database_name
-                )
-            )
-            cur.execute("DROP DATABASE {0}".format(database_name))
-            conn.autocommit(False)
-            _close_connection(cursor=cur, connect=conn)
+            with pymssql.connect(_get_db_args(**kwargs)) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "ALTER DATABASE {0} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
+                            database_name
+                        )
+                    )
+                    cursor.execute("DROP DATABASE {0}".format(database_name))
             return True
         else:
             return False
@@ -302,7 +295,6 @@ def db_remove(database_name, **kwargs):
 
 
 def role_list(**kwargs):
-
     """
     Lists database roles.
 
@@ -316,7 +308,6 @@ def role_list(**kwargs):
 
 
 def role_exists(role, **kwargs):
-
     """
     Checks if a role exists.
 
@@ -352,21 +343,16 @@ def role_create(role, owner=None, grants=None, **kwargs):
     sql = "CREATE ROLE [{0}]".format(role)
     if owner:
         sql += " AUTHORIZATION {0}".format(owner)
-    conn = None
     try:
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        # cur = conn.cursor()
-        # cur.execute(sql)
-        conn.cursor().execute(sql)
-        for grant in grants:
-            conn.cursor().execute("GRANT {0} TO [{1}]".format(grant, role))
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                # cur = conn.cursor()
+                # cur.execute(sql)
+                cursor.execute(sql)
+                for grant in grants:
+                    cursor.execute("GRANT {0} TO [{1}]".format(grant, role))
     except Exception as e:  # pylint: disable=broad-except
         return "Could not create the role: {0}".format(e)
-    finally:
-        if conn:
-            conn.autocommit(False)
-            _close_connection(connect=conn)
     return True
 
 
@@ -382,12 +368,9 @@ def role_remove(role, **kwargs):
     """
     try:
         role = quote_identifier(role)
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        cur = conn.cursor()
-        cur.execute("DROP ROLE {0}".format(role))
-        conn.autocommit(False)
-        _close_connection(cursor=cur, connect=conn)
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP ROLE {0}".format(role))
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the role: {0}".format(e)
@@ -474,23 +457,18 @@ def login_create(
         new_login_options.insert(0, "PASSWORD=N'{0}'".format(new_login_password))
     if new_login_options:
         sql += " WITH " + ", ".join(new_login_options)
-    conn = None
     try:
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        # cur = conn.cursor()
-        # cur.execute(sql)
-        conn.cursor().execute(sql)
-        for role in new_login_roles:
-            conn.cursor().execute(
-                "ALTER SERVER ROLE [{0}] ADD MEMBER [{1}]".format(role, login)
-            )
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                # cur = conn.cursor()
+                # cur.execute(sql)
+                cursor.execute(sql)
+                for role in new_login_roles:
+                    cursor.execute(
+                        "ALTER SERVER ROLE [{0}] ADD MEMBER [{1}]".format(role, login)
+                    )
     except Exception as e:  # pylint: disable=broad-except
         return "Could not create the login: {0}".format(e)
-    finally:
-        if conn:
-            conn.autocommit(False)
-            _close_connection(connect=conn)
     return True
 
 
@@ -505,12 +483,9 @@ def login_remove(login, **kwargs):
         salt minion mssql.login_remove LOGINNAME
     """
     try:
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        cur = conn.cursor()
-        cur.execute("DROP LOGIN [{0}]".format(login))
-        conn.autocommit(False)
-        _close_connection(cursor=cur, connect=conn)
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP LOGIN [{0}]".format(login))
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the login: {0}".format(e)
@@ -601,23 +576,18 @@ def user_create(
         sql += " WITHOUT LOGIN"
     if options:
         sql += " WITH " + ", ".join(options)
-    conn = None
     try:
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        # cur = conn.cursor()
-        # cur.execute(sql)
-        conn.cursor().execute(sql)
-        for role in roles:
-            conn.cursor().execute(
-                "ALTER ROLE [{0}] ADD MEMBER [{1}]".format(role, username)
-            )
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                # cur = conn.cursor()
+                # cur.execute(sql)
+                cursor.execute(sql)
+                for role in roles:
+                    cursor.execute(
+                        "ALTER ROLE [{0}] ADD MEMBER [{1}]".format(role, username)
+                    )
     except Exception as e:  # pylint: disable=broad-except
         return "Could not create the user: {0}".format(e)
-    finally:
-        if conn:
-            conn.autocommit(False)
-            _close_connection(connect=conn)
     return True
 
 
@@ -636,12 +606,9 @@ def user_remove(username, **kwargs):
         return False
     try:
         username = quote_identifier(username)
-        conn = _get_connection(**kwargs)
-        conn.autocommit(True)
-        cur = conn.cursor()
-        cur.execute("DROP USER {0}".format(username))
-        conn.autocommit(False)
-        _close_connection(cursor=cur, connect=conn)
+        with pymssql.connect(_get_db_args(**kwargs)) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP USER {0}".format(username))
         return True
     except Exception as e:  # pylint: disable=broad-except
         return "Could not remove the user: {0}".format(e)
