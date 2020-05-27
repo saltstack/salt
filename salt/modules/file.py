@@ -7143,7 +7143,7 @@ def normpath(path):
 
 
 def abspath(path):
-    '''
+    """
     Returns a normalized absolutized version of the pathname 'path'.
 
     .. versionadded:: Neon
@@ -7153,7 +7153,7 @@ def abspath(path):
     .. code-block:: jinja
 
         {%- set my_files_dir salt['file.abspath']('../files/') %}
-    '''
+    """
     return os.path.abspath(path)
 
 

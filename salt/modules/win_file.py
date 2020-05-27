@@ -60,8 +60,6 @@ from salt.modules.file import (
     _get_bkroot,
     _get_eol,
     _get_flags,
-    _insert_line_after,
-    _insert_line_before,
     _mkstemp_copy,
     _psed,
     _regex_to_static,
@@ -70,7 +68,6 @@ from salt.modules.file import (
     _set_line_eol,
     _set_line_indent,
     _splitlines_preserving_trailing_newline,
-    _starts_till,
     abspath,
     access,
     append,
@@ -190,7 +187,6 @@ def __virtual__():
             global _set_line_eol, _get_eol, _set_line, _regex_to_static
             global _set_line_indent, dirname, basename, abspath
             global list_backups_dir, normpath_, _assert_occurrence
-            global _starts_till, _insert_line_before, _insert_line_after
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
