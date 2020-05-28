@@ -176,7 +176,11 @@ def api(server, command, *args, **kwargs):
         log.error(err_msg)
         return {call: err_msg}
 
-    namespace, method = command.split(".")
+    namespace, _, method = command.rpartition(".")
+    if not namespace:
+        return {
+            call: "Error: command must use the following format: 'namespace.method'"
+        }
     endpoint = getattr(getattr(client, namespace), method)
 
     try:
