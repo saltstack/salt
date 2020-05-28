@@ -1609,6 +1609,22 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(ret)
 
             ret = postgres.has_privileges(
+                "baruwa",
+                "awl",
+                "table",
+                "ALL",
+                grant_option=False,
+                maintenance_db="db_name",
+                runas="user",
+                host="testhost",
+                port="testport",
+                user="testuser",
+                password="testpassword",
+            )
+
+            self.assertTrue(ret)
+
+            ret = postgres.has_privileges(
                 "bayestest",
                 "awl",
                 "table",
