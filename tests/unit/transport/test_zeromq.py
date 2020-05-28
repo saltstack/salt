@@ -161,7 +161,9 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
             master_ip="localhost", master_port=self.minion_config["master_port"]
         )
 
-        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+        channel = salt.transport.client.ReqChannel.factory(
+            self.minion_config, master_uri=uri
+        )
         self.assertIn("localhost", channel.master_uri)
         del channel
 
@@ -343,11 +345,7 @@ class AsyncReqMessageClientPoolTest(TestCase):
         ]
 
     def tearDown(self):
-        with patch(
-            "salt.transport.zeromq.AsyncReqMessageClient.destroy",
-            MagicMock(return_value=None),
-        ):
-            del self.original_message_clients
+        del self.original_message_clients
         super(AsyncReqMessageClientPoolTest, self).tearDown()
 
     def test_send(self):
@@ -360,10 +358,6 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
-
-    def test_destroy(self):
-        self.message_client_pool.destroy()
-        self.assertEqual([], self.message_client_pool.message_clients)
 
 
 class ZMQConfigTest(TestCase):

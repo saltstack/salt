@@ -78,7 +78,7 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.get_user username=admin
 
     For backwards compatibility, the following syntax will be supported
-    until the Sodium release.
+    until the 3001 release.
 
     salt '*' nxos.cmd <function>
     salt '*' nxos.cmd get_user username=admin
@@ -179,7 +179,6 @@ def check_password(username, password, encrypted=False, **kwargs):
             crypt_salt=cur_salt,
             password=password,
             algorithm=hash_algorithms[hash_type],
-            force=True,
         )
     else:
         new_hash = password
@@ -769,7 +768,7 @@ def set_password(
     get_user(username, **kwargs)  # verify user exists
     if encrypted is False:
         hashed_pass = gen_hash(
-            crypt_salt=crypt_salt, password=password, algorithm=algorithm, force=True
+            crypt_salt=crypt_salt, password=password, algorithm=algorithm
         )
     else:
         hashed_pass = password

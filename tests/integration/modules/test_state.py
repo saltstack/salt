@@ -1625,6 +1625,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "unless condition is true")
 
     @slowTest
+    @pytest.mark.usefixtures("salt_sub_minion")
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, "prod-cheese-file")
         try:
@@ -2417,7 +2418,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "Empty file",
-                "pchanges": {},
                 "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "start_time": "18:10:20.341753",
                 "result": True,

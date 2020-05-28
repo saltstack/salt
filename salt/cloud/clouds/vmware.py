@@ -3065,6 +3065,9 @@ def create(vm_):
             if "dns_servers" in list(vm_.keys()):
                 global_ip.dnsServerList = vm_["dns_servers"]
 
+            if "domain" in list(vm_.keys()):
+                global_ip.dnsSuffixList = vm_["domain"]
+
             non_hostname_chars = re.compile(r"[^\w-]")
             if re.search(non_hostname_chars, vm_name):
                 host_name = re.split(non_hostname_chars, vm_name, maxsplit=1)[0]

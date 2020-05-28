@@ -343,7 +343,10 @@ class SaltEvent(object):
             return
         match_func = self._get_match_func(match_type)
 
-        self.pending_tags.remove([tag, match_func])
+        try:
+            self.pending_tags.remove([tag, match_func])
+        except ValueError:
+            pass
 
         old_events = self.pending_events
         self.pending_events = []
@@ -1116,6 +1119,17 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         Bind the pub and pull sockets for events
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if (
+            self.opts["event_publisher_niceness"]
+            and not salt.utils.platform.is_windows()
+        ):
+            log.info(
+                "setting EventPublisher niceness to %i",
+                self.opts["event_publisher_niceness"],
+            )
+            os.nice(self.opts["event_publisher_niceness"])
+
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if self.opts["ipc_mode"] == "tcp":
@@ -1282,6 +1296,13 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         Spin up the multiprocess event returner
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if self.opts["event_return_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting EventReturn niceness to %i", self.opts["event_return_niceness"]
+            )
+            os.nice(self.opts["event_return_niceness"])
+
         self.event = get_event("master", opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, "salt/event_listen/start")
