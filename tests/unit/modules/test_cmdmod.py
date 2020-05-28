@@ -568,7 +568,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Test that unicode doesn't crash the system
         """
         stdout = "Datenträger"
-        ret = cmdmod.run_all("echo Datenträger")
+        with patch.object(builtins, "__salt_system_encoding__", "utf-8"):
+            ret = cmdmod.run_all("cmd /c echo Datenträger")
         self.assertEqual(ret["stdout"], stdout)
 
     def test_run_all_output_loglevel_quiet(self):
