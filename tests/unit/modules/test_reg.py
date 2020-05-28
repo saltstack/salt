@@ -20,8 +20,9 @@ except ImportError:
 
 UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
-    "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
+    "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
+UNICODE_VALUE_EXTENDED = "发~送时\\间1™自动/化平台"
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
@@ -488,6 +489,32 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 "key": FAKE_KEY,
                 "success": True,
                 "vdata": UNICODE_VALUE,
+                "vname": "fake_unicode",
+                "vtype": "REG_SZ",
+            }
+            self.assertEqual(
+                reg.read_value(hive="HKLM", key=FAKE_KEY, vname="fake_unicode"),
+                expected,
+            )
+        finally:
+            reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
+
+    @destructiveTest
+    def test_set_value_unicode_extended_value(self):
+        """
+        Test the set_value function on a unicode value
+        """
+        try:
+            self.assertTrue(
+                reg.set_value(
+                    hive="HKLM", key=FAKE_KEY, vname="fake_unicode", vdata=UNICODE_VALUE_EXTENDED
+                )
+            )
+            expected = {
+                "hive": "HKLM",
+                "key": FAKE_KEY,
+                "success": True,
+                "vdata": UNICODE_VALUE_EXTENDED,
                 "vname": "fake_unicode",
                 "vtype": "REG_SZ",
             }
