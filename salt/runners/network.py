@@ -80,7 +80,7 @@ def wolmatch(tgt, tgt_type="glob", bcast="255.255.255.255", destport=9):
     minions = __salt__["cache.grains"](tgt, tgt_type)
     for minion in minions:
         for iface, mac in minions[minion]["hwaddr_interfaces"].items():
-            if mac == "00:00:00:00:00:00" or mac == ":::::" :
+            if mac == "00:00:00:00:00:00" or mac == ":::::":
                 continue
             mac = mac.strip()
             wol(mac, bcast, destport)
