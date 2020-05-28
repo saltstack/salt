@@ -102,7 +102,6 @@ from salt.modules.file import (
     manage_file,
 )
 from salt.modules.file import normpath as normpath_
-from salt.modules.file import normpath as normpath_
 from salt.modules.file import (
     pardir,
     path_exists_glob,
@@ -184,9 +183,7 @@ def __virtual__():
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
             global list_backups_dir, normpath_, _assert_occurrence
-            global _set_line_eol, _get_eol, _set_line, _regex_to_static
-            global _set_line_indent, dirname, basename, abspath
-            global list_backups_dir, normpath_, _assert_occurrence
+            global _set_line_eol, _get_eol, _set_line, abspath
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -259,7 +256,6 @@ def __virtual__():
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
             _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
-            _starts_till = _namespaced_function(_starts_till, globals())
             abspath = _namespaced_function(abspath, globals())
 
         else:
