@@ -152,9 +152,11 @@ def _generate_payload(author_icon, title, report, event_returner):
     """
 
     if event_returner is True:
-        title = report["id"]
+        author_name = report["id"]
     else:
-        title = _sprinkle(title)
+        author_name = _sprinkle("{id}")
+
+    title = _sprinkle(title)
 
     text = "Function: {}\n".format(report.get("function"))
     if len(report.get("arguments", [])) > 0:
@@ -172,7 +174,7 @@ def _generate_payload(author_icon, title, report, event_returner):
         {
             "fallback": title,
             "color": "#272727",
-            "author_name": _sprinkle("{id}"),
+            "author_name": author_name,
             "author_link": _sprinkle("{localhost}"),
             "author_icon": author_icon,
             "title": "Success: {}".format(str(report["success"])),
@@ -393,5 +395,5 @@ def event_return(events):
     for event in events:
         ret = event.get("data", False)
 
-        if ret:
+        if ret and "saltutil.find_job" not in ret['fun'] or "salt/auth" not in ret['tag']:
             returner(ret, event_returner=True)
