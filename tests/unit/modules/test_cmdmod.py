@@ -528,6 +528,25 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], stdout_unicode)
         self.assertEqual(ret["stderr"], stderr_unicode)
 
+    def test_run_all_unicode(self):
+        """
+        Ensure that unicode stdout and stderr are decoded properly
+        """
+        stdout_unicode = "Here is some unicode: спам"
+        stderr_unicode = "Here is some unicode: яйца"
+        stdout_bytes = stdout_unicode.encode("utf-8")
+        stderr_bytes = stderr_unicode.encode("utf-8")
+
+        proc = MagicMock(
+            return_value=MockTimedProc(stdout=stdout_bytes, stderr=stderr_bytes)
+        )
+
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            ret = cmdmod.run_all("some command", rstrip=False)
+
+        self.assertEqual(ret["stdout"], stdout_unicode)
+        self.assertEqual(ret["stderr"], stderr_unicode)
+
     def test_run_all_output_encoding(self):
         """
         Test that specifying the output encoding works as expected
@@ -541,6 +560,16 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             builtins, "__salt_system_encoding__", "utf-8"
         ):
             ret = cmdmod.run_all("some command", output_encoding="latin1")
+
+        self.assertEqual(ret["stdout"], stdout)
+
+    def test_run_all_unicode_in_stdout(self):
+        """
+        Test that unicode doesn't crash the system
+        """
+        stdout = "Datenträger"
+
+        ret = cmdmod.run_all("echo Datenträger")
 
         self.assertEqual(ret["stdout"], stdout)
 
