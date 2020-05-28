@@ -507,7 +507,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret["stdout"], "")
         self.assertEqual(ret["stderr"], "")
 
-    def test_run_all_unicode(self):
+    def test_run_all_unicode_set_system_encoding(self):
         """
         Ensure that unicode stdout and stderr are decoded properly
         """
@@ -568,9 +568,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Test that unicode doesn't crash the system
         """
         stdout = "Datenträger"
-
         ret = cmdmod.run_all("echo Datenträger")
-
         self.assertEqual(ret["stdout"], stdout)
 
     def test_run_all_output_loglevel_quiet(self):
