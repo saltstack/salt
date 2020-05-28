@@ -432,7 +432,7 @@ def delkey(key):
 
         salt '*' grains.delkey key
     """
-    setval(key, None, destructive=True)
+    return delval(key, destructive=True)
 
 
 def delval(key, destructive=False):
@@ -455,7 +455,7 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     """
-    setval(key, None, destructive=destructive)
+    return set(key, None, destructive=destructive)
 
 
 def ls():  # pylint: disable=C0103

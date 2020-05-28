@@ -5,6 +5,7 @@ import os
 import threading
 import time
 
+import pytest
 import salt.utils.json
 import salt.utils.stringutils
 from salt.ext import six
@@ -14,8 +15,6 @@ from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
 from salt.utils.zeromq import zmq
 from tests.support.helpers import flaky, slowTest
 from tests.support.unit import skipIf
-
-# Import Salt Testing Libs
 from tests.unit.netapi.test_rest_tornado import SaltnadoTestCase
 
 HAS_ZMQ_IOLOOP = bool(zmq)
@@ -36,6 +35,7 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
     StrictVersion(zmq.__version__) < StrictVersion("14.0.1"),
     "PyZMQ must be >= 14.0.1 to run these tests.",
 )
+@pytest.mark.usefixtures("salt_sub_minion")
 class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def setUp(self):
         super(TestSaltAPIHandler, self).setUp()

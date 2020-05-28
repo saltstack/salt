@@ -501,6 +501,83 @@ Section -install_ucrt
 SectionEnd
 
 
+# Check and install Visual C++ redist 2013 packages
+# Hidden section (-) to install VCRedist
+Section -install_vcredist_2013
+
+    Var /GLOBAL VcRedistName
+    Var /GLOBAL VcRedistGuid
+    Var /GLOBAL NeedVcRedist
+
+    # GUIDs can be found by installing them and then running the following command:
+    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
+    !define VCREDIST_X86_NAME "vcredist_x86_2013"
+    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
+    !define VCREDIST_X64_NAME "vcredist_x64_2013"
+    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
+
+    # Only install 64bit VCRedist on 64bit machines
+    ${If} ${CPUARCH} == "AMD64"
+        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        Call InstallVCRedist
+    ${Else}
+        # Install 32bit VCRedist on all machines
+        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        Call InstallVCRedist
+    ${EndIf}
+
+SectionEnd
+
+
+Function InstallVCRedist
+    # Check to see if it's already installed
+    Call MsiQueryProductState
+    ${If} $NeedVcRedist == "True"
+        detailPrint "System requires $VcRedistName"
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "$VcRedistName is currently not installed. Would you like to install?" \
+            /SD IDYES IDNO endVCRedist
+
+        # If an output variable is specified ($0 in the case below),
+        # ExecWait sets the variable with the exit code (and only sets the
+        # error flag if an error occurs; if an error occurs, the contents
+        # of the user variable are undefined).
+        # http://nsis.sourceforge.net/Reference/ExecWait
+        ClearErrors
+        detailPrint "Installing $VcRedistName..."
+        ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+        IfErrors 0 CheckVcRedistErrorCode
+            MessageBox MB_OK \
+                "$VcRedistName failed to install. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+
+        CheckVcRedistErrorCode:
+        # Check for Reboot Error Code (3010)
+        ${If} $0 == 3010
+            MessageBox MB_OK \
+                "$VcRedistName installed but requires a restart to complete." \
+                /SD IDOK
+            detailPrint "Reboot and run Salt install again"
+
+        # Check for any other errors
+        ${ElseIfNot} $0 == 0
+            MessageBox MB_OK \
+                "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+            detailPrint "Error: $0"
+        ${EndIf}
+
+        endVCRedist:
+
+    ${EndIf}
+
+FunctionEnd
+
+
 Section "MainSection" SEC01
 
     SetOutPath "$INSTDIR\"
@@ -542,17 +619,17 @@ Function .onInit
     ${EndIf}
 
     customConfigExists:
-    # Check for existing installation
-    ReadRegStr $R0 HKLM \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
-        "UninstallString"
-    StrCmp $R0 "" checkOther
-    # Found existing installation, prompt to uninstall
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is already installed.$\n$\n\
-        Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK uninst
-    Abort
+        # Check for existing installation
+        ReadRegStr $R0 HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+            "UninstallString"
+        StrCmp $R0 "" checkOther
+        # Found existing installation, prompt to uninstall
+        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+            "${PRODUCT_NAME} is already installed.$\n$\n\
+            Click `OK` to remove the existing installation." \
+            /SD IDOK IDOK uninst
+        Abort
 
     checkOther:
         # Check for existing installation of full salt
@@ -807,6 +884,16 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
+Function MsiQueryProductState
+    # Used for detecting VCRedist Installation
+    !define INSTALLSTATE_DEFAULT "5"
+
+    StrCpy $NeedVcRedist "False"
+    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
+    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+    StrCpy $NeedVcRedist "True"
+
+FunctionEnd
 
 #------------------------------------------------------------------------------
 # Trim Function

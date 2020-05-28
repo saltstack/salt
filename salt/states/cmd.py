@@ -47,7 +47,7 @@ run if **any** of the files do not exist:
 .. note::
 
     The ``creates`` option was added to the cmd state in version 2014.7.0,
-    and made a global requisite in Sodium.
+    and made a global requisite in 3001.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.

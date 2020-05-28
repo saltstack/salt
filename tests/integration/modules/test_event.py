@@ -19,6 +19,7 @@ from tests.support.case import ModuleCase
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()
