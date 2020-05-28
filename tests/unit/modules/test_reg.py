@@ -22,6 +22,7 @@ UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
     "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
+UNICODE_KEY_EXTENDED = "Unicode Key 间1™自动/化平台"
 UNICODE_VALUE_EXTENDED = "发~送时\\间1™自动/化平台"
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
@@ -466,6 +467,39 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 reg.read_value(
                     hive="HKLM",
                     key="\\".join([FAKE_KEY, UNICODE_KEY]),
+                    vname="fake_name",
+                ),
+                expected,
+            )
+        finally:
+            reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
+
+    @destructiveTest
+    def test_set_value_unicode_extended_key(self):
+        """
+        Test the set_value function on a unicode key
+        """
+        try:
+            self.assertTrue(
+                reg.set_value(
+                    hive="HKLM",
+                    key="\\".join([FAKE_KEY, UNICODE_KEY_EXTENDED]),
+                    vname="fake_name",
+                    vdata="fake_value",
+                )
+            )
+            expected = {
+                "hive": "HKLM",
+                "key": "\\".join([FAKE_KEY, UNICODE_KEY_EXTENDED]),
+                "success": True,
+                "vdata": "fake_value",
+                "vname": "fake_name",
+                "vtype": "REG_SZ",
+            }
+            self.assertEqual(
+                reg.read_value(
+                    hive="HKLM",
+                    key="\\".join([FAKE_KEY, UNICODE_KEY_EXTENDED]),
                     vname="fake_name",
                 ),
                 expected,
