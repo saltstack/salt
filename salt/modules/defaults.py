@@ -29,22 +29,36 @@ def _mk_client():
         __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
 
 
-def _load(formula):
+def _load(formula, saltenv, defaults_files_names):
     """
     Generates a list of salt://<formula>/defaults.(json|yaml) files
     and fetches them from the Salt master.
 
-    Returns first defaults file as python dict.
-    """
+    If ``defaults_files_names`` is not ``None`` fetches this list
+    from the Salt master.
 
+    Returns merge of defaults files as python dict.
+    """
     # Compute possibilities
     _mk_client()
-    paths = []
-    for ext in ("yaml", "json"):
-        source_url = salt.utils.url.create(formula + "/defaults." + ext)
-        paths.append(source_url)
+
+    template_ctx = {
+        "salt": __salt__,
+        "opts": __opts__,
+        "grains": __grains__,
+        "saltenv": saltenv,
+    }
+    defaults = {}
+    if defaults_files_names is None:
+        defaults_files_names = ["defaults.yaml", "defaults.json"]
+
+    paths = [
+        salt.utils.url.create(formula + "/" + default_file)
+        for default_file in defaults_files_names
+    ]
+
     # Fetch files from master
-    defaults_files = __context__["cp.fileclient"].cache_files(paths)
+    defaults_files = __context__["cp.fileclient"].cache_files(paths, saltenv)
 
     for file_ in defaults_files:
         if not file_:
@@ -55,37 +69,72 @@ def _load(formula):
         if suffix == "yaml":
             loader = salt.utils.yaml.safe_load
         elif suffix == "json":
-            loader = salt.utils.json.load
+            loader = salt.utils.json.loads
         else:
             log.debug("Failed to determine loader for %r", file_)
             continue
 
         if os.path.exists(file_):
             log.debug("Reading defaults from %r", file_)
+            basedir, filename = os.path.split(file_)
             with salt.utils.files.fopen(file_) as fhr:
-                defaults = loader(fhr)
+                rdata = salt.utils.templates.render_jinja_tmpl(
+                    salt.utils.stringutils.to_unicode(fhr.read()),
+                    context=template_ctx,
+                    tmplpath=basedir,
+                )
+                defaults = merge(defaults, loader(rdata))
                 log.debug("Read defaults %r", defaults)
 
-            return defaults or {}
+    return defaults
 
 
-def get(key, default=""):
+def get(key, default="", saltenv="base", defaults_files_names=None):
     """
     defaults.get is used much like pillar.get except that it will read
     a default value for a pillar from defaults.json or defaults.yaml
     files that are stored in the root of a salt formula.
+
+    saltenv: base
+
+    defaults_files_names: None
+        list of default filenames that will be merged in a single python dict.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' defaults.get core:users:root
+        salt '*' defaults.get core:users:root saltenv=prod
+        salt '*' defaults.get core:users:root saltenv=prod defaults_files_names='['defaults-role1.yaml', 'defaults-role2.yaml']'
 
     The defaults is computed from pillar key. The first entry is considered as
     the formula namespace.
 
     For example, querying ``core:users:root`` will try to load
     ``salt://core/defaults.yaml`` and ``salt://core/defaults.json``.
+
+    defaults.(json|yaml) can contain jinja variables and access to salt dicts ``grains['somekey']``,
+    ``salt['somekey']`` and ``opts['somekey']``.
+
+    Example:
+
+        .. code-block:: jinja
+
+            {% set os_family = grains['os_family'] %}
+            defaults:
+                enabled: True
+                hostname: {{ grains['fqdn'] }}
+                os_family: {{ os_family }}
+
+        .. code-block:: jinja
+
+            {% set os_family = grains['os_family'] %}
+            {
+                "key": {{ 2+1 }},
+                "hostname": "{{ grains['fqdn'] }}",
+                os_family: {{ os_family }}
+            }
     """
 
     # Determine formula namespace from query
@@ -95,7 +144,7 @@ def get(key, default=""):
         namespace, key = key, None
 
     # Fetch and load defaults formula files from states.
-    defaults = _load(namespace)
+    defaults = _load(namespace, saltenv, defaults_files_names)
 
     # Fetch value
     if key:
