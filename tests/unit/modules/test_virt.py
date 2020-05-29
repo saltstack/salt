@@ -929,6 +929,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(diskp[0]["filename"], ("vdb2"))
 
+        # Reuse existing volume case
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb", "source_file": "vdb1"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+
     def test_gen_xml_volume(self):
         """
         Test virt._gen_xml(), generating a disk of volume type

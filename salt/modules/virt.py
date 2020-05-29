@@ -1319,6 +1319,23 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
             pool_xml = ElementTree.fromstring(pool_obj.XMLDesc())
             pool_type = pool_xml.get("type")
 
+            # Disk pools volume names are partition names, they need to be named based on the device name
+            if pool_type == "disk":
+                device = pool_xml.find("./source/device").get("path")
+                all_volumes = pool_obj.listVolumes()
+                if disk.get("source_file") not in all_volumes:
+                    indexes = [
+                        int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
+                    ] or [0]
+                    index = min(
+                        [
+                            idx
+                            for idx in range(1, max(indexes) + 2)
+                            if idx not in indexes
+                        ]
+                    )
+                    disk["filename"] = "{}{}".format(os.path.basename(device), index)
+
             # Is the user wanting to reuse an existing volume?
             if disk.get("source_file"):
                 if not disk.get("source_file") in pool_obj.listVolumes():
@@ -1345,18 +1362,6 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                     disk["format"] = "qcow2"
                 else:
                     disk["format"] = volume_options.get("default_format", None)
-
-            # Disk pools volume names are partition names, they need to be named based on the device name
-            if pool_type == "disk":
-                device = pool_xml.find("./source/device").get("path")
-                indexes = [
-                    int(re.sub("[a-z]+", "", vol_name))
-                    for vol_name in pool_obj.listVolumes()
-                ] or [0]
-                index = min(
-                    [idx for idx in range(1, max(indexes) + 2) if idx not in indexes]
-                )
-                disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{}.{}".format(vm_name, disk["name"])
