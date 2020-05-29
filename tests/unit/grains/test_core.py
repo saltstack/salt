@@ -1004,6 +1004,32 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             grains.get("virtual"), "container",
                         )
 
+    def test_if_virtual_subtype_exists_lxc_edge_case(self):
+        """
+        Test in the event when we're inside virtualbox, inside an LXC
+        container we need to report that the virtual grain is LXC
+        and not virtualbox.
+        """
+        virt = "lxc"
+        patch_platform = patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=True)
+        )
+        patch_which = patch.object(
+            salt.utils.path, "which", MagicMock(return_value=True)
+        )
+        patch_cmd = patch.dict(
+            core.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": virt}
+                )
+            },
+        )
+        with patch_platform, patch_which, patch_cmd:
+            osdata = {"kernel": "linux"}
+            ret = core._virtual(osdata)
+            self.assertEqual(ret["virtual"], virt.upper())
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     def test_xen_virtual(self):
         """
