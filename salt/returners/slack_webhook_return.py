@@ -360,10 +360,10 @@ def returner(ret, **kwargs):
     :return: The result of the post
     """
 
+    event_returner = False
+
     if kwargs:
-        event_returner = kwargs.get('event_returner')
-    else:
-        event_returner = False
+        event_returner = kwargs.get('event_returner', False)
 
     _options = _get_options(ret)
 
