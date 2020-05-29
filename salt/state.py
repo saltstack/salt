@@ -2902,6 +2902,10 @@ class State(object):
                 or lost["prereq"]
                 or lost["onfail"]
                 or lost["onchanges"]
+                or lost["require_any"]
+                or lost["watch_any"]
+                or lost["onfail_any"]
+                or lost["onchanges_any"]
                 or lost.get("prerequired")
             ):
                 comment = "The following requisites were not found:\n"

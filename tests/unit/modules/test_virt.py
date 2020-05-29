@@ -1879,8 +1879,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "/usr/share/OVMF/OVMF_VARS.ms.fd",
         )
 
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot={"efi": True}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("os").attrib.get("firmware"), "efi")
+
         with self.assertRaises(SaltInvocationError):
             virt.update("my_vm", boot=invalid_boot)
+
+        with self.assertRaises(SaltInvocationError):
+            virt.update("my_vm", boot={"efi": "Not a boolean value"})
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -2461,12 +2475,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         kernel_none = {
-            "kernel": None,
-            "initrd": None,
-            "cmdline": None,
+            "kernel": "None",
+            "initrd": "None",
+            "cmdline": "None",
         }
 
-        uefi_none = {"loader": None, "nvram": None}
+        uefi_none = {"loader": "None", "nvram": "None"}
 
         self.assertEqual(
             {
@@ -2481,6 +2495,18 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("os").find("kernel"), None)
         self.assertEqual(setxml.find("os").find("initrd"), None)
         self.assertEqual(setxml.find("os").find("cmdline"), None)
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_boot_param", boot={"efi": False}),
+        )
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("nvram"), None)
+        self.assertEqual(setxml.find("os").find("loader"), None)
 
         self.assertEqual(
             {

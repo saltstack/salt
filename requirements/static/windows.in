@@ -38,3 +38,6 @@ Genshi
 Cheetah3==3.1.0
 Mako
 wempy; python_version <'3'
+
+# cassandra
+cassandra-driver>=2.0

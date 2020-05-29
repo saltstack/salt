@@ -97,7 +97,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             },
         ):
             with patch("salt.client.LocalClient.cmd_cli") as cmd_cli_mock:
-                self.client.cmd_subset("*", "first.func", sub=1, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2"],
@@ -120,7 +120,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                         full_return=False,
                         ret="",
                     )
-                self.client.cmd_subset("*", "first.func", sub=10, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2", "minion1"],
@@ -145,7 +145,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                     )
 
                 ret = self.client.cmd_subset(
-                    "*", "first.func", sub=1, cli=True, full_return=True
+                    "*", "first.func", subset=1, cli=True, full_return=True
                 )
                 try:
                     cmd_cli_mock.assert_called_with(

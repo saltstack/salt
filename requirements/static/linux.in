@@ -1,4 +1,5 @@
 apache-libcloud==2.0.0
+azure>=4.0.0
 boto3>=1.13.5
 boto>=2.46.0
 certifi
@@ -21,6 +22,7 @@ libnacl>=1.7.1
 mock>=3.0.5
 more-itertools==5.0.0
 moto
+passlib
 paramiko>=2.1.6
 psutil
 pygit2<=0.28.2; python_version < '3.8'
@@ -48,3 +50,6 @@ Genshi
 Cheetah3==3.1.0
 Mako
 wempy; python_version <'3'
+
+# cassandra
+cassandra-driver>=2.0

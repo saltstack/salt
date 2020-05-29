@@ -1274,7 +1274,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     which are within that subnet. If 'type' is 'public', then only public
     addresses will be returned. Ditto for 'type'='private'.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
         ``interface`` can now be a single interface name or a list of
         interfaces. Globbing is also supported.
 
@@ -1309,7 +1309,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
     which are within that subnet.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
         ``interface`` can now be a single interface name or a list of
         interfaces. Globbing is also supported.
 
@@ -2014,7 +2014,7 @@ def iphexval(ip):
 
 def ip_networks(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns a list of IPv4 networks to which the minion belongs.
 
@@ -2039,7 +2039,7 @@ def ip_networks(interface=None, include_loopback=False, verbose=False):
 
 def ip_networks6(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns a list of IPv6 networks to which the minion belongs.
 
