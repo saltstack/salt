@@ -116,6 +116,31 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_onlyif(low_data, "")
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_onlyif_parse_deep_return(self):
+        low_data = {
+            "state": "test",
+            "name": "foo",
+            "__sls__": "consol",
+            "__env__": "base",
+            "__id__": "test",
+            "onlyif": [
+                {
+                    "fun": "test.arg",
+                    "get_return": "kwargs:deep:return",
+                    "deep": {"return": "true"},
+                }
+            ],
+            "order": 10000,
+            "fun": "nop",
+        }
+        expected_result = {"comment": "onlyif condition is true", "result": False}
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, "")
+            self.assertEqual(expected_result, return_result)
+
     def test_verify_onlyif_cmd_error(self):
         """
         Simulates a failure in cmd.retcode from onlyif
@@ -199,6 +224,31 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "result": True,
             "skip_watch": True,
         }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, "")
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_parse_deep_return(self):
+        low_data = {
+            "state": "test",
+            "name": "foo",
+            "__sls__": "consol",
+            "__env__": "base",
+            "__id__": "test",
+            "unless": [
+                {
+                    "fun": "test.arg",
+                    "get_return": "kwargs:deep:return",
+                    "deep": {"return": False},
+                }
+            ],
+            "order": 10000,
+            "fun": "nop",
+        }
+        expected_result = {"comment": "unless condition is false", "result": False}
 
         with patch("salt.state.State._gather_pillar") as state_patch:
             minion_opts = self.get_temp_config("minion")

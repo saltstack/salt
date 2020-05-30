@@ -960,7 +960,10 @@ class State(object):
                     log.warning(ret["comment"])
                     return ret
 
+                get_return = entry.pop("get_return", None)
                 result = self._run_check_function(entry)
+                if get_return:
+                    result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
                     _check_cmd(self.state_con["retcode"])
                 elif not result:
@@ -1023,7 +1026,10 @@ class State(object):
                     log.warning(ret["comment"])
                     return ret
 
+                get_return = entry.pop("get_return", None)
                 result = self._run_check_function(entry)
+                if get_return:
+                    result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
                     _check_cmd(self.state_con["retcode"])
                 elif result:
