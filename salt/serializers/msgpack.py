@@ -63,7 +63,13 @@ elif salt.utils.msgpack.version >= (0, 2, 0):
     def _deserialize(stream_or_string, **options):
         try:
             options.setdefault("use_list", True)
-            options.setdefault("encoding", "utf-8")
+
+            # msgpack deprecated `encoding` starting with version 0.5.2
+            if salt.utils.msgpack.version >= (0, 5, 2):
+                # Under Py2 we still want raw to be set to True
+                options.setdefault("raw", six.PY2)
+            else:
+                options.setdefault("encoding", "utf-8")
             return salt.utils.msgpack.loads(stream_or_string, **options)
         except Exception as error:  # pylint: disable=broad-except
             raise DeserializationError(error)

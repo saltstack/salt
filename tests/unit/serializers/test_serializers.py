@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import warnings
 from textwrap import dedent
 
 # Import 3rd party libs
@@ -338,10 +339,12 @@ class TestSerializers(TestCase):
 
     @skipIf(not msgpack.available, SKIP_MESSAGE % "msgpack")
     def test_msgpack(self):
-        data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
-        serialized = msgpack.serialize(data)
-        deserialized = msgpack.deserialize(serialized)
-        assert deserialized == data, deserialized
+        with warnings.catch_warnings(record=True) as w:
+            data = OrderedDict([("foo", 1), ("bar", 2), ("baz", True)])
+            serialized = msgpack.serialize(data)
+            deserialized = msgpack.deserialize(serialized)
+            assert deserialized == data, deserialized
+            assert len(w) == 0
 
     @skipIf(not python.available, SKIP_MESSAGE % "python")
     def test_serialize_python(self):
