@@ -6,7 +6,7 @@ Execution of Salt modules from within states
 .. note::
 
     There are two styles of calling ``module.run``. **The legacy style will no
-    longer be available starting in the Sodium release.** To opt-in early to the
+    longer be available starting in the 3001 release.** To opt-in early to the
     new style you must add the following to your ``/etc/salt/minion`` config
     file:
 
@@ -342,7 +342,7 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.

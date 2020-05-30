@@ -110,6 +110,12 @@ is hosted by Google Groups. It is open to new members.
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+Additionally, all users of Salt should be subscribed to the Announcements mailing
+list which contains important updates about Salt, such as new releaes and
+security-related announcements. This list is low-traffic.
+
+.. _`salt-announce mailing list`: https://groups.google.com/forum/#!forum/salt-announce
+
 
 IRC
 ===
@@ -134,6 +140,11 @@ The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
 
 |saltrepo|
+
+Long-term planning and strategic decisions are handled via Salt Enhancement Proposals
+and can be found on GitHub.
+
+.. _`Salt Enhancement Proposals`: https://github.com/saltstack/salt-enhancement-proposals
 
 
 Blogs

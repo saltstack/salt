@@ -11,7 +11,7 @@
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -29,6 +29,12 @@ ${StrStrAdv}
     !define PRODUCT_VERSION "${SaltVersion}"
 !else
     !define PRODUCT_VERSION "Undefined Version"
+!endif
+
+!ifdef PythonVersion
+    !define PYTHON_VERSION "${PythonVersion}"
+!else
+    !define PYTHON_VERSION "3"
 !endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
@@ -389,7 +395,7 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
 OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
@@ -495,6 +501,83 @@ Section -install_ucrt
 SectionEnd
 
 
+# Check and install Visual C++ redist 2013 packages
+# Hidden section (-) to install VCRedist
+Section -install_vcredist_2013
+
+    Var /GLOBAL VcRedistName
+    Var /GLOBAL VcRedistGuid
+    Var /GLOBAL NeedVcRedist
+
+    # GUIDs can be found by installing them and then running the following command:
+    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
+    !define VCREDIST_X86_NAME "vcredist_x86_2013"
+    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
+    !define VCREDIST_X64_NAME "vcredist_x64_2013"
+    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
+
+    # Only install 64bit VCRedist on 64bit machines
+    ${If} ${CPUARCH} == "AMD64"
+        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        Call InstallVCRedist
+    ${Else}
+        # Install 32bit VCRedist on all machines
+        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        Call InstallVCRedist
+    ${EndIf}
+
+SectionEnd
+
+
+Function InstallVCRedist
+    # Check to see if it's already installed
+    Call MsiQueryProductState
+    ${If} $NeedVcRedist == "True"
+        detailPrint "System requires $VcRedistName"
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "$VcRedistName is currently not installed. Would you like to install?" \
+            /SD IDYES IDNO endVCRedist
+
+        # If an output variable is specified ($0 in the case below),
+        # ExecWait sets the variable with the exit code (and only sets the
+        # error flag if an error occurs; if an error occurs, the contents
+        # of the user variable are undefined).
+        # http://nsis.sourceforge.net/Reference/ExecWait
+        ClearErrors
+        detailPrint "Installing $VcRedistName..."
+        ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+        IfErrors 0 CheckVcRedistErrorCode
+            MessageBox MB_OK \
+                "$VcRedistName failed to install. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+
+        CheckVcRedistErrorCode:
+        # Check for Reboot Error Code (3010)
+        ${If} $0 == 3010
+            MessageBox MB_OK \
+                "$VcRedistName installed but requires a restart to complete." \
+                /SD IDOK
+            detailPrint "Reboot and run Salt install again"
+
+        # Check for any other errors
+        ${ElseIfNot} $0 == 0
+            MessageBox MB_OK \
+                "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+            detailPrint "Error: $0"
+        ${EndIf}
+
+        endVCRedist:
+
+    ${EndIf}
+
+FunctionEnd
+
+
 Section "MainSection" SEC01
 
     SetOutPath "$INSTDIR\"
@@ -511,6 +594,23 @@ Function .onInit
 
     Call parseCommandLineSwitches
 
+    # Uninstall msi-installed salt
+    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    StrCpy $0 0
+    loop:
+    System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
+    ${If} $2 = 0
+	# Now $1 contains the product code
+        DetailPrint product:$1
+        push $R0
+          StrCpy $R0 $1
+          Call UninstallMSI
+        pop $R0
+        IntOp $0 $0 + 1
+        goto loop
+    ${Endif}
+
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
     ${If} $ConfigType_State == "Custom Config"
@@ -519,17 +619,17 @@ Function .onInit
     ${EndIf}
 
     customConfigExists:
-    # Check for existing installation
-    ReadRegStr $R0 HKLM \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
-        "UninstallString"
-    StrCmp $R0 "" checkOther
-    # Found existing installation, prompt to uninstall
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is already installed.$\n$\n\
-        Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK uninst
-    Abort
+        # Check for existing installation
+        ReadRegStr $R0 HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+            "UninstallString"
+        StrCmp $R0 "" checkOther
+        # Found existing installation, prompt to uninstall
+        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+            "${PRODUCT_NAME} is already installed.$\n$\n\
+            Click `OK` to remove the existing installation." \
+            /SD IDOK IDOK uninst
+        Abort
 
     checkOther:
         # Check for existing installation of full salt
@@ -784,6 +884,16 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
+Function MsiQueryProductState
+    # Used for detecting VCRedist Installation
+    !define INSTALLSTATE_DEFAULT "5"
+
+    StrCpy $NeedVcRedist "False"
+    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
+    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+    StrCpy $NeedVcRedist "True"
+
+FunctionEnd
 
 #------------------------------------------------------------------------------
 # Trim Function
@@ -1149,6 +1259,30 @@ Function un.RemoveFromPath
         Pop $2
         Pop $1
         Pop $0
+
+FunctionEnd
+
+#------------------------------------------------------------------------------
+# UninstallMSI Function
+# - Uninstalls MSI by product code
+#
+# Usage:
+#   Push product code
+#   Call UninstallMSI
+#
+# Source:
+#   https://nsis.sourceforge.io/Uninstalling_a_previous_MSI_(Windows_installer_package)
+#------------------------------------------------------------------------------
+Function UninstallMSI
+    ; $R0 === product code
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
+        Click `OK` to remove the existing installation." \
+        /SD IDOK IDOK UninstallMSI
+    Abort
+
+    UninstallMSI:
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
 
 FunctionEnd
 

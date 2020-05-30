@@ -14,7 +14,7 @@ import signal
 import pytest
 import salt.utils.event
 import salt.utils.reactor
-from tests.support.case import ShellTestCase
+from tests.support.case import ShellCase
 from tests.support.mixins import SaltMinionEventAssertsMixin
 from tests.support.unit import skipIf
 
@@ -24,7 +24,7 @@ class TimeoutException(Exception):
 
 
 @pytest.mark.windows_whitelisted
-class ReactorTest(SaltMinionEventAssertsMixin, ShellTestCase):
+class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
     """
     Test Salt's reactor system
     """

@@ -2,7 +2,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -10,15 +9,12 @@ import shutil
 import uuid
 
 import salt.modules.seed as seed
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.odict
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class SeedTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,7 +25,7 @@ class SeedTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {seed: {}}
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__, {"master": "foo"}):
             ddd = salt.utils.odict.OrderedDict()
