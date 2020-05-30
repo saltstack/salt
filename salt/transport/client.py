@@ -126,25 +126,28 @@ class AsyncReqChannel(AsyncChannel):
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
+        transport = None
         # switch on available ttypes
         if ttype == "zeromq":
             import salt.transport.zeromq
 
-            return salt.transport.zeromq.AsyncZeroMQReqChannel(opts, **kwargs)
+            transport = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, **kwargs)
         elif ttype == "tcp":
             if not cls._resolver_configured:
                 # TODO: add opt to specify number of resolver threads
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
 
-            return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
+            transport = salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
         elif ttype == "local":
             raise Exception("There's no AsyncLocalChannel implementation yet")
             # import salt.transport.local
             # return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
         else:
             raise Exception("Channels are only defined for tcp, zeromq, and local")
-            # return NewKindOfChannel(opts, **kwargs)
+            # return NewKindOfChannel(opts, **kwargs)'
+        import salt.transport.traced
+        return salt.transport.traced.TracedReqChannel(transport)
 
     def send(self, load, tries=3, timeout=60, raw=False):
         """
@@ -190,6 +193,7 @@ class AsyncPubChannel(AsyncChannel):
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
+        transport = None
         # switch on available ttypes
         if ttype == "detect":
             opts["detect_mode"] = True
@@ -197,14 +201,14 @@ class AsyncPubChannel(AsyncChannel):
         if ttype == "zeromq":
             import salt.transport.zeromq
 
-            return salt.transport.zeromq.AsyncZeroMQPubChannel(opts, **kwargs)
+            transport = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, **kwargs)
         elif ttype == "tcp":
             if not cls._resolver_configured:
                 # TODO: add opt to specify number of resolver threads
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
 
-            return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
+            transport = salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
         elif ttype == "local":  # TODO:
             raise Exception("There's no AsyncLocalPubChannel implementation yet")
             # import salt.transport.local
@@ -212,6 +216,8 @@ class AsyncPubChannel(AsyncChannel):
         else:
             raise Exception("Channels are only defined for tcp, zeromq, and local")
             # return NewKindOfChannel(opts, **kwargs)
+        import salt.transport.traced
+        return salt.transport.traced.TracedPubChannel(transport)
 
     def connect(self):
         """
@@ -252,7 +258,10 @@ class AsyncPushChannel(object):
         # Obviously, this makes the factory approach pointless, but we'll extend later
         import salt.transport.ipc
 
-        return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
+        transport = salt.transport.ipc.IPCMessageClient(opts, **kwargs)
+
+        import salt.transport.traced
+        return salt.transport.traced.TracedPushChannel(transport)
 
 
 class AsyncPullChannel(object):
@@ -267,7 +276,10 @@ class AsyncPullChannel(object):
         """
         import salt.transport.ipc
 
-        return salt.transport.ipc.IPCMessageServer(opts, **kwargs)
+        transport = salt.transport.ipc.IPCMessageServer(opts, **kwargs)
+
+        import salt.transport.traced
+        return salt.transport.traced.TracedPullChannel(transport)
 
 
 ## Additional IPC messaging patterns should provide interfaces here, ala router/dealer, pub/sub, etc

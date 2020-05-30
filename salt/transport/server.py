@@ -28,22 +28,25 @@ class ReqServerChannel(object):
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
+        transport = None
         # switch on available ttypes
         if ttype == "zeromq":
             import salt.transport.zeromq
 
-            return salt.transport.zeromq.ZeroMQReqServerChannel(opts)
+            transport = salt.transport.zeromq.ZeroMQReqServerChannel(opts)
         elif ttype == "tcp":
             import salt.transport.tcp
 
-            return salt.transport.tcp.TCPReqServerChannel(opts)
+            transport = salt.transport.tcp.TCPReqServerChannel(opts)
         elif ttype == "local":
             import salt.transport.local
 
-            return salt.transport.local.LocalServerChannel(opts)
+            transport = salt.transport.local.LocalServerChannel(opts)
         else:
             raise Exception("Channels are only defined for ZeroMQ and TCP")
             # return NewKindOfChannel(opts, **kwargs)
+        import salt.transport.traced
+        return salt.transport.traced.TracedReqServerChannel(transport)
 
     def pre_fork(self, process_manager):
         """
@@ -75,22 +78,25 @@ class PubServerChannel(object):
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
+        transport = None
         # switch on available ttypes
         if ttype == "zeromq":
             import salt.transport.zeromq
 
-            return salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
+            transport = salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
         elif ttype == "tcp":
             import salt.transport.tcp
 
-            return salt.transport.tcp.TCPPubServerChannel(opts)
+            transport = salt.transport.tcp.TCPPubServerChannel(opts)
         elif ttype == "local":  # TODO:
             import salt.transport.local
 
-            return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
+            transport = salt.transport.local.LocalPubServerChannel(opts, **kwargs)
         else:
             raise Exception("Channels are only defined for ZeroMQ and TCP")
             # return NewKindOfChannel(opts, **kwargs)
+        import salt.transport.traced
+        return salt.transport.traced.TracedPubServerChannel(transport)
 
     def pre_fork(self, process_manager, kwargs=None):
         """
