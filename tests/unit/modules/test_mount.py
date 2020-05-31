@@ -96,6 +96,17 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(mount, "_active_mounts_aix", mock):
                 self.assertEqual(mount.active(), {})
 
+    def test_fstab_entry_ignores_opt_ordering(self):
+        entry = mount._fstab_entry(
+            name="/tmp",
+            device="tmpfs",
+            fstype="tmpfs",
+            opts="defaults,nodev,noexec",
+            dump=0,
+            pass_num=0,
+        )
+        assert entry.match("tmpfs\t\t/tmp\ttmpfs\tnodev,defaults,noexec\t0 0\n")
+
     def test_fstab(self):
         """
         List the content of the fstab

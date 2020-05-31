@@ -290,7 +290,23 @@ def active(extended=False):
     return ret
 
 
-class _fstab_entry(object):
+class _fstab_match_mixin(object):
+    def match(self, line):
+        """
+        Compare potentially partial criteria against line
+        """
+        entry = self.dict_from_line(line)
+        for key, value in six.iteritems(self.criteria):
+            if key == "opts":
+                # Ignore ordering of the options
+                if set(entry[key].split(",")) != set(value.split(",")):
+                    return False
+            elif entry[key] != value:
+                return False
+        return True
+
+
+class _fstab_entry(_fstab_match_mixin):
     """
     Utility class for manipulating fstab entries. Primarily we're parsing,
     formatting, and comparing lines. Parsing emits dicts expected from
@@ -372,18 +388,8 @@ class _fstab_entry(object):
         """
         return os.path.normcase(os.path.normpath(path))
 
-    def match(self, line):
-        """
-        Compare potentially partial criteria against line
-        """
-        entry = self.dict_from_line(line)
-        for key, value in six.iteritems(self.criteria):
-            if entry[key] != value:
-                return False
-        return True
 
-
-class _vfstab_entry(object):
+class _vfstab_entry(_fstab_match_mixin):
     """
     Utility class for manipulating vfstab entries. Primarily we're parsing,
     formatting, and comparing lines. Parsing emits dicts expected from
@@ -469,16 +475,6 @@ class _vfstab_entry(object):
         Resolve equivalent paths equivalently
         """
         return os.path.normcase(os.path.normpath(path))
-
-    def match(self, line):
-        """
-        Compare potentially partial criteria against line
-        """
-        entry = self.dict_from_line(line)
-        for key, value in six.iteritems(self.criteria):
-            if entry[key] != value:
-                return False
-        return True
 
 
 class _FileSystemsEntry(object):
