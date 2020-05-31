@@ -66,6 +66,7 @@ class TracedPubChannel(AsyncPubChannel):
                               {})
         self.__dict__ = baseObject.__dict__
         self.channel = baseObject
+        log.warning("%s.__init__", __class__)
 
     def connect(self):
         log.warning("%s.connect", __class__)
@@ -104,6 +105,7 @@ class TracedReqServerChannel(object):
                               {})
         self.__dict__ = baseObject.__dict__
         self.channel = baseObject
+        log.warning("%s.__init__", __class__)
 
     def pre_fork(self, process_manager):
         log.warning("%s.pre_fork %s", __class__, process_manager)
@@ -137,6 +139,7 @@ class TracedPubServerChannel(object):
                               {})
         self.__dict__ = baseObject.__dict__
         self.channel = baseObject
+        log.warning("%s.__init__", __class__)
 
     def pre_fork(self, process_manager, kwargs=None):
         log.warning("%s.pre_fork %s %s", __class__, process_manager, kwargs)
@@ -156,6 +159,7 @@ class TracedPushChannel(IPCMessageClient):
                               {})
         self.__dict__ = baseObject.__dict__
         self.channel = baseObject
+        log.warning("%s.__init__", __class__)
 
     @salt.ext.tornado.gen.coroutine
     def send(self, msg, timeout=None, tries=None):
@@ -172,6 +176,7 @@ class TracedPullChannel(IPCServer):
                               {})
         self.__dict__ = baseObject.__dict__
         self.channel = baseObject
+        log.warning("%s.__init__", __class__)
 
         # Wrap payload handler for IPC
         self.payload_handler = self.channel.payload_handler
