@@ -1,3 +1,5 @@
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 import salt.ext.tornado.gen
@@ -6,8 +8,35 @@ from salt.transport.client import AsyncPubChannel
 from salt.transport.ipc import IPCServer
 from salt.transport.ipc import IPCMessageClient
 
-log = logging.getLogger(__name__)
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    ConsoleSpanExporter,
+    SimpleExportSpanProcessor,
+)
+from opentelemetry.context import get_current
+from opentelemetry.context import attach
 
+# The preferred tracer implementation must be set, as the opentelemetry-api
+# defines the interface with a no-op implementation.
+# It must be done before instrumenting any library
+trace.set_tracer_provider(TracerProvider())
+
+trace.get_tracer_provider().add_span_processor(
+    SimpleExportSpanProcessor(ConsoleSpanExporter())
+)
+
+from opentelemetry import propagators
+PROPAGATOR = propagators.get_global_httptextformat()
+
+def get_header_from_dict(dicty, key):
+    return dicty.get(key, None)
+
+def set_header_into_dict(dicty, key, value):
+    dicty[key] = value
+
+tracer = opentelemetry.trace.get_tracer(__name__)
+log = logging.getLogger(__name__)
 
 class TracedReqChannel(AsyncReqChannel):
     def __init__(self, baseObject):
@@ -20,16 +49,25 @@ class TracedReqChannel(AsyncReqChannel):
 
     def send(self, load, tries=3, timeout=60, raw=False):
         log.warning("%s.send %s", __class__, load)
-        reply = self.channel.send(load, tries, timeout, raw)
-        log.warning("%s.send (reply) %s", __class__, reply)
+        with tracer.start_as_current_span("%s.send".format(__class__)):
+            context = get_current()
+            PROPAGATOR.inject(
+                set_header_into_dict,
+                load,
+                context=context
+            )
+            log.warning("%s.send modified %s", __class__, load)
 
-        def callback(future):
-            value = future.result()
-            log.warning("%s.send (reply callback) %s", __class__, value)
+            reply = self.channel.send(load, tries, timeout, raw)
+            log.warning("%s.send (reply) %s", __class__, reply)
 
-        reply.add_done_callback(callback)
+            def callback(future):
+                value = future.result()
+                log.warning("%s.send (reply callback) %s", __class__, value)
 
-        return reply
+            reply.add_done_callback(callback)
+
+            return reply
 
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60
