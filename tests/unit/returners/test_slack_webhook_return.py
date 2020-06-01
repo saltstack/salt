@@ -153,6 +153,14 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.http.query", return_value=query_ret):
             self.assertTrue(slack_webhook.returner(self._RET))
 
+    def test_event_return(self):
+        """
+        Test to see if the Slack Webhook event_return sends a message
+        """
+        query_ret = {"body": "ok", "status": 200}
+        with patch("salt.utils.http.query", return_value=query_ret):
+            self.assertTrue(slack_webhook.event_return(self._RET))
+
     def test_generate_payload_for_state_apply(self):
         """
         Test _generate_payload private method
