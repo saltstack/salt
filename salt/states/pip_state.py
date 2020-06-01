@@ -885,9 +885,12 @@ def installed(
 
                 # Append comments if this is a dry run.
                 if __opts__["test"]:
-                    msg = "Python package {0} is set to be installed"
+                    msg = "Python package(s) set to be installed:"
+                    for pkg in pkgs_details:
+                        msg += "\n"
+                        msg += pkg[1]
+                        ret["comment"] = msg
                     ret["result"] = None
-                    ret["comment"] = msg.format(state_pkg_name)
                     return ret
 
             # The package is already present and will not be reinstalled.
