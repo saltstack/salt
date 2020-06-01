@@ -563,13 +563,13 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret["stdout"], stdout)
 
+    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
     def test_run_all_unicode_in_stdout(self):
         """
         Test that unicode doesn't crash the system
         """
         stdout = "Datenträger"
-        with patch.object(builtins, "__salt_system_encoding__", "utf-8"):
-            ret = cmdmod.run_all("cmd /c echo Datenträger")
+        ret = cmdmod.run_all("cmd /c echo Datenträger", chcp=65001)
         self.assertEqual(ret["stdout"], stdout)
 
     def test_run_all_output_loglevel_quiet(self):

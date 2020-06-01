@@ -286,6 +286,7 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
+    chcp=437,
     **kwargs
 ):
     """
@@ -602,7 +603,7 @@ def _run(
         else:
             # On Windows set the codepage to US English.
             if python_shell:
-                cmd = "chcp 437 > nul & " + cmd
+                cmd = "chcp {0} > nul & {1}".format(chcp, cmd)
 
     if clean_env:
         run_env = env
@@ -1137,6 +1138,12 @@ def run(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -1389,6 +1396,12 @@ def shell(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -1618,6 +1631,12 @@ def run_stdout(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -1828,6 +1847,12 @@ def run_stderr(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -2064,6 +2089,12 @@ def run_all(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -2265,6 +2296,12 @@ def retcode(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -2538,6 +2575,12 @@ def script(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -2789,6 +2832,12 @@ def script_retcode(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -3653,6 +3702,12 @@ def powershell(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     :returns:
         :dict: A dictionary of data returned by the powershell command.
 
@@ -3962,6 +4017,12 @@ def powershell_all(
 
       .. versionadded:: 2019.2.0
 
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
+
     :return: A dictionary with the following entries:
 
         result
@@ -4230,6 +4291,12 @@ def run_bg(
         present in the ``stdin`` value to newlines.
 
       .. versionadded:: 2019.2.0
+
+    :param int chcp: 437
+        Sets the codepage for Windows commands. Only applicable on Windows
+        systems. For others the setting will be ignored
+
+        .. versionadded:: Magnesium
 
     CLI Example:
 

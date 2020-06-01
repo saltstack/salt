@@ -1233,11 +1233,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
                 if salt.utils.platform.is_windows():
-                    comt = "User salt is not available Group salt" " is not available"
+                    comt = "User salt is not available Group salt is not available"
                 else:
-                    comt = (
-                        "User salt is not available Group saltstack" " is not available"
-                    )
+                    comt = "User salt is not available Group saltstack is not available"
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(
                     filestate.managed(name, user=user, group=group), ret

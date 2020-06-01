@@ -1027,6 +1027,9 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
 class WithTempfile(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop("create", True)
+        self.content = kwargs.pop("content", "")
+        if self.content:
+            self.create = True
         if "dir" not in kwargs:
             kwargs["dir"] = RUNTIME_VARS.TMP
         if "prefix" not in kwargs:
@@ -1043,6 +1046,9 @@ class WithTempfile(object):
 
     def wrap(self, testcase, *args, **kwargs):
         name = salt.utils.files.mkstemp(**self.kwargs)
+        if self.content:
+            with salt.utils.files.fopen(name, "w") as fp:
+                fp.write(self.content)
         if not self.create:
             os.remove(name)
         try:
