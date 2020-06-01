@@ -33,7 +33,7 @@ import salt.utils.json
 
 def _is_docker_module(mod):
     required_attrs = ["APIClient", "from_env"]
-    return all(hasattr(attr) for attr in required_attrs)
+    return all(hasattr(mod, attr) for attr in required_attrs)
 
 
 try:
