@@ -30,13 +30,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt libs
 import salt.utils.json
 
-HAS_DOCKER = False
+
+def _is_docker_module(mod):
+    if hasattr(mod, "APIClient") and hasattr(mod, "from_env"):
+        return True
+    else:
+        return False
+
 
 try:
     import docker
 
-    if hasattr(docker, "from_env"):
-        HAS_DOCKER = True
+    HAS_DOCKER = _is_docker_module(docker)
 except ImportError:
     HAS_DOCKER = False
 
