@@ -66,13 +66,13 @@ if not HAS_M2:
         from Cryptodome.Hash import SHA
         from Cryptodome.PublicKey import RSA
         from Cryptodome.Signature import PKCS1_v1_5
-        import Cryptodome.Random  # pylint: disable=W0611
+        from Cryptodome import Random  # pylint: disable=W0611
 
-        HAS_CDOME = True
+        HAS_CRYPTO = True
     except ImportError:
-        HAS_CDOME = False
+        HAS_CRYPTO = False
 
-if not HAS_M2 and not HAS_CDOME:
+if not HAS_M2 and not HAS_CRYPTO:
     try:
         from Crypto.Cipher import AES, PKCS1_OAEP
         from Crypto.Hash import SHA
@@ -80,10 +80,11 @@ if not HAS_M2 and not HAS_CDOME:
         from Crypto.Signature import PKCS1_v1_5
 
         # let this be imported, if possible
-        import Crypto.Random  # pylint: disable=W0611
+        from Crypto import Random  # pylint: disable=W0611
+
+        HAS_CRYPTO = True
     except ImportError:
-        # No need for crypt in local mode
-        pass
+        HAS_CRYPTO = False
 
 
 log = logging.getLogger(__name__)
@@ -332,6 +333,19 @@ def public_decrypt(pub, message):
     else:
         verifier = salt.utils.rsax931.RSAX931Verifier(pub.exportKey("PEM"))
         return verifier.verify(message)
+
+
+def pwdata_decrypt(rsa_key, pwdata):
+    if HAS_M2:
+        key = RSA.load_key_string(rsa_key.encode("ascii"))
+        password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
+    else:
+        dsize = SHA.digest_size
+        sentinel = Random.new().read(15 + dsize)
+        key_obj = RSA.importKey(rsa_key)
+        key_obj = PKCS1_v1_5.new(key_obj)
+        password = key_obj.decrypt(pwdata, sentinel)
+    return salt.utils.stringutils.to_unicode(password)
 
 
 class MasterKeys(dict):

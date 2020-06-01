@@ -101,9 +101,10 @@ import uuid
 from functools import cmp_to_key
 
 import salt.config as config
-import salt.utils.aws as aws
 
 # Import Salt Libs
+import salt.crypt
+import salt.utils.aws as aws
 import salt.utils.cloud
 import salt.utils.compat
 import salt.utils.files
@@ -127,26 +128,6 @@ from salt.ext import six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
-
-# Import 3rd-Party Libs
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-
-try:
-    import Crypto
-
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
 
 try:
     import requests
@@ -218,7 +199,10 @@ def get_dependencies():
     """
     Warn if dependencies aren't met.
     """
-    deps = {"requests": HAS_REQUESTS, "pycrypto or m2crypto": HAS_M2 or HAS_PYCRYPTO}
+    deps = {
+        "requests": HAS_REQUESTS,
+        "pycrypto or m2crypto": salt.crypt.HAS_M2 or salt.crypt.HAS_CRYPTO,
+    }
     return config.check_driver_dependencies(__virtualname__, deps)
 
 
@@ -4946,7 +4930,7 @@ def get_password_data(
     for item in data:
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
-    if not HAS_M2 and not HAS_PYCRYPTO:
+    if not salt.crypt.HAS_M2 and not salt.crypt.HAS_PYCRYPTO:
         if "key" in kwargs or "key_file" in kwargs:
             log.warning("No crypto library is installed, can not decrypt password")
         return ret
@@ -4961,16 +4945,7 @@ def get_password_data(
         if pwdata is not None:
             rsa_key = kwargs["key"]
             pwdata = base64.b64decode(pwdata)
-            if HAS_M2:
-                key = RSA.load_key_string(rsa_key.encode("ascii"))
-                password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
-            else:
-                dsize = Crypto.Hash.SHA.digest_size
-                sentinel = Crypto.Random.new().read(15 + dsize)
-                key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
-                key_obj = PKCS1_v1_5.new(key_obj)
-                password = key_obj.decrypt(pwdata, sentinel)
-            ret["password"] = salt.utils.stringutils.to_unicode(password)
+            ret["password"] = salt.crypt.pwdata_decrypt(rsa_key, pwdata)
 
     return ret
 
