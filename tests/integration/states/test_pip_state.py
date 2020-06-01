@@ -232,7 +232,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Test pip.installed state while test=true
         """
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode")
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode-name")
         with VirtualEnv(self, venv_dir):
             name = "pudb"
             msg = "Python package(s) set to be installed:\npudb"
@@ -245,7 +245,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Test pip.installed state while test=true
         """
-        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode")
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode-pkgs")
         with VirtualEnv(self, venv_dir):
             pkgs = ["boto", "pudb", "black"]
             msg = "Python package(s) set to be installed:\nboto\npudb\nblack"
