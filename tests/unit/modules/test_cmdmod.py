@@ -269,12 +269,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests cmd.powershell with a string value output
         """
-        mock_run = {
-            "pid": 1234,
-            "retcode": 0,
-            "stderr": "",
-            "stdout": '"foo"'
-        }
+        mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": '"foo"'}
         with patch("salt.modules.cmdmod._run", return_value=mock_run):
             ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
             self.assertEqual("foo", ret)
@@ -284,12 +279,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests cmd.powershell when the output is an empty string
         """
-        mock_run = {
-            "pid": 1234,
-            "retcode": 0,
-            "stderr": "",
-            "stdout": ""
-        }
+        mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": ""}
         with patch("salt.modules.cmdmod._run", return_value=mock_run):
             ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
             self.assertEqual({}, ret)
