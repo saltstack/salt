@@ -13,6 +13,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import errno
+import json
 import logging
 import os
 import re
@@ -166,6 +167,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         """
         Execute the runner function and return the return data and output in a dict
         """
+        output = kwargs.pop("_output", None)
         ret = {"fun": fun}
 
         # Late import
@@ -194,8 +196,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         opts["color"] = False
         opts["output_file"] = cStringIO()
         try:
-            salt.output.display_output(ret["return"], opts=opts)
-            ret["out"] = opts["output_file"].getvalue().splitlines()
+            salt.output.display_output(ret["return"], opts=opts, out=output)
+            out = opts["output_file"].getvalue()
+            if output is None:
+                out = out.splitlines()
+            elif output == "json":
+                out = json.loads(out)
+            ret["out"] = out
         finally:
             opts["output_file"].close()
         log.debug(
@@ -242,8 +249,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
+        # arg_str = "{0} --config-dir {1} {2}".format(
+        #    "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        # )
         arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
+            "--local" if local else "", config_dir, arg_str
         )
         ret = self.run_script(
             "salt-call",

@@ -28,8 +28,10 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
+
+# Import Salt Testing libs
 from tests.support.helpers import slowTest
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -131,6 +133,96 @@ class LazyLoaderTest(TestCase):
         self.assertTrue(inspect.isfunction(self.loader[self.module_name + ".loaded"]))
         # Make sure depends correctly kept a function from loading
         self.assertTrue(self.module_name + ".not_loaded" not in self.loader)
+
+
+loader_template_module = """
+import my_utils
+
+def run():
+    return my_utils.run()
+"""
+
+loader_template_utils = """
+def run():
+    return True
+"""
+
+
+class LazyLoaderUtilsTest(TestCase):
+    """
+    Test the loader
+    """
+
+    module_name = "lazyloaderutilstest"
+    utils_name = "my_utils"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts["grains"] = salt.loader.grains(cls.opts)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
+
+    def setUp(self):
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.module_file = os.path.join(
+            self.module_dir, "{}.py".format(self.module_name)
+        )
+        with salt.utils.files.fopen(self.module_file, "w") as fh:
+            fh.write(salt.utils.stringutils.to_str(loader_template_module))
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        self.utils_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.utils_file = os.path.join(self.utils_dir, "{}.py".format(self.utils_name))
+        with salt.utils.files.fopen(self.utils_file, "w") as fh:
+            fh.write(salt.utils.stringutils.to_str(loader_template_utils))
+            fh.flush()
+            os.fsync(fh.fileno())
+
+    def tearDown(self):
+        shutil.rmtree(self.module_dir)
+        if os.path.isdir(self.module_dir):
+            shutil.rmtree(self.module_dir)
+        shutil.rmtree(self.utils_dir)
+        if os.path.isdir(self.utils_dir):
+            shutil.rmtree(self.utils_dir)
+        del self.module_dir
+        del self.module_file
+        del self.utils_dir
+        del self.utils_file
+
+        if self.module_name in sys.modules:
+            del sys.modules[self.module_name]
+        if self.utils_name in sys.modules:
+            del sys.modules[self.utils_name]
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+
+    def test_utils_found(self):
+        """
+        Test that the extra module directory is available for imports
+        """
+        loader = salt.loader.LazyLoader(
+            [self.module_dir],
+            copy.deepcopy(self.opts),
+            tag="module",
+            extra_module_dirs=[self.utils_dir],
+        )
+        self.assertTrue(inspect.isfunction(loader[self.module_name + ".run"]))
+        self.assertTrue(loader[self.module_name + ".run"]())
+
+    def test_utils_not_found(self):
+        """
+        Test that the extra module directory is not available for imports
+        """
+        loader = salt.loader.LazyLoader(
+            [self.module_dir], copy.deepcopy(self.opts), tag="module"
+        )
+        self.assertTrue(self.module_name + ".run" not in loader)
 
 
 class LazyLoaderVirtualEnabledTest(TestCase):
@@ -1481,3 +1573,54 @@ class LoaderLoadCachedGrainsTest(TestCase):
         grains = salt.loader.grains(self.opts)
         osrelease_info = grains["osrelease_info"]
         assert isinstance(osrelease_info, tuple), osrelease_info
+
+
+class LazyLoaderRefreshFileMappingTest(TestCase):
+    """
+    Test that _refresh_file_mapping is called using acquiring LazyLoader._lock
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts["grains"] = salt.loader.grains(cls.opts)
+        cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
+        cls.proxy = salt.loader.proxy(cls.opts)
+        cls.funcs = salt.loader.minion_mods(cls.opts, utils=cls.utils, proxy=cls.proxy)
+
+    def setUp(self):
+        class LazyLoaderMock(salt.loader.LazyLoader):
+            pass
+
+        self.LOADER_CLASS = LazyLoaderMock
+
+    def __init_loader(self):
+        return self.LOADER_CLASS(
+            salt.loader._module_dirs(copy.deepcopy(self.opts), "modules", "module"),
+            copy.deepcopy(self.opts),
+            tag="module",
+            pack={
+                "__utils__": self.utils,
+                "__salt__": self.funcs,
+                "__proxy__": self.proxy,
+            },
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.opts
+        del cls.utils
+        del cls.funcs
+        del cls.proxy
+
+    def test_lazyloader_refresh_file_mapping_called_with_lock_at___init__(self):
+        func_mock = MagicMock()
+        lock_mock = MagicMock()
+        lock_mock.__enter__ = MagicMock()
+        self.LOADER_CLASS._refresh_file_mapping = func_mock
+        with patch("threading.RLock", MagicMock(return_value=lock_mock)):
+            loader = self.__init_loader()
+        lock_mock.__enter__.assert_called()
+        func_mock.assert_called()
+        assert len(func_mock.call_args_list) == len(lock_mock.__enter__.call_args_list)
+        del loader

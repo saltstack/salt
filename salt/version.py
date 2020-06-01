@@ -8,8 +8,6 @@ import platform
 import re
 import sys
 
-from distro import linux_distribution
-
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -93,7 +91,7 @@ class SaltStackVersion(object):
         "Oxygen": (2018, 3),
         "Fluorine": (2019, 2),
         "Neon": (3000,),
-        "Sodium": (MAX_SIZE - 98, 0),
+        "Sodium": (3001,),
         "Magnesium": (MAX_SIZE - 97, 0),
         "Aluminium": (MAX_SIZE - 96, 0),
         "Silicon": (MAX_SIZE - 95, 0),
@@ -668,11 +666,14 @@ def system_information():
     """
     Report system versions.
     """
+    # Late import so that when getting called from setup.py does not break
+    from distro import linux_distribution
 
     def system_version():
         """
         Return host system version.
         """
+
         lin_ver = linux_distribution()
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()

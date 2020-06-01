@@ -23,35 +23,17 @@ The builds should include the latest version of the OS that is currently availab
     but insert ``salt_rc/`` into the URL between the hostname
     and the remainder of the path.
 
-    For Redhat Python 2
-
-    .. code-block:: bash
-
-        baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
-
     For Redhat Python 3
 
     .. code-block:: bash
 
         baseurl=https://repo.saltstack.com/salt_rc/py3/redhat/$releasever/$basearch/
 
-    For Ubuntu Python 2 (replace os_version, with ubuntu version. For example 18.04)
-
-    .. code-block:: none
-
-        deb http://repo.saltstack.com/salt_rc/apt/ubuntu/<os_version>/amd64 bionic main
-
     For Ubuntu Python 3 (replace os_version, with ubuntu version. For example 18.04)
 
     .. code-block:: none
 
         deb http://repo.saltstack.com/salt_rc/py3/ubuntu/<os_version>/amd64 bionic main
-
-    For Debian Python 2 (replace os_version, with debian version. For example 9)
-
-    .. code-block:: none
-
-        deb http://repo.saltstack.com/salt_rc/apt/debian/<os_version>/amd64 stretch main
 
     For Debian Python 3 (replace os_version, with debian version. For example 9)
 
@@ -70,17 +52,19 @@ Installing Using Bootstrap
 You can install a release candidate of Salt using `Salt Bootstrap
 <https://github.com/saltstack/salt-bootstrap/>`_:
 
+For example for the 2019.2.0rc1 release:
+
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P git v2019.2.0rc1
+    sudo sh install_salt.sh -P -x python3 git v2019.2.0rc1
 
 If you want to also install a master using Salt Bootstrap, use the ``-M`` flag:
 
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M git v2019.2.0rc1
+    sudo sh install_salt.sh -P -M -x python3 git v2019.2.0rc1
 
 If you want to install only a master and not a minion using Salt Bootstrap, use
 the ``-M`` and ``-N`` flags:
@@ -88,7 +72,7 @@ the ``-M`` and ``-N`` flags:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -P -M -N git v2019.2.0rc1
+    sudo sh install_salt.sh -P -M -N -x python3 git v2019.2.0rc1
 
 Installing Using PyPI
 =====================

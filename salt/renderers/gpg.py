@@ -281,6 +281,7 @@ from subprocess import PIPE, Popen
 import salt.syspaths
 
 # Import salt libs
+import salt.utils.cache
 import salt.utils.path
 import salt.utils.stringio
 import salt.utils.stringutils
@@ -297,6 +298,7 @@ GPG_CIPHERTEXT = re.compile(
     ),
     re.DOTALL,
 )
+GPG_CACHE = None
 
 
 def _get_gpg_exec():
@@ -330,6 +332,18 @@ def _get_key_dir():
     return gpg_keydir
 
 
+def _get_cache():
+    global GPG_CACHE
+    if not GPG_CACHE:
+        cachedir = __opts__.get("cachedir")
+        GPG_CACHE = salt.utils.cache.CacheFactory.factory(
+            __opts__.get("gpg_cache_backend"),
+            __opts__.get("gpg_cache_ttl"),
+            minion_cache_path=os.path.join(cachedir, "gpg_cache"),
+        )
+    return GPG_CACHE
+
+
 def _decrypt_ciphertext(cipher):
     """
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
@@ -342,6 +356,10 @@ def _decrypt_ciphertext(cipher):
         # ciphertext is binary
         pass
     cipher = salt.utils.stringutils.to_bytes(cipher)
+    if __opts__.get("gpg_cache"):
+        cache = _get_cache()
+        if cipher in cache:
+            return cache[cipher]
     cmd = [
         _get_gpg_exec(),
         "--homedir",
@@ -357,6 +375,8 @@ def _decrypt_ciphertext(cipher):
         log.warning("Could not decrypt cipher %r, received: %r", cipher, decrypt_error)
         return cipher
     else:
+        if __opts__.get("gpg_cache"):
+            cache[cipher] = decrypted_data
         return decrypted_data
 
 

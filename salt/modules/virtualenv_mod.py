@@ -11,6 +11,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import logging
 import os
+import re
 import shutil
 import sys
 
@@ -62,16 +63,18 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
         # Unable to import?? Let's parse the version from the console
         version_cmd = [venv_bin, "--version"]
         ret = __salt__["cmd.run_all"](
-            version_cmd, runas=user, python_shell=False, **kwargs
+            version_cmd, runas=user, python_shell=False, redirect_stderr=True, **kwargs
         )
         if ret["retcode"] > 0 or not ret["stdout"].strip():
             raise CommandExecutionError(
                 "Unable to get the virtualenv version output using '{0}'. "
                 "Returned data: {1}".format(version_cmd, ret)
             )
-        virtualenv_version_info = tuple(
-            [int(i) for i in ret["stdout"].strip().split("rc")[0].split(".")]
+        # 20.0.0 virtualenv changed the --version output. find version number
+        ver = "".join(
+            [x for x in ret["stdout"].strip().split() if re.search(r"^\d.\d*", x)]
         )
+        virtualenv_version_info = tuple([int(i) for i in ver.split("rc")[0].split(".")])
     return virtualenv_version_info
 
 

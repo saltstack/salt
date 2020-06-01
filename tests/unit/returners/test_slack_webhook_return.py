@@ -36,14 +36,13 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         "return": {
             "file_|-vim files present_|-/Users/cdalvaro/_|-recurse": {
                 "comment": "The directory /Users/cdalvaro/ is in the correct state",
-                "pchanges": {},
+                "changes": {},
                 "name": "/Users/cdalvaro/",
                 "start_time": "10:59:52.252830",
                 "result": True,
                 "duration": 373.25,
                 "__run_num__": 3,
                 "__sls__": "config.vim",
-                "changes": {},
                 "__id__": "vim files present",
             },
             "pkg_|-vim present_|-vim_|-installed": {

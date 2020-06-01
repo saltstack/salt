@@ -92,8 +92,8 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
@@ -127,6 +127,7 @@ execution modules
     debian_service
     debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
@@ -232,6 +233,7 @@ execution modules
     keystoneng
     keystore
     kmod
+    kubeadm
     kubernetesmod
     launchctl_service
     layman
