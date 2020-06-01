@@ -8,6 +8,7 @@ from salt.transport.client import AsyncPubChannel
 from salt.transport.ipc import IPCServer
 from salt.transport.ipc import IPCMessageClient
 
+import opentelemetry
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
