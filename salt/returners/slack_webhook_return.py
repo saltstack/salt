@@ -116,6 +116,7 @@ def __virtual__():
 
     :return: The virtual name of the module.
     """
+
     return __virtualname__
 
 
@@ -126,6 +127,7 @@ def _sprinkle(config_str):
     :param config_str: The string to be sprinkled
     :return: The string sprinkled
     """
+
     parts = [x for sub in config_str.split("{") for x in sub.split("}")]
     for i in range(1, len(parts), 2):
         parts[i] = str(__grains__.get(parts[i], ""))
@@ -139,6 +141,7 @@ def _format_task(task):
 
     :return: A dictionary ready to be inserted in Slack fields array
     """
+
     return {"value": task, "short": False}
 
 
@@ -150,7 +153,7 @@ def _generate_payload(author_icon, title, report, **kwargs):
     :param report: A dictionary with the report of the Salt function
     :return: The payload ready for Slack
     """
-    
+
     event_rtn = kwargs.get('event_rtn', False)
 
     if event_rtn is True:
@@ -285,6 +288,7 @@ def _state_return(ret):
     Return True if ret is a Salt state return
     :param ret: The Salt return
     """
+
     ret_data = ret.get("return")
     if not isinstance(ret_data, dict):
         return False
@@ -335,7 +339,7 @@ def _post_message(webhook, author_icon, title, report, **kwargs):
     :param report:      The report of the function state
     :return:            Boolean if message was sent successfully
     """
-    
+
     event_rtn = kwargs.get('event_rtn', False)
 
     payload = _generate_payload(author_icon, title, report, event_rtn=event_rtn)
@@ -386,6 +390,7 @@ def returner(ret, **kwargs):
     slack = _post_message(webhook, author_icon, title, report, event_rtn=event_rtn)
 
     return slack
+
 
 def event_return(events):
     """
