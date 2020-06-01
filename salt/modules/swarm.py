@@ -32,10 +32,8 @@ import salt.utils.json
 
 
 def _is_docker_module(mod):
-    if hasattr(mod, "APIClient") and hasattr(mod, "from_env"):
-        return True
-    else:
-        return False
+    required_attrs = ["APIClient", "from_env"]
+    return all(hasattr(attr) for attr in required_attrs)
 
 
 try:
