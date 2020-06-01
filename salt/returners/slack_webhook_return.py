@@ -142,7 +142,7 @@ def _format_task(task):
     return {"value": task, "short": False}
 
 
-def _generate_payload(author_icon, title, report, event_returner):
+def _generate_payload(author_icon, title, report, **kwargs):
     """
     Prepare the payload for Slack
     :param author_icon: The url for the thumbnail to be displayed
@@ -150,8 +150,10 @@ def _generate_payload(author_icon, title, report, event_returner):
     :param report: A dictionary with the report of the Salt function
     :return: The payload ready for Slack
     """
+    
+    event_rtn = kwargs.get('event_rtn', False)
 
-    if event_returner is True:
+    if event_rtn is True:
         author_name = report["id"]
     else:
         author_name = _sprinkle("{id}")
@@ -324,7 +326,7 @@ def _generate_report(ret, show_tasks):
     return report
 
 
-def _post_message(webhook, author_icon, title, report, event_returner):
+def _post_message(webhook, author_icon, title, report, **kwargs):
     """
     Send a message to a Slack room through a webhook
     :param webhook:     The url of the incoming webhook
@@ -333,8 +335,10 @@ def _post_message(webhook, author_icon, title, report, event_returner):
     :param report:      The report of the function state
     :return:            Boolean if message was sent successfully
     """
+    
+    event_rtn = kwargs.get('event_rtn', False)
 
-    payload = _generate_payload(author_icon, title, report, event_returner)
+    payload = _generate_payload(author_icon, title, report, event_rtn=event_rtn)
 
     data = urllib.parse.urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
 
@@ -360,10 +364,7 @@ def returner(ret, **kwargs):
     :return: The result of the post
     """
 
-    event_returner = False
-
-    if kwargs:
-        event_returner = kwargs.get('event_returner', False)
+    event_rtn = kwargs.get('event_rtn', False)
 
     _options = _get_options(ret)
 
@@ -382,7 +383,7 @@ def returner(ret, **kwargs):
     else:
         title = _options.get("failure_title")
 
-    slack = _post_message(webhook, author_icon, title, report, event_returner)
+    slack = _post_message(webhook, author_icon, title, report, event_rtn=event_rtn)
 
     return slack
 
@@ -396,4 +397,4 @@ def event_return(events):
         ret = event.get("data", False)
 
         if ret and "saltutil.find_job" not in ret['fun'] or "salt/auth" not in ret['tag']:
-            returner(ret, event_returner=True)
+            returner(ret, event_rtn=True)
