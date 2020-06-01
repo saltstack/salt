@@ -521,12 +521,12 @@ Section -install_vcredist_2013
         StrCpy $VcRedistName ${VCREDIST_X64_NAME}
         StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
         Call InstallVCRedist
+    ${Else}
+        # Install 32bit VCRedist on all machines
+        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        Call InstallVCRedist
     ${EndIf}
-
-    # Install 32bit VCRedist on all machines
-    StrCpy $VcRedistName ${VCREDIST_X86_NAME}
-    StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
-    Call InstallVCRedist
 
 SectionEnd
 
@@ -538,16 +538,13 @@ Function InstallVCRedist
         detailPrint "System requires $VcRedistName"
         MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
             "$VcRedistName is currently not installed. Would you like to install?" \
-            /SD IDYES IDYES installVCRedist
-        detailPrint "Aborted by user"
-        Abort
+            /SD IDYES IDNO endVCRedist
 
         # If an output variable is specified ($0 in the case below),
         # ExecWait sets the variable with the exit code (and only sets the
         # error flag if an error occurs; if an error occurs, the contents
         # of the user variable are undefined).
         # http://nsis.sourceforge.net/Reference/ExecWait
-        installVCRedist:
         ClearErrors
         detailPrint "Installing $VcRedistName..."
         ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
@@ -556,7 +553,6 @@ Function InstallVCRedist
                 "$VcRedistName failed to install. Try installing the package manually." \
                 /SD IDOK
             detailPrint "An error occurred during installation of $VcRedistName"
-            Abort
 
         CheckVcRedistErrorCode:
         # Check for Reboot Error Code (3010)
@@ -565,7 +561,6 @@ Function InstallVCRedist
                 "$VcRedistName installed but requires a restart to complete." \
                 /SD IDOK
             detailPrint "Reboot and run Salt install again"
-            Abort
 
         # Check for any other errors
         ${ElseIfNot} $0 == 0
@@ -574,8 +569,9 @@ Function InstallVCRedist
                 /SD IDOK
             detailPrint "An error occurred during installation of $VcRedistName"
             detailPrint "Error: $0"
-            Abort
         ${EndIf}
+
+        endVCRedist:
 
     ${EndIf}
 

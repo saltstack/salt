@@ -654,7 +654,7 @@ Returns:
 ``method_call``
 ---------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Returns a result of object's method call.
 

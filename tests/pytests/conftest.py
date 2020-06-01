@@ -9,7 +9,7 @@ import pytest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
-NTS_TEST_SUITE_PATH = pathlib.Path(__file__).parent
+PYTESTS_SUITE_PATH = pathlib.Path(__file__).parent
 
 
 @pytest.hookimpl(hookwrapper=True, trylast=True)
@@ -27,7 +27,7 @@ def pytest_collection_modifyitems(config, items):
 
     # Check each collected item that's under this package to ensure that none is using TestCase as the base class
     for item in items:
-        if not str(item.fspath).startswith(str(NTS_TEST_SUITE_PATH)):
+        if not str(item.fspath).startswith(str(PYTESTS_SUITE_PATH)):
             continue
         if not item.cls:
             # The test item is not part of a class
@@ -35,7 +35,7 @@ def pytest_collection_modifyitems(config, items):
 
         if issubclass(item.cls, TestCase):
             raise RuntimeError(
-                "The tests under {} MUST NOT use unittest's TestCase class".format(
+                "The tests under {} MUST NOT use unittest's TestCase class or a subclass of it.".format(
                     pathlib.Path(str(item.fspath)).relative_to(RUNTIME_VARS.CODE_DIR)
                 )
             )

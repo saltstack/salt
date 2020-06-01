@@ -2456,7 +2456,7 @@ def group_list():
 def group_info(name, expand=False, ignore_groups=None):
     """
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Sodium,2016.3.0,2015.8.4,2015.5.10
+    .. versionchanged:: 3001,2016.3.0,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -2482,7 +2482,7 @@ def group_info(name, expand=False, ignore_groups=None):
         expanding subgroups. It is used during recursion in order to prevent
         expanding the same group multiple times.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     CLI Example:
 

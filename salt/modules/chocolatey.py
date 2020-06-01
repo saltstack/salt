@@ -188,7 +188,7 @@ def bootstrap(force=False, source=None):
             - ftp://
             - file:// - A local file on the system
 
-            .. versionadded:: Sodium
+            .. versionadded:: 3001
 
     Returns:
         str: The stdout of the Chocolatey installation script
@@ -360,7 +360,7 @@ def unbootstrap():
     """
     Uninstall chocolatey from the system by doing the following:
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     - Delete the Chocolatey Directory
     - Remove Chocolatey from the path

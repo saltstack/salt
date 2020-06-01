@@ -4141,7 +4141,7 @@ def set_selinux_context(
     persist=False,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added persist option
 
@@ -4829,7 +4829,7 @@ def check_perms(
     serange=None,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added selinux options
 
@@ -5254,7 +5254,7 @@ def check_managed_changes(
     """
     Return a dictionary of what changes need to be made for a file
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         selinux attributes added
 
@@ -5393,22 +5393,22 @@ def check_file_meta(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serole
         selinux role attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     """
     changes = {}
     if not source_sum:
@@ -5771,22 +5771,22 @@ def manage_file(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     CLI Example:
 
