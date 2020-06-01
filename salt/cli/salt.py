@@ -27,7 +27,7 @@ from salt.ext import six
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 
-sys.modules["pkg_resources"] = None
+# sys.modules["pkg_resources"] = None
 
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
