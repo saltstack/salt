@@ -1,0 +1,2 @@
+Adds a ``content`` parameter to the ``@with_tempfile`` helper to create a temp
+file with content. This is used to test file functions with unicode characters

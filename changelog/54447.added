@@ -1,0 +1,2 @@
+Adds a ``chcp`` option to all ``cmd.run*`` commands. It defaults to 437, but
+you can now specify 65001 for better unicode support.
