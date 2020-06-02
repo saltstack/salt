@@ -337,7 +337,7 @@ def public_decrypt(pub, message):
 
 def pwdata_decrypt(rsa_key, pwdata):
     if HAS_M2:
-        key = RSA.load_key_string(rsa_key.encode("ascii"))
+        key = RSA.load_key_string(salt.utils.stringutils.to_bytes(rsa_key, "ascii"))
         password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
     else:
         dsize = SHA.digest_size

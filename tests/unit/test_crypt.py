@@ -360,7 +360,7 @@ class TestM2CryptoRegression47124(TestCase):
 )
 class TestCrypt(TestCase):
     def test_pwdata_decrypt(self):
-        key_string = b"""-----BEGIN RSA PRIVATE KEY-----
+        key_string = """-----BEGIN RSA PRIVATE KEY-----
 MIIEpQIBAAKCAQEAzhBRyyHa7b63RLE71uKMKgrpulcAJjaIaN68ltXcCvy4w9pi
 Kj+4I3Qp6RvUaHOEmymqyjOMjQc6iwpe0scCFqh3nUk5YYaLZ3WAW0htQVlnesgB
 ZiBg9PBeTQY/LzqtudL6RCng/AX+fbnCsddlIysRxnUoNVMvz0gAmCY2mnTDjcTt
