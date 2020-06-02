@@ -3,7 +3,6 @@
     tests.unit.context_test
     ~~~~~~~~~~~~~~~~~~~~
 """
-# Import python libs
 from __future__ import absolute_import
 
 import threading
@@ -11,15 +10,12 @@ import time
 
 import salt.ext.tornado.gen
 import salt.ext.tornado.stack_context
-
-# Import Salt libs
 import salt.utils.json
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.utils.context import ContextDict, NamespacedDictWrapper
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import slowTest
+from tests.support.unit import TestCase
 
 
 class ContextDictTests(AsyncTestCase):
@@ -32,7 +28,7 @@ class ContextDictTests(AsyncTestCase):
         # set a global value
         self.cd["foo"] = "global"
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_threads(self):
         """Verify that ContextDict overrides properly within threads
         """
@@ -66,7 +62,7 @@ class ContextDictTests(AsyncTestCase):
             self.assertEqual(r[2], r[3])
 
     @gen_test
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_coroutines(self):
         """Verify that ContextDict overrides properly within coroutines
         """

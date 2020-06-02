@@ -78,7 +78,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = "svn"
+__virtualname__ = "svnfs"
+__virtual_aliases__ = ("svn",)
 
 
 def __virtual__():

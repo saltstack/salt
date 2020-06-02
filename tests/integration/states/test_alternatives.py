@@ -10,7 +10,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -23,7 +23,7 @@ if not os.path.exists("/etc/alternatives"):
 @skipIf(NO_ALTERNATIVES, "/etc/alternatives does not exist on the system")
 class AlterantivesStateTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_install_set_and_remove(self):
         ret = self.run_state(
             "alternatives.set", name="alt-test", path=RUNTIME_VARS.SHELL_TRUE_PATH
