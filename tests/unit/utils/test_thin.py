@@ -883,7 +883,10 @@ class SSHThinTestCase(TestCase):
     )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -958,7 +961,10 @@ class SSHThinTestCase(TestCase):
     )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
