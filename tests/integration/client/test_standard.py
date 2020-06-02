@@ -7,8 +7,10 @@ import os
 import pytest
 import salt.utils.files
 import salt.utils.platform
+from salt.client import LocalClient
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
+from tests.support.mock import create_autospec
 
 
 @pytest.mark.windows_whitelisted
@@ -91,6 +93,23 @@ class StdTest(ModuleCase):
         cmd_batch = self.client.cmd_batch("minion", "test.ping", raw=True,)
         for ret in cmd_batch:
             self.assertTrue(ret["data"]["success"])
+
+    def test_batch_provided_localclient(self):
+        """
+        test cmd_batch with LocalClient override.
+        """
+        local_client = create_autospec(LocalClient)
+
+        class FakeException(Exception):
+            pass
+
+        local_client.cmd_iter.side_effect = FakeException
+        with self.assertRaises(FakeException):
+            cmd_batch = self.client.cmd_batch(
+                "minion", "test.ping", raw=True, local=local_client
+            )
+            for ret in cmd_batch:
+                self.assertTrue(ret["data"]["success"])
 
     @slowTest
     def test_full_returns(self):
