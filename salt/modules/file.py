@@ -4141,7 +4141,7 @@ def set_selinux_context(
     persist=False,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added persist option
 
@@ -4829,7 +4829,7 @@ def check_perms(
     serange=None,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added selinux options
 
@@ -5254,7 +5254,7 @@ def check_managed_changes(
     """
     Return a dictionary of what changes need to be made for a file
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         selinux attributes added
 
@@ -5393,22 +5393,22 @@ def check_file_meta(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serole
         selinux role attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     """
     changes = {}
     if not source_sum:
@@ -5443,15 +5443,22 @@ def check_file_meta(
 
     if contents is not None:
         # Write a tempfile with the static contents
-        tmp = salt.utils.files.mkstemp(
-            prefix=salt.utils.files.TEMPFILE_PREFIX, text=True
-        )
-        if salt.utils.platform.is_windows():
-            contents = os.linesep.join(
-                _splitlines_preserving_trailing_newline(contents)
+        if isinstance(contents, six.binary_type):
+            tmp = salt.utils.files.mkstemp(
+                prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
             )
-        with salt.utils.files.fopen(tmp, "w") as tmp_:
-            tmp_.write(salt.utils.stringutils.to_str(contents))
+            with salt.utils.files.fopen(tmp, "wb") as tmp_:
+                tmp_.write(contents)
+        else:
+            tmp = salt.utils.files.mkstemp(
+                prefix=salt.utils.files.TEMPFILE_PREFIX, text=True
+            )
+            if salt.utils.platform.is_windows():
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents)
+                )
+            with salt.utils.files.fopen(tmp, "w") as tmp_:
+                tmp_.write(salt.utils.stringutils.to_str(contents))
         # Compare the static contents with the named file
         try:
             differences = get_diff(name, tmp, show_filenames=False)
@@ -5764,22 +5771,22 @@ def manage_file(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     CLI Example:
 

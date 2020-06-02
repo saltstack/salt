@@ -2021,3 +2021,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 assert ret[count]["model"] == device[2]
                 assert ret[count]["vendor"] == device[3]
                 count += 1
+
+    def test_get_server_id(self):
+        expected = {"server_id": 94889706}
+        with patch.dict(core.__opts__, {"id": "anid"}):
+            assert core.get_server_id() == expected
+
+        with patch.dict(core.__opts__, {"id": "otherid"}):
+            assert core.get_server_id() != expected

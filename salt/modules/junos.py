@@ -296,8 +296,9 @@ def rpc(cmd=None, dest=None, **kwargs):
         return ret
 
     format_ = op.pop("format", "xml")
-    # when called from state, dest becomes part of op via __pub_arg
-    dest = dest or op.pop("dest", None)
+    # dest becomes part of op via __pub_arg if not None
+    # rpc commands objecting to dest as part of op
+    op.pop("dest", dest)
 
     if cmd in ["get-config", "get_config"]:
         filter_reply = None
@@ -947,7 +948,7 @@ def install_config(path=None, **kwargs):
 
     kwargs = {}
     if "template_vars" in op:
-        kwargs = op["template_vars"]
+        kwargs.update({"template_vars": op["template_vars"]})
 
     with HandleFileCopy(path, **kwargs) as template_cached_path:
         if template_cached_path is None:
@@ -1173,7 +1174,7 @@ def install_os(path=None, **kwargs):
         When True (default), executes the software install on all Routing Engines of the Junos
         device. When False, execute the software install only on the current Routing Engine.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
@@ -1435,7 +1436,7 @@ def load(path=None, **kwargs):
 
     kwargs = {}
     if "template_vars" in op:
-        kwargs = op["template_vars"]
+        kwargs.update({"template_vars": op["template_vars"]})
 
     with HandleFileCopy(path, **kwargs) as template_cached_path:
         if template_cached_path is None:
@@ -1535,7 +1536,7 @@ def get_table(
     table_args=None,
 ):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Retrieve data from a Junos device using Tables/Views
 

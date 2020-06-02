@@ -997,7 +997,7 @@ if the gluster commands return a 0 ret value.
 Creates
 -------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 The ``creates`` requisite specifies that a state should only run when any of
 the specified files do not already exist. Like ``unless``, ``creates`` requisite
