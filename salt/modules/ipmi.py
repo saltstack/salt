@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Support IPMI commands over LAN. This module does not talk to the local
-systems hardware through IPMI drivers. It uses a python module `pyghmi`.
+Support IPMI commands over LAN or local IPMB. It uses a python module `pyghmi`.
 
 :depends: Python module pyghmi.
     You can install pyghmi using pip:
@@ -40,7 +39,7 @@ from salt.ext import six
 IMPORT_ERR = None
 try:
     from pyghmi.ipmi import command
-    from pyghmi.ipmi.private import session
+    from pyghmi.ipmi.private import session, localsession
 except Exception as ex:  # pylint: disable=broad-except
     IMPORT_ERR = six.text_type(ex)
 
@@ -56,7 +55,7 @@ def _get_config(**kwargs):
     Return configuration
     """
     config = {
-        "api_host": "localhost",
+        "api_host": None,
         "api_port": 623,
         "api_user": "admin",
         "api_pass": "",
@@ -88,7 +87,7 @@ class _IpmiCommand(object):
         return self.o
 
     def __exit__(self, type, value, traceback):
-        if self.o:
+        if self.o and not isinstance(self.o.ipmi_session, localsession.Session):
             self.o.ipmi_session.logout()
 
 
@@ -101,25 +100,28 @@ class _IpmiSession(object):
 
     def __init__(self, **kwargs):
         config = _get_config(**kwargs)
-        self.o = session.Session(
-            bmc=config["api_host"],
-            userid=config["api_user"],
-            password=config["api_pass"],
-            port=config["api_port"],
-            kg=config["api_kg"],
-            onlogon=self._onlogon,
-        )
-        while not self.o.logged:
-            # override timeout
-            self.o.maxtimeout = config["api_login_timeout"]
-            self.o.wait_for_rsp(timeout=1)
+        if config["api_host"] is None:
+            self.o = localsession.Session()
+        else:
+            self.o = session.Session(
+                bmc=config["api_host"],
+                userid=config["api_user"],
+                password=config["api_pass"],
+                port=config["api_port"],
+                kg=config["api_kg"],
+                onlogon=self._onlogon,
+            )
+            while not self.o.logged:
+                # override timeout
+                self.o.maxtimeout = config["api_login_timeout"]
+                self.o.wait_for_rsp(timeout=1)
         self.o.maxtimeout = 5
 
     def __enter__(self):
         return self.o
 
     def __exit__(self, type, value, traceback):
-        if self.o:
+        if self.o and not isinstance(self.o, localsession.Session):
             self.o.logout()
 
 
