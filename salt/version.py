@@ -679,18 +679,18 @@ def system_information():
         win_ver = platform.win32_ver()
 
         # linux_distribution() will return a
-        # distribution on OS X, only return if
-        # we are sure we are running on Linux
-        # and mac_ver is empty.
-        if lin_ver[0] and not mac_ver[0]:
-            return " ".join(lin_ver)
-        elif mac_ver[0]:
+        # distribution on OS X and Windows.
+        # Check mac_ver and win_ver first,
+        # then lin_ver.
+        if mac_ver[0]:
             if isinstance(mac_ver[1], (tuple, list)) and "".join(mac_ver[1]):
                 return " ".join([mac_ver[0], ".".join(mac_ver[1]), mac_ver[2]])
             else:
                 return " ".join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return " ".join(win_ver)
+        elif lin_ver[0]:
+            return " ".join(lin_ver)
         else:
             return ""
 
