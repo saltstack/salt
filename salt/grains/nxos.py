@@ -24,6 +24,8 @@ __virtualname__ = "nxos"
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "nxos: Not available on Windows"
     try:
         salt.utils.nxos.version_info()
     except NxosClientError as err:

@@ -12,6 +12,8 @@ __virtualname__ = "ssh_sample"
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "ssh_sample: Not available on Windows"
     try:
         if (
             salt.utils.platform.is_proxy()

@@ -23,6 +23,8 @@ GRAINS_CACHE = {"os_family": "panos"}
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "panos: Not available on Windows"
     try:
         if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "panos":
             return __virtualname__

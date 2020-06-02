@@ -12,6 +12,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
+import salt.utils.platform
 from salt.ext import six
 
 __proxyenabled__ = ["junos"]
@@ -22,6 +23,8 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "junos: Not available on Windows"
     if "proxy" not in __opts__:
         return False
     else:

@@ -9,8 +9,15 @@ import logging
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "mdadm: Not available on Windows"
+    return True
 
 
 def mdadm():

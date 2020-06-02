@@ -17,6 +17,8 @@ __virtualname__ = "chronos"
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "chronos: Not available on Windows"
     if not salt.utils.platform.is_proxy() or "proxy" not in __opts__:
         return False
     else:

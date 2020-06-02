@@ -19,6 +19,8 @@ Static grains for the Philips HUE lamps
 
 .. versionadded:: 2015.8.3
 """
+# Import Salt Libs
+import salt.utils.platform
 
 __proxyenabled__ = ["philips_hue"]
 
@@ -26,6 +28,8 @@ __virtualname__ = "hue"
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "hue: Not available on Windows"
     if "proxy" not in __opts__:
         return False
     else:

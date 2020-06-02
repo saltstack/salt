@@ -23,6 +23,8 @@ GRAINS_CACHE = {"os_family": "Cisco UCS"}
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "cimc: Not available on Windows"
     try:
         if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "cimc":
             return __virtualname__

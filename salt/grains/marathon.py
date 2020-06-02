@@ -15,6 +15,8 @@ __virtualname__ = "marathon"
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "marathon: Not available on Windows"
     if (
         salt.utils.platform.is_proxy()
         and "proxy" in __opts__

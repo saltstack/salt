@@ -28,6 +28,8 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    if salt.utils.platform.is_windows():
+        return False, "nvme: Not available on Windows"
     if __opts__.get("nvme_grains", False) is False:
         return False
     return __virtualname__
