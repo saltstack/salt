@@ -8,10 +8,10 @@ plugin interfaces used by Salt.
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
 import functools
 import inspect
 import logging
-import copy
 import os
 import re
 import sys
