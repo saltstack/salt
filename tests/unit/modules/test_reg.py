@@ -541,7 +541,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         try:
             self.assertTrue(
                 reg.set_value(
-                    hive="HKLM", key=FAKE_KEY, vname="fake_unicode", vdata=UNICODE_VALUE_EXTENDED
+                    hive="HKLM",
+                    key=FAKE_KEY,
+                    vname="fake_unicode",
+                    vdata=UNICODE_VALUE_EXTENDED,
                 )
             )
             expected = {
