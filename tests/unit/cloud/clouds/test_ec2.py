@@ -7,9 +7,10 @@ import os
 import tempfile
 
 import salt.utils.files
+from salt.cloud.clouds import ec2
 
 # Import Salt Libs
-from salt.cloud.clouds import ec2
+from salt.crypt import HAS_CRYPTO, HAS_M2
 from salt.exceptions import SaltCloudSystemExit
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import PropertyMock, patch
@@ -75,7 +76,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
                 SaltCloudSystemExit, ec2._validate_key_path_and_mode, "key_file"
             )
 
-    @skipIf(not ec2.HAS_M2 and not ec2.HAS_PYCRYPTO, "Needs crypto library")
+    @skipIf(not HAS_M2 and not HAS_CRYPTO, "Needs crypto library")
     @patch("salt.cloud.clouds.ec2._get_node")
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
