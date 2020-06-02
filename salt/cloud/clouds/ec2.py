@@ -4930,7 +4930,7 @@ def get_password_data(
     for item in data:
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
-    if not salt.crypt.HAS_M2 and not salt.crypt.HAS_PYCRYPTO:
+    if not salt.crypt.HAS_M2 and not salt.crypt.HAS_CRYPTO:
         if "key" in kwargs or "key_file" in kwargs:
             log.warning("No crypto library is installed, can not decrypt password")
         return ret
