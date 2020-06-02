@@ -114,7 +114,7 @@ Functions to interact with Hashicorp Vault.
               allow_minion_override: True
               token_backend: disk
 
-            .. versionchanged:: Sodium
+            .. versionchanged:: 3001
 
     policies
         Policies that are assigned to minions when requesting a token. These can
@@ -183,7 +183,7 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
 
     :param metadata: Optional - If using KV v2 backend, display full results, including metadata
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     Jinja Example:
 
@@ -315,7 +315,7 @@ def delete_secret(path):
 
 def destroy_secret(path, *args):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Destory specified secret version at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2

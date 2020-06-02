@@ -2,8 +2,6 @@
 """
 Generate the salt thin tarball from the installed python files
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
@@ -16,11 +14,9 @@ import tarfile
 import tempfile
 import zipfile
 
-# Import third party libs
+import distro
 import jinja2
 import msgpack
-
-# Import salt libs
 import salt
 import salt.exceptions
 import salt.ext.six as _six
@@ -195,6 +191,7 @@ def get_tops_python(py_ver, exclude=None):
     """
     files = {}
     for mod in [
+        "distro",
         "jinja2",
         "yaml",
         "tornado",
@@ -245,7 +242,7 @@ def get_ext_tops(config):
     """
     config = copy.deepcopy(config)
     alternatives = {}
-    required = ["jinja2", "yaml", "tornado", "msgpack"]
+    required = ["jinja2", "yaml", "tornado", "msgpack", "distro"]
     tops = []
     for ns, cfg in salt.ext.six.iteritems(config or {}):
         alternatives[ns] = cfg
@@ -336,6 +333,7 @@ def get_tops(extra_mods="", so_mods=""):
     tops = []
     for mod in [
         salt,
+        distro,
         jinja2,
         yaml,
         tornado,
@@ -462,9 +460,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             )
             if not os.path.exists(top):
                 log.error(
-                    "File path {} does not exist. Unable to add to salt-ssh thin".format(
-                        top
-                    )
+                    "File path %s does not exist. Unable to add to salt-ssh thin", top
                 )
                 continue
             if not os.path.isdir(top):

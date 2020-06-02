@@ -576,45 +576,36 @@ rest_cherrypy will remain the officially recommended REST API.
 .. |406| replace:: requested Content-Type not available
 
 """
-# We need a custom pylintrc here...
-# pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
-
-# Import Python libs
 from __future__ import absolute_import
 
-import collections
 import functools
+import io
 import itertools
 import logging
 import os
 import signal
 import tarfile
+from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
 
-# Import third-party libs
-# pylint: disable=import-error, 3rd-party-module-not-gated
-import cherrypy
-
-# Import Salt libs
+import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
 import salt
 import salt.auth
 import salt.exceptions
-
-# Import salt-api libs
 import salt.netapi
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six import BytesIO
 
 logger = logging.getLogger(__name__)
 
 
 try:
-    from cherrypy.lib import cpstats
+    from cherrypy.lib import (  # pylint: disable=import-error,3rd-party-module-not-gated
+        cpstats,
+    )
 except AttributeError:
     cpstats = None
     logger.warn(
@@ -626,11 +617,8 @@ except ImportError:
     cpstats = None
     logger.warn("Import of cherrypy.cpstats failed.")
 
-# pylint: enable=import-error, 3rd-party-module-not-gated
-
-
-# Imports related to websocket
 try:
+    # Imports related to websocket
     from .tools import websockets
     from . import event_processor
 
@@ -912,9 +900,7 @@ def hypermedia_handler(*args, **kwargs):
     out = cherrypy.response.processors[best]
     try:
         response = out(ret)
-        if six.PY3:
-            response = salt.utils.stringutils.to_bytes(response)
-        return response
+        return salt.utils.stringutils.to_bytes(response)
     except Exception:  # pylint: disable=broad-except
         msg = "Could not serialize the return data from Salt."
         logger.debug(msg, exc_info=True)
@@ -981,15 +967,12 @@ def json_processor(entity):
 
     :param entity: raw POST data
     """
-    if six.PY2:
-        body = entity.fp.read()
-    else:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = BytesIO()
-        body = entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body = salt.utils.stringutils.to_unicode(contents.read())
-        del contents
+    # https://github.com/cherrypy/cherrypy/pull/1572
+    contents = io.BytesIO()
+    body = entity.fp.read(fp_out=contents)
+    contents.seek(0)
+    body = salt.utils.stringutils.to_unicode(contents.read())
+    del contents
     try:
         cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
@@ -1005,14 +988,11 @@ def yaml_processor(entity):
 
     :param entity: raw POST data
     """
-    if six.PY2:
-        body = entity.fp.read()
-    else:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = BytesIO()
-        body = entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body = salt.utils.stringutils.to_unicode(contents.read())
+    # https://github.com/cherrypy/cherrypy/pull/1572
+    contents = io.BytesIO()
+    body = entity.fp.read(fp_out=contents)
+    contents.seek(0)
+    body = salt.utils.stringutils.to_unicode(contents.read())
     try:
         cherrypy.serving.request.unserialized_data = salt.utils.yaml.safe_load(body)
     except ValueError:
@@ -1031,14 +1011,11 @@ def text_processor(entity):
 
     :param entity: raw POST data
     """
-    if six.PY2:
-        body = entity.fp.read()
-    else:
-        # https://github.com/cherrypy/cherrypy/pull/1572
-        contents = BytesIO()
-        body = entity.fp.read(fp_out=contents)
-        contents.seek(0)
-        body = salt.utils.stringutils.to_unicode(contents.read())
+    # https://github.com/cherrypy/cherrypy/pull/1572
+    contents = io.BytesIO()
+    body = entity.fp.read(fp_out=contents)
+    contents.seek(0)
+    body = salt.utils.stringutils.to_unicode(contents.read())
     try:
         cherrypy.serving.request.unserialized_data = salt.utils.json.loads(body)
     except ValueError:
@@ -1097,7 +1074,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if data and isinstance(data, collections.Mapping):
+    if data and isinstance(data, Mapping):
         # Make the 'arg' param a list if not already
         if "arg" in data and not isinstance(
             data["arg"], list
@@ -1211,7 +1188,7 @@ class LowDataAdapter(object):
             ret = self.api.run(chunk)
 
             # Sometimes Salt gives us a return and sometimes an iterator
-            if isinstance(ret, collections.Iterator):
+            if isinstance(ret, Iterator):
                 for i in ret:
                     yield i
             else:
@@ -1322,7 +1299,7 @@ class Minions(LowDataAdapter):
 
     _cp_config = dict(LowDataAdapter._cp_config, **{"tools.salt_auth.on": True})
 
-    def GET(self, mid=None):
+    def GET(self, mid=None):  # pylint: disable=arguments-differ
         """
         A convenience URL for getting lists of minions or getting minion
         details
@@ -1440,7 +1417,7 @@ class Minions(LowDataAdapter):
 class Jobs(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{"tools.salt_auth.on": True})
 
-    def GET(self, jid=None, timeout=""):
+    def GET(self, jid=None, timeout=""):  # pylint: disable=arguments-differ
         """
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
@@ -1560,7 +1537,7 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     """
 
-    def GET(self, mid=None):
+    def GET(self, mid=None):  # pylint: disable=arguments-differ
         """
         Show the list of minion keys or detail on a specific key
 
@@ -1723,15 +1700,14 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo("minion.pem")
         priv_key_file.size = len(priv_key)
 
-        fileobj = BytesIO()
+        fileobj = io.BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode="w")
 
-        if six.PY3:
-            pub_key = pub_key.encode(__salt_system_encoding__)
-            priv_key = priv_key.encode(__salt_system_encoding__)
+        pub_key = pub_key.encode(__salt_system_encoding__)
+        priv_key = priv_key.encode(__salt_system_encoding__)
 
-        tarball.addfile(pub_key_file, BytesIO(pub_key))
-        tarball.addfile(priv_key_file, BytesIO(priv_key))
+        tarball.addfile(pub_key_file, io.BytesIO(pub_key))
+        tarball.addfile(priv_key_file, io.BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
@@ -1944,7 +1920,7 @@ class Logout(LowDataAdapter):
         **{"tools.salt_auth.on": True, "tools.lowdata_fmt.on": False}
     )
 
-    def POST(self):
+    def POST(self):  # pylint: disable=arguments-differ
         """
         Destroy the currently active session and expire the session cookie
         """
@@ -2856,9 +2832,7 @@ class API(object):
             url_blacklist = []
 
         urls = (
-            (url, cls)
-            for url, cls in six.iteritems(self.url_map)
-            if url not in url_blacklist
+            (url, cls) for url, cls in self.url_map.items() if url not in url_blacklist
         )
 
         for url, cls in urls:

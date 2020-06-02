@@ -16,6 +16,7 @@ for the generation and signing of certificates for systems running libvirt:
 from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
+import logging
 import os
 
 # Import Salt libs
@@ -37,6 +38,8 @@ except ImportError:
 
 
 __virtualname__ = "virt"
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -295,7 +298,7 @@ def defined(
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     :param name: name of the virtual machine to run
     :param cpu: number of CPUs for the virtual machine to create
@@ -349,7 +352,7 @@ def defined(
 
     :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
 
-        .. deprecated:: sodium
+        .. deprecated:: 3001
 
     .. rubric:: Example States
 
@@ -540,7 +543,7 @@ def running(
     :param update: set to ``True`` to update a defined domain. (Default: ``False``)
 
         .. versionadded:: 2019.2.0
-        .. deprecated:: sodium
+        .. deprecated:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -892,7 +895,7 @@ def network_defined(
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     .. code-block:: yaml
 
@@ -1090,6 +1093,10 @@ def network_running(
     return ret
 
 
+# Some of the libvirt storage drivers do not support the build action
+BUILDABLE_POOL_TYPES = {"disk", "fs", "netfs", "dir", "logical", "vstorage", "zfs"}
+
+
 def pool_defined(
     name,
     ptype=None,
@@ -1105,7 +1112,7 @@ def pool_defined(
     """
     Defines a new pool with specified arguments.
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
@@ -1204,14 +1211,24 @@ def pool_defined(
 
                 action = ""
                 if info[name]["state"] != "running":
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_build"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
-                    action = ", built"
+                    if ptype in BUILDABLE_POOL_TYPES:
+                        if not __opts__["test"]:
+                            # Storage pools build like disk or logical will fail if the disk or LV group
+                            # was already existing. Since we can't easily figure that out, just log the
+                            # possible libvirt error.
+                            try:
+                                __salt__["virt.pool_build"](
+                                    name,
+                                    connection=connection,
+                                    username=username,
+                                    password=password,
+                                )
+                            except libvirt.libvirtError as err:
+                                log.warning(
+                                    "Failed to build libvirt storage pool: %s",
+                                    err.get_error_message(),
+                                )
+                        action = ", built"
 
                 action = (
                     "{}, autostart flag changed".format(action)
@@ -1247,9 +1264,22 @@ def pool_defined(
                     password=password,
                 )
 
-                __salt__["virt.pool_build"](
-                    name, connection=connection, username=username, password=password
-                )
+                if ptype in BUILDABLE_POOL_TYPES:
+                    # Storage pools build like disk or logical will fail if the disk or LV group
+                    # was already existing. Since we can't easily figure that out, just log the
+                    # possible libvirt error.
+                    try:
+                        __salt__["virt.pool_build"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                    except libvirt.libvirtError as err:
+                        log.warning(
+                            "Failed to build libvirt storage pool: %s",
+                            err.get_error_message(),
+                        )
             if needs_autostart:
                 ret["changes"][name] = "Pool defined, marked for autostart"
                 ret["comment"] = "Pool {0} defined, marked for autostart".format(name)
@@ -1358,7 +1388,7 @@ def pool_running(
             is_running = info.get(name, {}).get("state", "stopped") == "running"
             if is_running:
                 if updated:
-                    action = "built, restarted"
+                    action = "restarted"
                     if not __opts__["test"]:
                         __salt__["virt.pool_stop"](
                             name,
@@ -1366,13 +1396,16 @@ def pool_running(
                             username=username,
                             password=password,
                         )
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_build"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
+                    # if the disk or LV group is already existing build will fail (issue #56454)
+                    if ptype in BUILDABLE_POOL_TYPES - {"disk", "logical"}:
+                        if not __opts__["test"]:
+                            __salt__["virt.pool_build"](
+                                name,
+                                connection=connection,
+                                username=username,
+                                password=password,
+                            )
+                        action = "built, {}".format(action)
                 else:
                     action = "already running"
                     result = True
@@ -1609,7 +1642,7 @@ def volume_defined(
                 format: raw
             - nocow: True
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
