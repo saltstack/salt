@@ -5,17 +5,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os.path
-import sys
 from collections import namedtuple
 
-import pkg_resources
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
 # Import Salt Libs
 import salt.config
 import salt.loader
-import salt.modules.boto_route53 as boto_route53
 import salt.utils.versions
-from boto.route53.exception import DNSServerError
 from salt.ext import six
 
 # Import Salt Testing Libs
@@ -27,6 +24,8 @@ from tests.support.unit import TestCase, skipIf
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
+    import salt.modules.boto_route53 as boto_route53
+    from boto.route53.exception import DNSServerError
     import boto
 
     boto.ENDPOINTS_PATH = os.path.join(
