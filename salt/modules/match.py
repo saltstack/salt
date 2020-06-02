@@ -4,15 +4,12 @@ The match module allows for match routines to be run and determine target specs
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
 import copy
-
-# Import python libs
 import inspect
 import logging
 import sys
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -251,7 +248,7 @@ def list_(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers["list_match.match"](tgt, opts=__opts__)
+        return matchers["list_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -281,7 +278,7 @@ def pcre(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers["pcre_match.match"](tgt, opts=__opts__)
+        return matchers["pcre_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -312,7 +309,7 @@ def glob(tgt, minion_id=None):
     matchers = salt.loader.matchers(opts)
 
     try:
-        return matchers["glob_match.match"](tgt, opts=__opts__)
+        return matchers["glob_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -358,7 +355,7 @@ def filter_by(
         params = (key, minion_id) if minion_id else (key,)
         if expr_funcs[tgt_type](*params):
             if merge:
-                if not isinstance(merge, collections.Mapping):
+                if not isinstance(merge, Mapping):
                     raise SaltException(
                         "filter_by merge argument must be a dictionary."
                     )

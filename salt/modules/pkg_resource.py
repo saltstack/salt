@@ -292,7 +292,7 @@ def version_clean(verstr):
 
 def version_compare(ver1, oper, ver2, ignore_epoch=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Perform a version comparison, using (where available) platform-specific
     version comparison tools to make the comparison.

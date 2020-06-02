@@ -1811,11 +1811,11 @@ def container_file_get(
 
     if mode:
         os.chmod(dst, mode)
-    if uid or uid is "0":
+    if uid or uid == "0":
         uid = int(uid)
     else:
         uid = -1
-    if gid or gid is "0":
+    if gid or gid == "0":
         gid = int(gid)
     else:
         gid = -1

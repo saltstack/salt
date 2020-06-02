@@ -227,6 +227,46 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(rh_ip, "_read_file", return_value="A"):
                 self.assertEqual(rh_ip.get_interface("iface"), "A")
 
+    def test__parse_settings_eth_hwaddr_and_macaddr(self):
+        """
+        Test that an AttributeError is thrown when hwaddr and macaddr are
+        passed together. They cannot be used together
+        """
+        opts = {"hwaddr": 1, "macaddr": 2}
+
+        self.assertRaises(
+            AttributeError,
+            rh_ip._parse_settings_eth,
+            opts=opts,
+            iface_type="eth",
+            enabled=True,
+            iface="eth0",
+        )
+
+    def test__parse_settings_eth_hwaddr(self):
+        """
+        Make sure hwaddr gets added when parsing opts
+        """
+        opts = {"hwaddr": "AA:BB:CC:11:22:33"}
+        with patch.dict(rh_ip.__salt__, {"network.interfaces": MagicMock()}):
+            results = rh_ip._parse_settings_eth(
+                opts=opts, iface_type="eth", enabled=True, iface="eth0"
+            )
+        self.assertIn("hwaddr", results)
+        self.assertEqual(results["hwaddr"], opts["hwaddr"])
+
+    def test__parse_settings_eth_macaddr(self):
+        """
+        Make sure macaddr gets added when parsing opts
+        """
+        opts = {"macaddr": "AA:BB:CC:11:22:33"}
+        with patch.dict(rh_ip.__salt__, {"network.interfaces": MagicMock()}):
+            results = rh_ip._parse_settings_eth(
+                opts=opts, iface_type="eth", enabled=True, iface="eth0"
+            )
+        self.assertIn("macaddr", results)
+        self.assertEqual(results["macaddr"], opts["macaddr"])
+
     def test_up(self):
         """
         Test to start up a network interface

@@ -568,15 +568,22 @@ def _refresh_buckets_cache_file(cache_file):
                     metadata[saltenv].append({bucket_name: env_files})
 
     # write the metadata to disk
+    _write_buckets_cache_file(metadata, cache_file)
+
+    return metadata
+
+
+def _write_buckets_cache_file(metadata, cache_file):
+    """
+    Write the contents of the buckets cache file
+    """
     if os.path.isfile(cache_file):
         os.remove(cache_file)
 
     log.debug("Writing buckets cache file")
 
-    with salt.utils.files.fopen(cache_file, "w") as fp_:
+    with salt.utils.files.fopen(cache_file, "wb") as fp_:
         pickle.dump(metadata, fp_)
-
-    return metadata
 
 
 def _read_buckets_cache_file(cache_file):

@@ -66,8 +66,8 @@ def init(
     done_file="%SALT_CONFIG_DIR%/lxd_initialized",
 ):
     """
-    Initalizes the LXD Daemon, as LXD doesn't tell if its initialized
-    we touch the the done_file and check if it exist.
+    Initializes the LXD Daemon, as LXD doesn't tell if its initialized
+    we touch the done_file and check if it exist.
 
     This can only be called once per host unless you remove the done_file.
 
@@ -97,7 +97,7 @@ def init(
 
     done_file :
         Path where we check that this method has been called,
-        as it can run only once and theres currently no way
+        as it can run only once and there's currently no way
         to ask LXD if init has been called.
     """
 

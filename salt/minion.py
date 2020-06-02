@@ -28,6 +28,7 @@ import salt.beacons
 import salt.cli.daemons
 import salt.client
 import salt.crypt
+import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
 
@@ -2367,7 +2368,7 @@ class Minion(MinionBase):
             include_grains = True
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to False in Sodium release.
+            # Old style event. Defaults to False in 3001 release.
             self._fire_master(
                 "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
                 "minion_start",
@@ -2417,7 +2418,7 @@ class Minion(MinionBase):
         self.module_refresh(force_refresh)
 
         if self.connected:
-            log.debug("Refreshing pillar")
+            log.debug("Refreshing pillar.")
             async_pillar = salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts["grains"],
@@ -2437,10 +2438,11 @@ class Minion(MinionBase):
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
-        evt = salt.utils.event.get_event("minion", opts=self.opts)
-        evt.fire_event(
-            {"complete": True}, tag="/salt/minion/minion_pillar_refresh_complete"
-        )
+        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
+            evt.fire_event(
+                {"complete": True},
+                tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+            )
 
     def manage_schedule(self, tag, data):
         """
@@ -3188,7 +3190,7 @@ class Syndic(Minion):
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to false in Sodium release.
+            # Old style event. Defaults to false in 3001 release.
             self._fire_master(
                 "Syndic {0} started at {1}".format(self.opts["id"], time.asctime()),
                 "syndic_start",
