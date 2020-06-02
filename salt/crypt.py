@@ -62,7 +62,7 @@ except ImportError:
 
 if not HAS_M2:
     try:
-        from Cryptodome.Cipher import AES, PKCS1_OAEP
+        from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5 as PKCS1_v1_5_CIPHER
         from Cryptodome.Hash import SHA
         from Cryptodome.PublicKey import RSA
         from Cryptodome.Signature import PKCS1_v1_5
@@ -74,7 +74,7 @@ if not HAS_M2:
 
 if not HAS_M2 and not HAS_CRYPTO:
     try:
-        from Crypto.Cipher import AES, PKCS1_OAEP
+        from Crypto.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5 as PKCS1_v1_5_CIPHER
         from Crypto.Hash import SHA
         from Crypto.PublicKey import RSA
         from Crypto.Signature import PKCS1_v1_5
@@ -343,7 +343,7 @@ def pwdata_decrypt(rsa_key, pwdata):
         dsize = SHA.digest_size
         sentinel = Random.new().read(15 + dsize)
         key_obj = RSA.importKey(rsa_key)
-        key_obj = PKCS1_v1_5.new(key_obj)
+        key_obj = PKCS1_v1_5_CIPHER.new(key_obj)
         password = key_obj.decrypt(pwdata, sentinel)
     return salt.utils.stringutils.to_unicode(password)
 
