@@ -4,10 +4,8 @@
 Define some generic socket functions for network modules
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
 import fnmatch
 import itertools
 import logging
@@ -18,9 +16,9 @@ import re
 import socket
 import subprocess
 import types
+from collections.abc import Mapping, Sequence
 from string import ascii_letters, digits
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.path
@@ -29,10 +27,6 @@ import salt.utils.stringutils
 import salt.utils.zeromq
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
@@ -53,6 +47,20 @@ try:
     RES_INIT = LIBC.__res_init
 except (ImportError, OSError, AttributeError, TypeError):
     pass
+
+
+_INTERFACES = {}
+
+
+def _get_interfaces():
+    """
+    Provide a dict of the connected interfaces and their ip addresses
+    """
+
+    global _INTERFACES
+    if not _INTERFACES:
+        _INTERFACES = interfaces()
+    return _INTERFACES
 
 
 def sanitize_host(host):
@@ -174,9 +182,9 @@ def _generate_minion_id():
                     hosts.append(a_nfo[3])
         except socket.gaierror:
             log.warning(
-                "Cannot resolve address {addr} info via socket: {message}".format(
-                    addr=hosts.first() or "localhost (N/A)", message=socket.gaierror
-                )
+                "Cannot resolve address %s info via socket: %s",
+                hosts.first() or "localhost (N/A)",
+                socket.gaierror,
             )
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
     for f_name in (
@@ -402,7 +410,7 @@ def _ip_options(ip_obj, version, options=None):
     }
 
     if not options:
-        return six.text_type(ip_obj)  # IP version already checked
+        return str(ip_obj)  # IP version already checked
 
     options_list = [option.strip() for option in options.split(",")]
 
@@ -413,7 +421,7 @@ def _ip_options(ip_obj, version, options=None):
                 return None
                 # stop at first failed test
             # else continue
-    return six.text_type(ip_obj)
+    return str(ip_obj)
 
 
 def _is_ipv(ip_addr, version, options=None):
@@ -456,7 +464,7 @@ def is_ipv4_filter(ip_addr, options=None):
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     """
     _is_ipv4 = _is_ipv(ip_addr, 4, options=options)
-    return isinstance(_is_ipv4, six.string_types)
+    return isinstance(_is_ipv4, str)
 
 
 @jinja_filter("is_ipv6")
@@ -474,7 +482,7 @@ def is_ipv6_filter(ip_addr, options=None):
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     """
     _is_ipv6 = _is_ipv(ip_addr, 6, options=options)
-    return isinstance(_is_ipv6, six.string_types)
+    return isinstance(_is_ipv6, str)
 
 
 def _ipv_filter(value, version, options=None):
@@ -482,7 +490,7 @@ def _ipv_filter(value, version, options=None):
     if version not in (4, 6):
         return
 
-    if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
+    if isinstance(value, (str, bytes)):
         return _is_ipv(
             value, version, options=options
         )  # calls is_ipv4 or is_ipv6 for `value`
@@ -554,14 +562,13 @@ def ip_host(value, options=None, version=None):
     if not ipaddr_filter_out:
         return
     if not isinstance(value, (list, tuple, types.GeneratorType)):
-        return six.text_type(ipaddress.ip_interface(ipaddr_filter_out[0]))
-    return [six.text_type(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
+        return str(ipaddress.ip_interface(ipaddr_filter_out[0]))
+    return [str(ipaddress.ip_interface(ip_a)) for ip_a in ipaddr_filter_out]
 
 
 def _network_hosts(ip_addr_entry):
     return [
-        six.text_type(host)
-        for host in ipaddress.ip_network(ip_addr_entry, strict=False).hosts()
+        str(host) for host in ipaddress.ip_network(ip_addr_entry, strict=False).hosts()
     ]
 
 
@@ -1077,7 +1084,7 @@ def get_net_start(ipaddr, netmask):
     Return the address of the network
     """
     net = ipaddress.ip_network("{0}/{1}".format(ipaddr, netmask), strict=False)
-    return six.text_type(net.network_address)
+    return str(net.network_address)
 
 
 def get_net_size(mask):
@@ -1100,7 +1107,7 @@ def calc_net(ipaddr, netmask=None):
     if netmask is not None:
         ipaddr = "{0}/{1}".format(ipaddr, netmask)
 
-    return six.text_type(ipaddress.ip_network(ipaddr, strict=False))
+    return str(ipaddress.ip_network(ipaddr, strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -1205,7 +1212,7 @@ def _subnets(proto="inet", interfaces_=None):
         ifaces = interfaces()
     elif isinstance(interfaces_, list):
         ifaces = {}
-        for key, value in six.iteritems(interfaces()):
+        for key, value in interfaces().items():
             if key in interfaces_:
                 ifaces[key] = value
     else:
@@ -1220,10 +1227,10 @@ def _subnets(proto="inet", interfaces_=None):
         subnet = "prefixlen"
         dflt_cidr = 128
     else:
-        log.error("Invalid proto {0} calling subnets()".format(proto))
+        log.error("Invalid proto %s calling subnets()", proto)
         return
 
-    for ip_info in six.itervalues(ifaces):
+    for ip_info in ifaces.values():
         addrs = ip_info.get(proto, [])
         addrs.extend(
             [addr for addr in ip_info.get("secondary", []) if addr.get("type") == proto]
@@ -1240,7 +1247,7 @@ def _subnets(proto="inet", interfaces_=None):
                 )
             if not intf.is_loopback:
                 ret.add(intf.network)
-    return [six.text_type(net) for net in sorted(ret)]
+    return [str(net) for net in sorted(ret)]
 
 
 def subnets(interfaces=None):
@@ -1281,7 +1288,7 @@ def _get_ips(ifaces, proto="inet"):
     Accepts a dict of interface data and returns a list of dictionaries
     """
     ret = []
-    for ip_info in six.itervalues(ifaces):
+    for ip_info in ifaces.values():
         ret.extend(ip_info.get(proto, []))
         ret.extend(
             [addr for addr in ip_info.get("secondary", []) if addr.get("type") == proto]
@@ -1302,7 +1309,7 @@ def _filter_interfaces(interface=None, interface_data=None):
         # pylint: disable=not-an-iterable
         ret = {
             k: v
-            for k, v in six.iteritems(ifaces)
+            for k, v in ifaces.items()
             if any((fnmatch.fnmatch(k, pat) for pat in interface))
         }
         # pylint: enable=not-an-iterable
@@ -1325,7 +1332,7 @@ def _ip_addrs(
         if not addr.is_loopback or include_loopback:
             ret.add(addr)
 
-    return [six.text_type(addr) for addr in sorted(ret)]
+    return [str(addr) for addr in sorted(ret)]
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
@@ -1372,12 +1379,12 @@ def _ip_networks(
                 ret.add(ip_net)
 
     if not verbose:
-        return [six.text_type(addr) for addr in sorted(ret)]
+        return [str(addr) for addr in sorted(ret)]
 
     verbose_ret = {
-        six.text_type(x): {
-            "address": six.text_type(x.network_address),
-            "netmask": six.text_type(x.netmask),
+        str(x): {
+            "address": str(x.network_address),
+            "netmask": str(x.netmask),
             "num_addresses": x.num_addresses,
             "prefixlen": x.prefixlen,
         }
@@ -1443,7 +1450,7 @@ def hex2ip(hex_ip, invert=False):
             else:
                 return address.compressed
         except ipaddress.AddressValueError as ex:
-            log.error("hex2ip - ipv6 address error: {0}".format(ex))
+            log.error("hex2ip - ipv6 address error: %s", ex)
             return hex_ip
 
     try:
@@ -1693,7 +1700,7 @@ def _freebsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split("sockstat -4 -c -p {0}".format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -1755,7 +1762,7 @@ def _netbsd_remotes_on(port, which_end):
         cmd = salt.utils.args.shlex_split("sockstat -4 -c -n -p {0}".format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
-        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "sockstat" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -1902,7 +1909,7 @@ def _linux_remotes_on(port, which_end):
             # to locate Internet addresses, and it is not an error in this case.
             log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
             return remotes
-        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
+        log.error('Failed "lsof" with returncode = %s', ex.returncode)
         raise
 
     lines = salt.utils.stringutils.to_str(data).split("\n")
@@ -2027,7 +2034,7 @@ def mac_str_to_bytes(mac_str):
     else:
         raise ValueError("Invalid MAC address")
     chars = (int(mac_str[s : s + 2], 16) for s in range(0, 12, 2))
-    return bytes(chars) if six.PY3 else b"".join(chr(x) for x in chars)
+    return bytes(chars)
 
 
 def refresh_dns():
@@ -2185,11 +2192,11 @@ def filter_by_networks(values, networks):
 
     if networks is not None:
         networks = [ipaddress.ip_network(network) for network in networks]
-        if isinstance(values, collections.Mapping):
+        if isinstance(values, Mapping):
             return {
                 interface: _filter(values[interface], networks) for interface in values
             }
-        elif isinstance(values, collections.Sequence):
+        elif isinstance(values, Sequence):
             return _filter(values, networks)
         else:
             raise ValueError("Do not know how to filter a {}".format(type(values)))

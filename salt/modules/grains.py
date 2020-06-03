@@ -10,7 +10,6 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
@@ -19,6 +18,7 @@ import math
 import operator
 import os
 import random
+from collections.abc import Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
 import salt.utils.compat
@@ -29,10 +29,6 @@ import salt.utils.platform
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-
-# Import Salt libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 __proxyenabled__ = ["*"]
 
@@ -163,7 +159,7 @@ def items(sanitize=False):
     """
     if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in six.iteritems(_SANITIZERS):
+        for key, func in _SANITIZERS.items():
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -201,7 +197,7 @@ def item(*args, **kwargs):
         pass
 
     if salt.utils.data.is_true(kwargs.get("sanitize")):
-        for arg, func in six.iteritems(_SANITIZERS):
+        for arg, func in _SANITIZERS.items():
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -226,7 +222,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
         salt '*' grains.setvals "{'key1': 'val1', 'key2': 'val2'}"
     """
     new_grains = grains
-    if not isinstance(new_grains, collections.Mapping):
+    if not isinstance(new_grains, Mapping):
         raise SaltException("setvals grains must be a dictionary.")
     grains = {}
     if os.path.isfile(__opts__["conf_file"]):
@@ -265,7 +261,7 @@ def setvals(grains, destructive=False, refresh_pillar=True):
                 return "Unable to read existing grains file: {0}".format(exc)
         if not isinstance(grains, dict):
             grains = {}
-    for key, val in six.iteritems(new_grains):
+    for key, val in new_grains.items():
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
@@ -436,7 +432,7 @@ def delkey(key):
 
         salt '*' grains.delkey key
     """
-    setval(key, None, destructive=True)
+    return delval(key, destructive=True)
 
 
 def delval(key, destructive=False):
@@ -459,7 +455,7 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     """
-    setval(key, None, destructive=destructive)
+    return set(key, None, destructive=destructive)
 
 
 def ls():  # pylint: disable=C0103
@@ -788,7 +784,7 @@ def equals(key, value):
         salt '*' grains.equals fqdn <expected_fqdn>
         salt '*' grains.equals systemd:version 219
     """
-    return six.text_type(value) == six.text_type(get(key))
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

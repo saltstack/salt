@@ -152,6 +152,7 @@ class ClearFuncsConfigTest(ConfigMixin, TestCase):
         assert not os.path.exists(
             self.evil_file_path
         ), "Wrote file via directory traversal"
+        assert ret["data"]["return"] == "Invalid path"
 
 
 class ClearFuncsFileRoots(ConfigMixin, TestCase):

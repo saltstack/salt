@@ -223,7 +223,7 @@ the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
 when there are many minions. Set ``enable_legacy_startup_events: False`` in the
 minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``Sodium`` Salt release this option will default to
+sent. Beginning with the ``3001`` Salt release this option will default to
 ``False``.
 
 .. code-block:: yaml
