@@ -343,6 +343,7 @@ class VersionTestCase(TestCase):
         for ver, repr_ret in expect:
             assert repr(SaltStackVersion(*ver)) == repr_ret
 
+    @skipIf(not salt.utils.platform.is_linux(), "Linux test only")
     def test_system_version_linux(self):
         """
         version.system_version on Linux
@@ -396,6 +397,7 @@ class VersionTestCase(TestCase):
             version = ("version", "OpenSUSE Leap 15.1 ")
             self.assertIn(version, versions)
 
+    @skipIf(not salt.utils.platform.is_darwin(), "OS X test only")
     def test_system_version_osx(self):
         """
         version.system_version on OS X
