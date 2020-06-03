@@ -425,5 +425,5 @@ class VersionTestCase(TestCase):
             MagicMock(return_value=("Windows Server 2016 Datacenter", 1)),
         ):
             versions = [item for item in system_information()]
-            version = ("version", "2016Server 10.0.14393 SP0")
+            version = ("version", "2016Server 10.0.14393 SP0 Multiprocessor Free")
             self.assertIn(version, versions)
