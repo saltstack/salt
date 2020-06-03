@@ -428,13 +428,16 @@ def get_jids():
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = """SELECT jid, load
-                FROM jids"""
+        sql = '''SELECT j.jid as jid, j.load as load, jsonb_agg(sr.id) as tgt FROM jids j
+                join salt_returns sr
+                using(jid)
+                group by j.jid, j.load'''
 
         cur.execute(sql)
         data = cur.fetchall()
         ret = {}
-        for jid, load in data:
+        for jid, load, tgt in data:
+            load["tgt"] = tgt
             ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
         return ret
 
