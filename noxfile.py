@@ -308,6 +308,8 @@ def _run_with_coverage(session, *test_cmd):
             "--omit=salt/*",
             "--include=tests/*",
         )
+        # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
+        shutil.move(".coverage", os.path.join("artifacts", "coverage", ".coverage"))
 
 
 def _runtests(session, coverage, cmd_args):
@@ -581,9 +583,6 @@ def pytest_parametrized(session, coverage, transport, crypto):
     # Install requirements
     _install_requirements(session, transport)
 
-    session.run(
-        "pip", "uninstall", "-y", "pytest-salt", silent=True,
-    )
     if crypto:
         session.run(
             "pip",
@@ -608,7 +607,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
         REPO_ROOT,
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
-        "--no-print-logs",
+        "--show-capture=no",
         "-ra",
         "-s",
         "--transport={}".format(transport),
@@ -750,7 +749,7 @@ def pytest_cloud(session, coverage):
         REPO_ROOT,
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
-        "--no-print-logs",
+        "--show-capture=no",
         "-ra",
         "-s",
         "--run-expensive",
@@ -773,7 +772,7 @@ def pytest_tornado(session, coverage):
         REPO_ROOT,
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
-        "--no-print-logs",
+        "--show-capture=no",
         "-ra",
         "-s",
     ] + session.posargs
@@ -783,6 +782,10 @@ def pytest_tornado(session, coverage):
 def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
+
+    session.run(
+        "pip", "uninstall", "-y", "pytest-salt", silent=True,
+    )
 
     env = None
     if IS_DARWIN:

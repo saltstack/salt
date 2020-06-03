@@ -8,6 +8,7 @@ import copy
 import os
 import shutil
 import sys
+import tarfile
 import tempfile
 
 import jinja2
@@ -20,7 +21,7 @@ import salt.utils.stringutils
 from salt.ext.six.moves import range
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
-from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -1295,3 +1296,30 @@ class SSHThinTestCase(TestCase):
             calls = self.tar.mock_calls
             for _file in exp_files:
                 assert [x for x in calls if "{}".format(_file) in x.args]
+
+    @skipIf(
+        salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
+    )
+    def test_thin_dir(self):
+        """
+        Test the thin dir to make sure salt-call can run
+
+        Run salt call via a python in a new virtual environment to ensure
+        salt-call has all dependencies needed.
+        """
+        # This was previously an integration test and is now here, as a unit test.
+        # Should actually be a functional test
+        with VirtualEnv() as venv:
+            salt.utils.thin.gen_thin(venv.venv_dir)
+            thin_dir = os.path.join(venv.venv_dir, "thin")
+            thin_archive = os.path.join(thin_dir, "thin.tgz")
+            tar = tarfile.open(thin_archive)
+            tar.extractall(thin_dir)
+            tar.close()
+            ret = venv.run(
+                venv.venv_python,
+                os.path.join(thin_dir, "salt-call"),
+                "--version",
+                check=False,
+            )
+            assert ret.exitcode == 0, ret

@@ -34,7 +34,7 @@ to below:
 auto_detect
 -----------
 
-In the Sodium release the ``auto_detect`` feature was added for ``ssh_ext_alternatives``.
+In the 3001 release the ``auto_detect`` feature was added for ``ssh_ext_alternatives``.
 This allows salt-ssh to automatically detect the path to all of your dependencies and
 does not require you to define them under ``dependencies``.
 

@@ -69,8 +69,7 @@ def which_smbd():
 
 @skipIf(not which_smbd(), reason="smbd binary not found")
 @skipIf(
-    any([salt.utils.smb.HAS_IMPACKET, salt.utils.smb.HAS_SMBPROTOCOL]),
-    'Either "impacket" or "smbprotocol" needs to be installed.',
+    not salt.utils.smb.HAS_SMBPROTOCOL, '"smbprotocol" needs to be installed.',
 )
 class TestSmb(TestCase):
 

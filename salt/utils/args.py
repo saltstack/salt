@@ -244,7 +244,12 @@ def yamlify_arg(arg):
 
 def get_function_argspec(func, is_class_method=None):
     """
-    A small wrapper around getargspec that also supports callable classes
+    A small wrapper around getargspec that also supports callable classes and wrapped functions
+
+    If the given function is a wrapper around another function (i.e. has a
+    ``__wrapped__`` attribute), return the functions specification of the underlying
+    function.
+
     :param is_class_method: Pass True if you are sure that the function being passed
                             is a class method. The reason for this is that on Python 3
                             ``inspect.ismethod`` only returns ``True`` for bound methods,
@@ -255,6 +260,9 @@ def get_function_argspec(func, is_class_method=None):
     """
     if not callable(func):
         raise TypeError("{0} is not a callable".format(func))
+
+    if hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
 
     if is_class_method is True:
         aspec = _getargspec(func)
@@ -268,7 +276,32 @@ def get_function_argspec(func, is_class_method=None):
         aspec = _getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        try:
+            sig = inspect.signature(func)
+        except TypeError:
+            raise TypeError("Cannot inspect argument list for '{0}'".format(func))
+        else:
+            # argspec-related functions are deprecated in Python 3 in favor of
+            # the new inspect.Signature class, and will be removed at some
+            # point in the Python 3 lifecycle. So, build a namedtuple which
+            # looks like the result of a Python 2 argspec.
+            _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+            args = []
+            defaults = []
+            varargs = keywords = None
+            for param in sig.parameters.values():
+                if param.kind == param.POSITIONAL_OR_KEYWORD:
+                    args.append(param.name)
+                    if param.default is not inspect._empty:
+                        defaults.append(param.default)
+                elif param.kind == param.VAR_POSITIONAL:
+                    varargs = param.name
+                elif param.kind == param.VAR_KEYWORD:
+                    keywords = param.name
+            if is_class_method:
+                del args[0]
+            aspec = _ArgSpec(args, varargs, keywords, tuple(defaults) or None)
+
     return aspec
 
 

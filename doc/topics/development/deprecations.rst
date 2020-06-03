@@ -26,7 +26,7 @@ the Boron feature release.
 A deprecation warning should be in place for at least two major releases before
 the deprecated code and its accompanying deprecation warning are removed.  More
 time should be given for more complex changes.  For example, if the current
-release under development is ``Sodium``, the deprecated code and associated
+release under development is ``3001``, the deprecated code and associated
 warnings should remain in place and warn for at least ``Aluminum``.
 
 To help in this deprecation task, salt provides

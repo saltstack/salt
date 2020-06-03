@@ -1879,8 +1879,22 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "/usr/share/OVMF/OVMF_VARS.ms.fd",
         )
 
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot={"efi": True}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("os").attrib.get("firmware"), "efi")
+
         with self.assertRaises(SaltInvocationError):
             virt.update("my_vm", boot=invalid_boot)
+
+        with self.assertRaises(SaltInvocationError):
+            virt.update("my_vm", boot={"efi": "Not a boolean value"})
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -2461,12 +2475,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         kernel_none = {
-            "kernel": None,
-            "initrd": None,
-            "cmdline": None,
+            "kernel": "None",
+            "initrd": "None",
+            "cmdline": "None",
         }
 
-        uefi_none = {"loader": None, "nvram": None}
+        uefi_none = {"loader": "None", "nvram": "None"}
 
         self.assertEqual(
             {
@@ -2481,6 +2495,18 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("os").find("kernel"), None)
         self.assertEqual(setxml.find("os").find("initrd"), None)
         self.assertEqual(setxml.find("os").find("cmdline"), None)
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_boot_param", boot={"efi": False}),
+        )
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("nvram"), None)
+        self.assertEqual(setxml.find("os").find("loader"), None)
 
         self.assertEqual(
             {
@@ -4226,7 +4252,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         mock_pool = MagicMock()
         mock_pool.delete = MagicMock(return_value=0)
-        mock_pool.XMLDesc.return_value = "<pool type='dir'/>"
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
 
         res = virt.pool_delete("test-pool")
@@ -4240,12 +4265,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
         )
 
-    def test_pool_delete_secret(self):
+    def test_pool_undefine_secret(self):
         """
-        Test virt.pool_delete function where the pool has a secret
+        Test virt.pool_undefine function where the pool has a secret
         """
         mock_pool = MagicMock()
-        mock_pool.delete = MagicMock(return_value=0)
+        mock_pool.undefine = MagicMock(return_value=0)
         mock_pool.XMLDesc.return_value = """
             <pool type='rbd'>
               <name>test-ses</name>
@@ -4262,16 +4287,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_undefine = MagicMock(return_value=0)
         self.mock_conn.secretLookupByUsage.return_value.undefine = mock_undefine
 
-        res = virt.pool_delete("test-ses")
+        res = virt.pool_undefine("test-ses")
         self.assertTrue(res)
 
         self.mock_conn.storagePoolLookupByName.assert_called_once_with("test-ses")
-
-        # Shouldn't be called with another parameter so far since those are not implemented
-        # and thus throwing exceptions.
-        mock_pool.delete.assert_called_once_with(
-            self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
-        )
+        mock_pool.undefine.assert_called_once_with()
 
         self.mock_conn.secretLookupByUsage.assert_called_once_with(
             self.mock_libvirt.VIR_SECRET_USAGE_TYPE_CEPH, "pool_test-ses"
@@ -4540,24 +4560,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
           </source>
         </pool>"""
 
-        expected_xml = (
-            '<pool type="rbd">'
-            "<name>default</name>"
-            "<uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>"
-            '<capacity unit="bytes">1999421108224</capacity>'
-            '<allocation unit="bytes">713207042048</allocation>'
-            '<available unit="bytes">1286214066176</available>'
-            "<source>"
-            '<host name="ses4.tf.local" />'
-            '<host name="ses5.tf.local" />'
-            '<auth type="ceph" username="libvirt">'
-            '<secret uuid="14e9a0f1-8fbf-4097-b816-5b094c182212" />'
-            "</auth>"
-            "<name>iscsi-images</name>"
-            "</source>"
-            "</pool>"
-        )
-
         mock_secret = MagicMock()
         self.mock_conn.secretLookupByUUIDString = MagicMock(return_value=mock_secret)
 
@@ -4576,6 +4578,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
         self.mock_conn.storagePoolDefineXML.assert_not_called()
+        mock_secret.setValue.assert_called_once_with(b"secret")
+
+        # Case where the secret can't be found
+        self.mock_conn.secretLookupByUUIDString = MagicMock(
+            side_effect=self.mock_libvirt.libvirtError("secret not found")
+        )
+        self.assertFalse(
+            virt.pool_update(
+                "default",
+                "rbd",
+                source_name="iscsi-images",
+                source_hosts=["ses4.tf.local", "ses5.tf.local"],
+                source_auth={"username": "libvirt", "password": "c2VjcmV0"},
+            )
+        )
+        self.mock_conn.storagePoolDefineXML.assert_not_called()
+        self.mock_conn.secretDefineXML.assert_called_once()
         mock_secret.setValue.assert_called_once_with(b"secret")
 
     def test_pool_update_password_create(self):
