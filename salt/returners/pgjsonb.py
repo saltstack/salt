@@ -428,10 +428,10 @@ def get_jids():
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT j.jid as jid, j.load as load, jsonb_agg(sr.id) as tgt FROM jids j
+        sql = """SELECT j.jid as jid, j.load as load, jsonb_agg(sr.id) as tgt FROM jids j
                 join salt_returns sr
                 using(jid)
-                group by j.jid, j.load'''
+                group by j.jid, j.load"""
 
         cur.execute(sql)
         data = cur.fetchall()
