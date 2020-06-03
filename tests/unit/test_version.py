@@ -21,7 +21,7 @@ from salt.version import SaltStackVersion, system_information, versions_report
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VersionTestCase(TestCase):
@@ -409,6 +409,7 @@ class VersionTestCase(TestCase):
             version = ("version", "10.15.2 x86_64")
             self.assertIn(version, versions)
 
+    @skipIf(not salt.utils.platform.is_windows(), "Windows test only")
     def test_system_version_windows(self):
         """
         version.system_version on Windows
