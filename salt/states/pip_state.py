@@ -885,11 +885,17 @@ def installed(
 
                 # Append comments if this is a dry run.
                 if __opts__["test"]:
-                    msg = "Python package(s) set to be installed:"
-                    for pkg in pkgs_details:
-                        msg += "\n"
-                        msg += pkg[1]
-                        ret["comment"] = msg
+                    # If there is more than one package, compute
+                    # the total amount and exit
+                    if len(pkgs_details) > 1:
+                        msg = "Python package(s) set to be installed:"
+                        for pkg in pkgs_details:
+                            msg += "\n"
+                            msg += pkg[1]
+                            ret["comment"] = msg
+                    else:
+                        msg = "Python package {0} is set to be installed"
+                        ret["comment"] = msg.format(state_pkg_name)
                     ret["result"] = None
                     return ret
 
