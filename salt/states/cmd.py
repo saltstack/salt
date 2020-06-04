@@ -1041,6 +1041,7 @@ def script(
     cmd_kwargs.update(
         {
             "runas": runas,
+            "password": password,
             "shell": shell or __grains__["shell"],
             "env": env,
             "cwd": cwd,
