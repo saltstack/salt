@@ -404,8 +404,11 @@ class GitPythonMixin:
                     "nested_dict": {"master": True},
                 },
                 "_errors": [
-                    "Specified SLS 'bar' in environment 'base' is not "
-                    "available on the salt master"
+                    "Specified SLS 'bar' in environment 'base' was not found. "
+                    "This is likely caused by a git_pillar top file "
+                    "containing an environment other than the one for the "
+                    "branch in which it resides. Each git_pillar "
+                    "branch/tag must have its own top file."
                 ],
             },
         )
@@ -1422,8 +1425,11 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 "nested_dict": {"master": True},
             },
             "_errors": [
-                "Specified SLS 'bar' in environment 'base' is not "
-                "available on the salt master"
+                "Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."
             ],
         }
 
@@ -2431,8 +2437,11 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 "nested_dict": {"master": True},
             },
             "_errors": [
-                "Specified SLS 'bar' in environment 'base' is not "
-                "available on the salt master"
+                "Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."
             ],
         }
 
@@ -3184,8 +3193,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 "nested_dict": {"master": True},
             },
             "_errors": [
-                "Specified SLS 'bar' in environment 'base' is not "
-                "available on the salt master"
+                "Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."
             ],
         }
 

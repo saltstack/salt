@@ -24,9 +24,10 @@ import weakref
 from datetime import datetime
 
 import salt.ext.tornado.ioloop
-import salt.fileserver
 
 # Import salt libs
+import salt.fileclient
+import salt.fileserver
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -511,8 +512,6 @@ class GitProvider(object):
             strip_sep = (
                 lambda x: x.rstrip(os.sep) if name in ("root", "mountpoint") else x
             )
-            if self.role != "gitfs":
-                return strip_sep(getattr(self, "_" + name))
             # Get saltenv-specific configuration
             saltenv_conf = self.saltenv.get(tgt_env, {})
             if name == "ref":
@@ -527,6 +526,43 @@ class GitProvider(object):
                         return self.global_saltenv[tgt_env][name]
                     else:
                         return None
+
+                def _get_git_pillar_env():
+                    if self.branch == "__env__":
+                        if hasattr(self, "all_saltenvs"):
+                            pillarenv = (
+                                self.opts.get("pillarenv")
+                                or self.opts.get("saltenv")
+                                or "base"
+                            )
+                            if tgt_env == pillarenv:
+                                return self.all_saltenvs
+                            else:
+                                return None
+                        else:
+                            if tgt_env == "base":
+                                return self.base
+                            else:
+                                return tgt_env
+                    elif self.env:
+                        if tgt_env == self.env:
+                            return self.branch
+                        else:
+                            return None
+                    else:
+                        if tgt_env == "base":
+                            if self.branch == self.base:
+                                return self.branch
+                            else:
+                                return None
+                        else:
+                            if tgt_env == self.branch:
+                                return self.branch
+                            else:
+                                return None
+
+                if self.opts.get("__git_pillar", False):
+                    return _get_git_pillar_env()
 
                 # Return the all_saltenvs branch/tag if it is configured
                 per_saltenv_ref = _get_per_saltenv(tgt_env)
@@ -1005,6 +1041,17 @@ class GitProvider(object):
         Check if an environment is exposed by comparing it against a whitelist
         and blacklist.
         """
+        if self.opts.get("__git_pillar", False):
+            if self.branch != "__env__":
+                if self.env:
+                    if tgt_env != self.env:
+                        return False
+                elif tgt_env == "base":
+                    if self.base != self.branch:
+                        return False
+                else:
+                    if tgt_env != self.branch:
+                        return False
         return salt.utils.stringutils.check_whitelist_blacklist(
             tgt_env, whitelist=self.saltenv_whitelist, blacklist=self.saltenv_blacklist,
         )
@@ -2835,6 +2882,7 @@ class GitFS(GitBase):
         remotes=None,
         per_remote_overrides=(),
         per_remote_only=PER_REMOTE_ONLY,
+        global_only=GLOBAL_ONLY,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -2859,6 +2907,7 @@ class GitFS(GitBase):
                 remotes if remotes is not None else [],
                 per_remote_overrides=per_remote_overrides,
                 per_remote_only=per_remote_only,
+                global_only=global_only,
                 git_providers=git_providers
                 if git_providers is not None
                 else GIT_PROVIDERS,
@@ -2882,6 +2931,7 @@ class GitFS(GitBase):
         remotes,
         per_remote_overrides=(),
         per_remote_only=PER_REMOTE_ONLY,
+        global_only=GLOBAL_ONLY,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -2922,14 +2972,29 @@ class GitFS(GitBase):
         if os.path.isabs(path):
             return fnd
 
-        dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
-        hashes_glob = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{0}.hash.*".format(path)
-        )
-        blobshadest = salt.utils.path.join(
-            self.hash_cachedir, tgt_env, "{0}.hash.blob_sha1".format(path)
-        )
-        lk_fn = salt.utils.path.join(self.hash_cachedir, tgt_env, "{0}.lk".format(path))
+        if self.opts.get("__git_pillar", False):
+            name = getattr(self.remotes[0], "name", self.remotes[0].hash)
+            dest = salt.utils.path.join(self.cache_root, "refs", name, tgt_env, path)
+            hashes_glob = salt.utils.path.join(
+                self.hash_cachedir, name, tgt_env, "{0}.hash.*".format(path)
+            )
+            blobshadest = salt.utils.path.join(
+                self.hash_cachedir, name, tgt_env, "{0}.hash.blob_sha1".format(path)
+            )
+            lk_fn = salt.utils.path.join(
+                self.hash_cachedir, name, tgt_env, "{0}.lk".format(path)
+            )
+        else:
+            dest = salt.utils.path.join(self.cache_root, "refs", tgt_env, path)
+            hashes_glob = salt.utils.path.join(
+                self.hash_cachedir, tgt_env, "{0}.hash.*".format(path)
+            )
+            blobshadest = salt.utils.path.join(
+                self.hash_cachedir, tgt_env, "{0}.hash.blob_sha1".format(path)
+            )
+            lk_fn = salt.utils.path.join(
+                self.hash_cachedir, tgt_env, "{0}.lk".format(path)
+            )
         destdir = os.path.dirname(dest)
         hashdir = os.path.dirname(blobshadest)
         if not os.path.isdir(destdir):
@@ -3346,6 +3411,81 @@ class GitPillar(GitBase):
             )
             return False
         return True
+
+
+class GitPillarClient(GitBase, salt.fileclient.Client):
+    """
+    Functionality specific to the git external pillar implementing the salt.fileclient.Client interface
+    """
+
+    role = "git_pillar"
+
+    def __init__(
+        self,
+        opts,
+        remotes,
+        per_remote_overrides=(),
+        per_remote_only=PER_REMOTE_ONLY,
+        global_only=GLOBAL_ONLY,
+        git_providers=None,
+        cache_root=None,
+        init_remotes=True,
+    ):
+        self._envs = None
+        GitBase.__init__(
+            self,
+            opts,
+            remotes,
+            per_remote_overrides=per_remote_overrides,
+            per_remote_only=per_remote_only,
+            global_only=global_only,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
+        salt.fileclient.Client.__init__(self, opts)
+
+    def get_file(
+        self, path, dest="", makedirs=False, saltenv="base", gzip=None, cachedir=None
+    ):
+        """
+        Get a single file from the salt-master
+        path must be a salt server location, aka, salt://path/to/file, if
+        dest is omitted, then the downloaded file will be placed in the minion
+        cache
+        """
+        path = self._check_proto(path)
+        ret = GitFS.find_file(self, path, tgt_env=saltenv)
+        return ret["path"]
+
+    def file_list(self, saltenv="base", prefix=""):
+        """
+        List the files on the master
+        """
+        load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_file_list"}
+        return GitFS._file_lists(self, load, "files")
+
+    def file_list_emptydirs(self, saltenv="base", prefix=""):
+        """
+        List the empty dirs on the master
+        """
+        # Cannot have empty dirs in git
+        return []
+
+    def dir_list(self, saltenv="base", prefix=""):
+        """
+        List the dirs on the master
+        """
+        load = {"saltenv": saltenv, "prefix": prefix, "cmd": "_dir_list"}
+        return GitFS._file_lists(self, load, "dirs")
+
+    def envs(self):
+        """
+        Return a list of available environments
+        """
+        if self._envs is None:
+            self._envs = GitFS.envs(self)
+        return self._envs
 
 
 class WinRepo(GitBase):
