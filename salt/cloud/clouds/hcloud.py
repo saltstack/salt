@@ -472,7 +472,7 @@ def list_nodes_select():
     Taken like this from https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#the-list-nodes-select-function
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full(), __opts__["query.selection"], "function",
     )
 
 
