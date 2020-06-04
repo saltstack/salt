@@ -52,6 +52,7 @@ try:
     from hcloud.networks.domain import NetworkRoute, NetworkSubnet
     from hcloud.server_types.domain import ServerType
     from salt.exceptions import SaltCloudException
+
     # pylint: enable=no-name-in-module
 
     HAS_HCLOUD = True
