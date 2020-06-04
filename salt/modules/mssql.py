@@ -131,12 +131,13 @@ def tsql_query(query, **kwargs):
     """
     try:
         query = _to_rawstrings(query)
-        with _get_connection(**kwargs).cursor() as cursor:
-            cursor.execute(query)
-            # Making sure the result is JSON serializable
-            return salt.utils.json.loads(
-                _MssqlEncoder().encode({"resultset": cursor.fetchall()})
-            )["resultset"]
+        with _get_connection(**kwargs) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                # Making sure the result is JSON serializable
+                return salt.utils.json.loads(
+                    _MssqlEncoder().encode({"resultset": cursor.fetchall()})
+                )["resultset"]
     except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
         return (("Could not run the query",), (six.text_type(err),))
