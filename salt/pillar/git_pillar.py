@@ -365,12 +365,9 @@ import salt.utils.versions
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
-# Import third party libs
-from salt.ext import six
-
-PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify', 'refspecs')
-PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')
-GLOBAL_ONLY = ('base', 'branch')
+PER_REMOTE_OVERRIDES = ('base', 'env', 'root', 'ssl_verify', 'refspecs', 'fallback', 'saltenv_whitelist', 'saltenv_blacklist', 'disable_saltenv_mapping', 'ref_types,)
+PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')  # "saltenv"
+GLOBAL_ONLY = ('branch',)
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -405,7 +402,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     opts = copy.deepcopy(__opts__)
     opts['pillar_roots'] = {}
     opts['__git_pillar'] = True
-    git_pillar = salt.utils.gitfs.GitPillar(
+    git_pillar_client = salt.utils.gitfs.GitPillarClient(
         opts,
         repos,
         per_remote_overrides=PER_REMOTE_OVERRIDES,
@@ -414,8 +411,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     if __opts__.get('__role') == 'minion':
         # If masterless, fetch the remotes. We'll need to remove this once
         # we make the minion daemon able to run standalone.
-        git_pillar.fetch_remotes()
-    git_pillar.checkout()
+        git_pillar_client.fetch_remotes()
     ret = {}
     merge_strategy = __opts__.get(
         'pillar_source_merging_strategy',
@@ -425,55 +421,43 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
         'pillar_merge_lists',
         False
     )
-    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
-        # Map env if env == '__env__' before checking the env value
-        if env == '__env__':
-            env = opts.get('pillarenv') \
-                or opts.get('saltenv') \
-                or opts.get('git_pillar_base')
-            log.debug('__env__ maps to %s', env)
 
-        # If pillarenv is set, only grab pillars with that match pillarenv
-        if opts['pillarenv'] and env != opts['pillarenv']:
-            log.debug(
-                'env \'%s\' for pillar dir \'%s\' does not match '
-                'pillarenv \'%s\', skipping',
-                env, pillar_dir, opts['pillarenv']
-            )
-            continue
-        if pillar_dir in git_pillar.pillar_linked_dirs:
-            log.debug(
-                'git_pillar is skipping processing on %s as it is a '
-                'mounted repo', pillar_dir
-            )
-            continue
+    def remote_env(remote):
+        if remote.branch == "__env__" and hasattr(remote, "all_saltenvs"):
+            return opts.get("pillarenv") or opts.get("saltenv") or "base"
+        elif remote.env:
+            return remote.env
         else:
-            log.debug(
-                'git_pillar is processing pillar SLS from %s for pillar '
-                'env \'%s\'', pillar_dir, env
-            )
+            if remote.branch == remote.base:
+                return "base"
+            else:
+                tgt = remote.get_checkout_target()
+                return "base" if tgt == remote.base else tgt
 
-        pillar_roots = [pillar_dir]
+    for remote_idx, remote in enumerate(git_pillar_client.remotes):
+        env = remote_env(remote)
+        remotes = [repos[remote_idx]]
+        if __opts__["git_pillar_includes"]:
+            for remote_idx2, remote2 in enumerate(git_pillar_client.remotes):
+                if remote_idx2 == remote_idx:
+                    continue
+                env2 = remote_env(remote2)
+                if env2 == env:
+                    remotes.append(repos[remote_idx2])
 
-        if __opts__['git_pillar_includes']:
-            # Add the rest of the pillar_dirs in this environment to the
-            # list, excluding the current pillar_dir being processed. This
-            # is because it was already specified above as the first in the
-            # list, so that its top file is sourced from the correct
-            # location and not from another git_pillar remote.
-            pillar_roots.extend(
-                [d for (d, e) in six.iteritems(git_pillar.pillar_dirs)
-                 if env == e and d != pillar_dir]
-            )
-
-        opts['pillar_roots'] = {env: pillar_roots}
-
-        local_pillar = Pillar(opts, __grains__, minion_id, env)
+        repo_git_pillar_client = salt.utils.gitfs.GitPillarClient(
+            opts,
+            remotes,
+            per_remote_overrides=PER_REMOTE_OVERRIDES,
+            per_remote_only=PER_REMOTE_ONLY,
+            global_only=GLOBAL_ONLY,
+        )
+        local_pillar = Pillar(
+            opts, __grains__, minion_id, env, client=repo_git_pillar_client
+        )
+        compiled = local_pillar.compile_pillar(ext=False)
         ret = salt.utils.dictupdate.merge(
-            ret,
-            local_pillar.compile_pillar(ext=False),
-            strategy=merge_strategy,
-            merge_lists=merge_lists
+            ret, compiled, strategy=merge_strategy, merge_lists=merge_lists,
         )
     return ret
 

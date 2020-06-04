@@ -354,8 +354,13 @@ class GitPythonMixin(object):
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}},
-             '_errors': ["Specified SLS 'bar' in environment 'base' is not "
-                         "available on the salt master"]}
+                "_errors": [
+                    "Specified SLS 'bar' in environment 'base' was not found. "
+                    "This is likely caused by a git_pillar top file "
+                    "containing an environment other than the one for the "
+                    "branch in which it resides. Each git_pillar "
+                    "branch/tag must have its own top file."
+                ]}
         )
 
     def test_includes_enabled_solves___env___with_mountpoint(self):
@@ -1267,8 +1272,11 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             'mydict': {'master': True,
                        'nested_list': ['master'],
                        'nested_dict': {'master': True}},
-            '_errors': ["Specified SLS 'bar' in environment 'base' is not "
-                        "available on the salt master"]
+            '_errors': ["Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."]
         }
 
         # Test with passphraseless key and global credential options
@@ -2094,8 +2102,11 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             'mydict': {'master': True,
                        'nested_list': ['master'],
                        'nested_dict': {'master': True}},
-            '_errors': ["Specified SLS 'bar' in environment 'base' is not "
-                        "available on the salt master"]
+            '_errors': ["Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."]
         }
 
         ret = self.get_pillar('''\
@@ -2727,8 +2738,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             'mydict': {'master': True,
                        'nested_list': ['master'],
                        'nested_dict': {'master': True}},
-            '_errors': ["Specified SLS 'bar' in environment 'base' is not "
-                        "available on the salt master"]
+            '_errors': ["Specified SLS 'bar' in environment 'base' was not found. "
+                "This is likely caused by a git_pillar top file "
+                "containing an environment other than the one for the "
+                "branch in which it resides. Each git_pillar "
+                "branch/tag must have its own top file."]
         }
 
         # Test with global credential options

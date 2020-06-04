@@ -67,10 +67,14 @@ _OPTS = {
     'git_pillar_privkey': '',
     'git_pillar_pubkey': '',
     'git_pillar_passphrase': '',
+    'git_pillar_ref_types': ['branch', 'tag', 'sha'],
+    'git_pillar_saltenv_whitelist': [],
+    'git_pillar_saltenv_blacklist': [],
     'git_pillar_refspecs': [
         '+refs/heads/*:refs/remotes/origin/*',
         '+refs/tags/*:refs/tags/*',
     ],
+    'git_pillar_disable_saltenv_mapping': False,
     'git_pillar_includes': True,
 }
 PROC_TIMEOUT = 10
