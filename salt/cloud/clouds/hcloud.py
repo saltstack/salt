@@ -44,11 +44,19 @@ import hcloud
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.files
-from hcloud.hcloud import APIException
-from hcloud.images.domain import Image
-from hcloud.networks.domain import NetworkRoute, NetworkSubnet
-from hcloud.server_types.domain import ServerType
-from salt.exceptions import SaltCloudException
+
+try:
+    # pylint: disable=no-name-in-module
+    from hcloud.hcloud import APIException
+    from hcloud.images.domain import Image
+    from hcloud.networks.domain import NetworkRoute, NetworkSubnet
+    from hcloud.server_types.domain import ServerType
+    from salt.exceptions import SaltCloudException
+    # pylint: enable=no-name-in-module
+
+    HAS_HCLOUD = True
+except ImportError:
+    HAS_HCLOUD = False
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +129,17 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     return __virtualname__
+
+
+def get_dependencies():
+    """
+    Warn if driver dependencies not met
+    """
+    return config.check_driver_dependencies(__virtualname__, {"hcloud": HAS_HCLOUD})
 
 
 def get_configured_provider():
