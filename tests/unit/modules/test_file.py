@@ -3730,9 +3730,15 @@ class PathStringFunctionsTests(TestCase):
         """
         The _normpath_ method works
         """
+        if salt.utils.platform.is_windows():
+            expected_path = r"C:\tmp\this\is"
+        else:
+            expected_path = "/tmp/this/is"
         unnorm = "/tmp/this/is/not/normalized/../../"
         normalized = filemod.normpath(unnorm)
-        assert normalized == "/tmp/this/is"
+        assert (
+            normalized == expected_path
+        ), f"Expected {expected_path}, was {normalized}"
 
     def test__abspath(self):
         """
