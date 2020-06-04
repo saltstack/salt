@@ -19,6 +19,7 @@ cloud modules
     ec2
     gce
     gogrid
+    hcloud
     joyent
     libvirt
     linode
