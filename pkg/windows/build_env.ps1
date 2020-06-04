@@ -183,6 +183,23 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
 }
 
 #------------------------------------------------------------------------------
+# Install VCRedist
+#------------------------------------------------------------------------------
+If (Test-Path "$($ini[$bitPrograms]['VCRedistReg'])") {
+    # Found VCRedist 2013, do nothing
+    Write-Output " - VCRedist 2013 Found . . ."
+} Else {
+    Write-Output " - Downloading $($ini[$bitPrograms]['VCRedist']) . . ."
+    $file = "$($ini[$bitPrograms]['VCRedist'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    DownloadFileWithProgress $url $file
+
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['VCRedist']) . . ."
+    $p    = Start-Process $file -ArgumentList "/install /quiet /norestart" -Wait -NoNewWindow -PassThru
+}
+
+#------------------------------------------------------------------------------
 # Update Environment Variables
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
