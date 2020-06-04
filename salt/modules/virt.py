@@ -2225,6 +2225,7 @@ def update(
     live=True,
     boot=None,
     test=False,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -2280,6 +2281,14 @@ def update(
                 nvram: null
 
         .. versionadded:: 3000
+
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
 
     :param test: run in dry-run mode if set to True
 
@@ -2410,6 +2419,18 @@ def update(
                 child_tag.set("template", child_tag.text)
                 child_tag.text = None
 
+            need_update = True
+
+    # Check the os/boot tags
+    if boot_dev is not None:
+        boot_nodes = parent_tag.findall("boot")
+        old_boot_devs = [node.get("dev") for node in boot_nodes]
+        new_boot_devs = boot_dev.split()
+        if old_boot_devs != new_boot_devs:
+            for boot_node in boot_nodes:
+                parent_tag.remove(boot_node)
+            for dev in new_boot_devs:
+                ElementTree.SubElement(parent_tag, "boot", attrib={"dev": dev})
             need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
