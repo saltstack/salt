@@ -552,9 +552,11 @@ def _grant_to_tokens(grant):
 
         if phrase == "grants":
             # Read-ahead
-            if exploded_grant[position_tracker + 1] == "," \
-                    or exploded_grant[position_tracker + 1] == 'ON' \
-                    or exploded_grant[position_tracker + 1] in ["(", ")"]:
+            if (
+                exploded_grant[position_tracker + 1] == ","
+                or exploded_grant[position_tracker + 1] == "ON"
+                or exploded_grant[position_tracker + 1] in ["(", ")"]
+            ):
                 # End of token detected
                 if multiword_statement:
                     multiword_statement.append(token)
@@ -2202,7 +2204,7 @@ def __grant_normalize(grant):
 
 
 def __grant_split(grant):
-    pattern = re.compile(r'([\w\s]+)(\([^)(]*\))?\s*,?')
+    pattern = re.compile(r"([\w\s]+)(\([^)(]*\))?\s*,?")
     return pattern.findall(grant)
 
 
