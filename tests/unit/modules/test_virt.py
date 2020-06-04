@@ -1700,6 +1700,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <vcpu placement='auto'>1</vcpu>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                <boot dev="hd"/>
               </os>
               <devices>
                 <disk type='file' device='disk'>
@@ -1831,7 +1832,36 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "initrd": "/root/f8-i386-initrd",
         }
 
+        # Update boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="cdrom network hd"),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            ["cdrom", "network", "hd"],
+            [node.get("dev") for node in setxml.findall("os/boot")],
+        )
+
+        # Update unchanged boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="hd"),
+        )
+        define_mock.assert_not_called()
+
         # Update with boot parameter case
+        define_mock.reset_mock()
         self.assertEqual(
             {
                 "definition": True,
