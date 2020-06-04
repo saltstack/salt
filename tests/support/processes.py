@@ -10,29 +10,38 @@
     Process handling utilities
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import logging
 
-from pytestsalt.fixtures.daemons import Salt as PytestSalt
-from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
-from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
-from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
-from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
-from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
-from pytestsalt.fixtures.daemons import SaltRun as PytestSaltRun
-from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
-
-# Import pytest-salt libs
-from pytestsalt.utils import (  # pylint: disable=unused-import
+from saltfactories.utils.processes.helpers import (  # pylint: disable=unused-import
     collect_child_processes,
     terminate_process,
     terminate_process_list,
 )
-
-# Import tests support libs
 from tests.support.cli_scripts import ScriptPathMixin
+
+try:
+    from pytestsalt.fixtures.daemons import Salt as PytestSalt
+    from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
+    from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
+    from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
+    from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
+    from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
+    from pytestsalt.fixtures.daemons import SaltRun as PytestSaltRun
+    from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
+except ImportError:
+    # If this happens, we are running under pytest which uninstalls pytest-salt due to impatabilites
+    # These imports won't actually work but these classes are only used when running under runtests,
+    # so, we're just making sure we also don't hit NameError's
+    from saltfactories.utils.processes.salts import SaltCallCLI as PytestSaltCall
+    from saltfactories.utils.processes.salts import SaltCLI as PytestSalt
+    from saltfactories.utils.processes.salts import SaltKeyCLI as PytestSaltKey
+    from saltfactories.utils.processes.salts import SaltMaster as PytestSaltMaster
+    from saltfactories.utils.processes.salts import SaltMinion as PytestSaltMinion
+    from saltfactories.utils.processes.salts import SaltProxyMinion as PytestSaltProxy
+    from saltfactories.utils.processes.salts import SaltRunCLI as PytestSaltRun
+    from saltfactories.utils.processes.salts import SaltSyndic as PytestSaltSyndic
 
 log = logging.getLogger(__name__)
 
