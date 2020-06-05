@@ -7,11 +7,13 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import inspect
+
 # Import Salt libs
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
 from salt.version import SaltStackVersion
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -434,3 +436,32 @@ class DecoratorsTest(TestCase):
     def timing_should_wrap_function(self):
         wrapped = decorators.timing(self.old_function)
         assert wrapped.__module__ == self.old_function.__module__
+
+
+class DependsDecoratorTest(TestCase):
+    def function(self):
+        return "foo"
+
+    def test_depends_get_previous_frame(self):
+        """
+        Confirms that we're not grabbing the entire stack every time the
+        depends decorator is invoked.
+        """
+        # Simply using True as a conditon; we aren't testing the dependency,
+        # but rather the functions called within the decorator.
+        dep = decorators.depends(True)
+
+        # By mocking both inspect.stack and inspect.currentframe with
+        # MagicMocks that return themselves, we don't affect normal operation
+        # of the decorator, and at the same time we get to peek at whether or
+        # not either was called.
+        stack_mock = MagicMock(return_value=inspect.stack)
+        currentframe_mock = MagicMock(return_value=inspect.currentframe)
+
+        with patch.object(inspect, "stack", stack_mock), patch.object(
+            inspect, "currentframe", currentframe_mock
+        ):
+            dep(self.function)()
+
+        stack_mock.assert_not_called()
+        currentframe_mock.assert_called_once_with()

@@ -155,6 +155,22 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 
+    def test_present_existing_key_only(self):
+        """
+        Test setting only a key with no value name
+        """
+        # Create the reg key for testing
+        salt.utils.win_reg.set_value(hive=self.hive, key=self.key)
+
+        expected = {
+            "comment": "(Default) in {0} is already present".format(self.name),
+            "changes": {},
+            "name": self.name,
+            "result": True,
+        }
+        ret = reg.present(self.name)
+        self.assertDictEqual(ret, expected)
+
     def test_present_existing_test_true(self):
         # Create the reg key for testing
         salt.utils.win_reg.set_value(

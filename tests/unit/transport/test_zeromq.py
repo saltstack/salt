@@ -2,7 +2,6 @@
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
@@ -26,7 +25,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.helpers import flaky, get_unused_localhost_port, not_runs_on
+from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import flaky, not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -151,7 +151,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         """
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_master_uri_override(self):
         """
         ensure master_uri kwarg is respected
@@ -161,7 +161,9 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
             master_ip="localhost", master_port=self.minion_config["master_port"]
         )
 
-        channel = salt.transport.Channel.factory(self.minion_config, master_uri=uri)
+        channel = salt.transport.client.ReqChannel.factory(
+            self.minion_config, master_uri=uri
+        )
         self.assertIn("localhost", channel.master_uri)
         del channel
 
@@ -196,7 +198,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     # WARNING: This test will fail randomly on any system with > 1 CPU core!!!
     #
     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_badload(self):
         """
         Test a variety of bad requests, make sure that we get some sort of error
@@ -343,11 +345,7 @@ class AsyncReqMessageClientPoolTest(TestCase):
         ]
 
     def tearDown(self):
-        with patch(
-            "salt.transport.zeromq.AsyncReqMessageClient.destroy",
-            MagicMock(return_value=None),
-        ):
-            del self.original_message_clients
+        del self.original_message_clients
         super(AsyncReqMessageClientPoolTest, self).tearDown()
 
     def test_send(self):
@@ -360,10 +358,6 @@ class AsyncReqMessageClientPoolTest(TestCase):
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
-
-    def test_destroy(self):
-        self.message_client_pool.destroy()
-        self.assertEqual([], self.message_client_pool.message_clients)
 
 
 class ZMQConfigTest(TestCase):
@@ -515,7 +509,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 results.append(payload["jid"])
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_to_pubserv_ipc(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using IPC transport
@@ -547,7 +541,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_zeromq_publish_port(self):
         """
         test when connecting that we
@@ -653,7 +647,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         assert res.result()["enc"] == "aes"
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_zeromq_filtering(self):
         """
         Test sending messags to publisher using UDP
@@ -701,7 +695,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_publish_to_pubserv_tcp(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
@@ -751,7 +745,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             server_channel.publish(load)
         server_channel.close()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_36469_tcp(self):
         """
         Test sending both large and small messags to publisher using TCP

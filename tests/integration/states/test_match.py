@@ -6,21 +6,15 @@
     tests.integration.states.match
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root
+from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class StateMatchTest(ModuleCase):
@@ -29,7 +23,7 @@ class StateMatchTest(ModuleCase):
     """
 
     @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function("network.subnets")
         self.assertTrue(len(subnets) > 0)

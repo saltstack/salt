@@ -7,19 +7,17 @@
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+)
 
 
-@pytest.mark.skip_unless_on_freebsd
+@runs_on(kernel="FreeBSD")
 class PwUserModuleTest(ModuleCase):
-    def setUp(self):
-        super(PwUserModuleTest, self).setUp()
-        os_grain = self.run_function("grains.item", ["kernel"])
-        if os_grain["kernel"] != "FreeBSD":
-            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
-
     @destructiveTest
     @skip_if_not_root
     def test_groups_includes_primary(self):

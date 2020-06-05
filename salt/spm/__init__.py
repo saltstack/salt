@@ -4,8 +4,6 @@ This module provides the point of entry to SPM, the Salt Package Manager
 
 .. versionadded:: 2015.8.0
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
@@ -16,8 +14,6 @@ import sys
 import tarfile
 
 import salt.cache
-
-# Import Salt libs
 import salt.client
 import salt.config
 import salt.loader
@@ -373,8 +369,10 @@ class SPMClient(object):
                 dl_url = dl_url.replace("file://", "")
                 shutil.copyfile(dl_url, out_file)
             else:
-                with salt.utils.files.fopen(out_file, "w") as outf:
-                    outf.write(self._query_http(dl_url, repo_info["info"]))
+                with salt.utils.files.fopen(out_file, "wb") as outf:
+                    outf.write(
+                        self._query_http(dl_url, repo_info["info"], decode_body=False)
+                    )
 
         # First we download everything, then we install
         for package in dl_list:
@@ -666,7 +664,7 @@ class SPMClient(object):
                         continue
                     callback(repo, repo_data[repo])
 
-    def _query_http(self, dl_path, repo_info):
+    def _query_http(self, dl_path, repo_info, decode_body=True):
         """
         Download files via http
         """
@@ -682,6 +680,7 @@ class SPMClient(object):
                             text=True,
                             username=repo_info["username"],
                             password=repo_info["password"],
+                            decode_body=decode_body,
                         )
                     else:
                         raise SPMException(
@@ -692,7 +691,7 @@ class SPMClient(object):
                 except SPMException as exc:
                     self.ui.error(six.text_type(exc))
             else:
-                query = http.query(dl_path, text=True)
+                query = http.query(dl_path, text=True, decode_body=decode_body)
         except SPMException as exc:
             self.ui.error(six.text_type(exc))
 

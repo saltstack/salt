@@ -21,6 +21,7 @@ import salt.utils.decorators.path
 # Import Salt Execution module to test
 import salt.utils.zfs
 from salt.utils.odict import OrderedDict
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -47,7 +48,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
 
         return zpool_obj
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exists_success(self):
         """
         Tests successful return of exists function
@@ -65,7 +66,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(zpool.exists("myzpool"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exists_failure(self):
         """
         Tests failure return of exists function
@@ -126,7 +127,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ret = zpool.status()
             self.assertEqual("ONLINE", ret["mypool"]["state"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_iostat(self):
         """
         Tests successful return of iostat function
@@ -216,7 +217,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_parsable(self):
         """
         Tests successful return of list function with parsable output
@@ -265,7 +266,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict(OrderedDict([("size", "1.81T")]))
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_parsable(self):
         """
         Tests successful return of get function with parsable output
@@ -282,7 +283,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict(OrderedDict([("size", 1990116046274)]))
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_get_whitespace(self):
         """
         Tests successful return of get function with a string with whitespaces
@@ -299,7 +300,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict(OrderedDict([("comment", "my testing pool")]))
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_scrub_start(self):
         """
         Tests start of scrub
@@ -318,7 +319,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict(OrderedDict([("scrubbing", True)]))
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_scrub_pause(self):
         """
         Tests pause of scrub
@@ -337,7 +338,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict(OrderedDict([("scrubbing", False)]))
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_scrub_stop(self):
         """
         Tests pauze of scrub
@@ -373,7 +374,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([("split", True)])
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_split_exist_new(self):
         """
         Tests split on exising new pool
@@ -415,7 +416,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_split_not_mirror(self):
         """
         Tests split on source pool is not a mirror
@@ -606,7 +607,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([("exported", True)])
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_export_nopool(self):
         """
         Tests export when the pool does not exists
@@ -626,7 +627,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_import_success(self):
         """
         Tests import
@@ -696,7 +697,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_online_success(self):
         """
         Tests online
@@ -800,7 +801,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_reguid_success(self):
         """
         Tests reguid
@@ -818,7 +819,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             res = OrderedDict([("reguided", True)])
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_reguid_nopool(self):
         """
         Tests reguid with missing pool
@@ -838,7 +839,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_reopen_success(self):
         """
         Tests reopen
@@ -911,7 +912,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(ret, res)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_history_success(self):
         """
         Tests history

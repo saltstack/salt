@@ -1075,11 +1075,11 @@ def request_instance(vm_):
         lun += 1
         # The default vhd is {vm_name}-datadisk{lun}.vhd
         if "media_link" in volume:
-            volume["vhd"] = VirtualHardDisk(volume["media_link"])
+            volume["vhd"] = VirtualHardDisk(uri=volume["media_link"])
             del volume["media_link"]
         elif volume.get("vhd") == "unmanaged":
             volume["vhd"] = VirtualHardDisk(
-                "https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd".format(
+                uri="https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd".format(
                     vm_["storage_account"],
                     storage_endpoint_suffix,
                     vm_["name"],
@@ -1087,7 +1087,7 @@ def request_instance(vm_):
                 ),
             )
         elif "vhd" in volume:
-            volume["vhd"] = VirtualHardDisk(volume["vhd"])
+            volume["vhd"] = VirtualHardDisk(uri=volume["vhd"])
 
         if "image" in volume:
             volume["create_option"] = "from_image"
@@ -1100,7 +1100,7 @@ def request_instance(vm_):
     img_ref = None
     if vm_["image"].startswith("http") or vm_.get("vhd") == "unmanaged":
         if vm_["image"].startswith("http"):
-            source_image = VirtualHardDisk(vm_["image"])
+            source_image = VirtualHardDisk(uri=vm_["image"])
         else:
             source_image = None
             if "|" in vm_["image"]:
@@ -1119,7 +1119,7 @@ def request_instance(vm_):
             create_option=DiskCreateOptionTypes.from_image,
             name=disk_name,
             vhd=VirtualHardDisk(
-                "https://{0}.blob.{1}/vhds/{2}.vhd".format(
+                uri="https://{0}.blob.{1}/vhds/{2}.vhd".format(
                     vm_["storage_account"], storage_endpoint_suffix, disk_name,
                 ),
             ),

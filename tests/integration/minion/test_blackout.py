@@ -13,8 +13,8 @@ import time
 import pytest
 import salt.utils.files
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ class MinionBlackoutTestCase(ModuleCase):
         self.wait_for_all_jobs()
         log.info("Exited minion blackout.")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_blackout(self):
         """
         Test that basic minion blackout functionality works
@@ -136,7 +136,7 @@ class MinionBlackoutTestCase(ModuleCase):
         ret = self.run_function("test.ping")
         self.assertEqual(ret, True)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_blackout_whitelist(self):
         """
         Test that minion blackout whitelist works
@@ -159,7 +159,7 @@ class MinionBlackoutTestCase(ModuleCase):
         self.assertTrue(isinstance(fib_ret, list))
         self.assertEqual(fib_ret[0], 13)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_blackout_nonwhitelist(self):
         """
         Test that minion refuses to run non-whitelisted functions during
