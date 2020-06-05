@@ -245,8 +245,9 @@ def row_present(name, db, table, data, where_sql, where_args=None, update=False)
                     if update:
                         if __opts__["test"]:
                             changes["result"] = True
+                            changes["changes"]["old"] = rows[0]
+                            changes["changes"]["new"] = data
                             changes["comment"] = "Row will be update in " + table
-
                         else:
                             columns = []
                             params = []
@@ -344,6 +345,7 @@ def table_absent(name, db):
         if len(tables) == 1:
             if __opts__["test"]:
                 changes["result"] = True
+                changes["changes"]["old"] = tables[0][0]
                 changes["comment"] = "'" + name + "' will be dropped"
             else:
                 conn.execute("DROP TABLE " + name)
