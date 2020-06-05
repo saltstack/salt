@@ -2,12 +2,16 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+
 import pytest
 import salt.config
 import salt.version
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+
+log = logging.getLogger(__name__)
 
 
 @pytest.mark.windows_whitelisted
