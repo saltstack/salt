@@ -254,8 +254,6 @@ Fixed
 - Fixed `win_system.join_domain` failures. (#57360)
 - Fixed `template_vars` functionality on Junos. (#57388)
 - Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
-- [#51872](https://github.com/saltstack/salt/issues/51872) - Additional fixes for using cron state with non-root Minion - [@Oloremo](https://github.com/Oloremo)
-- [#40491](https://github.com/saltstack/salt/issues/40491) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
 
 
 Added
@@ -282,7 +280,7 @@ Added
 - Added ability for async pillar refresh. (#50168)
 - Added `shutdown_host` to vmware cloud. (#50177)
 - Added `drbd.status` module. (#50410)
-- Added `file.keyvalue_list` state. (#50627)
+- Added `file.keyvalue` state. (#50627)
 - Added JID lookup message in case minion times out. (#50704)
 - Niceness control options added to the master config, for POSIX platforms. (#50905)
 - Added `serial_type` to virt module. (#50930)
