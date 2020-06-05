@@ -17,12 +17,15 @@ __virtualname__ = "chronos"
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "chronos: Not available on Windows"
-    if not salt.utils.platform.is_proxy() or "proxy" not in __opts__:
-        return False
-    else:
-        return __virtualname__
+    if not salt.utils.platform.is_proxy():
+        return False, "chronos: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "chronos":
+            return False, "chronos: Missing proxy configuration"
+    except KeyError:
+        return False, "chronos: Missing proxy configuration"
+
+    return __virtualname__
 
 
 def kernel():

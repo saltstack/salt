@@ -15,15 +15,15 @@ __virtualname__ = "marathon"
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "marathon: Not available on Windows"
-    if (
-        salt.utils.platform.is_proxy()
-        and "proxy" in __opts__
-        and __opts__["proxy"].get("proxytype") == "marathon"
-    ):
-        return __virtualname__
-    return False
+    if not salt.utils.platform.is_proxy():
+        return False, "marathon: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "marathon":
+            return False, "marathon: Missing proxy configuration"
+    except KeyError:
+        return False, "marathon: Missing proxy configuration"
+
+    return __virtualname__
 
 
 def kernel():

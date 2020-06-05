@@ -26,15 +26,15 @@ GRAINS_CACHE = {}
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "fx2: Not available on Windows"
-    if (
-        salt.utils.platform.is_proxy()
-        and "proxy" in __opts__
-        and __opts__["proxy"].get("proxytype") == "fx2"
-    ):
-        return __virtualname__
-    return False
+    if not salt.utils.platform.is_proxy():
+        return False, "fx2: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "fx2":
+            return False, "fx2: Missing proxy configuration"
+    except KeyError:
+        return False, "fx2: Missing proxy configuration"
+
+    return __virtualname__
 
 
 def _find_credentials():

@@ -28,12 +28,15 @@ __virtualname__ = "hue"
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "hue: Not available on Windows"
-    if "proxy" not in __opts__:
-        return False
-    else:
-        return __virtualname__
+    if not salt.utils.platform.is_proxy():
+        return False, "hue: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "hue":
+            return False, "hue: Missing proxy configuration"
+    except KeyError:
+        return False, "hue: Missing proxy configuration"
+
+    return __virtualname__
 
 
 def kernel():

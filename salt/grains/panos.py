@@ -23,15 +23,15 @@ GRAINS_CACHE = {"os_family": "panos"}
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "panos: Not available on Windows"
+    if not salt.utils.platform.is_proxy():
+        return False, "panos: Not a proxy minion"
     try:
-        if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "panos":
-            return __virtualname__
+        if not __opts__["proxy"]["proxytype"] == "panos":
+            return False, "panos: Missing proxy configuration"
     except KeyError:
-        pass
+        return False, "panos: Missing proxy configuration"
 
-    return False
+    return __virtualname__
 
 
 def panos(proxy=None):

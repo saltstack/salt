@@ -12,18 +12,15 @@ __virtualname__ = "ssh_sample"
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "ssh_sample: Not available on Windows"
+    if not salt.utils.platform.is_proxy():
+        return False, "ssh_sample: Not a proxy minion"
     try:
-        if (
-            salt.utils.platform.is_proxy()
-            and __opts__["proxy"]["proxytype"] == "ssh_sample"
-        ):
-            return __virtualname__
+        if not __opts__["proxy"]["proxytype"] == "ssh_sample":
+            return False, "ssh_sample: Missing proxy configuration"
     except KeyError:
-        pass
+        return False, "ssh_sample: Missing proxy configuration"
 
-    return False
+    return __virtualname__
 
 
 def kernel():

@@ -24,8 +24,14 @@ __virtualname__ = "nxos"
 
 
 def __virtual__():
-    if salt.utils.platform.is_windows():
-        return False, "nxos: Not available on Windows"
+    if not salt.utils.platform.is_proxy():
+        return False, "nvme: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "nvme":
+            return False, "nvme: Missing proxy configuration"
+    except KeyError:
+        return False, "nvme: Missing proxy configuration"
+
     try:
         salt.utils.nxos.version_info()
     except NxosClientError as err:

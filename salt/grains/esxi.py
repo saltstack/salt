@@ -27,15 +27,16 @@ GRAINS_CACHE = {}
 
 def __virtual__():
 
-    if salt.utils.platform.is_windows():
-        return False, "esxi: Not available on Windows"
+    if not salt.utils.platform.is_proxy():
+        return False, "ESXi: Not a proxy minion"
     try:
-        if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "esxi":
-            return __virtualname__
+        if not __opts__["proxy"]["proxytype"] == "esxi":
+            return False, "ESXi: Missing proxy configuration"
     except KeyError:
-        pass
+        return False, "ESXi: Missing proxy configuration"
 
-    return False
+    return __virtualname__
+
 
 
 def esxi():

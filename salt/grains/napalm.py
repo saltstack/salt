@@ -56,8 +56,14 @@ def __virtual__():
     """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
     """
-    if salt.utils.platform.is_windows():
-        return False, "napalm: Not available on Windows"
+    if not salt.utils.platform.is_proxy():
+        return False, "napalm: Not a proxy minion"
+    try:
+        if not __opts__["proxy"]["proxytype"] == "napalm":
+            return False, "napalm: Missing proxy configuration"
+    except KeyError:
+        return False, "napalm: Missing proxy configuration"
+
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 
