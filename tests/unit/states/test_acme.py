@@ -125,7 +125,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "acme.has": MagicMock(return_value=True),
                 "acme.needs_renewal": MagicMock(return_value=True),
                 "acme.info": MagicMock(
-                    side_effect=[{"name": "old cert"}, {"name": "new cert"}]
+                    side_effect=[{"name": "old cert"}] * 2
                 ),
                 "acme.cert": MagicMock(
                     return_value={"result": True, "comment": "Mockery"}
@@ -153,7 +153,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "acme.has": MagicMock(return_value=True),
                 "acme.needs_renewal": MagicMock(return_value=True),
                 "acme.info": MagicMock(
-                    side_effect=[{"name": "old cert"}, {"name": "new cert"}]
+                    side_effect=[{"name": "old cert"}, {"name": "new cert"}] * 2
                 ),
                 "acme.cert": MagicMock(
                     return_value={"result": True, "comment": "Mockery"}
