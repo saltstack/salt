@@ -24,7 +24,7 @@ def ext_pillar(minion_id, pillar, command):  # pylint: disable=W0613
     """
     try:
         data = salt.utils.yaml.safe_load(
-            __salt__["cmd.run"]("{0} {1}".format(command, minion_id))
+            __salt__["cmd.run_stdout"]("{0} {1}".format(command, minion_id))
         )
         return data["parameters"]
     except Exception:  # pylint: disable=broad-except
