@@ -16,9 +16,6 @@ from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-if sys.version_info[0] == 3:
-    six.string_types = (six.text_type, six.binary_type)
-
 
 def is_non_string_iterable(obj):
     """
