@@ -666,7 +666,7 @@ class MinionAsyncTestCase(
 
 class MasterMinionTestCase(TestCase):
     def test_config_cache_path_overrides(self):
-        cachedir = "/path/to/master/cache"
+        cachedir = os.path.abspath("/path/to/master/cache")
         opts = {"cachedir": cachedir, "conf_file": None}
 
         mminion = salt.minion.MasterMinion(opts)

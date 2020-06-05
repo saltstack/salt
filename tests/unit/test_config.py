@@ -1849,7 +1849,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_mminion_config_cache_path(self, fpath):
-        cachedir = "/path/to/master/cache"
+        cachedir = os.path.abspath("/path/to/master/cache")
         overrides = {}
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
@@ -1862,7 +1862,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_mminion_config_cache_path_overrides(self, fpath):
-        cachedir = "/path/to/master/cache"
+        cachedir = os.path.abspath("/path/to/master/cache")
         overrides = {"cachedir": cachedir}
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
