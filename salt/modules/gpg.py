@@ -1172,6 +1172,7 @@ def encrypt(
 
     output
         The filename where the signed file will be written, default is standard out.
+        If the file already exists, it will be overwritten.
 
     sign
         Whether to sign, in addition to encrypt, the data. ``True`` to use
@@ -1212,6 +1213,9 @@ def encrypt(
 
     if text:
         result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
+        if output:
+            with salt.utils.files.flopen(output, "wb") as _fp:
+                _fp.write(result.data)
     elif filename:
         if GPG_1_3_1:
             # This version does not allow us to encrypt using the
