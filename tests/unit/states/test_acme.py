@@ -43,7 +43,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": ["Certificate test exists and does not need renewal."],
                 "changes": {},
             }
-            self.assertEqual(acme.cert("test"),match)
+            self.assertEqual(acme.cert("test"), match)
             self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_no_changes(self):
