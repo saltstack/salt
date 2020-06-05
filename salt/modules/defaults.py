@@ -151,7 +151,7 @@ def deepcopy(source):
 def update(dest, defaults, merge_lists=True, in_place=True):
     """
     defaults.update
-        Allows to set defaults for group of data set e.g. group for nodes.
+        Allows setting defaults for group of data set e.g. group for nodes.
 
         This function is a combination of defaults.merge
         and defaults.deepcopy to avoid redundant in jinja.

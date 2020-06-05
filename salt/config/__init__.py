@@ -346,7 +346,7 @@ VALID_OPTS = immutabletypes.freeze(
         "log_rotate_backup_count": int,
         # If an event is above this size, it will be trimmed before putting it on the event bus
         "max_event_size": int,
-        # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
+        # Enable old style events to be sent on minion_startup. Change default to False in 3001 release
         "enable_legacy_startup_events": bool,
         # Always execute states with test=True if this flag is set
         "test": bool,
@@ -463,6 +463,16 @@ VALID_OPTS = immutabletypes.freeze(
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
+        # various subprocess niceness levels
+        "req_server_niceness": (type(None), int),
+        "pub_server_niceness": (type(None), int),
+        "fileserver_update_niceness": (type(None), int),
+        "maintenance_niceness": (type(None), int),
+        "mworker_niceness": (type(None), int),
+        "mworker_queue_niceness": (type(None), int),
+        "event_return_niceness": (type(None), int),
+        "event_publisher_niceness": (type(None), int),
+        "reactor_niceness": (type(None), int),
         # The number of MWorker processes for a master to startup. This number needs to scale up as
         # the number of connected minions increases.
         "worker_threads": int,
@@ -513,11 +523,11 @@ VALID_OPTS = immutabletypes.freeze(
         "minionfs_update_interval": int,
         "s3fs_update_interval": int,
         "svnfs_update_interval": int,
-        # NOTE: git_pillar_base, git_pillar_branch, git_pillar_env, and
-        # git_pillar_root omitted here because their values could conceivably be
-        # loaded as non-string types, which is OK because git_pillar will normalize
-        # them to strings. But rather than include all the possible types they
-        # could be, we'll just skip type-checking.
+        # NOTE: git_pillar_base, git_pillar_fallback, git_pillar_branch,
+        # git_pillar_env, and git_pillar_root omitted here because their values
+        # could conceivably be loaded as non-string types, which is OK because
+        # git_pillar will normalize them to strings. But rather than include all the
+        # possible types they could be, we'll just skip type-checking.
         "git_pillar_ssl_verify": bool,
         "git_pillar_global_lock": bool,
         "git_pillar_user": six.string_types,
@@ -529,10 +539,10 @@ VALID_OPTS = immutabletypes.freeze(
         "git_pillar_refspecs": list,
         "git_pillar_includes": bool,
         "git_pillar_verify_config": bool,
-        # NOTE: gitfs_base, gitfs_mountpoint, and gitfs_root omitted here because
-        # their values could conceivably be loaded as non-string types, which is OK
-        # because gitfs will normalize them to strings. But rather than include all
-        # the possible types they could be, we'll just skip type-checking.
+        # NOTE: gitfs_base, gitfs_fallback, gitfs_mountpoint, and gitfs_root omitted
+        # here because their values could conceivably be loaded as non-string types,
+        # which is OK because gitfs will normalize them to strings. But rather than
+        # include all the possible types they could be, we'll just skip type-checking.
         "gitfs_remotes": list,
         "gitfs_insecure_auth": bool,
         "gitfs_privkey": six.string_types,
@@ -577,6 +587,12 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_cache_ttl": int,
         # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
         "pillar_cache_backend": six.string_types,
+        # Cache the GPG data to avoid having to pass through the gpg renderer
+        "gpg_cache": bool,
+        # GPG data cache TTL, in seconds. Has no effect unless `gpg_cache` is True
+        "gpg_cache_ttl": int,
+        # GPG data cache backend. Defaults to `disk` which stores caches in the master cache
+        "gpg_cache_backend": six.string_types,
         "pillar_safe_render_error": bool,
         # When creating a pillar, there are several strategies to choose from when
         # encountering duplicate values
@@ -925,6 +941,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
+        "disabled_requisites": (six.string_types, list),
     }
 )
 
@@ -980,11 +997,15 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
         "pillar_includes_override_sls": False,
-        # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
+        # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
+        # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
         # are not used on the minion but are unavoidably in the code path
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "gpg_cache": False,
+        "gpg_cache_ttl": 86400,
+        "gpg_cache_backend": "disk",
         "extension_modules": os.path.join(salt.syspaths.CACHE_DIR, "minion", "extmods"),
         "state_top": "top.sls",
         "state_top_saltenv": None,
@@ -1033,6 +1054,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "git_pillar_base": "master",
         "git_pillar_branch": "master",
         "git_pillar_env": "",
+        "git_pillar_fallback": "",
         "git_pillar_root": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
@@ -1048,6 +1070,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "gitfs_mountpoint": "",
         "gitfs_root": "",
         "gitfs_base": "master",
+        "gitfs_fallback": "",
         "gitfs_user": "",
         "gitfs_password": "",
         "gitfs_insecure_auth": False,
@@ -1214,6 +1237,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "discovery": False,
         "schedule": {},
         "ssh_merge_pillar": True,
+        "disabled_requisites": [],
     }
 )
 
@@ -1272,6 +1296,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "git_pillar_base": "master",
         "git_pillar_branch": "master",
         "git_pillar_env": "",
+        "git_pillar_fallback": "",
         "git_pillar_root": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
@@ -1288,6 +1313,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "gitfs_mountpoint": "",
         "gitfs_root": "",
         "gitfs_base": "master",
+        "gitfs_fallback": "",
         "gitfs_user": "",
         "gitfs_password": "",
         "gitfs_insecure_auth": False,
@@ -1337,6 +1363,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "gpg_cache": False,
+        "gpg_cache_ttl": 86400,
+        "gpg_cache_backend": "disk",
         "ping_on_rotate": False,
         "peer": {},
         "preserve_minion_cache": False,
@@ -1394,6 +1423,16 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        # various subprocess niceness levels
+        "req_server_niceness": None,
+        "pub_server_niceness": None,
+        "fileserver_update_niceness": None,
+        "mworker_niceness": None,
+        "mworker_queue_niceness": None,
+        "maintenance_niceness": None,
+        "event_return_niceness": None,
+        "event_publisher_niceness": None,
+        "reactor_niceness": None,
         "ipv6": None,
         "tcp_master_pub_port": 4512,
         "tcp_master_pull_port": 4513,
@@ -2944,7 +2983,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
         # Merge provided extends
         keep_looping = False
         for alias, entries in six.iteritems(providers.copy()):
-            for driver, details in six.iteritems(entries):
+            for driver in list(six.iterkeys(entries)):
+                # Don't use iteritems, because the values of the dictionary will be changed
+                details = entries[driver]
 
                 if "extends" not in details:
                     # Extends resolved or non existing, continue!
@@ -3513,7 +3554,7 @@ def apply_minion_config(
             log.warning(
                 "The 'saltenv' and 'environment' minion config options "
                 "cannot both be used. Ignoring 'environment' in favor of "
-                "'saltenv'.",
+                "'saltenv'."
             )
             # Set environment to saltenv in case someone's custom module is
             # refrencing __opts__['environment']
@@ -3731,7 +3772,7 @@ def apply_master_config(overrides=None, defaults=None):
             log.warning(
                 "The 'saltenv' and 'environment' master config options "
                 "cannot both be used. Ignoring 'environment' in favor of "
-                "'saltenv'.",
+                "'saltenv'."
             )
             # Set environment to saltenv in case someone's custom runner is
             # refrencing __opts__['environment']

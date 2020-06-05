@@ -135,7 +135,7 @@ def avail_locations(call=None):
 
     available = conn.getAvailableLocations(id=50)
     for location in available:
-        if location.get("isAvailable", 0) is 0:
+        if location.get("isAvailable", 0) == 0:
             continue
         ret[location["locationId"]]["available"] = True
 

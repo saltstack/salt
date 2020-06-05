@@ -97,7 +97,7 @@ def get_join_info():
     .. versionadded:: 2018.3.4
 
     Returns:
-        dict: A dictionary containing the domain/workgroup and it's status
+        dict: A dictionary containing the domain/workgroup and its status
     """
     info = win32net.NetGetJoinInformation()
     status = {

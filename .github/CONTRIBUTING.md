@@ -67,19 +67,19 @@ Fixing issues
 =============
 
 If you wish to help us fix the issue you're reporting, 
-[Salt's documentation](http://docs.saltstack.com/en/latest/index.html)
+[Salt's documentation](http://docs.saltstack.com/en/master/index.html)
 already includes information to help you setup a development environment,
-under [Developing Salt](http://docs.saltstack.com/en/latest/topics/development/hacking.html).
+under [Developing Salt](http://docs.saltstack.com/en/master/topics/development/hacking.html).
 
-[SaltStack's Contributing documentation](https://docs.saltstack.com/en/latest/topics/development/contributing.html) 
+[SaltStack's Contributing documentation](https://docs.saltstack.com/en/master/topics/development/contributing.html)
 is also helpful, as it explains sending in pull requests, keeping your 
 salt branches in sync, and knowing
-[which branch](https://docs.saltstack.com/en/latest/topics/development/contributing.html#which-salt-branch) 
+[which branch](https://docs.saltstack.com/en/master/topics/development/contributing.html#which-salt-branch)
 new features or bug fixes should be submitted against.
 
 Fix the issue you have in hand and, if possible, also add a test case to Salt's
 testing suite. Then, create a 
-[pull request](http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request), 
+[pull request](http://docs.saltstack.com/en/master/topics/development/contributing.html#sending-a-github-pull-request),
 and **that's it**!
 
 Salt's development team will review your fix and if everything is OK, your fix

@@ -10,7 +10,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    return "wordpress.show_plugin" in __salt__
+    if "wordpress.show_plugin" in __salt__:
+        return True
+    return (False, "wordpress module could not be loaded")
 
 
 def installed(name, user, admin_user, admin_password, admin_email, title, url):

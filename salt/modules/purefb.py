@@ -134,7 +134,7 @@ def _get_blade():
 def _get_fs(name, blade):
     """
     Private function to
-    check for existance of a filesystem
+    check for existence of a filesystem
     """
     _fs = []
     _fs.append(name)

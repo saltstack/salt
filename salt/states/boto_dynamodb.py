@@ -184,8 +184,9 @@ def __virtual__():
     """
     Only load if boto_dynamodb is available.
     """
-    ret = "boto_dynamodb" if "boto_dynamodb.exists" in __salt__ else False
-    return ret
+    if "boto_dynamodb.exists" in __salt__:
+        return "boto_dynamodb"
+    return (False, "boto_dynamodb module could not be loaded")
 
 
 def present(
@@ -475,12 +476,12 @@ def _global_indexes_present(
     if global_indexes:
         for index in global_indexes:
             # Each index config is a key that maps to a list of OrderedDicts.
-            index_config = index.values()[0]
+            index_config = next(iter(index.values()))
             index_name = None
             for entry in index_config:
                 # Key by the name field in the index config.
                 if entry.keys() == ["name"]:
-                    index_name = entry.values()[0]
+                    index_name = next(iter(entry.values()))
             if not index_name:
                 ret["result"] = False
                 ret["comment"] = "Index name not found for table {0}".format(name)

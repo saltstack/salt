@@ -144,12 +144,12 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                 {"vdata": False},
             ]
         )
-        with patch.dict(win_dns_client.__salt__, {"reg.read_value": mock}):
+        with patch.dict(win_dns_client.__utils__, {"reg.read_value": mock}):
             ret.update({"comment": "No changes needed", "result": True})
             self.assertDictEqual(win_dns_client.primary_suffix("salt", "a"), ret)
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_dns_client.__salt__, {"reg.set_value": mock}):
+            with patch.dict(win_dns_client.__utils__, {"reg.set_value": mock}):
                 ret.update(
                     {
                         "changes": {"new": {"suffix": "a"}, "old": {"suffix": "b"}},

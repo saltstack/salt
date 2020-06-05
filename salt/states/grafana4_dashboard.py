@@ -66,7 +66,9 @@ from salt.utils.dictdiffer import DictDiffer
 
 def __virtual__():
     """Only load if grafana4 module is available"""
-    return "grafana4.get_dashboard" in __salt__
+    if "grafana4.get_dashboard" in __salt__:
+        return True
+    return (False, "grafana4 module could not be loaded")
 
 
 _DEFAULT_DASHBOARD_PILLAR = "grafana_dashboards:default"

@@ -502,6 +502,6 @@ Python testing documentation. Please see the follow references for more informat
 * `Python Unittest`_
 * `Python's Assert Functions`_
 
-.. _MagicMock: http://www.voidspace.org.uk/python/mock/index.html
+.. _MagicMock: https://docs.python.org/3/library/unittest.mock.html
 .. _Python Unittest: https://docs.python.org/2/library/unittest.html
 .. _Python's Assert Functions: https://docs.python.org/2/library/unittest.html#assert-methods

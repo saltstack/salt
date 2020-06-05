@@ -69,16 +69,6 @@ dynamic modules when states are run. To disable this behavior set
 When dynamic modules are autoloaded via states, only the modules defined in the
 same saltenvs as the states currently being run.
 
-Also it is possible to use the explicit ``saltutil.sync_*`` :py:mod:`state functions <salt.states.saltutil>`
-to sync the modules (previously it was necessary to use the ``module.run`` state):
-
-.. code-block::yaml
-
-   synchronize_modules:
-     saltutil.sync_modules:
-       - refresh: True
-
-
 Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -350,7 +340,7 @@ SDB
 
 * :ref:`Writing SDB Modules <sdb-writing-modules>`
 
-SDB is a way to store data that's not associated with a minion. See 
+SDB is a way to store data that's not associated with a minion. See
 :ref:`Storing Data in Other Databases <sdb>`.
 
 Serializer
@@ -394,6 +384,12 @@ pkgfiles modules handle the actual installation.
 SSH Wrapper
 -----------
 
+.. toctree::
+    :maxdepth: 1
+    :glob:
+
+    ssh_wrapper
+
 Replacement execution modules for :ref:`Salt SSH <salt-ssh>`.
 
 Thorium
@@ -420,7 +416,7 @@ the state system.
 Util
 ----
 
-Just utility modules to use with other modules via ``__utils__`` (see 
+Just utility modules to use with other modules via ``__utils__`` (see
 :ref:`Dunder Dictionaries <dunder-dictionaries>`).
 
 Wheel

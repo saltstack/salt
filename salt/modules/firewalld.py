@@ -82,7 +82,7 @@ def reload_rules():
 
     .. code-block:: bash
 
-        salt '*' firewalld.reload
+        salt '*' firewalld.reload_rules
     """
     return __firewall_cmd("--reload")
 

@@ -27,7 +27,9 @@ import salt.utils.stringutils
 
 
 def __virtual__():
-    return "kapacitor" if "kapacitor.version" in __salt__ else False
+    if "kapacitor.version" in __salt__:
+        return "kapacitor"
+    return (False, "kapacitor module could not be loaded")
 
 
 def task_present(

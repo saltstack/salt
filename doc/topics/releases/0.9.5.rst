@@ -59,8 +59,8 @@ committers. The following individuals have contributed to the development of
 
 This makes 21 new developers since 0.9.4 was released!
 
-To keep up with the growing community follow Salt on Ohloh
-(http://www.ohloh.net/p/salt), to join the Salt development community, fork
+To keep up with the growing community follow Salt on Black Duck Open Hub
+(https://www.openhub.net/p/salt), to join the Salt development community, fork
 Salt on GitHub, and get coding (https://github.com/saltstack/salt)!
 
 Major Features
@@ -75,7 +75,7 @@ For a few months now we have been talking about moving away from Python
 pickles for network serialization, but a preferred serialization format
 had not yet been found. After an extensive performance testing period
 involving everything from JSON to protocol buffers, a clear winner emerged.
-Message Pack (http://msgpack.org/) proved to not only be the fastest and most
+Message Pack (https://msgpack.org/) proved to not only be the fastest and most
 compact, but also the most "salt like". Message Pack is simple, and the code
 involved is very small. The msgpack library for Python has been added directly
 to Salt.
@@ -254,7 +254,7 @@ FreeBSD
 
 Salt on FreeBSD? There a port for that:
 
-http://svnweb.freebsd.org/ports/head/sysutils/py-salt/
+https://svnweb.freebsd.org/ports/head/sysutils/py-salt/
 
 This port was developed and added by Christer Edwards. This also marks the
 first time Salt has been included in an upstream packaging system!

@@ -7,6 +7,7 @@ Manage the information in the hosts file
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
+import logging
 import os
 
 # Import salt libs
@@ -17,6 +18,8 @@ import salt.utils.stringutils
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
+
+log = logging.getLogger(__name__)
 
 
 # pylint: disable=C0103
@@ -67,11 +70,17 @@ def _list_hosts():
                         ret.setdefault("comment-{0}".format(count), []).append(line)
                         count += 1
                         continue
+                    comment = None
                     if "#" in line:
+                        comment = line[line.index("#") + 1 :].lstrip()
                         line = line[: line.index("#")].strip()
                     comps = line.split()
                     ip = comps.pop(0)
-                    ret.setdefault(ip, []).extend(comps)
+                    if comment:
+                        ret.setdefault(ip, {}).setdefault("aliases", []).extend(comps)
+                        ret.setdefault(ip, {}).update({"comment": comment})
+                    else:
+                        ret.setdefault(ip, {}).setdefault("aliases", []).extend(comps)
         except (IOError, OSError) as exc:
             salt.utils.files.process_read_exception(exc, hfn, ignore=errno.ENOENT)
             # Don't set __context__ since we weren't able to read from the
@@ -113,8 +122,10 @@ def get_ip(host):
         return ""
     # Look for the op
     for addr in hosts:
-        if host in hosts[addr]:
-            return addr
+        if isinstance(hosts[addr], dict) and "aliases" in hosts[addr]:
+            _hosts = hosts[addr]["aliases"]
+            if host in _hosts:
+                return addr
     # ip not found
     return ""
 
@@ -134,8 +145,8 @@ def get_alias(ip):
         salt '*' hosts.get_alias <ip addr>
     """
     hosts = _list_hosts()
-    if ip in hosts:
-        return hosts[ip]
+    if ip in list(hosts):
+        return hosts[ip]["aliases"]
     return []
 
 
@@ -151,12 +162,15 @@ def has_pair(ip, alias):
     """
     hosts = _list_hosts()
     try:
-        return alias in hosts[ip]
+        if isinstance(alias, list):
+            return set(alias).issubset(hosts[ip]["aliases"])
+        else:
+            return alias in hosts[ip]["aliases"]
     except KeyError:
         return False
 
 
-def set_host(ip, alias):
+def set_host(ip, alias, comment=None):
     """
     Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
@@ -180,7 +194,12 @@ def set_host(ip, alias):
     # Make sure future calls to _list_hosts() will re-read the file
     __context__.pop("hosts._list_hosts", None)
 
-    line_to_add = salt.utils.stringutils.to_bytes(ip + "\t\t" + alias + os.linesep)
+    if comment:
+        line_to_add = salt.utils.stringutils.to_bytes(
+            ip + "\t\t" + alias + "\t\t# " + comment + os.linesep
+        )
+    else:
+        line_to_add = salt.utils.stringutils.to_bytes(ip + "\t\t" + alias + os.linesep)
     # support removing a host entry by providing an empty string
     if not alias.strip():
         line_to_add = b""
@@ -236,6 +255,14 @@ def rm_host(ip, alias):
         if tmpline.startswith(b"#"):
             continue
         comps = tmpline.split()
+        comment = None
+        if b"#" in tmpline:
+            host_info, comment = tmpline.split("#")
+            comment = salt.utils.stringutils.to_bytes(comment).lstrip()
+        else:
+            host_info = tmpline
+        host_info = salt.utils.stringutils.to_bytes(host_info)
+        comps = host_info.split()
         b_ip = salt.utils.stringutils.to_bytes(ip)
         b_alias = salt.utils.stringutils.to_bytes(alias)
         if comps[0] == b_ip:
@@ -249,7 +276,15 @@ def rm_host(ip, alias):
                 lines[ind] = b""
             else:
                 # Only an alias was removed
-                lines[ind] = newline + salt.utils.stringutils.to_bytes(os.linesep)
+                if comment:
+                    lines[ind] = (
+                        newline
+                        + b"# "
+                        + comment
+                        + salt.utils.stringutils.to_bytes(os.linesep)
+                    )
+                else:
+                    lines[ind] = newline + salt.utils.stringutils.to_bytes(os.linesep)
     with salt.utils.files.fopen(hfn, "wb") as ofile:
         ofile.writelines(lines)
     return True
@@ -281,23 +316,64 @@ def add_host(ip, alias):
     inserted = False
     for i, h in six.iteritems(hosts):
         for j in range(len(h)):
-            if h[j].startswith("#") and i == ip:
-                h.insert(j, alias)
-                inserted = True
+            if isinstance(h, list):
+                if h[j].startswith("#") and i == ip:
+                    h.insert(j, alias)
+                    inserted = True
     if not inserted:
-        hosts.setdefault(ip, []).append(alias)
+        hosts.setdefault(ip, {}).setdefault("aliases", []).append(alias)
     _write_hosts(hosts)
+    return True
+
+
+def set_comment(ip, comment):
+    """
+    Set the comment for a host to an existing entry,
+    if the entry is not in place then return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hosts.set_comment <ip> <comment>
+    """
+    hfn = _get_or_create_hostfile()
+    if not os.path.isfile(hfn):
+        return False
+
+    hosts = _list_hosts()
+
+    # Make sure future calls to _list_hosts() will re-read the file
+    __context__.pop("hosts._list_hosts", None)
+
+    if ip not in hosts:
+        return False
+
+    if "comment" in hosts[ip]:
+        if comment != hosts[ip]["comment"]:
+            hosts[ip]["comment"] = comment
+            _write_hosts(hosts)
+        else:
+            return True
+    else:
+        hosts[ip]["comment"] = comment
+        _write_hosts(hosts)
     return True
 
 
 def _write_hosts(hosts):
     lines = []
-    for ip, aliases in six.iteritems(hosts):
+    for ip, host_info in six.iteritems(hosts):
         if ip:
             if ip.startswith("comment"):
-                line = "".join(aliases)
+                line = "".join(host_info)
             else:
-                line = "{0}\t\t{1}".format(ip, " ".join(aliases))
+                if "comment" in host_info:
+                    line = "{0}\t\t{1}\t\t# {2}".format(
+                        ip, " ".join(host_info["aliases"]), host_info["comment"]
+                    )
+                else:
+                    line = "{0}\t\t{1}".format(ip, " ".join(host_info["aliases"]))
         lines.append(line)
 
     hfn = _get_or_create_hostfile()

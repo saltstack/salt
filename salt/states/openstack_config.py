@@ -23,7 +23,7 @@ def __virtual__():
     Only load if the openstack_config module is in __salt__
     """
     if "openstack_config.get" not in __salt__:
-        return False
+        return (False, "openstack_config module could not be loaded")
     if "openstack_config.set" not in __salt__:
         return False
     if "openstack_config.delete" not in __salt__:

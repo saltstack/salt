@@ -145,7 +145,9 @@ def __virtual__():
     Only make these states available if a pkg provider has been detected or
     assigned for this minion
     """
-    return "pkg.install" in __salt__
+    if "pkg.install" in __salt__:
+        return True
+    return (False, "pkg module could not be loaded")
 
 
 def _get_comparison_spec(pkgver):
@@ -158,6 +160,20 @@ def _get_comparison_spec(pkgver):
     if oper in ("=", ""):
         oper = "=="
     return oper, verstr
+
+
+def _check_ignore_epoch(oper, desired_version, ignore_epoch=None):
+    """
+    Conditionally ignore epoch, but only under all of the following
+    circumstances:
+
+    1. No value for ignore_epoch passed to state
+    2. desired_version has no epoch
+    3. oper does not contain a "<" or ">"
+    """
+    if ignore_epoch is not None:
+        return ignore_epoch
+    return "<" not in oper and ">" not in oper and ":" not in desired_version
 
 
 def _parse_version_string(version_conditions_string):
@@ -177,7 +193,7 @@ def _parse_version_string(version_conditions_string):
 def _fulfills_version_string(
     installed_versions,
     version_conditions_string,
-    ignore_epoch=False,
+    ignore_epoch=None,
     allow_updates=False,
 ):
     """
@@ -194,11 +210,16 @@ def _fulfills_version_string(
         >=1.2.3-4, <2.3.4-5
         >=1.2.3-4, <2.3.4-5, !=1.2.4-1
 
-    ignore_epoch : False
+    ignore_epoch : None
         When a package version contains an non-zero epoch (e.g.
-        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
+        ``1:3.14.159-2.el7``), and a specific version of a package is desired,
         set this option to ``True`` to ignore the epoch when comparing
         versions.
+
+        .. versionchanged:: 3001
+            If no value for this argument is passed to the state that calls
+            this helper function, and ``version_conditions_string`` contains no
+            epoch or greater-than/less-than, then the epoch will be ignored.
 
     allow_updates : False
         Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
@@ -220,7 +241,7 @@ def _fulfills_version_string(
     return False
 
 
-def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=False):
+def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=None):
     """
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
@@ -238,20 +259,24 @@ def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=False):
             oper=oper,
             ver2=desired_version,
             cmp_func=cmp_func,
-            ignore_epoch=ignore_epoch,
+            ignore_epoch=_check_ignore_epoch(oper, desired_version, ignore_epoch),
         ):
             return True
     return False
 
 
-def _find_unpurge_targets(desired):
+def _find_unpurge_targets(desired, **kwargs):
     """
     Find packages which are marked to be purged but can't yet be removed
     because they are dependencies for other installed packages. These are the
     packages which will need to be 'unpurged' because they are part of
     pkg.installed states. This really just applies to Debian-based Linuxes.
     """
-    return [x for x in desired if x in __salt__["pkg.list_pkgs"](purge_desired=True)]
+    return [
+        x
+        for x in desired
+        if x in __salt__["pkg.list_pkgs"](purge_desired=True, **kwargs)
+    ]
 
 
 def _find_download_targets(
@@ -260,14 +285,14 @@ def _find_download_targets(
     pkgs=None,
     normalize=True,
     skip_suggestions=False,
-    ignore_epoch=False,
+    ignore_epoch=None,
     **kwargs
 ):
     """
     Inspect the arguments to pkg.downloaded and discover what packages need to
     be downloaded. Return a dict of packages to download.
     """
-    cur_pkgs = __salt__["pkg.list_downloaded"]()
+    cur_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
     if pkgs:
         # pylint: disable=not-callable
         to_download = _repack_pkgs(pkgs, normalize=normalize)
@@ -389,7 +414,7 @@ def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
     Inspect the arguments to pkg.patch_installed and discover what advisory
     patches need to be installed. Return a dict of advisory patches to install.
     """
-    cur_patches = __salt__["pkg.list_installed_patches"]()
+    cur_patches = __salt__["pkg.list_installed_patches"](**kwargs)
     if advisory_ids:
         to_download = advisory_ids
     else:
@@ -421,7 +446,7 @@ def _find_advisory_targets(name=None, advisory_ids=None, **kwargs):
 
 
 def _find_remove_targets(
-    name=None, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs
+    name=None, version=None, pkgs=None, normalize=True, ignore_epoch=None, **kwargs
 ):
     """
     Inspect the arguments to pkg.removed and discover what packages need to
@@ -509,7 +534,7 @@ def _find_install_targets(
     skip_suggestions=False,
     pkg_verify=False,
     normalize=True,
-    ignore_epoch=False,
+    ignore_epoch=None,
     reinstall=False,
     refresh=False,
     **kwargs
@@ -598,7 +623,7 @@ def _find_install_targets(
                 "minion log.".format("pkgs" if pkgs else "sources"),
             }
 
-        to_unpurge = _find_unpurge_targets(desired)
+        to_unpurge = _find_unpurge_targets(desired, **kwargs)
     else:
         if salt.utils.platform.is_windows():
             # pylint: disable=not-callable
@@ -625,7 +650,7 @@ def _find_install_targets(
         else:
             desired = {name: version}
 
-        to_unpurge = _find_unpurge_targets(desired)
+        to_unpurge = _find_unpurge_targets(desired, **kwargs)
 
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         origin = bool(re.search("/", name))
@@ -670,7 +695,9 @@ def _find_install_targets(
                         name in cur_pkgs
                         and (
                             version is None
-                            or _fulfills_version_string(cur_pkgs[name], version)
+                            or _fulfills_version_string(
+                                cur_pkgs[name], version, ignore_epoch=ignore_epoch
+                            )
                         )
                     )
                 ]
@@ -796,6 +823,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
+                            **kwargs
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -829,6 +857,7 @@ def _find_install_targets(
                             package_name,
                             ignore_types=ignore_types,
                             verify_options=verify_options,
+                            **kwargs
                         )
                     except (CommandExecutionError, SaltInvocationError) as exc:
                         failed_verify = exc.strerror
@@ -878,7 +907,7 @@ def _find_install_targets(
     )
 
 
-def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
+def _verify_install(desired, new_pkgs, ignore_epoch=None, new_caps=None):
     """
     Determine whether or not the installed packages match what was requested in
     the SLS file.
@@ -998,7 +1027,7 @@ def installed(
     allow_updates=False,
     pkg_verify=False,
     normalize=True,
-    ignore_epoch=False,
+    ignore_epoch=None,
     reinstall=False,
     update_holds=False,
     **kwargs
@@ -1006,6 +1035,27 @@ def installed(
     """
     Ensure that the package is installed, and that it is the correct version
     (if specified).
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.installed:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     :param str name:
         The name of the package to be installed. This parameter is ignored if
@@ -1334,32 +1384,16 @@ def installed(
                 - normalize: False
 
     :param bool ignore_epoch:
-        When a package version contains an non-zero epoch (e.g.
-        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
-        set this option to ``True`` to ignore the epoch when comparing
-        versions. This allows for the following SLS to be used:
-
-        .. code-block:: yaml
-
-            # Actual vim-enhanced version: 2:7.4.160-1.el7
-            vim-enhanced:
-              pkg.installed:
-                - version: 7.4.160-1.el7
-                - ignore_epoch: True
-
-        Without this option set to ``True`` in the above example, the package
-        would be installed, but the state would report as failed because the
-        actual installed version would be ``2:7.4.160-1.el7``. Alternatively,
-        this option can be left as ``False`` and the full version string (with
-        epoch) can be specified in the SLS file:
-
-        .. code-block:: yaml
-
-            vim-enhanced:
-              pkg.installed:
-                - version: 2:7.4.160-1.el7
+        If this option is not explicitly set, and there is no epoch in the
+        desired package version, the epoch will be implicitly ignored. Set this
+        argument to ``True`` to explicitly ignore the epoch, and ``False`` to
+        strictly enforce it.
 
         .. versionadded:: 2015.8.9
+
+        .. versionchanged:: 3001
+            In prior releases, the default behavior was to strictly enforce
+            epochs unless this argument was set to ``True``.
 
     |
 
@@ -1556,10 +1590,20 @@ def installed(
 
     .. seealso:: unless and onlyif
 
-        You can use the :ref:`unless <unless-requisite>` or
-        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
-        This can be helpful in large environments with multiple states that
-        include requisites for packages to be installed.
+        If running pkg commands together with :ref:`aggregate <mod-aggregate-state>`
+        isn't an option, you can use the :ref:`creates <creates-requisite>`,
+        :ref:`unless <unless-requisite>`, or :ref:`onlyif <onlyif-requisite>`
+        syntax to skip a full package run. This can be helpful in large environments
+        with multiple states that include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using creates for a simple single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - creates:
+                  - /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1571,6 +1615,12 @@ def installed(
                   - fun: file.file_exists
                     args:
                       - /etc/nginx/nginx.conf
+
+            # Using unless with a shell test
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless: test -f /etc/nginx/nginx.conf
 
         .. code-block:: yaml
 
@@ -1584,11 +1634,11 @@ def installed(
                       - /etc/nginx/nginx.conf
                       - 'user www-data;'
 
-        The above examples use two different methods to reasonably ensure
+        The above examples use different methods to reasonably ensure
         that a package has already been installed. First, with checking for a
         file that would be created with the package. Second, by checking for
         specific text within a file that would be created or managed by salt.
-        With these requisists satisfied, unless will return ``True`` and the
+        With these requisists satisfied, creates/unless will return ``True`` and the
         ``pkg.installed`` state will be skipped.
 
         .. code-block:: bash
@@ -2050,7 +2100,10 @@ def installed(
             # No need to wrap this in a try/except because we would already
             # have caught invalid arguments earlier.
             verify_result = __salt__["pkg.verify"](
-                reinstall_pkg, ignore_types=ignore_types, verify_options=verify_options
+                reinstall_pkg,
+                ignore_types=ignore_types,
+                verify_options=verify_options,
+                **kwargs
             )
             if verify_result:
                 failed.append(reinstall_pkg)
@@ -2108,6 +2161,27 @@ def downloaded(
 
     Ensure that the package is downloaded, and that it is the correct version
     (if specified).
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to download the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.downloaded:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
@@ -2236,7 +2310,7 @@ def downloaded(
             )
         return ret
 
-    new_pkgs = __salt__["pkg.list_downloaded"]()
+    new_pkgs = __salt__["pkg.list_downloaded"](**kwargs)
     _ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
     if failed:
@@ -2258,6 +2332,19 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
     .. versionadded:: 2017.7.0
 
     Ensure that packages related to certain advisory ids are installed.
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the patch(es).
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     Currently supported for the following pkg providers:
     :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
@@ -2390,6 +2477,27 @@ def latest(
     :mod:`installed <salt.states.pkg.installed>` function to be
     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
     whenever a new package is available.
+
+    .. note::
+        Any argument which is either a) not explicitly defined for this state,
+        or b) not a global state argument like ``saltenv``, or
+        ``reload_modules``, will be passed through to the call to
+        ``pkg.install`` to install the package(s). For example, you can include
+        a ``disablerepo`` argument on platforms that use yum/dnf to disable
+        that repo:
+
+        .. code-block:: yaml
+
+            mypkg:
+              pkg.latest:
+                - disablerepo: base,updates
+
+        To see what is supported, check :ref:`this page <virtual-pkg>` to find
+        the documentation for your platform's ``pkg`` module, then look at the
+        documentation for the ``install`` function.
+
+        Any argument that is passed through to the ``install`` function, which
+        is not defined for that function, will be silently ignored.
 
     name
         The name of the package to maintain at the latest available version.
@@ -2775,7 +2883,7 @@ def _uninstall(
     version=None,
     pkgs=None,
     normalize=True,
-    ignore_epoch=False,
+    ignore_epoch=None,
     **kwargs
 ):
     """
@@ -2893,9 +3001,7 @@ def _uninstall(
     }
 
 
-def removed(
-    name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs
-):
+def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **kwargs):
     """
     Verify that a package is not installed, calling ``pkg.remove`` if necessary
     to remove the package.
@@ -2941,33 +3047,17 @@ def removed(
 
         .. versionadded:: 2015.8.0
 
-    ignore_epoch : False
-        When a package version contains an non-zero epoch (e.g.
-        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
-        set this option to ``True`` to ignore the epoch when comparing
-        versions. This allows for the following SLS to be used:
-
-        .. code-block:: yaml
-
-            # Actual vim-enhanced version: 2:7.4.160-1.el7
-            vim-enhanced:
-              pkg.removed:
-                - version: 7.4.160-1.el7
-                - ignore_epoch: True
-
-        Without this option set to ``True`` in the above example, the state
-        would falsely report success since the actual installed version is
-        ``2:7.4.160-1.el7``. Alternatively, this option can be left as
-        ``False`` and the full version string (with epoch) can be specified in
-        the SLS file:
-
-        .. code-block:: yaml
-
-            vim-enhanced:
-              pkg.removed:
-                - version: 2:7.4.160-1.el7
+    ignore_epoch : None
+        If this option is not explicitly set, and there is no epoch in the
+        desired package version, the epoch will be implicitly ignored. Set this
+        argument to ``True`` to explicitly ignore the epoch, and ``False`` to
+        strictly enforce it.
 
         .. versionadded:: 2015.8.9
+
+        .. versionchanged:: 3001
+            In prior releases, the default behavior was to strictly enforce
+            epochs unless this argument was set to ``True``.
 
     Multiple Package Options:
 
@@ -3003,7 +3093,7 @@ def removed(
         return ret
 
 
-def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **kwargs):
+def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **kwargs):
     """
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
     to purge the package. All configuration files are also removed.
@@ -3049,33 +3139,17 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **
 
         .. versionadded:: 2015.8.0
 
-    ignore_epoch : False
-        When a package version contains an non-zero epoch (e.g.
-        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
-        set this option to ``True`` to ignore the epoch when comparing
-        versions. This allows for the following SLS to be used:
-
-        .. code-block:: yaml
-
-            # Actual vim-enhanced version: 2:7.4.160-1.el7
-            vim-enhanced:
-              pkg.purged:
-                - version: 7.4.160-1.el7
-                - ignore_epoch: True
-
-        Without this option set to ``True`` in the above example, the state
-        would falsely report success since the actual installed version is
-        ``2:7.4.160-1.el7``. Alternatively, this option can be left as
-        ``False`` and the full version string (with epoch) can be specified in
-        the SLS file:
-
-        .. code-block:: yaml
-
-            vim-enhanced:
-              pkg.purged:
-                - version: 2:7.4.160-1.el7
+    ignore_epoch : None
+        If this option is not explicitly set, and there is no epoch in the
+        desired package version, the epoch will be implicitly ignored. Set this
+        argument to ``True`` to explicitly ignore the epoch, and ``False`` to
+        strictly enforce it.
 
         .. versionadded:: 2015.8.9
+
+        .. versionchanged:: 3001
+            In prior releases, the default behavior was to strictly enforce
+            epochs unless this argument was set to ``True``.
 
     Multiple Package Options:
 
@@ -3084,7 +3158,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=False, **
         ``name`` parameter will be ignored if this option is passed. It accepts
         version numbers as well.
 
-    .. versionadded:: 0.16.0
+        .. versionadded:: 0.16.0
     """
     kwargs["saltenv"] = __env__
     try:
@@ -3169,7 +3243,10 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
         try:
             packages = __salt__["pkg.list_upgrades"](refresh=refresh, **kwargs)
             expected = {
-                pkgname: {"new": pkgver, "old": __salt__["pkg.version"](pkgname)}
+                pkgname: {
+                    "new": pkgver,
+                    "old": __salt__["pkg.version"](pkgname, **kwargs),
+                }
                 for pkgname, pkgver in six.iteritems(packages)
             }
             if isinstance(pkgs, list):
@@ -3359,7 +3436,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
             )
         return ret
 
-    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"]()]
+    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"](**kwargs)]
     if failed:
         ret["comment"] = "Failed to install the following packages: {0}".format(
             ", ".join(failed)
