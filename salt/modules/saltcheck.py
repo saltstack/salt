@@ -599,7 +599,7 @@ def _render_file(file_path):
     call the salt utility to render a file
     """
     # salt-call slsutil.renderer /srv/salt/jinjatest/saltcheck-tests/test1.tst
-    rendered = __salt__["slsutil.renderer"](file_path)
+    rendered = __salt__["slsutil.renderer"](file_path, saltenv=global_scheck.saltenv)
     log.info("rendered: %s", rendered)
     return rendered
 
