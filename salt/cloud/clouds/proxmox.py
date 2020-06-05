@@ -679,7 +679,7 @@ def create(vm_):
     elif "private_ips" in data:
         ip_address = six.text_type(data["private_ips"][0])  # first IP
     else:
-        raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
+        raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
     log.debug("Using IP address %s", ip_address)
 
@@ -733,7 +733,7 @@ def create(vm_):
 def _import_api():
     """
     Download https://<url>/pve-docs/api-viewer/apidoc.js
-    Extract content of pveapi var (json formated)
+    Extract content of pveapi var (json formatted)
     Load this json content into global variable "api"
     """
     global api

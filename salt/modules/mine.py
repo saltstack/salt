@@ -237,7 +237,7 @@ def send(name, *args, **kwargs):
     Remaining args and kwargs will be passed on to the function to run.
 
     :rtype: bool
-    :return: Whether executing the function and storing the information was succesful.
+    :return: Whether executing the function and storing the information was successful.
 
     .. versionchanged:: 3000
 

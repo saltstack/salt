@@ -14,6 +14,7 @@ import base64
 import json
 import logging
 import string
+import time
 
 import requests
 
@@ -27,7 +28,9 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
-def generate_token(minion_id, signature, impersonated_by_master=False):
+def generate_token(
+    minion_id, signature, impersonated_by_master=False, ttl=None, uses=None
+):
     """
     Generate a Vault token for minion minion_id
 
@@ -41,6 +44,12 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
     impersonated_by_master
         If the master needs to create a token on behalf of the minion, this is
         True. This happens when the master generates minion pillars.
+
+    ttl
+        Ticket time to live in seconds, 1m minutes, or 2h hrs
+
+    uses
+        Number of times a token can be used
     """
     log.debug(
         "Token generation request for %s (impersonated by master: %s)",
@@ -48,10 +57,17 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         impersonated_by_master,
     )
     _validate_signature(minion_id, signature, impersonated_by_master)
-
     try:
-        config = __opts__["vault"]
+        config = __opts__.get("vault", {})
         verify = config.get("verify", None)
+        # Allow disabling of minion provided values via the master
+        allow_minion_override = config["auth"].get("allow_minion_override", False)
+        # This preserves the previous behavior of default TTL and 1 use
+        if not allow_minion_override or uses is None:
+            uses = config["auth"].get("uses", 1)
+        if not allow_minion_override or ttl is None:
+            ttl = config["auth"].get("ttl", None)
+        storage_type = config["auth"].get("token_backend", "session")
 
         if config["auth"]["method"] == "approle":
             if _selftoken_expired():
@@ -76,9 +92,12 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
         }
         payload = {
             "policies": _get_policies(minion_id, config),
-            "num_uses": 1,
+            "num_uses": uses,
             "meta": audit_data,
         }
+
+        if ttl is not None:
+            payload["explicit_max_ttl"] = str(ttl)
 
         if payload["policies"] == []:
             return {"error": "No policies matched minion"}
@@ -90,11 +109,19 @@ def generate_token(minion_id, signature, impersonated_by_master=False):
             return {"error": response.reason}
 
         auth_data = response.json()["auth"]
-        return {
+        ret = {
             "token": auth_data["client_token"],
+            "lease_duration": auth_data["lease_duration"],
+            "renewable": auth_data["renewable"],
+            "issued": int(round(time.time())),
             "url": config["url"],
             "verify": verify,
+            "token_backend": storage_type,
         }
+        if uses >= 0:
+            ret["uses"] = uses
+
+        return ret
     except Exception as e:  # pylint: disable=broad-except
         return {"error": six.text_type(e)}
 

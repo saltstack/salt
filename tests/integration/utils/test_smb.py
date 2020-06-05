@@ -67,7 +67,10 @@ def which_smbd():
     return smbd
 
 
-@skipIf(not which_smbd(), "Skip when no smbd binary found")
+@skipIf(not which_smbd(), reason="smbd binary not found")
+@skipIf(
+    not salt.utils.smb.HAS_SMBPROTOCOL, '"smbprotocol" needs to be installed.',
+)
 class TestSmb(TestCase):
 
     _smbd = None

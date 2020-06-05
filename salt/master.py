@@ -212,6 +212,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
 
+        if self.opts["maintenance_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Maintenance niceness to %d", self.opts["maintenance_niceness"]
+            )
+            os.nice(self.opts["maintenance_niceness"])
+
         self.presence_events = False
         if self.opts.get("presence_events", False):
             tcp_only = True
@@ -511,6 +517,17 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         Start the update threads
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if (
+            self.opts["fileserver_update_niceness"]
+            and not salt.utils.platform.is_windows()
+        ):
+            log.info(
+                "setting FileServerUpdate niceness to %d",
+                self.opts["fileserver_update_niceness"],
+            )
+            os.nice(self.opts["fileserver_update_niceness"])
+
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
 
@@ -974,6 +991,13 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 )
                 self.opts["worker_threads"] = 1
 
+        if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting ReqServer_ProcessManager niceness to %d",
+                self.opts["req_server_niceness"],
+            )
+            os.nice(self.opts["req_server_niceness"])
+
         # Reset signals to default ones before adding processes to the process
         # manager. We don't want the processes being started to inherit those
         # signal handlers
@@ -1146,12 +1170,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         log.trace("Clear payload received with command %s", load["cmd"])
         cmd = load["cmd"]
-        if cmd.startswith("__"):
-            return False
+        method = self.clear_funcs.get_method(cmd)
+        if not method:
+            return {}, {"fun": "send_clear"}
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = getattr(self.clear_funcs, cmd)(load), {"fun": "send_clear"}
+        ret = method(load), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1169,8 +1194,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             return {}
         cmd = data["cmd"]
         log.trace("AES payload received with command %s", data["cmd"])
-        if cmd.startswith("__"):
-            return False
+        method = self.aes_funcs.get_method(cmd)
+        if not method:
+            return {}, {"fun": "send"}
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
@@ -1192,20 +1218,98 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Start a Master Worker
         """
         salt.utils.process.appendproctitle(self.name)
+
+        # if we inherit req_server level without our own, reset it
+        if not salt.utils.platform.is_windows():
+            enforce_mworker_niceness = True
+            if self.opts["req_server_niceness"]:
+                if salt.utils.user.get_user() == "root":
+                    log.info(
+                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                    )
+                    log.info(os.nice())
+                    os.nice(-1 * self.opts["req_server_niceness"])
+                else:
+                    log.error(
+                        "%s unable to decrement niceness for MWorker, not running as root",
+                        self.name,
+                    )
+                    enforce_mworker_niceness = False
+
+            # else set what we're explicitly asked for
+            if enforce_mworker_niceness and self.opts["mworker_niceness"]:
+                log.info(
+                    "setting %s niceness to %i",
+                    self.name,
+                    self.opts["mworker_niceness"],
+                )
+                os.nice(self.opts["mworker_niceness"])
+
         self.clear_funcs = ClearFuncs(self.opts, self.key,)
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
 
 
+class TransportMethods(object):
+    """
+    Expose methods to the transport layer, methods with their names found in
+    the class attribute 'expose_methods' will be exposed to the transport layer
+    via 'get_method'.
+    """
+
+    expose_methods = ()
+
+    def get_method(self, name):
+        """
+        Get a method which should be exposed to the transport layer
+        """
+        if name in self.expose_methods:
+            try:
+                return getattr(self, name)
+            except AttributeError:
+                log.error("Requested method not exposed: %s", name)
+        else:
+            log.error("Requested method not exposed: %s", name)
+
+
 # TODO: rename? No longer tied to "AES", just "encrypted" or "private" requests
-class AESFuncs(object):
+class AESFuncs(TransportMethods):
     """
     Set up functions that are available when the load is encrypted with AES
     """
 
-    # The AES Functions:
-    #
+    expose_methods = (
+        "verify_minion",
+        "_master_tops",
+        "_ext_nodes",
+        "_master_opts",
+        "_mine_get",
+        "_mine",
+        "_mine_delete",
+        "_mine_flush",
+        "_file_recv",
+        "_pillar",
+        "_minion_event",
+        "_handle_minion_event",
+        "_return",
+        "_syndic_return",
+        "minion_runner",
+        "pub_ret",
+        "minion_pub",
+        "minion_publish",
+        "revoke_auth",
+        "_serve_file",
+        "_file_find",
+        "_file_hash",
+        "_file_hash_and_stat",
+        "_file_list",
+        "_file_list_emptydirs",
+        "_dir_list",
+        "_symlink_list",
+        "_file_envs",
+    )
+
     def __init__(self, opts):
         """
         Create a new AESFuncs
@@ -1937,11 +2041,22 @@ class AESFuncs(object):
         return ret, {"fun": "send"}
 
 
-class ClearFuncs(object):
+class ClearFuncs(TransportMethods):
     """
     Set up functions that are safe to execute when commands sent to the master
     without encryption and authentication
     """
+
+    # These methods will be exposed to the transport layer by
+    # MWorker._handle_clear
+    expose_methods = (
+        "ping",
+        "publish",
+        "get_token",
+        "mk_token",
+        "wheel",
+        "runner",
+    )
 
     # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:

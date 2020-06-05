@@ -14,7 +14,7 @@ are already installed, but not Salted.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
-:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+:ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 """
 
 # Import python libs

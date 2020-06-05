@@ -170,7 +170,7 @@ class Counter(object):
         path = win32pdh.MakeCounterPath(
             (None, obj, instance, None, instance_index, counter), 0
         )
-        if win32pdh.ValidatePath(path) is 0:
+        if win32pdh.ValidatePath(path) == 0:
             return Counter(path, obj, instance, instance_index, counter)
         raise CommandExecutionError("Invalid counter specified: {0}".format(path))
 

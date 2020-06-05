@@ -109,7 +109,7 @@ def _get_split_zone(zone, _conn, private_zone):
 
 
 def _is_retryable_error(exception):
-    return exception.code != "SignatureDoesNotMatch"
+    return exception.code not in ["SignatureDoesNotMatch"]
 
 
 def describe_hosted_zones(
@@ -173,7 +173,7 @@ def describe_hosted_zones(
             else:
                 marker = None
                 ret = None
-                while marker is not "":
+                while marker != "":
                     r = conn.get_all_hosted_zones(start_marker=marker, zone_list=ret)
                     ret = r["ListHostedZonesResponse"]["HostedZones"]
                     marker = r["ListHostedZonesResponse"].get("NextMarker", "")
@@ -277,7 +277,7 @@ def zone_exists(
         argument instead.
 
     error_retries
-        Amount of times to attempt to query if the zone exists.
+        Number of times to attempt to query if the zone exists.
         The previously used argument `rate_limit_retries` was
         deprecated for this arguments. Users can still use
         `rate_limit_retries` to ensure backwards compatibility,
@@ -561,7 +561,7 @@ def get_record(
         argument instead.
 
     error_retries
-        Amount of times to attempt to query if the zone exists.
+        Number of times to attempt to query if the zone exists.
         The previously used argument `rate_limit_retries` was
         deprecated for this arguments. Users can still use
         `rate_limit_retries` to ensure backwards compatibility,
@@ -670,7 +670,7 @@ def add_record(
         argument instead.
 
     error_retries
-        Amount of times to attempt to query if the zone exists.
+        Number of times to attempt to query if the zone exists.
         The previously used argument `rate_limit_retries` was
         deprecated for this arguments. Users can still use
         `rate_limit_retries` to ensure backwards compatibility,
@@ -775,7 +775,7 @@ def update_record(
         argument instead.
 
     error_retries
-        Amount of times to attempt to query if the zone exists.
+        Number of times to attempt to query if the zone exists.
         The previously used argument `rate_limit_retries` was
         deprecated for this arguments. Users can still use
         `rate_limit_retries` to ensure backwards compatibility,
@@ -862,7 +862,7 @@ def delete_record(
         argument instead.
 
     error_retries
-        Amount of times to attempt to query if the zone exists.
+        Number of times to attempt to query if the zone exists.
         The previously used argument `rate_limit_retries` was
         deprecated for this arguments. Users can still use
         `rate_limit_retries` to ensure backwards compatibility,

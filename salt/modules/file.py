@@ -30,6 +30,7 @@ import sys
 import tempfile
 import time
 from collections import namedtuple
+from collections.abc import Iterable, Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # Import salt libs
@@ -57,12 +58,6 @@ from salt.ext import six
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
-
-try:
-    from collections import Iterable, Mapping
-except ImportError:
-    from collections.abc import Iterable, Mapping
-
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -2044,7 +2039,7 @@ def line(
 
             The differences are that multiple (and non-matching) lines are
             alloweed between ``before`` and ``after``, if they are
-            sepcified. The line will always be inserted right before
+            specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
             the file.
@@ -2984,7 +2979,7 @@ def blockreplace(
 
     if block_found:
         diff = __utils__["stringutils.get_diff"](orig_file, new_file)
-        has_changes = diff is not ""
+        has_changes = diff != ""
         if has_changes and not dry_run:
             # changes detected
             # backup file attrs
@@ -4146,7 +4141,7 @@ def set_selinux_context(
     persist=False,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added persist option
 
@@ -4166,7 +4161,7 @@ def set_selinux_context(
         fcontext_result = __salt__["selinux.fcontext_add_policy"](
             path, sel_type=type, sel_user=user, sel_level=range
         )
-        if fcontext_result.get("retcode", None) is not 0:
+        if fcontext_result.get("retcode", None) != 0:
             # Problem setting fcontext policy
             raise CommandExecutionError(
                 "Problem setting fcontext: {0}".format(fcontext_result)
@@ -4834,7 +4829,7 @@ def check_perms(
     serange=None,
 ):
     """
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         Added selinux options
 
@@ -5259,7 +5254,7 @@ def check_managed_changes(
     """
     Return a dictionary of what changes need to be made for a file
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
 
         selinux attributes added
 
@@ -5398,22 +5393,22 @@ def check_file_meta(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serole
         selinux role attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     """
     changes = {}
     if not source_sum:
@@ -5448,15 +5443,22 @@ def check_file_meta(
 
     if contents is not None:
         # Write a tempfile with the static contents
-        tmp = salt.utils.files.mkstemp(
-            prefix=salt.utils.files.TEMPFILE_PREFIX, text=True
-        )
-        if salt.utils.platform.is_windows():
-            contents = os.linesep.join(
-                _splitlines_preserving_trailing_newline(contents)
+        if isinstance(contents, six.binary_type):
+            tmp = salt.utils.files.mkstemp(
+                prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
             )
-        with salt.utils.files.fopen(tmp, "w") as tmp_:
-            tmp_.write(salt.utils.stringutils.to_str(contents))
+            with salt.utils.files.fopen(tmp, "wb") as tmp_:
+                tmp_.write(contents)
+        else:
+            tmp = salt.utils.files.mkstemp(
+                prefix=salt.utils.files.TEMPFILE_PREFIX, text=True
+            )
+            if salt.utils.platform.is_windows():
+                contents = os.linesep.join(
+                    _splitlines_preserving_trailing_newline(contents)
+                )
+            with salt.utils.files.fopen(tmp, "w") as tmp_:
+                tmp_.write(salt.utils.stringutils.to_str(contents))
         # Compare the static contents with the named file
         try:
             differences = get_diff(name, tmp, show_filenames=False)
@@ -5769,22 +5771,22 @@ def manage_file(
     seuser
         selinux user attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     setype
         selinux type attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     serange
         selinux range attribute
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     CLI Example:
 

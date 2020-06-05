@@ -33,6 +33,7 @@ import stat
 import string  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
+from collections.abc import Iterable, Mapping
 from functools import reduce  # do not remove
 
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
@@ -121,14 +122,6 @@ from salt.modules.file import (
     write,
 )
 from salt.utils.functools import namespaced_function as _namespaced_function
-
-# pylint: disable=no-name-in-module
-try:
-    from collections import Iterable, Mapping
-except ImportError:
-    from collections.abc import Iterable, Mapping
-# pylint: enable=no-name-in-module
-
 
 HAS_WINDOWS_MODULES = False
 try:
