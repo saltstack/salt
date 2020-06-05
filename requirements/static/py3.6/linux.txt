@@ -119,12 +119,13 @@ docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
-future==0.17.1            # via python-jose, textfsm
+future==0.17.1            # via hcloud, python-jose, textfsm
 genshi==0.7.3
 geomet==0.1.2             # via cassandra-driver
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
+hcloud==1.6.3
 hgtools==8.1.1
 idna==2.8                 # via requests
 importlib-metadata==0.23  # via importlib-resources, pluggy, pytest, virtualenv
@@ -183,7 +184,7 @@ pytest-salt-factories==0.10.6
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==5.4.2 ; sys_platform != "win32"
-python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common, botocore, croniter, kubernetes, moto, vcert
+python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common, botocore, croniter, hcloud, kubernetes, moto, vcert
 python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
