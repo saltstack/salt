@@ -37,15 +37,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             acme.__opts__, {"test": True}
         ):  # pylint: disable=no-member
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": True,
-                    "comment": ["Certificate test exists and does not need renewal."],
-                    "changes": {},
-                },
-            )
+            match = {
+                "name": "test",
+                "result": True,
+                "comment": ["Certificate test exists and does not need renewal."],
+                "changes": {},
+            }
+            self.assertEqual(acme.cert("test"),match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_no_changes(self):
         """
@@ -59,15 +58,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "acme.needs_renewal": MagicMock(return_value=False),
             },
         ):
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": True,
-                    "comment": ["Certificate test exists and does not need renewal."],
-                    "changes": {},
-                },
-            )
+            match = {
+                "name": "test",
+                "result": True,
+                "comment": ["Certificate test exists and does not need renewal."],
+                "changes": {},
+            }
+            self.assertEqual(acme.cert("test"), match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_fresh_certificate_t(self):
         """
@@ -84,15 +82,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             acme.__opts__, {"test": True}
         ):  # pylint: disable=no-member
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": None,
-                    "comment": ["Certificate test would have been obtained."],
-                    "changes": {"old": "current certificate", "new": "new certificate"},
-                },
-            )
+            match = {
+                "name": "test",
+                "result": None,
+                "comment": ["Certificate test would have been obtained."],
+                "changes": {"old": "current certificate", "new": "new certificate"},
+            }
+            self.assertEqual(acme.cert("test"), match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_fresh_certificate(self):
         """
@@ -109,15 +106,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "acme.info": MagicMock(return_value={"foo": "bar"}),
             },
         ):
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": True,
-                    "comment": ["Mockery"],
-                    "changes": {"new": {"foo": "bar"}},
-                },
-            )
+            match = {
+                "name": "test",
+                "result": True,
+                "comment": ["Mockery"],
+                "changes": {"new": {"foo": "bar"}},
+            }
+            self.assertEqual(acme.cert("test"), match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_renew_certificate_t(self):
         """
@@ -138,15 +134,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             acme.__opts__, {"test": True}
         ):  # pylint: disable=no-member
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": None,
-                    "comment": ["Certificate test would have been renewed."],
-                    "changes": {"old": "current certificate", "new": "new certificate"},
-                },
-            )
+            match = {
+                "name": "test",
+                "result": None,
+                "comment": ["Certificate test would have been renewed."],
+                "changes": {"old": "current certificate", "new": "new certificate"},
+            }
+            self.assertEqual(acme.cert("test"), match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
 
     def test_cert_renew_certificate(self):
         """
@@ -165,15 +160,14 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 ),
             },
         ):
-            self.assertEqual(
-                acme.cert("test"),
-                {
-                    "name": "test",
-                    "result": True,
-                    "comment": ["Mockery"],
-                    "changes": {
-                        "old": {"name": "old cert"},
-                        "new": {"name": "new cert"},
-                    },
-                },
-            )
+            match = {
+                "name": "test",
+                "result": True,
+                "comment": ["Mockery"],
+                "changes": {
+                    "old": {"name": "old cert"},
+                    "new": {"name": "new cert"},
+                }
+            }
+            self.assertEqual(acme.cert("test"), match)
+            self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
