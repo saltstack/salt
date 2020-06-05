@@ -52,6 +52,19 @@ class CacheDictTestCase(TestCase):
         # make sure that a get would get a regular old key error
         self.assertRaises(KeyError, cd.__getitem__, "foo")
 
+    def test_ttl_zero(self):
+        cd = cache.CacheDict(0.1)
+        cd["foo"] = "bar"
+        # {'foo': 'bar'}
+        self.assertIn("foo", cd)
+        self.assertEqual(cd["foo"], "bar")
+        time.sleep(0)
+        del cd["foo"]
+        self.assertNotIn("foo", cd)
+
+        # make sure that a get would get a regular old key error
+        self.assertRaises(KeyError, cd.__getitem__, "foo")
+
 
 class CacheContextTestCase(TestCase):
     def setUp(self):
@@ -198,6 +211,11 @@ class CacheDiskTestCase(TestCase):
 
             # test ttl
             time.sleep(0.2)
+            self.assertNotIn("foo", cd)
+            self.assertNotIn("foo", cd2)
+
+            # test ttl zero
+            time.sleep(0)
             self.assertNotIn("foo", cd)
             self.assertNotIn("foo", cd2)
 
