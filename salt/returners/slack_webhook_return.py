@@ -405,6 +405,5 @@ def event_return(events):
 
         if ret and "saltutil.find_job" not in ret['fun'] or "salt/auth" not in ret['tag']:
             results = returner(ret, event_rtn=True)
-           
 
     return results
