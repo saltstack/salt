@@ -364,7 +364,6 @@ def returner(ret, **kwargs):
     """
     Send a slack message with the data through a webhook
     :param ret: The Salt return
-    :param **kwargs: Dictionary of additional key/value pairs
     :return: The result of the post
     """
 
@@ -396,11 +395,16 @@ def event_return(events):
     """
     Send event data to returner function
     :param events: The Salt event return
+    :return: The result of the post
     """
+
+    results = None
 
     for event in events:
         ret = event.get("data", False)
 
         if ret and "saltutil.find_job" not in ret['fun'] or "salt/auth" not in ret['tag']:
             results = returner(ret, event_rtn=True)
-            return results
+           
+
+    return results
