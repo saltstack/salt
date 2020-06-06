@@ -41,6 +41,11 @@ Example profile:
             pool: Data
             # Size in GB (default: '1')
             size: 3
+          # Passthrough disks
+            # Bus can be 'ide', 'sata', 'scsi', 'usb' or 'virtio' (default: 'virtio')
+            bus: scsi
+            # Block device to expose from the hypervisor to the virtual machine
+            device: /dev/sdc
         # Network interfaces
         network:
           eth0:
@@ -628,66 +633,85 @@ def create(vm_):
                     else:
                         bus = 'virtio'
 
-                    # format: should be 'raw' or 'qcow2' (default)
-                    if 'format' in devices['disk'][disk]:
-                        format = devices['disk'][disk]['format']
-                    else:
-                        format = 'qcow2'
+                    # Passthrough device from hypervisor
+                    if 'device' in devices['disk'][disk]:
+                        device = devices['disk'][disk]['device']
 
-                    # pool: name of the libvirt pool that will contain the new disk (default is 'default')
-                    if 'pool' in devices['disk'][disk]:
-                        pool_name = devices['disk'][disk]['pool']
-                    else:
-                        pool_name = "default"
+                        if 'shareable' in devices['disk'][disk]:
+                            shareable = devices['disk'][disk]['shareable']
+                        else:
+                            shareable = False
 
-                    # size: should be a size in GB (default: 1 GB)
-                    if 'size' in devices['disk'][disk]:
-                        size = devices['disk'][disk]['size']
-                    else:
-                        size = 1
-
-                    pool = None
-                    for p in virt_pools:
-                        if p.name() == devices['disk'][disk]['pool']:
-                            pool = p
-
-                    if pool:
-                        pool_xml = ElementTree.fromstring(pool.XMLDesc())
-                        pool_target = pool_xml.find('./target/path').text
-
-                        vol_name = name + "-" + disk + "." + format
-                        vol_path = pool_target + "/" + vol_name
-
-                        try:
-                            vol = pool.storageVolLookupByName(vol_name)
-                            log.debug("Volume '%s' in pool '%s' already exists", vol_name, pool.name())
-                        except libvirtError:
-                            log.debug("Creating volume '%s' in pool '%s'", vol_name, pool.name())
-                            vol_xml = """
-                            <volume>
-                              <name>"""+vol_name+"""</name>
-                              <allocation>0</allocation>
-                              <capacity unit="G">"""+str(size)+"""</capacity>
-                              <target>
-                                <path>"""+vol_path+"""</path>
-                                <format type='"""+format+"""'/>
-                                <permissions>
-                                   <owner>107</owner>
-                                   <group>107</group>
-                                   <mode>0644</mode>
-                                   <label>virt_image_t</label>
-                                 </permissions>
-                              </target>
-                            </volume>"""
-                            vol = pool.createXML(vol_xml, 0)
-
-                        log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
+                        log.debug("Adding passthrough disk '%s' to domain '%s'", device, name)
                         devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
                         disk_xml = devices_xml.findall('./disk')[-1]
-                        disk_xml.append(ElementTree.Element('driver', cache='none', io='native', name='qemu', type=format))
-                        disk_xml.append(ElementTree.Element('source', file=vol_path))
+                        disk_xml.append(ElementTree.Element('driver', name='qemu', type='raw'))
+                        disk_xml.append(ElementTree.Element('source', file=device))
                         disk_xml.append(ElementTree.Element('target', dev=disk, bus=bus))
-                        pool.refresh()
+                        if shareable:
+                            disk_xml.append(ElementTree.Element('shareable'))
+
+                    else:
+                        # format: should be 'raw' or 'qcow2' (default)
+                        if 'format' in devices['disk'][disk]:
+                            format = devices['disk'][disk]['format']
+                        else:
+                            format = 'qcow2'
+
+                        # pool: name of the libvirt pool that will contain the new disk (default is 'default')
+                        if 'pool' in devices['disk'][disk]:
+                            pool_name = devices['disk'][disk]['pool']
+                        else:
+                            pool_name = "default"
+
+                        # size: should be a size in GB (default: 1 GB)
+                        if 'size' in devices['disk'][disk]:
+                            size = devices['disk'][disk]['size']
+                        else:
+                            size = 1
+
+                        pool = None
+                        for p in virt_pools:
+                            if p.name() == devices['disk'][disk]['pool']:
+                                pool = p
+
+                        if pool:
+                            pool_xml = ElementTree.fromstring(pool.XMLDesc())
+                            pool_target = pool_xml.find('./target/path').text
+
+                            vol_name = name + "-" + disk + "." + format
+                            vol_path = pool_target + "/" + vol_name
+
+                            try:
+                                vol = pool.storageVolLookupByName(vol_name)
+                                log.debug("Volume '%s' in pool '%s' already exists", vol_name, pool.name())
+                            except libvirtError:
+                                log.debug("Creating volume '%s' in pool '%s'", vol_name, pool.name())
+                                vol_xml = """
+                                <volume>
+                                  <name>""" + vol_name + """</name>
+                                  <allocation>0</allocation>
+                                  <capacity unit="G">""" + str(size) + """</capacity>
+                                  <target>
+                                    <path>""" + vol_path + """</path>
+                                    <format type='""" + format + """'/>
+                                    <permissions>
+                                       <owner>107</owner>
+                                       <group>107</group>
+                                       <mode>0644</mode>
+                                       <label>virt_image_t</label>
+                                     </permissions>
+                                  </target>
+                                </volume>"""
+                                vol = pool.createXML(vol_xml, 0)
+
+                            log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
+                            devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
+                            disk_xml = devices_xml.findall('./disk')[-1]
+                            disk_xml.append(ElementTree.Element('driver', cache='none', io='native', name='qemu', type=format))
+                            disk_xml.append(ElementTree.Element('source', file=vol_path))
+                            disk_xml.append(ElementTree.Element('target', dev=disk, bus=bus))
+                            pool.refresh()
 
             clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
             log.debug("Clone XML '%s'", clone_xml)
