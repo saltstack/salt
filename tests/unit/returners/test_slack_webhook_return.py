@@ -92,7 +92,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         "out": "highstate",
     }
 
-    _EVNT_RET = ["data": {
+    _EVNT_RET = [{"data": {
         "fun_args": ["config.vim"],
         "jid": "20181227105933129338",
         "return": {
@@ -152,7 +152,7 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
         "fun": "state.apply",
         "id": _MINION_NAME,
         "out": "highstate",
-    }]
+    }}]
 
     _EXPECTED_PAYLOAD = {
         u"attachments": [
