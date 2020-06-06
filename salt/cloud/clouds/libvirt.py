@@ -26,6 +26,8 @@ Example profile:
       memory: 2048MB
       # Serial number visible in DMI data (string)
       serial: 01234456789
+      # Should the domain start automatically at hypervisor boot
+      autostart: True
       devices:
         # Supplementary disks for cloned domain
         disks:
@@ -383,6 +385,10 @@ def create(vm_):
         'serial', vm_, __opts__, default=None
     )
 
+    autostart = config.get_cloud_config_value(
+        'autostart', vm_, __opts__, default=False
+    )
+
     devices = config.get_cloud_config_value(
         'devices', vm_, __opts__, default=None
     )
@@ -691,6 +697,11 @@ def create(vm_):
 
             cleanup.append({"what": "domain", "item": clone_domain})
             clone_domain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
+
+            # Configure automatic startup
+            if autostart:
+                log.debug("Enabling automatic startup for this domain")
+                clone_domain.setAutostart(1)
 
         log.debug("VM '%s'", vm_)
 
