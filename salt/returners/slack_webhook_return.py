@@ -154,7 +154,7 @@ def _generate_payload(author_icon, title, report, **kwargs):
     :return: The payload ready for Slack
     """
 
-    event_rtn = kwargs.get('event_rtn', False)
+    event_rtn = kwargs.get("event_rtn", False)
 
     if event_rtn is True:
         author_name = report["id"]
@@ -340,7 +340,7 @@ def _post_message(webhook, author_icon, title, report, **kwargs):
     :return:            Boolean if message was sent successfully
     """
 
-    event_rtn = kwargs.get('event_rtn', False)
+    event_rtn = kwargs.get("event_rtn", False)
 
     payload = _generate_payload(author_icon, title, report, event_rtn=event_rtn)
 
@@ -367,7 +367,7 @@ def returner(ret, **kwargs):
     :return: The result of the post
     """
 
-    event_rtn = kwargs.get('event_rtn', False)
+    event_rtn = kwargs.get("event_rtn", False)
 
     _options = _get_options(ret)
 
@@ -403,7 +403,11 @@ def event_return(events):
     for event in events:
         ret = event.get("data", False)
 
-        if ret and "saltutil.find_job" not in ret['fun'] or "salt/auth" not in ret['tag']:
+        if (
+            ret
+            and "saltutil.find_job" not in ret["fun"]
+            or "salt/auth" not in ret["tag"]
+        ):
             results = returner(ret, event_rtn=True)
 
     return results
