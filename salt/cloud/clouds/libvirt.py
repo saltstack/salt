@@ -61,6 +61,8 @@ Example profile:
       ip_source: ip-learning
       # clone_strategy = [ quick | full ]
       clone_strategy: quick
+      # disk_name = [ default | <pattern> ]
+      disk_name: '{name}-{dev}'
       ssh_username: vagrant
       # has_ssh_agent: True
       password: vagrant
@@ -394,6 +396,10 @@ def create(vm_):
         'autostart', vm_, __opts__, default=False
     )
 
+    disk_name = config.get_cloud_config_value(
+        'disk_name', vm_, __opts__, default='default'
+    )
+
     devices = config.get_cloud_config_value(
         'devices', vm_, __opts__, default=None
     )
@@ -588,17 +594,24 @@ def create(vm_):
                         "Non qemu driver disk encountered bailing out."
                     )
                 disk_type = driver.attrib.get("type")
+
+                # Create device target name (e.g. 'mydomain-vda')
+                if disk_name != 'default':
+                    dev = disk.find("./target").attrib['dev']
+                    disk_name = disk_name.replace('{name}', name).replace('{dev}', dev)
+                    log.info("Cloned disk_name is '%s'", disk_name)
+
                 log.info("disk attributes %s", disk.attrib)
                 if disk_type == "qcow2":
                     source = disk.find("./source").attrib["file"]
                     pool, volume = find_pool_and_volume(conn, source)
                     if clone_strategy == "quick":
                         new_volume = pool.createXML(
-                            create_volume_with_backing_store_xml(volume), 0
+                            create_volume_with_backing_store_xml(volume, disk_name), 0
                         )
                     else:
                         new_volume = pool.createXMLFrom(
-                            create_volume_xml(volume), volume, 0
+                            create_volume_xml(volume, disk_name), volume, 0
                         )
                     pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
@@ -609,7 +622,7 @@ def create(vm_):
                     pool, volume = find_pool_and_volume(conn, source)
                     # TODO: more control on the cloned disk type
                     new_volume = pool.createXMLFrom(
-                        create_volume_xml(volume), volume, 0
+                        create_volume_xml(volume, disk_name), volume, 0
                     )
                     pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
@@ -906,7 +919,7 @@ def destroy_domain(conn, domain):
     )
 
 
-def create_volume_xml(volume):
+def create_volume_xml(volume, disk_name):
     template = """<volume>
                     <name>n</name>
                     <capacity>c</capacity>
@@ -920,7 +933,7 @@ def create_volume_xml(volume):
                 """
     volume_xml = ElementTree.fromstring(template)
     # TODO: generate name
-    volume_xml.find("name").text = generate_new_name(volume.name())
+    volume_xml.find("name").text = generate_new_name(volume.name(), disk_name)
     log.debug("Volume: %s", dir(volume))
     volume_xml.find("capacity").text = str(volume.info()[1])
     volume_xml.find("./target/path").text = volume.path()
@@ -929,7 +942,7 @@ def create_volume_xml(volume):
     return xml_string
 
 
-def create_volume_with_backing_store_xml(volume):
+def create_volume_with_backing_store_xml(volume, disk_name):
     template = """<volume>
                     <name>n</name>
                     <capacity>c</capacity>
@@ -946,7 +959,7 @@ def create_volume_with_backing_store_xml(volume):
                 """
     volume_xml = ElementTree.fromstring(template)
     # TODO: generate name
-    volume_xml.find("name").text = generate_new_name(volume.name())
+    volume_xml.find("name").text = generate_new_name(volume.name(), disk_name)
     log.debug("volume: %s", dir(volume))
     volume_xml.find("capacity").text = str(volume.info()[1])
     volume_xml.find("./backingStore/path").text = volume.path()
@@ -965,12 +978,15 @@ def find_pool_and_volume(conn, path):
     raise SaltCloudNotFound("Could not find volume for path {}".format(path))
 
 
-def generate_new_name(orig_name):
-    if "." not in orig_name:
+def generate_new_name(orig_name, disk_name):
+    if disk_name == "default" and "." not in orig_name:
         return "{}-{}".format(orig_name, uuid.uuid1())
 
     name, ext = orig_name.rsplit(".", 1)
-    return "{}-{}.{}".format(name, uuid.uuid1(), ext)
+    if disk_name == "default":
+        return "{}-{}.{}".format(name, uuid.uuid1(), ext)
+    else:
+        return "{}.{}".format(disk_name, ext)
 
 
 def get_domain_volumes(conn, domain):
