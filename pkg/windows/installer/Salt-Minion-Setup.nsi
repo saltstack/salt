@@ -592,6 +592,7 @@ SectionEnd
 
 Function .onInit
 
+    InitPluginsDir
     Call parseCommandLineSwitches
 
     # Uninstall msi-installed salt
