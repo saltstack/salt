@@ -45,6 +45,7 @@ REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
+IS_FREEBSD = sys.platform.lower().startswith("freebsd")
 # Python versions to run against
 _PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9")
 
@@ -192,6 +193,23 @@ def _get_pip_requirements_file(session, transport, crypto=None):
                 return _requirements_file
         _requirements_file = os.path.join(
             "requirements", "static", pydir, "darwin-crypto.txt"
+        )
+        if os.path.exists(_requirements_file):
+            return _requirements_file
+    elif IS_FREEBSD:
+        if crypto is None:
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "{}-freebsd.txt".format(transport)
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+            _requirements_file = os.path.join(
+                "requirements", "static", pydir, "freebsd.txt"
+            )
+            if os.path.exists(_requirements_file):
+                return _requirements_file
+        _requirements_file = os.path.join(
+            "requirements", "static", pydir, "freebsd-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
