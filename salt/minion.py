@@ -1975,6 +1975,7 @@ class Minion(MinionBase):
 
         ret["jid"] = data["jid"]
         ret["fun"] = data["fun"]
+        ret["tgt"] = data["tgt"]
         ret["fun_args"] = data["arg"]
         if "master_id" in data:
             ret["master_id"] = data["master_id"]
