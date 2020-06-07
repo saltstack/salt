@@ -11,8 +11,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.modules.vsphere
 import salt.utils.platform
+if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "esxi":
+    import salt.modules.vsphere
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
