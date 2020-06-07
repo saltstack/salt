@@ -1974,8 +1974,8 @@ class Minion(MinionBase):
             ret["out"] = "nested"
 
         ret["jid"] = data["jid"]
-        ret["fun"] = data["fun"]
         ret["tgt"] = data["tgt"]
+        ret["fun"] = data["fun"]
         ret["fun_args"] = data["arg"]
         if "master_id" in data:
             ret["master_id"] = data["master_id"]
