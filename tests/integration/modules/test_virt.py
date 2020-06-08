@@ -101,3 +101,14 @@ class VirtTest(ModuleCase):
         self.assertIsInstance(caps["host"]["host"]["uuid"], str)
         self.assertEqual(36, len(caps["host"]["host"]["uuid"]))
         self.assertIn("qemu", [domainCaps["domain"] for domainCaps in caps["domains"]])
+
+    def test_capabilities(self):
+        """
+        Test virt.capabilities
+        """
+        caps = self.run_function("virt.capabilities")
+        self.assertIsInstance(caps, dict)
+        self.assertIsInstance(caps["host"]["uuid"], str)
+        self.assertEqual(36, len(caps["host"]["uuid"]))
+        self.assertGreaterEqual(len(caps["guests"]), 1)
+        self.assertIn(caps["guests"][0]["os_type"], ["hvm", "xen", "xenpvh", "exe"])
