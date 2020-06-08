@@ -264,6 +264,26 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         self.assertIn("foo", ret)
 
+    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    def test_powershell(self):
+        """
+        Tests cmd.powershell with a string value output
+        """
+        mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": '"foo"'}
+        with patch("salt.modules.cmdmod._run", return_value=mock_run):
+            ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
+            self.assertEqual("foo", ret)
+
+    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
+    def test_powershell_empty(self):
+        """
+        Tests cmd.powershell when the output is an empty string
+        """
+        mock_run = {"pid": 1234, "retcode": 0, "stderr": "", "stdout": ""}
+        with patch("salt.modules.cmdmod._run", return_value=mock_run):
+            ret = cmdmod.powershell("Set-ExecutionPolicy RemoteSigned")
+            self.assertEqual({}, ret)
+
     def test_is_valid_shell_windows(self):
         """
         Tests return if running on windows
