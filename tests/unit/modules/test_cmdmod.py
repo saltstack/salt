@@ -569,7 +569,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         Test that unicode doesn't crash the system
         """
         stdout = "Datenträger"
-        ret = cmdmod.run_all("cmd /c echo Datenträger", chcp=65001)
+        ret = cmdmod.run_all("cmd /c echo Datenträger", python_shell=True, chcp=65001)
         self.assertEqual(ret["stdout"], stdout)
 
     def test_run_all_output_loglevel_quiet(self):
