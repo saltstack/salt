@@ -121,10 +121,6 @@ Changed
 - Upgraded dependency to use boto3>=1.13.5. (#57161)
 - Changed to consistent file location handling across APIs for Juniper network devices. (#57399)
 - Use Python's hashlib (sha256) instead of shelling out (SipHash24) to generate server_id. (#57415)
-- Some Debian network (debian_ip) refactoring (#49462)
-- Port #53537 to master (#56835)
-- Port #52156 to master (#56851)
-- Master port 53794 #56892
 - Update `formulas.rst` with new IRC channel and links to IRC logs (#51628)
 
 
@@ -336,23 +332,11 @@ Fixed
 - Fixed `win_system.join_domain` failures. (#57360)
 - Fixed `template_vars` functionality on Junos. (#57388)
 - Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
-- Wrong isinstance in ini options absent (#55595)
-- Respect argline passed into jinja renderer (#55126)
-- Add fix for bin_env (#56023)
-- Fix pkg.group_info infinite recursion (#56477)
-- postfix.show_queue fixes (#56620)
-- Mine value fix (#56658)
-- Fix issue with finding the real python executable during tests (#56686)
-- Allows clone_from option to be an integer in salt-cloud for proxmox as per the documentation. (#51002)
-- Fix broken link regarding the 1024 character limit for YAML keys (#56717)
-- Update events.rst (typo) (#52854)
-- Fixes SmartOS grains when using py3 (#53794)
-- Allow for number of open files on AIX in logging (#57077)
-- Fix to git state module when calling git.config_get_regexp (#54844)
-- Fix #49247 -- Changed log_access and log_error to log.access and log.error (#49612)
-- Fix UnicodeDecodeError in for binary file contents. (#57185)
-- Fix grain.delkey grains.delval for nested keys (#57235)
-- Virt disks fixes (#57350)
+- Wrong isinstance in ini options absent (#53874)
+- Fix issue with finding the real python executable during tests (#56460)
+- Fix broken link regarding the 1024 character limit for YAML keys (#56540)
+- Fix grain.delkey grains.delval for nested keys (#54819)
+- Virt disks fixes (#56666)
 
 
 Added
