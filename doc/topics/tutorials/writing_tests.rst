@@ -32,13 +32,11 @@ where the majority of Salt's test cases are housed.
 Getting Set Up For Tests
 ========================
 
-First of all you will need to ensure you install ``nox-py2``. This version of nox,
-allows the tests to run on both python2 and python3. Ensure you install ``nox-py2``
-and not ``nox`` as this will prevent you from running all the tests.
+First of all you will need to ensure you install ``nox``.
 
 .. code-block:: bash
 
-    pip install nox-py2
+    pip install nox
 
 
 Test Directory Structure
@@ -429,9 +427,9 @@ Add a system dependency to the test run
 
 If you need to add a system dependency for the test run, this will need to be added in
 the `salt jenkins`_ repo. This repo uses salt states to install system dependencies.
-You need to update the ``git/minimal.sls`` file with your dependency to ensure
-it is installed. Once your PR is merged the core team will need to promote the new images
-with your new dependency installed.
+You need to update the ``state-tree/golden-images-provision.sls`` file with
+your dependency to ensure it is installed. Once your PR is merged the core team
+will need to promote the new images with your new dependency installed.
 
 
 Checking for Log Messages
