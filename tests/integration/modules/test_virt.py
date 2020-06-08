@@ -91,3 +91,13 @@ class VirtTest(ModuleCase):
         self.assertEqual(disk["format"], "raw")
         self.assertEqual(disk["sparse_volume"], False)
         self.assertEqual(disk["size"], 8192)
+
+    def test_all_capabilities(self):
+        """
+        Test virt.all_capabilities
+        """
+        caps = self.run_function("virt.all_capabilities")
+        self.assertIsInstance(caps, dict)
+        self.assertIsInstance(caps["host"]["host"]["uuid"], str)
+        self.assertEqual(36, len(caps["host"]["host"]["uuid"]))
+        self.assertIn("qemu", [domainCaps["domain"] for domainCaps in caps["domains"]])
