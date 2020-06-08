@@ -316,7 +316,7 @@ def trusted(name, keys=None, user=None, gnupghome=None, trust=None):
                     )
                 else:
                     params = salt.utils.data.filter_falsey(
-                        {"trust_level": trust, "user": user, "gnupghome": gnupghome,}
+                        {"trust_level": trust, "user": user, "gnupghome": gnupghome}
                     )
                     if "fingerprint" in current_key:
                         params.update({"fingerprint": current_key["fingerprint"]})

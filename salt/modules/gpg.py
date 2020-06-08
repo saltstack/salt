@@ -902,7 +902,7 @@ def trust_key(
         homedir = gnupghome if gnupghome else _get_user_gnupghome(user)
         cmd = [_gpg(), "--import-ownertrust", "--homedir", homedir]
         run_kwargs = salt.utils.data.filter_falsey(
-            {"runas": None if user == "salt" else user,}
+            {"runas": None if user == "salt" else user}
         )
         ownertrust_string = "{}:{}\n".format(fingerprint, NUM_TRUST_DICT[trust_level])
 

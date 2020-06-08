@@ -761,7 +761,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         ):
             res = gpg.import_key(text=self.secret_key, gnupghome=self.gnupghome)
         self.assertDictEqual(
-            res, {"result": True, "message": "Key(s) already exist in keychain.",}
+            res, {"result": True, "message": "Key(s) already exist in keychain."}
         )
 
     def test_import_key_fail_args(self):
@@ -843,7 +843,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             self.gpgobject, "import_keys", MagicMock(return_value=import_key_result)
         ):
             res = gpg.import_key(text=self.secret_key, gnupghome=self.gnupghome)
-        self.assertDictEqual(res, {"result": False, "message": "Unable to import key",})
+        self.assertDictEqual(res, {"result": False, "message": "Unable to import key"})
 
     def test_import_key_fail_manual(self):
         """
@@ -1290,7 +1290,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         """
         recv_result = MagicMock(
             spec=gnupg.ImportResult,
-            results=[{"fingerprint": None, "problem": "0", "text": "Key expired"},],
+            results=[{"fingerprint": None, "problem": "0", "text": "Key expired"}],
         )
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(return_value=self.user_mock)}
@@ -1474,7 +1474,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # Fail to cache signature file
             res_3 = gpg.verify("anything", signature="blerp")
         self.assertEqual(
-            res_1, {"result": False, "message": "The signature could not be verified.",}
+            res_1, {"result": False, "message": "The signature could not be verified."}
         )
         self.assertEqual(
             res_2,
@@ -1486,7 +1486,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
         self.assertEqual(
-            res_3, {"result": False, "message": "Failed to cache source locally.",}
+            res_3, {"result": False, "message": "Failed to cache source locally."}
         )
 
     def test_encrypt_happy(self):
@@ -1522,7 +1522,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # Test encrypting a file to a recipient
             res_4 = gpg.encrypt(filename="foobar", recipients="salt@saltstack.com")
         self.assertEqual(
-            res_1, {"result": True, "message": b"a nice block of encrypted data",}
+            res_1, {"result": True, "message": b"a nice block of encrypted data"}
         )
         self.assertEqual(res_2, res_1)
         self.assertEqual(res_3, res_1)
