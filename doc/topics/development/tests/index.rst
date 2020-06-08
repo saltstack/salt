@@ -11,7 +11,7 @@ run these tests. Nox is used to manage all of the test python dependencies.
 When you run the test runner with nox, you will be installing the same
 python dependencies that we use to run our test suite on PRs and branch tests.
 `Kitchen Salt`_ is used to spin up our virtual machines based off of golden
-images. These virtual machines use the `salt-jenkins` sls states to configure
+images. These virtual machines use the `salt-jenkins`_ sls states to configure
 any system dependencies.
 
 To learn the basics of how Salt's test suite works, be sure to check
@@ -25,16 +25,11 @@ and spins up the different nox sessions. You can look at the ``noxfile.py``
 in the salt repo to view all of the current nox configurations. In that file
 you will notice various nox sessions. When creating each of these sessions,
 nox will create a virtualenv with the specified interpreter. Once the virtualenv
-is created it will also install all of the required python dependencies required for
-that session and run the tests.
+is created it will also install all of the required python dependencies
+required for that session and run the tests.
 
-.. warning::
-    Please note that you need to ensure to install `nox-py2` and not `nox` regardles of
-    installing Python 2 or Python 3 as these two libraries are incompatibile. Salt needs
-    to use `nox-py2` to ensure Python 2 support.
-
-For example if you want to run all of the tests using the zeromq transport on python3
-you would need to specify the zeromq transport and python3.
+For example if you want to run all of the tests using the zeromq transport on
+python3 you would need to specify the zeromq transport and python3.
 
 .. code-block:: bash
 
@@ -60,9 +55,10 @@ repo or you can manually install the dependency yourself.
 
 System Dependencies
 ===================
-The system dependencies are installed from the `salt-jenkins`_ repo. The ``git.minimal``
-states are what is run to determine what dependencies to install on which platform.
-We run these states only when we want to update our current VM images with new
+The system dependencies are installed from the `salt-jenkins`_ repo. The
+``golden-images-provision`` state is what is run to determine what dependencies
+to install on which platform.
+We run this state only when we want to update our current VM images with new
 dependencies.
 
 Kitchen Salt
@@ -80,8 +76,14 @@ similar to the jenkins environment we use to run branch and PR tests.
 Test Directory Structure
 ========================
 
-Salt's test suite is located in the ``tests`` directory in the root of
-Salt's codebase. The test suite is divided into two main groups:
+Salt's test suite is located in the ``tests/`` directory in the root of
+Salt's codebase.
+
+With the migration to PyTest, Salt has created a separate directory for tests
+that are written taking advantage of the full pottential of PyTest. These are
+located under ``tests/pytests``.
+
+As for the old test suite, it is divided into two main groups:
 
 * :ref:`Integration Tests <integration-tests>`
 * :ref:`Unit Tests <unit-tests>`
@@ -94,6 +96,10 @@ group.
 The files that are housed in the ``modules`` directory of either the unit
 or the integration testing factions contain respective integration or unit
 test files for Salt execution modules.
+
+The PyTest only tests under ``tests/pytests`` should, more or less, follow the
+same grouping as the old test suite.
+
 
 Integration Tests
 -----------------
@@ -143,11 +149,11 @@ Running The Tests
 =================
 
 There is only one requirement to install, to quickly get started
-running salt's test suite: ``nox-py2``.
+running salt's test suite: ``nox``.
 
 .. code-block:: bash
 
-    pip install nox-py2
+    pip install nox
 
 Once this requirement is installed, you can use the ``nox`` binary to run
 all of the tests included in Salt's test suite:
