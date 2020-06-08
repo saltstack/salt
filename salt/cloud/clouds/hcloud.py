@@ -1372,7 +1372,7 @@ def network_delete_route(kwargs=None):
     network_route = NetworkRoute(destination=destination, gateway=gateway)
 
     network_delete_route_action = _hcloud_wait_for_action(
-        hcloud_client.networks.delete_route(route=network_route)
+        hcloud_client.networks.delete_route(network=network, route=network_route)
     )
 
     ret.update(_hcloud_format_action(network_delete_route_action))
@@ -1456,7 +1456,9 @@ def network_update(kwargs=None):
         api=hcloud_client.networks, kwargs=kwargs, kwarg_name="network",
     )
 
-    updated_network = hcloud_client.networks.update(name=name, labels=labels)
+    updated_network = hcloud_client.networks.update(
+        network=network, name=name, labels=labels
+    )
 
     ret.update({"updated": _hcloud_format_network(updated_network)})
 
@@ -1833,9 +1835,16 @@ def volume_update(kwargs=None):
     )
 
     name = kwargs.get("name")
-    size = kwargs.get("size")
 
-    updated_volume = hcloud_client.volumes.update(volume=volume, name=name, size=size)
+    labels = kwargs.get("labels")
+    if labels is not None:
+        labels = {
+            label.split(":")[0]: label.split(":")[1] for label in labels.split(",")
+        }
+
+    updated_volume = hcloud_client.volumes.update(
+        volume=volume, name=name, labels=labels
+    )
 
     ret.update({"updated": _hcloud_format_volume(updated_volume)})
 
