@@ -371,6 +371,7 @@ def create_key(
     subkey_type=None,
     subkey_length=None,
     expire_date=None,
+    use_passphrase=None,
     passphrase=None,
     passphrase_pillar=None,
     user=None,
@@ -404,6 +405,9 @@ def create_key(
     :param str expire_date: The expiration date for the primary and any secondary key.
         You can specify an ISO date, A number of days/weeks/months/years,
         an epoch value, or 0 for a non-expiring key.
+    :param bool use_passphrase: Whether to use a passphrase with the signing key.
+        Passphrase is received from Pillar. Is being deprecated in favor of the
+        ``passphrase`` and ``passphrase_pillar`` arguments.
     :param str passphrase: Passphrase to use with the signing key, default is None.
         Overiddes passphrase_pillar if both are given.
     :param str passphrase_pillar: Pillar key to retrieve the passphrase from,
@@ -424,6 +428,18 @@ def create_key(
     ret = {"result": "changeme", "message": ""}
 
     gpg_passphrase = None
+    if use_passphrase:
+        salt.utils.versions.warn_until(
+            'Phosphorus',
+            'The \'use_passphrase\' argument is being deprecated and its '
+            'functionality will be removed, as such, its usage is no longer '
+            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+        )
+        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        if not gpg_passphrase:
+            ret['result'] = False
+            ret['message'] = 'gpg_passphrase not available in pillar.'
+            return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
@@ -952,6 +968,7 @@ def sign(
     filename=None,
     detach=False,
     output=None,
+    use_passphrase=None,
     passphrase_pillar=None,
     passphrase=None,
     gnupghome=None,
@@ -970,6 +987,9 @@ def sign(
     :param bool detach: Only return or output (see below) the signature. Default ``False``.
     :param str output: The name of the file where the signed data and signature
         will be written to. Default is to return it in the `message`-key.
+    :param bool use_passphrase: Whether to use a passphrase with the signing key.
+        Passphrase is received from Pillar. Is being deprecated in favor of the
+        ``passphrase`` and ``passphrase_pillar`` arguments.
     :param str passphrase: Passphrase to use with the signing key, default is None.
     :param str passphrase_pillar: Pillar key to retrieve the passphrase from.
         Default ``None``.
@@ -1007,6 +1027,18 @@ def sign(
         return ret
 
     gpg_passphrase = None
+    if use_passphrase:
+        salt.utils.versions.warn_until(
+            'Phosphorus',
+            'The \'use_passphrase\' argument is being deprecated and its '
+            'functionality will be removed, as such, its usage is no longer '
+            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+        )
+        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        if not gpg_passphrase:
+            ret['result'] = False
+            ret['message'] = 'gpg_passphrase not available in pillar.'
+            return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
@@ -1194,6 +1226,7 @@ def encrypt(
     filename=None,
     output=None,
     sign=None,
+    use_passphrase=None,
     passphrase=None,
     passphrase_pillar=None,
     gnupghome=None,
@@ -1221,6 +1254,9 @@ def encrypt(
     :param sign: Whether to sign, in addition to encrypt, the data. Set to ``True``
         to use default key or provide the fingerprint of a different key to sign with.
     :type sign: bool or str
+    :param bool use_passphrase: Whether to use a passphrase with the signing key.
+        Passphrase is received from Pillar. Is being deprecated in favor of the
+        ``passphrase`` and ``passphrase_pillar`` arguments.
     :param str passphrase: Passphrase to use with the signing key or symmetric encryption.
         default is None.
     :param str passphrase_pillar: Pillar key to retrieve the passphrase from, default
@@ -1256,6 +1292,18 @@ def encrypt(
             "Exactly one of either text or filename must be provided."
         )
     gpg_passphrase = None
+    if use_passphrase:
+        salt.utils.versions.warn_until(
+            'Phosphorus',
+            'The \'use_passphrase\' argument is being deprecated and its '
+            'functionality will be removed, as such, its usage is no longer '
+            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+        )
+        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        if not gpg_passphrase:
+            ret['result'] = False
+            ret['message'] = 'gpg_passphrase not available in pillar.'
+            return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
@@ -1319,6 +1367,7 @@ def decrypt(
     text=None,
     filename=None,
     output=None,
+    use_passphrase=None,
     passphrase=None,
     passphrase_pillar=None,
     gnupghome=None,
@@ -1335,6 +1384,9 @@ def decrypt(
     :param str filename: The encrypted filename to decrypt.
     :param str output: The filename where the decrypted data will be written, default
         returns data under ``message``-key. Only works when specifying a ``filename`` to decrypt.
+    :param bool use_passphrase: Whether to use a passphrase with the signing key.
+        Passphrase is received from Pillar. Is being deprecated in favor of the
+        ``passphrase`` and ``passphrase_pillar`` arguments.
     :param str passphrase: Passphrase to use when accessing the keyrings or when
         message was encrypted with symmetric encryption.
     :param str passphrase_pillar: Pillar key to retrieve the passphrase from, default
@@ -1378,6 +1430,18 @@ def decrypt(
             "Exactly one of either text or filename must be provided."
         )
     gpg_passphrase = None
+    if use_passphrase:
+        salt.utils.versions.warn_until(
+            'Phosphorus',
+            'The \'use_passphrase\' argument is being deprecated and its '
+            'functionality will be removed, as such, its usage is no longer '
+            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+        )
+        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        if not gpg_passphrase:
+            ret['result'] = False
+            ret['message'] = 'gpg_passphrase not available in pillar.'
+            return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
         if not gpg_passphrase:
