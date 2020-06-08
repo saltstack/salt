@@ -1,2 +1,0 @@
-Set ``enable_fqdns_grains`` to default to ``False`` on Windows. This addresses
-some of the slowness we're seeing.
