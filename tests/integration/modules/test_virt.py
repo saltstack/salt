@@ -6,6 +6,7 @@ Validate the virt module
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+from numbers import Number
 from xml.etree import ElementTree
 
 # Import Salt Testing libs
@@ -128,3 +129,20 @@ class VirtTest(ModuleCase):
         cpu_baseline = self.run_function("virt.cpu_baseline", out="salt")
         self.assertIsInstance(cpu_baseline, dict)
         self.assertIn(cpu_baseline["vendor"], vendors)
+
+    def test_freemem(self):
+        """
+        Test virt.freemem
+        """
+        available_memory = self.run_function("virt.freemem")
+        self.assertIsInstance(available_memory, Number)
+        self.assertGreater(available_memory, 0)
+
+    def test_freecpu(self):
+        """
+        Test virt.freecpu
+        """
+        available_cpus = self.run_function("virt.freecpu")
+        self.assertIsInstance(available_cpus, Number)
+        self.assertGreater(available_cpus, 0)
+
