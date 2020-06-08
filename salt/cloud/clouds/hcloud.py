@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-"Hetzner Public Cloud (HPC - https://hetzner.cloud/)"-driver using the HPC-Pythonlib
+"Hetzner Cloud (https://hetzner.cloud/)"-driver using the hcloud Python lib
 (https://hcloud-python.readthedocs.io/en/latest/index.html).
 ====================================================================================
 
-This driver is used to control VPS in a specific ``api_key``-defined project in the hetzner public cloud.
+This driver is used to control VPS in a specific ``api_key``-defined project in the hetzner cloud.
 
 To use this driver you need to set up at least one provider in ``/etc/salt/cloud.providers`` or e.g.
 ``/etc/salt/cloud.providers.d/hcloud.conf`` and one profile in ``/etc/salt/cloud.profiles`` or e.g.
@@ -12,7 +12,7 @@ To use this driver you need to set up at least one provider in ``/etc/salt/cloud
 
 The provider needs to have the attributes ``api_key``, ``ssh_keyfile`` and ``ssh_keyfile_public``. Newly created vps can
 only be bootstrapped if the ``ssh_keyfile_public`` is the public key of the servers private key provided with
-``ssh_keyfile``. ``api_key`` can be generated in the hetzner public cloud webinterface and is project-wide valid.
+``ssh_keyfile``. ``api_key`` can be generated in the hetzner cloud webinterface and is project-wide valid.
 
 provider-example:
 
@@ -157,7 +157,7 @@ def get_configured_provider():
 @hcloud_api
 def create(vm_):
     """
-    Create a single hetzner public cloud instance
+    Create a single hetzner cloud instance
     """
     name = vm_["name"]
     try:
@@ -173,7 +173,7 @@ def create(vm_):
     except AttributeError:
         pass
 
-    log.info("Sending request to create a new hetzner-cloud vm.")
+    log.info("Sending request to create a new hetzner cloud vm.")
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
