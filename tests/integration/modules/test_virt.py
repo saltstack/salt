@@ -6,6 +6,8 @@ Validate the virt module
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+from xml.etree import ElementTree
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_salt_modules
@@ -112,3 +114,17 @@ class VirtTest(ModuleCase):
         self.assertEqual(36, len(caps["host"]["uuid"]))
         self.assertGreaterEqual(len(caps["guests"]), 1)
         self.assertIn(caps["guests"][0]["os_type"], ["hvm", "xen", "xenpvh", "exe"])
+
+    def test_cpu_baseline(self):
+        """
+        Test virt.cpu_baseline
+        """
+        vendors = ["Intel", "ARM", "AMD"]
+        cpu_baseline = self.run_function("virt.cpu_baseline", out="libvirt")
+        self.assertIsInstance(cpu_baseline, str)
+        cpu_baseline = ElementTree.fromstring(cpu_baseline)
+        self.assertIn(cpu_baseline.find("vendor").text, vendors)
+
+        cpu_baseline = self.run_function("virt.cpu_baseline", out="salt")
+        self.assertIsInstance(cpu_baseline, dict)
+        self.assertIn(cpu_baseline["vendor"], vendors)
