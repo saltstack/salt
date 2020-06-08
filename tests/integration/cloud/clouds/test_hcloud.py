@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-    Tests for the Hetzner-Public-Cloud driver
+    Tests for the Hetzner Cloud driver
 
     You will need to set a master with ip/hostname in the cloud.profiled.d/hcloud.conf as well as a valid api_key in the
-    cloud.providers.d/hcloud.conf. A api_key can be found in a specific project in the hetzner public cloud.
+    cloud.providers.d/hcloud.conf. A api_key can be found in a specific project in the Hetzner Cloud.
 
     hcloud-test:
         ...
