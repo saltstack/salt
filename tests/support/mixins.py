@@ -581,6 +581,7 @@ class LoaderModuleMockMixin(
                         minion_funcs[func] = salt.utils.functools.namespaced_function(
                             minion_funcs[func], module_globals, preserve_context=True
                         )
+
             return setup_func(self)
 
         return wrapper

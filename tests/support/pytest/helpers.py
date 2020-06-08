@@ -13,6 +13,7 @@ from contextlib import contextmanager
 
 import pytest
 import salt.utils.files
+from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -214,6 +215,11 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
+
+
+@pytest.helpers.register
+def loader_mock(request, loader_modules, **kwargs):
+    return LoaderModuleMock(request, loader_modules, **kwargs)
 
 
 # Only allow star importing the functions defined in this module
