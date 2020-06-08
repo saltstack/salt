@@ -17,6 +17,7 @@ only be bootstrapped if the ``ssh_keyfile_public`` is the public key of the serv
 provider-example:
 
 .. code-block:: yaml
+
     hcloud-config:
         driver: hcloud
         ssh_keyfile: '/root/.ssh/id_rsa'
@@ -28,6 +29,7 @@ provider-example:
 profile-example:
 
 .. code-block:: yaml
+
     hcloud-test:
         provider: hcloud-config
         size: cx11
