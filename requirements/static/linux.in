@@ -1,6 +1,6 @@
 apache-libcloud==2.0.0
 azure>=4.0.0
-hcloud==1.6.3
+hcloud==1.7.0
 boto3>=1.13.5
 boto>=2.46.0
 certifi

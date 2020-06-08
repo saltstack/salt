@@ -126,7 +126,7 @@ geomet==0.1.2             # via cassandra-driver
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
-hcloud==1.6.3
+hcloud==1.7.0
 hgtools==8.1.1
 idna==2.8                 # via requests
 ipaddress==1.0.22         # via kubernetes
