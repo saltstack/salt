@@ -100,13 +100,13 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
+import salt.utils.virt
 import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.utils.virt import check_remote, download_remote
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -1536,13 +1536,15 @@ def _handle_remote_boot_params(orig_boot):
             for key in keys:
                 if key == "efi" and type(orig_boot.get(key)) == bool:
                     new_boot[key] = orig_boot.get(key)
-                elif orig_boot.get(key) is not None and check_remote(
+                elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
                     orig_boot.get(key)
                 ):
                     if saltinst_dir is None:
                         os.makedirs(CACHE_DIR)
                         saltinst_dir = CACHE_DIR
-                    new_boot[key] = download_remote(orig_boot.get(key), saltinst_dir)
+                    new_boot[key] = salt.utils.virt.download_remote(
+                        orig_boot.get(key), saltinst_dir
+                    )
             return new_boot
         else:
             raise SaltInvocationError(
