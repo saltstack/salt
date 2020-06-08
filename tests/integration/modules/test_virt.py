@@ -20,6 +20,21 @@ class VirtTest(ModuleCase):
     Test virt routines
     """
 
+    cpu_models = [
+        "none",
+        "armv7l",
+        "armv7b",
+        "aarch64",
+        "i686",
+        "ppc64",
+        "ppc64le",
+        "riscv32",
+        "riscv64",
+        "s390",
+        "s390x",
+        "x86_64",
+    ]
+
     def test_default_kvm_profile(self):
         """
         Test virt.get_profiles with the KVM profile
@@ -146,3 +161,39 @@ class VirtTest(ModuleCase):
         self.assertIsInstance(available_cpus, Number)
         self.assertGreater(available_cpus, 0)
 
+    def test_full_info(self):
+        """
+        Test virt.full_info
+        """
+        info = self.run_function("virt.full_info")
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(info["vm_info"], dict)
+
+        self.assertIsInstance(info["freecpu"], Number)
+        self.assertIsInstance(info["freemem"], Number)
+        self.assertGreater(info["freecpu"], 0)
+        self.assertGreater(info["freemem"], 0)
+
+        self.assertIsInstance(info["node_info"], dict)
+        self.assertIsInstance(info["node_info"]["cpucores"], Number)
+        self.assertIsInstance(info["node_info"]["cpumhz"], Number)
+        self.assertIsInstance(info["node_info"]["cpus"], Number)
+        self.assertIsInstance(info["node_info"]["cputhreads"], Number)
+        self.assertIsInstance(info["node_info"]["numanodes"], Number)
+        self.assertIsInstance(info["node_info"]["phymemory"], Number)
+        self.assertIn(info["node_info"]["cpumodel"], self.cpu_models)
+
+    def test_node_info(self):
+        """
+        Test virt.node_info
+        """
+        info = self.run_function("virt.node_info")
+        self.assertIsInstance(info, dict)
+        self.assertIsInstance(info["cpucores"], Number)
+        self.assertIsInstance(info["cpumhz"], Number)
+        self.assertIsInstance(info["cpus"], Number)
+        self.assertIsInstance(info["cputhreads"], Number)
+        self.assertIsInstance(info["numanodes"], Number)
+        self.assertIsInstance(info["phymemory"], Number)
+        self.assertIsInstance(info["sockets"], Number)
+        self.assertIn(info["cpumodel"], self.cpu_models)
