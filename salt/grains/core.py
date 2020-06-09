@@ -208,7 +208,7 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller")
+    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
 
     devs = []
     try:
