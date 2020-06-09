@@ -348,7 +348,7 @@ def pgrep(pattern, user=None, full=False, pattern_is_regex=False):
         This flag enables ps.pgrep to mirror the regex search functionality
         found in the pgrep command line utility.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     **Examples:**
 

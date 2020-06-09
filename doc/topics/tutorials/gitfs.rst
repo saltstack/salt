@@ -532,7 +532,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0 for all_saltenvs, sodium for fallback
+.. versionadded:: 2018.3.0 for all_saltenvs, 3001 for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This

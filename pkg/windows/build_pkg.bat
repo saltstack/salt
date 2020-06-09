@@ -185,17 +185,6 @@ set Name=Windows8.1-KB2999226-x86.msu
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
-goto vcredist_2013_x86
-
-:vcredist_2013_x64
-@echo.
-@echo Copying VCRedist 2013 X64 to Prerequisites
-@echo ----------------------------------------------------------------------
-set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
-set Name=vcredist_x64_2013.exe
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 :vcredist_2013_x86
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
@@ -205,6 +194,16 @@ set Name=vcredist_x86_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
+goto prereq_end
+
+:vcredist_2013_x64
+@echo.
+@echo Copying VCRedist 2013 X64 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
+set Name=vcredist_x64_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
 :prereq_end
 

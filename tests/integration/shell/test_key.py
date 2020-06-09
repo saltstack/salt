@@ -41,6 +41,7 @@ MIN_NAME = "minibar"
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     """
     Test salt-key script

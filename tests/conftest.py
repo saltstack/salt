@@ -14,13 +14,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import pathlib
 import pprint
-import shutil
-import stat
+import re
 import sys
-import tempfile
-import textwrap
-from contextlib import contextmanager
 from functools import partial, wraps
 
 import _pytest.logging
@@ -37,30 +34,29 @@ import salt.utils.platform
 import salt.utils.win_functions
 import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
-from salt.ext import six
 from salt.serializers import yaml
-from salt.utils.immutabletypes import freeze
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
+from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
-TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-CODE_DIR = os.path.dirname(TESTS_DIR)
+TESTS_DIR = pathlib.Path(__file__).resolve().parent
+CODE_DIR = TESTS_DIR.parent
 
 # Change to code checkout directory
-os.chdir(CODE_DIR)
+os.chdir(str(CODE_DIR))
 
 # Make sure the current directory is the first item in sys.path
-if CODE_DIR in sys.path:
-    sys.path.remove(CODE_DIR)
-sys.path.insert(0, CODE_DIR)
+if str(CODE_DIR) in sys.path:
+    sys.path.remove(str(CODE_DIR))
+sys.path.insert(0, str(CODE_DIR))
 
 # Coverage
 if "COVERAGE_PROCESS_START" in os.environ:
     MAYBE_RUN_COVERAGE = True
     COVERAGERC_FILE = os.environ["COVERAGE_PROCESS_START"]
 else:
-    COVERAGERC_FILE = os.path.join(CODE_DIR, ".coveragerc")
+    COVERAGERC_FILE = str(CODE_DIR / ".coveragerc")
     MAYBE_RUN_COVERAGE = (
         sys.argv[0].endswith("pytest.py") or "_COVERAGE_RCFILE" in os.environ
     )
@@ -69,7 +65,7 @@ else:
         os.environ[str("COVERAGE_PROCESS_START")] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace", "salt-runtests-bridge"]
+pytest_plugins = ["tempdir", "helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -131,12 +127,26 @@ def pytest_addoption(parser):
     """
     test_selection_group = parser.getgroup("Tests Selection")
     test_selection_group.addoption(
+        "--from-filenames",
+        default=None,
+        help=(
+            "Pass a comma-separated list of file paths, and any test module which corresponds to the "
+            "specified file(s) will run. For example, if 'setup.py' was passed, then the corresponding "
+            "test files defined in 'tests/filename_map.yml' would run. Absolute paths are assumed to be "
+            "files containing relative paths, one per line. Providing the paths in a file can help get "
+            "around shell character limits when the list of files is long."
+        ),
+    )
+    # Add deprecated CLI flag until we completely switch to PyTest
+    test_selection_group.addoption(
+        "--names-file", default=None, help="Deprecated option"
+    )
+    test_selection_group.addoption(
         "--transport",
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, "
-            "zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
         ),
     )
     test_selection_group.addoption(
@@ -203,11 +213,11 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
-    for dirname in os.listdir(CODE_DIR):
-        if not os.path.isdir(dirname):
+    for dirname in CODE_DIR.iterdir():
+        if not dirname.is_dir():
             continue
-        if dirname != "tests":
-            config.addinivalue_line("norecursedirs", os.path.join(CODE_DIR, dirname))
+        if dirname != TESTS_DIR:
+            config.addinivalue_line("norecursedirs", str(CODE_DIR / dirname))
 
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
@@ -304,6 +314,7 @@ def pytest_collection_modifyitems(config, items):
     # Let PyTest or other plugins handle the initial collection
     yield
     groups_collection_modifyitems(config, items)
+    from_filenames_collection_modifyitems(config, items)
 
     log.warning("Mofifying collected tests to keep track of fixture usage")
     for item in items:
@@ -417,25 +428,12 @@ def pytest_runtest_teardown(item, nextitem):
 
 
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
-def _has_unittest_attr(item, attr):
-    # XXX: This is a hack while we support both runtests.py and PyTest
-    if hasattr(item.obj, attr):
-        return True
-    if item.cls and hasattr(item.cls, attr):
-        return True
-    if item.parent and hasattr(item.parent.obj, attr):
-        return True
-    return False
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = os.path.join(
-        CODE_DIR, "tests", "integration", "utils"
-    )
+    integration_utils_tests_path = str(CODE_DIR / "tests" / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
         and PRE_PYTEST_SKIP_OR_NOT is True
@@ -499,7 +497,7 @@ def pytest_runtest_setup(item):
             )
 
     if salt.utils.platform.is_windows():
-        if not item.fspath.fnmatch(os.path.join(CODE_DIR, "tests", "unit", "*")):
+        if not item.fspath.fnmatch(str(CODE_DIR / "tests" / "unit" / "*")):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -564,182 +562,6 @@ def groups_collection_modifyitems(config, items):
 
 # <---- Test Groups Selection ----------------------------------------------------------------------------------------
 
-
-# ----- Pytest Helpers ---------------------------------------------------------------------------------------------->
-if six.PY2:
-    # backport mock_open from the python 3 unittest.mock library so that we can
-    # mock read, readline, readlines, and file iteration properly
-
-    file_spec = None
-
-    def _iterate_read_data(read_data):
-        # Helper for mock_open:
-        # Retrieve lines from read_data via a generator so that separate calls to
-        # readline, read, and readlines are properly interleaved
-        data_as_list = ["{0}\n".format(l) for l in read_data.split("\n")]
-
-        if data_as_list[-1] == "\n":
-            # If the last line ended in a newline, the list comprehension will have an
-            # extra entry that's just a newline.  Remove this.
-            data_as_list = data_as_list[:-1]
-        else:
-            # If there wasn't an extra newline by itself, then the file being
-            # emulated doesn't have a newline to end the last line  remove the
-            # newline that our naive format() added
-            data_as_list[-1] = data_as_list[-1][:-1]
-
-        for line in data_as_list:
-            yield line
-
-    @pytest.helpers.mock.register
-    def mock_open(mock=None, read_data=""):
-        """
-        A helper function to create a mock to replace the use of `open`. It works
-        for `open` called directly or used as a context manager.
-
-        The `mock` argument is the mock object to configure. If `None` (the
-        default) then a `MagicMock` will be created for you, with the API limited
-        to methods or attributes available on standard file handles.
-
-        `read_data` is a string for the `read` methoddline`, and `readlines` of the
-        file handle to return.  This is an empty string by default.
-        """
-        _mock = pytest.importorskip("mock", minversion="2.0.0")
-
-        def _readlines_side_effect(*args, **kwargs):
-            if handle.readlines.return_value is not None:
-                return handle.readlines.return_value
-            return list(_data)
-
-        def _read_side_effect(*args, **kwargs):
-            if handle.read.return_value is not None:
-                return handle.read.return_value
-            return "".join(_data)
-
-        def _readline_side_effect():
-            if handle.readline.return_value is not None:
-                while True:
-                    yield handle.readline.return_value
-            for line in _data:
-                yield line
-
-        global file_spec
-        if file_spec is None:
-            file_spec = file  # pylint: disable=undefined-variable
-
-        if mock is None:
-            mock = _mock.MagicMock(name="open", spec=open)
-
-        handle = _mock.MagicMock(spec=file_spec)
-        handle.__enter__.return_value = handle
-
-        _data = _iterate_read_data(read_data)
-
-        handle.write.return_value = None
-        handle.read.return_value = None
-        handle.readline.return_value = None
-        handle.readlines.return_value = None
-
-        handle.read.side_effect = _read_side_effect
-        handle.readline.side_effect = _readline_side_effect()
-        handle.readlines.side_effect = _readlines_side_effect
-
-        mock.return_value = handle
-        return mock
-
-
-else:
-
-    @pytest.helpers.mock.register
-    def mock_open(mock=None, read_data=""):
-        _mock = pytest.importorskip("mock", minversion="2.0.0")
-        return _mock.mock_open(mock=mock, read_data=read_data)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_directory(name=None):
-    if name is not None:
-        directory_path = os.path.join(RUNTIME_VARS.TMP, name)
-    else:
-        directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-
-    if not os.path.isdir(directory_path):
-        os.makedirs(directory_path)
-
-    yield directory_path
-
-    shutil.rmtree(directory_path, ignore_errors=True)
-
-
-@pytest.helpers.register
-@contextmanager
-def temp_file(name, contents=None, directory=None, strip_first_newline=True):
-    if directory is None:
-        directory = RUNTIME_VARS.TMP
-
-    file_path = os.path.join(directory, name)
-    file_directory = os.path.dirname(file_path)
-    if contents is not None:
-        if contents:
-            if contents.startswith("\n") and strip_first_newline:
-                contents = contents[1:]
-            file_contents = textwrap.dedent(contents)
-        else:
-            file_contents = contents
-
-    try:
-        if not os.path.isdir(file_directory):
-            os.makedirs(file_directory)
-        if contents is not None:
-            with salt.utils.files.fopen(file_path, "w") as wfh:
-                wfh.write(file_contents)
-
-        yield file_path
-
-    finally:
-        try:
-            os.unlink(file_path)
-        except OSError:
-            # Already deleted
-            pass
-
-
-@pytest.helpers.register
-def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
-
-    if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_STATE_TREE
-    elif saltenv == "prod":
-        directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
-    else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
-    return temp_file(
-        name, contents, directory=directory, strip_first_newline=strip_first_newline
-    )
-
-
-@pytest.helpers.register
-def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
-
-    if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_PILLAR_TREE
-    elif saltenv == "prod":
-        directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
-    else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
-    return temp_file(
-        name, contents, directory=directory, strip_first_newline=strip_first_newline
-    )
-
-
-# <---- Pytest Helpers -----------------------------------------------------------------------------------------------
-
-
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
 def salt_factories_config():
@@ -748,7 +570,7 @@ def salt_factories_config():
     """
     return {
         "executable": sys.executable,
-        "code_dir": CODE_DIR,
+        "code_dir": str(CODE_DIR),
         "inject_coverage": MAYBE_RUN_COVERAGE,
         "inject_sitecustomize": MAYBE_RUN_COVERAGE,
         "start_timeout": 120
@@ -759,504 +581,119 @@ def salt_factories_config():
 
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
 
-
-# ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
-def _get_virtualenv_binary_path():
-    try:
-        return _get_virtualenv_binary_path.__virtualenv_binary__
-    except AttributeError:
-        # Under windows we can't seem to properly create a virtualenv off of another
-        # virtualenv, we can on linux but we will still point to the virtualenv binary
-        # outside the virtualenv running the test suite, if that's the case.
-        try:
-            real_prefix = sys.real_prefix
-            # The above attribute exists, this is a virtualenv
-            if salt.utils.platform.is_windows():
-                virtualenv_binary = os.path.join(
-                    real_prefix, "Scripts", "virtualenv.exe"
-                )
-            else:
-                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
-                # from within the virtualenv, we don't want that
-                path = os.environ.get("PATH")
-                if path is not None:
-                    path_items = path.split(os.pathsep)
-                    for item in path_items[:]:
-                        if item.startswith(sys.base_prefix):
-                            path_items.remove(item)
-                    os.environ["PATH"] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.path.which("virtualenv")
-                if path is not None:
-                    # Restore previous environ PATH
-                    os.environ["PATH"] = path
-                if not virtualenv_binary.startswith(real_prefix):
-                    virtualenv_binary = None
-            if virtualenv_binary and not os.path.exists(virtualenv_binary):
-                # It doesn't exist?!
-                virtualenv_binary = None
-        except AttributeError:
-            # We're not running inside a virtualenv
-            virtualenv_binary = None
-        _get_virtualenv_binary_path.__virtualenv_binary__ = virtualenv_binary
-        return virtualenv_binary
+# ----- From Filenames Test Selection ------------------------------------------------------------------------------->
+def _match_to_test_file(match):
+    parts = match.split(".")
+    parts[-1] += ".py"
+    return TESTS_DIR.joinpath(*parts).relative_to(CODE_DIR)
 
 
-@pytest.fixture(scope="session")
-def integration_files_dir(salt_factories):
-    """
-    Fixture which returns the salt integration files directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = salt_factories.root_dir.join("integration-files")
-    dirname.ensure(dir=True)
-    return dirname
+def from_filenames_collection_modifyitems(config, items):
+    from_filenames = config.getoption("--from-filenames")
+    if not from_filenames:
+        # Don't do anything
+        return
 
-
-@pytest.fixture(scope="session")
-def state_tree_root_dir(integration_files_dir):
-    """
-    Fixture which returns the salt state tree root directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = integration_files_dir.join("state-tree")
-    dirname.ensure(dir=True)
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def pillar_tree_root_dir(integration_files_dir):
-    """
-    Fixture which returns the salt pillar tree root directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = integration_files_dir.join("pillar-tree")
-    dirname.ensure(dir=True)
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def base_env_state_tree_root_dir(state_tree_root_dir):
-    """
-    Fixture which returns the salt base environment state tree directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = state_tree_root_dir.join("base")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_STATE_TREE = dirname.realpath().strpath
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def prod_env_state_tree_root_dir(state_tree_root_dir):
-    """
-    Fixture which returns the salt prod environment state tree directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = state_tree_root_dir.join("prod")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = dirname.realpath().strpath
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
-    """
-    Fixture which returns the salt base environment pillar tree directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = pillar_tree_root_dir.join("base")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PILLAR_TREE = dirname.realpath().strpath
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
-    """
-    Fixture which returns the salt prod environment pillar tree directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = pillar_tree_root_dir.join("prod")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = dirname.realpath().strpath
-    return dirname
-
-
-@pytest.fixture(scope="session")
-def salt_syndic_master_config(request, salt_factories):
-    root_dir = salt_factories._get_root_dir_for_daemon("syndic_master")
-
-    with salt.utils.files.fopen(
-        os.path.join(RUNTIME_VARS.CONF_DIR, "syndic_master")
-    ) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
-        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
-            known_hosts.write("")
-
-    config_defaults["root_dir"] = root_dir.strpath
-    config_defaults["known_hosts_file"] = tests_known_hosts_file
-    config_defaults["syndic_master"] = "localhost"
-    config_defaults["transport"] = request.config.getoption("--transport")
-
-    config_overrides = {}
-    ext_pillar = []
-    if salt.utils.platform.is_windows():
-        ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
-        )
-    else:
-        ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
-        )
-
-    # We need to copy the extension modules into the new master root_dir or
-    # it will be prefixed by it
-    extension_modules_path = root_dir.join("extension_modules").strpath
-    if not os.path.exists(extension_modules_path):
-        shutil.copytree(
-            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
-            extension_modules_path,
-        )
-
-    # Copy the autosign_file to the new  master root_dir
-    autosign_file_path = root_dir.join("autosign_file").strpath
-    shutil.copyfile(
-        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
-    )
-    # all read, only owner write
-    autosign_file_permissions = (
-        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
-    )
-    os.chmod(autosign_file_path, autosign_file_permissions)
-
-    config_overrides.update(
-        {
-            "ext_pillar": ext_pillar,
-            "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_PILLAR_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-            },
-        }
-    )
-    return salt_factories.configure_master(
-        request,
-        "syndic_master",
-        order_masters=True,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+    test_categories_paths = (
+        (CODE_DIR / "tests" / "integration").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "multimaster").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "unit").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "e2e").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "functional").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "integration").relative_to(CODE_DIR),
+        (CODE_DIR / "tests" / "pytests" / "unit").relative_to(CODE_DIR),
     )
 
-
-@pytest.fixture(scope="session")
-def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
-    return salt_factories.configure_syndic(
-        request, "syndic", master_of_masters_id="syndic_master"
-    )
-
-
-@pytest.fixture(scope="session")
-def salt_master_config(request, salt_factories, salt_syndic_master_config):
-    root_dir = salt_factories._get_root_dir_for_daemon("master")
-    conf_dir = root_dir.join("conf").ensure(dir=True)
-
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "master")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
-        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
-            known_hosts.write("")
-
-    config_defaults["root_dir"] = root_dir.strpath
-    config_defaults["known_hosts_file"] = tests_known_hosts_file
-    config_defaults["syndic_master"] = "localhost"
-    config_defaults["transport"] = request.config.getoption("--transport")
-    config_defaults["reactor"] = [
-        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
-    ]
-
-    config_overrides = {}
-    ext_pillar = []
-    if salt.utils.platform.is_windows():
-        ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
-        )
-    else:
-        ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
-        )
-    ext_pillar.append(
-        {
-            "file_tree": {
-                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
-                "follow_dir_links": False,
-                "keep_newline": True,
-            }
-        }
-    )
-    config_overrides["pillar_opts"] = True
-
-    # We need to copy the extension modules into the new master root_dir or
-    # it will be prefixed by it
-    extension_modules_path = root_dir.join("extension_modules").strpath
-    if not os.path.exists(extension_modules_path):
-        shutil.copytree(
-            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
-            extension_modules_path,
-        )
-
-    # Copy the autosign_file to the new  master root_dir
-    autosign_file_path = root_dir.join("autosign_file").strpath
-    shutil.copyfile(
-        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
-    )
-    # all read, only owner write
-    autosign_file_permissions = (
-        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
-    )
-    os.chmod(autosign_file_path, autosign_file_permissions)
-
-    config_overrides.update(
-        {
-            "ext_pillar": ext_pillar,
-            "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    RUNTIME_VARS.TMP_PILLAR_TREE,
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-            },
-        }
-    )
-
-    # Let's copy over the test cloud config files and directories into the running master config directory
-    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
-        if not entry.startswith("cloud"):
+    test_module_paths = set()
+    from_filenames_listing = set()
+    for path in [pathlib.Path(path.strip()) for path in from_filenames.split(",")]:
+        if path.is_absolute():
+            # In this case, this path is considered to be a file containing a line separated list
+            # of files to consider
+            with salt.utils.files.fopen(str(path)) as rfh:
+                for line in rfh:
+                    line_path = pathlib.Path(line.strip())
+                    if not line_path.exists():
+                        continue
+                    from_filenames_listing.add(line_path)
             continue
-        source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
-        dest = conf_dir.join(entry).strpath
-        if os.path.isdir(source):
-            shutil.copytree(source, dest)
+        from_filenames_listing.add(path)
+
+    filename_map = yaml.deserialize(
+        (CODE_DIR / "tests" / "filename_map.yml").read_text()
+    )
+    # Let's add the match all rule
+    for rule, matches in filename_map.items():
+        if rule == "*":
+            for match in matches:
+                test_module_paths.add(_match_to_test_file(match))
+            break
+
+    # Let's now go through the list of files gathered
+    for filename in from_filenames_listing:
+        if str(filename).startswith("tests/"):
+            # Tests in the listing don't require additional matching and will be added to the
+            # list of tests to run
+            test_module_paths.add(filename)
+            continue
+        if filename.name == "setup.py" or str(filename).startswith("salt/"):
+            if path.name == "__init__.py":
+                # No direct macthing
+                continue
+            # Now let's try a direct match between the passed file and possible test modules
+            for test_categories_path in test_categories_paths:
+                test_module_path = test_categories_path / "test_{}".format(path.name)
+                if test_module_path.is_file():
+                    test_module_paths.add(test_module_path)
+                    continue
+
+            # Do we have an entry in tests/filename_map.yml
+            for rule, matches in filename_map.items():
+                if rule == "*":
+                    continue
+                elif "|" in rule:
+                    # This is regex
+                    if re.match(rule, str(filename)):
+                        for match in matches:
+                            test_module_paths.add(_match_to_test_file(match))
+                elif "*" in rule or "\\" in rule:
+                    # Glob matching
+                    for filerule in CODE_DIR.glob(rule):
+                        if not filerule.exists():
+                            continue
+                        filerule = filerule.relative_to(CODE_DIR)
+                        if filerule != filename:
+                            continue
+                        for match in matches:
+                            test_module_paths.add(_match_to_test_file(match))
+                else:
+                    if str(filename) != rule:
+                        continue
+                    # Direct file paths as rules
+                    filerule = pathlib.Path(rule)
+                    if not filerule.exists():
+                        continue
+                    for match in matches:
+                        test_module_paths.add(_match_to_test_file(match))
+            continue
         else:
-            shutil.copyfile(source, dest)
+            log.debug("Don't know what to do with path %s", filename)
 
-    return salt_factories.configure_master(
-        request,
-        "master",
-        master_of_masters_id="syndic_master",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
-    )
+    selected = []
+    deselected = []
+    for item in items:
+        itempath = pathlib.Path(str(item.fspath)).relative_to(CODE_DIR)
+        if itempath in test_module_paths:
+            selected.append(item)
+        else:
+            deselected.append(item)
 
-
-@pytest.fixture(scope="session")
-def salt_minion_config(request, salt_factories, salt_master_config):
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = request.config.getoption("--transport")
-
-    config_overrides = {
-        "file_roots": {
-            "base": [
-                RUNTIME_VARS.TMP_STATE_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-            ],
-            # Alternate root to test __env__ choices
-            "prod": [
-                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-            ],
-        },
-        "pillar_roots": {
-            "base": [
-                RUNTIME_VARS.TMP_PILLAR_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-            ],
-            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-        },
-    }
-    virtualenv_binary = _get_virtualenv_binary_path()
-    if virtualenv_binary:
-        config_overrides["venv_bin"] = virtualenv_binary
-    return salt_factories.configure_minion(
-        request,
-        "minion",
-        master_id="master",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
-    )
+    items[:] = selected
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
 
 
-@pytest.fixture(scope="session")
-def salt_sub_minion_config(request, salt_factories, salt_master_config):
-    with salt.utils.files.fopen(
-        os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
-    ) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = request.config.getoption("--transport")
-
-    config_overrides = {
-        "file_roots": {
-            "base": [
-                RUNTIME_VARS.TMP_STATE_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-            ],
-            # Alternate root to test __env__ choices
-            "prod": [
-                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-            ],
-        },
-        "pillar_roots": {
-            "base": [
-                RUNTIME_VARS.TMP_PILLAR_TREE,
-                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-            ],
-            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
-        },
-    }
-    virtualenv_binary = _get_virtualenv_binary_path()
-    if virtualenv_binary:
-        config_overrides["venv_bin"] = virtualenv_binary
-    return salt_factories.configure_minion(
-        request,
-        "sub_minion",
-        master_id="master",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
-    )
-
-
-@pytest.hookspec(firstresult=True)
-def pytest_saltfactories_syndic_configuration_defaults(
-    request, factories_manager, root_dir, syndic_id, syndic_master_port
-):
-    """
-    Hook which should return a dictionary tailored for the provided syndic_id with 3 keys:
-
-    * `master`: The default config for the master running along with the syndic
-    * `minion`: The default config for the master running along with the syndic
-    * `syndic`: The default config for the master running along with the syndic
-
-    Stops at the first non None result
-    """
-    factory_opts = {"master": None, "minion": None, "syndic": None}
-    if syndic_id == "syndic":
-        with salt.utils.files.fopen(
-            os.path.join(RUNTIME_VARS.CONF_DIR, "syndic")
-        ) as rfh:
-            opts = yaml.deserialize(rfh.read())
-
-            opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-            opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-            opts["transport"] = request.config.getoption("--transport")
-            factory_opts["syndic"] = opts
-    return factory_opts
-
-
-@pytest.hookspec(firstresult=True)
-def pytest_saltfactories_syndic_configuration_overrides(
-    request, factories_manager, syndic_id, config_defaults
-):
-    """
-    Hook which should return a dictionary tailored for the provided syndic_id.
-    This dictionary will override the default_options dictionary.
-
-    The returned dictionary should contain 3 keys:
-
-    * `master`: The config overrides for the master running along with the syndic
-    * `minion`: The config overrides for the master running along with the syndic
-    * `syndic`: The config overridess for the master running along with the syndic
-
-    The `default_options` parameter be None or have 3 keys, `master`, `minion`, `syndic`,
-    while will contain the default options for each of the daemons.
-
-    Stops at the first non None result
-    """
-
-
-@pytest.fixture(scope="session", autouse=True)
-def bridge_pytest_and_runtests(
-    reap_stray_processes,
-    base_env_state_tree_root_dir,
-    prod_env_state_tree_root_dir,
-    base_env_pillar_tree_root_dir,
-    prod_env_pillar_tree_root_dir,
-    salt_factories,
-    salt_syndic_master_config,
-    salt_syndic_config,
-    salt_master_config,
-    salt_minion_config,
-    salt_sub_minion_config,
-):
-    # Make sure unittest2 uses the pytest generated configuration
-    RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(salt_sub_minion_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(salt_syndic_master_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(salt_syndic_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS["client_config"] = freeze(
-        salt.config.client_config(salt_master_config["conf_file"])
-    )
-
-    # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP_ROOT_DIR = salt_factories.root_dir.realpath().strpath
-    RUNTIME_VARS.TMP_CONF_DIR = os.path.dirname(salt_master_config["conf_file"])
-    RUNTIME_VARS.TMP_MINION_CONF_DIR = os.path.dirname(salt_minion_config["conf_file"])
-    RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = os.path.dirname(
-        salt_sub_minion_config["conf_file"]
-    )
-    RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = os.path.dirname(
-        salt_syndic_master_config["conf_file"]
-    )
-    RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(
-        salt_syndic_config["conf_file"]
-    )
-
-
-# <---- Salt Configuration -------------------------------------------------------------------------------------------
-# <---- Fixtures Overrides -------------------------------------------------------------------------------------------
-
+# <---- From Filenames Test Selection --------------------------------------------------------------------------------
 
 # ----- Custom Grains Mark Evaluator -------------------------------------------------------------------------------->
 class GrainsMarkEvaluator(MarkEvaluator):
