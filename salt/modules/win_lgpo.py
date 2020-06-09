@@ -1891,7 +1891,7 @@ class _policy_info(object):
                         "Transform": self.enabled_one_disabled_zero_transform,
                     },
                     "ScRemoveOption": {
-                        "Policy": "Interactive logon: Smart card removal " "behavior",
+                        "Policy": "Interactive logon: Smart card removal behavior",
                         "Settings": self.sc_removal_lookup.keys(),
                         "lgpo_section": self.security_options_gpedit_path,
                         "Registry": {
@@ -1915,7 +1915,7 @@ class _policy_info(object):
                         },
                     },
                     "DisableCAD": {
-                        "Policy": "Interactive logon: Do not require " "CTRL+ALT+DEL",
+                        "Policy": "Interactive logon: Do not require CTRL+ALT+DEL",
                         "Settings": self.enabled_one_disabled_zero.keys(),
                         "lgpo_section": self.security_options_gpedit_path,
                         "Registry": {
