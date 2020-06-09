@@ -9,18 +9,21 @@
 # Description: This script sets up a build environment for Salt on macOS.
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 1 parameter
-#       $1 : <test mode> : the version of Python to use for the
-#                               build environment. Default is 2
+#       $1 : <test mode> :   if this script should be run in test mode, this
+#                            disables the longer optimized compile time of python.
+#                            Please DO NOT set to "true" when building a
+#                            release version.
+#                            (defaults to false)
 #
 #     Example:
-#         The following will set up a Python 3 build environment for Salt
+#         The following will set up an optimized Python build environment for Salt
 #         on macOS
 #
-#         ./dev_env.sh 3
+#         ./dev_env.sh
 #
 ############################################################################
 
