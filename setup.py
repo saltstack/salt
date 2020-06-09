@@ -129,7 +129,6 @@ SALT_ZEROMQ_REQS = os.path.join(
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
 SALT_OSX_REQS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_ext.txt"),
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
 ]
 SALT_WINDOWS_REQS = [
@@ -485,7 +484,7 @@ class DownloadWindowsDlls(Command):
         url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "msvcr120"):
+            for fname in ("libeay32", "ssleay32", "libsodium"):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue

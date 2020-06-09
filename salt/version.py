@@ -91,7 +91,7 @@ class SaltStackVersion(object):
         "Oxygen": (2018, 3),
         "Fluorine": (2019, 2),
         "Neon": (3000,),
-        "Sodium": (MAX_SIZE - 98, 0),
+        "Sodium": (3001,),
         "Magnesium": (MAX_SIZE - 97, 0),
         "Aluminium": (MAX_SIZE - 96, 0),
         "Silicon": (MAX_SIZE - 95, 0),
@@ -678,15 +678,19 @@ def system_information():
         mac_ver = platform.mac_ver()
         win_ver = platform.win32_ver()
 
-        if lin_ver[0]:
-            return " ".join(lin_ver)
-        elif mac_ver[0]:
+        # linux_distribution() will return a
+        # distribution on OS X and Windows.
+        # Check mac_ver and win_ver first,
+        # then lin_ver.
+        if mac_ver[0]:
             if isinstance(mac_ver[1], (tuple, list)) and "".join(mac_ver[1]):
                 return " ".join([mac_ver[0], ".".join(mac_ver[1]), mac_ver[2]])
             else:
                 return " ".join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return " ".join(win_ver)
+        elif lin_ver[0]:
+            return " ".join(lin_ver)
         else:
             return ""
 

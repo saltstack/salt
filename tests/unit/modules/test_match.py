@@ -10,6 +10,7 @@ import salt.loader
 import salt.matchers.compound_match as compound_match
 import salt.matchers.glob_match as glob_match
 import salt.matchers.list_match as list_match
+import salt.matchers.pcre_match as pcre_match
 import salt.modules.match as match
 
 # Import Salt Libs
@@ -24,6 +25,7 @@ MATCHERS_DICT = {
     "compound_match.match": compound_match.match,
     "glob_match.match": glob_match.match,
     "list_match.match": list_match.match,
+    "pcre_match.match": pcre_match.match,
 }
 
 # the name of the minion to be used for tests
@@ -210,3 +212,36 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         mdict = "notadict"
 
         self.assertRaises(SaltException, match.filter_by, lookup, merge=mdict)
+
+    def test_glob_match_different_minon_id(self):
+        """
+        Tests for situations where the glob matcher is called with a different
+        minion_id than what is found in __opts__
+        """
+        # not passing minion_id, should return False
+        self.assertFalse(match.glob("bar04"))
+
+        # passing minion_id, should return True
+        self.assertTrue(match.glob("bar04", "bar04"))
+
+    def test_pcre_match_different_minion_id(self):
+        """
+        Tests for situations where the glob matcher is called with a different
+        minion_id than what is found in __opts__
+        """
+        # not passing minion_id, should return False
+        self.assertFalse(match.pcre("bar.*04"))
+
+        # passing minion_id, should return True
+        self.assertTrue(match.pcre("bar.*04", "bar04"))
+
+    def test_list_match_different_minion_id(self):
+        """
+        Tests for situations where the list matcher is called with a different
+        minion_id than what is found in __opts__
+        """
+        # not passing minion_id, should return False
+        self.assertFalse(match.list_("bar02,bar04"))
+
+        # passing minion_id, should return True
+        self.assertTrue(match.list_("bar02,bar04", "bar04"))

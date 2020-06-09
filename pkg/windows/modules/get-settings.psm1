@@ -50,13 +50,17 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python3"   = "python-3.7.4-amd64.exe"
+            "Python3"     = "python-3.7.4-amd64.exe"
+            "VCRedist"    = "vcredist_x64_2013.exe"
+            "VCRedistReg" = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python3"   = "python-3.7.4.exe"
+            "Python3"     = "python-3.7.4.exe"
+            "VCRedist"    = "vcredist_x86_2013.exe"
+            "VCRedistReg" = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 
@@ -65,7 +69,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "msvcr"      = "msvcr120.dll"
             "Libsodium"  = "libsodium.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
@@ -75,7 +78,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "msvcr"      = "msvcr120.dll"
             "Libsodium"  = "libsodium.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)
