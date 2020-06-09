@@ -430,15 +430,15 @@ def create_key(
     gpg_passphrase = None
     if use_passphrase:
         salt.utils.versions.warn_until(
-            'Phosphorus',
-            'The \'use_passphrase\' argument is being deprecated and its '
-            'functionality will be removed, as such, its usage is no longer '
-            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+            "Phosphorus",
+            "The 'use_passphrase' argument is being deprecated and its "
+            "functionality will be removed, as such, its usage is no longer "
+            "desired. Please use 'passphrase' or 'passphrase_pillar' instead.",
         )
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
-            ret['result'] = False
-            ret['message'] = 'gpg_passphrase not available in pillar.'
+            ret["result"] = False
+            ret["message"] = "gpg_passphrase not available in pillar."
             return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
@@ -1029,15 +1029,15 @@ def sign(
     gpg_passphrase = None
     if use_passphrase:
         salt.utils.versions.warn_until(
-            'Phosphorus',
-            'The \'use_passphrase\' argument is being deprecated and its '
-            'functionality will be removed, as such, its usage is no longer '
-            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+            "Phosphorus",
+            "The 'use_passphrase' argument is being deprecated and its "
+            "functionality will be removed, as such, its usage is no longer "
+            "desired. Please use 'passphrase' or 'passphrase_pillar' instead.",
         )
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
-            ret['result'] = False
-            ret['message'] = 'gpg_passphrase not available in pillar.'
+            ret["result"] = False
+            ret["message"] = "gpg_passphrase not available in pillar."
             return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
@@ -1294,15 +1294,15 @@ def encrypt(
     gpg_passphrase = None
     if use_passphrase:
         salt.utils.versions.warn_until(
-            'Phosphorus',
-            'The \'use_passphrase\' argument is being deprecated and its '
-            'functionality will be removed, as such, its usage is no longer '
-            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+            "Phosphorus",
+            "The 'use_passphrase' argument is being deprecated and its "
+            "functionality will be removed, as such, its usage is no longer "
+            "desired. Please use 'passphrase' or 'passphrase_pillar' instead.",
         )
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
-            ret['result'] = False
-            ret['message'] = 'gpg_passphrase not available in pillar.'
+            ret["result"] = False
+            ret["message"] = "gpg_passphrase not available in pillar."
             return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
@@ -1432,15 +1432,15 @@ def decrypt(
     gpg_passphrase = None
     if use_passphrase:
         salt.utils.versions.warn_until(
-            'Phosphorus',
-            'The \'use_passphrase\' argument is being deprecated and its '
-            'functionality will be removed, as such, its usage is no longer '
-            'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
+            "Phosphorus",
+            "The 'use_passphrase' argument is being deprecated and its "
+            "functionality will be removed, as such, its usage is no longer "
+            "desired. Please use 'passphrase' or 'passphrase_pillar' instead.",
         )
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
         if not gpg_passphrase:
-            ret['result'] = False
-            ret['message'] = 'gpg_passphrase not available in pillar.'
+            ret["result"] = False
+            ret["message"] = "gpg_passphrase not available in pillar."
             return ret
     if passphrase_pillar:
         gpg_passphrase = __salt__["pillar.get"](passphrase_pillar)
