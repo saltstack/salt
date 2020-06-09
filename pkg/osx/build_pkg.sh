@@ -9,15 +9,13 @@
 #              /opt/salt
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 2 parameters
 #         $1 : <version> : the version name to give the package (overrides
 #              version of the git repo) (Defaults to the git repo version)
-#         $2 : <python ver> : the version of python that was built (defaults
-#              to 2)
-#         $3 : <package dir> : the staging area for the package defaults to
+#         $2 : <package dir> : the staging area for the package defaults to
 #              /tmp/salt_pkg
 #
 #     Example:
