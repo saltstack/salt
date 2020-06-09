@@ -1024,8 +1024,8 @@ run if **any** of the files do not exist:
               - /path/file
               - /path/file2
 
-listen
-~~~~~~
+runas
+~~~~~
 
 .. versionadded:: 2017.7.0
 
