@@ -3208,12 +3208,28 @@ class GitPillar(GitBase):
         return True
 
 
-class GitPillarClient(GitBase, salt.fileclient.Client):
+class GitPillarClient(GitFS, salt.fileclient.Client):
     """
     Functionality specific to the git external pillar implementing the salt.fileclient.Client interface
     """
 
     role = "git_pillar"
+
+    def __new__(cls, opts, remotes=None, per_remote_overrides=(),
+                per_remote_only=PER_REMOTE_ONLY, global_only=GLOBAL_ONLY, git_providers=None,
+                cache_root=None, init_remotes=True):
+        return GitBase.__new__(
+            self,
+            opts,
+            remotes,
+            per_remote_overrides=per_remote_overrides,
+            per_remote_only=per_remote_only,
+            global_only=global_only,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
+        # salt.fileclient.Client.__new__(self, opts)
 
     def __init__(
         self,
