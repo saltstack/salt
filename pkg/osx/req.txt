@@ -18,7 +18,6 @@ psutil==5.6.6
 pyasn1==0.4.8
 pycparser==2.19
 pycryptodomex==3.9.7
-pyobjc==6.2
 pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
