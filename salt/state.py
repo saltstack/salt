@@ -3319,6 +3319,7 @@ class State(object):
             self.opts["renderer"],
             self.opts["renderer_blacklist"],
             self.opts["renderer_whitelist"],
+            jid=self.jid
         )
         if not high:
             return high
@@ -3337,6 +3338,7 @@ class State(object):
             self.opts["renderer"],
             self.opts["renderer_blacklist"],
             self.opts["renderer_whitelist"],
+            jid=self.jid
         )
         if not high:
             return high
@@ -3515,6 +3517,7 @@ class BaseHighState(object):
                         self.state.opts["renderer_blacklist"],
                         self.state.opts["renderer_whitelist"],
                         saltenv=self.opts["saltenv"],
+                        jid=self.jid
                     )
                 ]
             else:
@@ -3542,6 +3545,7 @@ class BaseHighState(object):
                             self.state.opts["renderer_blacklist"],
                             self.state.opts["renderer_whitelist"],
                             saltenv=saltenv,
+                            jid=self.jid
                         )
                     )
                 else:
@@ -3598,6 +3602,7 @@ class BaseHighState(object):
                                 self.state.opts["renderer_blacklist"],
                                 self.state.opts["renderer_whitelist"],
                                 saltenv,
+                                jid=self.jid
                             )
                         )
                         done[saltenv].append(sls)
@@ -3962,6 +3967,7 @@ class BaseHighState(object):
                     saltenv,
                     sls,
                     rendered_sls=mods,
+                    jid=self.jid
                 )
             except SaltRenderError as exc:
                 msg = "Rendering SLS '{0}:{1}' failed: {2}".format(saltenv, sls, exc)
@@ -4574,6 +4580,7 @@ class HighState(BaseHighState):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
+        self.jid = jid
         self.state = State(
             self.opts,
             pillar_override,
