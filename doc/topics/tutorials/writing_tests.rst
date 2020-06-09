@@ -139,10 +139,10 @@ file:
 .. code-block:: python
 
     def test_ping(self):
-        '''
+        """
         test.ping
-        '''
-        self.assertTrue(self.run_function('test.ping'))
+        """
+        self.assertTrue(self.run_function("test.ping"))
 
 The test above is a very simple example where the ``test.ping`` function is
 executed by Salt's test suite runner and is asserting that the minion returned
@@ -254,20 +254,20 @@ minion's return is expected.
 .. code-block:: python
 
     def test_ping(self):
-        '''
+        """
         test.ping
-        '''
-        self.assertTrue(self.run_function('test.ping'))
+        """
+        self.assertTrue(self.run_function("test.ping"))
 
 Args can be passed in to the ``run_function`` method as well:
 
 .. code-block:: python
 
     def test_echo(self):
-        '''
+        """
         test.echo
-        '''
-        self.assertEqual(self.run_function('test.echo', ['text']), 'text')
+        """
+        self.assertEqual(self.run_function("test.echo", ["text"]), "text")
 
 The next example is taken from the
 ``tests/integration/modules/test_aliases.py`` file and
@@ -279,18 +279,13 @@ call should return.
 .. code-block:: python
 
     def test_set_target(self):
-        '''
+        """
         aliases.set_target and aliases.get_target
-        '''
-        set_ret = self.run_function(
-                'aliases.set_target',
-                alias='fred',
-                target='bob')
+        """
+        set_ret = self.run_function("aliases.set_target", alias="fred", target="bob")
         self.assertTrue(set_ret)
-        tgt_ret = self.run_function(
-                'aliases.get_target',
-                alias='fred')
-        self.assertEqual(tgt_ret, 'bob')
+        tgt_ret = self.run_function("aliases.get_target", alias="fred")
+        self.assertEqual(tgt_ret, "bob")
 
 Using multiple Salt commands in this manner provides two useful benefits. The first is
 that it provides some additional coverage for the ``aliases.set_target`` function.
@@ -335,12 +330,13 @@ the test method:
     import integration
     from tests.support.helpers import destructiveTest
 
+
     class PkgTest(integration.ModuleCase):
         @destructiveTest
         def test_pkg_install(self):
-            ret = self.run_function('pkg.install', name='finch')
+            ret = self.run_function("pkg.install", name="finch")
             self.assertSaltTrueReturn(ret)
-            ret = self.run_function('pkg.purge', name='finch')
+            ret = self.run_function("pkg.purge", name="finch")
             self.assertSaltTrueReturn(ret)
 
 
@@ -372,13 +368,13 @@ testing the call to ``cp.hash_file``, which is used in ``cp.get_file``.
 .. code-block:: python
 
     def test_get_file_not_found(self):
-        '''
+        """
         Test if get_file can't find the file.
-        '''
-        with patch('salt.modules.cp.hash_file', MagicMock(return_value=False)):
-            path = 'salt://saltines'
-            dest = '/srv/salt/cheese'
-            ret = ''
+        """
+        with patch("salt.modules.cp.hash_file", MagicMock(return_value=False)):
+            path = "salt://saltines"
+            dest = "/srv/salt/cheese"
+            ret = ""
             assert cp.get_file(path, dest) == ret
 
 Note that Salt's ``cp`` module is imported at the top of the file, along with all
@@ -446,10 +442,10 @@ can be used
     # .. inside test
     with TstSuiteLoggingHandler() as handler:
         for message in handler.messages:
-            if message.startswith('ERROR: This is the error message we seek'):
+            if message.startswith("ERROR: This is the error message we seek"):
                 break
             else:
-                raise AssertionError('Did not find error message')
+                raise AssertionError("Did not find error message")
 
 
 Automated Test Runs
