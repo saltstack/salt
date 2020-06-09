@@ -43,38 +43,39 @@ quit_on_error() {
 }
 
 ############################################################################
-# Check passed parameters, set defaults
-############################################################################
-if [ "$1" == "" ]; then
-    PYVER=2
-else
-    PYVER=$1
-fi
-
-############################################################################
 # Parameters Required for the script to function properly
 ############################################################################
 echo -n -e "\033]0;Build_Env: Variables\007"
 
 # This is needed to allow the some test suites (zmq) to pass
-ulimit -n 1200
+# taken from https://github.com/zeromq/libzmq/issues/1878
+SET_ULIMIT=200000
+sysctl -w kern.maxfiles=$SET_ULIMIT
+sysctl -w kern.maxfilesperproc=$SET_ULIMIT
+launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
+ulimit -n $SET_ULIMIT
+
+CHECK_ULIMIT=`ulimit -n`
+if [[ "$SET_ULIMIT" != "$CHECK_ULIMIT" ]]; then
+    echo "Failed to set ulimit"
+fi
 
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
 SHADIR=$SCRIPTDIR/shasums
 INSTALL_DIR=/opt/salt
+PKG_CONFIG=$INSTALL_DIR/bin/pkg-config
 PKG_CONFIG_PATH=$INSTALL_DIR/lib/pkgconfig
-CFLAGS="-I$INSTALL_DIR/include"
-LDFLAGS="-L$INSTALL_DIR/lib"
-if [ "$PYVER" == "2" ]; then
-    PYDIR=$INSTALL_DIR/lib/python2.7
-    PYTHON=$INSTALL_DIR/bin/python
-    PIP=$INSTALL_DIR/bin/pip
-else
-    PYDIR=$INSTALL_DIR/lib/python3.7
-    PYTHON=$INSTALL_DIR/bin/python3
-    PIP=$INSTALL_DIR/bin/pip3
-fi
+CFLAGS="-march=x86-64 -mtune=generic"
+PYDIR=$INSTALL_DIR/lib/python3.7
+PYTHON=$INSTALL_DIR/bin/python3
+PIP=$INSTALL_DIR/bin/pip3
+
+# needed for python to find pkg-config and have pkg-config properly link
+# the python install to the compiled openssl below.
+export PKG_CONFIG
+export PKG_CONFIG_PATH
+export CFLAGS
 
 ############################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -83,16 +84,14 @@ fi
 # Fink, Brew)
 # Check for Xcode Command Line Tools first
 if [ -d '/Library/Developer/CommandLineTools/usr/bin' ]; then
-    PATH=/Library/Developer/CommandLineTools/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Library/Developer/CommandLineTools/usr/bin/make
 elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
-    PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Applications/Xcode.app/Contents/Developer/usr/bin/make
 else
     echo "No installation of XCode found. This script requires XCode."
+    echo "Try running: xcode-select --install"
     exit -1
 fi
-export PATH
 
 ############################################################################
 # Download Function
@@ -214,7 +213,7 @@ echo -n -e "\033]0;Build_Env: zeromq: configure\007"
 echo -n -e "\033]0;Build_Env: zeromq: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: zeromq: make check\007"
-$MAKE check
+#$MAKE check
 echo -n -e "\033]0;Build_Env: zeromq: make install\007"
 $MAKE install
 
@@ -233,7 +232,7 @@ echo "Building OpenSSL"
 echo "################################################################################"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: OpenSSL: configure\007"
-./Configure darwin64-x86_64-cc --prefix=$INSTALL_DIR --openssldir=$INSTALL_DIR/openssl
+./Configure darwin64-x86_64-cc shared --prefix=$INSTALL_DIR --openssldir=$INSTALL_DIR/openssl
 echo -n -e "\033]0;Build_Env: OpenSSL: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: OpenSSL: make test\007"
@@ -246,13 +245,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: Python: download\007"
 
-if [ "$PYVER" == "2" ]; then
-    PKGURL="https://www.python.org/ftp/python/2.7.15/Python-2.7.15.tar.xz"
-    PKGDIR="Python-2.7.15"
-else
-    PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
-    PKGDIR="Python-3.7.4"
-fi
+PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
+PKGDIR="Python-3.7.4"
 
 download $PKGURL
 
@@ -262,7 +256,8 @@ echo "##########################################################################
 echo "Note there are some test failures"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: Python: configure\007"
-./configure --prefix=$INSTALL_DIR --enable-shared --enable-toolbox-glue --with-ensurepip=install
+# removed --enable-toolbox-glue as no longer a config option
+./configure --prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations
 echo -n -e "\033]0;Build_Env: Python: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: Python: make install\007"
@@ -283,7 +278,7 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
+$PIP install -r $SRCDIR/pkg/osx/req.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
              --no-cache-dir
