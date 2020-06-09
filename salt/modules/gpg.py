@@ -435,7 +435,7 @@ def create_key(
             'functionality will be removed, as such, its usage is no longer '
             'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
         )
-        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['result'] = False
             ret['message'] = 'gpg_passphrase not available in pillar.'
@@ -1034,7 +1034,7 @@ def sign(
             'functionality will be removed, as such, its usage is no longer '
             'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
         )
-        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['result'] = False
             ret['message'] = 'gpg_passphrase not available in pillar.'
@@ -1299,7 +1299,7 @@ def encrypt(
             'functionality will be removed, as such, its usage is no longer '
             'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
         )
-        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['result'] = False
             ret['message'] = 'gpg_passphrase not available in pillar.'
@@ -1437,7 +1437,7 @@ def decrypt(
             'functionality will be removed, as such, its usage is no longer '
             'desired. Please use \'passphrase\' or \'passphrase_pillar\' instead.'
         )
-        gpg_passphrase = __sapt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['result'] = False
             ret['message'] = 'gpg_passphrase not available in pillar.'
