@@ -876,10 +876,11 @@ For example, with these custom grains functions:
 .. code-block:: python
 
     def custom1_k1():
-        return {'custom1': {'k1': 'v1'}}
+        return {"custom1": {"k1": "v1"}}
+
 
     def custom1_k2():
-        return {'custom1': {'k2': 'v2'}}
+        return {"custom1": {"k2": "v2"}}
 
 Without ``grains_deep_merge``, the result would be:
 
@@ -2710,8 +2711,7 @@ the ``extra_minion_data`` parameter will be
 
 .. code-block:: python
 
-    {'opt1': 'value1',
-     'opt2': {'subopt1': 'value2'}}
+    {"opt1": "value1", "opt2": {"subopt1": "value2"}}
 
 Security Settings
 =================
