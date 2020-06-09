@@ -8,11 +8,14 @@ import salt.renderers.py as pyrender
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 
 class PyRendererTestCase(TestCase, LoaderModuleMockMixin):
+    """
+    Class for testing PyRenderer.
+    """
+
     def setup_loader_modules(self):
         return {pyrender: {}}
 

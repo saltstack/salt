@@ -9,6 +9,10 @@ from tests.support.helpers import with_tempdir
 
 
 class PyJinjaRendererTest(ModuleCase):
+    """
+    Class for testing PyJinjaRenderer.
+    """
+
     @with_tempdir()
     def test_issue_55390(self, tmpdir):
         file_path = os.path.join(tmpdir, "issue-55390")
