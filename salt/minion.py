@@ -1985,6 +1985,15 @@ class Minion(MinionBase):
                 ret["return"] = "{0}: {1}".format(msg, traceback.format_exc())
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+            except (KeyboardInterrupt, SystemExit):
+                msg = "The minion is shutting down"
+                log.warning(msg)
+                salt.utils.error.fire_exception(
+                    salt.exceptions.MinionError(msg), opts, job=data
+                )
+                ret["return"] = msg
+                ret["out"] = "nested"
+                ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         else:
             docs = minion_instance.functions["sys.doc"]("{0}*".format(function_name))
             if docs:
@@ -2148,6 +2157,13 @@ class Minion(MinionBase):
                     ret["return"][ind] = trb
                 else:
                     ret["return"][data["fun"][ind]] = trb
+            except (KeyboardInterrupt, SystemExit):
+                msg = "The minion is shutting down"
+                log.warning(msg)
+                if multifunc_ordered:
+                    ret["return"][ind] = msg
+                else:
+                    ret["return"][data["fun"][ind]] = msg
             ret["jid"] = data["jid"]
             ret["fun"] = data["fun"]
             ret["fun_args"] = data["arg"]
