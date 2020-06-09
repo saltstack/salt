@@ -696,7 +696,7 @@ Return of examples #2 and #3:
 
   [[web01, example.com], [db01, example.com]]
 
-.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+.. _`map filter`: https://jinja.palletsprojects.com/en/2.11.x/templates/#map
 
 
 .. jinja_ref:: is_sorted
