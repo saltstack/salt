@@ -5,16 +5,20 @@
 
     PyTest helpers functions
 """
+import logging
 import os
 import shutil
 import tempfile
 import textwrap
+import types
 from contextlib import contextmanager
 
 import pytest
 import salt.utils.files
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
+
+log = logging.getLogger(__name__)
 
 
 @pytest.helpers.register
@@ -220,6 +224,31 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 @pytest.helpers.register
 def loader_mock(request, loader_modules, **kwargs):
     return LoaderModuleMock(request, loader_modules, **kwargs)
+
+
+@pytest.helpers.register
+def salt_loader_module_functions(module):
+    if not isinstance(module, types.ModuleType):
+        raise RuntimeError(
+            "The passed 'module' argument must be an imported "
+            "imported module, not {}".format(type(module))
+        )
+    funcs = {}
+    func_alias = getattr(module, "__func_alias__", {})
+    virtualname = getattr(module, "__virtualname__")
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+        func = getattr(module, name)
+        if getattr(func, "__module__", None) != module.__name__:
+            # Not eve defined on the module being processed, carry on
+            continue
+        if not isinstance(func, types.FunctionType):
+            # Not a function? carry on
+            continue
+        funcname = func_alias.get(func.__name__) or func.__name__
+        funcs["{}.{}".format(virtualname, funcname)] = func
+    return funcs
 
 
 # Only allow star importing the functions defined in this module
