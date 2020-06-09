@@ -13,7 +13,7 @@
 #
 # Usage:
 #     This script can be passed 1 parameter
-#       $1 : <python version> : the version of Python to use for the
+#       $1 : <test mode> : the version of Python to use for the
 #                               build environment. Default is 2
 #
 #     Example:
@@ -55,18 +55,12 @@ sysctl -w kern.maxfilesperproc=$SET_ULIMIT
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
 ulimit -n $SET_ULIMIT
 
-CHECK_ULIMIT=`ulimit -n`
-if [[ "$SET_ULIMIT" != "$CHECK_ULIMIT" ]]; then
-    echo "Failed to set ulimit"
-fi
-
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
 SHADIR=$SCRIPTDIR/shasums
 INSTALL_DIR=/opt/salt
 PKG_CONFIG=$INSTALL_DIR/bin/pkg-config
 PKG_CONFIG_PATH=$INSTALL_DIR/lib/pkgconfig
-CFLAGS="-march=x86-64 -mtune=generic"
 PYDIR=$INSTALL_DIR/lib/python3.7
 PYTHON=$INSTALL_DIR/bin/python3
 PIP=$INSTALL_DIR/bin/pip3
@@ -75,7 +69,6 @@ PIP=$INSTALL_DIR/bin/pip3
 # the python install to the compiled openssl below.
 export PKG_CONFIG
 export PKG_CONFIG_PATH
-export CFLAGS
 
 ############################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -213,7 +206,8 @@ echo -n -e "\033]0;Build_Env: zeromq: configure\007"
 echo -n -e "\033]0;Build_Env: zeromq: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: zeromq: make check\007"
-#$MAKE check
+# some tests fail occasionally.
+$MAKE check
 echo -n -e "\033]0;Build_Env: zeromq: make install\007"
 $MAKE install
 
@@ -244,7 +238,13 @@ $MAKE install
 # Download and install Python
 ############################################################################
 echo -n -e "\033]0;Build_Env: Python: download\007"
-
+# if $1 is true the we should remove the --enable-optimizations flag to get a quicker
+# build if testing other functions of this script
+if [ "$1" == "true" ]; then
+    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install"
+else
+    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations"
+fi
 PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
 PKGDIR="Python-3.7.4"
 
@@ -257,7 +257,7 @@ echo "Note there are some test failures"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: Python: configure\007"
 # removed --enable-toolbox-glue as no longer a config option
-./configure --prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations
+./configure $PY_CONF
 echo -n -e "\033]0;Build_Env: Python: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: Python: make install\007"
