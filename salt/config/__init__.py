@@ -66,12 +66,14 @@ if salt.utils.platform.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = "tcp"
+    _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = -1
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
 else:
     _DFLT_IPC_MODE = "ipc"
+    _DFLT_FQDNS_GRAINS = True
     _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
 
@@ -352,6 +354,8 @@ VALID_OPTS = immutabletypes.freeze(
         "test": bool,
         # Tell the loader to attempt to import *.pyx cython files if cython is available
         "cython_enable": bool,
+        # Whether or not to load grains for FQDNs
+        "enable_fqdns_grains": bool,
         # Whether or not to load grains for the GPU
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
@@ -1133,6 +1137,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "test": False,
         "ext_job_cache": "",
         "cython_enable": False,
+        "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
         "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,
