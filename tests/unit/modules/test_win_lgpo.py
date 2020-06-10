@@ -581,7 +581,24 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         Test getting the policy value using the NetSH mechanism
         """
         policy_name = "WfwDomainState"
-        result = self._test_policy(policy_name=policy_name)
+        all_settings = {
+            "State": "NotConfigured",
+            "Inbound": "NotConfigured",
+            "Outbound": "NotConfigured",
+            "LocalFirewallRules": "NotConfigured",
+            "LocalConSecRules": "NotConfigured",
+            "InboundUserNotification": "NotConfigured",
+            "RemoteManagement": "NotConfigured",
+            "UnicastResponseToMulticast": "NotConfigured",
+            "LogAllowedConnections": "NotConfigured",
+            "LogDroppedConnections": "NotConfigured",
+            "FileName": "NotConfigured",
+            "MaxFileSize": "NotConfigured",
+        }
+        with patch(
+            "salt.utils.win_lgpo_netsh.get_all_settings", return_value=all_settings
+        ):
+            result = self._test_policy(policy_name=policy_name)
         expected = "Not configured"
         self.assertEqual(result, expected)
 
