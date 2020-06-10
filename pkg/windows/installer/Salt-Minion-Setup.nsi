@@ -413,12 +413,13 @@ SectionEnd
 
 # Check and install the Windows 10 Universal C Runtime (KB2999226)
 # ucrt is needed on Windows 8.1 and lower
-# They are installed as a Microsoft Update package (.msu)
+# They are installed as a Microsoft Update package (.cab)
 # ucrt for Windows 8.1 RT is only available via Windows Update
 Section -install_ucrt
 
-    Var /GLOBAL MsuPrefix
-    Var /GLOBAL MsuFileName
+    Var /GLOBAL CabPrefix
+    Var /GLOBAL CabFileName
+    Var /GLOBAL SystemDirectory
 
     # Get the Major.Minor version Number
     # Windows 10 introduced CurrentMajorVersionNumber
@@ -456,19 +457,19 @@ Section -install_ucrt
     ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
         CurrentVersion
 
-    # Get the name of the .msu file based on the value of $R0
+    # Get the name of the .cab file based on the value of $R0
     ${Switch} "$R0"
         ${Case} "6.3"
-            StrCpy $MsuPrefix "Windows8.1"
+            StrCpy $CabPrefix "Windows8.1"
             ${break}
         ${Case} "6.2"
-            StrCpy $MsuPrefix "Windows8-RT"
+            StrCpy $CabPrefix "Windows8-RT"
             ${break}
         ${Case} "6.1"
-            StrCpy $MsuPrefix "Windows6.1"
+            StrCpy $CabPrefix "Windows6.1"
             ${break}
         ${Case} "6.0"
-            StrCpy $MsuPrefix "Windows6.0"
+            StrCpy $CabPrefix "Windows6.0"
             ${break}
     ${EndSwitch}
 
@@ -476,15 +477,22 @@ Section -install_ucrt
     # CPUARCH is defined when the installer is built and is based on the machine that
     # built the installer, not the target system as we need here.
     ${If} ${RunningX64}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
+        StrCpy $CabFileName "$CabPrefix-KB2999226-x64.cab"
     ${Else}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
+        StrCpy $CabFileName "$CabPrefix-KB2999226-x86.cab"
     ${EndIf}
 
     ClearErrors
 
-    detailPrint "Installing KB2999226 using file $MsuFileName"
-    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    # Defining a system directory based on architecture
+    ${If} ${IsWow64}
+        StrCpy $SystemDirectory $WinDir\sysnative
+    ${Else}
+        StrCpy $SystemDirectory $SysDir
+    ${EndIf}
+
+    detailPrint "Installing KB2999226 using file $CabFileName"
+    nsExec::ExecToStack 'cmd /c $SystemDirectory\dism /Online /NoRestart /Add-Package /PackagePath:"$PLUGINSDIR\$CabFileName"'
     # Clean up the stack
     Pop $R0  # Get Error
     Pop $R1  # Get stdout
