@@ -514,10 +514,16 @@ def container_setting(name, container, settings=None):
             settings[setting] = identityType_map2string[settings[setting]]
 
         if str(settings[setting]) != str(current_settings[setting]):
-            ret_settings["changes"][setting] = {
-                "old": current_settings[setting],
-                "new": settings[setting],
-            }
+            if setting == "processModel.password":
+                ret_settings["changes"][setting] = {
+                    "old": "XXX-REDACTED-XXX",
+                    "new": "XXX-REDACTED-XXX",
+                }
+            else:
+                ret_settings["changes"][setting] = {
+                    "old": current_settings[setting],
+                    "new": settings[setting],
+                }
     if not ret_settings["changes"]:
         ret["comment"] = "Settings already contain the provided values."
         ret["result"] = True
@@ -536,11 +542,23 @@ def container_setting(name, container, settings=None):
     )
     for setting in settings:
         if str(settings[setting]) != str(new_settings[setting]):
-            ret_settings["failures"][setting] = {
-                "old": current_settings[setting],
-                "new": new_settings[setting],
-            }
+            if setting == "processModel.password":
+                ret_settings["failures"][setting] = {
+                    "old": "XXX-REDACTED-XXX",
+                    "new": "XXX-REDACTED-XXX",
+                }
+            else:
+                ret_settings["failures"][setting] = {
+                    "old": current_settings[setting],
+                    "new": new_settings[setting],
+                }
             ret_settings["changes"].pop(setting, None)
+        else:
+            if setting == "processModel.password":
+                ret_settings["changes"][setting] = {
+                    "old": "XXX-REDACTED-XXX",
+                    "new": "XXX-REDACTED-XXX",
+                }
 
     if ret_settings["failures"]:
         ret["comment"] = "Some settings failed to change."
