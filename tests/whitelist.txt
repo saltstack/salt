@@ -16,6 +16,7 @@ integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_archive
 integration.modules.test_beacons
+integration.modules.test_chocolatey
 integration.modules.test_cmdmod
 integration.modules.test_config
 integration.modules.test_cp
@@ -66,8 +67,8 @@ integration.returners.test_librato_return
 integration.runners.test_fileserver
 integration.runners.test_jobs
 integration.runners.test_manage
-integration.runners.test_runner_returns
 integration.runners.test_nacl
+integration.runners.test_runner_returns
 integration.runners.test_salt
 integration.sdb.test_env
 integration.shell.test_arguments
@@ -92,12 +93,12 @@ integration.spm.test_info
 integration.spm.test_install
 integration.spm.test_remove
 integration.spm.test_repo
+integration.states.test_file
 integration.states.test_host
 integration.states.test_pip_state
 integration.states.test_pkg
 integration.states.test_reg
 integration.states.test_renderers
-integration.states.test_file
 integration.states.test_service
 integration.states.test_user
 integration.utils.testprogram
