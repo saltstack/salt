@@ -11,11 +11,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-import salt.modules.vsphere
-import salt.utils.platform
-
 # Import Salt Libs
+import salt.utils.platform
 from salt.exceptions import SaltSystemExit
+
+if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "esxi":
+    import salt.modules.vsphere
+
 
 __proxyenabled__ = ["esxi"]
 __virtualname__ = "esxi"
