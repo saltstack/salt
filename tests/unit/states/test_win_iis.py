@@ -240,7 +240,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "processModel.identityType": "SpecificUser"
         }
         old_settings = {
-            "processModel.userName": "Administrator",
+            "processModel.userName": "Spongebob",
             "processModel.password": "0ldP@ssW0rd1!",
             "processModel.identityType": "SpecificUser",
         }
@@ -254,7 +254,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         expected_ret = {
             "name": name,
             "changes": {
-                "changes": {},
+                "changes": {
+                    "processModel.userName": {
+                        "new": "Administrator",
+                        "old": "Spongebob"
+                    }
+                },
                 "failures": {
                     "processModel.password": {
                         "new": "XXX-REDACTED-XXX",
@@ -263,7 +268,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 },
             },
             "comment": "Set settings to contain the provided values.",
-            "result": True,
+            "result": False,
         }
         with patch.dict(
             win_iis.__salt__,
