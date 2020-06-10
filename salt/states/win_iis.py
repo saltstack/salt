@@ -530,7 +530,7 @@ def container_setting(name, container, settings=None):
         return ret
     elif __opts__["test"]:
         ret["comment"] = "Settings will be changed."
-        ret["changes"] = ret_settings['changes']
+        ret["changes"] = ret_settings["changes"]
         return ret
 
     __salt__["win_iis.set_container_setting"](
