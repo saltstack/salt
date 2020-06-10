@@ -254,10 +254,13 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         expected_ret = {
             "name": name,
             "changes": {
-                "processModel.password": {
-                    "new": "XXX-REDACTED-XXX",
-                    "old": "XXX-REDACTED-XXX"
-                }
+                "changes": {},
+                "failures": {
+                    "processModel.password": {
+                        "new": "XXX-REDACTED-XXX",
+                        "old": "XXX-REDACTED-XXX"
+                    }
+                },
             },
             "comment": "Set settings to contain the provided values.",
             "result": True,
