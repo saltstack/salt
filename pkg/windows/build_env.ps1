@@ -169,7 +169,7 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 3 installation . . ."
 If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
-    # Found Python 3.5, do nothing
+    # Found Python 3, do nothing
     Write-Output " - Python 3 Found . . ."
 } Else {
     Write-Output " - Downloading $($ini[$bitPrograms]['Python3']) . . ."
