@@ -562,7 +562,7 @@ def container_setting(name, container, settings=None):
 
     if ret_settings["failures"]:
         ret["comment"] = "Some settings failed to change."
-        ret["changes"] = ret_settings['changes']
+        ret["changes"] = ret_settings
         ret["result"] = False
     else:
         ret["comment"] = "Set settings to contain the provided values."
