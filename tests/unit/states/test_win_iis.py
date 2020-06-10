@@ -181,10 +181,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             win_iis.__salt__,
             {
-                "win_iis.get_container_settings": MagicMock(
+                "win_iis.get_container_setting": MagicMock(
                     side_effect=[old_settings, current_settings, new_settings]
                 ),
-                "win_iis.set_container_settings": MagicMock(return_value=True),
+                "win_iis.set_container_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": False}):
             actual_ret = win_iis.container_setting(name=name,
@@ -229,10 +229,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             win_iis.__salt__,
             {
-                "win_iis.get_webconfiguration_settings": MagicMock(
+                "win_iis.get_webconfiguration_setting": MagicMock(
                     side_effect=[old_settings, current_settings, new_settings]
                 ),
-                "win_iis.set_webconfiguration_settings": MagicMock(return_value=True),
+                "win_iis.set_webconfiguration_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": True}):
             actual_ret = win_iis.container_setting(name=name, container=container, settings=settings)
