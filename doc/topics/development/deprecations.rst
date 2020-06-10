@@ -45,10 +45,10 @@ Consider the following example:
     def some_function(bar=False, foo=None):
         if foo is not None:
             salt.utils.versions.warn_until(
-                'Aluminum',
-                'The \'foo\' argument has been deprecated and its '
-                'functionality removed, as such, its usage is no longer '
-                'required.'
+                "Aluminum",
+                "The 'foo' argument has been deprecated and its "
+                "functionality removed, as such, its usage is no longer "
+                "required.",
             )
 
 Development begins on the ``Aluminum`` release when the ``Magnesium`` branch is
