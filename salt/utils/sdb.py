@@ -12,17 +12,21 @@ import random
 
 # Import salt libs
 import salt.loader
+from salt.exceptions import SaltInvocationError
 from salt.ext.six import string_types
 from salt.ext.six.moves import range
 
 
-def sdb_get(uri, opts, utils=None):
+def sdb_get(uri, opts, utils=None, strict=False):
     """
     Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
-    the uri provided does not start with ``sdb://``, then it will be returned as-is.
+    the uri provided is not valid, then it will be returned as-is, unless ``strict=True`` was passed.
     """
     if not isinstance(uri, string_types) or not uri.startswith("sdb://"):
-        return uri
+        if strict:
+            raise SaltInvocationError('SDB uri must start with "sdb://"')
+        else:
+            return uri
 
     if utils is None:
         utils = salt.loader.utils(opts)
@@ -31,13 +35,25 @@ def sdb_get(uri, opts, utils=None):
     indx = uri.find("/", sdlen)
 
     if (indx == -1) or not uri[(indx + 1) :]:
-        return uri
+        if strict:
+            raise SaltInvocationError(
+                "SDB uri must have a profile name as a first part of the uri before the /"
+            )
+        else:
+            return uri
 
     profile = opts.get(uri[sdlen:indx], {})
     if not profile:
         profile = opts.get("pillar", {}).get(uri[sdlen:indx], {})
     if "driver" not in profile:
-        return uri
+        if strict:
+            raise SaltInvocationError(
+                'SDB profile "{}" wasnt found in the minion configuration'.format(
+                    uri[sdlen:indx]
+                )
+            )
+        else:
+            return uri
 
     fun = "{0}.get".format(profile["driver"])
     query = uri[indx + 1 :]
