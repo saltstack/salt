@@ -144,7 +144,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             actual_ret = win_iis.webconfiguration_settings(name, settings)
         self.assertEqual(expected_ret, actual_ret)
 
-    def test_webconfiguration_settings_password_redacted(self):
+    def test_container_settings_password_redacted(self):
         name = "IIS:\\"
         container = "AppPools"
         settings = {
@@ -181,16 +181,18 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             win_iis.__salt__,
             {
-                "win_iis.get_webconfiguration_settings": MagicMock(
+                "win_iis.get_container_settings": MagicMock(
                     side_effect=[old_settings, current_settings, new_settings]
                 ),
-                "win_iis.set_webconfiguration_settings": MagicMock(return_value=True),
+                "win_iis.set_container_settings": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": False}):
-            actual_ret = win_iis.webconfiguration_settings(name, settings)
+            actual_ret = win_iis.container_setting(name=name,
+                                                   container=container,
+                                                   settings=settings)
         self.assertEqual(expected_ret, actual_ret)
 
-    def test_webconfiguration_settings_password_redacted_test_true(self):
+    def test_container_settings_password_redacted_test_true(self):
         name = "IIS:\\"
         container = "AppPools"
         settings = {
@@ -233,5 +235,5 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 "win_iis.set_webconfiguration_settings": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": True}):
-            actual_ret = win_iis.webconfiguration_settings(name, settings)
+            actual_ret = win_iis.container_setting(name=name, container=container, settings=settings)
         self.assertEqual(expected_ret, actual_ret)
