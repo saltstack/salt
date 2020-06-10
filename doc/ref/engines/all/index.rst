@@ -12,6 +12,7 @@ engine modules
 
     docker_events
     fluent
+    http
     http_logstash
     ircbot
     junos_syslog

@@ -87,11 +87,9 @@ def start(urls, headers=None, tags=None, funs=None):
         headers which will be included in http headers
     """
 
-    if headers is None:
-        headers = {}
-
-    for k, v in headers.items():
-        _HEADERS[k] = v
+    if headers is not None:
+        for k, v in headers.items():
+            _HEADERS[k] = v
 
     if __opts__.get("id").endswith("_master"):
         instance = "master"
