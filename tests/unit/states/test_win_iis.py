@@ -167,17 +167,17 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             }
         ]
         new_settings = current_settings
-        expected_ret = self.__base_webconfiguration_ret(
-            name=name,
-            result=True,
-            changes={
+        expected_ret = {
+            "name": name,
+            "changes": {
                 "processModel.password": {
                     "new": "XXX-REDACTED-XXX",
                     "old": "XXX-REDACTED-XXX"
                 }
             },
-            comment="Set settings to contain the provided values.",
-        )
+            "comment": "Set settings to contain the provided values.",
+            "result": True,
+        }
         with patch.dict(
             win_iis.__salt__,
             {
@@ -215,24 +215,24 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             }
         ]
         new_settings = current_settings
-        expected_ret = self.__base_webconfiguration_ret(
-            name=name,
-            result=True,
-            changes={
+        expected_ret = {
+            "name": name,
+            "changes": {
                 "processModel.password": {
                     "new": "XXX-REDACTED-XXX",
                     "old": "XXX-REDACTED-XXX"
                 }
             },
-            comment="Settings will be changed.",
-        )
+            "comment": "Settings will be changed.",
+            "result": None,
+        }
         with patch.dict(
             win_iis.__salt__,
             {
-                "win_iis.get_webconfiguration_setting": MagicMock(
+                "win_iis.get_container_setting": MagicMock(
                     side_effect=[old_settings, current_settings, new_settings]
                 ),
-                "win_iis.set_webconfiguration_setting": MagicMock(return_value=True),
+                "win_iis.set_container_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": True}):
             actual_ret = win_iis.container_setting(name=name, container=container, settings=settings)
