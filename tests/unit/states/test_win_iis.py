@@ -150,7 +150,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = {
             "processModel.userName": "Administrator",
             "processModel.password": "Sup3rS3cr3tP@ssW0rd",
-            "processModel.identityType": "SpecificUser"
+            "processModel.identityType": "SpecificUser",
         }
         old_settings = {
             "processModel.userName": "Administrator",
@@ -169,7 +169,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "changes": {
                 "processModel.password": {
                     "new": "XXX-REDACTED-XXX",
-                    "old": "XXX-REDACTED-XXX"
+                    "old": "XXX-REDACTED-XXX",
                 }
             },
             "comment": "Set settings to contain the provided values.",
@@ -184,9 +184,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 "win_iis.set_container_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": False}):
-            actual_ret = win_iis.container_setting(name=name,
-                                                   container=container,
-                                                   settings=settings)
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
         self.assertEqual(expected_ret, actual_ret)
 
     def test_container_settings_password_redacted_test_true(self):
@@ -195,7 +195,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = {
             "processModel.userName": "Administrator",
             "processModel.password": "Sup3rS3cr3tP@ssW0rd",
-            "processModel.identityType": "SpecificUser"
+            "processModel.identityType": "SpecificUser",
         }
         old_settings = {
             "processModel.userName": "Administrator",
@@ -213,7 +213,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "changes": {
                 "processModel.password": {
                     "new": "XXX-REDACTED-XXX",
-                    "old": "XXX-REDACTED-XXX"
+                    "old": "XXX-REDACTED-XXX",
                 }
             },
             "comment": "Settings will be changed.",
@@ -228,7 +228,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 "win_iis.set_container_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": True}):
-            actual_ret = win_iis.container_setting(name=name, container=container, settings=settings)
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
         self.assertEqual(expected_ret, actual_ret)
 
     def test_container_settings_password_redacted_failures(self):
@@ -237,7 +239,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = {
             "processModel.userName": "Administrator",
             "processModel.password": "Sup3rS3cr3tP@ssW0rd",
-            "processModel.identityType": "SpecificUser"
+            "processModel.identityType": "SpecificUser",
         }
         old_settings = {
             "processModel.userName": "Spongebob",
@@ -257,13 +259,13 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 "changes": {
                     "processModel.userName": {
                         "new": "Administrator",
-                        "old": "Spongebob"
+                        "old": "Spongebob",
                     }
                 },
                 "failures": {
                     "processModel.password": {
                         "new": "XXX-REDACTED-XXX",
-                        "old": "XXX-REDACTED-XXX"
+                        "old": "XXX-REDACTED-XXX",
                     }
                 },
             },
@@ -279,7 +281,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 "win_iis.set_container_setting": MagicMock(return_value=True),
             },
         ), patch.dict(win_iis.__opts__, {"test": False}):
-            actual_ret = win_iis.container_setting(name=name,
-                                                   container=container,
-                                                   settings=settings)
+            actual_ret = win_iis.container_setting(
+                name=name, container=container, settings=settings
+            )
         self.assertEqual(expected_ret, actual_ret)
