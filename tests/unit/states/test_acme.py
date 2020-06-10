@@ -124,9 +124,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             {  # pylint: disable=no-member
                 "acme.has": MagicMock(return_value=True),
                 "acme.needs_renewal": MagicMock(return_value=True),
-                "acme.info": MagicMock(
-                    side_effect=[{"name": "old cert"}] * 2
-                ),
+                "acme.info": MagicMock(side_effect=[{"name": "old cert"}] * 2),
                 "acme.cert": MagicMock(
                     return_value={"result": True, "comment": "Mockery"}
                 ),
@@ -164,10 +162,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                 "name": "test",
                 "result": True,
                 "comment": ["Mockery"],
-                "changes": {
-                    "old": {"name": "old cert"},
-                    "new": {"name": "new cert"},
-                }
+                "changes": {"old": {"name": "old cert"}, "new": {"name": "new cert"}},
             }
             self.assertEqual(acme.cert("test"), match)
             self.assertEqual(acme.cert("testing.example.com", certname="test"), match)
