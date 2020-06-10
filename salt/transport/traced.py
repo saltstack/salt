@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import typing
 
 import salt.ext.tornado.gen
 from salt.transport.client import AsyncReqChannel
@@ -8,35 +9,37 @@ from salt.transport.client import AsyncPubChannel
 from salt.transport.ipc import IPCServer
 from salt.transport.ipc import IPCMessageClient
 
-import opentelemetry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    ConsoleSpanExporter,
-    SimpleExportSpanProcessor,
-)
-from opentelemetry.context import get_current
-from opentelemetry.context import attach
+from opentelemetry import context, propagators, trace
+from opentelemetry.trace.status import Status, StatusCanonicalCode
 
-# The preferred tracer implementation must be set, as the opentelemetry-api
-# defines the interface with a no-op implementation.
-# It must be done before instrumenting any library
-trace.set_tracer_provider(TracerProvider())
+def setup_jaeger():
+    from opentelemetry.ext import jaeger
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchExportSpanProcessor
 
-trace.get_tracer_provider().add_span_processor(
-    SimpleExportSpanProcessor(ConsoleSpanExporter())
-)
+    trace.set_tracer_provider(TracerProvider())
 
-from opentelemetry import propagators
-PROPAGATOR = propagators.get_global_httptextformat()
+    # Create a BatchExportSpanProcessor and add the exporter to it
+    trace.get_tracer_provider().add_span_processor(
+        BatchExportSpanProcessor(
+            jaeger.JaegerSpanExporter(
+                service_name='salt',
+                # configure agent
+                agent_host_name='localhost',
+                agent_port=6831,
+            )
+        )
+    )
 
-def get_header_from_dict(dicty, key):
-    return dicty.get(key, None)
+def get_header_from_dict(scope: dict, header_name: str) -> typing.List[str]:
+    try:
+        return [scope[header_name]]
+    except KeyError:
+        return []
 
 def set_header_into_dict(dicty, key, value):
     dicty[key] = value
 
-tracer = opentelemetry.trace.get_tracer(__name__)
 log = logging.getLogger(__name__)
 
 class TracedReqChannel(AsyncReqChannel):
@@ -50,23 +53,24 @@ class TracedReqChannel(AsyncReqChannel):
 
     def send(self, load, tries=3, timeout=60, raw=False):
         log.warning("%s.send %s", __class__, load)
-        with tracer.start_as_current_span("%s.send".format(__class__)):
-            context = get_current()
-            PROPAGATOR.inject(
-                set_header_into_dict,
-                load,
-                context=context
-            )
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("TracedReqChannel.send", kind=trace.SpanKind.PRODUCER) as span:
+            propagators.inject(set_header_into_dict, load)
             log.warning("%s.send modified %s", __class__, load)
 
             reply = self.channel.send(load, tries, timeout, raw)
             log.warning("%s.send (reply) %s", __class__, reply)
 
+            child = tracer.start_span("TracedReqChannel.send (callback)", kind=trace.SpanKind.CONSUMER)
             def callback(future):
                 value = future.result()
                 log.warning("%s.send (reply callback) %s", __class__, value)
+                child.end()
 
             reply.add_done_callback(callback)
+
+            span.set_status(Status(StatusCanonicalCode.OK))
 
             return reply
 
@@ -116,8 +120,27 @@ class TracedPubChannel(AsyncPubChannel):
 
         def wrapped_callback(*args, **kwargs):
             log.warning("%s.wrapped_callback %s %s", __class__, args, kwargs)
-            reply = callback(*args, **kwargs)
-            log.warning("%s.wrapped_callback (reply) %s", __class__, reply)
+
+            load = args[0]['load']
+            if 'traceparent' in load:
+                print("Parent:", load['traceparent'])
+
+            setup_jaeger()
+            token = context.attach(
+                propagators.extract(get_header_from_dict, load)
+            )
+            span_name = "TracedPubChannel.wrapped_callback"
+            reply = None
+            try:
+                tracer = trace.get_tracer(__name__)
+                with tracer.start_as_current_span(
+                    span_name,
+                    kind=trace.SpanKind.CONSUMER,
+                ):
+                    reply = callback(*args, **kwargs)
+                    log.warning("%s.wrapped_callback (reply) %s", __class__, reply)
+            finally:
+                context.detach(token)
             return reply
 
         if callback:
@@ -155,15 +178,34 @@ class TracedReqServerChannel(object):
 
         def wrapped_payload_handler(*args, **kwargs):
             log.warning("%s.wrapped_payload_handler %s %s", __class__, args, kwargs)
-            reply = payload_handler(*args, **kwargs)
-            log.warning("%s.wrapped_payload_handler (reply) %s", __class__, reply)
 
-            def callback(future):
-                value = future.result()
-                log.warning("%s.wrapped_payload_handler (reply callback) %s", __class__, value)
+            load = args[0]['load']
+            if 'traceparent' in load:
+                print("Parent:", load['traceparent'])
 
-            reply.add_done_callback(callback)
+            setup_jaeger()
+            token = context.attach(
+                propagators.extract(get_header_from_dict, load)
+            )
+            span_name = "TracedReqServerChannel.payload_handler"
 
+            reply = None
+            try:
+                tracer = trace.get_tracer(__name__)
+                with tracer.start_as_current_span(
+                    span_name,
+                    kind=trace.SpanKind.CONSUMER,
+                ):
+                    reply = payload_handler(*args, **kwargs)
+                    log.warning("%s.wrapped_payload_handler (reply) %s", __class__, reply)
+
+                    def callback(future):
+                        value = future.result()
+                        log.warning("%s.wrapped_payload_handler (reply callback) %s", __class__, value)
+
+                    reply.add_done_callback(callback)
+            finally:
+                context.detach(token)
             return reply
 
         if payload_handler:
@@ -186,9 +228,21 @@ class TracedPubServerChannel(object):
 
     def publish(self, load):
         log.warning("%s.publish %s", __class__, load)
-        reply = self.channel.publish(load)
-        log.warning("%s.publish (reply) %s", __class__, reply)
-        return reply
+
+        setup_jaeger()
+        span_name = "TracedPubServerChannel.publish"
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            span_name,
+            kind=trace.SpanKind.PRODUCER,
+        ):
+            propagators.inject(set_header_into_dict, load)
+            log.warning("%s.publish modified %s", __class__, load)
+
+            reply = self.channel.publish(load)
+            log.warning("%s.publish (reply) %s", __class__, reply)
+            return reply
 
 
 class TracedPushChannel(IPCMessageClient):

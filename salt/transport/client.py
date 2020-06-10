@@ -147,20 +147,8 @@ class AsyncReqChannel(AsyncChannel):
             raise Exception("Channels are only defined for tcp, zeromq, and local")
             # return NewKindOfChannel(opts, **kwargs)'
 
-        import importlib
-        spam_spec = importlib.util.find_spec("pkg_resources")
-        print(spam_spec)
-
-        try:
-            import salt.transport.traced
-            print("IMPORTED!")
-            return salt.transport.traced.TracedReqChannel(transport)
-        except Exception as err:
-            import traceback
-
-            print(err)
-            traceback.print_exc()
-        return transport
+        import salt.transport.traced
+        return salt.transport.traced.TracedReqChannel(transport)
 
     def send(self, load, tries=3, timeout=60, raw=False):
         """
