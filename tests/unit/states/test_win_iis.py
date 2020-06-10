@@ -152,20 +152,17 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "processModel.password": "Sup3rS3cr3tP@ssW0rd",
             "processModel.identityType": "SpecificUser"
         }
-        old_settings = [
-            {
-                "processModel.userName": "Administrator",
-                "processModel.password": "0ldP@ssW0rd1!",
-                "processModel.identityType": "SpecificUser",
-            }
-        ]
-        current_settings = [
-            {
-                "processModel.userName": "Administrator",
-                "processModel.password": "Sup3rS3cr3tP@ssW0rd",
-                "processModel.identityType": "SpecificUser",
-            }
-        ]
+        old_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+        current_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
+
         new_settings = current_settings
         expected_ret = {
             "name": name,
@@ -200,20 +197,16 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "processModel.password": "Sup3rS3cr3tP@ssW0rd",
             "processModel.identityType": "SpecificUser"
         }
-        old_settings = [
-            {
-                "processModel.userName": "Administrator",
-                "processModel.password": "0ldP@ssW0rd1!",
-                "processModel.identityType": "SpecificUser",
-            }
-        ]
-        current_settings = [
-            {
-                "processModel.userName": "Administrator",
-                "processModel.password": "Sup3rS3cr3tP@ssW0rd",
-                "processModel.identityType": "SpecificUser",
-            }
-        ]
+        old_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "0ldP@ssW0rd1!",
+            "processModel.identityType": "SpecificUser",
+        }
+        current_settings = {
+            "processModel.userName": "Administrator",
+            "processModel.password": "Sup3rS3cr3tP@ssW0rd",
+            "processModel.identityType": "SpecificUser",
+        }
         new_settings = current_settings
         expected_ret = {
             "name": name,
