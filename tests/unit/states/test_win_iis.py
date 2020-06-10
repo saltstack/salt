@@ -267,7 +267,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                     }
                 },
             },
-            "comment": "Set settings to contain the provided values.",
+            "comment": "Some settings failed to change.",
             "result": False,
         }
         with patch.dict(
