@@ -5,13 +5,14 @@ So you want to contribute to the Salt project? Excellent! You can help in a
 number of ways:
 
 - Using Salt and opening bug reports.
-- Joining a [working group](TODO LINK HERE).
-- Answering questions on [irc](TODO link here), the [community Slack](TODO link
-  here), the [salt-users mailing list](TODO LINK HERE).
+- Joining a [working group](https://github.com/saltstack/community).
+- Answering questions on [irc][salt on freenode], the
+  [community Slack](https://saltstackcommunity.herokuapp.com/), or the
+  [salt-users mailing list](https://groups.google.com/forum/#!forum/salt-users).
 - Fixing issues.
 
 If you'd like to update docs or fix an issue, you're going to need the Salt
-repo. The best way to contribute is using [Git](TODO LINK HERE).
+repo. The best way to contribute is using [Git](https://git-scm.com/).
 
 ## Environment Setup
 
@@ -21,8 +22,9 @@ can use that, but otherwise this is an opinionated guide for setting up your
 dev environment. Follow these steps and you'll end out with a functioning dev
 environment and be able to submit your first PR.
 
-This guide assumes at least a passing familiarity with [Git](TODO LINK), and
-that you already have installed and configured Git. 
+This guide assumes at least a passing familiarity with
+[Git](https://git-scm.com/), and that you already have it installed and
+configured.
 
 ## `pyenv`, Virtual Environments, and You
 
@@ -155,12 +157,14 @@ If you aren't into writing documentation or tests, we still welcome your
 contributions! But your PR will be labeled `Needs Testcase` and `Help Wanted`
 until someone can get to write the tests/documentation. Of course, if you have
 a desire but just lack the skill we are more than happy to collaborate and help
-out! There's the [documentation working group](TODO LINK HERE) and the [testing
-working group](TODO LINK HERE). We also regularly stream our test clinic [live
-on Twitch](TODO LINK HERE) every Tuesday afternoon and Thursday morning,
-Central Time. If you'd like specific help with tests, bring them to the clinic.
-If no community members need help, you can also just watch tests written in
-real time.
+out! There's the [documentation working
+group](https://github.com/saltstack/docs-hub) and the [testing working
+group](https://github.com/saltstack/community/tree/master/working_groups/wg-Testing).
+We also regularly stream our test clinic [live on
+Twitch](https://www.twitch.tv/saltstackinc) every Tuesday afternoon and
+Thursday morning, Central Time. If you'd like specific help with tests, bring
+them to the clinic.  If no community members need help, you can also just watch
+tests written in real time.
 
 ### Documentation
 
@@ -249,10 +253,11 @@ you can hack away on the Salt codebase!
 ### Test First? Test Last? Test Meaningfully!
 
 You can write tests first or tests last, as long as your tests are meaningful
-and complete! Typically the best tests for Salt are going to be unit tests.
-Testing is [a whole topic on its own](TODO LINK HERE), But you may also want
-to write functional or integration tests. You'll find those in the `salt/tests`
-directory.
+and complete! *Typically* the best tests for Salt are going to be unit tests.
+Testing is [a whole topic on its
+own](https://docs.saltstack.com/en/master/topics/tutorials/writing_tests.html),
+But you may also want to write functional or integration tests. You'll find
+those in the `salt/tests` directory.
 
 When you're thinking about tests to write, the most important thing to keep in
 mind is, "What, exactly, am I testing?" When a test fails, you should know:
@@ -330,8 +335,7 @@ will run across different platforms. You will also get a reviewer assigned. If
 your PR is submitted during the week you should be able to expect some kind of
 communication within that business day. If your tests are passing and we're not
 in a code freeze, ideally your code will be merged that day. If you haven't
-heard from your assigned reviewer, ping them on GitHub, [irc](TODO salt
-freenode), or Community Slack.
+heard from your assigned reviewer, ping them on GitHub, [irc][salt on freenode], or Community Slack.
 
 If, as mentioned earlier, you're not interested in writing tests or docs, just
 note that in your PR. Something like, "I'm not interested in writing
@@ -380,3 +384,5 @@ If the value is less than 2047, you should increase it with:
     ulimit -n 2047
     # For c-shell:
     limit descriptors 2047
+    
+[salt on freenode]: https://webchat.freenode.net/#salt
