@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import random
-
 import pytest
 import salt.utils.platform
 from salt.ext import six
@@ -24,11 +22,9 @@ class StatusModuleTest(ModuleCase):
         """
         status.pid
         """
-        status_pid = self.run_function("status.pid", ["salt"])
-        grab_pids = status_pid.split()[:10]
-        random_pid = random.choice(grab_pids)
-        grep_salt = self.run_function("cmd.run", ["pgrep -f salt"])
-        self.assertIn(random_pid, grep_salt)
+        status_pid = self.run_function("status.pid", ["cli_master"])
+        grep_salt = self.run_function("cmd.run", ["pgrep -f cli_master"])
+        self.assertEqual(status_pid, grep_salt)
 
     @skipIf(not salt.utils.platform.is_windows(), "windows only test")
     @slowTest
