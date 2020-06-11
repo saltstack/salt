@@ -243,7 +243,10 @@ def get_interface_info_dot_net_formatted():
     i_faces = {}
     for i_face in interfaces:
         if interfaces[i_face]["status"] == "Up":
-            name = interfaces[i_face]["description"]
+            try:
+                name = interfaces[i_face]["alias"]
+            except AttributeError:
+                name = interfaces[i_face]["description"]
             i_faces.setdefault(name, {}).update(
                 {"hwaddr": interfaces[i_face]["physical_address"], "up": True}
             )
