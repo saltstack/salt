@@ -62,17 +62,22 @@ class TracedReqChannel(AsyncReqChannel):
             reply = self.channel.send(load, tries, timeout, raw)
             log.warning("%s.send (reply) %s", __class__, reply)
 
-            child = tracer.start_span("TracedReqChannel.send (callback)", kind=trace.SpanKind.CONSUMER)
+            child = tracer.start_span("TracedReqChannel.send (waiting for callback)", kind=trace.SpanKind.CONSUMER)
+            from salt.ext.tornado.concurrent import Future
+            wrapped_reply = Future()
+
             def callback(future):
+                child.end()
                 value = future.result()
                 log.warning("%s.send (reply callback) %s", __class__, value)
-                child.end()
+                with tracer.start_as_current_span("TracedReqChannel.send (callback)", kind=trace.SpanKind.PRODUCER) as span:
+                    wrapped_reply.set_result(value)
 
             reply.add_done_callback(callback)
 
             span.set_status(Status(StatusCanonicalCode.OK))
 
-            return reply
+            return wrapped_reply
 
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60
