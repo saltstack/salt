@@ -59,7 +59,7 @@ SALT_MAC_SERVICES = {
     "salt-minion": "com.saltstack.salt.minion",
     "salt-master": "com.saltstack.salt.master",
     "salt-api": "com.saltstack.salt.api",
-    "salt-syndic": "com.saltstack.salt.syndic"
+    "salt-syndic": "com.saltstack.salt.syndic",
 }
 
 
@@ -137,11 +137,9 @@ def _get_service(name):
     :rtype: dict
     """
     services = __utils__["mac_utils.available_services"]()
-    #fix the name differences between platforms
+    # fix the name differences between platforms
     # salt-minion becomes com.saltstack.salt.minion
-    name = SALT_MAC_SERVICES.get(name, name)
-
-    name = name.lower()
+    name = SALT_MAC_SERVICES.get(name, name).lower()
 
     service = _name_in_services(name, services)
 
