@@ -13,8 +13,10 @@ CSF Ip tables management
       csf.rule_present:
         ip: 1.2.3.4
         method: allow
-'''  # pylint: disable=W0105
+'''
+# pylint: disable=W0105
 # Import Python Libs
+
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
@@ -237,6 +239,19 @@ def ports_open(name, ports, proto='tcp', direction='in'):
     '''
 
     ports = list(six.moves.map(six.text_type, ports))
+    port_ranges = []
+    for item in ports:
+        if ':' in str(item) :
+            port_ranges.append(str(item))
+            ports.remove(item)
+
+    if port_ranges != None:
+        port_ranges = sorted(port_ranges)
+        ports = sorted(set(ports), key=int)
+        ports = ports + port_ranges
+    else:
+        ports = sorted(set(ports), key=int)
+
     diff = False
     ret = {'name': ','.join(ports),
            'changes': {},
@@ -256,7 +271,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
         ret['changes']['Ports'] = { 'Ports' : 'Changed', 'List' : plist  }
         ret['changes']['Proto'] = str(proto)
-        ret['changes']['Direction'] = str(direction)        
+        ret['changes']['Direction'] = str(direction)
         ret['comment'] = result
     return ret
 
