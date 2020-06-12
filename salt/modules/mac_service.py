@@ -21,6 +21,12 @@ This module has support for services in the following locations.
     path and a ``runas`` user is NOT specified, the current console user will
     be used to properly interact with the service.
 
+.. note::
+    As of the TODO release, if a service name of ``salt-minion`` is passed this
+    module will convert it over to it's macOS equivalent name, in this case
+    to ``com.saltstack.salt.minion``. This is true for ``salt-master``
+    ``salt-api``, and ``salt-syndic`` as well.
+
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
