@@ -546,7 +546,19 @@ def allow_ports(ports, proto='tcp', direction='in'):
     '''
 
     results = []
-    ports = sorted(set(ports), key=int) 
+    port_ranges = []
+    for item in ports:
+        if ':' in str(item) :
+            port_ranges.append(str(item))
+            ports.remove(item)
+
+    if port_ranges != None:
+        port_ranges = sorted(port_ranges)
+        ports = sorted(set(ports), key=int)
+        ports = ports + port_ranges
+    else:
+        ports = sorted(set(ports), key=int)
+
     proto = proto.upper()
     direction = direction.upper()
     _validate_direction_and_proto(direction, proto)
