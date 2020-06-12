@@ -1,0 +1,1 @@
+Fixes issue with lgpo.get when there are unicode characters in the hostname
