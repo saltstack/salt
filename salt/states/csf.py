@@ -270,7 +270,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
     if diff:
         if __opts__['test']:
             result = None
-            ret['changes']['Ports'] = {'Ports': 'Changed', 'List': plist}
+            ret['changes']['Ports'] = {'Ports': 'test mode - Change Not applied', 'List': plist}
             ret['changes']['Proto'] = str(proto)
             ret['changes']['Direction'] = str(direction)
             ret['comment'] = 'Configuration will update.'
