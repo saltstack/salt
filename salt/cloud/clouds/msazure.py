@@ -49,6 +49,7 @@ import time
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+import salt.utils.stringutils
 import salt.utils.yaml
 
 # Import 3rd-party libs
@@ -117,9 +118,11 @@ def get_conn():
         'certificate_path',
         get_configured_provider(), __opts__, search_global=False
     )
-    subscription_id = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    subscription_id = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
     management_host = config.get_cloud_config_value(
         'management_host',
@@ -885,7 +888,7 @@ def _wait_for_async(conn, request_id):
     while result.status == 'InProgress':
         count = count + 1
         if count > 120:
-            raise ValueError('Timed out waiting for async operation to complete.')
+            raise ValueError('Timed out waiting for asynchronous operation to complete.')
         time.sleep(5)
         result = conn.get_operation_status(request_id)
 
@@ -2040,9 +2043,10 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
 
     ret = {}
     for item in data:
-        if 'Role' not in item:
-            continue
-        for role in item['Role']:
+        if 'Role' in item:
+            role = item['Role']
+            if not isinstance(role, dict):
+                return ret
             input_endpoint = role['ConfigurationSets']['ConfigurationSet'].get('InputEndpoints', {}).get('InputEndpoint')
             if not input_endpoint:
                 continue
@@ -2050,6 +2054,7 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
                 input_endpoint = [input_endpoint]
             for endpoint in input_endpoint:
                 ret[endpoint['Name']] = endpoint
+            return ret
     return ret
 
 
@@ -3369,9 +3374,11 @@ def query(path, method='GET', data=None, params=None, header_dict=None, decode=T
         'certificate_path',
         get_configured_provider(), __opts__, search_global=False
     )
-    subscription_id = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    subscription_id = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
     management_host = config.get_cloud_config_value(
         'management_host',

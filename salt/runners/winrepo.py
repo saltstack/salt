@@ -12,15 +12,12 @@ import os
 
 # Import third party libs
 from salt.ext import six
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils.files
 import salt.utils.gitfs
+import salt.utils.msgpack
 import salt.utils.path
 import logging
 import salt.minion
@@ -124,7 +121,7 @@ def genrepo(opts=None, fire_event=True):
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.files.fopen(
             os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
-        repo.write(msgpack.dumps(ret))
+        repo.write(salt.utils.msgpack.dumps(ret))
     return ret
 
 

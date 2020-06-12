@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 from functools import wraps
+import os
 import io
 import stat
 
@@ -12,6 +13,7 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
@@ -98,7 +100,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions()
     def test_check_permissions_group_can_write_not_permissive(self):
         '''
-        Assert that a file is accepted, when group can write to it and perkissive_pki_access=False
+        Assert that a file is accepted, when group can write to it and permissive_pki_access=False
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         if salt.utils.platform.is_windows():
@@ -109,7 +111,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(permissive_pki=True)
     def test_check_permissions_group_can_write_permissive(self):
         '''
-        Assert that a file is accepted, when group can write to it and perkissive_pki_access=True
+        Assert that a file is accepted, when group can write to it and permissive_pki_access=True
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         self.assertTrue(self.auto_key.check_permissions('testfile'))
@@ -117,7 +119,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_in_group(self):
         '''
-        Assert that a file is accepted, when group can write to it, perkissive_pki_access=False,
+        Assert that a file is accepted, when group can write to it, permissive_pki_access=False,
         salt is root and in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 0}
@@ -126,7 +128,7 @@ class AutoKeyTest(TestCase):
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_not_in_group(self):
         '''
-        Assert that no file is accepted, when group can write to it, perkissive_pki_access=False,
+        Assert that no file is accepted, when group can write to it, permissive_pki_access=False,
         salt is root and **not** in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
@@ -568,7 +570,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(None)
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 
@@ -604,3 +606,55 @@ class RemoteFuncsTestCase(TestCase):
         This is what minions before Nitrogen would issue.
         '''
         self.test_mine_get(tgt_type_key='expr_form')
+
+    def test_mine_get_dict_str(self, tgt_type_key='tgt_type'):
+        '''
+        Asserts that ``mine_get`` gives the expected results when request
+        is a comma-separated list.
+
+        Actually this only tests that:
+
+        - the correct check minions method is called
+        - the correct cache key is subsequently used
+        '''
+        self.funcs.cache.store('minions/webserver', 'mine',
+                               dict(ip_addr='2001:db8::1:3', ip4_addr='127.0.0.1'))
+        with patch('salt.utils.minions.CkMinions._check_compound_minions',
+                   MagicMock(return_value=(dict(
+                       minions=['webserver'],
+                       missing=[])))):
+            ret = self.funcs._mine_get(
+                {
+                    'id': 'requester_minion',
+                    'tgt': 'G@roles:web',
+                    'fun': 'ip_addr,ip4_addr',
+                    tgt_type_key: 'compound',
+                }
+            )
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
+
+    def test_mine_get_dict_list(self, tgt_type_key='tgt_type'):
+        '''
+        Asserts that ``mine_get`` gives the expected results when request
+        is a list.
+
+        Actually this only tests that:
+
+        - the correct check minions method is called
+        - the correct cache key is subsequently used
+        '''
+        self.funcs.cache.store('minions/webserver', 'mine',
+                               dict(ip_addr='2001:db8::1:3', ip4_addr='127.0.0.1'))
+        with patch('salt.utils.minions.CkMinions._check_compound_minions',
+                   MagicMock(return_value=(dict(
+                       minions=['webserver'],
+                       missing=[])))):
+            ret = self.funcs._mine_get(
+                {
+                    'id': 'requester_minion',
+                    'tgt': 'G@roles:web',
+                    'fun': ['ip_addr', 'ip4_addr'],
+                    tgt_type_key: 'compound',
+                }
+            )
+        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))

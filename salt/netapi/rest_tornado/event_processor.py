@@ -194,7 +194,7 @@ class SaltInfo(object):
                     'expr_type': 'list',
                     'mode': 'client',
                     'client': 'local',
-                    'async': 'local_async',
+                    'asynchronous': 'local_async',
                     'token': token,
                 })
 

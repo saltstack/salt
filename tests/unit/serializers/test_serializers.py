@@ -27,7 +27,7 @@ from salt.utils.odict import OrderedDict
 # Import test support libs
 from tests.support.helpers import flaky
 
-SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'
+SKIP_MESSAGE = '%s is unavailable, have prerequisites been met?'
 
 
 @flaky(condition=six.PY3)
@@ -68,7 +68,22 @@ class TestSerializers(TestCase):
         serialized = yamlex.serialize(data)
         assert serialized == '{foo: bar}', serialized
 
+        serialized = yamlex.serialize(data, default_flow_style=False)
+        assert serialized == 'foo: bar', serialized
+
         deserialized = yamlex.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data)
+        assert serialized == '{foo: bar}', serialized
+
+        deserialized = yaml.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data, default_flow_style=False)
+        assert serialized == 'foo: bar', serialized
+
+        deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
@@ -82,6 +97,12 @@ class TestSerializers(TestCase):
         assert serialized == '{foo: 1, bar: 2, baz: true}', serialized
 
         deserialized = yamlex.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+        serialized = yaml.serialize(data)
+        assert serialized == '{bar: 2, baz: true, foo: 1}', serialized
+
+        deserialized = yaml.deserialize(serialized)
         assert deserialized == data, deserialized
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
@@ -102,6 +123,7 @@ class TestSerializers(TestCase):
 
     @skipIf(not yaml.available, SKIP_MESSAGE % 'yaml')
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
+    @skipIf(six.PY3, 'Flaky on Python 3.')
     def test_compare_sls_vs_yaml_with_jinja(self):
         tpl = '{{ data }}'
         env = jinja2.Environment()
@@ -151,7 +173,7 @@ class TestSerializers(TestCase):
 
         # BLAAM! yml_src is not valid !
         final_obj = OrderedDict(yaml.deserialize(yml_src))
-        assert obj != final_obj
+        assert obj != final_obj, 'Objects matched! {} == {}'.format(obj, final_obj)
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
     def test_sls_aggregate(self):
@@ -356,6 +378,34 @@ class TestSerializers(TestCase):
 
         deserialized = configparser.deserialize(serialized)
         assert deserialized == data, deserialized
+
+    @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
+    def test_configparser_preserve_case(self):
+        '''
+        Validate that items with case are preserved through serialization/deserialization
+        if the preserve_case=True option is passed
+        '''
+        data = {'foo': {'someItemWithCase': 'data'}}
+        # configparser appends empty lines
+        serialized = configparser.serialize(data, **{'preserve_case': True}).strip()
+        assert serialized == "[foo]\nsomeItemWithCase = data", serialized
+
+        deserialized = configparser.deserialize(serialized, **{'preserve_case': True})
+        assert deserialized == data, deserialized
+
+    @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
+    def test_configparser_case_not_preserved(self):
+        '''
+        Validate that items with case are *not* preserved through serialization/deserialization
+        if the preserve_case=True option is not passed
+        '''
+        data = {'foo': {'someItemWithCase': 'data'}}
+        # configparser appends empty lines
+        serialized = configparser.serialize(data).strip()
+        assert serialized == "[foo]\nsomeitemwithcase = data", serialized
+
+        deserialized = configparser.deserialize(serialized)
+        assert deserialized != data, deserialized
 
     @skipIf(not toml.available, SKIP_MESSAGE % 'toml')
     def test_serialize_toml(self):

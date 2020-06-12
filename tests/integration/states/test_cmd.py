@@ -8,15 +8,20 @@ import errno
 import os
 import textwrap
 import tempfile
+import time
+import sys
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
+
+# Import 3rd-party libs
+from salt.ext import six
 
 IS_WINDOWS = salt.utils.platform.is_windows()
 
@@ -45,9 +50,11 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         cmd.run with output hidden
         '''
+
+        cmd = u'dir' if IS_WINDOWS else u'ls'
         ret = self.run_state(
             u'cmd.run',
-            name=u'ls',
+            name=cmd,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -62,7 +69,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_redirect'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
 
         # Create the testfile and release the handle
         fd, self.test_file = tempfile.mkstemp()
@@ -70,7 +77,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         # Create the testfile and release the handle
         fd, self.test_tmp_path = tempfile.mkstemp()
@@ -78,11 +85,12 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         super(CMDRunRedirectTest, self).setUp()
 
     def tearDown(self):
+        time.sleep(1)
         for path in (self.state_file, self.test_tmp_path, self.test_file):
             try:
                 os.remove(path)
@@ -179,7 +187,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_watch'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
         super(CMDRunWatchTest, self).setUp()
 
     def tearDown(self):

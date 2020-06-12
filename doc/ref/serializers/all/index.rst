@@ -14,5 +14,6 @@ serializer modules
     json
     msgpack
     python
+    toml
     yaml
     yamlex

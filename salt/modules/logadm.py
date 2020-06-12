@@ -53,7 +53,7 @@ def __virtual__():
     '''
     Only work on Solaris based systems
     '''
-    if 'Solaris' in __grains__['os_family']:
+    if 'Solaris' in __grains__.get('os_family'):
         return True
     return (False, 'The logadm execution module cannot be loaded: only available on Solaris.')
 
@@ -64,7 +64,7 @@ def _arg2opt(arg):
     '''
     res = [o for o, a in option_toggles.items() if a == arg]
     res += [o for o, a in option_flags.items() if a == arg]
-    return res[0] if len(res) else None
+    return res[0] if res else None
 
 
 def _parse_conf(conf_file=default_conf):
@@ -90,7 +90,7 @@ def _parse_options(entry, options, include_unset=True):
     '''
     log_cfg = {}
     options = shlex.split(options)
-    if len(options) == 0:
+    if not options:
         return None
 
     ## identifier is entry or log?
@@ -249,14 +249,14 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
         alias for log_file
     conf_file : string
         optional path to alternative configuration file
-    **kwargs : boolean|string|int
+    kwargs : boolean|string|int
         optional additional flags and parameters
 
     .. note::
         ``name`` and ``pattern`` were kept for backwards compatibility reasons.
 
         ``name`` is an alias for the ``entryname`` argument, ``pattern`` is an alias
-        for ``log_file``. These aliasses wil only be used if the ``entryname`` and
+        for ``log_file``. These aliases will only be used if the ``entryname`` and
         ``log_file`` arguments are not passed.
 
         For a full list of arguments see ```logadm.show_args```.

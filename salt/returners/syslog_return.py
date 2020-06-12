@@ -192,14 +192,10 @@ def returner(ret):
         logoption = logoption | getattr(syslog, opt)
 
     # Open syslog correctly based on options and tag
-    try:
-        if 'tag' in _options:
-            syslog.openlog(ident=_options['tag'], logoption=logoption)
-        else:
-            syslog.openlog(logoption=logoption)
-    except TypeError:
-        # Python 2.6 syslog.openlog does not accept keyword args
-        syslog.openlog(_options.get('tag', 'salt-minion'), logoption)
+    if 'tag' in _options:
+        syslog.openlog(ident=salt.utils.stringutils.to_str(_options['tag']), logoption=logoption)
+    else:
+        syslog.openlog(logoption=logoption)
 
     # Send log of given level and facility
     syslog.syslog(facility | level, salt.utils.json.dumps(ret))

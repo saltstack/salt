@@ -238,16 +238,16 @@ start with looks like this:
 
 .. code-block:: bash
 
-    salt '*' test.ping
+    salt '*' test.version
 
 The ``*`` is the target, which specifies all minions.
 
-``test.ping`` tells the minion to run the :py:func:`test.ping
-<salt.modules.test.ping>` function.
+``test.version`` tells the minion to run the :py:func:`test.version
+<salt.modules.test.version>` function.
 
-In the case of ``test.ping``, ``test`` refers to a :ref:`execution module
-<writing-execution-modules>`.  ``ping`` refers to the :py:func:`ping
-<salt.modules.test.ping>` function contained in the aforementioned ``test``
+In the case of ``test.version``, ``test`` refers to a :ref:`execution module
+<writing-execution-modules>`.  ``version`` refers to the :py:func:`version
+<salt.modules.test.version>` function contained in the aforementioned ``test``
 module.
 
 .. note::
@@ -257,12 +257,10 @@ module.
     services.
 
 The result of running this command will be the master instructing all of the
-minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
-and return the result.
-
-This is not an actual ICMP ping, but rather a simple function which returns ``True``.
-Using :py:func:`test.ping <salt.modules.test.ping>` is a good way of confirming that a minion is
-connected.
+minions to execute :py:func:`test.version <salt.modules.test.version>` in parallel
+and return the result. Using :py:func:`test.version <salt.modules.test.version>` 
+is a good way of confirming that a minion is connected, and reaffirm to the user 
+the salt version(s) they have installed on the minions.
 
 .. note::
 
@@ -271,7 +269,7 @@ connected.
     well by using the :conf_minion:`id` parameter.
 
 Of course, there are hundreds of other modules that can be called just as
-``test.ping`` can.  For example, the following would return disk usage on all
+``test.version`` can.  For example, the following would return disk usage on all
 targeted minions:
 
 .. code-block:: bash
@@ -495,7 +493,7 @@ configuration is required. States can be set up immediately.
 The First SLS Formula
 ---------------------
 
-The state system is built on SLS formulas. These formulas are built out in
+The state system is built on SLS (SaLt State) formulas. These formulas are built out in
 files on Salt's file server. To make a very basic SLS formula open up a file
 under /srv/salt named vim.sls. The following state ensures that vim is installed
 on a system to which that state has been applied.
@@ -591,7 +589,7 @@ This formula can be referenced via the following command:
 
 .. note::
     :py:func:`state.apply <salt.modules.state.apply_>` is just another remote
-    execution function, just like :py:func:`test.ping <salt.modules.test.ping>`
+    execution function, just like :py:func:`test.version <salt.modules.test.version>`
     or :py:func:`disk.usage <salt.modules.disk.usage>`. It simply takes the
     name of an SLS file as an argument.
 

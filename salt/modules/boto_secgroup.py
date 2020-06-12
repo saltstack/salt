@@ -334,8 +334,15 @@ def convert_to_group_ids(groups, vpc_id=None, vpc_name=None, region=None, key=No
                                 key=key, keyid=keyid, profile=profile)
         if not group_id:
             # Security groups are a big deal - need to fail if any can't be resolved...
-            raise CommandExecutionError('Could not resolve Security Group name '
-                                        '{0} to a Group ID'.format(group))
+            # But... if we're running in test mode, it may just be that the SG is scheduled
+            # to be created, and thus WOULD have been there if running "for real"...
+            if __opts__['test']:
+                log.warning('Security Group `%s` could not be resolved to an ID.  This may '
+                            'cause a failure when not running in test mode.', group)
+                return []
+            else:
+                raise CommandExecutionError('Could not resolve Security Group name '
+                                            '{0} to a Group ID'.format(group))
         else:
             group_ids.append(six.text_type(group_id))
     log.debug('security group contents %s post-conversion', group_ids)
@@ -473,6 +480,9 @@ def authorize(name=None, source_group_name=None,
                 log.error(msg)
                 return False
         except boto.exception.EC2ResponseError as e:
+            # if we are trying to add the same rule then we are already in the desired state, return true
+            if e.error_code == 'InvalidPermission.Duplicate':
+                return True
             msg = ('Failed to add rule to security group {0} with id {1}.'
                    .format(group.name, group.id))
             log.error(msg)

@@ -264,6 +264,12 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
+    __utils__['versions.warn_until'](
+        'Neon',
+        'This driver has been deprecated and will be removed in the '
+        '{version} release of Salt. Please use the openstack driver instead.'
+    )
+
     return __virtualname__
 
 

@@ -2,6 +2,8 @@
   virtualenv.managed:
     - system_site_packages: False
     - distribute: True
+    {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
+    - python: {{ salt.runtests_helpers.get_python_executable() }}
 
 pep8:
   pip.installed:

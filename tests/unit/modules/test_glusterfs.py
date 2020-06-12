@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
-    :codeauthor: :email:`Joe Julian <me@joejulian.name>`
+    :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
+    :codeauthor: Joe Julian <me@joejulian.name>
 '''
 
 # Import Python libs
@@ -180,6 +180,7 @@ class GlusterResults(object):
             success_first_ip_from_second_first_time = success_other
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 'ip']
+
 
 xml_peer_present = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -777,7 +778,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_version}):
             self.assertFalse(glusterfs.get_max_op_version()[0])
 
-        with patch.object(glusterfs, '_get_version', return_value=[3, 12, 0]):
+        with patch.object(glusterfs, '_get_version', return_value=(3, 12, 0)):
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_xml}):
                 self.assertEqual(glusterfs.get_max_op_version(), '31200')
 

@@ -55,6 +55,7 @@ def _has_required_boto():
     else:
         return True
 
+
 if _has_required_boto():
     region = 'us-east-1'
     access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -101,8 +102,11 @@ class BotoCloudTrailTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['boto3'], context={})
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_cloudtrail: {
                 '__utils__': utils,

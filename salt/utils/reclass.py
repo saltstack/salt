@@ -28,5 +28,5 @@ def set_inventory_base_uri_default(config, opts):
         return
 
     base_roots = config.get('file_roots', {}).get('base', [])
-    if len(base_roots) > 0:
+    if base_roots:
         opts['inventory_base_uri'] = base_roots[0]

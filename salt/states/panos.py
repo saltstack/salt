@@ -2,7 +2,7 @@
 '''
 A state module to manage Palo Alto network devices.
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -64,7 +64,7 @@ The proxy['panos.is_required_version'] method will check if a panos device is cu
 greater than the passed version. For example, proxy['panos.is_required_version']('7.0.0') would match both 7.1.0 and
 8.0.0.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% if proxy['panos.is_required_version']('8.0.0') %}
     panos/deviceconfig/system/motd-and-banner:
@@ -79,7 +79,7 @@ greater than the passed version. For example, proxy['panos.is_required_version']
     {% endif %}
 
 .. seealso::
-    :prox:`Palo Alto Proxy Module <salt.proxy.panos>`
+    :py:mod:`Palo Alto Proxy Module <salt.proxy.panos>`
 
 '''
 
@@ -769,7 +769,7 @@ def edit_config(name, xpath=None, value=None, commit=False):
     xpath_split = xpath.split("/")
 
     # Retrieve the head of the xpath for validation.
-    if len(xpath_split) > 0:
+    if xpath_split:
         head = xpath_split[-1]
         if "[" in head:
             head = head.split("[")[0]

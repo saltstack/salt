@@ -104,13 +104,18 @@ Here is an example of a profile:
     profitbricks_production:
       provider: my-profitbricks-config
       image: Ubuntu-15.10-server-2016-05-01
+      image_password: MyPassword1
       disk_type: SSD
       disk_size: 40
       cores: 8
       cpu_family: INTEL_XEON
       ram: 32768
       public_lan: 1
+      public_ips:
+        - 172.217.18.174
       private_lan: 2
+      private_ips:
+        - 192.168.100.10
       public_firewall_rules:
         Allow SSH:
           protocol: TCP
@@ -151,113 +156,127 @@ command:
 
     # salt-cloud --list-sizes my-profitbricks-config
 
+.. versionchanged:: 2019.2.0
+
+    One or more public IP address can be reserved with the following command:
+
+    .. code-block:: bash
+
+        # salt-cloud -f reserve_ipblock  my-profitbricks-config location='us/ewr' size=1
+
 Profile Specifics:
 ------------------
 
 The following list explains some of the important properties.
 
-size
-    Can be one of the options listed in the output of the following command:
+- ``size`` - Can be one of the options listed in the output of the following
+  command:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-    salt-cloud --list-sizes my-profitbricks-config
+      salt-cloud --list-sizes my-profitbricks-config
 
-image
-    Can be one of the options listed in the output of the following command:
+- ``image`` - Can be one of the options listed in the output of the following
+  command:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-    salt-cloud --list-images my-profitbricks-config
+      salt-cloud --list-images my-profitbricks-config
 
-image_alias
-   Can be one of the options listed in the output of the following command:
+- ``image_alias`` - Can be one of the options listed in the output of the
+  following command:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-   salt-cloud -f list_images my-profitbricks-config
+     salt-cloud -f list_images my-profitbricks-config
 
-disk_size
-    This option allows you to override the size of the disk as defined by the
-    size. The disk size is set in gigabytes (GB).
+- ``disk_size`` - This option allows you to override the size of the disk as
+  defined by the size. The disk size is set in gigabytes (GB).
 
-disk_type
-    This option allow the disk type to be set to HDD or SSD. The default is
-    HDD.
+- ``disk_type`` - This option allow the disk type to be set to HDD or SSD. The
+  default is HDD.
 
-cores
-    This option allows you to override the number of CPU cores as defined by
-    the size.
+  .. versionadded:: 2019.2.0
 
-ram
-    This option allows you to override the amount of RAM defined by the size.
-    The value must be a multiple of 256, e.g. 256, 512, 768, 1024, and so
-    forth.
+- ``image_password`` - A password is set on the image for the "root" or
+  "Administrator" account.  This field may only be set during volume creation.
+  Only valid with ProfitBricks supplied HDD (not ISO) images. The password must
+  contain at least 8 and no more than 50 characters. Only these characters are
+  allowed: [a-z][A-Z][0-9]
 
-public_lan
-    This option will connect the server to the specified public LAN. If no
-    LAN exists, then a new public LAN will be created. The value accepts a LAN
-    ID (integer).
+- ``cores`` - This option allows you to override the number of CPU cores as
+  defined by the size.
 
-public_firewall_rules
-    This option allows for a list of firewall rules assigned to the public
-    network interface.
+- ``ram`` - This option allows you to override the amount of RAM defined by the
+  size. The value must be a multiple of 256, e.g. 256, 512, 768, 1024, and so
+  forth.
 
-    Firewall Rule Name:
-      protocol: <protocol> (TCP, UDP, ICMP)
-      source_mac: <source-mac>
-      source_ip: <source-ip>
-      target_ip: <target-ip>
-      port_range_start: <port-range-start>
-      port_range_end: <port-range-end>
-      icmp_type: <icmp-type>
-      icmp_code: <icmp-code>
+- ``public_lan`` - This option will connect the server to the specified public
+  LAN. If no LAN exists, then a new public LAN will be created. The value
+  accepts a LAN ID (integer).
 
-private_lan
-    This option will connect the server to the specified private LAN. If no
-    LAN exists, then a new private LAN will be created. The value accepts a LAN
-    ID (integer).
+  .. versionadded:: 2019.2.0
 
-private_firewall_rules
-    This option allows for a list of firewall rules assigned to the private
-    network interface.
+- ``public_ips`` - Public IPs assigned to the NIC in the public LAN.
 
-    Firewall Rule Name:
-      protocol: <protocol> (TCP, UDP, ICMP)
-      source_mac: <source-mac>
-      source_ip: <source-ip>
-      target_ip: <target-ip>
-      port_range_start: <port-range-start>
-      port_range_end: <port-range-end>
-      icmp_type: <icmp-type>
-      icmp_code: <icmp-code>
+- ``public_firewall_rules`` - This option allows for a list of firewall rules
+  assigned to the public network interface.
 
-ssh_private_key
-    Full path to the SSH private key file.
+  .. code-block:: yaml
 
-ssh_public_key
-    Full path to the SSH public key file.
+      Firewall Rule Name:
+        protocol: <protocol> (TCP, UDP, ICMP)
+        source_mac: <source-mac>
+        source_ip: <source-ip>
+        target_ip: <target-ip>
+        port_range_start: <port-range-start>
+        port_range_end: <port-range-end>
+        icmp_type: <icmp-type>
+        icmp_code: <icmp-code>
 
-ssh_interface
-    This option will use the private LAN IP for node connections (such as
-    as bootstrapping the node) instead of the public LAN IP. The value accepts
-    'private_lan'.
+- ``private_lan`` - This option will connect the server to the specified
+  private LAN. If no LAN exists, then a new private LAN will be created. The
+  value accepts a LAN ID (integer).
 
-cpu_family
-    This option allow the CPU family to be set to AMD_OPTERON or INTEL_XEON.
-    The default is AMD_OPTERON.
+  .. versionadded:: 2019.2.0
 
-volumes:
-    This option allows a list of additional volumes by name that will be
-    created and attached to the server. Each volume requires 'disk_size'
-    and, optionally, 'disk_type'. The default is HDD.
+- ``private_ips`` - Private IPs assigned in the private LAN. NAT setting is
+  ignored when this setting is active.
 
-deploy
-    Set to False if Salt should not be installed on the node.
+- ``private_firewall_rules`` - This option allows for a list of firewall rules
+  assigned to the private network interface.
 
-wait_for_timeout
-    The timeout to wait in seconds for provisioning resources such as servers.
-    The default wait_for_timeout is 15 minutes.
+  .. code-block:: yaml
+
+      Firewall Rule Name:
+        protocol: <protocol> (TCP, UDP, ICMP)
+        source_mac: <source-mac>
+        source_ip: <source-ip>
+        target_ip: <target-ip>
+        port_range_start: <port-range-start>
+        port_range_end: <port-range-end>
+        icmp_type: <icmp-type>
+        icmp_code: <icmp-code>
+
+- ``ssh_private_key`` - Full path to the SSH private key file
+
+- ``ssh_public_key`` - Full path to the SSH public key file
+
+- ``ssh_interface`` - This option will use the private LAN IP for node
+  connections (such as as bootstrapping the node) instead of the public LAN IP.
+  The value accepts 'private_lan'.
+
+- ``cpu_family`` - This option allow the CPU family to be set to AMD_OPTERON or
+  INTEL_XEON.  The default is AMD_OPTERON.
+
+- ``volumes`` - This option allows a list of additional volumes by name that
+  will be created and attached to the server. Each volume requires 'disk_size'
+  and, optionally, 'disk_type'. The default is HDD.
+
+- ``deploy`` - Set to ``False`` if Salt should not be installed on the node.
+
+- ``wait_for_timeout`` - The timeout to wait in seconds for provisioning
+  resources such as servers.  The default wait_for_timeout is 15 minutes.
 
 For more information concerning cloud profiles, see :ref:`here
-</topics/cloud/profiles>`.
+<salt-cloud-profiles>`.

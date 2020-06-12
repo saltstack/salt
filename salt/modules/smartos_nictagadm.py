@@ -118,7 +118,7 @@ def exists(*nictag, **kwargs):
         salt '*' nictagadm.exists admin
     '''
     ret = {}
-    if len(nictag) == 0:
+    if not nictag:
         return {'Error': 'Please provide at least one nictag to check.'}
 
     cmd = 'nictagadm exists -l {0}'.format(' '.join(nictag))
@@ -143,14 +143,14 @@ def add(name, mac, mtu=1500):
     mac : string
         mac of parent interface or 'etherstub' to create a ether stub
     mtu : int
-        MTU
+        MTU (ignored for etherstubs)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' nictagadm.add storage etherstub
-        salt '*' nictagadm.add trunk 'DE:AD:OO:OO:BE:EF' 9000
+        salt '*' nictagadm.add storage0 etherstub
+        salt '*' nictagadm.add trunk0 'DE:AD:OO:OO:BE:EF' 9000
     '''
     ret = {}
 
@@ -159,21 +159,15 @@ def add(name, mac, mtu=1500):
     if mac != 'etherstub':
         cmd = 'dladm show-phys -m -p -o address'
         res = __salt__['cmd.run_all'](cmd)
-        if mac not in res['stdout'].splitlines():
+        # dladm prints '00' as '0', so account for that.
+        if mac.replace('00', '0') not in res['stdout'].splitlines():
             return {'Error': '{0} is not present on this system.'.format(mac)}
 
     if mac == 'etherstub':
-        cmd = 'nictagadm add -l -p mtu={mtu} {name}'.format(
-            mtu=mtu,
-            name=name
-        )
+        cmd = 'nictagadm add -l {0}'.format(name)
         res = __salt__['cmd.run_all'](cmd)
     else:
-        cmd = 'nictagadm add -p mtu={mtu},mac={mac} {name}'.format(
-            mtu=mtu,
-            mac=mac,
-            name=name
-        )
+        cmd = 'nictagadm add -p mtu={0},mac={1} {2}'.format(mtu, mac, name)
         res = __salt__['cmd.run_all'](cmd)
 
     if res['retcode'] == 0:
@@ -214,7 +208,8 @@ def update(name, mac=None, mtu=None):
         else:
             cmd = 'dladm show-phys -m -p -o address'
             res = __salt__['cmd.run_all'](cmd)
-            if mac not in res['stdout'].splitlines():
+            # dladm prints '00' as '0', so account for that.
+            if mac.replace('00', '0') not in res['stdout'].splitlines():
                 return {'Error': '{0} is not present on this system.'.format(mac)}
 
     if mac and mtu:
@@ -224,10 +219,7 @@ def update(name, mac=None, mtu=None):
     elif mtu:
         properties = "mtu={0}".format(mtu) if mtu else ""
 
-    cmd = 'nictagadm update -p {properties} {name}'.format(
-        properties=properties,
-        name=name
-    )
+    cmd = 'nictagadm update -p {0} {1}'.format(properties, name)
     res = __salt__['cmd.run_all'](cmd)
 
     if res['retcode'] == 0:
@@ -256,10 +248,7 @@ def delete(name, force=False):
     if name not in list_nictags():
         return True
 
-    cmd = 'nictagadm delete {force}{name}'.format(
-        force="-f " if force else "",
-        name=name
-    )
+    cmd = 'nictagadm delete {0}{1}'.format("-f " if force else "", name)
     res = __salt__['cmd.run_all'](cmd)
 
     if res['retcode'] == 0:

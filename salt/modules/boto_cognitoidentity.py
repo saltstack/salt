@@ -81,7 +81,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import Salt libs
-import salt.utils.boto3
 import salt.utils.compat
 import salt.utils.versions
 
@@ -131,7 +130,7 @@ def _find_identity_pool_ids(name, pool_id, conn):
     '''
     ids = []
     if pool_id is None:
-        for pools in salt.utils.boto3.paged_call(conn.list_identity_pools,
+        for pools in __utils__['boto3.paged_call'](conn.list_identity_pools,
                          marker_flag='NextToken', marker_arg='NextToken', MaxResults=25):
             for pool in pools['IdentityPools']:
                 if pool['IdentityPoolName'] == name:
@@ -174,7 +173,7 @@ def describe_identity_pools(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'identity_pools': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def create_identity_pool(IdentityPoolName,
@@ -216,7 +215,7 @@ def create_identity_pool(IdentityPoolName,
 
         return {'created': True, 'identity_pool': response}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'created': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
@@ -250,7 +249,7 @@ def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'deleted': False, 'count': count}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'deleted': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
@@ -284,7 +283,7 @@ def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
         else:
             return {'identity_pool_roles': None}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)}
+        return {'error': __utils__['boto3.get_error'](e)}
 
 
 def _get_role_arn(name, **conn_params):
@@ -349,7 +348,7 @@ def set_identity_pool_roles(IdentityPoolId, AuthenticatedRole=None, Unauthentica
 
         return {'set': True, 'roles': Roles}
     except ClientError as e:
-        return {'set': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'set': False, 'error': __utils__['boto3.get_error'](e)}
 
 
 def update_identity_pool(IdentityPoolId,
@@ -420,4 +419,4 @@ def update_identity_pool(IdentityPoolId,
 
         return {'updated': True, 'identity_pool': response}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': __utils__['boto3.get_error'](e)}

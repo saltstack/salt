@@ -59,16 +59,16 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if self.opts['file_roots'] is self.opts['pillar_roots']:
-            if saltenv not in self.opts['file_roots']:
+        self.pillar_rend = pillar_rend
+        if self.pillar_rend:
+            if saltenv not in self.opts['pillar_roots']:
                 self.searchpath = []
             else:
-                self.searchpath = opts['file_roots'][saltenv]
+                self.searchpath = opts['pillar_roots'][saltenv]
         else:
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self.pillar_rend = pillar_rend
         self._file_client = None
         # Instantiate the fileclient
         self.file_client()
@@ -98,28 +98,60 @@ class SaltCacheLoader(BaseLoader):
             self.cached.append(template)
 
     def get_source(self, environment, template):
-        # checks for relative '..' paths
-        if '..' in template:
-            log.warning(
-                'Discarded template path \'%s\', relative paths are '
-                'prohibited', template
-            )
-            raise TemplateNotFound(template)
+        '''
+        Salt-specific loader to find imported jinja files.
 
-        self.check_cache(template)
+        Jinja imports will be interpreted as originating from the top
+        of each of the directories in the searchpath when the template
+        name does not begin with './' or '../'.  When a template name
+        begins with './' or '../' then the import will be relative to
+        the importing file.
+
+        '''
+        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        _template = template
+        if template.split('/', 1)[0] in ('..', '.'):
+            is_relative = True
+        else:
+            is_relative = False
+        # checks for relative '..' paths that step-out of file_roots
+        if is_relative:
+            # Starts with a relative path indicator
+
+            if not environment or 'tpldir' not in environment.globals:
+                log.warning(
+                    'Relative path "%s" cannot be resolved without an environment',
+                    template
+                )
+                raise TemplateNotFound
+            base_path = environment.globals['tpldir']
+            _template = os.path.normpath('/'.join((base_path, _template)))
+            if _template.split('/', 1)[0] == '..':
+                log.warning(
+                    'Discarded template path "%s": attempts to'
+                    ' ascend outside of salt://', template
+                )
+                raise TemplateNotFound(template)
+
+        self.check_cache(_template)
 
         if environment and template:
-            tpldir = os.path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(_template).replace('\\', '/')
+            tplfile = _template
+            if is_relative:
+                tpldir = environment.globals.get('tpldir', tpldir)
+                tplfile = template
             tpldata = {
-                'tplfile': template,
+                'tplfile': tplfile,
                 'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
+                'tplroot': tpldir.split('/')[0],
             }
             environment.globals.update(tpldata)
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = os.path.join(spath, template)
+            filepath = os.path.join(spath, _template)
             try:
                 with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
@@ -205,7 +237,7 @@ def skip_filter(data):
     '''
     Suppress data output
 
-    .. code-balock:: yaml
+    .. code-block:: yaml
 
         {% my_string = "foo" %}
 
@@ -274,8 +306,28 @@ def to_bool(val):
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):
-        return len(val) > 0
+        return bool(val)
     return False
+
+
+@jinja_filter('tojson')
+def tojson(val, indent=None):
+    '''
+    Implementation of tojson filter (only present in Jinja 2.9 and later). If
+    Jinja 2.9 or later is installed, then the upstream version of this filter
+    will be used.
+    '''
+    options = {'ensure_ascii': True}
+    if indent is not None:
+        options['indent'] = indent
+    return (
+        salt.utils.json.dumps(
+            val, **options
+        ).replace('<', '\\u003c')
+         .replace('>', '\\u003e')
+         .replace('&', '\\u0026')
+         .replace("'", '\\u0027')
+    )
 
 
 @jinja_filter('quote')
@@ -488,6 +540,14 @@ def lst_avg(lst):
 
         2.5
     '''
+    salt.utils.versions.warn_until(
+        'Neon',
+        'This results of this function are currently being rounded.'
+        'Beginning in the Salt Neon release, results will no longer be '
+        'rounded and this warning will be removed.',
+        stacklevel=3
+    )
+
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
@@ -575,6 +635,11 @@ def symmetric_difference(lst1, lst2):
     if isinstance(lst1, collections.Hashable) and isinstance(lst2, collections.Hashable):
         return set(lst1) ^ set(lst2)
     return unique([ele for ele in union(lst1, lst2) if ele not in intersect(lst1, lst2)])
+
+
+@jinja_filter('method_call')
+def method_call(obj, f_name, *f_args, **f_kwargs):
+    return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
 @jinja2.contextfunction
@@ -749,8 +814,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -789,14 +853,21 @@ class SerializerExtension(Extension, object):
         return explore(data)
 
     def format_json(self, value, sort_keys=True, indent=None):
-        return Markup(salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
+        json_txt = salt.utils.json.dumps(value, sort_keys=sort_keys, indent=indent).strip()
+        try:
+            return Markup(json_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(json_txt))
 
     def format_yaml(self, value, flow_style=True):
         yaml_txt = salt.utils.yaml.safe_dump(
             value, default_flow_style=flow_style).strip()
-        if yaml_txt.endswith('\n...'):
+        if yaml_txt.endswith(str('\n...')):  # future lint: disable=blacklisted-function
             yaml_txt = yaml_txt[:len(yaml_txt)-4]
-        return Markup(yaml_txt)
+        try:
+            return Markup(yaml_txt)
+        except UnicodeDecodeError:
+            return Markup(salt.utils.stringutils.to_unicode(yaml_txt))
 
     def format_xml(self, value):
         """Render a formatted multi-line XML string from a complex Python
@@ -889,7 +960,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

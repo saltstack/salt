@@ -79,6 +79,8 @@ def _localectl_status():
             ctl_key = ctl_key.strip().lower().replace(' ', '_')
         else:
             ctl_data = line.strip()
+        if not ctl_data:
+            continue
         if ctl_key:
             if '=' in ctl_data:
                 loc_set = ctl_data.split('=')
@@ -87,7 +89,7 @@ def _localectl_status():
                         ret[ctl_key] = {}
                     ret[ctl_key][loc_set[0]] = loc_set[1]
             else:
-                ret[ctl_key] = ctl_data
+                ret[ctl_key] = {'data': None if ctl_data == 'n/a' else ctl_data}
     if not ret:
         log.debug("Unable to find any locale information inside the following data:\n%s", locale_ctl_out)
         raise CommandExecutionError('Unable to parse result of "localectl"')
@@ -102,7 +104,7 @@ def _localectl_set(locale=''):
     '''
     locale_params = _parse_dbus_locale() if dbus is not None else _localectl_status().get('system_locale', {})
     locale_params['LANG'] = six.text_type(locale)
-    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params)])
+    args = ' '.join(['{0}="{1}"'.format(k, v) for k, v in six.iteritems(locale_params) if v is not None])
     return not __salt__['cmd.retcode']('localectl set-locale {0}'.format(args), python_shell=False)
 
 
@@ -137,7 +139,7 @@ def get_locale():
     if lc_ctl and not (__grains__['os_family'] in ['Suse'] and __grains__['osmajorrelease'] in [12]):
         ret = (_parse_dbus_locale() if dbus is not None else _localectl_status()['system_locale']).get('LANG', '')
     else:
-        if 'Suse' in __grains__['os_family'] and __grains__['osmajorrelease'] == 12:
+        if 'Suse' in __grains__['os_family']:
             cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
         elif 'RedHat' in __grains__['os_family']:
             cmd = 'grep "^LANG=" /etc/sysconfig/i18n'

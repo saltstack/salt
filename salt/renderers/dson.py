@@ -20,12 +20,18 @@ import logging
 try:
     import dson
 except ImportError:
-    raise
+    dson = None
 
 # Import salt libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if dson is None:
+        return (False, 'The dogeon Python package is not installed')
+    return True
 
 
 def render(dson_input, saltenv='base', sls='', **kwargs):

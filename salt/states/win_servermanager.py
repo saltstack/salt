@@ -27,8 +27,7 @@ def installed(name,
               recurse=False,
               restart=False,
               source=None,
-              exclude=None,
-              **kwargs):
+              exclude=None):
     '''
     Install the windows feature. To install a single feature, use the ``name``
     parameter. To install multiple features, use the ``features`` parameter.
@@ -111,17 +110,8 @@ def installed(name,
               - XPS-Viewer
               - SNMP-Service
             - exclude:
-              - Web-Service
+              - Web-Server
     '''
-    if 'force' in kwargs:
-        salt.utils.versions.warn_until(
-            'Flourine',
-            'Parameter \'force\' has been detected in the argument list. This'
-            'parameter is no longer used and has been replaced by \'recurse\''
-            'as of Salt 2018.3.0. This warning will be removed in Salt Flourine.'
-        )
-        kwargs.pop('force')
-
     ret = {'name': name,
            'result': True,
            'changes': {},

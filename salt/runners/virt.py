@@ -172,7 +172,10 @@ def init(
         start=True,
         disk='default',
         saltenv='base',
-        enable_vnc=False):
+        enable_vnc=False,
+        seed_cmd='seed.apply',
+        enable_qcow=False,
+        serial_type='None'):
     '''
     This routine is used to create a new virtual machine. This routines takes
     a number of options to determine what the newly created virtual machine
@@ -194,14 +197,14 @@ def init(
         on the salt fileserver, but http, https and ftp can also be used.
 
     hypervisor
-        The hypervisor to use for the new virtual machine. Default is 'kvm'.
+        The hypervisor to use for the new virtual machine. Default is `kvm`.
 
     host
         The host to use for the new virtual machine, if this is omitted
         Salt will automatically detect what host to use.
 
     seed
-        Set to False to prevent Salt from seeding the new virtual machine.
+        Set to `False` to prevent Salt from seeding the new virtual machine.
 
     nic
         The nic profile to use, defaults to the "default" nic profile which
@@ -217,6 +220,22 @@ def init(
 
     saltenv
         The Salt environment to use
+
+    enable_vnc
+        Whether a VNC screen is attached to resulting VM. Default is `False`.
+
+    seed_cmd
+        If seed is `True`, use this execution module function to seed new VM.
+        Default is `seed.apply`.
+
+    enable_qcow
+        Clone disk image as a copy-on-write qcow2 image, using downloaded
+        `image` as backing file.
+
+    serial_type
+        Enable serial console. Set to 'pty' for serial console or 'tcp' for
+        telnet.
+        Default is 'None'
     '''
     __jid_event__.fire_event({'message': 'Searching for hosts'}, 'progress')
     data = query(host, quiet=True)
@@ -257,25 +276,30 @@ def init(
     )
     try:
         cmd_ret = client.cmd_iter(
-                host,
-                'virt.init',
-                [
-                    name,
-                    cpu,
-                    mem,
-                    image,
-                    nic,
-                    hypervisor,
-                    start,
-                    disk,
-                    saltenv,
-                    seed,
-                    install,
-                    pub_key,
-                    priv_key,
-                    enable_vnc,
-                ],
-                timeout=600)
+            host,
+            'virt.init',
+            [
+                name,
+                cpu,
+                mem
+            ],
+            timeout=600,
+            kwarg={
+                'image': image,
+                'nic': nic,
+                'hypervisor': hypervisor,
+                'start': start,
+                'disk': disk,
+                'saltenv': saltenv,
+                'seed': seed,
+                'install': install,
+                'pub_key': pub_key,
+                'priv_key': priv_key,
+                'seed_cmd': seed_cmd,
+                'enable_vnc': enable_vnc,
+                'enable_qcow': enable_qcow,
+                'serial_type': serial_type,
+            })
     except SaltClientError as client_error:
         # Fall through to ret error handling below
         print(client_error)

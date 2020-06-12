@@ -81,9 +81,9 @@ Arguments are formatted as YAML:
 
 .. code-block:: bash
 
-    salt '*' cmd.run 'echo "Hello: $FIRST_NAME"' saltenv='{FIRST_NAME: "Joe"}'
+    salt '*' cmd.run 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
 
-Note: dictionaries must have curly braces around them (like the ``saltenv``
+Note: dictionaries must have curly braces around them (like the ``env``
 keyword argument above).  This was changed in 0.15.1: in the above example,
 the first argument used to be parsed as the dictionary
 ``{'echo "Hello': '$FIRST_NAME"'}``. This was generally not the expected
@@ -94,7 +94,7 @@ If you want to test what parameters are actually passed to a module, use the
 
 .. code-block:: bash
 
-    salt '*' test.arg_repr 'echo "Hello: $FIRST_NAME"' saltenv='{FIRST_NAME: "Joe"}'
+    salt '*' test.arg_repr 'echo "Hello: $FIRST_NAME"' env='{FIRST_NAME: "Joe"}'
 
 Finding available minion functions
 ``````````````````````````````````

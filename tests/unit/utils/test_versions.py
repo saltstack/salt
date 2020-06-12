@@ -10,15 +10,19 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import sys
 import warnings
 
 # Import Salt Testing libs
+import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
+import salt.modules.cmdmod
 import salt.version
+import salt.utils.platform
 import salt.utils.versions
 from salt.utils.versions import LooseVersion, StrictVersion
 
@@ -94,6 +98,40 @@ class VersionTestCase(TestCase):
             self.assertEqual(res, wanted,
                              'cmp(%s, %s) should be %s, got %s' %
                              (v1, v2, wanted, res))
+
+    @skipIf(not salt.utils.platform.is_linux(), 'only need to run on linux')
+    def test_spelling_version_name(self):
+        '''
+        check the spelling of the version name for the release
+        names in the salt.utils.versions.warn_until call
+        '''
+        salt_dir = integration.CODE_DIR
+        query = 'salt.utils.versions.warn_until'
+        names = salt.version.SaltStackVersion.NAMES
+
+        salt_dir += '/salt/'
+        cmd = 'grep -lr {0} -A 1 '.format(query) + salt_dir
+
+        grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
+
+        for line in grep_call:
+            num_cmd = salt.modules.cmdmod.run_stdout('grep -c {0} {1}'.format(query, line))
+            ver_cmd = salt.modules.cmdmod.run_stdout('grep {0} {1} -A 1'.format(query, line))
+            if 'pyc' in line:
+                break
+
+            match = 0
+            for key in names:
+                if key in ver_cmd:
+                    match = match + (ver_cmd.count(key))
+            if 'utils/__init__.py' in line:
+                # work around for utils/__init__.py because
+                # it includes the warn_utils function
+                match = match + 1
+            self.assertEqual(match, int(num_cmd), msg='The file: {0} has an '
+                             'incorrect spelling for the release name in the warn_utils '
+                             'call: {1}. Expecting one of these release names: '
+                             '{2}'.format(line, ver_cmd, names))
 
 
 class VersionFuncsTestCase(TestCase):

@@ -4,18 +4,6 @@
 Thorium Complex Reactor
 =======================
 
-.. note::
-
-    Thorium is a provisional feature of Salt and is subject to change
-    and removal if the feature proves to not be a viable solution.
-
-.. note::
-
-    Thorium was added to Salt as an experimental feature in the 2016.3.0
-    release, as of 2016.3.0 this feature is considered experimental, no
-    guarantees are made for support of any kind yet.
-
-
 The original Salt Reactor is based on the idea of listening for a specific
 event and then reacting to it. This model comes with many logical limitations,
 for instance it is very difficult (and hacky) to fire a reaction based on
@@ -75,6 +63,67 @@ Example ``thorium_roots`` configuration:
       base:
         - /etc/salt/thorium
 
+It is also possible to use gitfs with Thorium,
+using the ``thoriumenv`` or ``thorium_top`` settings.
+
+Example using ``thorium_top``:
+
+.. code-block:: yaml
+
+    thorium_top: salt://thorium/top.sls
+    gitfs_provider: pygit2
+
+    gitfs_remotes:
+      - git@github.com:user/repo.git:
+        - name: salt-backend
+        - root: salt
+        - base: master
+      - git@github.com:user/repo.git:
+        - name: thorium-backend
+        - root: thorium
+        - base: master
+        - mountpoint: salt://thorium
+
+.. note::
+
+    When using this method don't forget to prepend the mountpoint to files served by this repo,
+    for example ``top.sls``:
+
+    .. code-block:: yaml
+
+        base:
+          '*':
+            - thorium.key_clean
+
+Example using ``thoriumenv``:
+
+.. code-block:: yaml
+
+    thoriumenv: thorium
+    gitfs_provider: pygit2
+
+    gitfs_remotes:
+      - git@github.com:user/repo.git:
+        - name: salt-backend
+        - root: salt
+        - base: master
+      - git@github.com:user/repo.git:
+        - name: thorium-backend
+        - root: thorium
+        - saltenv:
+          - thorium:
+            - ref: master
+
+.. note::
+
+    When using this method all state will run under the defined environment,
+    for example ``top.sls``:
+
+    .. code-block:: yaml
+
+        thorium:
+          '*':
+            - key_clean
 
 The Thorium top.sls File
 ------------------------
@@ -285,12 +334,12 @@ event bus, and returns ``True`` if that event's tag matches. For example:
         run_remote_ex:
           local.cmd:
             - tgt: '*'
-            - func: test.ping
+            - func: test.version
             - require:
               - check: salt/foo/*/bar
 
 This formula will look for an event whose tag is ``salt/foo/<anything>/bar`` and
-if it comes in, issue a ``test.ping`` to all minions.
+if it comes in, issue a ``test.version`` to all minions.
 
 
 Register Persistence

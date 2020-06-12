@@ -124,7 +124,7 @@ def active():
             dev_info = match.groupdict()
             ret[dev_info['devname']] = dev_info
         else:
-            log.warn('dmsetup output does not match expected format')
+            log.warning('dmsetup output does not match expected format')
 
     return ret
 

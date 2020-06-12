@@ -4,7 +4,7 @@ Manage PagerDuty schedules.
 
 Example:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
     ensure test schedule:
         pagerduty_schedule.present:

@@ -420,7 +420,7 @@ class AESReqServerMixin(object):
                 with salt.utils.files.fopen(pubfn, 'w+') as fp_:
                     fp_.write(load['pub'])
             elif not load['pub']:
-                log.error('Public key is empty: {0}'.format(load['id']))
+                log.error('Public key is empty: %s', load['id'])
                 return {'enc': 'clear',
                         'load': {'ret': False}}
 
@@ -434,8 +434,8 @@ class AESReqServerMixin(object):
         # and an empty request comes in
         try:
             pub = salt.crypt.get_rsa_pub_key(pubfn)
-        except (ValueError, IndexError, TypeError) as err:
-            log.error('Corrupt public key "%s": %s', pubfn, err)
+        except Exception as err:
+            log.error('Corrupt public key "%s": %s', pubfn, err, exc_info_on_loglevel=logging.DEBUG)
             return {'enc': 'clear',
                     'load': {'ret': False}}
 

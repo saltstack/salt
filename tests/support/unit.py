@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
     ============================
@@ -26,6 +26,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
+from unittest import (
+    TestLoader as _TestLoader,
+    TextTestRunner as _TextTestRunner,
+    TestCase as _TestCase,
+    expectedFailure,
+    TestSuite as _TestSuite,
+    skip,
+    skipIf,
+    TestResult,
+    TextTestResult as _TextTestResult
+)
+from unittest.case import _id, SkipTest
 from salt.ext import six
 try:
     import psutil
@@ -50,67 +62,6 @@ Quisque cursus odio tortor. In consequat augue nisl, eget lacinia odio vestibulu
 Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convallis. Ut condimentum
 eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
 Sed quis posuere urna.'''
-
-# support python < 2.7 via unittest2
-if sys.version_info < (2, 7):
-    try:
-        # pylint: disable=import-error
-        from unittest2 import (
-            TestLoader as __TestLoader,
-            TextTestRunner as __TextTestRunner,
-            TestCase as __TestCase,
-            expectedFailure,
-            TestSuite as __TestSuite,
-            skip,
-            skipIf,
-            TestResult as _TestResult,
-            TextTestResult as __TextTestResult
-        )
-        from unittest2.case import _id
-        # pylint: enable=import-error
-
-        class NewStyleClassMixin(object):
-            '''
-            Simple new style class to make pylint shut up!
-
-            And also to avoid errors like:
-
-                'Cannot create a consistent method resolution order (MRO) for bases'
-            '''
-
-        class _TestLoader(__TestLoader, NewStyleClassMixin):
-            pass
-
-        class _TextTestRunner(__TextTestRunner, NewStyleClassMixin):
-            pass
-
-        class _TestCase(__TestCase, NewStyleClassMixin):
-            pass
-
-        class _TestSuite(__TestSuite, NewStyleClassMixin):
-            pass
-
-        class TestResult(_TestResult, NewStyleClassMixin):
-            pass
-
-        class _TextTestResult(__TextTestResult, NewStyleClassMixin):
-            pass
-
-    except ImportError:
-        raise SystemExit('You need to install unittest2 to run the salt tests')
-else:
-    from unittest import (
-        TestLoader as _TestLoader,
-        TextTestRunner as _TextTestRunner,
-        TestCase as _TestCase,
-        expectedFailure,
-        TestSuite as _TestSuite,
-        skip,
-        skipIf,
-        TestResult,
-        TextTestResult as _TextTestResult
-    )
-    from unittest.case import _id
 
 
 class TestSuite(_TestSuite):
@@ -268,6 +219,19 @@ class TestCase(_TestCase):
         )
         # return _TestCase.assertNotAlmostEquals(self, *args, **kwargs)
 
+    def repack_state_returns(self, state_ret):
+        '''
+        Accepts a state return dict and returns it back with the top level key
+        names rewritten such that the ID declaration is the key instead of the
+        State's unique tag. For example: 'foo' instead of
+        'file_|-foo_|-/etc/foo.conf|-managed'
+
+        This makes it easier to work with state returns when crafting asserts
+        after running states.
+        '''
+        assert isinstance(state_ret, dict), state_ret
+        return {x.split('_|-')[1]: y for x, y in six.iteritems(state_ret)}
+
     def failUnlessEqual(self, *args, **kwargs):
         raise DeprecationWarning(
             'The {0}() function is deprecated. Please start using {1}() '
@@ -401,11 +365,11 @@ class TextTestResult(_TextTestResult):
     '''
 
     def startTest(self, test):
-        log.debug('>>>>> START >>>>> {0}'.format(test.id()))
+        log.debug('>>>>> START >>>>> %s', test.id())
         return super(TextTestResult, self).startTest(test)
 
     def stopTest(self, test):
-        log.debug('<<<<< END <<<<<<< {0}'.format(test.id()))
+        log.debug('<<<<< END <<<<<<< %s', test.id())
         return super(TextTestResult, self).stopTest(test)
 
 

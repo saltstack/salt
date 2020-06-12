@@ -59,7 +59,7 @@ def update_config(file_name, yaml_contents):
 
     Example low data:
 
-    .. code-block:: yaml
+    .. code-block:: python
 
         data = {
             'username': 'salt',

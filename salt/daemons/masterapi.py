@@ -45,6 +45,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.versions
+import salt.utils.master
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -174,6 +175,42 @@ def clean_old_jobs(opts):
         mminion.returners[fstr]()
 
 
+def clean_proc_dir(opts):
+    '''
+    Clean out old tracked jobs running on the master
+
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    '''
+    serial = salt.payload.Serial(opts)
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(*[proc_dir, fn_])
+        data = salt.utils.master.read_proc_file(proc_file, opts)
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+            continue
+        if not salt.utils.master.is_pid_healthy(data['pid']):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data['pid'],
+                    proc_file
+                )
+                os.remove(proc_file)
+            except (OSError, IOError) as err:
+                log.error('Unable to remove proc file: %s.', err)
+
+
 def mk_key(opts, user):
     if HAS_PWD:
         uid = None
@@ -202,10 +239,9 @@ def mk_key(opts, user):
         os.unlink(keyfile)
 
     key = salt.crypt.Crypticle.generate_key_string()
-    cumask = os.umask(191)
-    with salt.utils.files.fopen(keyfile, 'w+') as fp_:
-        fp_.write(salt.utils.stringutils.to_str(key))
-    os.umask(cumask)
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.fopen(keyfile, 'w+') as fp_:
+            fp_.write(salt.utils.stringutils.to_str(key))
     # 600 octal: Read and write access to the owner only.
     # Write access is necessary since on subsequent runs, if the file
     # exists, it needs to be written to again. Windows enforces this.
@@ -276,6 +312,7 @@ class AutoKey(object):
     Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
+        self.signing_files = {}
         self.opts = opts
 
     def check_permissions(self, filename):
@@ -315,15 +352,15 @@ class AutoKey(object):
             log.warning('Wrong permissions for %s, ignoring content', signing_file)
             return False
 
-        with salt.utils.files.fopen(signing_file, 'r') as fp_:
-            for line in fp_:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                else:
-                    if salt.utils.stringutils.expr_match(keyid, line):
-                        return True
-        return False
+        mtime = os.path.getmtime(signing_file)
+        if self.signing_files.get(signing_file, {}).get('mtime') != mtime:
+            self.signing_files.setdefault(signing_file, {})['mtime'] = mtime
+            with salt.utils.files.fopen(signing_file, 'r') as fp_:
+                self.signing_files[signing_file]['data'] = [
+                    entry for entry in [line.strip() for line in fp_] if not entry.strip().startswith('#')
+                ]
+        return any(salt.utils.stringutils.expr_match(keyid, line) for line
+                   in self.signing_files[signing_file].get('data', []))
 
     def check_autosign_dir(self, keyid):
         '''
@@ -549,6 +586,18 @@ class RemoteFuncs(object):
         if not skip_verify:
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
+
+        if isinstance(load['fun'], six.string_types):
+            functions = list(set(load['fun'].split(',')))
+            _ret_dict = len(functions) > 1
+        elif isinstance(load['fun'], list):
+            functions = load['fun']
+            _ret_dict = True
+        else:
+            return {}
+
+        functions_allowed = []
+
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -558,8 +607,16 @@ class RemoteFuncs(object):
                 if re.match(match, load['id']):
                     if isinstance(self.opts['mine_get'][match], list):
                         perms.update(self.opts['mine_get'][match])
-            if not any(re.match(perm, load['fun']) for perm in perms):
+
+            for fun in functions:
+                if any(re.match(perm, fun) for perm in perms):
+                    functions_allowed.append(fun)
+
+            if not functions_allowed:
                 return {}
+        else:
+            functions_allowed = functions
+
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
@@ -588,10 +645,16 @@ class RemoteFuncs(object):
         minions = _res['minions']
         for minion in minions:
             fdata = self.cache.fetch('minions/{0}'.format(minion), 'mine')
-            if isinstance(fdata, dict):
-                fdata = fdata.get(load['fun'])
-                if fdata:
-                    ret[minion] = fdata
+
+            if not isinstance(fdata, dict):
+                continue
+
+            if not _ret_dict and functions_allowed and functions_allowed[0] in fdata:
+                ret[minion] = fdata.get(functions_allowed[0])
+            elif _ret_dict:
+                for fun in list(set(functions_allowed) & set(fdata.keys())):
+                    ret.setdefault(fun, {})[minion] = fdata.get(fun)
+
         return ret
 
     def _mine(self, load, skip_verify=False):
@@ -660,6 +723,13 @@ class RemoteFuncs(object):
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
+            return False
+
+        if load.get('size', 0) > file_recv_max_size:
+            log.error(
+                'Exceeding file_recv_max_size limit: %s',
+                file_recv_max_size
+            )
             return False
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
@@ -1069,9 +1139,9 @@ class LocalFuncs(object):
         try:
             fun = load.pop('fun')
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.async(fun,
-                                       load.get('kwarg', {}),
-                                       username)
+            return runner_client.asynchronous(fun,
+                                              load.get('kwarg', {}),
+                                              username)
         except Exception as exc:
             log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,

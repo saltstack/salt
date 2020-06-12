@@ -30,7 +30,7 @@ class SPM(parsers.SPMParser):
         self.parse_args()
         self.setup_logfile_logger()
         v_dirs = [
-            self.config['cachedir'],
+            self.config['spm_cache_dir'],
         ]
         verify_env(v_dirs,
                    self.config['user'],

@@ -29,7 +29,6 @@ import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.user
-from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 
@@ -309,13 +308,11 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo 'Foo Bar'
     '''
-    if isinstance(fullname, string_types):
-        fullname = _sdecode(fullname)
+    fullname = salt.utils.data.decode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
-    if isinstance(pre_info['fullname'], string_types):
-        pre_info['fullname'] = _sdecode(pre_info['fullname'])
+    pre_info['fullname'] = salt.utils.data.decode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -329,9 +326,7 @@ def chfullname(name, fullname):
     # matches desired value
     time.sleep(1)
 
-    current = info(name).get('fullname')
-    if isinstance(current, string_types):
-        current = _sdecode(current)
+    current = salt.utils.data.decode(info(name).get('fullname'))
     return current == fullname
 
 
@@ -471,7 +466,8 @@ def list_users():
 
         salt '*' user.list_users
     '''
-    return sorted([user.pw_name for user in pwd.getpwall()])
+    users = _dscl(['/users'], 'list')['stdout']
+    return users.split()
 
 
 def rename(name, new_name):

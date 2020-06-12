@@ -8,15 +8,26 @@ from __future__ import absolute_import, unicode_literals
 # Import Python libs
 import json  # future lint: blacklisted-module
 import logging
+import sys
 
 # Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+def __split(raw):
+    '''
+    Performs a splitlines on the string. This function exists to make mocking
+    possible in unit tests, since the member functions of the str/unicode
+    builtins cannot be mocked.
+    '''
+    return raw.splitlines()
 
 
 def find_json(raw):
@@ -25,8 +36,13 @@ def find_json(raw):
     string to start with garbage and end with json but be cleanly loaded
     '''
     ret = {}
-    for ind, _ in enumerate(raw):
-        working = '\n'.join(raw.splitlines()[ind:])
+    lines = __split(raw)
+    for ind, _ in enumerate(lines):
+        try:
+            working = '\n'.join(lines[ind:])
+        except UnicodeDecodeError:
+            working = '\n'.join(salt.utils.data.decode(lines[ind:]))
+
         try:
             ret = json.loads(working)  # future lint: blacklisted-function
         except ValueError:
@@ -79,9 +95,9 @@ def loads(s, **kwargs):
     except TypeError as exc:
         # json.loads cannot load bytestrings in Python < 3.6
         if six.PY3 and isinstance(s, bytes):
-            return json_module.loads(s.decode(__salt_system_encoding__), **kwargs)
+            return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)
         else:
-            raise exc
+            six.reraise(*sys.exc_info())
 
 
 def dump(obj, fp, **kwargs):
@@ -100,11 +116,17 @@ def dump(obj, fp, **kwargs):
     using the _json_module argument)
     '''
     json_module = kwargs.pop('_json_module', json)
+    orig_enc_func = kwargs.pop('default', lambda x: x)
+
+    def _enc_func(obj):
+        obj = ThreadLocalProxy.unproxy(obj)
+        return orig_enc_func(obj)
+
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json_module.dump(obj, fp, **kwargs)  # future lint: blacklisted-function
+    return json_module.dump(obj, fp, default=_enc_func, **kwargs)  # future lint: blacklisted-function
 
 
 def dumps(obj, **kwargs):
@@ -122,10 +144,15 @@ def dumps(obj, **kwargs):
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
     '''
-    import sys
     json_module = kwargs.pop('_json_module', json)
+    orig_enc_func = kwargs.pop('default', lambda x: x)
+
+    def _enc_func(obj):
+        obj = ThreadLocalProxy.unproxy(obj)
+        return orig_enc_func(obj)
+
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
     if six.PY2:
         obj = salt.utils.data.encode(obj)
-    return json_module.dumps(obj, **kwargs)  # future lint: blacklisted-function
+    return json_module.dumps(obj, default=_enc_func, **kwargs)  # future lint: blacklisted-function

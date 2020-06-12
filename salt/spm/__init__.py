@@ -95,6 +95,8 @@ class SPMClient(object):
         self.files_prov = self.opts.get('spm_files_provider', 'local')
         self._prep_pkgdb()
         self._prep_pkgfiles()
+        self.db_conn = None
+        self.files_conn = None
         self._init()
 
     def _prep_pkgdb(self):
@@ -104,8 +106,14 @@ class SPMClient(object):
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
 
     def _init(self):
-        self.db_conn = self._pkgdb_fun('init')
-        self.files_conn = self._pkgfiles_fun('init')
+        if not self.db_conn:
+            self.db_conn = self._pkgdb_fun('init')
+        if not self.files_conn:
+            self.files_conn = self._pkgfiles_fun('init')
+
+    def _close(self):
+        if self.db_conn:
+            self.db_conn.close()
 
     def run(self, args):
         '''
@@ -133,6 +141,8 @@ class SPMClient(object):
                 self._info(args)
             elif command == 'list':
                 self._list(args)
+            elif command == 'close':
+                self._close()
             else:
                 raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
@@ -249,7 +259,7 @@ class SPMClient(object):
             if pkg.endswith('.spm'):
                 if self._pkgfiles_fun('path_exists', pkg):
                     comps = pkg.split('-')
-                    comps = '-'.join(comps[:-2]).split('/')
+                    comps = os.path.split('-'.join(comps[:-2]))
                     pkg_name = comps[-1]
 
                     formula_tar = tarfile.open(pkg, 'r:bz2')
@@ -265,6 +275,7 @@ class SPMClient(object):
                     to_install.extend(to_)
                     optional.extend(op_)
                     recommended.extend(re_)
+                    formula_tar.close()
                 else:
                     raise SPMInvocationError('Package file {0} not found'.format(pkg))
             else:
@@ -417,7 +428,7 @@ class SPMClient(object):
 
             needs, unavail, optional, recommended = self._resolve_deps(formula_def)
 
-            if len(unavail) > 0:
+            if unavail:
                 raise SPMPackageError(
                     'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
                         formula_def['name'], '\n'.join(unavail))
@@ -585,7 +596,7 @@ class SPMClient(object):
 
         inspected = []
         to_inspect = can_has.copy()
-        while len(to_inspect) > 0:
+        while to_inspect:
             dep = next(six.iterkeys(to_inspect))
             del to_inspect[dep]
 
@@ -700,7 +711,7 @@ class SPMClient(object):
 
         def _read_metadata(repo, repo_info):
             if cache.updated('.', repo) is None:
-                log.warn('Updating repo metadata')
+                log.warning('Updating repo metadata')
                 self._download_repo_metadata({})
 
             metadata[repo] = {
@@ -901,6 +912,7 @@ class SPMClient(object):
         formula_def = salt.utils.yaml.safe_load(formula_ref)
 
         self.ui.status(self._get_info(formula_def))
+        formula_tar.close()
 
     def _info(self, args):
         '''
@@ -1083,7 +1095,7 @@ class SPMClient(object):
         Render a [pre|post]_local_state or [pre|post]_tgt_state script
         '''
         # FORMULA can contain a renderer option
-        renderer = formula_def.get('renderer', self.opts.get('renderer', 'yaml_jinja'))
+        renderer = formula_def.get('renderer', self.opts.get('renderer', 'jinja|yaml'))
         rend = salt.loader.render(self.opts, {})
         blacklist = self.opts.get('renderer_blacklist')
         whitelist = self.opts.get('renderer_whitelist')

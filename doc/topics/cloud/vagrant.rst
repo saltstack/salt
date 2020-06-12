@@ -94,7 +94,7 @@ Profile configuration example:
     vagrant-machine:
       host: my-vhost  # the Salt id of the virtual machine's host computer.
       provider: my-vagrant-config
-      cwd: /srv/machines  # the path to your Virtualbox file.
+      cwd: /srv/machines  # the path to your Vagrantfile.
       vagrant_runas: my-username  # the username who defined the Vagrantbox on the host
       # vagrant_up_timeout: 300 # (seconds) timeout for cmd.run of the "vagrant up" command
       # vagrant_provider: '' # option for "vagrant up" like: "--provider vmware_fusion"
@@ -119,7 +119,7 @@ to it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt my-id test.ping
+    salt my-id test.version
 
 .. _host provisioning example:
 

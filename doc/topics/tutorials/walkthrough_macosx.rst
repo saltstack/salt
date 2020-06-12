@@ -13,14 +13,14 @@ consisting of  one master, and one minion running on a local VM hosted on macOS.
     `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
 
 The 5 Cent Salt Intro
----------------------
+=====================
 
 Since you're here you've probably already heard about Salt, so you already
 know Salt lets you configure and run commands on hordes of servers easily.
 Here's a brief overview of a Salt cluster:
 
 - Salt works by having a "master" server sending commands to one or multiple
-  "minion" servers [#]_. The master server is the "command center". It is
+  "minion" servers. The master server is the "command center". It is
   going to be the place where you store your configuration files, aka: "which
   server is the db, which is the web server, and what libraries and software
   they should have installed". The minions receive orders from the master.
@@ -52,7 +52,7 @@ Here's a brief overview of a Salt cluster:
     it also contains some Salt configuration. More on that in step 3. Also
     note that all configuration files are YAML files. So indentation matters.
 
-.. [#]
+.. note::
 
     Salt also works with "masterless" configuration where a minion is
     autonomous (in which case salt can be seen as a local configuration tool),
@@ -64,14 +64,14 @@ Before Digging In, The Architecture Of The Salt Cluster
 -------------------------------------------------------
 
 Salt Master
-+++++++++++
+***********
 
 The "Salt master" server is going to be the Mac OS machine, directly. Commands
 will be run from a terminal app, so Salt will need to be installed on the Mac.
 This is going to be more convenient for toying around with configuration files.
 
 Salt Minion
-+++++++++++
+***********
 
 We'll only have one "Salt minion" server. It is going to be running on a
 Virtual Machine running on the Mac, using VirtualBox. It will run an Ubuntu
@@ -80,7 +80,8 @@ distribution.
 
 Step 1 - Configuring The Salt Master On Your Mac
 ================================================
-`official documentation
+
+`Official Documentation
 <http://docs.saltstack.com/topics/installation/osx.html>`_
 
 Because Salt has a lot of dependencies that are not built in macOS, we will use
@@ -113,7 +114,9 @@ it all over again. It also lets you *uninstall* things easily.
 
 Install Homebrew
 ----------------
+
 Install Homebrew here http://brew.sh/
+
 Or just type
 
 .. code-block:: bash
@@ -409,9 +412,9 @@ following:
 
 .. code-block:: bash
 
-    sudo salt '*' test.ping
+    sudo salt '*' test.version
 
-You should see your minion answering the ping. It's now time to do some
+You should see your minion answering with its salt version. It's now time to do some
 configuration.
 
 
@@ -496,7 +499,7 @@ http://192.168.33.10/, you should see the standard Nginx welcome page.
 Congratulations!
 
 Where To Go From Here
----------------------
+=====================
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:

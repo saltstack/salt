@@ -487,9 +487,10 @@ def present(
                 iargs = {'ami_name': image_name, 'region': region, 'key': key,
                          'keyid': keyid, 'profile': profile}
                 image_ids = __salt__['boto_ec2.find_images'](**iargs)
-                if len(image_ids):
+                if image_ids:  # find_images() returns False on failure
                     launch_config[index]['image_id'] = image_ids[0]
                 else:
+                    log.warning("Couldn't find AMI named `%s`, passing literally.", image_name)
                     launch_config[index]['image_id'] = image_name
                 del launch_config[index]['image_name']
                 break
@@ -715,7 +716,7 @@ def _determine_termination_policies(termination_policies, termination_policies_f
     pillar_termination_policies = copy.deepcopy(
         __salt__['config.option'](termination_policies_from_pillar, [])
     )
-    if not termination_policies and len(pillar_termination_policies) > 0:
+    if not termination_policies and pillar_termination_policies:
         termination_policies = pillar_termination_policies
     return termination_policies
 
@@ -727,7 +728,7 @@ def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
     pillar_scaling_policies = copy.deepcopy(
         __salt__['config.option'](scaling_policies_from_pillar, {})
     )
-    if not scaling_policies and len(pillar_scaling_policies) > 0:
+    if not scaling_policies and pillar_scaling_policies:
         scaling_policies = pillar_scaling_policies
     return scaling_policies
 
@@ -756,7 +757,7 @@ def _determine_notification_info(notification_arn,
         __salt__['config.option'](notification_arn_from_pillar, {})
     )
     pillar_arn = None
-    if len(pillar_arn_list) > 0:
+    if pillar_arn_list:
         pillar_arn = pillar_arn_list[0]
     pillar_notification_types = copy.deepcopy(
         __salt__['config.option'](notification_types_from_pillar, {})

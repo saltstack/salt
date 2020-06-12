@@ -46,7 +46,7 @@ def default_hash():
     return '*' if __grains__['os'].lower() == 'freebsd' else '*************'
 
 
-def info(name):
+def info(name, **kwargs):
     '''
     Return information for the specified user
 
@@ -73,7 +73,7 @@ def info(name):
 
     if __salt__['cmd.has_exec']('pw'):
         change, expire = __salt__['cmd.run_stdout'](
-            ['pw', 'user', 'show', name],
+            ['pw', 'usershow', '-n', name],
             python_shell=False).split(':')[5:7]
     elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
         try:

@@ -41,7 +41,7 @@ Salt's policy has always been that when upgrading, the minion should never be
 on a newer version than the master.  Specifically with this update, because of
 changes in the fileclient, the 2017.7 minion requires a 2017.7 master.
 
-Backwards compatiblity is still maintained, so older minions can still be used.
+Backwards compatibility is still maintained, so older minions can still be used.
 
 More information can be found in the :ref:`Salt FAQ<which-version>`
 
@@ -54,7 +54,7 @@ The :py:func:`service.masked <salt.states.service.masked>` and
 added to allow Salt to manage masking of systemd units.
 
 Additionally, the following functions in the :mod:`systemd
-<salt.modules.systemd>` execution module have changed to accomodate the fact
+<salt.modules.systemd>` execution module have changed to accommodate the fact
 that indefinite and runtime masks can co-exist for the same unit:
 
 - :py:func:`service.masked <salt.modules.systemd.masked>` - The return from
@@ -152,7 +152,7 @@ State Module Changes
 
   In a rare case that you have a function that needs to be called several times but
   with the different parameters, an additional feature of "tagging" is to the
-  rescue. In order to tag a function, use a colon delimeter. For example:
+  rescue. In order to tag a function, use a colon delimiter. For example:
 
   .. code-block:: yaml
 
@@ -281,7 +281,7 @@ Minion Configuration Additions
 salt-api Changes
 ================
 
-The ``rest_cherrypy`` netapi module has recieved a few minor improvements:
+The ``rest_cherrypy`` netapi module has received a few minor improvements:
 
 * A CORS bugfix.
 * A new ``/token`` convenience endpoint to generate Salt eauth tokens.
@@ -301,7 +301,7 @@ reports of confusion among community members, since the targeting method is
 published to minions as ``tgt_type``, and appears as ``tgt_type`` in the job
 cache as well.
 
-While ``expr_form`` will continue to be supported until the **Fluorine**
+While ``expr_form`` will continue to be supported until the **2019.2.0**
 release cycle (two major releases after this one), those who are using the
 :ref:`LocalClient <local-client>` (either directly, or implictly via a
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
@@ -557,7 +557,7 @@ of objects (users, databases, roles, etc.).
 .. note::
     With the `Moby announcement`_ coming at this year's DockerCon_, Salt's
     :mod:`docker <salt.modules.dockermod>` execution module (as well as the
-    state modules) work interchangably when **docker** is replaced with
+    state modules) work interchangeably when **docker** is replaced with
     **moby** (e.g.  :py:func:`moby_container.running
     <salt.states.docker_container.running>`, :py:func:`moby_image.present
     <salt.states.docker_image.present>`, :py:func:`moby.inspect_container
@@ -566,7 +566,7 @@ of objects (users, databases, roles, etc.).
 .. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
 .. _DockerCon: http://2017.dockercon.com/
 
-The old syntax will continue to work until the **Fluorine** release of Salt.
+The old syntax will continue to work until the **2019.2.0** release of Salt.
 The old ``dockerng`` naming will also continue to work until that release, so
 no immediate changes need to be made to your SLS files (unless you were still
 using the old docker states that have been moved to salt-contrib_).
@@ -607,13 +607,14 @@ documentation for :ref:`skip_translate
 New SSH Cache Roster
 ====================
 
-The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch to increase its usefulness.
-The new roster supports all minion matchers,
-so it is now possible to target minions identically through `salt` and `salt-ssh`.
+The :mod:`SSH cache Roster <salt.roster.cache>` has been rewritten from scratch
+to increase its usefulness.  The new roster supports all minion matchers, so it
+is now possible to target minions identically through `salt` and `salt-ssh`.
 
-Using the new ``roster_order`` configuration syntax it's now possible to compose a roster out of any combination
-of grains, pillar and mine data and even Salt SDB URLs.
-The new release is also fully IPv4 and IPv6 enabled and even has support for CIDR ranges.
+Using the new ``roster_order`` configuration syntax it's now possible to
+compose a roster out of any combination of grains, pillar and mine data and
+even Salt SDB URLs.  The new release is also fully IPv4 and IPv6 enabled and
+even has support for CIDR ranges.
 
 Salt-SSH Default Options
 ========================
@@ -621,8 +622,8 @@ Salt-SSH Default Options
 Defaults for rosters can now be set, so that they don't have to be set on every
 entry in a roster or specified from the commandline.
 
-The new option is :ref:`roster_defaults<roster-defaults>` and is specified in
-the master config file.
+The new option is :conf_master:`roster_defaults` and is specified in the master
+config file:
 
 .. code-block:: yaml
 
@@ -682,7 +683,7 @@ New Modules
 Beacons
 -------
 
-- :mod:`salt.beacons.log <salt.beacons.log>`
+- :mod:`salt.beacons.logs <salt.beacons.logs>`
 
 Cache
 -----
@@ -709,7 +710,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
-- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
+- :mod:`salt.modules.kubernetesmod <salt.modules.kubernetesmod>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`

@@ -155,11 +155,24 @@ import salt.exceptions
 
 # Import 3rd-party libs
 from salt.ext import six
+
 try:
+    # Trying to import MySQLdb
     import MySQLdb
-    HAS_MYSQL = True
+    import MySQLdb.cursors
+    import MySQLdb.converters
+    from MySQLdb.connections import OperationalError
 except ImportError:
-    HAS_MYSQL = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+        from MySQLdb.err import OperationalError
+    except ImportError:
+        MySQLdb = None
 
 log = logging.getLogger(__name__)
 
@@ -168,10 +181,10 @@ __virtualname__ = 'mysql'
 
 
 def __virtual__():
-    if not HAS_MYSQL:
-        return False, 'Could not import mysql returner; ' \
-                      'mysql python client is not installed.'
-    return True
+    '''
+    Confirm that a python mysql client is installed.
+    '''
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 def _get_options(ret=None):
@@ -228,7 +241,7 @@ def _get_serv(ret=None, commit=False):
             conn = __context__['mysql_returner_conn']
             conn.ping()
             connect = False
-        except MySQLdb.connections.OperationalError as exc:
+        except OperationalError as exc:
             log.debug('OperationalError on ping: %s', exc)
 
     if connect:
@@ -254,7 +267,7 @@ def _get_serv(ret=None, commit=False):
                 __context__['mysql_returner_conn'] = conn
             except TypeError:
                 pass
-        except MySQLdb.connections.OperationalError as exc:
+        except OperationalError as exc:
             raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
 
     cursor = conn.cursor()
@@ -265,7 +278,7 @@ def _get_serv(ret=None, commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -326,7 +339,7 @@ def save_load(jid, load, minions=None):
             cur.execute(sql, (jid, salt.utils.json.dumps(load)))
         except MySQLdb.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
-            # Without this try:except: we get tons of duplicate entry errors
+            # Without this try/except we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
 

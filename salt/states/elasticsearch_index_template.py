@@ -53,7 +53,7 @@ def present(name, definition):
     '''
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2017.3.0
-            Marked ``definition`` as required.
+        Marked ``definition`` as required.
 
     Ensure that the named index templat eis present.
 

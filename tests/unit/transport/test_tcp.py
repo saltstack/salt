@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Thomas Jackson <jacksontj.89@gmail.com>`
+    :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 '''
 
 # Import python libs
@@ -228,7 +228,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
-        if len(failures) > 0:
+        if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
         del self.channel
         del self._start_handlers

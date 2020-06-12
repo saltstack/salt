@@ -95,12 +95,9 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    supported = ['NetBSD', 'SunOS', 'DragonFly', 'Minix', 'Darwin', 'SmartOS']
-
-    if __grains__['os'] in supported and _check_pkgin():
-        return __virtualname__
-    return (False, 'The pkgin execution module cannot be loaded: only '
-            'available on {0} systems.'.format(', '.join(supported)))
+    return (__grains__.get('os_family') == 'Solaris' and _check_pkgin(),
+            'The pkgin execution module cannot be loaded: pkgin was '
+            'not detected on this platform.')
 
 
 def _splitpkg(name):
@@ -112,7 +109,7 @@ def _splitpkg(name):
         return name.split(';', 1)[0].rsplit('-', 1)
 
 
-def search(pkg_name):
+def search(pkg_name, **kwargs):
     '''
     Searches for an exact match using pkgin ^package$
 
@@ -147,6 +144,7 @@ def search(pkg_name):
 def latest_version(*names, **kwargs):
     '''
     .. versionchanged: 2016.3.0
+
     Return the latest version of the named package available for upgrade or
     installation.
 
@@ -181,7 +179,9 @@ def latest_version(*names, **kwargs):
 
         out = __salt__['cmd.run'](cmd, output_loglevel='trace')
         for line in out.splitlines():
-            p = line.split(',' if _supports_parsing() else None)
+            if line.startswith('No results found for'):
+                return pkglist
+            p = line.split(';' if _supports_parsing() else None)
 
             if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
@@ -190,7 +190,7 @@ def latest_version(*names, **kwargs):
                 s = _splitpkg(p[0])
                 if s:
                     if not s[0] in pkglist:
-                        if len(p) > 1 and p[1] == '<':
+                        if len(p) > 1 and p[1] in ('<', '', '='):
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
@@ -222,7 +222,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(force=False):
+def refresh_db(force=False, **kwargs):
     '''
     Use pkg update to get latest pkg_summary
 
@@ -261,6 +261,7 @@ def refresh_db(force=False):
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
     .. versionchanged: 2016.3.0
+
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -633,7 +634,7 @@ def _rehash():
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 
-def file_list(package):
+def file_list(package, **kwargs):
     '''
     List the files that belong to a package.
 
@@ -651,9 +652,10 @@ def file_list(package):
     return ret
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     '''
     .. versionchanged: 2016.3.0
+
     List the files that belong to a package.
 
     CLI Examples:
@@ -669,7 +671,6 @@ def file_dict(*packages):
     for package in packages:
         cmd = ['pkg_info', '-qL', package]
         ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
         files[package] = []
         for line in ret['stderr'].splitlines():
             errors.append(line)
@@ -681,9 +682,22 @@ def file_dict(*packages):
                 continue  # unexpected string
 
     ret = {'errors': errors, 'files': files}
-    for field in ret:
+    for field in list(ret):
         if not ret[field] or ret[field] == '':
             del ret[field]
     return ret
+
+
+def normalize_name(pkgs, **kwargs):
+    '''
+    Normalize package names
+
+    .. note::
+        Nothing special to do to normalize, just return
+        the original. (We do need it to be comaptible
+        with the pkg_resource provider.)
+    '''
+    return pkgs
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

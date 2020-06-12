@@ -68,11 +68,11 @@ def __virtual__():
     Load as 'pkg' on FreeBSD 9 when config option
     ``providers:pkg`` is set to 'pkgng'.
     '''
-    if __grains__['kernel'] == 'DragonFly':
+    if __grains__.get('kernel') == 'DragonFly':
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
+    if __grains__.get('os') == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
-    if __grains__['os'] == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
+    if __grains__.get('os') == 'FreeBSD' and int(__grains__['osmajorrelease']) == 9:
         providers = {}
         if 'providers' in __opts__:
             providers = __opts__['providers']
@@ -224,7 +224,7 @@ def version(*names, **kwargs):
 info = salt.utils.functools.alias_function(version, 'info')
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     '''
     Refresh PACKAGESITE contents
 
@@ -290,7 +290,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name> jail=<jail name or id>
         salt '*' pkg.latest_version <package name> chroot=/path/to/chroot
     '''
-    if len(names) == 0:
+    if not names:
         return ''
     ret = {}
 
@@ -678,6 +678,7 @@ def install(name=None,
             reinstall_requires=False,
             regex=False,
             pcre=False,
+            batch=False,
             **kwargs):
     '''
     Install package(s) from a repository
@@ -801,7 +802,16 @@ def install(name=None,
 
         .. code-block:: bash
 
-            salt '*' pkg.install <extended regular expression> pcre=True
+
+    batch
+        Use BATCH=true for pkg install, skipping all questions.
+        Be careful when using in production.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name> batch=True
     '''
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
@@ -810,9 +820,10 @@ def install(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
+    env = {}
     opts = 'y'
     if salt.utils.data.is_true(orphan):
         opts += 'A'
@@ -832,6 +843,11 @@ def install(name=None,
         opts += 'x'
     if salt.utils.data.is_true(pcre):
         opts += 'X'
+    if salt.utils.data.is_true(batch):
+        env = {
+                "BATCH": "true",
+                "ASSUME_ALWAYS_YES": "YES"
+              }
 
     old = list_pkgs(jail=jail, chroot=chroot, root=root)
 
@@ -870,7 +886,8 @@ def install(name=None,
     out = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        env=env
     )
 
     if out['retcode'] != 0 and out['stderr']:
@@ -1885,7 +1902,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. note::
         This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
+        parts of :py:mod:`states.pkg <salt.states.pkg>`.
         Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
     name
@@ -1949,9 +1966,9 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Remove version locks
 
     .. note::
-        This function is provided primarily for compatibilty with some
-        parts of :py:module:`states.pkg <salt.states.pkg>`.
-        Consider using :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
+        This function is provided primarily for compatibilty with some parts of
+        :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
+        :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
 
     name
         The name of the package to be unheld
@@ -2424,7 +2441,7 @@ def _parse_upgrade(stdout):
     return result
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     '''
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem

@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
+import logging
 import re
 import shlex
 
@@ -19,6 +20,9 @@ import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
 import salt.utils.yaml
+from salt.utils.odict import OrderedDict
+
+log = logging.getLogger(__name__)
 
 
 if six.PY3:
@@ -34,6 +38,12 @@ def clean_kwargs(**kwargs):
     functions. These keys are useful for tracking what was used to invoke
     the function call, but they may not be desirable to have if passing the
     kwargs forward wholesale.
+
+    Usage example:
+
+    .. code-block:: python
+
+        kwargs = __utils__['args.clean_kwargs'](**kwargs)
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
@@ -70,7 +80,7 @@ def condition_input(args, kwargs):
     ret = []
     for arg in args:
         if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
-        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)
@@ -82,7 +92,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, condition=True, no_parse=None):
+def parse_input(args, kwargs=None, condition=True, no_parse=None):
     '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
@@ -91,6 +101,8 @@ def parse_input(args, condition=True, no_parse=None):
     '''
     if no_parse is None:
         no_parse = ()
+    if kwargs is None:
+        kwargs = {}
     _args = []
     _kwargs = {}
     for arg in args:
@@ -112,6 +124,7 @@ def parse_input(args, condition=True, no_parse=None):
                 _args.append(arg)
         else:
             _args.append(arg)
+    _kwargs.update(kwargs)
     if condition:
         return condition_input(_args, _kwargs)
     return _args, _kwargs
@@ -142,7 +155,8 @@ def yamlify_arg(arg):
         return arg
 
     if arg.strip() == '':
-        # Because YAML loads empty strings as None, we return the original string
+        # Because YAML loads empty (or all whitespace) strings as None, we
+        # return the original string
         # >>> import yaml
         # >>> yaml.load('') is None
         # True
@@ -151,6 +165,9 @@ def yamlify_arg(arg):
         return arg
 
     elif '_' in arg and all([x in '0123456789_' for x in arg.strip()]):
+        # When the stripped string includes just digits and underscores, the
+        # underscores are ignored and the digits are combined together and
+        # loaded as an int. We don't want that, so return the original value.
         return arg
 
     try:
@@ -173,6 +190,14 @@ def yamlify_arg(arg):
             # dicts must be wrapped in curly braces
             if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
+                return original_arg
+            else:
+                return arg
+
+        elif isinstance(arg, list):
+            # lists must be wrapped in brackets
+            if (isinstance(original_arg, six.string_types) and
+                    not original_arg.startswith('[')):
                 return original_arg
             else:
                 return arg
@@ -399,7 +424,7 @@ def format_call(fun,
     ret = initial_ret is not None and initial_ret or {}
 
     ret['args'] = []
-    ret['kwargs'] = {}
+    ret['kwargs'] = OrderedDict()
 
     aspec = get_function_argspec(fun, is_class_method=is_class_method)
 
@@ -460,17 +485,6 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Fluorine comes out, after
-    # which, errors will be raised instead.
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'It\'s time to start raising `SaltInvocationError` instead of '
-        'returning warnings',
-        # Let's not show the deprecation warning on the console, there's no
-        # need.
-        _dont_call_warnings=True
-    )
-
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -495,19 +509,7 @@ def format_call(fun,
                 )
             )
 
-        # Return a warning to the user explaining what's going on
-        ret.setdefault('warnings', []).append(
-            '{0}. If you were trying to pass additional data to be used '
-            'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until Salt '
-            'Fluorine is out.{1}'.format(
-                msg,
-                '' if 'full' not in ret else ' Please update your state files.'
-            )
-        )
-
-        # Lets pack the current extra kwargs as template context
-        ret.setdefault('context', {}).update(extra)
+        raise SaltInvocationError(msg)
     return ret
 
 
@@ -568,3 +570,26 @@ def parse_function(s):
         return fname, args, kwargs
     else:
         return None, None, None
+
+
+def prepare_kwargs(all_kwargs, class_init_kwargs):
+    '''
+    Filter out the kwargs used for the init of the class and the kwargs used to
+    invoke the command required.
+
+    all_kwargs
+        All the kwargs the Execution Function has been invoked.
+
+    class_init_kwargs
+        The kwargs of the ``__init__`` of the class.
+    '''
+    fun_kwargs = {}
+    init_kwargs = {}
+    for karg, warg in six.iteritems(all_kwargs):
+        if karg not in class_init_kwargs:
+            if warg is not None:
+                fun_kwargs[karg] = warg
+            continue
+        if warg is not None:
+            init_kwargs[karg] = warg
+    return init_kwargs, fun_kwargs

@@ -37,7 +37,7 @@ if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart import _upstart_enable, _upstart_disable, _upstart_is_enabled
+        from salt.modules.upstart_service import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
                   'salt.modules.upstart: %s', exc)
@@ -50,9 +50,14 @@ def __virtual__():
     Only work on select distros which still use Red Hat's /usr/bin/service for
     management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
+    # Disable when booted with systemd
+    if __utils__['systemd.booted'](__context__):
+        return (False, 'The rh_service execution module failed to load: this system was booted with systemd.')
+
     # Enable on these platforms only.
     enable = set((
         'XenServer',
+        'XCP-ng',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -66,7 +71,7 @@ def __virtual__():
         'McAfee  OS Server',
         'VirtuozzoLinux'
     ))
-    if __grains__['os'] in enable:
+    if __grains__.get('os') in enable:
 
         if __grains__['os'] == 'SUSE':
             if six.text_type(__grains__['osrelease']).startswith('11'):
@@ -76,11 +81,11 @@ def __virtual__():
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] == 'XenServer':
+        if __grains__['os'] in ('XenServer', 'XCP-ng'):
             if osrelease_major >= 7:
                 return (
                     False,
-                    'XenServer >= 7 uses systemd, will not load rh_service.py '
+                    'XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
             return __virtualname__
@@ -97,15 +102,6 @@ def __virtual__():
                 return (
                     False,
                     'RedHat-based distros >= version 7 use systemd, will not '
-                    'load rh_service.py as virtual \'service\''
-                )
-        if __grains__['os'] == 'Amazon':
-            if int(osrelease_major) in (2016, 2017):
-                return __virtualname__
-            else:
-                return (
-                    False,
-                    'Amazon Linux >= version 2 uses systemd. Will not '
                     'load rh_service.py as virtual \'service\''
                 )
         return __virtualname__

@@ -6,11 +6,15 @@ Minion enabling different transports.
 from __future__ import absolute_import, print_function, unicode_literals
 # Import Python Libs
 import sys
-from collections import namedtuple, Iterable, Sequence, Mapping
+
+try:
+    from collections.abc import Iterable, Sequence, Mapping
+except ImportError:
+    from collections import Iterable, Sequence, Mapping
+
 import logging
 
 # Import Salt Libs
-from salt.utils.odict import OrderedDict
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -46,11 +50,6 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
     Parses opts and generates a list of master (host,port) addresses.
     By default looks for list of masters in opts['master'] and uses
     opts['master_port'] as the default port when otherwise not provided.
-
-    To use this function to generate the cluster master list then
-    call with masters='cluster_masters' and port='raet_port' on a master
-    and
-    call with masters='cluster_masters' on a minion
 
     Use the opts key given by masters for the masters list, default is 'master'
     If parameter port is not None then uses the default port given by port
@@ -148,14 +147,14 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
 
     if not master_port:
         emsg = "Invalid or missing opts['master_port']."
-        log.error(emsg + '\n')
+        log.error(emsg)
         raise ValueError(emsg)
 
     entries = opts.get(masters, [])
 
     if not entries:
         emsg = "Invalid or missing opts['{0}'].".format(masters)
-        log.error(emsg + '\n')
+        log.error(emsg)
         if raise_if_empty:
             raise ValueError(emsg)
 

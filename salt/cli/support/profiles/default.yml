@@ -1,0 +1,78 @@
+sysinfo:
+  - description: |
+      Get the Salt grains of the current system.
+  - grains.items:
+      info: System grains
+
+packages:
+  - description: |
+      Fetch list of all the installed packages.
+  - pkg.list_pkgs:
+      info: Installed packages
+
+repositories:
+  - pkg.list_repos:
+      info: Available repositories
+
+upgrades:
+  - pkg.list_upgrades:
+      info: Possible upgrades
+
+## TODO: Some data here belongs elsewhere and also is duplicated
+status:
+  - status.version:
+      info: Status version
+  - status.cpuinfo:
+      info: CPU information
+  - status.cpustats:
+      info: CPU stats
+  - status.diskstats:
+      info: Disk stats
+  - status.loadavg:
+      info: Average load of the current system
+  - status.uptime:
+      info: Uptime of the machine
+  - status.meminfo:
+      info: Information about memory
+  - status.vmstats:
+      info: Virtual memory stats
+  - status.netdev:
+      info: Network device stats
+  - status.nproc:
+      info: Number of processing units available on this system
+  - status.procs:
+      info: Process data
+
+general-health:
+  - ps.boot_time:
+      info: System Boot Time
+  - ps.swap_memory:
+      info: Swap Memory
+      output: txt
+  - ps.cpu_times:
+      info: CPU times
+  - ps.disk_io_counters:
+      info: Disk IO counters
+  - ps.disk_partition_usage:
+      info: Disk partition usage
+      output: table
+  - ps.disk_partitions:
+      info: Disk partitions
+      output: table
+  - ps.top:
+      info: Top CPU consuming processes
+
+boot_log:
+  - filetree:
+      info: Collect boot logs
+      args:
+        - /var/log/boot.*
+
+system.log:
+  # This works on any file system object.
+  - filetree:
+      info: Add system log
+      args:
+        - /var/log/syslog
+        - /var/log/messages
+

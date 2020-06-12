@@ -28,11 +28,11 @@ else:
 
 # Import Salt libs
 import salt.utils.data
+import salt.utils.dateutils
 import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yamlencoding
-import salt.utils.locales
 import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -133,6 +133,7 @@ def wrap_tmpl_func(render_str):
                     'tplfile': template,
                     'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
+                    'tplroot': tpldir.split('/')[0],
                 }
                 context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
@@ -161,7 +162,7 @@ def wrap_tmpl_func(render_str):
                         tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
-                    raise exc
+                    six.reraise(*sys.exc_info())
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
@@ -204,7 +205,8 @@ def _get_jinja_error_slug(tb_data):
         return [
             x
             for x in tb_data if x[2] in ('top-level template code',
-                                         'template')
+                                         'template',
+                                         '<module>')
         ][-1]
     except IndexError:
         pass
@@ -356,8 +358,12 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined,
                                        **env_args)
 
+    tojson_filter = jinja_env.filters.get('tojson')
     jinja_env.tests.update(JinjaTest.salt_jinja_tests)
     jinja_env.filters.update(JinjaFilter.salt_jinja_filters)
+    if tojson_filter is not None:
+        # Use the existing tojson filter, if present (jinja2 >= 2.9)
+        jinja_env.filters['tojson'] = tojson_filter
     jinja_env.globals.update(JinjaGlobal.salt_jinja_globals)
 
     # globals
@@ -372,7 +378,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.locales.sdecode(value)
+        try:
+            decoded_context[key] = salt.utils.stringutils.to_unicode(value, encoding=SLS_ENCODING)
+        except UnicodeDecodeError as ex:
+            log.debug(
+                "Failed to decode using default encoding (%s), trying system encoding",
+                SLS_ENCODING,
+            )
+            decoded_context[key] = salt.utils.data.decode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -461,7 +474,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             uri=context['sls'].replace('.', '/') if 'sls' in context else None,
             lookup=lookup
         ).render(**context)
-    except:
+    except Exception:
         raise SaltRenderError(mako.exceptions.text_error_template().render())
 
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexander Pyatkin <asp@thexyz.net`
+    :codeauthor: Alexander Pyatkin <asp@thexyz.net
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals

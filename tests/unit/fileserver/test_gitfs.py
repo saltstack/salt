@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-:codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import errno
 import os
 import shutil
@@ -15,15 +14,16 @@ import tornado.ioloop
 import logging
 import stat
 try:
-    import pwd
+    import pwd  # pylint: disable=unused-import
 except ImportError:
     pass
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TMP, FILES
+from tests.support.helpers import patched_environ
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs
@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
+import salt.ext.six
 
 import salt.utils.gitfs
 from salt.utils.gitfs import (
@@ -60,43 +61,9 @@ except AttributeError:
 
 log = logging.getLogger(__name__)
 
-TMP_SOCK_DIR = tempfile.mkdtemp(dir=TMP)
-TMP_REPO_DIR = os.path.join(TMP, 'gitfs_root')
-INTEGRATION_BASE_FILES = os.path.join(FILES, 'file', 'base')
 UNICODE_FILENAME = 'питон.txt'
 UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 TAG_NAME = 'mytag'
-
-OPTS = {
-    'sock_dir': TMP_SOCK_DIR,
-    'gitfs_remotes': ['file://' + TMP_REPO_DIR],
-    'gitfs_root': '',
-    'fileserver_backend': ['gitfs'],
-    'gitfs_base': 'master',
-    'fileserver_events': True,
-    'transport': 'zeromq',
-    'gitfs_mountpoint': '',
-    'gitfs_saltenv': [],
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
-    'gitfs_saltenv_whitelist': [],
-    'gitfs_saltenv_blacklist': [],
-    'gitfs_user': '',
-    'gitfs_password': '',
-    'gitfs_insecure_auth': False,
-    'gitfs_privkey': '',
-    'gitfs_pubkey': '',
-    'gitfs_passphrase': '',
-    'gitfs_refspecs': [
-        '+refs/heads/*:refs/remotes/origin/*',
-        '+refs/tags/*:refs/tags/*'
-    ],
-    'gitfs_ssl_verify': True,
-    'gitfs_disable_saltenv_mapping': False,
-    'gitfs_ref_types': ['branch', 'tag', 'sha'],
-    'gitfs_update_interval': 60,
-    '__role': 'master',
-}
 
 
 def _rmtree_error(func, path, excinfo):
@@ -115,7 +82,36 @@ def _clear_instance_map():
 class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        opts = copy.deepcopy(OPTS)
+        opts = {
+            'sock_dir': self.tmp_sock_dir,
+            'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+            'gitfs_root': '',
+            'fileserver_backend': ['gitfs'],
+            'gitfs_base': 'master',
+            'fileserver_events': True,
+            'transport': 'zeromq',
+            'gitfs_mountpoint': '',
+            'gitfs_saltenv': [],
+            'gitfs_env_whitelist': [],
+            'gitfs_env_blacklist': [],
+            'gitfs_saltenv_whitelist': [],
+            'gitfs_saltenv_blacklist': [],
+            'gitfs_user': '',
+            'gitfs_password': '',
+            'gitfs_insecure_auth': False,
+            'gitfs_privkey': '',
+            'gitfs_pubkey': '',
+            'gitfs_passphrase': '',
+            'gitfs_refspecs': [
+                '+refs/heads/*:refs/remotes/origin/*',
+                '+refs/tags/*:refs/tags/*'
+            ],
+            'gitfs_ssl_verify': True,
+            'gitfs_disable_saltenv_mapping': False,
+            'gitfs_ref_types': ['branch', 'tag', 'sha'],
+            'gitfs_update_interval': 60,
+            '__role': 'master',
+        }
         opts['cachedir'] = self.tmp_cachedir
         opts['sock_dir'] = self.tmp_sock_dir
         return {
@@ -129,8 +125,12 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         # Clear the instance map so that we make sure to create a new instance
         # for this test class.
         _clear_instance_map()
-        cls.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        cls.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
+
+        cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, 'gitfs_root')
+        if salt.utils.platform.is_windows():
+            cls.tmp_repo_dir = cls.tmp_repo_dir.replace('\\', '/')
+        cls.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.tmp_sock_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
     def tearDownClass(cls):
@@ -142,6 +142,9 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             try:
                 shutil.rmtree(path, onerror=_rmtree_error)
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                    continue
                 if exc.errno != errno.EEXIST:
                     raise
 
@@ -285,7 +288,7 @@ class GitFSTestFuncs(object):
         Test the per_remote ref_types config option, using a different
         ref_types setting than the global test.
         '''
-        remotes = [{'file://' + TMP_REPO_DIR: [{'ref_types': ['tag']}]}]
+        remotes = [{'file://' + self.tmp_repo_dir: [{'ref_types': ['tag']}]}]
         with patch.dict(gitfs.__opts__, {'gitfs_remotes': remotes}):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
@@ -305,14 +308,14 @@ class GitFSTestFuncs(object):
             gitfs_disable_saltenv_mapping: True
             gitfs_saltenv:
               - foo:
-                - ref: base
+                - ref: somebranch
             '''))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['foo'])
+            self.assertEqual(ret, ['base', 'foo'])
 
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         '''
@@ -326,14 +329,14 @@ class GitFSTestFuncs(object):
               - file://{0}:
                 - saltenv:
                   - bar:
-                    - ref: base
-            '''.format(TMP_REPO_DIR)))
+                    - ref: somebranch
+            '''.format(self.tmp_repo_dir)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['bar'])
+            self.assertEqual(ret, ['bar', 'base'])
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         '''
@@ -348,14 +351,14 @@ class GitFSTestFuncs(object):
 
             gitfs_saltenv:
               - hello:
-                - ref: base
-            '''))
+                - ref: somebranch
+            '''.format(self.tmp_repo_dir)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['hello'])
+            self.assertEqual(ret, ['base', 'hello'])
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         '''
@@ -369,51 +372,54 @@ class GitFSTestFuncs(object):
                 - disable_saltenv_mapping: True
                 - saltenv:
                   - world:
-                    - ref: base
-            '''.format(TMP_REPO_DIR)))
+                    - ref: somebranch
+            '''.format(self.tmp_repo_dir)))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['world'])
+            self.assertEqual(ret, ['base', 'world'])
 
 
 class GitFSTestBase(object):
 
     @classmethod
     def setUpClass(cls):
-        cls.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
-        cls.tmp_sock_dir = tempfile.mkdtemp(dir=TMP)
+
+        cls.tmp_repo_dir = os.path.join(RUNTIME_VARS.TMP, 'gitfs_root')
+        if salt.utils.platform.is_windows():
+            cls.tmp_repo_dir = cls.tmp_repo_dir.replace('\\', '/')
+        cls.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        cls.tmp_sock_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         try:
-            shutil.rmtree(TMP_REPO_DIR)
+            shutil.rmtree(cls.tmp_repo_dir)
         except OSError as exc:
-            if exc.errno != errno.ENOENT:
+            if exc.errno == errno.EACCES:
+                log.error("Access error removeing file %s", cls.tmp_repo_dir)
+            elif exc.errno != errno.ENOENT:
                 raise
-        shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/')
+        shutil.copytree(
+            salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+        )
 
-        repo = git.Repo.init(TMP_REPO_DIR)
+        repo = git.Repo.init(cls.tmp_repo_dir)
 
-        username_key = str('USERNAME')
-        orig_username = os.environ.get(username_key)
         try:
-            if username_key not in os.environ:
-                try:
-                    if salt.utils.platform.is_windows():
-                        os.environ[username_key] = \
-                            salt.utils.win_functions.get_current_user()
-                    else:
-                        os.environ[username_key] = \
-                            pwd.getpwuid(os.geteuid()).pw_name
-                except AttributeError:
-                    log.error(
-                        'Unable to get effective username, falling back to '
-                        '\'root\'.'
-                    )
-                    os.environ[username_key] = str('root')
+            if salt.utils.platform.is_windows():
+                username = salt.utils.win_functions.get_current_user()
+            else:
+                username = pwd.getpwuid(os.geteuid()).pw_name
+        except AttributeError:
+            log.error(
+                'Unable to get effective username, falling back to \'root\'.'
+            )
+            username = str('root')
+        with patched_environ(USERNAME=username):
 
-            repo.index.add([x for x in os.listdir(TMP_REPO_DIR)
+            repo.index.add([x for x in os.listdir(cls.tmp_repo_dir)
                             if x != '.git'])
             repo.index.commit('Test')
 
@@ -422,11 +428,9 @@ class GitFSTestBase(object):
 
             # Add a tag
             repo.create_tag(TAG_NAME, 'HEAD')
-        finally:
-            if orig_username is not None:
-                os.environ[username_key] = orig_username
-            else:
-                os.environ.pop(username_key, None)
+            # Older GitPython versions do not have a close method.
+            if hasattr(repo, 'close'):
+                repo.close()
 
     @classmethod
     def tearDownClass(cls):
@@ -434,11 +438,13 @@ class GitFSTestBase(object):
         Remove the temporary git repository and gitfs cache directory to ensure
         a clean environment for the other test class(es).
         '''
-        for path in (cls.tmp_cachedir, cls.tmp_sock_dir, TMP_REPO_DIR):
+        for path in (cls.tmp_cachedir, cls.tmp_sock_dir, cls.tmp_repo_dir):
             try:
-                shutil.rmtree(path, onerror=_rmtree_error)
+                salt.utils.files.rm_rf(path)
             except OSError as exc:
-                if exc.errno != errno.EEXIST:
+                if exc.errno == errno.EACCES:
+                    log.error("Access error removeing file %s", path)
+                elif exc.errno != errno.EEXIST:
                     raise
 
     def setUp(self):
@@ -457,10 +463,16 @@ class GitFSTestBase(object):
         _clear_instance_map()
         for subdir in ('gitfs', 'file_lists'):
             try:
-                shutil.rmtree(os.path.join(self.tmp_cachedir, subdir))
+                salt.utils.files.rm_rf(os.path.join(self.tmp_cachedir, subdir))
             except OSError as exc:
+                if exc.errno == errno.EACCES:
+                    log.warning("Access error removeing file %s", os.path.join(self.tmp_cachedir, subdir))
+                    continue
                 if exc.errno != errno.ENOENT:
                     raise
+        if salt.ext.six.PY3 and salt.utils.platform.is_windows():
+            self.setUpClass()
+            self.setup_loader_modules()
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
@@ -468,7 +480,36 @@ class GitFSTestBase(object):
 class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        opts = copy.deepcopy(OPTS)
+        opts = {
+            'sock_dir': self.tmp_sock_dir,
+            'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+            'gitfs_root': '',
+            'fileserver_backend': ['gitfs'],
+            'gitfs_base': 'master',
+            'fileserver_events': True,
+            'transport': 'zeromq',
+            'gitfs_mountpoint': '',
+            'gitfs_saltenv': [],
+            'gitfs_env_whitelist': [],
+            'gitfs_env_blacklist': [],
+            'gitfs_saltenv_whitelist': [],
+            'gitfs_saltenv_blacklist': [],
+            'gitfs_user': '',
+            'gitfs_password': '',
+            'gitfs_insecure_auth': False,
+            'gitfs_privkey': '',
+            'gitfs_pubkey': '',
+            'gitfs_passphrase': '',
+            'gitfs_refspecs': [
+                '+refs/heads/*:refs/remotes/origin/*',
+                '+refs/tags/*:refs/tags/*'
+            ],
+            'gitfs_ssl_verify': True,
+            'gitfs_disable_saltenv_mapping': False,
+            'gitfs_ref_types': ['branch', 'tag', 'sha'],
+            'gitfs_update_interval': 60,
+            '__role': 'master',
+        }
         opts['cachedir'] = self.tmp_cachedir
         opts['sock_dir'] = self.tmp_sock_dir
         opts['gitfs_provider'] = 'gitpython'
@@ -485,7 +526,36 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
 class Pygit2Test(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        opts = copy.deepcopy(OPTS)
+        opts = {
+            'sock_dir': self.tmp_sock_dir,
+            'gitfs_remotes': ['file://' + self.tmp_repo_dir],
+            'gitfs_root': '',
+            'fileserver_backend': ['gitfs'],
+            'gitfs_base': 'master',
+            'fileserver_events': True,
+            'transport': 'zeromq',
+            'gitfs_mountpoint': '',
+            'gitfs_saltenv': [],
+            'gitfs_env_whitelist': [],
+            'gitfs_env_blacklist': [],
+            'gitfs_saltenv_whitelist': [],
+            'gitfs_saltenv_blacklist': [],
+            'gitfs_user': '',
+            'gitfs_password': '',
+            'gitfs_insecure_auth': False,
+            'gitfs_privkey': '',
+            'gitfs_pubkey': '',
+            'gitfs_passphrase': '',
+            'gitfs_refspecs': [
+                '+refs/heads/*:refs/remotes/origin/*',
+                '+refs/tags/*:refs/tags/*'
+            ],
+            'gitfs_ssl_verify': True,
+            'gitfs_disable_saltenv_mapping': False,
+            'gitfs_ref_types': ['branch', 'tag', 'sha'],
+            'gitfs_update_interval': 60,
+            '__role': 'master',
+        }
         opts['cachedir'] = self.tmp_cachedir
         opts['sock_dir'] = self.tmp_sock_dir
         opts['gitfs_provider'] = 'pygit2'

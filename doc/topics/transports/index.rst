@@ -34,4 +34,3 @@ guarantee minion-master confidentiality.
 
     zeromq
     tcp
-    raet/index

@@ -5,8 +5,16 @@ Decorators for salt.state
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 '''
 
+# Import Python libs
 from __future__ import absolute_import, unicode_literals
+import traceback
+import logging
+
+# Import salt libs
+import salt.utils.stringutils
 from salt.exceptions import SaltException
+
+log = logging.getLogger(__name__)
 
 
 class OutputUnifier(object):
@@ -24,12 +32,15 @@ class OutputUnifier(object):
             for pls in self.policies:
                 try:
                     result = pls(result)
-                except Exception as ex:
+                except Exception as exc:
+                    trb = traceback.format_exc()
+                    log.debug('An exception occurred in this state: %s', trb,
+                              exc_info_on_loglevel=logging.DEBUG)
                     result = {
                         'result': False,
                         'name': 'later',
                         'changes': {},
-                        'comment': 'An exception occurred in this state: {0}'.format(ex)
+                        'comment': 'An exception occurred in this state: {0}'.format(trb)
                     }
             return result
         return _func
@@ -75,7 +86,9 @@ class OutputUnifier(object):
         :return:
         '''
         if isinstance(result.get('comment'), list):
-            result['comment'] = '\n'.join([str(elm) for elm in result['comment']])
+            result['comment'] = u'\n'.join([
+                salt.utils.stringutils.to_unicode(elm) for elm in result['comment']
+            ])
         if result.get('result') is not None:
             result['result'] = bool(result['result'])
 

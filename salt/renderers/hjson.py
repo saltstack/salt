@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Hjson_ renderer for Salt
+hjson renderer for Salt
 
-.. _Hjson: http://laktak.github.io/hjson/
+See the hjson_ documentation for more information
+
+.. _hjson: http://laktak.github.io/hjson/
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import 3rd party libs
 try:
-    import hjson as hjson
+    import hjson
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False

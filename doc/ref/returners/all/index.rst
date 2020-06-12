@@ -10,6 +10,7 @@ returner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    appoptics_return
     carbon_return
     cassandra_cql_return
     cassandra_return
@@ -19,7 +20,6 @@ returner modules
     elasticsearch_return
     etcd_return
     highstate_return
-    hipchat_return
     influxdb_return
     kafka_return
     librato_return
@@ -31,7 +31,7 @@ returner modules
     mongo_return
     multi_returner
     mysql
-    nagios_return
+    nagios_nrdp_return
     odbc
     pgjsonb
     postgres
@@ -41,6 +41,7 @@ returner modules
     redis_return
     sentry_return
     slack_returner
+    slack_webhook_return
     sms_return
     smtp_return
     splunk

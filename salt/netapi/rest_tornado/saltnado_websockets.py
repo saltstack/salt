@@ -411,7 +411,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
                 'tgt': '*',
                 'token': self.token,
                 'mode': 'client',
-                'async': 'local_async',
+                'asynchronous': 'local_async',
                 'client': 'local'
                 })
             while True:

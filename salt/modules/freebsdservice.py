@@ -37,7 +37,7 @@ def __virtual__():
     Only work on FreeBSD
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (False, 'The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.')
 
@@ -225,7 +225,7 @@ def _switch(name,                   # pylint: disable=C0103
     if os.path.exists(config):
         with salt.utils.files.fopen(config, 'r') as ifile:
             for line in ifile:
-                line = salt.utils.stringutils.to_unicode(line).rstrip('\n')
+                line = salt.utils.stringutils.to_unicode(line)
                 if not line.startswith('{0}='.format(rcvar)):
                     nlines.append(line)
                     continue

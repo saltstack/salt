@@ -22,21 +22,9 @@
 
 # Load parameters
 param(
-    [switch]$Silent
+    [switch]$Silent,
+    [switch]$NoPipDependencies
 )
-
-Write-Output "================================================================="
-Write-Output ""
-Write-Output "               Development Environment Installation"
-Write-Output ""
-Write-Output "               - Installs All Salt Dependencies"
-Write-Output "               - Detects 32/64 bit Architectures"
-Write-Output ""
-Write-Output "               To run silently add -Silent"
-Write-Output "               eg: dev_env.ps1 -Silent"
-Write-Output ""
-Write-Output "================================================================="
-Write-Output ""
 
 #==============================================================================
 # Get the Directory of actual script
@@ -48,6 +36,22 @@ $script_path = $script_path.DirectoryName
 # Get the name of actual script
 #==============================================================================
 $script_name = $MyInvocation.MyCommand.Name
+
+Write-Output "================================================================="
+Write-Output ""
+Write-Output "               Development Environment Installation"
+Write-Output ""
+Write-Output "               - Installs All Salt Dependencies"
+Write-Output "               - Detects 32/64 bit Architectures"
+Write-Output ""
+Write-Output "               To run silently add -Silent"
+Write-Output "               eg: ${script_name} -Silent"
+Write-Output ""
+Write-Output "               To run skip installing pip dependencies add -NoPipDependencies"
+Write-Output "               eg: ${script_name} -NoPipDependencies"
+Write-Output ""
+Write-Output "================================================================="
+Write-Output ""
 
 #==============================================================================
 # Import Modules
@@ -157,7 +161,7 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
     # Install Microsoft Visual C++ Build Tools
     Write-Output " - Installing $($ini['Prerequisites']['VCppBuildTools']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCppBuildTools'])"
-    $p    = Start-Process $file -ArgumentList '/Passive' -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList '/Quiet' -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -175,7 +179,7 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
     DownloadFileWithProgress $url $file
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
-    $p    = Start-Process $file -ArgumentList "/passive InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=0 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------
@@ -191,59 +195,37 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower())))
 
 #==============================================================================
 # Update PIP and SetupTools
-#    caching depends on environmant variable SALT_PIP_LOCAL_CACHE
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_PIP_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
-} else {
-    $p = New-Item $Env:SALT_PIP_LOCAL_CACHE -ItemType Directory -Force # Ensure directory exists
-    if ( (Get-ChildItem $Env:SALT_PIP_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req_pip.txt into empty local cache SALT_REQ_PIP $Env:SALT_PIP_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe"  "-m pip download --dest $Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_PIP_LOCAL_CACHE"
-    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_PIP_LOCAL_CACHE -r $($script_path)\req_pip.txt" "pip install"
-}
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_pip.txt" "python pip"
+
+
+#==============================================================================
+# Install windows specific pypi resources using pip
+#==============================================================================
+Write-Output " ----------------------------------------------------------------"
+Write-Output " - $script_name :: Installing windows specific pypi resources using pip . . ."
+Write-Output " ----------------------------------------------------------------"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req_win.txt" "pip install"
 
 #==============================================================================
 # Install pypi resources using pip
-#    caching depends on environmant variable SALT_REQ_LOCAL_CACHE
 #==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing pypi resources using pip . . ."
-Write-Output " ----------------------------------------------------------------"
-if ( ! [bool]$Env:SALT_REQ_LOCAL_CACHE) {
-    Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "--no-cache-dir install -r $($script_path)\req.txt" "pip install"
-} else {
-    if ( (Get-ChildItem $Env:SALT_REQ_LOCAL_CACHE | Measure-Object).Count -eq 0 ) {
-        # folder empty
-        Write-Output "    pip download from req.txt into empty local cache SALT_REQ $Env:SALT_REQ_LOCAL_CACHE"
-        Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip download --dest $Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip download"
-    }
-    Write-Output "    reading from local pip cache $Env:SALT_REQ_LOCAL_CACHE"
-    Write-Output "    If a (new) ressource is missing, please delete all files in this cache, go online and repeat"
-  Start_Process_and_test_exitcode "$($ini['Settings']['Python3Dir'])\python.exe" "-m pip install --no-index --find-links=$Env:SALT_REQ_LOCAL_CACHE -r $($script_path)\req.txt" "pip install"
+If ($NoPipDependencies -eq $false) {
+  Write-Output " ----------------------------------------------------------------"
+  Write-Output " - $script_name :: Installing pypi resources using pip . . ."
+  Write-Output " ----------------------------------------------------------------"
+  Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -r $($script_path)\req.txt" "pip install"
 }
 
 #==============================================================================
-# Install PyWin32 from wheel file
+# Cleaning Up PyWin32
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Installing PyWin32 . . ."
+Write-Output " - $script_name :: Cleaning Up PyWin32 . . ."
 Write-Output " ----------------------------------------------------------------"
-# Download
-$file = "$($ini[$bitPrograms]['PyWin323'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-DownloadFileWithProgress $url $file
-
-# Install
-Start_Process_and_test_exitcode "$($ini['Settings']['Scripts3Dir'])\pip.exe" "install $file " "pip install PyWin32"
 
 # Move DLL's to Python Root
 # The dlls have to be in Python directory and the site-packages\win32 directory
@@ -270,11 +252,13 @@ Remove-Item "$($ini['Settings']['Scripts3Dir'])\pywin32_*" -Force -Recurse
 #==============================================================================
 # Fix PyCrypto
 #==============================================================================
-Write-Output " ----------------------------------------------------------------"
-Write-Output "   - $script_name :: Fixing PyCrypto . . ."
-Write-Output " ----------------------------------------------------------------"
-$nt_file = "$($ini['Settings']['Python3Dir'])\Lib\site-packages\Crypto\Random\OSRNG\nt.py"
-(Get-Content $nt_file) | Foreach-Object {$_ -replace '^import winrandom$', 'from Crypto.Random.OSRNG import winrandom'} | Set-Content $nt_file
+If ($NoPipDependencies -eq $false) {
+  Write-Output " ----------------------------------------------------------------"
+  Write-Output "   - $script_name :: Fixing PyCrypto . . ."
+  Write-Output " ----------------------------------------------------------------"
+  $nt_file = "$($ini['Settings']['Python3Dir'])\Lib\site-packages\Crypto\Random\OSRNG\nt.py"
+  (Get-Content $nt_file) | Foreach-Object {$_ -replace '^import winrandom$', 'from Crypto.Random.OSRNG import winrandom'} | Set-Content $nt_file
+}
 
 #==============================================================================
 # Copy DLLs to Python Directory
@@ -284,14 +268,12 @@ Write-Output "   - $script_name :: Copying DLLs . . ."
 Write-Output " ----------------------------------------------------------------"
 # Architecture Specific DLL's
 ForEach($key in $ini[$bitDLLs].Keys) {
-    If ($arrInstalled -notcontains $key) {
-        Write-Output "   - $key . . ."
-        $file = "$($ini[$bitDLLs][$key])"
-        $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-        $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
-        DownloadFileWithProgress $url $file
-        Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
-    }
+    Write-Output "   - $key . . ."
+    $file = "$($ini[$bitDLLs][$key])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    DownloadFileWithProgress $url $file
+    Copy-Item $file  -destination $($ini['Settings']['Python3Dir'])
 }
 
 #------------------------------------------------------------------------------
@@ -312,9 +294,7 @@ If (-Not $Silent) {
 # Remove the temporary download directory
 #------------------------------------------------------------------------------
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - $script_name :: Cleaning up downloaded files unless you use SALTREPO_LOCAL_CACHE"
+Write-Output " - $script_name :: Cleaning up downloaded files"
 Write-Output " ----------------------------------------------------------------"
 Write-Output ""
-if ( ! [bool]$Env:SALTREPO_LOCAL_CACHE ) {
-    Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse
-}
+Remove-Item $($ini['Settings']['DownloadDir']) -Force -Recurse

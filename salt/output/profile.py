@@ -1,4 +1,31 @@
 # -*- coding: utf-8 -*-
+'''
+Display profiling data in a table format
+========================================
+
+Show profile data for returners that would normally show a highstate output.
+
+    salt MINION state.apply something --out=profile
+
+Attempt to output the returns of state.sls and state.highstate as a table of
+names, modules and durations that looks somewhat like the following::
+
+    name                mod.fun                duration (ms)
+    --------------------------------------------------------
+    I-fail-unless-stmt  other.function               -1.0000
+    old-minion-config   grains.list_present           1.1200
+    salt-data           group.present                48.3800
+    /etc/salt/minion    file.managed                 63.1450
+
+
+To get the above appearance, use settings something like these::
+
+    out.table.separate_rows: False
+    out.table.justify: left
+    out.table.delim: '  '
+    out.table.prefix: ''
+    out.table.suffix: ''
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 import salt.output.table_out as table_out
 
@@ -39,28 +66,7 @@ def _find_durations(data, name_max=60):
 
 def output(data, **kwargs):
     '''
-
-    Show profile data for returners that would normally show a highstate output.
-
-        salt globhere state.sls something --out=profile
-
-    Attempt to output the returns of state.sls and state.highstate as a table of
-    names, modules and durations that looks somewhat like the following:
-
-        name                mod.fun                duration (ms)
-        --------------------------------------------------------
-        I-fail-unless-stmt  other.function               -1.0000
-        old-minion-config   grains.list_present           1.1200
-        salt-data           group.present                48.3800
-        /etc/salt/minion    file.managed                 63.1450
-
-
-    To get the above appearance, use settings something like these:
-      out.table.separate_rows: False
-      out.table.justify: left
-      out.table.delim: '  '
-      out.table.prefix: ''
-      out.table.suffix: ''
+    Display the profiling data in a table format.
     '''
 
     rows = _find_durations(data)

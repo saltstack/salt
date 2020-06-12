@@ -14,8 +14,8 @@ config. These are the defaults:
 
     queue.pgjsonb.host: 'salt'
     queue.pgjsonb.user: 'salt'
-    queue.pgjsonb.pass: 'salt'
-    queue.pgjsonb.db: 'salt'
+    queue.pgjsonb.password: 'salt'
+    queue.pgjsonb.dbname: 'salt'
     queue.pgjsonb.port: 5432
 
 Use the following Pg database schema:
@@ -95,7 +95,7 @@ def _conn(commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -246,7 +246,7 @@ def pop(queue, quantity=1, is_runner=False):
     with _conn(commit=True) as cur:
         cur.execute(cmd)
         result = cur.fetchall()
-        if len(result) > 0:
+        if result:
             ids = [six.text_type(item[0]) for item in result]
             items = [item[1] for item in result]
             idlist = "','".join(ids)

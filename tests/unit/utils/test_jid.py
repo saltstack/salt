@@ -35,13 +35,38 @@ class JidTestCase(TestCase):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_gen_jid(self):
-        now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
+        now = datetime.datetime(2002, 12, 25, 12, 0, 0, 0)
         with patch('datetime.datetime'):
             datetime.datetime.now.return_value = now
             ret = salt.utils.jid.gen_jid({})
             self.assertEqual(ret, '20021225120000000000')
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_gen_jid_unique(self):
+        now = datetime.datetime(2002, 12, 25, 12, 0, 0, 0)
+        with patch('datetime.datetime'):
+            datetime.datetime.now.return_value = now
             salt.utils.jid.LAST_JID_DATETIME = None
             ret = salt.utils.jid.gen_jid({'unique_jid': True})
             self.assertEqual(ret, '20021225120000000000_{0}'.format(os.getpid()))
             ret = salt.utils.jid.gen_jid({'unique_jid': True})
             self.assertEqual(ret, '20021225120000000001_{0}'.format(os.getpid()))
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_gen_jid_utc(self):
+        utcnow = datetime.datetime(2002, 12, 25, 12, 7, 0, 0)
+        with patch('datetime.datetime'):
+            datetime.datetime.utcnow.return_value = utcnow
+            ret = salt.utils.jid.gen_jid({'utc_jid': True})
+            self.assertEqual(ret, '20021225120700000000')
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_gen_jid_utc_unique(self):
+        utcnow = datetime.datetime(2002, 12, 25, 12, 7, 0, 0)
+        with patch('datetime.datetime'):
+            datetime.datetime.utcnow.return_value = utcnow
+            salt.utils.jid.LAST_JID_DATETIME = None
+            ret = salt.utils.jid.gen_jid({'utc_jid': True, 'unique_jid': True})
+            self.assertEqual(ret, '20021225120700000000_{0}'.format(os.getpid()))
+            ret = salt.utils.jid.gen_jid({'utc_jid': True, 'unique_jid': True})
+            self.assertEqual(ret, '20021225120700000001_{0}'.format(os.getpid()))

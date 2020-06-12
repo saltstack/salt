@@ -3,6 +3,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+from textwrap import dedent
+
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
@@ -20,11 +22,9 @@ from salt.exceptions import SaltRenderError
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GPGTestCase(TestCase, LoaderModuleMockMixin):
-
     '''
     unit test GPG renderer
     '''
-
     def setup_loader_modules(self):
         return {gpg: {}}
 
@@ -52,12 +52,10 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         multicrypted = 'password is {0} and salt is {0}'.format(crypted)
 
         class GPGDecrypt(object):
-
             def communicate(self, *args, **kwargs):
                 return [secret, None]
 
         class GPGNotDecrypt(object):
-
             def communicate(self, *args, **kwargs):
                 return [None, 'decrypt error']
 
@@ -76,7 +74,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test _decrypt_object
         '''
-
         secret = 'Use more salt.'
         crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----'
 
@@ -97,7 +94,6 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test render
         '''
-
         key_dir = '/etc/salt/gpgkeys'
         secret = 'Use more salt.'
         crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'
@@ -106,3 +102,69 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
                 with patch('salt.renderers.gpg._decrypt_object', MagicMock(return_value=secret)):
                     self.assertEqual(gpg.render(crypted), secret)
+
+    def test_multi_render(self):
+        key_dir = '/etc/salt/gpgkeys'
+        secret = 'Use more salt.'
+        expected = '\n'.join([secret]*3)
+        crypted = dedent('''\
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+        ''')
+
+        with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
+            with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+                with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
+                    self.assertEqual(gpg.render(crypted), expected)
+
+    def test_render_with_binary_data_should_return_binary_data(self):
+        key_dir = '/etc/salt/gpgkeys'
+        secret = b'Use\x8b more\x8b salt.'
+        expected = b'\n'.join([secret]*3)
+        crypted = dedent('''\
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+        ''')
+
+        with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
+            with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+                with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
+                    self.assertEqual(gpg.render(crypted, encoding='utf-8'), expected)
+
+    def test_render_with_translate_newlines_should_translate_newlines(self):
+        key_dir = '/etc/salt/gpgkeys'
+        secret = b'Use\x8b more\x8b salt.'
+        expected = b'\n\n'.join([secret]*3)
+        crypted = dedent('''\
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----\\n
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----\\n
+            -----BEGIN PGP MESSAGE-----
+            !@#$%^&*()_+
+            -----END PGP MESSAGE-----
+        ''')
+
+        with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
+            with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+                with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
+                    self.assertEqual(
+                        gpg.render(crypted, translate_newlines=True, encoding='utf-8'),
+                        expected,
+                    )

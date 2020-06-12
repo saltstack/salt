@@ -92,7 +92,7 @@ def latest(name,
         specified string is passed to SVN's --trust-server-cert-failures
         option as-is.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -242,7 +242,7 @@ def export(name,
         specified string is passed to SVN's --trust-server-cert-failures
         option as-is.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not target:
@@ -285,7 +285,8 @@ def export(name,
         opts += ('--trust-server-cert-failures', trust_failures)
 
     out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
-    ret['changes'] = name + ' was Exported to ' + target
+    ret['changes']['new'] = name
+    ret['changes']['comment'] = name + ' was Exported to ' + target
 
     return ret
 

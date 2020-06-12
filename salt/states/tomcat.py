@@ -272,8 +272,14 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
 
 def mod_watch(name, url='http://localhost:8080/manager', timeout=180):
     '''
-    The tomcat watcher function.
-    When called it will reload the webapp in question
+    The tomcat watcher, called to invoke the watch command.
+    When called, it will reload the webapp in question
+
+    .. note::
+        This state exists to support special handling of the ``watch``
+        :ref:`requisite <requisites>`. It should not be called directly.
+
+        Parameters for this function should be set by the state being triggered.
     '''
 
     msg = __salt__['tomcat.reload'](name, url, timeout)

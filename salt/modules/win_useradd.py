@@ -9,7 +9,6 @@ Module for managing Windows Users
     <module-provider-override>`.
 
 :depends:
-        - pythoncom
         - pywintypes
         - win32api
         - win32con
@@ -31,13 +30,14 @@ from datetime import datetime
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except:  # pylint: disable=W0702
+except Exception:
     from pipes import quote as _cmd_quote
 
 # Import Salt libs
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
+import salt.utils.winapi
 from salt.ext import six
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
@@ -47,7 +47,6 @@ log = logging.getLogger(__name__)
 try:
     import pywintypes
     import wmi
-    import pythoncom
     import win32api
     import win32con
     import win32net
@@ -167,7 +166,6 @@ def add(name,
     try:
         win32net.NetUserAdd(None, 1, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to create user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -246,7 +244,7 @@ def update(name,
             changing the password. False allows the user to change the password.
 
     Returns:
-        bool: True if successful. False is unsuccessful.
+        bool: True if successful. False if unsuccessful.
 
     CLI Example:
 
@@ -271,7 +269,6 @@ def update(name,
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -331,7 +328,6 @@ def update(name,
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to update user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -420,7 +416,7 @@ def delete(name,
             sid = getUserSid(name)
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
-            (number, context, message) = exc
+            (number, context, message) = exc.args
             if number == 2:  # Profile Folder Not Found
                 pass
             else:
@@ -434,7 +430,6 @@ def delete(name,
     try:
         win32net.NetUserDel(None, name)
     except win32net.error as exc:
-        (number, context, message) = exc
         log.error('Failed to delete user %s', name)
         log.error('nbr: %s', exc.winerror)
         log.error('ctx: %s', exc.funcname)
@@ -843,7 +838,7 @@ def _get_userprofile_from_registry(user, sid):
     Returns:
         str: Profile directory
     '''
-    profile_dir = __salt__['reg.read_value'](
+    profile_dir = __utils__['reg.read_value'](
         'HKEY_LOCAL_MACHINE',
         'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
@@ -993,8 +988,8 @@ def rename(name, new_name):
 
     # Rename the user account
     # Connect to WMI
-    pythoncom.CoInitialize()
-    c = wmi.WMI(find_classes=0)
+    with salt.utils.winapi.Com():
+        c = wmi.WMI(find_classes=0)
 
     # Get the user object
     try:

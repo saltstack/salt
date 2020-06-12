@@ -7,6 +7,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
 
 .. toctree::
     :maxdepth: 1
+    :glob:
 
     ../../ref/configuration/master
     ../../ref/configuration/minion
@@ -18,6 +19,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     ../jobs/job_cache
     ../jobs/external_cache
     ../../ref/configuration/logging/index
+    ../../ref/configuration/logging/handlers/*
     ../../ref/file_server/index
     ../tutorials/gitfs
     ../tutorials/minionfs

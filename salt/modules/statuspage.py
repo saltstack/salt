@@ -173,9 +173,6 @@ def create(endpoint='incidents',
     api_url
         Custom API URL in case the user has a StatusPage service running in a custom environment.
 
-    **kwargs
-        Other params.
-
     CLI Example:
 
     .. code-block:: bash

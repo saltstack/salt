@@ -139,7 +139,7 @@ blacklist, can be found below:
       - web*
       - 'mail\d+\.domain\.tld'
 
-    minionfs_whitelist:
+    minionfs_blacklist:
       - web21
 
 Potential Concerns

@@ -66,14 +66,30 @@ def _gen_checksum(path):
 
 
 def _checksum_file_path(path):
-    relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
-    if re.match(r'..[/\\]', relpath):
-        # path is a local file
-        relpath = salt.utils.path.join(
-            'local',
-            os.path.splitdrive(path)[-1].lstrip('/\\'),
-        )
-    return salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    try:
+        relpath = '.'.join((os.path.relpath(path, __opts__['cachedir']), 'hash'))
+        if re.match(r'..[/\\]', relpath):
+            # path is a local file
+            relpath = salt.utils.path.join(
+                'local',
+                os.path.splitdrive(path)[-1].lstrip('/\\'),
+            )
+    except ValueError as exc:
+        # The path is on a different drive (Windows)
+        if six.text_type(exc).startswith('path is on'):
+            drive, path = os.path.splitdrive(path)
+            relpath = salt.utils.path.join(
+                'local',
+                drive.rstrip(':'),
+                path.lstrip('/\\'),
+            )
+        elif str(exc).startswith('Cannot mix UNC'):
+            relpath = salt.utils.path.join('unc', path)
+        else:
+            raise
+    ret = salt.utils.path.join(__opts__['cachedir'], 'archive_hash', relpath)
+    log.debug('Using checksum file %s for cached archive file %s', ret, path)
+    return ret
 
 
 def _update_checksum(path):
@@ -396,6 +412,10 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_verify : False
@@ -437,7 +457,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
@@ -664,21 +684,6 @@ def extracted(name,
         # Neither was passed, default is True
         keep_source = True
 
-    if 'keep_source' in kwargs and 'keep' in kwargs:
-        ret.setdefault('warnings', []).append(
-            'Both \'keep_source\' and \'keep\' were used. Since these both '
-            'do the same thing, \'keep\' was ignored.'
-        )
-        keep_source = bool(kwargs.pop('keep_source'))
-        kwargs.pop('keep')
-    elif 'keep_source' in kwargs:
-        keep_source = bool(kwargs.pop('keep_source'))
-    elif 'keep' in kwargs:
-        keep_source = bool(kwargs.pop('keep'))
-    else:
-        # Neither was passed, default is True
-        keep_source = True
-
     if not _path_is_abs(name):
         ret['comment'] = '{0} is not an absolute path'.format(name)
         return ret
@@ -776,6 +781,11 @@ def extracted(name,
         ret['comment'] = exc.strerror
         return ret
 
+    if not source_match:
+        ret['result'] = False
+        ret['comment'] = 'Invalid source "{0}"'.format(source)
+        return ret
+
     urlparsed_source = _urlparse(source_match)
     urlparsed_scheme = urlparsed_source.scheme
     urlparsed_path = os.path.join(
@@ -818,7 +828,7 @@ def extracted(name,
         ret['comment'] = (
             'Invalid archive_format \'{0}\'. Either set it to a supported '
             'value ({1}) or remove this argument and the archive format will '
-            'be guesseed based on file extension.'.format(
+            'be guessed based on file extension.'.format(
                 archive_format,
                 ', '.join(valid_archive_formats),
             )
@@ -1056,7 +1066,7 @@ def extracted(name,
 
     if enforce_toplevel and contents is not None \
             and (len(contents['top_level_dirs']) > 1
-                 or len(contents['top_level_files']) > 0):
+                 or contents['top_level_files']):
         ret['comment'] = ('Archive does not have a single top-level directory. '
                           'To allow this archive to be extracted, set '
                           '\'enforce_toplevel\' to False. To avoid a '
@@ -1105,7 +1115,7 @@ def extracted(name,
                                          and not stat.S_ISDIR(x)),
                      (contents['links'], stat.S_ISLNK)):
                 for path in path_list:
-                    full_path = os.path.join(name, path)
+                    full_path = salt.utils.path.join(name, path)
                     try:
                         path_mode = os.lstat(full_path.rstrip(os.sep)).st_mode
                         if not func(path_mode):
@@ -1274,7 +1284,7 @@ def extracted(name,
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, 'r')) as tar:
-                            tar.extractall(name)
+                            tar.extractall(salt.utils.stringutils.to_str(name))
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1344,10 +1354,13 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1377,9 +1390,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:
@@ -1430,25 +1443,19 @@ def extracted(name,
                 dir_result = __states__['file.directory'](full_path,
                                                           user=user,
                                                           group=group,
-                                                          recurse=recurse,
-                                                          test=__opts__['test'])
+                                                          recurse=recurse)
                 log.debug('file.directory: %s', dir_result)
 
-                if __opts__['test']:
-                    if dir_result.get('pchanges'):
-                        ret['changes']['updated ownership'] = True
-                else:
-                    try:
-                        if dir_result['result']:
-                            if dir_result['changes']:
-                                ret['changes']['updated ownership'] = True
-                        else:
-                            enforce_failed.append(full_path)
-                    except (KeyError, TypeError):
-                        log.warning(
-                            'Bad state return %s for file.directory state on %s',
-                            dir_result, dirname
-                        )
+                if dir_result.get('changes'):
+                    ret['changes']['updated ownership'] = True
+                try:
+                    if not dir_result['result']:
+                        enforce_failed.append(full_path)
+                except (KeyError, TypeError):
+                    log.warning(
+                        'Bad state return %s for file.directory state on %s',
+                        dir_result, dirname
+                    )
 
         for filename in enforce_files + enforce_links:
             full_path = os.path.join(name, filename)
@@ -1482,7 +1489,7 @@ def extracted(name,
                             enforce_failed.append(filename)
 
     if extraction_needed:
-        if len(files) > 0:
+        if files:
             if created_destdir:
                 ret['changes']['directories_created'] = [name]
             ret['changes']['extracted_files'] = files

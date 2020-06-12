@@ -742,10 +742,7 @@ def parse_updates(rule):
     '''
     rules = shlex.split(rule)
     rules.pop(0)
-    if len(rules) > 0:
-        return {'url': rules[0]}
-    else:
-        return True
+    return {'url': rules[0]} if rules else True
 
 
 def parse_upgrade(rule):

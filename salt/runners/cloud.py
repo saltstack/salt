@@ -164,7 +164,7 @@ def action(func=None,
             instances,
             provider,
             instance,
-            **salt.utils.args.clean_kwargs(**kwargs)
+            salt.utils.args.clean_kwargs(**kwargs)
         )
     except SaltCloudConfigError as err:
         log.error(err)

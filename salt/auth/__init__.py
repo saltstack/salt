@@ -43,8 +43,15 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'gather_job_timeout',
     'kwarg',
-    'match'
+    'match',
+    'metadata',
+    'print_event',
+    'raw',
+    'yield_pub_data',
+    'batch',
+    'batch_delay'
 ])
 
 
@@ -88,9 +95,14 @@ class LoadAuth(object):
         fstr = '{0}.auth'.format(load['eauth'])
         if fstr not in self.auth:
             return False
+        # When making auth calls, only username, password, auth, and token
+        # are valid, so we strip anything else out.
+        _valid = ['username', 'password', 'eauth', 'token']
+        _load = {key: value for (key, value) in load.items() if key in _valid}
+
         fcall = salt.utils.args.format_call(
             self.auth[fstr],
-            load,
+            _load,
             expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             if 'kwargs' in fcall:
@@ -249,7 +261,7 @@ class LoadAuth(object):
 
     def list_tokens(self):
         '''
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         '''
         return self.tokens["{0}.list_tokens".format(self.opts['eauth_tokens'])](self.opts)
 
@@ -283,7 +295,7 @@ class LoadAuth(object):
             return False
 
         if load['eauth'] not in self.opts['external_auth']:
-            # The eauth system is not enabled, fail
+            log.warning('The eauth system "%s" is not enabled', load['eauth'])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -318,6 +330,7 @@ class LoadAuth(object):
                 return auth_user.sudo_name()
             elif load['user'] == self.opts.get('user', 'root') or load['user'] == 'root':
                 if auth_key != key[self.opts.get('user', 'root')]:
+                    log.warning('Master runs as %r, but user in payload is %r', self.opts.get('user', 'root'), load['user'])
                     log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():
@@ -361,6 +374,7 @@ class LoadAuth(object):
         eauth = token['eauth'] if token else load['eauth']
         if eauth not in self.opts['external_auth']:
             # No matching module is allowed in config
+            log.debug('The eauth system "%s" is not enabled', eauth)
             log.warning('Authorization failure occurred.')
             return None
 
@@ -371,6 +385,9 @@ class LoadAuth(object):
             name = self.load_name(load)  # The username we are attempting to auth with
             groups = self.get_groups(load)  # The groups this user belongs to
         eauth_config = self.opts['external_auth'][eauth]
+        if not eauth_config:
+            log.debug('eauth "%s" configuration is empty', eauth)
+
         if not groups:
             groups = []
 
@@ -469,8 +486,8 @@ class Authorize(object):
         salt.utils.versions.warn_until(
             'Neon',
             'The \'Authorize\' class has been deprecated. Please use the '
-            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
-            'Support for the \'Authorze\' class will be removed in Salt '
+            '\'LoadAuth\', \'Resolver\', or \'AuthUser\' classes instead. '
+            'Support for the \'Authorize\' class will be removed in Salt '
             '{version}.'
         )
         self.opts = salt.config.master_config(opts['conf_file'])
@@ -664,18 +681,12 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] in ('zeromq', 'tcp'):
-            master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                         ':' + six.text_type(self.opts['ret_port'])
-            channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
-            return channel.send(load)
-
-        elif self.opts['transport'] == 'raet':
-            channel = salt.transport.client.ReqChannel.factory(self.opts)
-            channel.dst = (None, None, 'local_cmd')
-            return channel.send(load)
+        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
+                     ':' + six.text_type(self.opts['ret_port'])
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
+        return channel.send(load)
 
     def cli(self, eauth):
         '''
@@ -690,6 +701,7 @@ class Resolver(object):
         if fstr not in self.auth:
             print(('The specified external authentication system "{0}" is '
                    'not available').format(eauth))
+            print("Available eauth types: {0}".format(", ".join(self.auth.file_mapping.keys())))
             return ret
 
         args = salt.utils.args.arg_lookup(self.auth[fstr])
@@ -758,7 +770,7 @@ class AuthUser(object):
         '''
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         '''
         self.user = user
 

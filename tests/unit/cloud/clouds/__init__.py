@@ -3,7 +3,7 @@
 
 def _preferred_ip(ip_set, preferred=None):
     '''
-    Returns a function that reacts which ip is prefered
+    Returns a function that reacts which ip is preferred
     :param ip_set:
     :param private:
     :return:

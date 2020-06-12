@@ -2,7 +2,7 @@
 '''
 Salt states to create and manage VMware vSphere datacenters (datacenters).
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: `Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
 
 Dependencies
 ============
@@ -32,6 +32,7 @@ Example:
 Proxy minion configuration (connects passthrough to the vCenter):
 
 .. code-block:: yaml
+
     proxy:
       proxytype: esxdatacenter
       datacenter: target_dc
@@ -87,13 +88,12 @@ def datacenter_configured(name):
         dc_name = __salt__['esxdatacenter.get_details']()['datacenter']
     else:
         dc_name = name
-    log.info('Running datacenter_configured for datacenter \'{0}\''
-             ''.format(dc_name))
-    ret = {'name': name, 'changes': {}, 'pchanges': {},
-           'result': None, 'comment': 'Default'}
+    log.info('Running datacenter_configured for datacenter \'%s\'', dc_name)
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': 'Default'}
     comments = []
-    changes = {}
-    pchanges = {}
     si = None
     try:
         si = __salt__['vsphere.get_service_instance_via_proxy']()
@@ -103,30 +103,22 @@ def datacenter_configured(name):
             if __opts__['test']:
                 comments.append('State will create '
                                 'datacenter \'{0}\'.'.format(dc_name))
-                log.info(comments[-1])
-                pchanges.update({'new': {'name': dc_name}})
             else:
-                log.debug('Creating datacenter \'{0}\'. '.format(dc_name))
+                log.debug('Creating datacenter \'%s\'', dc_name)
                 __salt__['vsphere.create_datacenter'](dc_name, si)
                 comments.append('Created datacenter \'{0}\'.'.format(dc_name))
-                log.info(comments[-1])
-                changes.update({'new': {'name': dc_name}})
+            log.info(comments[-1])
+            ret['changes'].update({'new': {'name': dc_name}})
         else:
             comments.append('Datacenter \'{0}\' already exists. Nothing to be '
                             'done.'.format(dc_name))
             log.info(comments[-1])
         __salt__['vsphere.disconnect'](si)
-        if __opts__['test'] and pchanges:
-            ret_status = None
-        else:
-            ret_status = True
-        ret.update({'result': ret_status,
-                    'comment': '\n'.join(comments),
-                    'changes': changes,
-                    'pchanges': pchanges})
+        ret['comment'] = '\n'.join(comments)
+        ret['result'] = None if __opts__['test'] and ret['changes'] else True
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: {}'.format(exc))
+        log.error('Error: %s', exc)
         if si:
             __salt__['vsphere.disconnect'](si)
         ret.update({

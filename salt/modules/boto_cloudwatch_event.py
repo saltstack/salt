@@ -101,7 +101,7 @@ def exists(Name, region=None, key=None, keyid=None, profile=None):
 
     try:
         events = conn.list_rules(NamePrefix=Name)
-        if len(events) == 0:
+        if not events:
             return {'exists': False}
         for rule in events.get('Rules', []):
             if rule.get('Name', None) == Name:

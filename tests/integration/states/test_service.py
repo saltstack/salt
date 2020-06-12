@@ -13,6 +13,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
 import salt.utils.path
+import salt.utils.platform
 
 INIT_DELAY = 5
 
@@ -40,9 +41,21 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
                 self.service_name = 'com.apple.AirPlayXPCHelper'
             self.stopped = ''
             self.running = '[0-9]'
+        elif os_family == 'Windows':
+            self.service_name = 'Spooler'
 
-        if salt.utils.path.which(cmd_name) is None:
+        self.pre_srv_enabled = True if self.service_name in self.run_function('service.get_enabled') else False
+        self.post_srv_disable = False
+        if not self.pre_srv_enabled:
+            self.run_function('service.enable', name=self.service_name)
+            self.post_srv_disable = True
+
+        if os_family != 'Windows' and salt.utils.path.which(cmd_name) is None:
             self.skipTest('{0} is not installed'.format(cmd_name))
+
+    def tearDown(self):
+        if self.post_srv_disable:
+            self.run_function('service.disable', name=self.service_name)
 
     def check_service_status(self, exp_return):
         '''
@@ -62,9 +75,14 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test service.running state module
         '''
-        stop_service = self.run_function('service.stop', self.service_name)
-        self.assertTrue(stop_service)
+        if self.run_function('service.status', name=self.service_name):
+            stop_service = self.run_function('service.stop', name=self.service_name)
+            self.assertTrue(stop_service)
         self.check_service_status(self.stopped)
+
+        if salt.utils.platform.is_darwin():
+            # make sure the service is enabled on macosx
+            enable = self.run_function('service.enable', name=self.service_name)
 
         start_service = self.run_state('service.running',
                                        name=self.service_name)

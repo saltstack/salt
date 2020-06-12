@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (False, 'The freebsdports execution module cannot be loaded: '
             'only available on FreeBSD systems.')
@@ -300,9 +300,7 @@ def showconfig(name, default=False, dict_return=False):
     try:
         pkg = output[0].split()[-1].rstrip(':')
     except (IndexError, AttributeError, TypeError) as exc:
-        log.error(
-            'Unable to get pkg-version string: {0}'.format(exc)
-        )
+        log.error('Unable to get pkg-version string: %s', exc)
         return {}
 
     ret = {pkg: {}}

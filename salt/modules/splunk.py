@@ -262,7 +262,7 @@ def update_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if not user:
-        log.error("Failed to retrieve user {0}".format(email))
+        log.error('Failed to retrieve user %s', email)
         return False
 
     property_map = {}
@@ -289,7 +289,7 @@ def update_user(email, profile="splunk", **kwargs):
             elif resource_value != v:
                 kwargs[k] = v
 
-    if len(kwargs) > 0:
+    if kwargs:
         user.update(**kwargs).refresh()
 
         fields_modified = {}

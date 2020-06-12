@@ -434,10 +434,8 @@ def vm_created(name, vm_name, cpu, memory, image, version, interfaces,
               'comment': ''}
 
     if __opts__['test']:
-        result.update({'result': None,
-                       'changes': None,
-                       'comment': 'Virtual machine '
-                                  '{0} will be created'.format(vm_name)})
+        result['comment'] = 'Virtual machine {0} will be created'.format(
+                vm_name)
         return result
 
     service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
@@ -497,7 +495,7 @@ def vm_registered(vm_name, datacenter, placement, vm_file, power_on=False):
               'comment': ''}
 
     vmx_path = '{0}{1}'.format(vm_file.folderPath, vm_file.file[0].path)
-    log.trace('Registering virtual machine with vmx file: {0}'.format(vmx_path))
+    log.trace('Registering virtual machine with vmx file: %s', vmx_path)
     service_instance = __salt__['vsphere.get_service_instance_via_proxy']()
     try:
         __salt__['vsphere.register_vm'](vm_name, datacenter,

@@ -9,7 +9,7 @@ import random
 
 # Import Salt libs
 import salt.config
-import salt.utils.versions
+import salt.utils.args
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
 
@@ -52,15 +52,6 @@ class SSHClient(object):
         '''
         Prepare the arguments
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:
@@ -88,15 +79,6 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         ssh = self._prep_ssh(
                 tgt,
                 fun,
@@ -122,15 +104,6 @@ class SSHClient(object):
 
         .. versionadded:: 2015.5.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
-
         ssh = self._prep_ssh(
                 tgt,
                 fun,
@@ -226,14 +199,6 @@ class SSHClient(object):
 
         .. versionadded:: 2017.7.0
         '''
-        if 'expr_form' in kwargs:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'The target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = kwargs.pop('expr_form')
         minion_ret = self.cmd(tgt,
                               'sys.list_functions',
                               tgt_type=tgt_type,

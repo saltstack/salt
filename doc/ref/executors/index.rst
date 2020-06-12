@@ -30,7 +30,7 @@ The same could be done by command line:
 
 .. code-block:: bash
 
-    salt -t 40 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 30}' '*' test.ping
+    salt -t 40 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 30}' '*' test.version
 
 And the same command called via netapi will look like this:
 
@@ -43,7 +43,7 @@ And the same command called via netapi will look like this:
         -d '[{
             "client": "local",
             "tgt": "*",
-            "fun": "test.ping",
+            "fun": "test.version",
             "module_executors": ["splay", "direct_call"],
             "executor_opts": {"splaytime": 10}
             }]'
@@ -83,3 +83,7 @@ option set by commandline or API ``data.get('executor_opts',
 {}).get('splaytime')`` should be used. So if an option is safe and must be
 accessible by user executor should check it in both places, but if an option is
 unsafe it should be read from the only config ignoring the passed request data.
+
+There is also a function named ``all_missing_func`` which the name of the
+``func`` is passed, which can be used to verify if the command should still be
+run, even if it is not loaded in minion_mods.

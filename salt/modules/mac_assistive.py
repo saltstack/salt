@@ -29,14 +29,11 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.platform.is_darwin() \
-            and _LooseVersion(__grains__['osrelease']) >= _LooseVersion('10.9'):
-        return True
-    return (
-        False,
-        'The assistive module cannot be loaded: must be run on '
-        'macOS 10.9 or newer.'
-    )
+    if not salt.utils.platform.is_darwin():
+        return False, 'Must be run on macOS'
+    if _LooseVersion(__grains__['osrelease']) < salt.utils.stringutils.to_str('10.9'):
+        return False, 'Must be run on macOS 10.9 or newer'
+    return __virtualname__
 
 
 def install(app_id, enable=True):

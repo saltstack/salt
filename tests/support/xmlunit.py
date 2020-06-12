@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2014 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
 
@@ -56,7 +56,7 @@ try:
 
     class _XMLTestResult(xmlrunner.result._XMLTestResult):
         def startTest(self, test):
-            log.debug('>>>>> START >>>>> {0}'.format(test.id()))
+            log.debug('>>>>> START >>>>> %s', test.id())
             # xmlrunner classes are NOT new-style classes
             xmlrunner.result._XMLTestResult.startTest(self, test)
             if self.buffer:
@@ -68,7 +68,7 @@ try:
                 sys.stdout = self._stdout_buffer
 
         def stopTest(self, test):
-            log.debug('<<<<< END <<<<<<< {0}'.format(test.id()))
+            log.debug('<<<<< END <<<<<<< %s', test.id())
             # xmlrunner classes are NOT new-style classes
             return xmlrunner.result._XMLTestResult.stopTest(self, test)
 

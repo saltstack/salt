@@ -5,7 +5,7 @@ Azure ARM Cloud Module
 
 .. versionadded:: 2016.11.0
 
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
 
 The Azure ARM cloud module is used to control access to Microsoft Azure Resource Manager
 
@@ -33,6 +33,9 @@ The Azure ARM cloud module is used to control access to Microsoft Azure Resource
       * ``tenant``
       * ``client_id``
       * ``secret``
+
+    if using MSI-style authentication:
+      * ``subscription_id``
 
     Optional provider parameters:
 
@@ -100,13 +103,14 @@ import string
 import time
 
 # Salt libs
+from salt.ext import six
 import salt.cache
 import salt.config as config
 import salt.loader
-import salt.utils
 import salt.utils.cloud
+import salt.utils.files
+import salt.utils.stringutils
 import salt.utils.yaml
-import salt.ext.six as six
 import salt.version
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -250,14 +254,22 @@ def get_configured_provider():
     provider = __is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'tenant', 'client_id', 'secret')
+        ('subscription_id', 'tenant', 'client_id', 'secret'),
     )
 
     if provider is False:
         provider = __is_provider_configured(
             __opts__,
             __active_provider_name__ or __virtualname__,
-            ('subscription_id', 'username', 'password')
+            ('subscription_id', 'username', 'password'),
+        )
+
+    if provider is False:
+        # check if using MSI style credentials...
+        provider = config.is_provider_configured(
+            __opts__,
+            __active_provider_name__ or __virtualname__,
+            required_keys=('subscription_id',),
         )
 
     return provider
@@ -279,9 +291,11 @@ def get_conn(client_type):
     '''
     conn_kwargs = {}
 
-    conn_kwargs['subscription_id'] = config.get_cloud_config_value(
-        'subscription_id',
-        get_configured_provider(), __opts__, search_global=False
+    conn_kwargs['subscription_id'] = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'subscription_id',
+            get_configured_provider(), __opts__, search_global=False
+        )
     )
 
     cloud_env = config.get_cloud_config_value(
@@ -308,11 +322,13 @@ def get_conn(client_type):
         )
         conn_kwargs.update({'client_id': client_id, 'secret': secret,
                             'tenant': tenant})
-    else:
-        username = config.get_cloud_config_value(
-            'username',
-            get_configured_provider(), __opts__, search_global=False
-        )
+
+    username = config.get_cloud_config_value(
+        'username',
+        get_configured_provider(), __opts__, search_global=False
+    )
+
+    if username is not None:
         password = config.get_cloud_config_value(
             'password',
             get_configured_provider(), __opts__, search_global=False
@@ -326,13 +342,17 @@ def get_conn(client_type):
     return client
 
 
-def get_location(call=None):  # pylint: disable=unused-argument
+def get_location(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
     Return the location that is configured for this provider
     '''
+    if not kwargs:
+        kwargs = {}
+    vm_dict = get_configured_provider()
+    vm_dict.update(kwargs)
     return config.get_cloud_config_value(
         'location',
-        get_configured_provider(), __opts__, search_global=False
+        vm_dict, __opts__, search_global=False
     )
 
 
@@ -533,11 +553,11 @@ def list_nodes_full(call=None):
                 image_ref['sku'],
                 image_ref['version'],
             ])
-        except TypeError:
+        except (TypeError, KeyError):
             try:
                 node['image'] = node['storage_profile']['os_disk']['image']['uri']
-            except TypeError:
-                node['image'] = None
+            except (TypeError, KeyError):
+                node['image'] = node.get('storage_profile', {}).get('image_reference', {}).get('id')
         try:
             netifaces = node['network_profile']['network_interfaces']
             for index, netiface in enumerate(netifaces):
@@ -763,20 +783,28 @@ def create_network_interface(call=None, kwargs=None):
         )
 
     if kwargs.get('network_resource_group') is None:
-        kwargs['resource_group'] = config.get_cloud_config_value(
+        kwargs['network_resource_group'] = config.get_cloud_config_value(
             'resource_group', vm_, __opts__, search_global=False
         )
-    else:
-        kwargs['resource_group'] = kwargs['network_resource_group']
 
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
-    subnet_obj = netconn.subnets.get(
-        resource_group_name=kwargs['resource_group'],
-        virtual_network_name=kwargs['network'],
-        subnet_name=kwargs['subnet'],
-    )
+    try:
+        subnet_obj = netconn.subnets.get(
+            resource_group_name=kwargs['network_resource_group'],
+            virtual_network_name=kwargs['network'],
+            subnet_name=kwargs['subnet'],
+        )
+    except CloudError as exc:
+        raise SaltCloudSystemExit(
+            '{0} (Resource Group: "{1}", VNET: "{2}", Subnet: "{3}")'.format(
+                exc.message,
+                kwargs['network_resource_group'],
+                kwargs['network'],
+                kwargs['subnet']
+            )
+        )
 
     ip_kwargs = {}
     ip_configurations = None
@@ -826,7 +854,7 @@ def create_network_interface(call=None, kwargs=None):
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs['public_ip_address'] = PublicIPAddress(
-                        six.text_type(pub_ip_data.id),  # pylint: disable=no-member
+                        id=six.text_type(pub_ip_data.id),  # pylint: disable=no-member
                     )
                     ip_configurations = [
                         NetworkInterfaceIPConfiguration(
@@ -837,7 +865,7 @@ def create_network_interface(call=None, kwargs=None):
                     ]
                     break
             except CloudError as exc:
-                log.error('There was a cloud error: {0}'.format(exc))
+                log.error('There was a cloud error: %s', exc)
             count += 1
             if count > 120:
                 raise ValueError('Timed out waiting for public IP Address.')
@@ -871,7 +899,7 @@ def create_network_interface(call=None, kwargs=None):
     try:
         poller.wait()
     except Exception as exc:
-        log.warn('Network interface creation could not be polled. '
+        log.warning('Network interface creation could not be polled. '
                  'It is likely that we are reusing an existing interface. (%s)', exc)
 
     count = 0
@@ -1003,7 +1031,7 @@ def request_instance(vm_):
     )
     if ssh_publickeyfile is not None:
         try:
-            with salt.utils.fopen(ssh_publickeyfile, 'r') as spkc_:
+            with salt.utils.files.fopen(ssh_publickeyfile, 'r') as spkc_:
                 ssh_publickeyfile_contents = spkc_.read()
         except Exception as exc:
             raise SaltCloudConfigError(
@@ -1020,10 +1048,12 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = config.get_cloud_config_value(
-        'ssh_password', vm_, __opts__, search_global=True,
-        default=config.get_cloud_config_value(
-            'win_password', vm_, __opts__, search_global=True
+    vm_password = salt.utils.stringutils.to_str(
+        config.get_cloud_config_value(
+            'ssh_password', vm_, __opts__, search_global=True,
+            default=config.get_cloud_config_value(
+                'win_password', vm_, __opts__, search_global=True
+            )
         )
     )
 
@@ -1153,26 +1183,29 @@ def request_instance(vm_):
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
 
         if 'image' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.from_image
+            volume['create_option'] = 'from_image'
         elif 'attach' in volume:
-            volume['create_option'] = DiskCreateOptionTypes.attach
+            volume['create_option'] = 'attach'
         else:
-            volume['create_option'] = DiskCreateOptionTypes.empty
+            volume['create_option'] = 'empty'
         data_disks.append(DataDisk(**volume))
 
+    img_ref = None
     if vm_['image'].startswith('http') or vm_.get('vhd') == 'unmanaged':
         if vm_['image'].startswith('http'):
             source_image = VirtualHardDisk(vm_['image'])
-            img_ref = None
         else:
             source_image = None
-            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
-            img_ref = ImageReference(
-                publisher=img_pub,
-                offer=img_off,
-                sku=img_sku,
-                version=img_ver,
-            )
+            if '|' in vm_['image']:
+                img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+                img_ref = ImageReference(
+                    publisher=img_pub,
+                    offer=img_off,
+                    sku=img_sku,
+                    version=img_ver,
+                )
+            elif vm_['image'].startswith('/subscriptions'):
+                img_ref = ImageReference(id=vm_['image'])
         if win_installer:
             os_type = 'Windows'
         else:
@@ -1193,19 +1226,22 @@ def request_instance(vm_):
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
     else:
-        img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         os_type = None
         os_disk = OSDisk(
             create_option=DiskCreateOptionTypes.from_image,
             disk_size_gb=vm_.get('os_disk_size_gb')
         )
-        img_ref = ImageReference(
-            publisher=img_pub,
-            offer=img_off,
-            sku=img_sku,
-            version=img_ver,
-        )
+        if '|' in vm_['image']:
+            img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
+            img_ref = ImageReference(
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
+            )
+        elif vm_['image'].startswith('/subscriptions'):
+            img_ref = ImageReference(id=vm_['image'])
 
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
@@ -1219,10 +1255,30 @@ def request_instance(vm_):
 
     if userdata_file:
         if os.path.exists(userdata_file):
-            with salt.utils.fopen(userdata_file, 'r') as fh_:
+            with salt.utils.files.fopen(userdata_file, 'r') as fh_:
                 userdata = fh_.read()
 
     if userdata and userdata_template:
+        userdata_sendkeys = config.get_cloud_config_value(
+            'userdata_sendkeys', vm_, __opts__, search_global=False, default=None
+        )
+        if userdata_sendkeys:
+            vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
+                config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    __opts__
+                )
+            )
+
+            key_id = vm_.get('name')
+            if 'append_domain' in vm_:
+                key_id = '.'.join([key_id, vm_['append_domain']])
+
+            salt.utils.cloud.accept_key(
+                __opts__['pki_dir'], vm_['pub_key'], key_id
+            )
+
         userdata = salt.utils.cloud.userdata_template(__opts__, vm_, userdata)
 
     custom_extension = None
@@ -1352,10 +1408,10 @@ def create(vm_):
     __utils__['cloud.cachedir_index_add'](
         vm_['name'], vm_['profile'], 'azurearm', vm_['driver']
     )
-    location = get_location(vm_)
-    vm_['location'] = location
+    if not vm_.get('location'):
+        vm_['location'] = get_location(kwargs=vm_)
 
-    log.info('Creating Cloud VM %s in %s', vm_['name'], location)
+    log.info('Creating Cloud VM %s in %s', vm_['name'], vm_['location'])
 
     vm_request = request_instance(vm_=vm_)
 
@@ -1369,9 +1425,9 @@ def create(vm_):
         Query node data.
         '''
         data = show_instance(name, call='action')
-        ip_address = None
-        if len(data.keys()) == 0:
+        if not data:
             return False
+        ip_address = None
         if bootstrap_interface == 'public':
             ip_address = data['public_ips'][0]
         if bootstrap_interface == 'private':
@@ -1708,7 +1764,7 @@ def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
                                'server_encrypted': blob.properties.server_encrypted,
                              }
     except Exception as exc:
-        log.warn(six.text_type(exc))
+        log.warning(six.text_type(exc))
 
     return ret
 
@@ -1840,7 +1896,7 @@ def list_subnets(call=None, kwargs=None):
 
 def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Create or update a VM extension object "inside" of a VM object.
 
@@ -1946,7 +2002,7 @@ def create_or_update_vmextension(call=None, kwargs=None):  # pylint: disable=unu
 
 def stop(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Stop (deallocate) a VM
 
@@ -2007,7 +2063,7 @@ def stop(name, call=None):
 
 def start(name, call=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Start a VM
 

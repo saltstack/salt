@@ -23,6 +23,7 @@ import salt.utils.hashutils
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves.urllib.parse import quote as _quote   # pylint: disable=import-error,no-name-in-module
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -117,6 +118,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         location = salt.utils.aws.get_location()
 
     data = ''
+    fh = None
     payload_hash = None
     if method == 'PUT':
         if local_file:
@@ -124,6 +126,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     if path is None:
         path = ''
+    path = _quote(path)
 
     if not requesturl:
         requesturl = (('https' if https_enable else 'http')+'://{0}/{1}').format(endpoint, path)
@@ -152,29 +155,33 @@ def query(key, keyid, method='GET', params=None, headers=None,
     try:
         if method == 'PUT':
             if local_file:
-                data = salt.utils.files.fopen(local_file, 'r')  # pylint: disable=resource-leakage
+                fh = salt.utils.files.fopen(local_file, 'rb')  # pylint: disable=resource-leakage
+                data = fh.read()  # pylint: disable=resource-leakage
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         elif method == 'GET' and local_file and not return_bin:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
                                       verify=verify_ssl,
-                                      stream=True)
+                                      stream=True,
+                                      timeout=300)
         else:
             result = requests.request(method,
                                       requesturl,
                                       headers=headers,
                                       data=data,
-                                      verify=verify_ssl)
+                                      verify=verify_ssl,
+                                      timeout=300)
     finally:
-        if data is not None:
-            data.close()
+        if fh is not None:
+            fh.close()
 
     err_code = None
     err_msg = None

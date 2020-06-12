@@ -14,8 +14,11 @@ import re
 import time
 
 # Import salt libs
+import salt.utils.compat
 import salt.utils.data
 from salt.utils.timeout import wait_for
+import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
@@ -135,8 +138,7 @@ def vb_get_manager():
     '''
     global _virtualboxManager
     if _virtualboxManager is None and HAS_LIBS:
-        # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
-        reload(vboxapi)
+        salt.utils.compat.reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 
     return _virtualboxManager
@@ -149,7 +151,13 @@ def vb_get_box():
     @rtype: IVirtualBox
     '''
     vb_get_manager()
-    vbox = _virtualboxManager.vbox
+
+    try:
+        # This works in older versions of the SDK, but does not seem to work anymore.
+        vbox = _virtualboxManager.vbox
+    except AttributeError:
+        vbox = _virtualboxManager.getVirtualBox()
+
     return vbox
 
 

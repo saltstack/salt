@@ -85,10 +85,10 @@ def auth(username, password, **kwargs):
         cert = X509.load_cert_string(pem, X509.FORMAT_PEM)
         cacert = X509.load_cert(cacert_file, X509.FORMAT_PEM)
         if cert.verify(cacert.get_pubkey()):
-            log.info('Successfully authenticated certificate: {0}'.format(pem))
+            log.info('Successfully authenticated certificate: %s', pem)
             return True
         else:
-            log.info('Failed to authenticate certificate: {0}'.format(pem))
+            log.info('Failed to authenticate certificate: %s', pem)
             return False
 
     c = OpenSSL.crypto

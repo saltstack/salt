@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
+    :codeauthor: Erik Johnson <erik@saltstack.com>
 '''
 
 # Import Python libs
@@ -68,7 +68,7 @@ def _git_version():
     if not git_version:
         log.error('Git not installed')
         return False
-    log.debug('Detected git version ' + git_version)
+    log.debug('Detected git version %s', git_version)
     return LooseVersion(git_version.split()[-1])
 
 

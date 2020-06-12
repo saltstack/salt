@@ -1,0 +1,5 @@
+#!jinja|yaml
+host: 127.0.0.2
+port: 22
+sudo: true
+user: scoundrel

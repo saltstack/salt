@@ -11,15 +11,16 @@ engine modules
     :template: autosummary.rst.tmpl
 
     docker_events
-    hipchat
     http_logstash
     ircbot
     junos_syslog
+    libvirt_events
     logentries
-    logstash
+    logstash_engine
     napalm_syslog
     reactor
     redis_sentinel
+    script
     slack
     sqs_events
     stalekey

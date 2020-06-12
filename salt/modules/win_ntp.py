@@ -48,9 +48,10 @@ def set_servers(*servers):
     update_cmd = ['W32tm', '/config', '/update']
 
     for cmd in server_cmd, reliable_cmd, update_cmd:
-        ret = __salt__['cmd.run'](cmd, python_shell=False)
-        if 'command completed successfully' not in ret:
-            return False
+        __salt__['cmd.run'](cmd, python_shell=False)
+
+    if not sorted(list(servers)) == get_servers():
+        return False
 
     __salt__['service.restart'](service_name)
     return True
@@ -71,7 +72,7 @@ def get_servers():
     for line in lines:
         try:
             if line.startswith('NtpServer:'):
-                _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)
+                _, ntpsvrs = line.rsplit(' (', 1)[0].split(':', 1)
                 return sorted(ntpsvrs.split())
         except ValueError as e:
             return False

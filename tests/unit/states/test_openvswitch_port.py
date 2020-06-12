@@ -42,6 +42,7 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
         mock_n = MagicMock(return_value=[])
 
         with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
+                                                    'openvswitch.interface_get_type': MagicMock(return_value='""'),
                                                     'openvswitch.port_list': mock_l
                                                     }):
             comt = 'Port salt already exists.'
@@ -49,6 +50,7 @@ class OpenvswitchPortTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(openvswitch_port.present(name, bridge), ret)
 
         with patch.dict(openvswitch_port.__salt__, {'openvswitch.bridge_exists': mock,
+                                                    'openvswitch.interface_get_type': MagicMock(return_value='""'),
                                                     'openvswitch.port_list': mock_n,
                                                     'openvswitch.port_add': mock
                                                     }):

@@ -18,6 +18,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import logging
 import re
+import sys
 
 # Import salt libs
 import salt.utils.json
@@ -83,14 +84,14 @@ def _to_dict(objects):
             objects = salt.utils.json.loads(objects)
     except ValueError as err:
         log.error("Could not parse objects: %s", err)
-        raise err
+        six.reraise(*sys.exc_info())
 
     return objects
 
 
 def db_list(user=None, password=None, host=None, port=None, authdb=None):
     '''
-    List all Mongodb databases
+    List all MongoDB databases
 
     CLI Example:
 
@@ -112,7 +113,7 @@ def db_list(user=None, password=None, host=None, port=None, authdb=None):
 
 def db_exists(name, user=None, password=None, host=None, port=None, authdb=None):
     '''
-    Checks if a database exists in Mongodb
+    Checks if a database exists in MongoDB
 
     CLI Example:
 
@@ -130,7 +131,7 @@ def db_exists(name, user=None, password=None, host=None, port=None, authdb=None)
 
 def db_remove(name, user=None, password=None, host=None, port=None, authdb=None):
     '''
-    Remove a Mongodb database
+    Remove a MongoDB database
 
     CLI Example:
 
@@ -207,7 +208,7 @@ def user_find(name, user=None, password=None, host=None, port=None,
 
 def user_list(user=None, password=None, host=None, port=None, database='admin', authdb=None):
     '''
-    List users of a Mongodb database
+    List users of a MongoDB database
 
     CLI Example:
 
@@ -248,7 +249,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin', 
 def user_exists(name, user=None, password=None, host=None, port=None,
                 database='admin', authdb=None):
     '''
-    Checks if a user exists in Mongodb
+    Checks if a user exists in MongoDB
 
     CLI Example:
 
@@ -271,7 +272,7 @@ def user_exists(name, user=None, password=None, host=None, port=None,
 def user_create(name, passwd, user=None, password=None, host=None, port=None,
                 database='admin', authdb=None, roles=None):
     '''
-    Create a Mongodb user
+    Create a MongoDB user
 
     CLI Example:
 
@@ -299,7 +300,7 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
 def user_remove(name, user=None, password=None, host=None, port=None,
                 database='admin', authdb=None):
     '''
-    Remove a Mongodb user
+    Remove a MongoDB user
 
     CLI Example:
 
@@ -325,7 +326,7 @@ def user_remove(name, user=None, password=None, host=None, port=None,
 def user_roles_exists(name, roles, database, user=None, password=None, host=None,
                       port=None, authdb=None):
     '''
-    Checks if a user of a Mongodb database has specified roles
+    Checks if a user of a MongoDB database has specified roles
 
     CLI Examples:
 
@@ -363,7 +364,7 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
 def user_grant_roles(name, roles, database, user=None, password=None, host=None,
                      port=None, authdb=None):
     '''
-    Grant one or many roles to a Mongodb user
+    Grant one or many roles to a MongoDB user
 
     CLI Examples:
 
@@ -398,7 +399,7 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
 def user_revoke_roles(name, roles, database, user=None, password=None, host=None,
                       port=None, authdb=None):
     '''
-    Revoke one or many roles to a Mongodb user
+    Revoke one or many roles to a MongoDB user
 
     CLI Examples:
 
@@ -513,7 +514,7 @@ def update_one(objects, collection, user=None, password=None, host=None, port=No
                   authdb)
     if not isinstance(test_f, list):
         return 'The find result is not well formatted. An error appears; cannot update.'
-    elif len(test_f) < 1:
+    elif not test_f:
         return 'Did not find any result. You should try an insert before.'
     elif len(test_f) > 1:
         return 'Too many results. Please try to be more specific.'

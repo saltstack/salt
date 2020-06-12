@@ -28,9 +28,9 @@ The relevant entry in the ``models.py`` file would look like this:
 .. code-block:: python
 
     class SaltExternalAuthModel(models.Model):
-        user_fk = models.ForeignKey(auth.User)
-        minion_matcher = models.CharField()
-        minion_fn = models.CharField()
+        user_fk = models.ForeignKey(User, on_delete=models.CASCADE)
+        minion_or_fn_matcher = models.CharField(max_length=255)
+        minion_fn = models.CharField(max_length=255)
 
 The :conf_master:`external_auth` clause in the master config would then look
 like this:
@@ -56,7 +56,7 @@ import sys
 
 # Import 3rd-party libs
 from salt.ext import six
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module
 try:
     import django
     from django.db import connection
@@ -66,7 +66,7 @@ except Exception as exc:
     # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: %s', exc)
     HAS_DJANGO = False
-# pylint: enable=import-error
+# pylint: enable=import-error,no-name-in-module
 
 DJANGO_AUTH_CLASS = None
 

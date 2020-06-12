@@ -12,8 +12,8 @@ Known Issues
     prevent a possible crash**
 
     An issue exists that prevents the Salt master from cleaning the default job
-    cache. This issue can cause an overconsumption of resources resulting in
-    a crash. 2016.3.0 Salt masters should apply the patch in :PR:`33555`. This
+    cache. This issue can cause an overconsumption of resources resulting in a
+    crash. 2016.3.0 Salt masters should apply the patch in :pull:`33555`. This
     issue will be addressed in 2016.3.1.
 
 - :issue:`33516`: When upgrading from 2015.8.10 to 2016.3.0 on centos7/redhat7
@@ -110,18 +110,11 @@ Platform Changes
 - Renamed modules related to macOS. The following module filenames were changed.
   The virtual name remained unchanged.
 
-- **PR** `#30558`_: renamed osxdesktop.py to mac_desktop.py
-- **PR** `#30557`_: renamed macports.py to mac_ports.py
-- **PR** `#30556`_: renamed darwin_sysctl.py to mac_sysctl.py
-- **PR** `#30555`_: renamed brew.py to mac_brew.py
-- **PR** `#30552`_: renamed darwin_pkgutil.py to mac_pkgutil.py
-
-.. _`#30558`: https://github.com/saltstack/salt/pull/30558
-.. _`#30557`: https://github.com/saltstack/salt/pull/30557
-.. _`#30556`: https://github.com/saltstack/salt/pull/30556
-.. _`#30555`: https://github.com/saltstack/salt/pull/30555
-.. _`#30552`: https://github.com/saltstack/salt/pull/30552
-
+- :pull:`#30558`: renamed osxdesktop.py to mac_desktop.py
+- :pull:`#30557`: renamed macports.py to mac_ports.py
+- :pull:`#30556`: renamed darwin_sysctl.py to mac_sysctl.py
+- :pull:`#30555`: renamed brew.py to mac_brew.py
+- :pull:`#30552`: renamed darwin_pkgutil.py to mac_pkgutil.py
 
 Package Support
 ===============

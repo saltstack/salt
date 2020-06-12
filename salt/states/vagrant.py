@@ -3,8 +3,6 @@ r'''
 Manage Vagrant VMs
 ==================
 
-.. index:: Vagrant state function
-
 Manange execution of Vagrant virtual machines on Salt minions.
 
 Vagrant_ is a tool for building and managing virtual machine environments.
@@ -319,7 +317,7 @@ def powered_off(name):
 
 def destroyed(name):
     '''
-    Stops a VM (or VMs) and removes all refences to it (them). (Runs ``vagrant destroy``.)
+    Stops a VM (or VMs) and removes all references to it (them). (Runs ``vagrant destroy``.)
 
     Subsequent re-use of the same machine will requere another operation of ``vagrant.running``
     or a call to the ``vagrant.init`` execution module.

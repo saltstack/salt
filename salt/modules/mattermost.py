@@ -109,7 +109,7 @@ def post_message(message,
 
     .. code-block:: bash
 
-        salt '*' mattermost.post_message message='Build is done"
+        salt '*' mattermost.post_message message='Build is done'
     '''
     if not api_url:
         api_url = _get_api_url()

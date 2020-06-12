@@ -47,7 +47,7 @@ def out_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -74,7 +74,7 @@ def string_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:
@@ -101,7 +101,7 @@ def html_format(data, out='nested', opts=None, **kwargs):
     opts
         Dictionary of configuration options. Default: ``__opts__``.
 
-    **kwargs
+    kwargs
         Arguments to sent to the outputter module.
 
     CLI Example:

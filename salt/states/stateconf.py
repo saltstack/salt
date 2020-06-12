@@ -16,4 +16,5 @@ def _no_op(name, **kwargs):
     '''
     return dict(name=name, result=True, changes={}, comment='')
 
+
 set = context = _no_op  # pylint: disable=C0103

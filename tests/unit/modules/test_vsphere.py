@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
-    :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
+    :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
     Tests for functions in salt.modules.vsphere
 '''
@@ -1478,6 +1478,7 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not vsphere.HAS_JSONSCHEMA, 'The \'jsonschema\' library is missing')
 class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''

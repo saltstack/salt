@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Alexander Pyatkin <asp@thexyz.net>`
+    :codeauthor: Alexander Pyatkin <asp@thexyz.net>
 '''
 
 # Import Python Libs

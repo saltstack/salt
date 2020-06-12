@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
+    :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 '''
 
 # Import Python Libs

@@ -275,7 +275,7 @@ def managed(name, entries, connect_spec=None):
             for x in o, n:
                 to_delete = set()
                 for attr, vals in six.iteritems(x):
-                    if not len(vals):
+                    if not vals:
                         # clean out empty attribute lists
                         to_delete.add(attr)
                 for attr in to_delete:
@@ -320,8 +320,8 @@ def managed(name, entries, connect_spec=None):
 
                 try:
                     # perform the operation
-                    if len(o):
-                        if len(n):
+                    if o:
+                        if n:
                             op = 'modify'
                             assert o != n
                             __salt__['ldap3.change'](l, dn, o, n)
@@ -330,7 +330,7 @@ def managed(name, entries, connect_spec=None):
                             __salt__['ldap3.delete'](l, dn)
                     else:
                         op = 'add'
-                        assert len(n)
+                        assert n
                         __salt__['ldap3.add'](l, dn, n)
 
                     # update these after the op in case an exception
@@ -343,7 +343,7 @@ def managed(name, entries, connect_spec=None):
                     errs.append((op, dn, err))
                     continue
 
-            if len(errs):
+            if errs:
                 ret['result'] = False
                 ret['comment'] = 'failed to ' \
                                  + ', '.join((op + ' entry ' + dn + '(' + six.text_type(err) + ')'
@@ -358,7 +358,7 @@ def managed(name, entries, connect_spec=None):
         changes = {}
         ret['changes'][dn] = changes
         for x, xn in ((o, 'old'), (n, 'new')):
-            if not len(x):
+            if not x:
                 changes[xn] = None
                 continue
             changes[xn] = dict(((attr, sorted(vals))
@@ -429,7 +429,7 @@ def _process_entries(l, entries):
                                  if len(attrs[attr])))
                 else:
                     # nothing, so it must be a brand new entry
-                    assert len(results) == 0
+                    assert not results
                     olde = {}
                 old[dn] = olde
             # copy the old entry to create the new (don't do a simple
@@ -474,21 +474,21 @@ def _update_entry(entry, status, directives):
             status['mentioned_attributes'].add(attr)
             vals = _toset(vals)
             if directive == 'default':
-                if len(vals) and (attr not in entry or not len(entry[attr])):
+                if vals and (attr not in entry or not entry[attr]):
                     entry[attr] = vals
             elif directive == 'add':
                 vals.update(entry.get(attr, ()))
-                if len(vals):
+                if vals:
                     entry[attr] = vals
             elif directive == 'delete':
                 existing_vals = entry.pop(attr, OrderedSet())
-                if len(vals):
+                if vals:
                     existing_vals -= vals
-                    if len(existing_vals):
+                    if existing_vals:
                         entry[attr] = existing_vals
             elif directive == 'replace':
                 entry.pop(attr, None)
-                if len(vals):
+                if vals:
                     entry[attr] = vals
             else:
                 raise ValueError('unknown directive: ' + directive)

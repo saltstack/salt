@@ -9,14 +9,14 @@ notation).
 
 .. code-block:: bash
 
-    salt -S 192.168.40.20 test.ping
-    salt -S 2001:db8::/64 test.ping
+    salt -S 192.168.40.20 test.version
+    salt -S 2001:db8::/64 test.version
 
 Ipcidr matching can also be used in compound matches
 
 .. code-block:: bash
 
-    salt -C 'S@10.0.0.0/24 and G@os:Debian' test.ping
+    salt -C 'S@10.0.0.0/24 and G@os:Debian' test.version
 
 It is also possible to use in both pillar and state-matching
 

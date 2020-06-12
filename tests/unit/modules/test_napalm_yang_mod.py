@@ -44,6 +44,7 @@ class MockNapalmYangModule(object):
     models = MockNapalmYangModels()
     utils = MockUtils()
 
+
 TEST_CONFIG = {
     'comment': 'Configuration discarded.',
     'already_configured': False,

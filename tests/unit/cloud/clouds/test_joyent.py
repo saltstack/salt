@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Eric Radman <ericshane@eradman.com>`
+    :codeauthor: Eric Radman <ericshane@eradman.com>
 '''
 
 # Import Salt Libs
@@ -35,6 +35,7 @@ def fake_wait_for_ip(check_for_ip_fn,
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(joyent.HAS_REQUIRED_CRYPTO is False, reason='PyCrypto or Cryptodome not installed')
 class JoyentTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.cloud.clouds.joyent module

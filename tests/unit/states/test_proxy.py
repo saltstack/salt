@@ -14,9 +14,6 @@ from tests.support.mock import (
     call
 )
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # Import Salt Libs
 import salt.states.proxy as proxy
 
@@ -70,9 +67,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(proxy.__salt__, patches):
                 out = proxy.managed('192.168.0.1', '3128', user='frank', password='passw0rd',
                                     bypass_domains=['salt.com', 'test.com'])
-                if six.PY3:
-                    # Sorting is different in Py3
-                    out['changes']['new'][-1]['bypass_domains'] = sorted(out['changes']['new'][-1]['bypass_domains'])
+                out['changes']['new'][-1]['bypass_domains'] = sorted(out['changes']['new'][-1]['bypass_domains'])
 
                 calls = [
                     call('192.168.0.1', '3128', 'frank', 'passw0rd', 'Ethernet'),

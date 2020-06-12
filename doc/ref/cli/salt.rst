@@ -11,9 +11,9 @@ Synopsis
 
     salt -E '.*' [ options ] sys.doc cmd
 
-    salt -G 'os:Arch.*' [ options ] test.ping
+    salt -G 'os:Arch.*' [ options ] test.version
 
-    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.ping
+    salt -C 'G@os:Arch.* and webserv* or G@kernel:FreeBSD' [ options ] test.version
 
 Description
 ===========
@@ -45,14 +45,6 @@ Options
 
     Instead of waiting for the job to run on minions only print the job id of
     the started execution and complete.
-
-.. option:: --state-output=STATE_OUTPUT
-
-    .. versionadded:: 0.17
-
-    Override the configured ``state_output`` value for minion output. One of
-    ``full``, ``terse``, ``mixed``, ``changes`` or ``filter``.  Default:
-    ``full``.
 
 .. option:: --subset=SUBSET
 

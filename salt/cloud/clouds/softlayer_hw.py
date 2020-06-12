@@ -390,7 +390,7 @@ def create(vm_):
         for node in node_info:
             if node['id'] == response['id'] \
                     and 'passwords' in node['operatingSystem'] \
-                    and len(node['operatingSystem']['passwords']) > 0:
+                    and node['operatingSystem']['passwords']:
                 return node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False

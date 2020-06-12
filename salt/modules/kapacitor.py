@@ -6,15 +6,21 @@ Kapacitor execution module.
     parameters or as configuration settings in /etc/salt/minion on the relevant
     minions::
 
-        kapacitor.unsafe_ssl: 'false'
-        kapacitor.protocol: 'http'
         kapacitor.host: 'localhost'
         kapacitor.port: 9092
+
+    .. versionadded:: 2016.11.0
+
+    Also protocol and SSL settings could be configured::
+
+        kapacitor.unsafe_ssl: 'false'
+        kapacitor.protocol: 'http'
+
+    .. versionadded:: 2019.2.0
 
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-.. versionadded:: 2016.11.0
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -25,6 +31,10 @@ import salt.utils.http
 import salt.utils.json
 import salt.utils.path
 from salt.utils.decorators import memoize
+import logging as logger
+
+# Setup the logger
+log = logger.getLogger(__name__)
 
 
 def __virtual__():
@@ -139,11 +149,10 @@ def define_task(name,
         to fetch data from. For backward compatibility, the value of
         'database' and 'retention_policy' will be merged as part of dbrps.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     database
-        Which database to fetch data from. Defaults to None, which will use the
-        default database in InfluxDB.
+        Which database to fetch data from.
 
     retention_policy
         Which retention policy to fetch data from. Defaults to 'default'.
@@ -154,6 +163,10 @@ def define_task(name,
 
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
+    if not database and not dbrps:
+        log.error("Providing database name or dbrps is mandatory.")
+        return False
+
     if version() < '0.13':
         cmd = 'kapacitor define -name {0}'.format(name)
     else:

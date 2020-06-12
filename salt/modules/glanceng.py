@@ -9,10 +9,12 @@ Glance module for interacting with OpenStack Glance
 Example configuration
 
 .. code-block:: yaml
+
     glance:
       cloud: default
 
 .. code-block:: yaml
+
     glance:
       auth:
         username: admin

@@ -5,8 +5,8 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import contextlib
+import copy
 import errno
 import fnmatch
 import glob
@@ -17,6 +17,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sys
 import time
 import tornado.ioloop
 import weakref
@@ -93,7 +94,7 @@ try:
     import git
     import gitdb
     GITPYTHON_VERSION = _LooseVersion(git.__version__)
-except ImportError:
+except Exception:
     GITPYTHON_VERSION = None
 
 try:
@@ -272,6 +273,15 @@ class GitProvider(object):
                     'If no per-remote parameters are being specified, there '
                     'may be a trailing colon after the URL, which should be '
                     'removed. Check the master configuration file.',
+                    self.role, self.id
+                )
+                failhard(self.role)
+
+            if self.role == 'git_pillar' \
+                    and self.branch != '__env__' and 'base' in per_remote_conf:
+                log.critical(
+                    'Invalid per-remote configuration for %s remote \'%s\'. '
+                    'base can only be specified if __env__ is specified as the branch name.',
                     self.role, self.id
                 )
                 failhard(self.role)
@@ -467,12 +477,19 @@ class GitProvider(object):
             if rname in self.saltenv_revmap:
                 env_set.update(self.saltenv_revmap[rname])
             else:
-                env_set.add('base' if rname == self.base else rname)
+                if rname == self.base:
+                    env_set.add('base')
+                elif not self.disable_saltenv_mapping:
+                    env_set.add(rname)
 
         use_branches = 'branch' in self.ref_types
         use_tags = 'tag' in self.ref_types
 
         ret = set()
+        if salt.utils.stringutils.is_hex(self.base):
+            # gitfs_base or per-saltenv 'base' may point to a commit ID, which
+            # would not show up in the refs. Make sure we include it.
+            ret.add('base')
         for ref in salt.utils.data.decode(refs):
             if ref.startswith('refs/'):
                 ref = ref[5:]
@@ -492,7 +509,7 @@ class GitProvider(object):
     @classmethod
     def add_conf_overlay(cls, name):
         '''
-        Programatically determine config value based on the desired saltenv
+        Programmatically determine config value based on the desired saltenv
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \
@@ -577,10 +594,20 @@ class GitProvider(object):
         '''
         cleaned = []
         cmd_str = 'git remote prune origin'
+
+        # Attempt to force all output to plain ascii english, which is what some parsing code
+        # may expect.
+        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
+        # just to be sure.
+        env = os.environ.copy()
+        env[b"LANGUAGE"] = b"C"
+        env[b"LC_ALL"] = b"C"
+
         cmd = subprocess.Popen(
             shlex.split(cmd_str),
             close_fds=not salt.utils.platform.is_windows(),
             cwd=os.path.dirname(self.gitdir),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
         output = cmd.communicate()[0]
@@ -806,7 +833,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise exc
+                        six.reraise(*sys.exc_info())
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
@@ -977,6 +1004,11 @@ class GitProvider(object):
         Resolve dynamically-set branch
         '''
         if self.role == 'git_pillar' and self.branch == '__env__':
+            try:
+                return self.all_saltenvs
+            except AttributeError:
+                # all_saltenvs not configured for this remote
+                pass
             target = self.opts.get('pillarenv') \
                 or self.opts.get('saltenv') \
                 or 'base'
@@ -1388,6 +1420,19 @@ class Pygit2(GitProvider):
             override_params, cache_root, role
         )
 
+    def peel(self, obj):
+        '''
+        Compatibility function for pygit2.Reference objects. Older versions of
+        pygit2 use .get_object() to return the object to which the reference
+        points, while newer versions use .peel(). In pygit2 0.27.4,
+        .get_object() was removed. This function will try .peel() first and
+        fall back to .get_object().
+        '''
+        try:
+            return obj.peel()
+        except AttributeError:
+            return obj.get_object()
+
     def checkout(self):
         '''
         Checkout the configured branch/tag
@@ -1406,7 +1451,7 @@ class Pygit2(GitProvider):
             return None
 
         try:
-            head_sha = local_head.get_object().hex
+            head_sha = self.peel(local_head).hex
         except AttributeError:
             # Shouldn't happen, but just in case a future pygit2 API change
             # breaks things, avoid a traceback and log an error.
@@ -1455,7 +1500,7 @@ class Pygit2(GitProvider):
         try:
             if remote_ref in refs:
                 # Get commit id for the remote ref
-                oid = self.repo.lookup_reference(remote_ref).get_object().id
+                oid = self.peel(self.repo.lookup_reference(remote_ref)).id
                 if local_ref not in refs:
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
@@ -1463,7 +1508,7 @@ class Pygit2(GitProvider):
 
                 try:
                     target_sha = \
-                        self.repo.lookup_reference(remote_ref).get_object().hex
+                        self.peel(self.repo.lookup_reference(remote_ref)).hex
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
@@ -1527,9 +1572,9 @@ class Pygit2(GitProvider):
 
             elif tag_ref in refs:
                 tag_obj = self.repo.revparse_single(tag_ref)
-                if not isinstance(tag_obj, pygit2.Tag):
+                if not isinstance(tag_obj, pygit2.Commit):
                     log.error(
-                        '%s does not correspond to pygit2.Tag object',
+                        '%s does not correspond to pygit2.Commit object',
                         tag_ref
                     )
                 else:
@@ -1549,9 +1594,10 @@ class Pygit2(GitProvider):
                                 exc_info=True
                             )
                             return None
+                    log.debug('SHA of tag %s: %s', tgt_ref, tag_sha)
 
-                    if head_sha != target_sha:
-                        if not _perform_checkout(local_ref, branch=False):
+                    if head_sha != tag_sha:
+                        if not _perform_checkout(tag_ref, branch=False):
                             return None
 
                     # Return the relative root, if present
@@ -1575,11 +1621,19 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
+        try:
+            if pygit2.GIT_FETCH_PRUNE:
+                # Don't need to clean anything, pygit2 can do it by itself
+                return []
+        except AttributeError:
+            # However, only in 0.26.2 and newer
+            pass
         if self.credentials is not None:
             log.debug(
-                'pygit2 does not support detecting stale refs for '
-                'authenticated remotes, saltenvs will not reflect '
-                'branches/tags removed from remote \'%s\'', self.id
+                'The installed version of pygit2 (%s) does not support '
+                'detecting stale refs for authenticated remotes, saltenvs '
+                'will not reflect branches/tags removed from remote \'%s\'',
+                PYGIT2_VERSION, self.id
             )
             return []
         return super(Pygit2, self).clean_stale_refs()
@@ -1590,6 +1644,10 @@ class Pygit2(GitProvider):
         will let the calling function know whether or not a new repo was
         initialized by this function.
         '''
+        # https://github.com/libgit2/pygit2/issues/339
+        # https://github.com/libgit2/libgit2/issues/2122
+        home = os.path.expanduser('~')
+        pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
@@ -1598,23 +1656,16 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                try:
-                    self.repo = pygit2.Repository(self.cachedir)
-                except GitError as exc:
-                    import pwd
-                    # https://github.com/libgit2/pygit2/issues/339
-                    # https://github.com/libgit2/libgit2/issues/2122
-                    if "Error stat'ing config file" not in six.text_type(exc):
-                        raise
-                    home = pwd.getpwnam(salt.utils.user.get_user()).pw_dir
-                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
-                    self.repo = pygit2.Repository(self.cachedir)
+                self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO, self.cachedir, self.url, self.role)
                 return new
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, '.git')
         self.enforce_git_config()
+        git_config = os.path.join(self.gitdir, 'config')
+        if os.path.exists(git_config) and PYGIT2_VERSION >= _LooseVersion('0.28.0'):
+            self.repo.config.add_file(git_config)
 
         return new
 
@@ -1637,7 +1688,7 @@ class Pygit2(GitProvider):
                 blobs.append(
                     salt.utils.path.join(prefix, entry.name, use_posixpath=True)
                 )
-                if len(blob):
+                if blob:
                     _traverse(
                         blob, blobs, salt.utils.path.join(
                             prefix, entry.name, use_posixpath=True)
@@ -1659,7 +1710,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = []
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1691,6 +1742,11 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
+        try:
+            fetch_kwargs['prune'] = pygit2.GIT_FETCH_PRUNE
+        except AttributeError:
+            # pruning only available in pygit2 >= 0.26.2
+            pass
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
@@ -1784,7 +1840,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = {}
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1840,8 +1896,8 @@ class Pygit2(GitProvider):
         refs/remotes/origin/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/remotes/origin/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/remotes/origin/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -1850,8 +1906,8 @@ class Pygit2(GitProvider):
         Return a pygit2.Tree object matching a tag ref fetched into refs/tags/
         '''
         try:
-            return self.repo.lookup_reference(
-                'refs/tags/{0}'.format(ref)).get_object().tree
+            return self.peel(self.repo.lookup_reference(
+                'refs/tags/{0}'.format(ref))).tree
         except KeyError:
             return None
 
@@ -2543,7 +2599,8 @@ class GitBase(object):
                     LIBGIT2_VERSION
                 )
             )
-        if not salt.utils.path.which('git'):
+        if not getattr(pygit2, 'GIT_FETCH_PRUNE', False) \
+                and not salt.utils.path.which('git'):
             errors.append(
                 'The git command line utility is required when using the '
                 '\'pygit2\' {0}_provider.'.format(self.role)
@@ -2692,9 +2749,7 @@ class GitFS(GitBase):
                 return cache_match
         ret = set()
         for repo in self.remotes:
-            repo_envs = set()
-            if not repo.disable_saltenv_mapping:
-                repo_envs.update(repo.envs())
+            repo_envs = repo.envs()
             for env_list in six.itervalues(repo.saltenv_revmap):
                 repo_envs.update(env_list)
             ret.update([x for x in repo_envs if repo.env_is_exposed(x)])
@@ -2774,7 +2829,7 @@ class GitFS(GitBase):
                         return _add_file_stat(fnd, blob_mode)
             except IOError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
             with salt.utils.files.fopen(lk_fn, 'w'):
                 pass
@@ -2856,13 +2911,13 @@ class GitFS(GitBase):
             return ret
         except IOError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         try:
             os.makedirs(os.path.dirname(hashdest))
         except OSError as exc:
             if exc.errno != errno.EEXIST:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:
@@ -2971,10 +3026,18 @@ class GitPillar(GitBase):
             cachedir = self.do_checkout(repo)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
-                if repo.env:
+                if repo.branch == '__env__' and hasattr(repo, 'all_saltenvs'):
+                    env = self.opts.get('pillarenv') \
+                        or self.opts.get('saltenv') \
+                        or 'base'
+                elif repo.env:
                     env = repo.env
                 else:
-                    env = 'base' if repo.branch == repo.base else repo.branch
+                    if repo.branch == repo.base:
+                        env = 'base'
+                    else:
+                        tgt = repo.get_checkout_target()
+                        env = 'base' if tgt == repo.base else tgt
                 if repo._mountpoint:
                     if self.link_mountpoint(repo):
                         self.pillar_dirs[repo.linkdir] = env
@@ -2988,6 +3051,7 @@ class GitPillar(GitBase):
         points at the correct path
         '''
         lcachelink = salt.utils.path.join(repo.linkdir, repo._mountpoint)
+        lcachedest = salt.utils.path.join(repo.cachedir, repo.root()).rstrip(os.sep)
         wipe_linkdir = False
         create_link = False
         try:
@@ -3021,11 +3085,11 @@ class GitPillar(GitBase):
                             )
                             wipe_linkdir = True
                         else:
-                            if ldest != repo.cachedir:
+                            if ldest != lcachedest:
                                 log.debug(
                                     'Destination of %s (%s) does not match '
                                     'the expected value (%s)',
-                                    lcachelink, ldest, repo.cachedir
+                                    lcachelink, ldest, lcachedest
                                 )
                                 # Since we know that the parent dirs of the
                                 # link are set up properly, all we need to do
@@ -3070,16 +3134,16 @@ class GitPillar(GitBase):
 
                 if create_link:
                     try:
-                        os.symlink(repo.cachedir, lcachelink)
+                        os.symlink(lcachedest, lcachelink)
                         log.debug(
                             'Successfully linked %s to cachedir %s',
-                            lcachelink, repo.cachedir
+                            lcachelink, lcachedest
                         )
                         return True
                     except OSError as exc:
                         log.error(
                             'Failed to create symlink to %s at path %s: %s',
-                            repo.cachedir, lcachelink, exc.__str__()
+                            lcachedest, lcachelink, exc.__str__()
                         )
                         return False
         except GitLockError:

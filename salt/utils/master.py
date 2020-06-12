@@ -25,18 +25,108 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
 from salt.utils.process import MultiprocessingProcess
 
+# pylint: disable=import-error
+try:
+    import salt.utils.psutil_compat as psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+
 # Import third party libs
 from salt.ext import six
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
+
+
+def get_running_jobs(opts):
+    '''
+    Return the running jobs on the master
+    '''
+
+    ret = []
+    proc_dir = os.path.join(opts['cachedir'], 'proc')
+    if not os.path.isdir(proc_dir):
+        return ret
+    for fn_ in os.listdir(proc_dir):
+        path = os.path.join(proc_dir, fn_)
+        data = read_proc_file(path, opts)
+        if not data:
+            continue
+        if not is_pid_healthy(data['pid']):
+            continue
+        ret.append(data)
+    return ret
+
+
+def read_proc_file(path, opts):
+    '''
+    Return a dict of JID metadata, or None
+    '''
+    serial = salt.payload.Serial(opts)
+    with salt.utils.files.fopen(path, 'rb') as fp_:
+        try:
+            data = serial.load(fp_)
+        except Exception as err:
+            # need to add serial exception here
+            # Could not read proc file
+            log.warning("Issue deserializing data: %s", err)
+            return None
+
+    if not isinstance(data, dict):
+        # Invalid serial object
+        log.warning("Data is not a dict: %s", data)
+        return None
+
+    pid = data.get('pid', None)
+    if not pid:
+        # No pid, not a salt proc file
+        log.warning("No PID found in data")
+        return None
+
+    return data
+
+
+def is_pid_healthy(pid):
+    '''
+    This is a health check that will confirm the PID is running
+    and executed by salt.
+
+    If pusutil is available:
+        * all architectures are checked
+
+    if psutil is not available:
+        * Linux/Solaris/etc: archs with `/proc/cmdline` available are checked
+        * AIX/Windows: assume PID is healhty and return True
+    '''
+    if HAS_PSUTIL:
+        try:
+            proc = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            log.warning("PID %s is no longer running.", pid)
+            return False
+        return any(['salt' in cmd for cmd in proc.cmdline()])
+
+    if salt.utils.platform.is_aix() or salt.utils.platform.is_windows():
+        return True
+
+    if not salt.utils.process.os_is_running(pid):
+        log.warning("PID %s is no longer running.", pid)
+        return False
+
+    cmdline_file = os.path.join('proc', str(pid), 'cmdline')
+    try:
+        with salt.utils.files.fopen(cmdline_file, 'rb') as fp_:
+            return b'salt' in fp_.read()
+    except (OSError, IOError) as err:
+        log.error("There was a problem reading proc file: %s", err)
+        return False
 
 
 class MasterPillarUtil(object):
@@ -72,19 +162,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 expr_form=None):
-
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
+                 opts=None):
 
         log.debug('New instance of %s created.',
                   self.__class__.__name__)
@@ -202,16 +280,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: %s', missed_minions)
-            if self.grains_fallback:
+            if self.grains_fallback and missed_minions:
                 lret = self._get_live_minion_grains(missed_minions)
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: %s', missed_minions)
-            if self.grains_fallback:
+            if self.grains_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         return ret
 
     def _get_minion_pillar(self, *minion_ids, **kwargs):
@@ -227,16 +305,16 @@ class MasterPillarUtil(object):
             cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: %s', missed_minions)
-            if self.pillar_fallback:
+            if self.pillar_fallback and missed_minions:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: %s', missed_minions)
-            if self.pillar_fallback:
+            if self.pillar_fallback and missed_minions:
                 cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
-            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
+            ret = {key: value for key, value in [(minion_id, {}) for minion_id in minion_ids] + list(six.iteritems(cret)) + list(six.iteritems(lret))}
         return ret
 
     def _tgt_to_list(self):
@@ -245,7 +323,7 @@ class MasterPillarUtil(object):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         _res = ckminions.check_minions(self.tgt, self.tgt_type)
         minion_ids = _res['minions']
-        if len(minion_ids) == 0:
+        if not minion_ids:
             log.debug('No minions matched for tgt="%s" and tgt_type="%s"', self.tgt, self.tgt_type)
             return {}
         log.debug('Matching minions for tgt="%s" and tgt_type="%s": %s', self.tgt, self.tgt_type, minion_ids)
@@ -345,7 +423,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 
@@ -438,11 +516,11 @@ class CacheWorker(MultiprocessingProcess):
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__(log_queue=log_queue)
+        super(CacheWorker, self).__init__(**kwargs)
         self.opts = opts
 
     # __setstate__ and __getstate__ are only used on Windows.
@@ -450,11 +528,18 @@ class CacheWorker(MultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -475,11 +560,11 @@ class ConnectedCache(MultiprocessingProcess):
     the master publisher port.
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__(log_queue=log_queue)
+        super(ConnectedCache, self).__init__(**kwargs)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -506,11 +591,18 @@ class ConnectedCache(MultiprocessingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def signal_handler(self, sig, frame):
         '''
@@ -566,13 +658,13 @@ class ConnectedCache(MultiprocessingProcess):
 
         # the socket for incoming cache-updates from workers
         cupd_in = context.socket(zmq.SUB)
-        cupd_in.setsockopt(zmq.SUBSCRIBE, '')
+        cupd_in.setsockopt(zmq.SUBSCRIBE, b'')
         cupd_in.setsockopt(zmq.LINGER, 100)
         cupd_in.bind('ipc://' + self.update_sock)
 
         # the socket for the timer-event
         timer_in = context.socket(zmq.SUB)
-        timer_in.setsockopt(zmq.SUBSCRIBE, '')
+        timer_in.setsockopt(zmq.SUBSCRIBE, b'')
         timer_in.setsockopt(zmq.LINGER, 100)
         timer_in.connect('ipc://' + self.upd_t_sock)
 
@@ -636,7 +728,7 @@ class ConnectedCache(MultiprocessingProcess):
 
                 try:
 
-                    if len(new_c_data) == 0:
+                    if not new_c_data:
                         log.debug('ConCache Got empty update from worker')
                         continue
 
@@ -683,7 +775,7 @@ def ping_all_connected_minions(opts):
     else:
         tgt = '*'
         form = 'glob'
-    client.cmd(tgt, 'test.ping', tgt_type=form)
+    client.cmd_async(tgt, 'test.ping', tgt_type=form)
 
 
 def get_master_key(key_user, opts, skip_perm_errors=False):
@@ -720,6 +812,7 @@ def get_values_of_matching_keys(pattern_dict, user_name):
         if salt.utils.stringutils.expr_match(user_name, expr):
             ret.extend(pattern_dict[expr])
     return ret
+
 
 # test code for the ConCache class
 if __name__ == '__main__':

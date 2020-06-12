@@ -7,7 +7,7 @@ Management of Zabbix hosts.
 
 '''
 from __future__ import absolute_import, print_function, unicode_literals
-from json import loads, dumps
+from salt.utils.json import loads, dumps
 from copy import deepcopy
 from salt.ext import six
 
@@ -122,7 +122,7 @@ def present(host, groups, interfaces, **kwargs):
             interface_type = interface_ports[value['type'].lower()][0]
             main = '1' if six.text_type(value.get('main', 'true')).lower() == 'true' else '0'
             useip = '1' if six.text_type(value.get('useip', 'true')).lower() == 'true' else '0'
-            interface_ip = value.get('ip')
+            interface_ip = value.get('ip', '')
             dns = value.get('dns', key)
             port = six.text_type(value.get('port', interface_ports[value['type'].lower()][1]))
 
@@ -193,7 +193,7 @@ def present(host, groups, interfaces, **kwargs):
     host_exists = __salt__['zabbix.host_exists'](host, **connection_args)
 
     if host_exists:
-        host = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
+        host = __salt__['zabbix.host_get'](host=host, **connection_args)[0]
         hostid = host['hostid']
 
         update_proxy = False
@@ -268,8 +268,7 @@ def present(host, groups, interfaces, **kwargs):
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
                 sum_kwargs = dict(new_inventory)
-                for elem in connection_args:
-                    sum_kwargs = new_inventory.get(elem, 0) + connection_args[elem]
+                sum_kwargs.update(connection_args)
                 sum_kwargs['clear_old'] = True
 
                 hostupdate = __salt__['zabbix.host_inventory_set'](hostid, **sum_kwargs)
@@ -457,7 +456,7 @@ def assign_templates(host, templates, **kwargs):
         ret['comment'] = comment_host_templ_notupdated
         return ret
 
-    host_info = __salt__['zabbix.host_get'](name=host, **connection_args)[0]
+    host_info = __salt__['zabbix.host_get'](host=host, **connection_args)[0]
     hostid = host_info['hostid']
 
     if not templates:

@@ -75,7 +75,7 @@ def uuid(dev=None):
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
             return os.path.basename(_bcsys(dev, 'cache'))
-    except:  # pylint: disable=bare-except
+    except Exception:
         return False
 
 
@@ -105,10 +105,7 @@ def attach_(dev=None):
             if 'cache' in data:
                 res[dev] = attach_(dev)
 
-        if len(res):
-            return res
-        else:
-            return None
+        return res if res else None
 
     bcache = uuid(dev)
     if bcache:
@@ -150,10 +147,7 @@ def detach(dev=None):
             if 'cache' in data:
                 res[dev] = detach(dev)
 
-        if len(res):
-            return res
-        else:
-            return None
+        return res if res else None
 
     log.debug('Detaching %s', dev)
     if not _bcsys(dev, 'detach', 'goaway', 'error', 'Error detaching {0}'.format(dev)):
@@ -492,7 +486,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 
         try:
             result['dev'] = os.path.basename(_bcsys(dev, 'dev'))
-        except:  # pylint: disable=bare-except
+        except Exception:
             pass
         result['bdev'] = _bdev(dev)
 
@@ -536,7 +530,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     if internals:
         interres = result.pop('inter_ro', {})
         interres.update(result.pop('inter_rw', {}))
-        if len(interres):
+        if interres:
             for key in interres:
                 if key.startswith('internal'):
                     nkey = re.sub(r'internal[s/]*', '', key)
@@ -604,10 +598,10 @@ def super_(dev):
 
         try:
             rval = int(rval)
-        except:  # pylint: disable=bare-except
+        except Exception:
             try:
                 rval = float(rval)
-            except:  # pylint: disable=bare-except
+            except Exception:
                 if rval == 'yes':
                     rval = True
                 elif rval == 'no':
@@ -668,7 +662,7 @@ def _bdev(dev=None):
     if not dev:
         return False
     else:
-        return _devbase(os.path.realpath(os.path.join(dev, '../')))
+        return _devbase(os.path.dirname(dev))
 
 
 def _bcpath(dev):
@@ -800,10 +794,10 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
                 val = val.strip()
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except Exception:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
+                    except Exception:
                         pass
                 listres[key.strip()] = val
             result[strlist] = listres
@@ -826,7 +820,7 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
         for intf in intflist:
             if intf in result:
                 ifres[intf] = result.pop(intf)
-        if len(ifres):
+        if ifres:
             bresult[iftype] = ifres
 
     return bresult
@@ -846,7 +840,7 @@ def _size_map(size):
                 size = 1024**2 * float(re.sub(r'[Mm]', '', size))
             size = int(size)
         return size
-    except:  # pylint: disable=bare-except
+    except Exception:
         return None
 
 
@@ -927,7 +921,7 @@ def _wipe(dev):
 def _wait(lfunc, log_lvl=None, log_msg=None, tries=10):
     '''
     Wait for lfunc to be True
-    :return: True if lfunc succeeded within tries, False if it didnt
+    :return: True if lfunc succeeded within tries, False if it didn't
     '''
     i = 0
     while i < tries:

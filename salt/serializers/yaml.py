@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 import datetime
+import logging
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -19,8 +20,11 @@ from yaml.scanner import ScannerError
 from salt.serializers import DeserializationError, SerializationError
 from salt.ext import six
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 __all__ = ['deserialize', 'serialize', 'available']
+
+log = logging.getLogger(__name__)
 
 available = True
 
@@ -46,14 +50,17 @@ def deserialize(stream_or_string, **options):
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
+        log.exception('Error encountered while deserializing')
         err_type = ERROR_MAP.get(error.problem, 'Unknown yaml render error')
         line_num = error.problem_mark.line + 1
         raise DeserializationError(err_type,
                                    line_num,
                                    error.problem_mark.buffer)
     except ConstructorError as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
     except Exception as error:
+        log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
 
@@ -66,6 +73,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -74,6 +82,7 @@ def serialize(obj, **options):
             return response[:-1]
         return response
     except Exception as error:
+        log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
 
@@ -108,12 +117,12 @@ Loader.add_multi_constructor('tag:yaml.org,2002:set', Loader.construct_yaml_set)
 Loader.add_multi_constructor('tag:yaml.org,2002:str', Loader.construct_yaml_str)
 Loader.add_multi_constructor('tag:yaml.org,2002:seq', Loader.construct_yaml_seq)
 Loader.add_multi_constructor('tag:yaml.org,2002:map', Loader.construct_yaml_map)
-Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
     '''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
+
 
 Dumper.add_multi_representer(EncryptedString, EncryptedString.yaml_dumper)
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
@@ -132,3 +141,7 @@ Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
 Dumper.add_multi_representer(OrderedDict, Dumper.represent_dict)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))

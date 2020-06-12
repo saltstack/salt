@@ -79,7 +79,7 @@ def set_change_request_state(change_id, state='approved'):
     client.table = 'change_request'
     # Get the change record first
     record = client.get({'number': change_id})
-    if record is None or len(record) == 0:
+    if not record:
         log.error('Failed to fetch change record, maybe it does not exist?')
         return False
     # Use the sys_id as the unique system record

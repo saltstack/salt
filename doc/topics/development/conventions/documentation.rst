@@ -13,7 +13,7 @@ broadly, most of the narrative documentation is contained within the
 :blob:`doc` subdirectory and most of the reference and API documentation is
 written inline with Salt's Python code and extracted using a Sphinx extension.
 
-.. _`Sphinx`: http://sphinx-doc.org/
+.. _`Sphinx`: https://www.sphinx-doc.org/en/master/
 
 
 .. _docs-style:
@@ -187,7 +187,7 @@ Link to :ref:`glossary entries <glossary>` using the `term role`_. A
 cross-reference should be added the first time a Salt-specific term is used in
 a document.
 
-.. _`term role`: http://sphinx-doc.org/markup/inline.html#role-term
+.. _`term role`: https://www.sphinx-doc.org/en/master/glossary.html#term-role
 
 .. code-block:: restructuredtext
 
@@ -206,7 +206,7 @@ occasionally useful to manually add items to the index.
 One method is to use the `index directive`_ above the document or section that
 should appear in the index.
 
-.. _`index directive`: http://sphinx-doc.org/markup/misc.html#directive-index
+.. _`index directive`: https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html?highlight=index%20directive#index-generating-markup
 
 .. code-block:: restructuredtext
 
@@ -217,7 +217,7 @@ Another method is to use the `index role`_ inline with the text that should
 appear in the index. The index entry is created and the target text is left
 otherwise intact.
 
-.. _`index role`: http://sphinx-doc.org/markup/misc.html#role-index
+.. _`index role`: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#role-index
 
 .. code-block:: restructuredtext
 
@@ -252,7 +252,7 @@ to survive document renames or movement.
 
 Note, the ``:doc:`` role should *not* be used to link documents together.
 
-.. _`ref role`: http://sphinx-doc.org/markup/inline.html#role-ref
+.. _`ref role`: https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html#role-ref
 
 
 .. _docs-ref-modules:
@@ -340,8 +340,17 @@ Building the documentation
 4.  A useful method of viewing the HTML documentation locally is to start
     Python's built-in HTTP server:
 
+    Python 3:
+    
     .. code-block:: bash
+		    
+        cd /path/to/salt/doc/_build/html
+	python3 -m http.server
 
+    Python 2:
+    
+    .. code-block:: bash
+		    
         cd /path/to/salt/doc/_build/html
         python -m SimpleHTTPServer
 

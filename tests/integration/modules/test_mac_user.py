@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
 # Import Python Libs
@@ -16,6 +16,7 @@ from tests.support.helpers import destructiveTest, skip_if_not_root
 # Import Salt Libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
+import salt.ext.six as six
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -30,6 +31,7 @@ def __random_string(size=6):
         random.choice(string.ascii_uppercase + string.digits)
         for x in range(size)
     )
+
 
 # Create user strings for tests
 ADD_USER = __random_string()

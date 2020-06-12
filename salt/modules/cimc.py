@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Cisco UCS compatibility to Salt.
+Module to provide Cisco UCS compatibility to Salt
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -15,12 +15,13 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Cisco UCS Proxy Module <salt.proxy.cimc>`
+    :py:mod:`Cisco UCS Proxy Module <salt.proxy.cimc>`
 
 About
 =====
-This execution module was designed to handle connections to a Cisco UCS server. This module adds support to send
-connections directly to the device through the rest API.
+This execution module was designed to handle connections to a Cisco UCS server.
+This module adds support to send connections directly to the device through the
+rest API.
 
 '''
 
@@ -260,7 +261,7 @@ def get_hostname():
     '''
     Retrieves the hostname from the device.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -394,7 +395,7 @@ def get_power_configuration():
     Get the configuration of the power settings from the device. This is only available
     on some C-Series servers.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -460,7 +461,7 @@ def get_syslog_settings():
     '''
     Get the Syslog configuration settings from the system.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -632,7 +633,7 @@ def set_hostname(hostname=None):
     '''
     Sets the hostname on the server.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
         hostname(str): The new hostname to set.
@@ -667,7 +668,7 @@ def set_logging_levels(remote=None, local=None):
     the following options: emergency, alert, critical, error, warning, notice,
     informational, debug.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
         remote(str): The logging level for SYSLOG logs.
@@ -750,7 +751,7 @@ def set_power_configuration(policy=None, delayType=None, delayValue=None):
     Sets the power configuration on the device. This is only available for some
     C-Series servers.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
         policy(str): The action to be taken when chassis power is restored after
@@ -860,7 +861,7 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
     '''
     Sets a CIMC user with specified configurations.
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Args:
         uid(int): The user ID slot to create the user account in.
