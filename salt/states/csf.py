@@ -237,27 +237,23 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         should be opened for inbound traffic, outbound
         traffic, or both.
     '''
-
     ports = list(six.moves.map(six.text_type, ports))
     port_ranges = []
     for item in ports:
         if ':' in str(item):
             port_ranges.append(str(item))
             ports.remove(item)
-
     if not port_ranges:
         port_ranges = sorted(port_ranges)
         ports = sorted(set(ports), key=int)
         ports = ports + port_ranges
     else:
         ports = sorted(set(ports), key=int)
-
     diff = False
     ret = {'name': ','.join(ports),
            'changes': {},
            'result': True,
            'comment': 'Ports open.'}
-
     current_ports = __salt__['csf.get_ports'](proto=proto, direction=direction)
     plist = ', '.join([str(x) for x in ports])
     direction = direction.upper()
@@ -281,7 +277,6 @@ def ports_open(name, ports, proto='tcp', direction='in'):
             ret['changes']['Proto'] = str(proto)
             ret['changes']['Direction'] = str(direction)
             ret['comment'] = result
-
     return ret
 
 
