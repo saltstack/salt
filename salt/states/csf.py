@@ -268,11 +268,20 @@ def ports_open(name, ports, proto='tcp', direction='in'):
         if current_ports[direction] != ports:
             diff = True
     if diff:
-        result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
-        ret['changes']['Ports'] = {'Ports': 'Changed', 'List': plist}
-        ret['changes']['Proto'] = str(proto)
-        ret['changes']['Direction'] = str(direction)
-        ret['comment'] = result
+        if __opts__['test']:
+            result = None
+            ret['changes']['Ports'] = {'Ports': 'Changed', 'List': plist}
+            ret['changes']['Proto'] = str(proto)
+            ret['changes']['Direction'] = str(direction)
+            ret['comment'] = 'Configuration will update.'
+            ret['result'] = None
+        else:
+            result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
+            ret['changes']['Ports'] = {'Ports': 'Changed', 'List': plist}
+            ret['changes']['Proto'] = str(proto)
+            ret['changes']['Direction'] = str(direction)
+            ret['comment'] = result
+
     return ret
 
 
