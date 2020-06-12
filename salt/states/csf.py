@@ -241,11 +241,11 @@ def ports_open(name, ports, proto='tcp', direction='in'):
     ports = list(six.moves.map(six.text_type, ports))
     port_ranges = []
     for item in ports:
-        if ':' in str(item) :
+        if ':' in str(item):
             port_ranges.append(str(item))
             ports.remove(item)
 
-    if port_ranges != None:
+    if not port_ranges:
         port_ranges = sorted(port_ranges)
         ports = sorted(set(ports), key=int)
         ports = ports + port_ranges
@@ -269,7 +269,7 @@ def ports_open(name, ports, proto='tcp', direction='in'):
             diff = True
     if diff:
         result = __salt__['csf.allow_ports'](ports, proto=proto, direction=direction)
-        ret['changes']['Ports'] = { 'Ports' : 'Changed', 'List' : plist  }
+        ret['changes']['Ports'] = {'Ports': 'Changed', 'List': plist}
         ret['changes']['Proto'] = str(proto)
         ret['changes']['Direction'] = str(direction)
         ret['comment'] = result
