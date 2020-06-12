@@ -287,6 +287,8 @@ def lv_present(
         lvpath = "/dev/{0}/{1}".format(vgname, name)
 
     lv_info = __salt__["lvm.lvdisplay"](lvpath, quiet=True)
+    lv_info = lv_info.get(lvpath)
+
     if not lv_info:
         if __opts__["test"]:
             ret["comment"] = "Logical Volume {0} is set to be created".format(name)
@@ -317,7 +319,6 @@ def lv_present(
                 )
                 ret["result"] = False
     else:
-        lv_info = lv_info[lvpath]
         ret["comment"] = "Logical Volume {0} already present".format(name)
         if size or extents:
             old_extents = int(lv_info["Current Logical Extents Associated"])
