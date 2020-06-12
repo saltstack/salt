@@ -317,7 +317,7 @@
 # recon_randomize: True
 #
 # Each minion will have a randomized reconnect value between 'recon_default'
-# and 'recon_default + recon_max', which in this example means between 1000ms
+# and 'recon_default + recon_max', which in this example means between 1000ms6
 # 60000ms (or between 1 and 60 seconds). The generated random-value will be
 # doubled after each attempt to reconnect. Lets say the generated random
 # value is 11 seconds (or 11000ms).
@@ -332,7 +332,7 @@
 # reconnect 9: wait 33 seconds
 # reconnect x: etc.
 #
-# In a setup with ~6000 thousand hosts these settings would average the reconnects
+# In a setup with ~6000 hosts these settings would average the reconnects
 # to about 100 per second and all hosts would be reconnected within 60 seconds.
 # recon_default: 100
 # recon_max: 5000
