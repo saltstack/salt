@@ -548,11 +548,11 @@ def allow_ports(ports, proto='tcp', direction='in'):
     results = []
     port_ranges = []
     for item in ports:
-        if ':' in str(item) :
+        if ':' in str(item):
             port_ranges.append(str(item))
             ports.remove(item)
 
-    if port_ranges != None:
+    if not port_ranges:
         port_ranges = sorted(port_ranges)
         ports = sorted(set(ports), key=int)
         ports = ports + port_ranges
