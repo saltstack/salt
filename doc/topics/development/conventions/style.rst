@@ -68,8 +68,8 @@ All strings which require formatting should use the `.format` string method:
 
 .. code-block:: python
 
-    data = 'some text'
-    more = '{0} and then some'.format(data)
+    data = "some text"
+    more = "{0} and then some".format(data)
 
 Make sure to use indices or identifiers in the format brackets, since empty
 brackets are not supported by python 2.6.
@@ -84,15 +84,15 @@ When adding a new function or state, where possible try to use a
 
 .. code-block:: python
 
-    def new_func(msg=''):
-        '''
+    def new_func(msg=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
 
         msg : None
             The string to be printed.
-        '''
+        """
         print(msg)
 
 If you are uncertain what version should be used, either consult a core
@@ -109,8 +109,8 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
 
 .. code-block:: python
 
-    def new_func(msg='', signature=''):
-        '''
+    def new_func(msg="", signature=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
@@ -124,8 +124,8 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
             An optional signature.
 
         .. versionadded 0.17.0
-        '''
-        print('Greetings! {0}\n\n{1}'.format(msg, signature))
+        """
+        print("Greetings! {0}\n\n{1}".format(msg, signature))
 
 
 Dictionaries
@@ -154,8 +154,9 @@ To say this more directly with an example, this is `GOOD`:
 
     import os
 
+
     def minion_path():
-        path = os.path.join(self.opts['cachedir'], 'minions')
+        path = os.path.join(self.opts["cachedir"], "minions")
         return path
 
 This on the other hand is `DISCOURAGED`:
@@ -164,8 +165,9 @@ This on the other hand is `DISCOURAGED`:
 
     from os.path import join
 
+
     def minion_path():
-        path = join(self.opts['cachedir'], 'minions')
+        path = join(self.opts["cachedir"], "minions")
         return path
 
 The time when this is changed is for importing exceptions, generally directly
