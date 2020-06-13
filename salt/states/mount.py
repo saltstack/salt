@@ -1100,6 +1100,7 @@ def fstab_present(
     mount=True,
     match_on="auto",
     not_change=False,
+    fs_mount=True,
 ):
     """Makes sure that a fstab mount point is present.
 
@@ -1123,6 +1124,10 @@ def fstab_present(
     fs_passno
         Field is used by fsck to determine the order in which
         filesystem checks are done at boot time. Default is ``0``
+
+    fs_mount
+        Field is used only in AIX systems to determine if the
+        filesystem will be mounted by ``mount all``
 
     mount_by
         Select the final value for fs_spec. Can be [``None``,
@@ -1203,7 +1208,7 @@ def fstab_present(
                 device=fs_spec,
                 fstype=fs_vfstype,
                 opts=fs_mntops,
-                mount=mount,
+                mount=fs_mount,
                 config=config,
                 test=True,
                 match_on=match_on,
@@ -1253,7 +1258,7 @@ def fstab_present(
             device=fs_spec,
             fstype=fs_vfstype,
             opts=fs_mntops,
-            mount=mount,
+            mount=fs_mount,
             config=config,
             match_on=match_on,
             not_change=not_change,
