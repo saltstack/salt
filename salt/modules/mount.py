@@ -1245,7 +1245,7 @@ def automaster(config="/etc/auto_salt"):
 
 
 def mount(
-    name, device, mkmnt=False, fstype="", opts="defaults", user=None, util="mount"
+    name, device=False, mkmnt=False, fstype="", opts="defaults", user=None, util="mount"
 ):
     """
     Mount a device
@@ -1295,7 +1295,11 @@ def mount(
         else:
             args += " -t {0}".format(fstype)
 
-    cmd = "mount {0} {1} {2} ".format(args, device, name)
+    cmd = "mount "
+    if device:
+        cmd += "{0} {1} {2} ".format(args, device, name)
+    else:
+        cmd += "{0} ".format(name)
     out = __salt__["cmd.run_all"](cmd, runas=user, python_shell=False)
     if out["retcode"]:
         return out["stderr"]
