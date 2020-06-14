@@ -820,7 +820,10 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             "name": "/dev/sda1",
             "result": None,
             "changes": {},
-            "comment": ["/home entry will be written in /etc/fstab."],
+            "comment": [
+                "/home entry will be written in /etc/fstab.",
+                "Will mount /dev/sda1 on /home",
+            ],
         }
 
         grains_mock = {"os": "Linux"}
@@ -999,6 +1002,42 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             "name": "/dev/sda1",
             "result": True,
             "changes": {"persist": "new"},
+            "comment": [
+                "/home entry added in /etc/fstab.",
+                "Mounted /dev/sda1 on /home",
+            ],
+        }
+
+        grains_mock = {"os": "Linux"}
+        opts_mock = {"test": False}
+        set_fstab_mock = {"mount.set_fstab": MagicMock(return_value="new")}
+        mount_mock = {"mount.mount": MagicMock(return_value=True)}
+        with patch.dict(mount.__grains__, grains_mock), patch.dict(
+            mount.__opts__, opts_mock
+        ), patch.dict(mount.__salt__, mount_mock), patch.dict(
+            mount.__salt__, set_fstab_mock
+        ):
+            assert mount.fstab_present("/dev/sda1", "/home", "ext2") == ret
+            set_fstab_mock["mount.set_fstab"].assert_called_with(
+                name="/home",
+                device="/dev/sda1",
+                fstype="ext2",
+                opts="defaults",
+                dump=0,
+                pass_num=0,
+                config="/etc/fstab",
+                match_on="auto",
+                not_change=False,
+            )
+
+    def test_fstab_present_new_no_mount(self):
+        """
+        Test fstab_present with mount=false option
+        """
+        ret = {
+            "name": "/dev/sda1",
+            "result": True,
+            "changes": {"persist": "new"},
             "comment": ["/home entry added in /etc/fstab."],
         }
 
@@ -1008,7 +1047,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mount.__grains__, grains_mock), patch.dict(
             mount.__opts__, opts_mock
         ), patch.dict(mount.__salt__, salt_mock):
-            assert mount.fstab_present("/dev/sda1", "/home", "ext2") == ret
+            assert mount.fstab_present("/dev/sda1", "/home", "ext2", mount=False) == ret
             salt_mock["mount.set_fstab"].assert_called_with(
                 name="/home",
                 device="/dev/sda1",
