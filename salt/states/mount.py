@@ -1073,17 +1073,34 @@ def _convert_to(maybe_device, convert_to):
 
     # Get the device information
     if maybe_device.startswith("/"):
-        blkid = __salt__["disk.blkid"](maybe_device)
+        cmd = "blkid {0}".format(maybe_device)
     else:
-        blkid = __salt__["disk.blkid"](token=maybe_device)
+        cmd = "blkid -t {0}".format(maybe_device)
 
+    blkid_result = __salt__["cmd.run_all"]("{0}".format(cmd))
+
+    # This is almost the same code from disk.blkid, for some unknown
+    # reason when calling disk.blkid and running states using salt-call
+    # hangs forever after printing the summary.
+    blkid = {}
     result = None
-    if len(blkid) == 1:
-        if convert_to == "device":
-            result = next(iter(blkid))
-        else:
-            key = convert_to.upper()
-            result = "{}={}".format(key, next(iter(blkid.values()))[key])
+    if blkid_result["retcode"] == 0:
+        line = blkid_result["stdout"]
+        comps = line.split()
+        device = comps[0][:-1]
+        info = {}
+        device_attributes = re.split(('"*"'), line.partition(" ")[2])
+        for key, value in zip(*[iter(device_attributes)] * 2):
+            key = key.strip("=").strip(" ")
+            info[key] = value.strip('"')
+        blkid[device] = info
+
+        if len(blkid) == 1:
+            if convert_to == "device":
+                result = next(iter(blkid))
+            else:
+                key = convert_to.upper()
+                result = "{}={}".format(key, next(iter(blkid.values()))[key])
 
     return result
 
