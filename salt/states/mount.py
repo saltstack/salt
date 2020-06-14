@@ -1234,6 +1234,9 @@ def fstab_present(
         elif out == "new":
             msg = "{} entry will be written in {}."
             ret["comment"].append(msg.format(fs_file, config))
+            if mount:
+                msg = "Will mount {} on {}".format(name, fs_file)
+                ret["comment"].append(msg)
         elif out == "change":
             msg = "{} entry will be updated in {}."
             ret["comment"].append(msg.format(fs_file, config))
