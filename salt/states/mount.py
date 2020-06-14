@@ -1284,6 +1284,14 @@ def fstab_present(
         ret["changes"]["persist"] = out
         msg = "{} entry added in {}."
         ret["comment"].append(msg.format(fs_file, config))
+        if mount:
+            out = __salt__["mount.mount"](fs_file)
+            if type(out) == str:
+                ret["result"] = False
+                msg = "Error while mounting {}".format(out.split(":", maxsplit=1)[1])
+            else:
+                msg = "Mounted {} on {}".format(name, fs_file)
+            ret["comment"].append(msg)
     elif out == "change":
         ret["changes"]["persist"] = out
         msg = "{} entry updated in {}."
