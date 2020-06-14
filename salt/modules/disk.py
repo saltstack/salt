@@ -28,9 +28,6 @@ __func_alias__ = {"format_": "format"}
 
 log = logging.getLogger(__name__)
 
-HAS_HDPARM = salt.utils.path.which("hdparm") is not None
-HAS_IOSTAT = salt.utils.path.which("iostat") is not None
-
 
 def __virtual__():
     """
@@ -562,7 +559,7 @@ def fstype(device):
     return ""
 
 
-@salt.utils.decorators.depends(HAS_HDPARM)
+@salt.utils.decorators.path.which("hdparm")
 def _hdparm(args, failhard=True):
     """
     Execute hdparm
@@ -581,7 +578,7 @@ def _hdparm(args, failhard=True):
     return result["stdout"]
 
 
-@salt.utils.decorators.depends(HAS_HDPARM)
+@salt.utils.decorators.path.which("hdparm")
 def hdparms(disks, args=None):
     """
     Retrieve all info's for all disks
@@ -658,7 +655,7 @@ def hdparms(disks, args=None):
     return out
 
 
-@salt.utils.decorators.depends(HAS_HDPARM)
+@salt.utils.decorators.path.which("hdparm")
 def hpa(disks, size=None):
     """
     Get/set Host Protected Area settings
@@ -785,7 +782,7 @@ def smart_attributes(dev, attributes=None, values=None):
     return smart_attr
 
 
-@salt.utils.decorators.depends(HAS_IOSTAT)
+@salt.utils.decorators.path.which("iostat")
 def iostat(interval=1, count=5, disks=None):
     """
     Gather and return (averaged) IO stats.
