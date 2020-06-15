@@ -265,7 +265,10 @@ def running(name,
             password=None,
             os_type=None,
             arch=None,
-            boot=None):
+            boot=None,
+            serial_type=None,
+            console=True,
+            telnet_port=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -367,6 +370,25 @@ def running(name,
 
         .. versionadded:: 3000
 
+
+    :param serial_type: 
+        Serial device type. One of 'pty', 'tcp' (Default: None)
+        Only used when creating a new virtual machine.
+    
+        .. versionadded:: 3000.4
+
+    :param console: 
+        True to add a console device along with serial one (Default: True)      
+        Only used when creating a new virtual machine.
+
+        .. versionadded:: 3000.4
+
+    :param telnet_port: 
+        Telnet port to use for serial device of type tcp (Default: None)
+        Only used when creating a new virtual machine.
+
+        .. versionadded:: 3000.4
+        
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -487,7 +509,10 @@ def running(name,
                                   connection=connection,
                                   username=username,
                                   password=password,
-                                  boot=boot)
+                                  boot=boot,
+                                  serial_type=serial_type,
+                                  console=console,
+                                  telnet_port=telnet_port)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
