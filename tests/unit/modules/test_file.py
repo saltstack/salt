@@ -3736,9 +3736,9 @@ class PathStringFunctionsTests(TestCase):
             expected_path = "/tmp/this/is"
         unnorm = "/tmp/this/is/not/normalized/../../"
         normalized = filemod.normpath(unnorm)
-        assert (
-            normalized == expected_path
-        ), f"Expected {expected_path}, was {normalized}"
+        assert normalized == expected_path, "Expected {}, was {}".format(
+            expected_path, normalized
+        )
 
     def test__abspath(self):
         """
