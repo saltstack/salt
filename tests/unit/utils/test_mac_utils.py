@@ -480,6 +480,31 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 except CommandExecutionError as exc:
                     self.assertEqual(exc.message, error)
 
+    def test_not_bootout_retcode_36_fail(self):
+        """
+        Make sure that if we get a retcode 36 on non bootout cmds
+        that we still get a failure.
+        """
+        error = (
+            "Failed to bootstrap service:\n"
+            "stdout: failure\n"
+            "stderr: test failure\n"
+            "retcode: 36"
+        )
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b"failure", stderr=b"test failure", returncode=36
+            )
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                try:
+                    mac_utils.launchctl("bootstrap", "org.salt.minion")
+                except CommandExecutionError as exc:
+                    self.assertEqual(exc.message, error)
+
 
 def _get_walk_side_effects(results):
     """
