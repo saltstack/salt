@@ -12,13 +12,13 @@ import salt.grains.disks as disks
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
 
 
-class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
+class DisksGrainsTestCase(TestCase, LoaderModuleMockMixin):
     """
-    Test cases for _windows_disks grains
+    Test cases for disks grains
     """
 
     def setup_loader_modules(self):
@@ -83,3 +83,43 @@ class IscsiGrainsTestCase(TestCase, LoaderModuleMockMixin):
             result = disks._windows_disks()
             expected = {"SSDs": [], "disks": []}
             self.assertDictEqual(result, expected)
+
+    def test__linux_disks(self):
+        """
+        Test grains._linux_disks, normal return
+        Should return a populated dictionary
+        """
+
+        files = [
+            "/sys/block/asm!.asm_ctl_vbg0",
+            "/sys/block/dm-0",
+            "/sys/block/loop0",
+            "/sys/block/ram0",
+            "/sys/block/sda",
+            "/sys/block/sdb",
+            "/sys/block/vda",
+        ]
+        links = [
+            "../devices/virtual/block/asm!.asm_ctl_vbg0",
+            "../devices/virtual/block/dm-0",
+            "../devices/virtual/block/loop0",
+            "../devices/virtual/block/ram0",
+            "../devices/pci0000:00/0000:00:1f.2/ata1/host0/target0:0:0/0:0:0:0/block/sda",
+            "../devices/pci0000:35/0000:35:00.0/0000:36:00.0/host2/target2:1:0/2:1:0:0/block/sdb",
+            "../devices/pci0000L00:0000:00:05.0/virtio2/block/vda",
+        ]
+        contents = [
+            "1",
+            "1",
+            "1",
+            "0",
+            "1",
+            "1",
+            "1",
+        ]
+        with patch("glob.glob", MagicMock(return_value=files)), patch(
+            "salt.utils.path.readlink", MagicMock(side_effect=links)
+        ), patch("salt.utils.files.fopen", mock_open(read_data=contents)):
+            ret = disks._linux_disks()
+
+        assert ret == {"disks": ["sda", "sdb", "vda"], "SSDs": []}, ret
