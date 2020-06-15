@@ -15,12 +15,10 @@ CSF Ip tables management
         method: allow
 '''
 # pylint: disable=W0105
-# Import Python Libs
 
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-# Import Salt Libs
 from salt.ext import six
 
 log = logging.getLogger(__name__)
