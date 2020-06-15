@@ -637,15 +637,7 @@ def get_or_set_hash(
 
     if ret is None:
         val = "".join([random.SystemRandom().choice(chars) for _ in range(length)])
-
-        if DEFAULT_TARGET_DELIM in name:
-            root, rest = name.split(DEFAULT_TARGET_DELIM, 1)
-            curr = get(root, _infinitedict())
-            val = _dict_from_path(rest, val)
-            curr.update(val)
-            setval(root, curr)
-        else:
-            setval(name, val)
+        return set(name, val)
 
     return get(name)
 
