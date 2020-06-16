@@ -402,102 +402,13 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+
 Section -copy_prereqs
     # Copy prereqs to the Plugins Directory
-    # These files will be KB2999226 for Win8.1 and below
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
     File /r "..\prereqs\"
-SectionEnd
-
-# Check and install the Windows 10 Universal C Runtime (KB2999226)
-# ucrt is needed on Windows 8.1 and lower
-# They are installed as a Microsoft Update package (.msu)
-# ucrt for Windows 8.1 RT is only available via Windows Update
-Section -install_ucrt
-
-    Var /GLOBAL MsuPrefix
-    Var /GLOBAL MsuFileName
-
-    # Get the Major.Minor version Number
-    # Windows 10 introduced CurrentMajorVersionNumber
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentMajorVersionNumber
-
-    # Windows 10/2016 will return a value here, skip to the end if returned
-    StrCmp $R0 '' lbl_needs_ucrt 0
-
-    # Found Windows 10
-    detailPrint "KB2999226 does not apply to this machine"
-    goto lbl_done
-
-    lbl_needs_ucrt:
-    # UCRT only needed on Windows Server 2012R2/Windows 8.1 and below
-    # The first ReadRegStr command above should have skipped to lbl_done if on
-    # Windows 10 box
-
-    # Is the update already installed
-    ClearErrors
-
-    # Use WMI to check if it's installed
-    detailPrint "Checking for existing KB2999226 installation"
-    nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
-    # Clean up the stack
-    Pop $R0 # Gets the ErrorCode
-    Pop $R1 # Gets the stdout, which should be KB2999226 if it's installed
-
-    # If it returned KB2999226 it's already installed
-    StrCmp $R1 'KB2999226' lbl_done
-
-    detailPrint "KB2999226 not found"
-
-    # All lower versions of Windows
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentVersion
-
-    # Get the name of the .msu file based on the value of $R0
-    ${Switch} "$R0"
-        ${Case} "6.3"
-            StrCpy $MsuPrefix "Windows8.1"
-            ${break}
-        ${Case} "6.2"
-            StrCpy $MsuPrefix "Windows8-RT"
-            ${break}
-        ${Case} "6.1"
-            StrCpy $MsuPrefix "Windows6.1"
-            ${break}
-        ${Case} "6.0"
-            StrCpy $MsuPrefix "Windows6.0"
-            ${break}
-    ${EndSwitch}
-
-    # Use RunningX64 here to get the Architecture for the system running the installer
-    # CPUARCH is defined when the installer is built and is based on the machine that
-    # built the installer, not the target system as we need here.
-    ${If} ${RunningX64}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
-    ${Else}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
-    ${EndIf}
-
-    ClearErrors
-
-    detailPrint "Installing KB2999226 using file $MsuFileName"
-    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
-    # Clean up the stack
-    Pop $R0  # Get Error
-    Pop $R1  # Get stdout
-    ${IfNot} $R0 == 0
-        detailPrint "error: $R0"
-        detailPrint "output: $R2"
-        Sleep 3000
-    ${Else}
-        detailPrint "KB2999226 installed successfully"
-    ${EndIf}
-
-    lbl_done:
-
 SectionEnd
 
 
