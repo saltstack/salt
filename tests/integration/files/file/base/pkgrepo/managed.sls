@@ -88,34 +88,36 @@ epel-salttest:
 
 # START Ubuntu pkgrepo tests
 {% set codename = grains['oscodename'] %}
+{% set ubuntu_repos = [] %}
+{% set beta = grains['oscodename'] in ['xenial', 'bionic', 'eoan', 'focal', 'groovy'] %}
+{% set backports = grains['oscodename'] in ['xenial', 'bionic', 'eoan', 'focal'] %}
 
-# The gpodder PPA has not made a package for vivid yet - skip this test for now.
-{% if codename != 'vivid' %}
-gpodder-ppa:
+{%- if beta %}{%- do ubuntu_repos.append('firefox-beta') %}
+firefox-beta:
   pkgrepo.managed:
-    - name: deb http://ppa.launchpad.net/thp/gpodder/ubuntu {{ codename }} main
+    - name: deb http://ppa.launchpad.net/mozillateam/firefox-next/ubuntu {{ codename }} main
     - dist: {{ codename }}
-    - file: /etc/apt/sources.list.d/gpodder.list
-    - keyid: 89617F48
+    - file: /etc/apt/sources.list.d/firefox-beta.list
+    - keyid: CE49EC21
     - keyserver: keyserver.ubuntu.com
-{% endif %}
+{%- endif %}
 
-nginx-ppa:
+{%- if backports %}{%- do ubuntu_repos.append('kubuntu-ppa') %}
+kubuntu-ppa:
   pkgrepo.managed:
-    - ppa: nginx/development
-
-{% set osrelease = salt['grains.get']('osrelease', '12.04') %}
+    - ppa: kubuntu-ppa/backports
+{%- endif %}
 
 pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
-      - python-software-properties
-    - require_in:
-      {%- if codename != 'vivid' %}
-      - pkgrepo: gpodder-ppa
-      {%- endif %}
-      - pkgrepo: nginx-ppa
+      - software-properties-common
+{%- for repo in ubuntu_repos -%}
+{% if loop.first %}
+    - require_in:{%- endif %}
+      - pkgrepo: {{ repo }}
+{%- endfor %}
 # END Ubuntu pkgrepo tests
 
 {% else %}
