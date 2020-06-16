@@ -18,10 +18,8 @@ import multiprocessing
 import os
 import pprint
 import subprocess
-import sys
 import tempfile
 import time
-import types
 
 import salt.config
 import salt.exceptions
@@ -39,8 +37,8 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
+from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
 try:
@@ -465,123 +463,9 @@ class LoaderModuleMockMixin(
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            salt_dunders = (
-                "__opts__",
-                "__salt__",
-                "__runner__",
-                "__context__",
-                "__utils__",
-                "__ext_pillar__",
-                "__thorium__",
-                "__states__",
-                "__serializers__",
-                "__ret__",
-                "__grains__",
-                "__pillar__",
-                "__sdb__",
-                # Proxy is commented out on purpose since some code in salt expects a NameError
-                # and is most of the time not a required dunder
-                # '__proxy__'
-            )
-
-            for module, module_globals in six.iteritems(loader_modules_configs):
-                if not isinstance(module, types.ModuleType):
-                    raise RuntimeError(
-                        "The dictionary keys returned by {}.setup_loader_modules() "
-                        "must be an imported module, not {}".format(
-                            self.__class__.__name__, type(module)
-                        )
-                    )
-                if not isinstance(module_globals, dict):
-                    raise RuntimeError(
-                        "The dictionary values returned by {}.setup_loader_modules() "
-                        "must be a dictionary, not {}".format(
-                            self.__class__.__name__, type(module_globals)
-                        )
-                    )
-
-                module_blacklisted_dunders = module_globals.pop(
-                    "blacklisted_dunders", ()
-                )
-
-                minion_funcs = {}
-                if (
-                    "__salt__" in module_globals
-                    and module_globals["__salt__"] == "autoload"
-                ):
-                    if "__opts__" not in module_globals:
-                        raise RuntimeError(
-                            "You must provide '__opts__' on the {} module globals dictionary "
-                            "to auto load the minion functions".format(module.__name__)
-                        )
-                    import salt.loader
-
-                    ctx = {}
-                    if "__utils__" not in module_globals:
-                        utils = salt.loader.utils(
-                            module_globals["__opts__"],
-                            context=module_globals.get("__context__") or ctx,
-                        )
-                        module_globals["__utils__"] = utils
-                    minion_funcs = salt.loader.minion_mods(
-                        module_globals["__opts__"],
-                        context=module_globals.get("__context__") or ctx,
-                        utils=module_globals.get("__utils__"),
-                    )
-                    module_globals["__salt__"] = minion_funcs
-
-                for dunder_name in salt_dunders:
-                    if dunder_name not in module_globals:
-                        if dunder_name in module_blacklisted_dunders:
-                            continue
-                        module_globals[dunder_name] = {}
-
-                sys_modules = module_globals.pop("sys.modules", None)
-                if sys_modules is not None:
-                    if not isinstance(sys_modules, dict):
-                        raise RuntimeError(
-                            "'sys.modules' must be a dictionary not: {}".format(
-                                type(sys_modules)
-                            )
-                        )
-                    patcher = patch.dict(sys.modules, sys_modules)
-                    patcher.start()
-
-                    def cleanup_sys_modules(patcher, sys_modules):
-                        patcher.stop()
-                        del patcher
-                        del sys_modules
-
-                    self.addCleanup(cleanup_sys_modules, patcher, sys_modules)
-
-                for key in module_globals:
-                    if not hasattr(module, key):
-                        if key in salt_dunders:
-                            setattr(module, key, {})
-                        else:
-                            setattr(module, key, None)
-
-                if module_globals:
-                    patcher = patch.multiple(module, **module_globals)
-                    patcher.start()
-
-                    def cleanup_module_globals(patcher, module_globals):
-                        patcher.stop()
-                        del patcher
-                        del module_globals
-
-                    self.addCleanup(cleanup_module_globals, patcher, module_globals)
-
-                if minion_funcs:
-                    # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
-                    # used to patch above
-                    import salt.utils
-
-                    for func in minion_funcs:
-                        minion_funcs[func] = salt.utils.functools.namespaced_function(
-                            minion_funcs[func], module_globals, preserve_context=True
-                        )
-
+            mocker = LoaderModuleMock(self, loader_modules_configs)
+            mocker.__enter__()
+            self.addCleanup(mocker.__exit__)
             return setup_func(self)
 
         return wrapper
