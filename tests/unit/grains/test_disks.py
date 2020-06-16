@@ -117,9 +117,13 @@ class DisksGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "1",
             "1",
         ]
-        with patch("glob.glob", MagicMock(return_value=files)), patch(
-            "salt.utils.path.readlink", MagicMock(side_effect=links)
-        ), patch("salt.utils.files.fopen", mock_open(read_data=contents)):
+
+        patch_glob = patch("glob.glob", autospec=True, return_value=files)
+        patch_readlink = patch(
+            "salt.utils.path.readlink", autospec=True, side_effect=links
+        )
+        patch_fopen = patch("salt.utils.files.fopen", mock_open(read_data=contents))
+        with patch_glob, patch_readlink, patch_fopen:
             ret = disks._linux_disks()
 
         assert ret == {"disks": ["sda", "sdb", "vda"], "SSDs": []}, ret
