@@ -2363,7 +2363,10 @@ def fqdns():
     # fqdns
     opt = {"fqdns": []}
     if __opts__.get(
-        "enable_fqdns_grains", False if salt.utils.platform.is_windows() else True
+        "enable_fqdns_grains",
+        False
+        if salt.utils.platform.is_windows() or salt.utils.platform.is_proxy()
+        else True,
     ):
         opt = __salt__["network.fqdns"]()
     return opt

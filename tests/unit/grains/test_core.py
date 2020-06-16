@@ -1348,6 +1348,18 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             else:
                 assert core.fqdns() == "my.fake.domain"
 
+    def test_enable_fqdns_false_is_proxy(self):
+        """
+        testing fqdns grains is disabled by default for proxy minions
+        """
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(
+                "salt.grains.core.__salt__",
+                {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+            ):
+                # fqdns is disabled by default on proxy minions
+                assert core.fqdns() == {"fqdns": []}
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
