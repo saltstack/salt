@@ -71,6 +71,8 @@ if salt.utils.platform.is_windows():
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
+elif salt.utils.platform.is_proxy():
+    _DFLT_FQDNS_GRAINS = False
 else:
     _DFLT_IPC_MODE = "ipc"
     _DFLT_FQDNS_GRAINS = True
