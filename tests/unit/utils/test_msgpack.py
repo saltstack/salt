@@ -294,8 +294,9 @@ class TestMsgpack(TestCase):
         # Reverse the packing and the result should be equivalent to the original data
         unpacked = unpack_func(buffer)
 
-        # if isinstance(unpacked, bytes):
-        #    unpacked = unpacked.decode()
+        if isinstance(unpacked, bytes):
+            unpacked = unpacked.decode()
+
         self.assertEqual(data, unpacked)
 
     def test_buffered_base_pack(self):
