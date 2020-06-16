@@ -186,7 +186,7 @@ def _yum_pkginfo(output):
     cur = {}
     keys = itertools.cycle(("name", "version", "repoid"))
     values = salt.utils.itertools.split(_strip_headers(output))
-    osarch = __grains__["osarch"]
+    osarch = __grains__["cpuarch"]
     for (key, value) in zip(keys, values):
         if key == "name":
             try:
@@ -441,8 +441,8 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__["osarch"], "noarch") or salt.utils.pkg.rpm.check_32(
-        arch, osarch=__grains__["osarch"]
+    if arch in (__grains__["cpuarch"], "noarch") or salt.utils.pkg.rpm.check_32(
+        arch, osarch=__grains__["cpuarch"]
     ):
         return name[: -(len(arch) + 1)]
     return name
@@ -562,9 +562,9 @@ def latest_version(*names, **kwargs):
         try:
             arch = name.rsplit(".", 1)[-1]
             if arch not in salt.utils.pkg.rpm.ARCHES:
-                arch = __grains__["osarch"]
+                arch = __grains__["cpuarch"]
         except ValueError:
-            arch = __grains__["osarch"]
+            arch = __grains__["cpuarch"]
 
         # This loop will iterate over the updates derived by _yum_pkginfo()
         # above, which have been sorted descendingly by version number,
@@ -709,7 +709,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
         for line in output.splitlines():
             pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
-                line, osarch=__grains__["osarch"]
+                line, osarch=__grains__["cpuarch"]
             )
             if pkginfo is not None:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
