@@ -4,3 +4,6 @@ PyYAML
 MarkupSafe
 requests>=1.0.0
 distro
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-ext-jaeger

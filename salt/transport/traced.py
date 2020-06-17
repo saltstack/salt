@@ -12,7 +12,26 @@ from salt.transport.ipc import IPCMessageClient
 from opentelemetry import context, propagators, trace
 from opentelemetry.trace.status import Status, StatusCanonicalCode
 
+from contextvars import ContextVar
+service_name = ContextVar('service_name')
+
+from functools import wraps
+def service_name_wrapper(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        service_name.set(func.__name__)
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(func.__name__, kind=trace.SpanKind.INTERNAL) as span:
+            return func(*args, **kwargs)
+    return wrapped
+
+
 def setup_jaeger():
+    import threading
+    print(threading.get_ident(), service_name.get('unknown'))
+    #import traceback
+    #traceback.print_stack()
     from opentelemetry.ext import jaeger
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchExportSpanProcessor
@@ -23,7 +42,7 @@ def setup_jaeger():
     trace.get_tracer_provider().add_span_processor(
         BatchExportSpanProcessor(
             jaeger.JaegerSpanExporter(
-                service_name='salt',
+                service_name=service_name.get('unknown'),
                 # configure agent
                 agent_host_name='localhost',
                 agent_port=6831,
@@ -52,47 +71,70 @@ class TracedReqChannel(AsyncReqChannel):
         log.warning("%s.__init__", __class__)
 
     def send(self, load, tries=3, timeout=60, raw=False):
-        log.warning("%s.send %s", __class__, load)
         setup_jaeger()
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("TracedReqChannel.send", kind=trace.SpanKind.PRODUCER) as span:
+
+        span_name = "TracedReqChannel.send"
+
+        attributes = {
+            key: str(value) for key, value in load.items()
+            if key in ['id', 'cmd', 'data', 'tag']
+        }
+        send = tracer.start_span(span_name, kind=trace.SpanKind.PRODUCER, attributes=attributes)
+        with tracer.start_as_current_span(span_name + "(running handler)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
             propagators.inject(set_header_into_dict, load)
-            log.warning("%s.send modified %s", __class__, load)
-
             reply = self.channel.send(load, tries, timeout, raw)
-            log.warning("%s.send (reply) %s", __class__, reply)
+        child = tracer.start_span(span_name + "(waiting for callback)", kind=trace.SpanKind.INTERNAL, parent=send)
 
-            child = tracer.start_span("TracedReqChannel.send (waiting for callback)", kind=trace.SpanKind.CONSUMER)
-            from salt.ext.tornado.concurrent import Future
-            wrapped_reply = Future()
+        from salt.ext.tornado.concurrent import Future
+        wrapped_reply = Future()
 
-            def callback(future):
-                child.end()
-                value = future.result()
-                log.warning("%s.send (reply callback) %s", __class__, value)
-                with tracer.start_as_current_span("TracedReqChannel.send (callback)", kind=trace.SpanKind.PRODUCER) as span:
-                    wrapped_reply.set_result(value)
+        def callback(future):
+            child.end()
+            value = future.result()
+            log.warning("%s.send (reply callback) %s", __class__, value)
+            with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
+                wrapped_reply.set_result(value)
+            send.set_status(Status(StatusCanonicalCode.OK))
+            send.end()
 
-            reply.add_done_callback(callback)
+        reply.add_done_callback(callback)
 
-            span.set_status(Status(StatusCanonicalCode.OK))
-
-            return wrapped_reply
+        return wrapped_reply
 
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60
     ):
-        log.warning("%s.crypted_transfer_decode_dictentry %s", __class__, load)
-        reply = self.channel.crypted_transfer_decode_dictentry(load, dictkey, tries, timeout)
-        log.warning("%s.crypted_transfor_decode_dictentry (reply) %s", __class__, reply)
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+
+        span_name = "TracedReqChannel.crypted_transfer_decode_dictentry"
+
+        attributes = {
+            key: str(value) for key, value in load.items()
+            if key in ['id', 'cmd', 'data', 'tag']
+        }
+        send = tracer.start_span(span_name, kind=trace.SpanKind.PRODUCER, attributes=attributes)
+        with tracer.start_as_current_span(span_name + "(running handler)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
+            propagators.inject(set_header_into_dict, load)
+            reply = self.channel.crypted_transfer_decode_dictentry(load, dictkey, tries, timeout)
+        child = tracer.start_span(span_name + "(waiting for callback)", kind=trace.SpanKind.CONSUMER, parent=send)
+
+        from salt.ext.tornado.concurrent import Future
+        wrapped_reply = Future()
 
         def callback(future):
+            child.end()
             value = future.result()
-            log.warning("%s.crypted_transfer_decode_dictentry (reply callback) %s", __class__, value)
+            log.warning("%s.send (reply callback) %s", __class__, value)
+            with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.PRODUCER, parent=send) as span:
+                wrapped_reply.set_result(value)
+            send.set_status(Status(StatusCanonicalCode.OK))
+            send.end()
 
         reply.add_done_callback(callback)
 
-        return reply
+        return wrapped_reply
 
     def close(self):
         log.warning("%s.close", __class__)
@@ -194,21 +236,33 @@ class TracedReqServerChannel(object):
             )
             span_name = "TracedReqServerChannel.payload_handler"
 
+            attributes = {
+                key: str(value) for key, value in load.items()
+                if key in ['cmd', 'id', 'jiq', 'return', 'retcode', 'fun', 'fun_args']
+            }
+
             reply = None
             try:
                 tracer = trace.get_tracer(__name__)
-                with tracer.start_as_current_span(
-                    span_name,
-                    kind=trace.SpanKind.CONSUMER,
-                ):
+                send = tracer.start_span(span_name, kind=trace.SpanKind.PRODUCER, attributes=attributes)
+                with tracer.start_as_current_span(span_name + "(running handler)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
                     reply = payload_handler(*args, **kwargs)
-                    log.warning("%s.wrapped_payload_handler (reply) %s", __class__, reply)
+                child = tracer.start_span(span_name + "(waiting for callback)", kind=trace.SpanKind.INTERNAL, parent=send)
+                from salt.ext.tornado.concurrent import Future
+                wrapped_reply = Future()
 
-                    def callback(future):
-                        value = future.result()
-                        log.warning("%s.wrapped_payload_handler (reply callback) %s", __class__, value)
+                def callback(future):
+                    child.end()
+                    value = future.result()
+                    log.warning("%s.send (reply callback) %s", __class__, value)
+                    with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
+                        wrapped_reply.set_result(value)
+                    send.set_status(Status(StatusCanonicalCode.OK))
+                    send.end()
 
-                    reply.add_done_callback(callback)
+                reply.add_done_callback(callback)
+
+                return wrapped_reply
             finally:
                 context.detach(token)
             return reply

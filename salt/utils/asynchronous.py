@@ -115,8 +115,10 @@ class SyncWrapper(object):
     def _wrap(self, key):
         def wrap(*args, **kwargs):
             results = []
+            from contextvars import copy_context
+            ctx = copy_context()
             thread = threading.Thread(
-                target=self._target, args=(key, args, kwargs, results, self.io_loop),
+                target=self._context_target, args=(key, args, kwargs, results, self.io_loop, ctx),
             )
             thread.start()
             thread.join()
@@ -126,6 +128,9 @@ class SyncWrapper(object):
                 six.reraise(*results[1])
 
         return wrap
+
+    def _context_target(self, key, args, kwargs, results, io_loop, context):
+        context.run(self._target, key, args, kwargs, results, io_loop)
 
     def _target(self, key, args, kwargs, results, io_loop):
         try:

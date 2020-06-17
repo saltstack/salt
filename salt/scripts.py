@@ -21,6 +21,7 @@ import salt.ext.six as six
 
 # Import salt libs
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
+from salt.transport.traced import service_name_wrapper
 
 log = logging.getLogger(__name__)
 
@@ -91,6 +92,7 @@ def _install_signal_handlers(client):
         signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
 
 
+@service_name_wrapper
 def salt_master():
     """
     Start the salt master.
@@ -184,6 +186,7 @@ def minion_process():
         lock.acquire(blocking=True)
 
 
+@service_name_wrapper
 def salt_minion():
     """
     Start the salt minion in a subprocess.
@@ -357,6 +360,7 @@ def proxy_minion_process(queue):
     sys.exit(status)
 
 
+@service_name_wrapper
 def salt_proxy():
     """
     Start a proxy minion.
@@ -414,6 +418,7 @@ def salt_proxy():
         logging.basicConfig()
 
 
+@service_name_wrapper
 def salt_syndic():
     """
     Start the salt syndic.
@@ -432,6 +437,7 @@ def salt_syndic():
         os.kill(pid, 15)
 
 
+@service_name_wrapper
 def salt_key():
     """
     Manage the authentication keys with salt-key.
@@ -446,6 +452,7 @@ def salt_key():
         sys.stderr.write("Error: {0}\n".format(err))
 
 
+@service_name_wrapper
 def salt_cp():
     """
     Publish commands to the salt system from the command line on the
@@ -458,6 +465,7 @@ def salt_cp():
     client.run()
 
 
+@service_name_wrapper
 def salt_call():
     """
     Directly call a salt command in the modules, does not require a running
@@ -472,6 +480,7 @@ def salt_call():
     client.run()
 
 
+@service_name_wrapper
 def salt_run():
     """
     Execute a salt convenience routine.
@@ -485,6 +494,7 @@ def salt_run():
     client.run()
 
 
+@service_name_wrapper
 def salt_ssh():
     """
     Execute the salt-ssh system
@@ -506,6 +516,7 @@ def salt_ssh():
         _handle_interrupt(SystemExit(err), err, hardcrash, trace=trace)
 
 
+@service_name_wrapper
 def salt_cloud():
     """
     The main function for salt-cloud
@@ -531,6 +542,7 @@ def salt_cloud():
     client.run()
 
 
+@service_name_wrapper
 def salt_api():
     """
     The main function for salt-api
@@ -545,6 +557,7 @@ def salt_api():
     sapi.start()
 
 
+@service_name_wrapper
 def salt_main():
     """
     Publish commands to the salt system from the command line on the
@@ -559,6 +572,7 @@ def salt_main():
     client.run()
 
 
+@service_name_wrapper
 def salt_spm():
     """
     The main function for spm, the Salt Package Manager
@@ -571,6 +585,7 @@ def salt_spm():
     spm.run()
 
 
+@service_name_wrapper
 def salt_extend(extension, name, description, salt_dir, merge):
     """
     Quickstart for developing on the saltstack installation
@@ -588,6 +603,7 @@ def salt_extend(extension, name, description, salt_dir, merge):
     )
 
 
+@service_name_wrapper
 def salt_unity():
     """
     Change the args and redirect to another salt script
