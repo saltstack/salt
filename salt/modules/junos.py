@@ -126,16 +126,18 @@ class HandleFileCopy:
                     else:
                         return local_cache_path
                 # continue for else part
-            self._cached_folder = tempfile.mkdtemp()
-            log.debug(
-                "Caching file {0} at {1}".format(self._file_path, self._cached_folder)
-            )
             if self._kwargs:
-                self._cached_file = salt.utils.files.mkstemp(dir=self._cached_folder)
+                self._cached_file = salt.utils.files.mkstemp()
                 __salt__["cp.get_template"](
                     self._file_path, self._cached_file, **self._kwargs
                 )
             else:
+                self._cached_folder = tempfile.mkdtemp()
+                log.debug(
+                    "Caching file {0} at {1}".format(
+                        self._file_path, self._cached_folder
+                    )
+                )
                 self._cached_file = __salt__["cp.get_file"](
                     self._file_path, self._cached_folder
                 )
