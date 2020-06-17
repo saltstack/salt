@@ -46,6 +46,13 @@ from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
+try:
+    import pop.hub
+
+    HAS_POP = True
+except ImportError:
+    HAS_POP = False
+
 if sys.version_info[:2] >= (3, 5):
     import importlib.machinery  # pylint: disable=no-name-in-module,import-error
     import importlib.util  # pylint: disable=no-name-in-module,import-error
@@ -55,7 +62,6 @@ else:
     import imp
 
     USE_IMPORTLIB = False
-
 
 try:
     import pkg_resources
@@ -214,6 +220,7 @@ def minion_mods(
     notify=False,
     static_modules=None,
     proxy=None,
+    hub=None,
 ):
     """
     Load execution modules
@@ -243,11 +250,12 @@ def minion_mods(
         import salt.loader
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
-        __grains__ = salt.loader.grains(__opts__)
+        __grains__ = salt.loader.grains(__hub__, __opts__)
         __opts__['grains'] = __grains__
         __utils__ = salt.loader.utils(__opts__)
         __salt__ = salt.loader.minion_mods(__opts__, utils=__utils__)
         __salt__['test.ping']()
+        __hub__ = salt.loader.create_hub(__opts__)
     """
     # TODO Publish documentation for module whitelisting
     if not whitelist:
@@ -264,6 +272,7 @@ def minion_mods(
     )
 
     ret.pack["__salt__"] = ret
+    ret.pack["__hub__"] = hub
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -395,6 +404,27 @@ def utils(opts, whitelist=None, context=None, proxy=proxy):
         whitelist=whitelist,
         pack={"__context__": context, "__proxy__": proxy or {}},
     )
+
+
+def create_hub():
+    """
+    Returns a hub with idem and grains loaded
+    """
+    # Return None if pop.hub is not available (like if we are on <python3.6)
+    if not HAS_POP:
+        return
+
+    # Initialize the hub
+    hub = pop.hub.Hub()
+    # Load idem states/exec modules onto the hub
+    hub.pop.sub.add(dyne_name="exec")
+    hub.pop.sub.add(dyne_name="states")
+    # Load grains onto the hub
+    hub.pop.sub.add(dyne_name="grains")
+    # Set up logging and read the grains/idem config options
+    hub.pop.config.load(["grains"], "grains", parse_cli=False)
+
+    return hub
 
 
 def pillars(opts, functions, context=None):
@@ -621,7 +651,7 @@ def log_handlers(opts):
     return FilterDictWrapper(ret, ".setup_handlers")
 
 
-def ssh_wrapper(opts, functions=None, context=None):
+def ssh_wrapper(opts, functions=None, context=None, hub=None):
     """
     Returns the custom logging handler modules
     """
@@ -638,11 +668,12 @@ def ssh_wrapper(opts, functions=None, context=None):
             "__grains__": opts.get("grains", {}),
             "__pillar__": opts.get("pillar", {}),
             "__context__": context,
+            "__hub__": hub,
         },
     )
 
 
-def render(opts, functions, states=None, proxy=None, context=None):
+def render(opts, functions, states=None, proxy=None, context=None, hub=None):
     """
     Returns the render modules
     """
@@ -652,6 +683,7 @@ def render(opts, functions, states=None, proxy=None, context=None):
     pack = {
         "__salt__": functions,
         "__grains__": opts.get("grains", {}),
+        "__hub__": hub,
         "__context__": context,
     }
 
@@ -752,7 +784,7 @@ def _load_cached_grains(opts, cfn):
         return None
 
 
-def grains(opts, force_refresh=False, proxy=None):
+def grains(opts, force_refresh=False, proxy=None, hub=None):
     """
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -813,6 +845,13 @@ def grains(opts, force_refresh=False, proxy=None):
         opts["grains"] = {}
 
     grains_data = {}
+    if opts.get("enable_grainsv2", False) and hub is not None:
+        # Collect grains from grainsv2
+        hub.grains.init.standalone()
+        # Get initial grains from the hub
+        grains_data.update(hub.grains.GRAINS._dict())
+    # TODO if grains came from pop then don't load those same grains from core.py and the grains dir
+
     blist = opts.get("grains_blacklist", [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
@@ -1517,6 +1556,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.context_dict["pillar"] = opts.get("pillar", {})
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
+            )
+        if "__hub__" not in self.pack:
+            self.context_dict["hub"] = {}
+            self.pack["__hub__"] = salt.utils.context.NamespacedDictWrapper(
+                self.context_dict, "hub"
             )
 
         mod_opts = {}

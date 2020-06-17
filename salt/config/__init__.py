@@ -360,6 +360,8 @@ VALID_OPTS = immutabletypes.freeze(
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
         "enable_zip_modules": bool,
+        # Tell salt to collect grains from pop
+        "enable_grainsv2": bool,
         # Tell the client to show minions that have timed out
         "show_timeout": bool,
         # Tell the client to display the jid when a job is published
@@ -1138,6 +1140,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "ext_job_cache": "",
         "cython_enable": False,
         "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
+        "enable_grainsv2": False,
         "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,

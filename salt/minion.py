@@ -435,6 +435,7 @@ def service_name():
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
+        self.hub = salt.loader.create_hub()
         self.beacons_leader = opts.get("beacons_leader", True)
 
     def gen_modules(self, initial_load=False, context=None):
@@ -458,7 +459,7 @@ class MinionBase(object):
 
         self.utils = salt.loader.utils(self.opts, context=context)
         self.functions = salt.loader.minion_mods(
-            self.opts, utils=self.utils, context=context
+            self.opts, utils=self.utils, context=context, hub=self.hub
         )
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(
@@ -909,8 +910,8 @@ class SMinion(MinionBase):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
 
-        opts["grains"] = salt.loader.grains(opts)
         super(SMinion, self).__init__(opts)
+        opts["grains"] = salt.loader.grains(opts, hub=self.hub)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
@@ -967,9 +968,10 @@ class MasterMinion(object):
         self.opts = salt.config.minion_config(
             opts["conf_file"], ignore_config_errors=ignore_config_errors, role="master"
         )
+        self.hub = salt.loader.create_hub()
         self.opts.update(opts)
         self.whitelist = whitelist
-        self.opts["grains"] = salt.loader.grains(opts)
+        self.opts["grains"] = salt.loader.grains(opts, hub=self.hub)
         self.opts["pillar"] = {}
         self.mk_returners = returners
         self.mk_states = states
@@ -1239,7 +1241,7 @@ class Minion(MinionBase):
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
         if not salt.utils.platform.is_proxy():
-            self.opts["grains"] = salt.loader.grains(opts)
+            self.opts["grains"] = salt.loader.grains(opts, hub=self.hub)
         else:
             if self.opts.get("beacons_before_connect", False):
                 log.warning(
@@ -1503,7 +1505,9 @@ class Minion(MinionBase):
             proxy = None
 
         if grains is None:
-            opts["grains"] = salt.loader.grains(opts, force_refresh, proxy=proxy)
+            opts["grains"] = salt.loader.grains(
+                opts, force_refresh, proxy=proxy, hub=self.hub
+            )
         self.utils = salt.loader.utils(opts, proxy=proxy)
 
         if opts.get("multimaster", False):
@@ -3714,7 +3718,7 @@ class SProxyMinion(SMinion):
 
             salt '*' sys.reload_modules
         """
-        self.opts["grains"] = salt.loader.grains(self.opts)
+        self.opts["grains"] = salt.loader.grains(self.opts, hub=self.hub)
         self.opts["pillar"] = salt.pillar.get_pillar(
             self.opts,
             self.opts["grains"],
@@ -3792,7 +3796,9 @@ class SProxyMinion(SMinion):
         proxy_init_fn = self.proxy[fq_proxyname + ".init"]
         proxy_init_fn(self.opts)
 
-        self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
+        self.opts["grains"] = salt.loader.grains(
+            self.opts, proxy=self.proxy, hub=self.hub
+        )
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions["saltutil.sync_grains"](saltenv="base")
