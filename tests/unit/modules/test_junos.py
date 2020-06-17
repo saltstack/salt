@@ -1298,11 +1298,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 ret["out"] = True
                 self.assertEqual(
                     junos.install_config(
-                        "salt://actual/path/config", template_vars=dict(temp_var_1=True)
+                        "salt://actual/path/config", template_vars=True
                     ),
                     ret,
                 )
-                mock_mkstemp.assert_called_with(dir="/tmp/argr5351afd")
+                mock_mkstemp.assert_called_with()
 
     def test_install_config_replace(self):
         with patch.dict(
