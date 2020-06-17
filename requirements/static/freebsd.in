@@ -10,7 +10,6 @@ docker
 futures>=2.0; python_version < '3.0'
 GitPython
 hgtools
-idem-bsd==3; python_version >= '3.6'
 jmespath
 jsonschema
 junos-eznc
