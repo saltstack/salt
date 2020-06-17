@@ -235,7 +235,7 @@ class TestMsgpack(TestCase):
         salt.utils.msgpack.version = (1, 0, 0)
         self.assertEqual(
             salt.utils.msgpack._sanitize_msgpack_unpack_kwargs(kwargs.copy()),
-            {"strict_map_key": True, "use_bin_type": True},
+            {"raw": True, "strict_map_key": True, "use_bin_type": True},
         )
 
         salt.utils.msgpack.version = (0, 6, 0)
