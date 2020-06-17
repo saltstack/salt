@@ -2787,7 +2787,7 @@ def _make_privileges_list_query(name, object_type, prepend):
                     "ON n.oid = c.relnamespace",
                     "WHERE nspname = '{0}'",
                     "AND relname = '{1}'",
-                    "AND relkind = 'r'",
+                    "AND relkind in ('r', 'v')",
                     "ORDER BY relname",
                 ]
             )
