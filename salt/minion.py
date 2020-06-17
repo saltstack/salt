@@ -113,7 +113,6 @@ except ImportError:
     HAS_WIN_FUNCTIONS = False
 # pylint: enable=import-error
 
-
 log = logging.getLogger(__name__)
 
 # To set up a minion:
@@ -433,6 +432,7 @@ def service_name():
 
 
 class MinionBase(object):
+
     def __init__(self, opts):
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
@@ -693,7 +693,18 @@ class MinionBase(object):
             for master in opts["local_masters"]:
                 opts["master"] = master
                 opts.update(prep_ip_port(opts))
-                opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+                if opts['master_type'] == 'failover':
+                    try:
+                        opts["master_uri_list"].append(resolve_dns(opts)["master_uri"], False)
+                    except SaltClientError:
+                        continue
+                else:
+                    opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+
+                if not opts['master_uri_list']:
+                    msg = 'No master could be resolved'
+                    log.error(msg)
+                    raise SaltClientError(msg)
 
             pub_channel = None
             while True:
@@ -711,7 +722,13 @@ class MinionBase(object):
                 for master in opts["local_masters"]:
                     opts["master"] = master
                     opts.update(prep_ip_port(opts))
-                    opts.update(resolve_dns(opts))
+                    if opts['master_type'] == 'failover':
+                        try:
+                            opts.update(resolve_dns(opts, False))
+                        except SaltClientError:
+                            continue
+                    else:
+                        opts.update(resolve_dns(opts))
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
@@ -3628,9 +3645,9 @@ def _metaproxy_call(opts, fn_name):
         metaproxy_name = "proxy"
         errmsg = (
             "No metaproxy key found in opts for id "
-            + opts["id"]
-            + ". "
-            + "Defaulting to standard proxy minion"
+            +opts["id"]
+            +". "
+            +"Defaulting to standard proxy minion"
         )
         log.trace(errmsg)
 
@@ -3780,7 +3797,7 @@ class SProxyMinion(SMinion):
                 "Proxymodule {0} is missing an init() or a shutdown() or both. ".format(
                     fq_proxyname
                 )
-                + "Check your proxymodule.  Salt-proxy aborted."
+                +"Check your proxymodule.  Salt-proxy aborted."
             )
             log.error(errmsg)
             self._running = False
