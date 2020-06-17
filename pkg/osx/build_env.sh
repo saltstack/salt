@@ -71,7 +71,7 @@ if [ "$PYVER" == "2" ]; then
     PYTHON=$INSTALL_DIR/bin/python
     PIP=$INSTALL_DIR/bin/pip
 else
-    PYDIR=$INSTALL_DIR/lib/python3.5
+    PYDIR=$INSTALL_DIR/lib/python3.7
     PYTHON=$INSTALL_DIR/bin/python3
     PIP=$INSTALL_DIR/bin/pip3
 fi
@@ -286,14 +286,6 @@ echo "##########################################################################
 $PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
-             --no-cache-dir
-
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (build_ext)"
-echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
-             --global-option=build_ext \
-             --global-option="-I$INSTALL_DIR/include" \
              --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"
