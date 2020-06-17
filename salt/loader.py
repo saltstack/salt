@@ -243,6 +243,7 @@ def minion_mods(
     :param str loaded_base_name: A string marker for the loaded base name.
     :param bool notify: Flag indicating that an event should be fired upon
                         completion of module loading.
+    :param hub: An instance of a POP hub
 
     .. code-block:: python
 
@@ -250,12 +251,12 @@ def minion_mods(
         import salt.loader
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
-        __grains__ = salt.loader.grains(__hub__, __opts__)
+        __grains__ = salt.loader.grains(__opts__)
         __opts__['grains'] = __grains__
         __utils__ = salt.loader.utils(__opts__)
         __salt__ = salt.loader.minion_mods(__opts__, utils=__utils__)
         __salt__['test.ping']()
-        __hub__ = salt.loader.create_hub(__opts__)
+        __hub__ = salt.loader.create_hub()
     """
     # TODO Publish documentation for module whitelisting
     if not whitelist:
@@ -1556,11 +1557,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.context_dict["pillar"] = opts.get("pillar", {})
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
-            )
-        if "__hub__" not in self.pack:
-            self.context_dict["hub"] = {}
-            self.pack["__hub__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "hub"
             )
 
         mod_opts = {}
