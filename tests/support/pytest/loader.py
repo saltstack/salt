@@ -11,7 +11,6 @@ import sys
 import types
 
 import attr  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.functools
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
@@ -97,10 +96,6 @@ class LoaderModuleMock:
                         # Remove the added attribute after the test finishes
                         self.addfinalizer(delattr, module, key)
                     for mock_key, mock_data in mocked_details.items():
-                        if isinstance(mock_data, types.FunctionType):
-                            mock_data = salt.utils.functools.namespaced_function(
-                                mock_data, module_globals, preserve_context=True
-                            )
                         module_globals.setdefault(key, {})[mock_key] = mock_data
                 else:
                     if not hasattr(module, key):
@@ -108,10 +103,6 @@ class LoaderModuleMock:
                         setattr(module, key, None)
                         # Remove the added attribute after the test finishes
                         self.addfinalizer(delattr, module, key)
-                    if isinstance(mocked_details, types.FunctionType):
-                        mocked_details = salt.utils.functools.namespaced_function(
-                            mocked_details, module_globals, preserve_context=True
-                        )
                     module_globals[key] = mocked_details
 
             # Patch the module!
