@@ -144,7 +144,7 @@ class HandleFileCopy:
             if self._cached_file != "":
                 return self._cached_file
         else:
-            # check for local location of file
+            # check for local location of the file
             if __salt__["file.file_exists"](self._file_path):
                 if self._kwargs:
                     self._cached_file = salt.utils.files.mkstemp()
