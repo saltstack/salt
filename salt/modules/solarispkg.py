@@ -358,7 +358,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
 
         # Only makes sense in a global zone but works fine in non-globals.
         if kwargs.get("current_zone_only") in ["True",True]:
-            cmd_prefix.append("-G ")
+            cmd_prefix.append("-G")
 
         errors = []
         for pkg in pkg_params:
