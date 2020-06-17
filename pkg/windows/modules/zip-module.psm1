@@ -8,7 +8,7 @@ Function Expand-ZipFile {
     # Code obtained from:
     # http://www.howtogeek.com/tips/how-to-extract-zip-files-using-powershell/
 
-    Begin { Write-Host "- Unzipping '$zipfile' to '$destination'" }
+    Begin { Write-Host " - Unzipping '$zipfile' to '$destination'" }
 
     Process {
         # Create a new directory if it doesn't exist
@@ -30,5 +30,5 @@ Function Expand-ZipFile {
         }
     }
 
-    End { Write-Host "- Finished"}
+    End { Write-Host " - Finished"}
 }
