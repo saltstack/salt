@@ -72,7 +72,7 @@ _get_pid() {
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '[s]alt-minion' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
+    [ -n "$(_get_pid)" ] && ps wwwaxu | grep '\/[s]alt-minion ' | awk '{print $2}' | grep -qi "\b$(_get_pid)\b"
 }
 
 
