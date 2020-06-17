@@ -463,6 +463,7 @@ Section -install_ucrt
     ClearErrors
 
     detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
+    CreateDirectory $INSTDIR\bin
     nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
 
     # Clean up the stack
