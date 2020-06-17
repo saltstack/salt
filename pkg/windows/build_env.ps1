@@ -196,6 +196,36 @@ If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
     # Remove temp files
     Remove-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU" -Force -Recurse
     Remove-Item "$file" -Force
+
+#------------------------------------------------------------------------------
+# Check for installation of EnVar Plugin for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for EnVar Plugin of NSIS installation  . . ."
+If (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll" -and TestPath "$($ini[$bitPaths]['NSISPluginsDirU'])\EnVar.dll") {
+    # Found EnVar Plugin for NSIS, do nothing
+    Write-Output " - EnVar Plugin for NSIS Found . . ."
+} Else {
+    # EnVar Plugin for NSIS not found, install
+    Write-Output " - EnVar Plugin for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISPluginEnVar']) . . ."
+    $file = "$($ini['Prerequisites']['NSISPluginEnVar'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$ini['Settings']['DownloadDir']\nsisenvar"
+
+    # Copy dlls to plugins directory (both ANSI and Unicode)
+    Write-Output " - Copying dlls to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-ansi\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\EnVar.dll" -Force
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-unicode\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\EnVar.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar" -Force -Recurse
+    Remove-Item "$file" -Force
+
 }
 
 #------------------------------------------------------------------------------
