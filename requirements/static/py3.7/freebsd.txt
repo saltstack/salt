@@ -80,7 +80,7 @@ pyasn1==0.4.5             # via paramiko, pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.7
-pygit2==1.2.1
+pygit2==1.1.1
 pyinotify==0.9.6
 pynacl==1.3.0             # via paramiko
 pyopenssl==19.0.0
@@ -98,7 +98,7 @@ python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
 pyyaml==5.1.2
-pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==18.0.1
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
