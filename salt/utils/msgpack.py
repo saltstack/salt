@@ -83,6 +83,7 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     """
     assert isinstance(kwargs, dict)
     if version >= (1, 0, 0):
+        kwargs.setdefault("raw", True)
         if "encoding" in kwargs:
             del kwargs["encoding"]
         kwargs.setdefault("strict_map_key", False)
