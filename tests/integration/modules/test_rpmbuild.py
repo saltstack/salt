@@ -26,7 +26,7 @@ from tests.support.helpers import (
 from tests.support.runtests import RUNTIME_VARS
 
 
-GPG_TEST_PRIV_KEY ="""-----BEGIN PGP PRIVATE KEY BLOCK-----
+GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: GnuPG v2.0.22 (GNU/Linux)
 
 lQO+BF7qopoBCACVyX0rjtcbh1CMu0Od/luO14VvgEZ+u+MJaioiEN6NMU0SscBn
@@ -140,6 +140,8 @@ pinentry-program /usr/bin/pinentry-gtk
 pinentry-timeout 30
 allow-loopback-pinentry
 """
+TEST_SYSTEM_USER = "root"
+TEST_SYSTEM_GROUP = "root"
 
 log = logging.getLogger(__name__)
 
@@ -209,13 +211,13 @@ class RPMSignModuleTest(ModuleCase):
             fd.write(self.gpg_agent_conf.encode())
 
         gpg_pkg_key_pem_path = os.path.join(self.gpghome, "gpg_pkg_key.pem")
-        self.gpg_pkg_key_pem = GPG_TEST_PRIV_KEY 
-        with salt.utils.files.fopen(gpg_pkg_key_pem_path, "wb") as fd: 
+        self.gpg_pkg_key_pem = GPG_TEST_PRIV_KEY
+        with salt.utils.files.fopen(gpg_pkg_key_pem_path, "wb") as fd:
             fd.write(self.gpg_pkg_key_pem.encode())
 
         gpg_pkg_key_pub_path = os.path.join(self.gpghome, "gpg_pkg_key.pub")
-        self.gpg_pkg_key_pub = GPG_TEST_PUB_KEY 
-        with salt.utils.files.fopen(gpg_pkg_key_pub_path, "wb") as fd: 
+        self.gpg_pkg_key_pub = GPG_TEST_PUB_KEY
+        with salt.utils.files.fopen(gpg_pkg_key_pub_path, "wb") as fd:
             fd.write(self.gpg_pkg_key_pub.encode())
 
         self.gpg_passphrase = GPG_TEST_KEY_PASSPHRASE
