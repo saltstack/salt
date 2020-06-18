@@ -122,11 +122,11 @@ def setup_handlers():
     """
     sets up the sentry handler
     """
-    __grains__ = salt.loader.grains(__opts__)
-    __salt__ = salt.loader.minion_mods(__opts__)
     if "sentry_handler" not in __opts__:
         log.debug("No 'sentry_handler' key was found in the configuration")
         return False
+    __grains__ = salt.loader.grains(__opts__)
+    __salt__ = salt.loader.minion_mods(__opts__)
     options = {}
     dsn = get_config_value("dsn")
     if dsn is not None:
