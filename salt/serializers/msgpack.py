@@ -47,7 +47,6 @@ elif salt.utils.msgpack.version >= (0, 2, 0):
         try:
             options.setdefault("use_list", True)
             options.setdefault("encoding", "utf-8")
-            options.setdefault("raw", False)
             return salt.utils.msgpack.loads(stream_or_string, **options)
         except Exception as error:  # pylint: disable=broad-except
             raise DeserializationError(error)
