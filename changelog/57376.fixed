@@ -1,2 +1,1 @@
-Fix bug whereby exception can occur before a version identifier could be resolved,
-resulting in an exception during exception handling.
+Fixed UnboundLocalError vid in boto_iam.create_policy_version.
