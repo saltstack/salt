@@ -1957,7 +1957,7 @@ def create_policy_version(
         log.debug(e)
         log.error("Failed to create IAM policy %s.", policy_name)
         return {"created": False, "error": __utils__["boto.get_error"](e)}
-    try:
+    else:
         vid = (
             ret.get("create_policy_version_response", {})
             .get("create_policy_version_result", {})
@@ -1966,10 +1966,6 @@ def create_policy_version(
         )
         log.info("Created IAM policy %s version %s.", policy_name, vid)
         return {"created": True, "version_id": vid}
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.error("Failed to create IAM policy %s version %s.", policy_name, vid)
-        return {"created": False, "error": __utils__["boto.get_error"](e)}
 
 
 def delete_policy_version(
