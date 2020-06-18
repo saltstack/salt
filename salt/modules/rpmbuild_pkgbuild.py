@@ -197,7 +197,6 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
         Utilizes Public and Private keys associated with keyid which have
         been loaded into the minion's Pillar data.
 
-
     env
 
         A dictionary of environment variables to be utilized in creating the
@@ -240,10 +239,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
     retrc = 0
     use_gpg_agent = False
 
-    if (
-        __grains__.get("os_family") == "Redhat"
-        and __grains__.get("osmajorrelease") >= 7
-    ):
+    if (__grains__.get("os_family") == "Redhat" and __grains__.get("osmajorrelease") >= 8):
         use_gpg_agent = True
 
     if keyid is not None:
@@ -768,4 +764,7 @@ def make_repo(
 
     log.debug("DGM createrepo  repodir {0}".format(repodir))
     cmd = "createrepo --update {0}".format(repodir)
-    return __salt__["cmd.run_all"](cmd, runas=runas)
+    retrc = __salt__["cmd.run_all"](cmd, runas=runas)
+
+    log.debug("DGM make_repor returns {0}".format(retrc))
+    return retrc
