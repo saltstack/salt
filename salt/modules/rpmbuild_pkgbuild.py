@@ -230,6 +230,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
             phrase              pass phrase (may not be used)
 
     """
+    log.debug("DGM  _get_gpg_key_resources inputs keyid \'{0}\', env \'{1}\', use_passphrase \'{2}\', gnupghome \'{3}\', runas \'{4}\'"
+        .format(keyid, env, use_passphrase, gnupghome, runas)
+    )
+
     local_keygrip_to_use = None
     local_key_fingerprint = None
     local_keyid = None
@@ -280,6 +284,9 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     local_keygrip_to_use = gpg_key["fingerprint"]
                     local_key_fingerprint = gpg_key["fingerprint"]
                 break
+            log.debug("DGM getting gpg_key in local_keys local_uids \'{0}\', local_keyid \'{1}\', use_gpg_agent \'{2}\', local_keygrip_to_use \'{3}\', local_key_fingerprint \'{4}\'"
+                .format(local_uids, local_keyid, use_gpg_agent, local_keygrip_to_use, local_key_fingerprint)
+                )
 
         if use_gpg_agent:
             cmd = "gpg --with-keygrip --list-secret-keys"
@@ -323,9 +330,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     )
 
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
-                local_uids[0]
-            )
+            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}' --define='%_gpg_path={1}".format(local_uids[0], gnupghome)
 
         # need to update rpm with public key
         cmd = "rpm --import {0}".format(pkg_pub_key_file)
@@ -354,6 +359,8 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
     error_msg = "Failed to sign file {0}".format(abs_file)
 
     cmd = "rpm {0} --addsign {1}".format(define_gpg_name, abs_file)
+    log.debug("DGM _sign_file cmd \'{0}\'".format(cmd))
+
     preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
     try:
         stdout, stderr = None, None
@@ -399,6 +406,8 @@ def _sign_files_with_gpg_agent(runas, local_keyid, abs_file, repodir, env, timeo
     Sign file with provided key utilizing gpg-agent
     """
     cmd = "rpmsign --verbose  --key-id={0} --addsign {1}".format(local_keyid, abs_file)
+    log.debug("DGM _sign_file_with_gpg_agent cmd \'{0}\'".format(cmd))
+
     retrc = __salt__["cmd.retcode"](
         cmd, runas=runas, cwd=repodir, use_vt=True, env=env
     )
