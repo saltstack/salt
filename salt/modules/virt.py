@@ -2,7 +2,11 @@
 """
 Work with virtual machines managed by libvirt
 
-:depends: libvirt Python module
+:depends:
+    * libvirt Python module
+    * libvirt client
+    * qemu-img
+    * grep
 
 Connection
 ==========
