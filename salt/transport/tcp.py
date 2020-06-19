@@ -1161,7 +1161,7 @@ class SaltMessageClient(object):
                         )
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(
-                        self.host, self.port, ssl_options=self.opts.get("ssl"), **kwargs
+                        self.host.strip('[]'), self.port, ssl_options=self.opts.get("ssl"), **kwargs
                     )
                 self._connecting_future.set_result(True)
                 break
