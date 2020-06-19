@@ -357,7 +357,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         cmd_prefix = ["/usr/sbin/pkgadd", "-n", "-a", adminfile]
 
         # Only makes sense in a global zone but works fine in non-globals.
-        if kwargs.get("current_zone_only") in ["True",True]:
+        if kwargs.get("current_zone_only") in ["True", True]:
             cmd_prefix.append("-G")
 
         errors = []
