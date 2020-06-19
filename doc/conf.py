@@ -151,7 +151,6 @@ MOCK_MODULES = [
     "ansible",
     "avahi",
     "boto.regioninfo",
-    "concurrent",
     "dbus",
     "django",
     "dns",
