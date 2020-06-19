@@ -1,0 +1,116 @@
+# basic config
+# Connects to master
+master: localhost
+interface: 127.0.0.1
+master_port: 64506
+tcp_pub_port: 64540
+tcp_pull_port: 64541
+sock_dir: virt_minion_1_sock
+id: virt_minion_1
+open_mode: True
+log_file: virt_minion_1.log
+log_level_logfile: debug
+pidfile: virt_minion_1.pid
+
+# Give the minion extra attempts to find the master
+# This is especially needed for the TCP tests as we
+# wait for the master to come up in 2016.3. See #35489.
+master_tries: 5
+
+# module extension
+test.foo: baz
+integration.test: True
+
+# Grains addons
+grains:
+  test_grain: cheese
+  script: grail
+  alot: many
+  planets:
+    - mercury
+    - venus
+    - earth
+    - mars
+  level1:
+    level2: foo
+  companions:
+    one:
+      - susan
+      - ian
+      - barbara
+  tokenv2:
+    keystone.endpoint: http://localhost:35357/v2.0
+    keystone.token: administrator
+  tokenv3:
+    keystone.endpoint: http://localhost:35357/v3
+    keystone.token: administrator
+  adminv2:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  demov2:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  adminv3:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+  demov3:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+  zookeeper:
+    prod:
+      hosts: 'localhost:2181'
+      default_acl:
+        - username: daniel
+          password: test
+          read: true
+          write: true
+          create: true
+          delete: true
+          admin: true
+      username: daniel
+      password: test
+    hosts: 'localhost:2181'
+    default_acl:
+      - username: daniel
+        password: test
+        read: true
+        write: true
+        create: true
+        delete: true
+        admin: true
+    username: daniel
+    password: test
+
+config_test:
+  spam: eggs
+
+mine_functions:
+  test.ping: []
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'
+
+# sdb env module
+osenv:
+  driver: env
+
+# cmd blacklist
+cmd_blacklist_glob:
+  - 'bad_command *'
+  - 'second_bad_command *'
+
+autosign_grains:
+  - test_grain
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+sdbvault:
+  driver: vault
