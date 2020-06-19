@@ -916,8 +916,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     ):
                         status.append(self.run_integration_suite(**TEST_SUITES[suite]))
             return status
-        except TestDaemonStartFailed:
-            self.exit(status=2)
+        except TestDaemonStartFailed as err:
+            self.exit(status=2, msg=str(err))
 
     def run_multimaster_tests(self):
         """
