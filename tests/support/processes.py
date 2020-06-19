@@ -13,6 +13,9 @@
 from __future__ import absolute_import
 
 import logging
+import os
+import subprocess
+import time
 
 from saltfactories.utils.processes.helpers import (  # pylint: disable=unused-import
     collect_child_processes,
@@ -113,6 +116,99 @@ class SaltSyndic(GetSaltRunFixtureMixin, PytestSaltSyndic):
     """
     Class which runs the salt-syndic daemon
     """
+
+
+class SaltVirtContainer(object):
+    """
+    Class which represents virt-minion container
+    """
+
+    def __init__(self, container_name, container_img, daemon_config_dir):
+        self.container_name = container_name
+        self.container_img = container_img
+        self.daemon_config_dir = daemon_config_dir
+        self.pid_file = os.path.join(daemon_config_dir, container_name + ".pid")
+
+    def _run_cmd(self, cmd):
+        log.debug("Running command:\n%s", " ".join(cmd))
+        return subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True,
+        )
+
+    def start(self):
+        log.info(
+            "Minion log file: {}/{}.log".format(
+                self.daemon_config_dir, self.container_name
+            )
+        )
+        salt_root_path = os.path.abspath(os.path.join(__file__, "..", "..", ".."))
+        # Start container
+        process = self._run_cmd(
+            [
+                "docker",
+                "run",
+                "-d",
+                "--rm",
+                "--privileged",
+                "--cap-add=ALL",
+                "--network",
+                "host",
+                "--name",
+                self.container_name,
+                "--hostname",
+                self.container_name,
+                "-v",
+                salt_root_path + ":/salt",
+                "-v",
+                self.daemon_config_dir + ":/etc/salt",
+                self.container_img,
+            ]
+        )
+        output = process.communicate()[0]
+        if process.returncode != 0:
+            raise RuntimeError(
+                "Failed to start '{}':\n{}".format(self.container_name, output)
+            )
+
+    def wait_until_minion_is_running(self, timeout=60):
+        """
+        Wait until a pid file exists and check the container state every 10 sec
+        """
+        log.info("Wating for pidfile ({}s timeout): {}".format(timeout, self.pid_file))
+        cmd = ["docker", "inspect", "-f", "{{.State.Running}}", self.container_name]
+        while not os.path.isfile(self.pid_file):
+            time.sleep(1)
+            if timeout > 0:
+                if timeout % 10 == 0:
+                    process = self._run_cmd(cmd)
+                    output = process.communicate()[0].decode("utf-8")
+                    if process.returncode != 0 or output.strip().lower() != "true":
+                        raise RuntimeError(
+                            "Container '{}' isn't running:\n{}".format(
+                                self.container_name, output
+                            )
+                        )
+                timeout -= 1
+            else:
+                self.terminate()
+                raise RuntimeError("Timeout: minion daemon isn't running.")
+
+    def terminate(self):
+        """
+        Send a KILL signal to container.
+        """
+        self._run_cmd(["docker", "kill", self.container_name])
+        os.remove(self.pid_file)
+
+
+def start_virt_daemon(container_name, container_img, daemon_config_dir):
+    """
+    Start a salt minion daemon inside a container.
+    """
+    container = SaltVirtContainer(container_name, container_img, daemon_config_dir)
+    container.start()
+    container.wait_until_minion_is_running()
+    return container
 
 
 def start_daemon(

@@ -186,6 +186,12 @@ class TestDaemon(object):
         self.colors = salt.utils.color.get_colors(
             self.parser.options.no_colors is False
         )
+        self.virt_minion_enabled = False
+        if salt.utils.path.which("docker"):
+            for test in self.parser.options.name:
+                if test.endswith("integration.modules.test_virt"):
+                    self.virt_minion_enabled = True
+                    break
         if salt.utils.platform.is_windows():
             # There's no shell color support on windows...
             for key in self.colors:
@@ -202,6 +208,9 @@ class TestDaemon(object):
         self._enter_mockbin()
 
         self.minion_targets = set(["minion", "sub_minion"])
+        if self.virt_minion_enabled:
+            self.minion_targets.add("virt_minion_0")
+            self.minion_targets.add("virt_minion_1")
 
         if self.parser.options.transport == "zeromq":
             self.start_zeromq_daemons()
@@ -267,6 +276,9 @@ class TestDaemon(object):
         )
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.start()
+        clear_current_line = "\r{0}\r".format(
+            " " * getattr(self.parser.options, "output_columns", PNUM)
+        )
         try:
             sys.stdout.write(
                 " * {LIGHT_YELLOW}Starting salt-master ... {ENDC}".format(**self.colors)
@@ -285,30 +297,22 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-            raise TestDaemonStartFailed()
+            raise TestDaemonStartFailed(str(err))
 
         try:
             sys.stdout.write(
@@ -328,30 +332,81 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-            raise TestDaemonStartFailed()
+            raise TestDaemonStartFailed(str(err))
+
+        if self.virt_minion_enabled:
+            try:
+                sys.stdout.write(
+                    " * {LIGHT_YELLOW}Starting virt_minion_0 ... {ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+                self.virt_minion_0_process = start_virt_daemon(
+                    container_name="virt_minion_0",
+                    container_img="quay.io/rst0git/virt-minion",
+                    daemon_config_dir=RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR,
+                )
+                sys.stdout.write(clear_current_line)
+                sys.stdout.write(
+                    " * {LIGHT_GREEN}Starting virt_minion_0 ... STARTED!\n{ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+            except (RuntimeWarning, RuntimeError) as err:
+                sys.stdout.write(clear_current_line)
+                sys.stdout.write(
+                    " * {LIGHT_RED}Starting virt_minion_0 ... FAILED!\n{ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+                raise TestDaemonStartFailed(str(err))
+
+            try:
+                sys.stdout.write(
+                    " * {LIGHT_YELLOW}Starting virt_minion_1 ... {ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+                self.virt_minion_1_process = start_virt_daemon(
+                    container_name="virt_minion_1",
+                    container_img="quay.io/rst0git/virt-minion",
+                    daemon_config_dir=RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR,
+                )
+                sys.stdout.write(clear_current_line)
+                sys.stdout.write(
+                    " * {LIGHT_GREEN}Starting virt_minion_1 ... STARTED!\n{ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+            except (RuntimeWarning, RuntimeError) as err:
+                sys.stdout.write(clear_current_line)
+                sys.stdout.write(
+                    " * {LIGHT_RED}Starting virt_minion_1 ... FAILED!\n{ENDC}".format(
+                        **self.colors
+                    )
+                )
+                sys.stdout.flush()
+                raise TestDaemonStartFailed(str(err))
 
         try:
             sys.stdout.write(
@@ -375,30 +430,22 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-            raise TestDaemonStartFailed()
+            raise TestDaemonStartFailed(str(err))
 
         try:
             sys.stdout.write(
@@ -423,30 +470,22 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting syndic salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-            raise TestDaemonStartFailed()
+            raise TestDaemonStartFailed(str(err))
 
         try:
             sys.stdout.write(
@@ -466,30 +505,22 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-syndic ... STARTED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(clear_current_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}".format(
                     **self.colors
                 )
             )
             sys.stdout.flush()
-            raise TestDaemonStartFailed()
+            raise TestDaemonStartFailed(str(err))
 
         if self.parser.options.proxy:
             self.minion_targets.add(self.proxy_opts["id"])
@@ -512,30 +543,22 @@ class TestDaemon(object):
                     fail_hard=True,
                     start_timeout=120,
                 )
-                sys.stdout.write(
-                    "\r{0}\r".format(
-                        " " * getattr(self.parser.options, "output_columns", PNUM)
-                    )
-                )
+                sys.stdout.write(clear_current_line)
                 sys.stdout.write(
                     " * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}".format(
                         **self.colors
                     )
                 )
                 sys.stdout.flush()
-            except (RuntimeWarning, RuntimeError):
-                sys.stdout.write(
-                    "\r{0}\r".format(
-                        " " * getattr(self.parser.options, "output_columns", PNUM)
-                    )
-                )
+            except (RuntimeWarning, RuntimeError) as err:
+                sys.stdout.write(clear_current_line)
                 sys.stdout.write(
                     " * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}".format(
                         **self.colors
                     )
                 )
                 sys.stdout.flush()
-                raise TestDaemonStartFailed()
+                raise TestDaemonStartFailed(str(err))
 
     start_tcp_daemons = start_zeromq_daemons
 
@@ -795,6 +818,8 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP)
         os.makedirs(RUNTIME_VARS.TMP_ROOT_DIR)
         os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR)
+        os.makedirs(RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
@@ -887,6 +912,27 @@ class TestDaemon(object):
         if virtualenv_binary:
             minion_opts["venv_bin"] = virtualenv_binary
 
+        # This libvirt + minion connects to master
+        virt_minion_0_opts = salt.config._read_conf_file(
+            os.path.join(RUNTIME_VARS.CONF_DIR, "virt_minion_0")
+        )
+        virt_minion_0_opts["user"] = "root"
+        virt_minion_0_opts["cachedir"] = "cache"
+        virt_minion_0_opts["root_dir"] = "/etc/salt"
+        virt_minion_0_opts["pki_dir"] = "pki"
+        virt_minion_0_opts["hosts.file"] = "hosts"
+        virt_minion_0_opts["aliases.file"] = "aliases"
+
+        virt_minion_1_opts = salt.config._read_conf_file(
+            os.path.join(RUNTIME_VARS.CONF_DIR, "virt_minion_1")
+        )
+        virt_minion_1_opts["user"] = "root"
+        virt_minion_1_opts["cachedir"] = "cache"
+        virt_minion_1_opts["root_dir"] = "/etc/salt"
+        virt_minion_1_opts["pki_dir"] = "pki"
+        virt_minion_1_opts["hosts.file"] = "hosts"
+        virt_minion_1_opts["aliases.file"] = "aliases"
+
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(
             os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
@@ -950,6 +996,8 @@ class TestDaemon(object):
         if transport == "tcp":
             master_opts["transport"] = "tcp"
             minion_opts["transport"] = "tcp"
+            virt_minion_0_opts["transport"] = "tcp"
+            virt_minion_1_opts["transport"] = "tcp"
             sub_minion_opts["transport"] = "tcp"
             syndic_master_opts["transport"] = "tcp"
             proxy_opts["transport"] = "tcp"
@@ -1063,6 +1111,8 @@ class TestDaemon(object):
 
         master_opts["runtests_conn_check_port"] = get_unused_localhost_port()
         minion_opts["runtests_conn_check_port"] = get_unused_localhost_port()
+        virt_minion_0_opts["runtests_conn_check_port"] = get_unused_localhost_port()
+        virt_minion_1_opts["runtests_conn_check_port"] = get_unused_localhost_port()
         sub_minion_opts["runtests_conn_check_port"] = get_unused_localhost_port()
         syndic_opts["runtests_conn_check_port"] = get_unused_localhost_port()
         syndic_master_opts["runtests_conn_check_port"] = get_unused_localhost_port()
@@ -1098,6 +1148,8 @@ class TestDaemon(object):
             if entry in (
                 "master",
                 "minion",
+                "virt_minion_0",
+                "virt_minion_1",
                 "sub_minion",
                 "syndic",
                 "syndic_master",
@@ -1129,6 +1181,31 @@ class TestDaemon(object):
                 salt.utils.yaml.safe_dump(
                     computed_config, fp_, default_flow_style=False
                 )
+
+        virt_minion_0_computed_config = copy.deepcopy(virt_minion_0_opts)
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR, "minion"), "w"
+        ) as wfh:
+            salt.utils.yaml.safe_dump(
+                virt_minion_0_computed_config, wfh, default_flow_style=False
+            )
+        shutil.copyfile(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master"),
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR, "master"),
+        )
+
+        virt_minion_1_computed_config = copy.deepcopy(virt_minion_1_opts)
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR, "minion"), "w"
+        ) as wfh:
+            salt.utils.yaml.safe_dump(
+                virt_minion_1_computed_config, wfh, default_flow_style=False
+            )
+        shutil.copyfile(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master"),
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR, "master"),
+        )
+
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, "minion"), "w"
@@ -1168,6 +1245,12 @@ class TestDaemon(object):
         minion_opts = salt.config.minion_config(
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
         )
+        virt_minion_0_opts = salt.config.minion_config(
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR, "minion")
+        )
+        virt_minion_1_opts = salt.config.minion_config(
+            os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR, "minion")
+        )
         syndic_opts = salt.config.syndic_config(
             os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, "master"),
             os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, "minion"),
@@ -1185,6 +1268,8 @@ class TestDaemon(object):
         RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(master_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(syndic_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS["virt_minion_0"] = freeze(virt_minion_0_opts)
+        RUNTIME_VARS.RUNTIME_CONFIGS["virt_minion_1"] = freeze(virt_minion_1_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(sub_minion_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(syndic_master_opts)
         RUNTIME_VARS.RUNTIME_CONFIGS["proxy"] = freeze(proxy_opts)
@@ -1211,16 +1296,28 @@ class TestDaemon(object):
                 os.path.join(minion_opts["pki_dir"], "accepted"),
                 os.path.join(minion_opts["pki_dir"], "rejected"),
                 os.path.join(minion_opts["pki_dir"], "pending"),
+                os.path.join(virt_minion_0_opts["pki_dir"], "accepted"),
+                os.path.join(virt_minion_0_opts["pki_dir"], "rejected"),
+                os.path.join(virt_minion_0_opts["pki_dir"], "pending"),
+                os.path.join(virt_minion_1_opts["pki_dir"], "accepted"),
+                os.path.join(virt_minion_1_opts["pki_dir"], "rejected"),
+                os.path.join(virt_minion_1_opts["pki_dir"], "pending"),
                 os.path.join(sub_minion_opts["pki_dir"], "accepted"),
                 os.path.join(sub_minion_opts["pki_dir"], "rejected"),
                 os.path.join(sub_minion_opts["pki_dir"], "pending"),
                 os.path.dirname(master_opts["log_file"]),
                 minion_opts["extension_modules"],
+                virt_minion_0_opts["extension_modules"],
+                virt_minion_0_opts["pki_dir"],
+                virt_minion_1_opts["extension_modules"],
+                virt_minion_1_opts["pki_dir"],
                 sub_minion_opts["extension_modules"],
                 sub_minion_opts["pki_dir"],
                 proxy_opts["pki_dir"],
                 master_opts["sock_dir"],
                 syndic_master_opts["sock_dir"],
+                virt_minion_0_opts["sock_dir"],
+                virt_minion_1_opts["sock_dir"],
                 sub_minion_opts["sock_dir"],
                 minion_opts["sock_dir"],
                 RUNTIME_VARS.TMP_STATE_TREE,
@@ -1235,6 +1332,8 @@ class TestDaemon(object):
         cls.master_opts = master_opts
         cls.minion_opts = minion_opts
         # cls.proxy_opts = proxy_opts
+        cls.virt_minion_0_opts = virt_minion_0_opts
+        cls.virt_minion_1_opts = virt_minion_1_opts
         cls.sub_minion_opts = sub_minion_opts
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
@@ -1246,10 +1345,26 @@ class TestDaemon(object):
         Kill the minion and master processes
         """
         try:
+            if hasattr(self.virt_minion_0_process, "terminate"):
+                self.virt_minion_0_process.terminate()
+            else:
+                log.error("self.virt_minion_0_process can't be terminated.")
+        except AttributeError:
+            pass
+
+        try:
+            if hasattr(self.virt_minion_1_process, "terminate"):
+                self.virt_minion_1_process.terminate()
+            else:
+                log.error("self.virt_minion_1_process can't be terminated.")
+        except AttributeError:
+            pass
+
+        try:
             if hasattr(self.sub_minion_process, "terminate"):
                 self.sub_minion_process.terminate()
             else:
-                log.error("self.sub_minion_process can't be terminate.")
+                log.error("self.sub_minion_process can't be terminated.")
         except AttributeError:
             pass
 
@@ -1257,7 +1372,7 @@ class TestDaemon(object):
             if hasattr(self.minion_process, "terminate"):
                 self.minion_process.terminate()
             else:
-                log.error("self.minion_process can't be terminate.")
+                log.error("self.minion_process can't be terminated.")
         except AttributeError:
             pass
 

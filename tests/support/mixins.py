@@ -210,6 +210,10 @@ class AdaptedConfigurationTestCaseMixin(object):
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
         if filename == "syndic":
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, "minion")
+        if filename == "virt_minion_0":
+            return os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR, "minion")
+        if filename == "virt_minion_1":
+            return os.path.join(RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR, "minion")
         if filename == "sub_minion":
             return os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, "minion")
         if filename == "mm_master":

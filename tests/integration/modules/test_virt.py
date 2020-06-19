@@ -11,10 +11,11 @@ from xml.etree import ElementTree
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
+from tests.support.helpers import skip_if_binaries_missing, slowTest
 
 
-@requires_salt_modules("virt.get_profiles")
+@skip_if_binaries_missing("docker")
+@slowTest
 class VirtTest(ModuleCase):
     """
     Test virt routines
@@ -39,7 +40,9 @@ class VirtTest(ModuleCase):
         """
         Test virt.get_profiles with the KVM profile
         """
-        profiles = self.run_function("virt.get_profiles", ["kvm"])
+        profiles = self.run_function(
+            "virt.get_profiles", ["kvm"], minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -57,7 +60,9 @@ class VirtTest(ModuleCase):
         """
         Test virt.get_profiles with the VMware profile
         """
-        profiles = self.run_function("virt.get_profiles", ["vmware"])
+        profiles = self.run_function(
+            "virt.get_profiles", ["vmware"], minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -76,7 +81,9 @@ class VirtTest(ModuleCase):
         """
         Test virt.get_profiles with the XEN profile
         """
-        profiles = self.run_function("virt.get_profiles", ["xen"])
+        profiles = self.run_function(
+            "virt.get_profiles", ["xen"], minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -94,7 +101,9 @@ class VirtTest(ModuleCase):
         """
         Test virt.get_profiles with the Bhyve profile
         """
-        profiles = self.run_function("virt.get_profiles", ["bhyve"])
+        profiles = self.run_function(
+            "virt.get_profiles", ["bhyve"], minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(profiles, dict)
         nic = profiles["nic"]["default"][0]
         disk = profiles["disk"]["default"][0]
@@ -114,7 +123,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.all_capabilities
         """
-        caps = self.run_function("virt.all_capabilities")
+        caps = self.run_function("virt.all_capabilities", minion_tgt="virt_minion_0")
         self.assertIsInstance(caps, dict)
         self.assertIsInstance(caps["host"]["host"]["uuid"], str)
         self.assertEqual(36, len(caps["host"]["host"]["uuid"]))
@@ -124,7 +133,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.capabilities
         """
-        caps = self.run_function("virt.capabilities")
+        caps = self.run_function("virt.capabilities", minion_tgt="virt_minion_0")
         self.assertIsInstance(caps, dict)
         self.assertIsInstance(caps["host"]["uuid"], str)
         self.assertEqual(36, len(caps["host"]["uuid"]))
@@ -136,12 +145,16 @@ class VirtTest(ModuleCase):
         Test virt.cpu_baseline
         """
         vendors = ["Intel", "ARM", "AMD"]
-        cpu_baseline = self.run_function("virt.cpu_baseline", out="libvirt")
+        cpu_baseline = self.run_function(
+            "virt.cpu_baseline", out="libvirt", minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(cpu_baseline, str)
         cpu_baseline = ElementTree.fromstring(cpu_baseline)
         self.assertIn(cpu_baseline.find("vendor").text, vendors)
 
-        cpu_baseline = self.run_function("virt.cpu_baseline", out="salt")
+        cpu_baseline = self.run_function(
+            "virt.cpu_baseline", out="salt", minion_tgt="virt_minion_0"
+        )
         self.assertIsInstance(cpu_baseline, dict)
         self.assertIn(cpu_baseline["vendor"], vendors)
 
@@ -149,7 +162,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.freemem
         """
-        available_memory = self.run_function("virt.freemem")
+        available_memory = self.run_function("virt.freemem", minion_tgt="virt_minion_0")
         self.assertIsInstance(available_memory, Number)
         self.assertGreater(available_memory, 0)
 
@@ -157,7 +170,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.freecpu
         """
-        available_cpus = self.run_function("virt.freecpu")
+        available_cpus = self.run_function("virt.freecpu", minion_tgt="virt_minion_0")
         self.assertIsInstance(available_cpus, Number)
         self.assertGreater(available_cpus, 0)
 
@@ -165,7 +178,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.full_info
         """
-        info = self.run_function("virt.full_info")
+        info = self.run_function("virt.full_info", minion_tgt="virt_minion_0")
         self.assertIsInstance(info, dict)
         self.assertIsInstance(info["vm_info"], dict)
 
@@ -187,7 +200,7 @@ class VirtTest(ModuleCase):
         """
         Test virt.node_info
         """
-        info = self.run_function("virt.node_info")
+        info = self.run_function("virt.node_info", minion_tgt="virt_minion_0")
         self.assertIsInstance(info, dict)
         self.assertIsInstance(info["cpucores"], Number)
         self.assertIsInstance(info["cpumhz"], Number)
