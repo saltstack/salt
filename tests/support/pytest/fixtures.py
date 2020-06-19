@@ -388,6 +388,84 @@ def salt_minion_config(request, salt_factories, salt_master_config):
 
 
 @pytest.fixture(scope="session")
+def salt_virt_minion_0_config(request, salt_factories, salt_master_config):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "virt_minion_0")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = "hosts"
+    config_defaults["aliases.file"] = "aliases"
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+    return salt_factories.configure_minion(
+        request,
+        "virt_minion_0",
+        master_id="master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+    )
+
+
+@pytest.fixture(scope="session")
+def salt_virt_minion_1_config(request, salt_factories, salt_master_config):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "virt_minion_1")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = "hosts"
+    config_defaults["aliases.file"] = "aliases"
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+    return salt_factories.configure_minion(
+        request,
+        "virt_minion_1",
+        master_id="master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+    )
+
+
+@pytest.fixture(scope="session")
 def salt_sub_minion_config(request, salt_factories, salt_master_config):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
@@ -489,11 +567,15 @@ def bridge_pytest_and_runtests(
     salt_syndic_config,
     salt_master_config,
     salt_minion_config,
+    salt_virt_minion_0_config,
+    salt_virt_minion_1_config,
     salt_sub_minion_config,
 ):
     # Make sure unittest2 uses the pytest generated configuration
     RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["virt_minion_0"] = freeze(salt_virt_minion_0_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["virt_minion_1"] = freeze(salt_virt_minion_1_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(salt_sub_minion_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(salt_syndic_master_config)
     RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(salt_syndic_config)
@@ -505,6 +587,12 @@ def bridge_pytest_and_runtests(
     RUNTIME_VARS.TMP_ROOT_DIR = salt_factories.root_dir.realpath().strpath
     RUNTIME_VARS.TMP_CONF_DIR = os.path.dirname(salt_master_config["conf_file"])
     RUNTIME_VARS.TMP_MINION_CONF_DIR = os.path.dirname(salt_minion_config["conf_file"])
+    RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR = os.path.dirname(
+        salt_virt_minion_0_config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR = os.path.dirname(
+        salt_virt_minion_1_config["conf_file"]
+    )
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = os.path.dirname(
         salt_sub_minion_config["conf_file"]
     )
