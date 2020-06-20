@@ -1333,6 +1333,7 @@ class LoaderGlobalsTest(ModuleCase):
         Test that states have:
             - __pillar__
             - __salt__
+            - __hub__
             - __opts__
             - __grains__
             - __context__
@@ -1348,6 +1349,7 @@ class LoaderGlobalsTest(ModuleCase):
         """
         Test that renderers have:
             - __salt__    # Execution functions (i.e. __salt__['test.echo']('foo'))
+            - __hub__     # Hub from POP with execution functions (i.e. await __hub__.exec.test.ping())
             - __grains__  # Grains (i.e. __grains__['os'])
             - __pillar__  # Pillar data (i.e. __pillar__['foo'])
             - __opts__    # Minion configuration options

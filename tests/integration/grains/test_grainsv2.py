@@ -36,8 +36,8 @@ class TestGrainsv2(ModuleCase, LoaderModuleMockMixin):
 
     @classmethod
     def tearDownClass(cls):
-        del cls.hub
         del cls.grainsv2
+        del cls.hub
 
     @requires_system_grains
     def test_keys(self, grains):

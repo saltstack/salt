@@ -422,10 +422,8 @@ def create_hub():
     hub.pop.sub.add(dyne_name="states")
     # Load grains onto the hub
     hub.pop.sub.add(dyne_name="grains")
-    # Set up logging and read the grains/idem config options
+    # Read the grains/idem config options
     hub.pop.config.load(["grains", "idem"], "grains", parse_cli=False)
-    # set pop's logging level to the same as salt
-    hub.log.log.INT_LEVEL = log.getEffectiveLevel()
 
     return hub
 
@@ -858,7 +856,6 @@ def grains(opts, force_refresh=False, proxy=None, hub=None):
     else:
         opts["grains"] = {}
 
-    # TODO enable grainsv2 for tests.  Core.py will stay practically unchanged from here on out.
     if opts.get("enable_grainsv2", False) and hub is not None:
         return grainsv2(hub, force_refresh=force_refresh)
 
