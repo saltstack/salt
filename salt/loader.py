@@ -257,6 +257,7 @@ def minion_mods(
         __salt__ = salt.loader.minion_mods(__opts__, utils=__utils__)
         __salt__['test.ping']()
         __hub__ = salt.loader.create_hub()
+        __hub__.exec.test.ping()
     """
     # TODO Publish documentation for module whitelisting
     if not whitelist:
@@ -417,13 +418,16 @@ def create_hub():
 
     # Initialize the hub
     hub = pop.hub.Hub()
-    # Load idem states/exec modules onto the hub
+    # Load idem grains/states/exec modules onto the hub
+    hub.pop.sub.add(dyne_name="acct")
+    hub.pop.sub.add(dyne_name="config")
     hub.pop.sub.add(dyne_name="exec")
-    hub.pop.sub.add(dyne_name="states")
-    # Load grains onto the hub
     hub.pop.sub.add(dyne_name="grains")
+    hub.pop.sub.add(dyne_name="states")
     # Read the grains/idem config options
-    hub.pop.config.load(["grains", "idem"], "grains", parse_cli=False)
+    hub.config.integrate.load(
+        ["acct", "idem", "grains"], "idem", parse_cli=False, logs=False
+    )
 
     return hub
 

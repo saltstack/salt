@@ -45,21 +45,25 @@ class TestGrainsv2(ModuleCase, LoaderModuleMockMixin):
         Test that all the grains from salt are now available in grainsv2
         """
         missing_keys = set(grains.keys()) - set(self.grainsv2.keys())
-        assert not missing_keys, "Grains not implemented by grainsv2: {}".format(
+        assert not missing_keys, "Grainsv2 is missing grains: {}".format(
             ", ".join(sorted(missing_keys))
         )
 
     def compare_values(self, v1, v2):
-        if isinstance(v1, dict) or isinstance(v2, dict):
+        if isinstance(v1, dict) and isinstance(v2, dict):
             keys = set(v1.keys())
             keys.update(set(v2.keys()))
             for key in keys:
-                self.compare_values(v1.get(key), v2.get(key))
+                with self.subTest(key=key):
+                    self.compare_values(v1.get(key), v2.get(key))
             return
         # Loosely match grain values by casting iterables as sets
-        elif isinstance(v1, (list, tuple)) and isinstance(v2, (list, tuple)):
-            v1 = set(v1)
-            v2 = set(v2)
+        if isinstance(v1, (list, tuple)) and isinstance(v2, (list, tuple)):
+            try:
+                v1 = set(v1)
+                v2 = set(v2)
+            except TypeError:
+                pass
         try:
             self.assertEqual(v1, v2)
         except AssertionError as e:
@@ -71,6 +75,6 @@ class TestGrainsv2(ModuleCase, LoaderModuleMockMixin):
         Test that all the grains from salt have generally the same value as in grainsv2
         Warn for each one that is different but do not fail
         """
-        for grain, value in grains.items():
+        for grain in sorted(grains.keys()):
             with self.subTest(grain=grain):
-                self.compare_values(value, self.grainsv2.get(grain))
+                self.compare_values(grains[grain], self.grainsv2.get(grain))
