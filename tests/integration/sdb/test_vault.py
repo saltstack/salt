@@ -243,6 +243,21 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
 
     @flaky
     @slowTest
+    def test_sdb_kv2_kvv2_path_local(self):
+        set_output = self.run_function(
+            "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
+        )
+        self.assertEqual(set_output, True)
+        import copy
+        opts = copy.copy(self.minion_opts)
+        get_output = ShellCase.run_function(self,
+            function="sdb.get", arg=["sdb://sdbvault/kv-v2/test/test_sdb/foo"], local=True,
+        )
+        self.assertEqual(get_output[1], "    bar")
+
+
+    @flaky
+    @slowTest
     def test_sdb_runner_kv2(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"

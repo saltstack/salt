@@ -334,9 +334,9 @@ def make_request(
 
     # Decrement vault uses, only on secret URL lookups and multi use tokens
     if (
+        "uses" in connection and
         not connection.get("unlimited_use_token")
         and not resource.startswith("v1/sys")
-        and not resource.startswith("v1/sec")
     ):
         log.debug("Decrementing Vault uses on limited token for url: %s", resource)
         connection["uses"] -= 1
@@ -410,9 +410,11 @@ def is_v2(path):
         # metadata lookup failed. Simply return not v2
         return ret
     ret["type"] = path_metadata.get("type", "kv")
-    if ret["type"] == "kv" and path_metadata.get("options", {}).get("version", "1") in [
-        "2"
-    ]:
+    if (
+        ret["type"] == "kv"
+        and path_metadata["options"] is not None
+        and path_metadata.get("options", {}).get("version", "1") in ["2"]
+    ):
         ret["v2"] = True
         ret["data"] = _v2_the_path(path, path_metadata.get("path", path))
         ret["metadata"] = _v2_the_path(
