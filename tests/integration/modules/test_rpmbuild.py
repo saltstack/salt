@@ -172,7 +172,7 @@ def _testrpm_signed(abs_path_named_rpm):
     return False
 
 
-@skip_if_binaries_missing(["gpg", "/usr/libexec/gpg-preset-passphrase", "rpm", "createrepo"], check_all=True)
+@skip_if_binaries_missing(["gpg", "gpg-agent", "/usr/libexec/gpg-preset-passphrase", "rpm", "createrepo"], check_all=True)
 class RPMSignModuleTest(ModuleCase):
     """
     Test the RPM Signing module
@@ -194,6 +194,7 @@ class RPMSignModuleTest(ModuleCase):
             os.makedirs(self.subsalt_dir)
         if not os.path.isdir(self.gpghome):
             os.makedirs(self.gpghome)
+            os.chmod(self.gpghome, 0o600)
         if not os.path.isdir(self.repodir):
             os.makedirs(self.repodir)
 
@@ -256,6 +257,10 @@ class RPMSignModuleTest(ModuleCase):
                 "TODO: test not configured for {0} and major release {1}".format(grains["os_family"], grains["osmajorrelease"])
             )
 
+        pillar = self.run_function("pillar.data")
+        self.assertEqual(pillar["gpg_passphrase"], "saltstacktestingpackages")
+        self.assertEqual(pillar["gpg_pkg_pub_keyname"], "gpg_pkg_key.pub")
+
         # launch gpg-agent
 # miracle occurs here and start gpg-agent
 
@@ -300,9 +305,7 @@ class RPMSignModuleTest(ModuleCase):
                 .format(grains["os_family"], grains["osmajorrelease"])
             )
 
-        ## DGM Test
         pillar = self.run_function("pillar.data")
-        log.debug("DGM pillar date \'{0}\'".format(pillar))
         self.assertEqual(pillar["gpg_passphrase"], "saltstacktestingpackages")
         self.assertEqual(pillar["gpg_pkg_pub_keyname"], "gpg_pkg_key.pub")
 
