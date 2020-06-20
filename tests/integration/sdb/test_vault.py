@@ -209,6 +209,13 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             )
             if ret != 0:
                 self.skipTest("unable to assign policy to vault")
+            ret = self.run_function(
+                "cmd.retcode",
+                cmd="/usr/local/bin/vault secrets enable kv-v2",
+                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+            )
+            if ret != 0:
+                self.skipTest("unable to enable kv-v2")
         self.count += 1
 
     def tearDown(self):
