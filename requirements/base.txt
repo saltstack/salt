@@ -7,6 +7,6 @@ distro
 idem-aix==3.2; os_name == "AIX" and python_version >= '3.6'
 idem-bsd==3.2; "BSD" in sys_platform and python_version >= '3.6'
 idem-darwin==7; sys_platform == "darwin" and python_version >= '3.6'
-idem-linux==6.5; sys_platform == "linux" and python_version >= '3.6'
+idem-linux==6.6; sys_platform == "linux" and python_version >= '3.6'
 idem-solaris==3.1; "sunos" in sys_platform and python_version >= '3.6'
 idem-windows==4; sys_platform == 'win32' and python_version >= '3.6'

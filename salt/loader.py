@@ -423,7 +423,9 @@ def create_hub():
     # Load grains onto the hub
     hub.pop.sub.add(dyne_name="grains")
     # Set up logging and read the grains/idem config options
-    hub.pop.config.load(["grains"], "grains", parse_cli=False)
+    hub.pop.config.load(["grains", "idem"], "grains", parse_cli=False)
+    # set pop's logging level to the same as salt
+    hub.log.log.INT_LEVEL = log.getEffectiveLevel()
 
     return hub
 
@@ -785,6 +787,17 @@ def _load_cached_grains(opts, cfn):
         return None
 
 
+def grainsv2(hub, force_refresh=False):
+    """
+    Collect grains from the idem-platform projects
+    """
+    # Collect grains from grainsv2
+    if force_refresh or not hub.grains.GRAINS:
+        hub.grains.init.standalone()
+
+    return hub.grains.GRAINS._dict()
+
+
 def grains(opts, force_refresh=False, proxy=None, hub=None):
     """
     Return the functions for the dynamic grains and the values for the static
@@ -845,14 +858,11 @@ def grains(opts, force_refresh=False, proxy=None, hub=None):
     else:
         opts["grains"] = {}
 
-    grains_data = {}
+    # TODO enable grainsv2 for tests.  Core.py will stay practically unchanged from here on out.
     if opts.get("enable_grainsv2", False) and hub is not None:
-        # Collect grains from grainsv2
-        hub.grains.init.standalone()
-        # Get initial grains from the hub
-        grains_data.update(hub.grains.GRAINS._dict())
-    # TODO if grains came from pop then don't load those same grains from core.py and the grains dir
+        return grainsv2(hub, force_refresh=force_refresh)
 
+    grains_data = {}
     blist = opts.get("grains_blacklist", [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules

@@ -132,7 +132,7 @@ google-auth==1.6.3        # via kubernetes
 grains-virt==2            # via idem-linux
 grainsv2==9               # via grains-virt, idem-linux
 hgtools==8.1.1
-idem-linux==6.5 ; sys_platform == "linux" and python_version >= "3.6"
+idem-linux==6.6 ; sys_platform == "linux" and python_version >= "3.6"
 idem==7.3                 # via idem-linux
 idna==2.8                 # via requests
 importlib-metadata==0.23  # via importlib-resources, pluggy, pytest, virtualenv
