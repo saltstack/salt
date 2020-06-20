@@ -6,7 +6,7 @@ Proxmox Virtual Environment is a complete server virtualization management solut
 based on OpenVZ(in Proxmox up to 3.4)/LXC(from Proxmox 4.0 and up) and full virtualization with KVM.
 Further information can be found at:
 
-http://www.proxmox.org/
+https://www.proxmox.com
 
 Dependencies
 ============
