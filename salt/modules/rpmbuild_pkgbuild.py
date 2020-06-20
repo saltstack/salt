@@ -79,7 +79,10 @@ def _create_rpmmacros(runas="root"):
     """
     Create the .rpmmacros file in user's home directory
     """
-    home = os.path.expanduser("~")
+    home = os.path.expanduser("~" + runas)
+
+    log.debug("DGM create_rpmmacros home \'{0}\'".format(home))
+
     rpmbuilddir = os.path.join(home, "rpmbuild")
     if not os.path.isdir(rpmbuilddir):
         __salt__["file.makedirs_perms"](name=rpmbuilddir, user=runas, group="mock")
@@ -243,6 +246,9 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
     retrc = 0
     use_gpg_agent = False
 
+    log.debug("DGM salt _get_gpg_key_resources input keyid \'{0}\', env \'{1}\', use_passphrase \'{2}\', gnupghome \'{3}\', runas \'{4}\'"
+        .format(keyid, env, use_passphrase, gnupghome, runas))
+
     if (__grains__.get("os_family") == "Redhat" and __grains__.get("osmajorrelease") >= 8):
         use_gpg_agent = True
 
@@ -276,6 +282,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
         # gpg keys should have been loaded as part of setup
         # retrieve specified key and preset passphrase
         local_keys = __salt__["gpg.list_keys"](user=runas, gnupghome=gnupghome)
+        log.debug("DGM gpg.list_keys produced local_keys '\{0}\'".format(local_keys))
         for gpg_key in local_keys:
             if keyid == gpg_key["keyid"][8:]:
                 local_uids = gpg_key["uids"]
@@ -284,9 +291,9 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     local_keygrip_to_use = gpg_key["fingerprint"]
                     local_key_fingerprint = gpg_key["fingerprint"]
                 break
-            log.debug("DGM getting gpg_key in local_keys local_uids \'{0}\', local_keyid \'{1}\', use_gpg_agent \'{2}\', local_keygrip_to_use \'{3}\', local_key_fingerprint \'{4}\'"
-                .format(local_uids, local_keyid, use_gpg_agent, local_keygrip_to_use, local_key_fingerprint)
-                )
+        log.debug("DGM getting gpg_key in local_keys local_uids \'{0}\', local_keyid \'{1}\', use_gpg_agent \'{2}\', local_keygrip_to_use \'{3}\', local_key_fingerprint \'{4}\'"
+        .format(local_uids, local_keyid, use_gpg_agent, local_keygrip_to_use, local_key_fingerprint)
+        )
 
         if use_gpg_agent:
             cmd = "gpg --with-keygrip --list-secret-keys"
@@ -329,8 +336,13 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                         "check logs for further details".format(retrc)
                     )
 
+## DGM ??? no longer needed since .rpmmacros is defined as part of make_repo
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}' --define='%_gpg_path={1}".format(local_uids[0], gnupghome)
+           define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
+               local_uids[0]
+           )
+
+        log.debug("DGM define_gpg_name \'{0}\'".format(define_gpg_name))
 
         # need to update rpm with public key
         cmd = "rpm --import {0}".format(pkg_pub_key_file)
@@ -360,7 +372,6 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
 
     cmd = "rpm {0} --addsign {1}".format(define_gpg_name, abs_file)
     log.debug("DGM _sign_file cmd \'{0}\'".format(cmd))
-
     preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
     try:
         stdout, stderr = None, None
@@ -376,6 +387,7 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
             if stdout and SIGN_PROMPT_RE.search(stdout):
                 # have the prompt for inputting the passphrase
                 proc.sendline(phrase)
+                log.debug("DGM _sign_file have prompt for passphase \'{0}\'".format(phrase))
             else:
                 times_looped += 1
 
@@ -743,11 +755,20 @@ def make_repo(
         salt '*' pkgbuild.make_repo /var/www/html/
 
     """
-    if gnupghome and env is None:
-        env = {}
+    log.debug("DGM make_repo entry repodir \'{0}\', keyid \'{1}\, env \'{2}\', use_passphrase \'{3}\', gnupghome \'{4}\', runas \'{5}\', timeout \'{6}\'"
+        .format(repodir, keyid, env, use_passphrase, gnupghome, runas, timeout))
+
+    home = os.path.expanduser("~" + runas)
+    rpmmacros = os.path.join(home, ".rpmmacros")
+    if not os.path.exists(rpmmacros):
+        _create_rpmmacros(runas)
+    
+##     if gnupghome and env is None:
+##         env = {}
+    if gnupghome:
         env["GNUPGHOME"] = gnupghome
 
-        use_gpg_agent, local_keyid, phrase, define_gpg_name = _get_gpg_key_resources(
+        use_gpg_agent, local_keyid, define_gpg_name, phrase = _get_gpg_key_resources(
             keyid, env, use_passphrase, gnupghome, runas
         )
 
