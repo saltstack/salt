@@ -260,12 +260,15 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         )
         self.assertEqual(set_output, True)
         import copy
+
         opts = copy.copy(self.minion_opts)
-        get_output = ShellCase.run_function(self,
-            function="sdb.get", arg=["sdb://sdbvault/kv-v2/test/test_sdb/foo"], local=True,
+        get_output = ShellCase.run_function(
+            self,
+            function="sdb.get",
+            arg=["sdb://sdbvault/kv-v2/test/test_sdb/foo"],
+            local=True,
         )
         self.assertEqual(get_output[1], "    bar")
-
 
     @flaky
     @slowTest
