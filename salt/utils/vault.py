@@ -334,8 +334,8 @@ def make_request(
 
     # Decrement vault uses, only on secret URL lookups and multi use tokens
     if (
-        "uses" in connection and
-        not connection.get("unlimited_use_token")
+        "uses" in connection
+        and not connection.get("unlimited_use_token")
         and not resource.startswith("v1/sys")
     ):
         log.debug("Decrementing Vault uses on limited token for url: %s", resource)
