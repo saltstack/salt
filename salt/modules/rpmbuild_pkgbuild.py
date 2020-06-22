@@ -29,7 +29,7 @@ import salt.utils.user
 import salt.utils.vt
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -698,15 +698,14 @@ def make_repo(
         Passphrase is received from Pillar data which could be passed on the
         command line with ``pillar`` parameter.
 
-        .. versionadded:: 3001.1
-        RHEL 8 and above leverages gpg-agent and gpg-preset-passphrase for
-        caching keys, etc.
-
-        For example:
-
         .. code-block:: bash
 
             pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+        .. versionadded:: 3001.1
+
+        RHEL 8 and above leverages gpg-agent and gpg-preset-passphrase for
+        caching keys, etc.
 
     gnupghome : /etc/salt/gpgkeys
         .. versionadded:: 2016.3.0
