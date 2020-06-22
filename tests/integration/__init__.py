@@ -304,6 +304,36 @@ class TestDaemon(object):
             sys.stdout.flush()
             raise TestDaemonStartFailed(str(err))
 
+    def start_salt_daemon(self, **kwargs):
+        """
+        Start salt daemon
+        """
+        try:
+            sys.stdout.write(
+                " * {LIGHT_YELLOW}Starting {name} ... {ENDC}".format(
+                    **self.colors, name=kwargs["daemon_name"],
+                )
+            )
+            sys.stdout.flush()
+            process = start_daemon(**kwargs)
+            sys.stdout.write(self.clear_line)
+            sys.stdout.write(
+                " * {LIGHT_GREEN}Starting {name} ... STARTED!\n{ENDC}".format(
+                    **self.colors, name=kwargs["daemon_name"],
+                )
+            )
+            sys.stdout.flush()
+            return process
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(self.clear_line)
+            sys.stdout.write(
+                " * {LIGHT_RED}Starting {name} ... FAILED!\n{ENDC}".format(
+                    **self.colors, name=kwargs["daemon_name"],
+                )
+            )
+            sys.stdout.flush()
+            raise TestDaemonStartFailed(str(err))
+
     def start_zeromq_daemons(self):
         """
         Fire up the daemons used for zeromq tests
@@ -313,75 +343,34 @@ class TestDaemon(object):
         )
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.start()
-        try:
-            sys.stdout.write(
-                " * {LIGHT_YELLOW}Starting salt-master ... {ENDC}".format(**self.colors)
-            )
-            sys.stdout.flush()
-            self.master_process = start_daemon(
-                daemon_name="salt-master",
-                daemon_id=self.master_opts["id"],
-                daemon_log_prefix="salt-master/{}".format(self.master_opts["id"]),
-                daemon_cli_script_name="master",
-                daemon_config=self.master_opts,
-                daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                daemon_class=SaltMaster,
-                bin_dir_path=SCRIPT_DIR,
-                fail_hard=True,
-                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                start_timeout=120,
-            )
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            raise TestDaemonStartFailed(str(err))
 
-        try:
-            sys.stdout.write(
-                " * {LIGHT_YELLOW}Starting salt-minion ... {ENDC}".format(**self.colors)
-            )
-            sys.stdout.flush()
-            self.minion_process = start_daemon(
-                daemon_name="salt-minion",
-                daemon_id=self.master_opts["id"],
-                daemon_log_prefix="salt-minion/{}".format(self.minion_opts["id"]),
-                daemon_cli_script_name="minion",
-                daemon_config=self.minion_opts,
-                daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                daemon_class=SaltMinion,
-                bin_dir_path=SCRIPT_DIR,
-                fail_hard=True,
-                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                start_timeout=120,
-            )
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            raise TestDaemonStartFailed(str(err))
+        self.master_process = self.start_salt_daemon(
+            daemon_name="salt-master",
+            daemon_id=self.master_opts["id"],
+            daemon_log_prefix="salt-master/{}".format(self.master_opts["id"]),
+            daemon_cli_script_name="master",
+            daemon_config=self.master_opts,
+            daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            daemon_class=SaltMaster,
+            bin_dir_path=SCRIPT_DIR,
+            fail_hard=True,
+            event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            start_timeout=120,
+        )
+
+        self.minion_process = self.start_salt_daemon(
+            daemon_name="salt-minion",
+            daemon_id=self.master_opts["id"],
+            daemon_log_prefix="salt-minion/{}".format(self.minion_opts["id"]),
+            daemon_cli_script_name="minion",
+            daemon_config=self.minion_opts,
+            daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            daemon_class=SaltMinion,
+            bin_dir_path=SCRIPT_DIR,
+            fail_hard=True,
+            event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            start_timeout=120,
+        )
 
         if self.virt_minion_enabled:
             self.virt_minion_0_process = self.start_virt_minion(
@@ -391,157 +380,63 @@ class TestDaemon(object):
                 "virt_minion_1", RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR,
             )
 
-        try:
-            sys.stdout.write(
-                " * {LIGHT_YELLOW}Starting sub salt-minion ... {ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            self.sub_minion_process = start_daemon(
-                daemon_name="sub salt-minion",
-                daemon_id=self.master_opts["id"],
-                daemon_log_prefix="sub-salt-minion/{}".format(
-                    self.sub_minion_opts["id"]
-                ),
-                daemon_cli_script_name="minion",
-                daemon_config=self.sub_minion_opts,
-                daemon_config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
-                daemon_class=SaltMinion,
-                bin_dir_path=SCRIPT_DIR,
-                fail_hard=True,
-                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                start_timeout=120,
-            )
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            raise TestDaemonStartFailed(str(err))
+        self.sub_minion_process = self.start_salt_daemon(
+            daemon_name="sub salt-minion",
+            daemon_id=self.master_opts["id"],
+            daemon_log_prefix="sub-salt-minion/{}".format(self.sub_minion_opts["id"]),
+            daemon_cli_script_name="minion",
+            daemon_config=self.sub_minion_opts,
+            daemon_config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
+            daemon_class=SaltMinion,
+            bin_dir_path=SCRIPT_DIR,
+            fail_hard=True,
+            event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            start_timeout=120,
+        )
 
-        try:
-            sys.stdout.write(
-                " * {LIGHT_YELLOW}Starting syndic salt-master ... {ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            self.prep_syndic()
-            self.smaster_process = start_daemon(
-                daemon_name="salt-smaster",
-                daemon_id=self.syndic_master_opts["id"],
-                daemon_log_prefix="salt-smaster/{}".format(
-                    self.syndic_master_opts["id"]
-                ),
-                daemon_cli_script_name="master",
-                daemon_config=self.syndic_master_opts,
-                daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
-                daemon_class=SaltMaster,
-                bin_dir_path=SCRIPT_DIR,
-                fail_hard=True,
-                event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
-                start_timeout=120,
-            )
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_GREEN}Starting syndic salt-master ... STARTED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            raise TestDaemonStartFailed(str(err))
+        self.prep_syndic()
+        self.smaster_process = self.start_salt_daemon(
+            daemon_name="salt-smaster",
+            daemon_id=self.syndic_master_opts["id"],
+            daemon_log_prefix="salt-smaster/{}".format(self.syndic_master_opts["id"]),
+            daemon_cli_script_name="master",
+            daemon_config=self.syndic_master_opts,
+            daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
+            daemon_class=SaltMaster,
+            bin_dir_path=SCRIPT_DIR,
+            fail_hard=True,
+            event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
+            start_timeout=120,
+        )
 
-        try:
-            sys.stdout.write(
-                " * {LIGHT_YELLOW}Starting salt-syndic ... {ENDC}".format(**self.colors)
-            )
-            sys.stdout.flush()
-            self.syndic_process = start_daemon(
-                daemon_name="salt-syndic",
-                daemon_id=self.syndic_opts["id"],
-                daemon_log_prefix="salt-syndic/{}".format(self.syndic_opts["id"]),
-                daemon_cli_script_name="syndic",
-                daemon_config=self.syndic_opts,
-                daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR,
-                daemon_class=SaltSyndic,
-                bin_dir_path=SCRIPT_DIR,
-                fail_hard=True,
-                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                start_timeout=120,
-            )
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_GREEN}Starting salt-syndic ... STARTED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-        except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(self.clear_line)
-            sys.stdout.write(
-                " * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}".format(
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-            raise TestDaemonStartFailed(str(err))
+        self.syndic_process = self.start_salt_daemon(
+            daemon_name="salt-syndic",
+            daemon_id=self.syndic_opts["id"],
+            daemon_log_prefix="salt-syndic/{}".format(self.syndic_opts["id"]),
+            daemon_cli_script_name="syndic",
+            daemon_config=self.syndic_opts,
+            daemon_config_dir=RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR,
+            daemon_class=SaltSyndic,
+            bin_dir_path=SCRIPT_DIR,
+            fail_hard=True,
+            event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+            start_timeout=120,
+        )
 
         if self.parser.options.proxy:
             self.minion_targets.add(self.proxy_opts["id"])
-            try:
-                sys.stdout.write(
-                    " * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                self.proxy_process = start_daemon(
-                    daemon_name="salt-proxy",
-                    daemon_id=self.proxy_opts["id"],
-                    daemon_log_prefix="salt-proxy/{}".format(self.proxy_opts["id"]),
-                    daemon_cli_script_name="proxy",
-                    daemon_config=self.proxy_opts,
-                    daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
-                    daemon_class=SaltProxy,
-                    bin_dir_path=SCRIPT_DIR,
-                    fail_hard=True,
-                    start_timeout=120,
-                )
-                sys.stdout.write(self.clear_line)
-                sys.stdout.write(
-                    " * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-            except (RuntimeWarning, RuntimeError) as err:
-                sys.stdout.write(self.clear_line)
-                sys.stdout.write(
-                    " * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                raise TestDaemonStartFailed(str(err))
+            self.proxy_process = self.start_salt_daemon(
+                daemon_name="salt-proxy",
+                daemon_id=self.proxy_opts["id"],
+                daemon_log_prefix="salt-proxy/{}".format(self.proxy_opts["id"]),
+                daemon_cli_script_name="proxy",
+                daemon_config=self.proxy_opts,
+                daemon_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                daemon_class=SaltProxy,
+                bin_dir_path=SCRIPT_DIR,
+                fail_hard=True,
+                start_timeout=120,
+            )
 
     start_tcp_daemons = start_zeromq_daemons
 
@@ -1478,7 +1373,7 @@ class TestDaemon(object):
                     "   * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}".format(
                         "{0}".format(expire - now).rsplit(".", 1)[0],
                         ", ".join(running),
-                        **self.colors
+                        **self.colors,
                     )
                 )
                 sys.stdout.flush()
