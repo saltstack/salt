@@ -22,6 +22,10 @@ Installation from the Official SaltStack Repository
 The output of ``md5sum <salt minion exe>`` should match the contents of the
 corresponding md5 file.
 
+There are installers available for Python 3. Starting with Salt 3001, only
+Python 3 builds of the Windows Salt Minion will be built. Python 2 builds
+exist for earlier Salt Minion versions.
+
 .. note::
     - `Earlier builds from supported branches
       <https://repo.saltstack.com/windows/>`__
@@ -40,10 +44,6 @@ The 64bit installer has been tested on Windows 7 64bit and Windows Server
 2008R2 64bit. The 32bit installer has been tested on Windows 2008 Server 32bit.
 Please file a bug report on our GitHub repo if issues for other platforms are
 found.
-
-There are installers available for Python 3. Starting with Salt 3001, only
-Python 3 builds of the Windows Salt Minion will be built. Python 2 builds
-of earlier Salt Minion versions can be found in the archives.
 
 The installer will detect previous installations of Salt and ask if you would
 like to remove them. Clicking OK will remove the Salt binaries and related files
