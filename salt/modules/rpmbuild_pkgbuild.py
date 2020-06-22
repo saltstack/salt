@@ -80,9 +80,6 @@ def _create_rpmmacros(runas="root"):
     Create the .rpmmacros file in user's home directory
     """
     home = os.path.expanduser("~" + runas)
-
-    log.debug("DGM create_rpmmacros home \'{0}\'".format(home))
-
     rpmbuilddir = os.path.join(home, "rpmbuild")
     if not os.path.isdir(rpmbuilddir):
         __salt__["file.makedirs_perms"](name=rpmbuilddir, user=runas, group="mock")
@@ -233,10 +230,6 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
             phrase              pass phrase (may not be used)
 
     """
-    log.debug("DGM  _get_gpg_key_resources inputs keyid \'{0}\', env \'{1}\', use_passphrase \'{2}\', gnupghome \'{3}\', runas \'{4}\'"
-        .format(keyid, env, use_passphrase, gnupghome, runas)
-    )
-
     local_keygrip_to_use = None
     local_key_fingerprint = None
     local_keyid = None
@@ -246,10 +239,11 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
     retrc = 0
     use_gpg_agent = False
 
-    log.debug("DGM _get_gpg_key_resources check use_gpg_agent OS family \'{0}\', OS MAjor Release \'{1}\',".format(__grains__.get("os_family"), __grains__.get("osmajorrelease")))
-    if (__grains__.get("os_family") == "RedHat" and __grains__.get("osmajorrelease") >= 8):
+    if (
+        __grains__.get("os_family") == "RedHat"
+        and __grains__.get("osmajorrelease") >= 8
+    ):
         use_gpg_agent = True
-        log.debug("DGM _get_gpg_key_resources set use_gpg_agent to True")
 
     if keyid is not None:
         # import_keys
@@ -281,7 +275,6 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
         # gpg keys should have been loaded as part of setup
         # retrieve specified key and preset passphrase
         local_keys = __salt__["gpg.list_keys"](user=runas, gnupghome=gnupghome)
-        log.debug("DGM gpg.list_keys produced local_keys \'{0}\'".format(local_keys))
         for gpg_key in local_keys:
             if keyid == gpg_key["keyid"][8:]:
                 local_uids = gpg_key["uids"]
@@ -290,9 +283,6 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     local_keygrip_to_use = gpg_key["fingerprint"]
                     local_key_fingerprint = gpg_key["fingerprint"]
                 break
-        log.debug("DGM getting gpg_key in local_keys local_uids \'{0}\', local_keyid \'{1}\', use_gpg_agent \'{2}\', local_keygrip_to_use \'{3}\', local_key_fingerprint \'{4}\'"
-        .format(local_uids, local_keyid, use_gpg_agent, local_keygrip_to_use, local_key_fingerprint)
-        )
 
         if use_gpg_agent:
             cmd = "gpg --with-keygrip --list-secret-keys"
@@ -336,9 +326,9 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     )
 
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(local_uids[0])
-
-        log.debug("DGM define_gpg_name \'{0}\'".format(define_gpg_name))
+            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
+                local_uids[0]
+            )
 
         # need to update rpm with public key
         cmd = "rpm --import {0}".format(pkg_pub_key_file)
@@ -367,7 +357,6 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
     error_msg = "Failed to sign file {0}".format(abs_file)
 
     cmd = "rpm {0} --addsign {1}".format(define_gpg_name, abs_file)
-    log.debug("DGM _sign_file cmd \'{0}\'".format(cmd))
     preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
     try:
         stdout, stderr = None, None
@@ -383,7 +372,6 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
             if stdout and SIGN_PROMPT_RE.search(stdout):
                 # have the prompt for inputting the passphrase
                 proc.sendline(phrase)
-                log.debug("DGM _sign_file have prompt for passphase \'{0}\'".format(phrase))
             else:
                 times_looped += 1
 
@@ -414,11 +402,7 @@ def _sign_files_with_gpg_agent(runas, local_keyid, abs_file, repodir, env, timeo
     Sign file with provided key utilizing gpg-agent
     """
     cmd = "rpmsign --verbose  --key-id={0} --addsign {1}".format(local_keyid, abs_file)
-    log.debug("DGM _sign_file_with_gpg_agent cmd \'{0}\'".format(cmd))
-
-    retrc = __salt__["cmd.retcode"](
-        cmd, runas=runas, cwd=repodir, use_vt=True, env=env
-    )
+    retrc = __salt__["cmd.retcode"](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
     if retrc != 0:
         raise SaltInvocationError(
             "Signing encountered errors for command '{0}', "
@@ -751,46 +735,30 @@ def make_repo(
         salt '*' pkgbuild.make_repo /var/www/html/
 
     """
-    log.debug("DGM make_repo entry repodir \'{0}\', keyid \'{1}\', env \'{2}\', use_passphrase \'{3}\', gnupghome \'{4}\', runas \'{5}\', timeout \'{6}\'"
-        .format(repodir, keyid, env, use_passphrase, gnupghome, runas, timeout))
-
     home = os.path.expanduser("~" + runas)
     rpmmacros = os.path.join(home, ".rpmmacros")
     if not os.path.exists(rpmmacros):
         _create_rpmmacros(runas)
 
-##     if gnupghome and env is None:
-##         env = {}
-    if gnupghome:
+    if gnupghome and env is None:
+        env = {}
         env["GNUPGHOME"] = gnupghome
 
-        use_gpg_agent, local_keyid, define_gpg_name, phrase = _get_gpg_key_resources(
-            keyid, env, use_passphrase, gnupghome, runas
-        )
+    use_gpg_agent, local_keyid, define_gpg_name, phrase = _get_gpg_key_resources(
+        keyid, env, use_passphrase, gnupghome, runas
+    )
 
-        log.debug("DGM _get_gpg_key_resources returns use_gpg_agent {0}, local_keyid {1}, phrase {2} , define_gpg_name {3}"
-            .format(use_gpg_agent, local_keyid, phrase, define_gpg_name))
+    # sign_it_here
+    for fileused in os.listdir(repodir):
+        if fileused.endswith(".rpm"):
+            abs_file = os.path.join(repodir, fileused)
+            if use_gpg_agent:
+                _sign_files_with_gpg_agent(
+                    runas, local_keyid, abs_file, repodir, env, timeout
+                )
+            else:
+                _sign_file(runas, define_gpg_name, phrase, abs_file, timeout)
 
-        # sign_it_here
-        for fileused in os.listdir(repodir):
-            if fileused.endswith(".rpm"):
-                abs_file = os.path.join(repodir, fileused)
-                if use_gpg_agent:
-                    log.debug("DGM signing with gpg-agent")
-                    log.debug("DGM signing with params runas {0}, local_keyid {1}, abs_file {2}, repodir {3}, env {4}"
-                        .format(runas, local_keyid, abs_file, repodir, env))
-                    _sign_files_with_gpg_agent(
-                        runas, local_keyid, abs_file, repodir, env, timeout
-                    )
-                else:
-                    log.debug("DGM plain signing")
-                    log.debug("DGM plain signing with params runas {0}, define_gpg_name {1}, phrase {2}, abs_file {3}"
-                        .format(runas, define_gpg_name, phrase, abs_file))
-                    _sign_file(runas, define_gpg_name, phrase, abs_file, timeout)
-
-    log.debug("DGM createrepo  repodir {0}".format(repodir))
     cmd = "createrepo --update {0}".format(repodir)
     retrc = __salt__["cmd.run_all"](cmd, runas=runas)
-
-    log.debug("DGM make_repor returns {0}".format(retrc))
     return retrc
