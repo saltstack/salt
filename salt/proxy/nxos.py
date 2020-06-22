@@ -68,7 +68,7 @@ save_config:
     instead of this option to improve performance.  The default behavior
     controlled by this option is preserved for backwards compatibility.
 
-Conection SSH Args:
+Connection SSH Args:
 
     prompt_name:
         (REQUIRED when `connection` is `ssh`)
