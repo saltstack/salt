@@ -205,11 +205,7 @@ class MultimasterTestDaemon(TestDaemon):
                 fail_hard=True,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -217,11 +213,7 @@ class MultimasterTestDaemon(TestDaemon):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -258,11 +250,7 @@ class MultimasterTestDaemon(TestDaemon):
                 fail_hard=True,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting second salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -270,11 +258,7 @@ class MultimasterTestDaemon(TestDaemon):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting second salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -300,11 +284,7 @@ class MultimasterTestDaemon(TestDaemon):
                 fail_hard=True,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -312,11 +292,7 @@ class MultimasterTestDaemon(TestDaemon):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -346,11 +322,7 @@ class MultimasterTestDaemon(TestDaemon):
                 fail_hard=True,
                 start_timeout=120,
             )
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -358,11 +330,7 @@ class MultimasterTestDaemon(TestDaemon):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
