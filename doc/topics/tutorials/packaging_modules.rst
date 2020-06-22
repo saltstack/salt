@@ -11,7 +11,7 @@ The salt loader was enhanced to look for external modules by looking at the
 `salt.loader` entry-point:
 
  https://setuptools.readthedocs.io/en/latest/pkg_resources.html#entry-points
- 
+
 `pkg_resources` should be installed, which is normally included in setuptools.
 
  https://setuptools.readthedocs.io/en/latest/pkg_resources.html
@@ -24,21 +24,23 @@ function:
 
     from setuptools import setup, find_packages
 
-    setup(name=<NAME>,
-	  version=<VERSION>,
-	  description=<DESC>,
-	  author=<AUTHOR>,
-	  author_email=<AUTHOR-EMAIL>,
-	  url=' ... ',
-	  packages=find_packages(),
-	  entry_points='''
-	    [salt.loader]
-	    engines_dirs = <package>.<loader-module>:engines_dirs
-	    fileserver_dirs = <package>.<loader-module>:fileserver_dirs
-	    pillar_dirs = <package>.<loader-module>:pillar_dirs
-	    returner_dirs = <package>.<loader-module>:returner_dirs
-	    roster_dirs = <package>.<loader-module>:roster_dirs
-	  ''')
+    setup(
+        name=<NAME>,
+        version=<VERSION>,
+        description=<DESC>,
+        author=<AUTHOR>,
+        author_email=<AUTHOR-EMAIL>,
+        url=" ... ",
+        packages=find_packages(),
+        entry_points="""
+        [salt.loader]
+        engines_dirs = <package>.<loader-module>:engines_dirs
+        fileserver_dirs = <package>.<loader-module>:fileserver_dirs
+        pillar_dirs = <package>.<loader-module>:pillar_dirs
+        returner_dirs = <package>.<loader-module>:returner_dirs
+        roster_dirs = <package>.<loader-module>:roster_dirs
+        """
+    )
 
 
 The above setup script example mentions a loader module. here's an example of
