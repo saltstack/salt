@@ -427,7 +427,7 @@ def extracted(
         changed but only checksums of the archive will be checked to determine if
         the extraction is required.
 
-        It will try to find a local cache of the ``source`` and check its hash agains
+        It will try to find a local cache of the ``source`` and check its hash against
         the ``source_hash``. If there is no local cache available, for example if you
         set the ``keep_source`` to ``False``,  it will try to find a cached source hash
         file in the Minion archives cache directory.
@@ -439,7 +439,7 @@ def extracted(
 
         .. warning::
             With this argument set to ``True`` Salt will only check for the ``source_hash``
-            agains the local hash of the ``sourse``. So if you, for example, remove extracted
+            against the local hash of the ``sourse``. So if you, for example, remove extracted
             files without clearing the Salt Minion cache next time you execute the state Salt
             will not notice that extraction is required if the hashes are still match.
 
