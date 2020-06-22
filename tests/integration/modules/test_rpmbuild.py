@@ -5,12 +5,11 @@ Test the ssh module
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
 import os
 import re
-import logging
 import shutil
 import subprocess
-import pytest
 
 import salt.utils.files
 import salt.utils.platform
@@ -24,7 +23,6 @@ from tests.support.helpers import (
     slowTest,
 )
 from tests.support.runtests import RUNTIME_VARS
-
 
 GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: GnuPG v2.0.22 (GNU/Linux)
@@ -286,8 +284,9 @@ class RPMSignModuleTest(ModuleCase):
             "cmd.run",
             [
                 "{0}".format(gpg_agent_cmd),
-                "GPG_TTY=\$(tty) ; export GPG_TTY",
-                "echo \$GPG_TTY=\$(tty) > {0}".format(gpg_tty_info_path),
+                "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {0}".format(
+                    gpg_tty_info_path
+                ),
             ],
             template="jinja",
             python_shell=True,
