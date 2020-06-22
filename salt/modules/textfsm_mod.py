@@ -101,7 +101,7 @@ def extract(template_path, raw_text=None, raw_text_file=None, saltenv="base"):
         Supports the same URL schemes as the ``template_path`` argument.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``template_path`` is not a ``salt://`` URL.
 
     CLI Example:
@@ -324,7 +324,7 @@ def index(
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
     include_empty: ``False``
