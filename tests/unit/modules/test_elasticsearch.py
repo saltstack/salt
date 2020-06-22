@@ -1242,7 +1242,7 @@ class ElasticsearchTestCase(TestCase):
 
     def test_index_put_settings_not_exists(self):
         """
-        Test if settings put executed against non-existinf index
+        Test if settings put executed against non-existing index
         """
 
         body = {"settings": {"index": {"number_of_replicas": 2}}}
