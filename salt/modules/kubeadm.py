@@ -189,7 +189,7 @@ def token_create(
        is 24h0m0s
 
     usages
-       Describes the ways in wich this token can be used. The default
+       Describes the ways in which this token can be used. The default
        value is ['signing', 'authentication']
 
     kubeconfig
