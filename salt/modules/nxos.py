@@ -744,7 +744,7 @@ def set_password(
         Configure crypt_salt setting
         Default: None
 
-    alogrithm
+    algorithm
         Encryption algorithm
         Default: sha256
 
