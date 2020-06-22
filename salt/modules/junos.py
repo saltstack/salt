@@ -1173,7 +1173,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentaion:
+        Please refer to below URl for PyEZ sw.install() documentation:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
