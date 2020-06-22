@@ -147,7 +147,6 @@ log = logging.getLogger(__name__)
 
 
 def _testrpm_signed(abs_path_named_rpm):
-    log.debug("DGM check signed correctly for named rpm {0}".format(abs_path_named_rpm))
     try:
         rpm_chk_sign = subprocess.Popen(
             ["rpm", "--checksig", "-v", abs_path_named_rpm],
@@ -155,7 +154,7 @@ def _testrpm_signed(abs_path_named_rpm):
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            ).communicate()[0]
+        ).communicate()[0]
     except OSError:
         return False
     if not rpm_chk_sign:
@@ -163,16 +162,19 @@ def _testrpm_signed(abs_path_named_rpm):
         return False
 
     test_string = GPG_TEST_KEY_ID.lower() + ": OK"
-    log.debug("DGM search test_string \'{0}\', with rpm_chk_sign \'{1}\'".format(test_string, rpm_chk_sign))
     CHECK_KEYID_OK = re.compile(test_string, re.M)
     retrc = CHECK_KEYID_OK.search(rpm_chk_sign.decode())
-    log.debug("signed checking, found test_string \'{0}\' in rpm_chk_sign \'{1}\', return code \'{2}\'".format(test_string, rpm_chk_sign, retrc))
+    log.debug(
+        "signed checking, found test_string '{0}' in rpm_chk_sign '{1}', return code '{2}'".format(
+            test_string, rpm_chk_sign, retrc
+        )
+    )
     if retrc:
         return True
     return False
 
 
-@skip_if_binaries_missing(["gpg", "gpg-agent", "/usr/libexec/gpg-preset-passphrase", "rpm", "createrepo"], check_all=True)
+@skip_if_binaries_missing(["gpg", "rpm", "createrepo"], check_all=True)
 class RPMSignModuleTest(ModuleCase):
     """
     Test the RPM Signing module
@@ -245,6 +247,9 @@ class RPMSignModuleTest(ModuleCase):
 
     @slowTest
     @skip_if_not_root
+    @skip_if_binaries_missing(
+        ["gpgconf", "gpg-agent", "/usr/libexec/gpg-preset-passphrase"], check_all=True
+    )
     @requires_system_grains
     @destructiveTest
     @requires_salt_modules("pkgbuild.make_repo")
@@ -254,7 +259,9 @@ class RPMSignModuleTest(ModuleCase):
         """
         if not (grains["os_family"] == "RedHat" and grains["osmajorrelease"] >= 8):
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}".format(grains["os_family"], grains["osmajorrelease"])
+                "TODO: test not configured for {0} and major release {1}".format(
+                    grains["os_family"], grains["osmajorrelease"]
+                )
             )
 
         pillar = self.run_function("pillar.data")
@@ -262,22 +269,52 @@ class RPMSignModuleTest(ModuleCase):
         self.assertEqual(pillar["gpg_pkg_pub_keyname"], "gpg_pkg_key.pub")
 
         # launch gpg-agent
-# miracle occurs here and start gpg-agent
+        self.run_function(
+            "cmd.run", ["gpgconf --kill gpg-agent"], template="jinja", python_shell=True
+        )
+        gpg_agent_cmd = "gpg-agent --homedir {0} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
+            self.gpghome
+        )
+        gpg_tty_info_path = os.path.join(self.gpghome, "gpg_tty_info")
+        self.run_function(
+            "cmd.run",
+            ["{0}".format(gpg_agent_cmd)],
+            template="jinja",
+            python_shell=True,
+        )
+        self.run_function(
+            "cmd.run",
+            [
+                "{0}".format(gpg_agent_cmd),
+                "GPG_TTY=\$(tty) ; export GPG_TTY",
+                "echo \$GPG_TTY=\$(tty) > {0}".format(gpg_tty_info_path),
+            ],
+            template="jinja",
+            python_shell=True,
+        )
 
         # sign rpm and create repo
-        ret = self.run_function("pkgbuild.make_repo",
-                repodir=self.repodir,
-                keyid=self.gpg_keyid,
-                env=None,
-                use_passphrase=True,
-                gnupghome=self.gpghome,
-                runas="root",
-                timeout=15.0)
+        ret = self.run_function(
+            "pkgbuild.make_repo",
+            repodir=self.repodir,
+            keyid=self.gpg_keyid,
+            env=None,
+            use_passphrase=True,
+            gnupghome=self.gpghome,
+            runas="root",
+            timeout=15.0,
+        )
 
         self.assertNotEqual(ret, {})
         test_rpm_path = os.path.join(self.repodir, self.repo_named_rpm)
         self.assertTrue(_testrpm_signed(test_rpm_path))
-# TODO needs to check repodata directory is created
+        test_repodata_path = os.path.join(self.repodir, "repodata")
+        self.assertTrue(os.path.isdir(test_repodata_path))
+        test_repomd_xml_path = os.path.join(test_repodata_path, "repomd.xml")
+        self.assertTrue(os.path.isfile(test_repomd_xml_path))
+        self.run_function(
+            "cmd.run", ["gpgconf --kill gpg-agent"], template="jinja", python_shell=True
+        )
 
     @slowTest
     @skip_if_not_root
@@ -293,16 +330,18 @@ class RPMSignModuleTest(ModuleCase):
                 "TODO: test not configured for {0}".format(grains["os_family"])
             )
 
-        if (grains["os_family"] == "RedHat" and grains["osmajorrelease"] >= 8):
+        if grains["os_family"] == "RedHat" and grains["osmajorrelease"] >= 8:
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}"
-                .format(grains["os_family"], grains["osmajorrelease"])
+                "TODO: test not configured for {0} and major release {1}".format(
+                    grains["os_family"], grains["osmajorrelease"]
+                )
             )
 
-        if (grains["os_family"] == "Amazon" and grains["osmajorrelease"] != 2):
+        if grains["os_family"] == "Amazon" and grains["osmajorrelease"] != 2:
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}"
-                .format(grains["os_family"], grains["osmajorrelease"])
+                "TODO: test not configured for {0} and major release {1}".format(
+                    grains["os_family"], grains["osmajorrelease"]
+                )
             )
 
         pillar = self.run_function("pillar.data")
@@ -310,16 +349,21 @@ class RPMSignModuleTest(ModuleCase):
         self.assertEqual(pillar["gpg_pkg_pub_keyname"], "gpg_pkg_key.pub")
 
         # sign rpm and create repo
-        ret = self.run_function("pkgbuild.make_repo",
-                repodir=self.repodir,
-                keyid=self.gpg_keyid,
-                env=None,
-                use_passphrase=True,
-                gnupghome=self.gpghome,
-                runas="root",
-                timeout=15.0)
+        ret = self.run_function(
+            "pkgbuild.make_repo",
+            repodir=self.repodir,
+            keyid=self.gpg_keyid,
+            env=None,
+            use_passphrase=True,
+            gnupghome=self.gpghome,
+            runas="root",
+            timeout=15.0,
+        )
 
         self.assertNotEqual(ret, {})
         test_rpm_path = os.path.join(self.repodir, self.repo_named_rpm)
         self.assertTrue(_testrpm_signed(test_rpm_path))
-# TODO needs to check repodata directory is created
+        test_repodata_path = os.path.join(self.repodir, "repodata")
+        self.assertTrue(os.path.isdir(test_repodata_path))
+        test_repomd_xml_path = os.path.join(test_repodata_path, "repomd.xml")
+        self.assertTrue(os.path.isfile(test_repomd_xml_path))
