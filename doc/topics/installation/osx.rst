@@ -8,7 +8,6 @@ Installation from the Official SaltStack Repository
 ===================================================
 
 **Latest stable build from the selected branch**:
-|osxdownloadpy2|
 |osxdownloadpy3|
 
 The output of ``md5 <salt pkg>`` should match the contents of the
