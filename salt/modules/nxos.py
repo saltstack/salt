@@ -197,7 +197,7 @@ def check_role(username, role, **kwargs):
 
 def cmd(command, *args, **kwargs):
     """
-    NOTE: This function is preserved for backwards compatibilty.  This allows
+    NOTE: This function is preserved for backwards compatibility.  This allows
     commands to be executed using either of the following syntactic forms.
 
     salt '*' nxos.cmd <function>
