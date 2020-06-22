@@ -186,6 +186,9 @@ class TestDaemon(object):
         self.colors = salt.utils.color.get_colors(
             self.parser.options.no_colors is False
         )
+        self.clear_line = "\r{0}\r".format(
+            " " * getattr(self.parser.options, "output_columns", PNUM)
+        )
         self.virt_minion_enabled = False
         if salt.utils.path.which("docker"):
             for test in self.parser.options.name:
@@ -267,6 +270,40 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
+    def start_virt_minion(self, name, config_dir):
+        """
+        Start virt minion daemon
+        """
+        try:
+            sys.stdout.write(
+                " * {LIGHT_YELLOW}Starting {name} ... {ENDC}".format(
+                    **self.colors, name=name,
+                )
+            )
+            sys.stdout.flush()
+            process = start_virt_daemon(
+                container_img="quay.io/rst0git/virt-minion",
+                container_name=name,
+                daemon_config_dir=config_dir,
+            )
+            sys.stdout.write(self.clear_line)
+            sys.stdout.write(
+                " * {LIGHT_GREEN}Starting {name} ... STARTED!\n{ENDC}".format(
+                    **self.colors, name=name,
+                )
+            )
+            sys.stdout.flush()
+            return process
+        except (RuntimeWarning, RuntimeError) as err:
+            sys.stdout.write(self.clear_line)
+            sys.stdout.write(
+                " * {LIGHT_RED}Starting {name} ... FAILED!\n{ENDC}".format(
+                    **self.colors, name=name,
+                )
+            )
+            sys.stdout.flush()
+            raise TestDaemonStartFailed(str(err))
+
     def start_zeromq_daemons(self):
         """
         Fire up the daemons used for zeromq tests
@@ -276,9 +313,6 @@ class TestDaemon(object):
         )
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
         self.log_server_process.start()
-        clear_current_line = "\r{0}\r".format(
-            " " * getattr(self.parser.options, "output_columns", PNUM)
-        )
         try:
             sys.stdout.write(
                 " * {LIGHT_YELLOW}Starting salt-master ... {ENDC}".format(**self.colors)
@@ -297,7 +331,7 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -305,7 +339,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -332,7 +366,7 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -340,7 +374,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -350,63 +384,12 @@ class TestDaemon(object):
             raise TestDaemonStartFailed(str(err))
 
         if self.virt_minion_enabled:
-            try:
-                sys.stdout.write(
-                    " * {LIGHT_YELLOW}Starting virt_minion_0 ... {ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                self.virt_minion_0_process = start_virt_daemon(
-                    container_name="virt_minion_0",
-                    container_img="quay.io/rst0git/virt-minion",
-                    daemon_config_dir=RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR,
-                )
-                sys.stdout.write(clear_current_line)
-                sys.stdout.write(
-                    " * {LIGHT_GREEN}Starting virt_minion_0 ... STARTED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-            except (RuntimeWarning, RuntimeError) as err:
-                sys.stdout.write(clear_current_line)
-                sys.stdout.write(
-                    " * {LIGHT_RED}Starting virt_minion_0 ... FAILED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                raise TestDaemonStartFailed(str(err))
-
-            try:
-                sys.stdout.write(
-                    " * {LIGHT_YELLOW}Starting virt_minion_1 ... {ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                self.virt_minion_1_process = start_virt_daemon(
-                    container_name="virt_minion_1",
-                    container_img="quay.io/rst0git/virt-minion",
-                    daemon_config_dir=RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR,
-                )
-                sys.stdout.write(clear_current_line)
-                sys.stdout.write(
-                    " * {LIGHT_GREEN}Starting virt_minion_1 ... STARTED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-            except (RuntimeWarning, RuntimeError) as err:
-                sys.stdout.write(clear_current_line)
-                sys.stdout.write(
-                    " * {LIGHT_RED}Starting virt_minion_1 ... FAILED!\n{ENDC}".format(
-                        **self.colors
-                    )
-                )
-                sys.stdout.flush()
-                raise TestDaemonStartFailed(str(err))
+            self.virt_minion_0_process = self.start_virt_minion(
+                "virt_minion_0", RUNTIME_VARS.TMP_VIRT_MINION_0_CONF_DIR,
+            )
+            self.virt_minion_1_process = self.start_virt_minion(
+                "virt_minion_1", RUNTIME_VARS.TMP_VIRT_MINION_1_CONF_DIR,
+            )
 
         try:
             sys.stdout.write(
@@ -430,7 +413,7 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting sub salt-minion ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -438,7 +421,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -470,7 +453,7 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting syndic salt-master ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -478,7 +461,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -505,7 +488,7 @@ class TestDaemon(object):
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120,
             )
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_GREEN}Starting salt-syndic ... STARTED!\n{ENDC}".format(
                     **self.colors
@@ -513,7 +496,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError) as err:
-            sys.stdout.write(clear_current_line)
+            sys.stdout.write(self.clear_line)
             sys.stdout.write(
                 " * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}".format(
                     **self.colors
@@ -543,7 +526,7 @@ class TestDaemon(object):
                     fail_hard=True,
                     start_timeout=120,
                 )
-                sys.stdout.write(clear_current_line)
+                sys.stdout.write(self.clear_line)
                 sys.stdout.write(
                     " * {LIGHT_GREEN}Starting salt-proxy ... STARTED!\n{ENDC}".format(
                         **self.colors
@@ -551,7 +534,7 @@ class TestDaemon(object):
                 )
                 sys.stdout.flush()
             except (RuntimeWarning, RuntimeError) as err:
-                sys.stdout.write(clear_current_line)
+                sys.stdout.write(self.clear_line)
                 sys.stdout.write(
                     " * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}".format(
                         **self.colors
@@ -1481,11 +1464,7 @@ class TestDaemon(object):
         job_finished = False
         while now <= expire:
             running = self.__client_job_running(targets, jid)
-            sys.stdout.write(
-                "\r{0}\r".format(
-                    " " * getattr(self.parser.options, "output_columns", PNUM)
-                )
-            )
+            sys.stdout.write(self.clear_line)
             if not running and job_finished is False:
                 # Let's not have false positives and wait one more seconds
                 job_finished = True
