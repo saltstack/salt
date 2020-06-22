@@ -14,9 +14,12 @@ Installation from the Official SaltStack Repository
 The output of ``md5 <salt pkg>`` should match the contents of the
 corresponding md5 file.
 
-`Earlier builds from supported branches <https://repo.saltstack.com/osx/>`__
+.. note::
+    - `Earlier builds from supported branches 
+      <https://repo.saltstack.com/osx/>`__
 
-`Archived builds from unsupported branches <https://repo.saltstack.com/osx/archive/>`__
+    - `Archived builds from unsupported branches 
+      <https://archive.repo.saltstack.com/osx/>`__
 
 Installation from Homebrew
 ==========================

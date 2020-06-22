@@ -22,6 +22,27 @@ the SaltStack Repository.
 - `Amazon Linux <https://repo.saltstack.com/#amzn>`_
 
 .. note::
+    Archived builds from unsupported branches: 
+    
+    **Red Hat / CentOS**
+    
+    - `Archive 1 <https://archive.repo.saltstack.com/py3/redhat/>`__
+    - `Archive 2 <https://archive.repo.saltstack.com/yum/redhat/>`__
+
+    If looking to use archives, the same directions from the `RHEL/CentOS
+    install directions <https://repo.saltstack.com/#rhel>`__ can be used by
+    replacing the URL paths with the appropriate archive location.
+
+    **Amazon Linux**
+
+    - `Archive 1 <https://archive.repo.saltstack.com/py3/amazon/>`__
+    - `Archive 2 <https://archive.repo.saltstack.com/yum/amazon/>`__
+
+    If looking to use archives, the same directions from the `Amazon
+    install directions <https://repo.saltstack.com/#amzn>`__ can be used by
+    replacing the URL paths with the appropriate archive location.
+
+.. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
     RHEL systems. SaltStack repository provides all needed dependencies.
 
