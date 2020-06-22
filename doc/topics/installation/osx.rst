@@ -15,10 +15,10 @@ The output of ``md5 <salt pkg>`` should match the contents of the
 corresponding md5 file.
 
 .. note::
-    - `Earlier builds from supported branches 
+    - `Earlier builds from supported branches
       <https://repo.saltstack.com/osx/>`__
 
-    - `Archived builds from unsupported branches 
+    - `Archived builds from unsupported branches
       <https://archive.repo.saltstack.com/osx/>`__
 
 Installation from Homebrew

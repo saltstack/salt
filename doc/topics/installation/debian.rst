@@ -24,13 +24,13 @@ Official SaltStack repository.
 Instructions are at https://repo.saltstack.com/#debian.
 
 .. note::
-    Archived builds from unsupported branches: 
+    Archived builds from unsupported branches:
     
     - `Archive 1 <https://archive.repo.saltstack.com/py3/debian/>`__
     - `Archive 2 <https://archive.repo.saltstack.com/debian/dists/>`__
 
-    If looking to use archives, the same directions from the `Debian install 
-    directions <https://repo.saltstack.com/#debian>`__ can be used by replacing 
+    If looking to use archives, the same directions from the `Debian install
+    directions <https://repo.saltstack.com/#debian>`__ can be used by replacing
     the URL paths with the appropriate archive location.
 
 .. warning::
