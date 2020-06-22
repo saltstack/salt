@@ -256,11 +256,9 @@ Fixed
 - Fixed `win_system.join_domain` failures. (#57360)
 - Fixed `template_vars` functionality on Junos. (#57388)
 - Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
-- Wrong isinstance in ini options absent (#53874)
-- Fix issue with finding the real python executable during tests (#56460)
+- Fix issue with finding the real python executable during tests (#56686)
 - Fix broken link regarding the 1024 character limit for YAML keys (#56540)
 - Fix grain.delkey grains.delval for nested keys (#54819)
-- Virt disks fixes (#56666)
 
 
 Added
