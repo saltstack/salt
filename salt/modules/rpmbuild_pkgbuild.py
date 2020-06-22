@@ -246,11 +246,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
     retrc = 0
     use_gpg_agent = False
 
-    log.debug("DGM salt _get_gpg_key_resources input keyid \'{0}\', env \'{1}\', use_passphrase \'{2}\', gnupghome \'{3}\', runas \'{4}\'"
-        .format(keyid, env, use_passphrase, gnupghome, runas))
-
-    if (__grains__.get("os_family") == "Redhat" and __grains__.get("osmajorrelease") >= 8):
+    log.debug("DGM _get_gpg_key_resources check use_gpg_agent OS family \'{0}\', OS MAjor Release \'{1}\',".format(__grains__.get("os_family"), __grains__.get("osmajorrelease")))
+    if (__grains__.get("os_family") == "RedHat" and __grains__.get("osmajorrelease") >= 8):
         use_gpg_agent = True
+        log.debug("DGM _get_gpg_key_resources set use_gpg_agent to True")
 
     if keyid is not None:
         # import_keys
@@ -282,7 +281,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
         # gpg keys should have been loaded as part of setup
         # retrieve specified key and preset passphrase
         local_keys = __salt__["gpg.list_keys"](user=runas, gnupghome=gnupghome)
-        log.debug("DGM gpg.list_keys produced local_keys '\{0}\'".format(local_keys))
+        log.debug("DGM gpg.list_keys produced local_keys \'{0}\'".format(local_keys))
         for gpg_key in local_keys:
             if keyid == gpg_key["keyid"][8:]:
                 local_uids = gpg_key["uids"]
@@ -336,11 +335,8 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                         "check logs for further details".format(retrc)
                     )
 
-## DGM ??? no longer needed since .rpmmacros is defined as part of make_repo
         if local_uids:
-           define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
-               local_uids[0]
-           )
+            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(local_uids[0])
 
         log.debug("DGM define_gpg_name \'{0}\'".format(define_gpg_name))
 
@@ -755,14 +751,14 @@ def make_repo(
         salt '*' pkgbuild.make_repo /var/www/html/
 
     """
-    log.debug("DGM make_repo entry repodir \'{0}\', keyid \'{1}\, env \'{2}\', use_passphrase \'{3}\', gnupghome \'{4}\', runas \'{5}\', timeout \'{6}\'"
+    log.debug("DGM make_repo entry repodir \'{0}\', keyid \'{1}\', env \'{2}\', use_passphrase \'{3}\', gnupghome \'{4}\', runas \'{5}\', timeout \'{6}\'"
         .format(repodir, keyid, env, use_passphrase, gnupghome, runas, timeout))
 
     home = os.path.expanduser("~" + runas)
     rpmmacros = os.path.join(home, ".rpmmacros")
     if not os.path.exists(rpmmacros):
         _create_rpmmacros(runas)
-    
+
 ##     if gnupghome and env is None:
 ##         env = {}
     if gnupghome:
