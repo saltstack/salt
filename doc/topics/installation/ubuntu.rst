@@ -15,13 +15,13 @@ are available in the SaltStack repository.
 Instructions are at https://repo.saltstack.com/#ubuntu.
 
 .. note::
-    Archived builds from unsupported branches: 
+    Archived builds from unsupported branches:
     
     - `Archive 1 <https://archive.repo.saltstack.com/py3/ubuntu/>`__
     - `Archive 2 <https://archive.repo.saltstack.com/apt/ubuntu/>`__
 
-    If looking to use archives, the same directions from the `Ubuntu install 
-    directions <https://repo.saltstack.com/#ubuntu>`__ can be used by replacing 
+    If looking to use archives, the same directions from the `Ubuntu install
+    directions <https://repo.saltstack.com/#ubuntu>`__ can be used by replacing
     the URL paths with the appropriate archive location.
 
 .. _ubuntu-install-pkgs:

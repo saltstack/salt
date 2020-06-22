@@ -23,7 +23,7 @@ The output of ``md5sum <salt minion exe>`` should match the contents of the
 corresponding md5 file.
 
 .. note::
-    - `Earlier builds from supported branches 
+    - `Earlier builds from supported branches
       <https://repo.saltstack.com/windows/>`__
 
     Archived builds from unsupported branches:
