@@ -7,8 +7,13 @@ SUSE
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for SUSE 12 SP1, SUSE 12, SUSE 11, openSUSE 13 and openSUSE Leap 42.1
-are available in the SaltStack Repository.
+The SaltStack Repository has packages available for the following platforms:
+
+- SLES 11 SP4
+- SLES 12 / SLES 12 SP1 through SP4
+- SLES 15
+- openSUSE Leap 15.0, 15.1, 42.2, 42.3
+- openSUSE Tumbleweed
 
 Instructions are at https://repo.saltstack.com/#suse.
 
