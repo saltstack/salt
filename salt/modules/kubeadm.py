@@ -180,7 +180,7 @@ def token_create(
        A human friendly description of how this token is used
 
     groups
-       List of extra groups that this token will authenticate, defaut
+       List of extra groups that this token will authenticate, default
        to ['system:bootstrappers:kubeadm:default-node-token']
 
     ttl
