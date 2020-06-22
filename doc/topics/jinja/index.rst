@@ -379,7 +379,7 @@ Returns:
 
 .. code-block:: python
 
-  ('defabcdef',)
+  ("defabcdef",)
 
 
 .. jinja_ref:: regex_match
@@ -740,7 +740,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': [4], 'old': [3]}
+  {"new": [4], "old": [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -762,7 +762,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': {'new': 'c', 'old': 'b'}}
+  {"a": {"new": "c", "old": "b"}}
 
 
 .. jinja_ref:: is_hex
@@ -1018,7 +1018,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': '\xd0\x94'}
+  {"a": "\xd0\x94"}
 
 
 .. jinja_ref:: tojson
@@ -1381,7 +1381,7 @@ Returns:
 
 .. code-block:: python
 
-  {'c1': 'foo'}
+  {"c1": "foo"}
 
 .. code-block:: jinja
 
@@ -1391,7 +1391,7 @@ Returns:
 
 .. code-block:: python
 
-  'default'
+  "default"
 
 
 .. jinja_ref:: json_query
@@ -1571,7 +1571,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', 'fe80::']
+  ["192.168.0.1", "fe80::"]
 
 
 .. jinja_ref:: ipv4
@@ -1594,7 +1594,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1']
+  ["192.168.0.1"]
 
 
 .. jinja_ref:: ipv6
@@ -1617,7 +1617,7 @@ Returns:
 
 .. code-block:: python
 
-  ['fe80::']
+  ["fe80::"]
 
 
 .. jinja_ref:: network_hosts
@@ -1644,7 +1644,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', '192.168.0.2']
+  ["192.168.0.1", "192.168.0.2"]
 
 
 .. jinja_ref:: network_size
@@ -1947,7 +1947,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 3}]
+    [{"value": 3}]
 
 .. jinja_ref:: match
 
@@ -1976,7 +1976,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 'b'}, {'value': 'c'}]
+    [{"value": "b"}, {"value": "c"}]
 
 
 Test supports additional optional arguments: ``ignorecase``, ``multiline``
