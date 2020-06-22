@@ -118,7 +118,7 @@ Connection SSH Args:
         Extra optional arguments used for connecting to switch.
 
     key_accept:
-        Wheather or not to accept the host key of the switch on initial login.
+        Whether or not to accept the host key of the switch on initial login.
         Default: `False`
 
 Connection NXAPI Args:
