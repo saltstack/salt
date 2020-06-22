@@ -33,7 +33,7 @@ CALLBACK_DEFS constant. If the filters list contains ``all``, all
 events will be relayed.
 
 Be aware that the list of events increases with libvirt versions, for example
-network events have been added in libvirt 1.2.1.
+network events have been added in libvirt 1.2.1 and storage events in 2.0.0.
 
 Running the engine on non-root
 ------------------------------
@@ -137,8 +137,14 @@ CALLBACK_DEFS = {
         ("block_threshold", None),
     ),
     "network": (("lifecycle", None),),
-    "pool": (("lifecycle", None), ("refresh", None)),
-    "nodedev": (("lifecycle", None), ("update", None)),
+    "pool": (
+        ("lifecycle", "VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE"),
+        ("refresh", "VIR_STORAGE_POOL_EVENT_ID_REFRESH"),
+    ),
+    "nodedev": (
+        ("lifecycle", "VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE"),
+        ("update", "VIR_NODE_DEVICE_EVENT_ID_UPDATE"),
+    ),
     "secret": (("lifecycle", None), ("value_changed", None)),
 }
 
@@ -753,7 +759,6 @@ def start(uri=None, tag_prefix="salt/engines/libvirt_events", filters=None):
         exit_loop = False
         while not exit_loop:
             exit_loop = libvirt.virEventRunDefaultImpl() < 0
-            log.debug("=== in the loop exit_loop %s ===", exit_loop)
 
     except Exception as err:  # pylint: disable=broad-except
         log.exception(err)
