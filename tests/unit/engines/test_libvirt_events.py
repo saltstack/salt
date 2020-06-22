@@ -28,6 +28,10 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
         )  # Don't loop for ever
         self.mock_libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE = 0
         self.mock_libvirt.VIR_DOMAIN_EVENT_ID_REBOOT = 1
+        self.mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE = 0
+        self.mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_REFRESH = 1
+        self.mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE = 0
+        self.mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_UPDATE = 1
         self.addCleanup(patcher.stop)
         self.addCleanup(delattr, self, "mock_libvirt")
         return {libvirt_events: {}}
@@ -111,6 +115,30 @@ class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):
             mock_libvirt.VIR_NETWORK_EVENT_ID_LIFECYCLE,
             libvirt_events._network_event_lifecycle_cb,
             {"prefix": "test/prefix", "object": "network", "event": "lifecycle"},
+        )
+        mock_cnx.storagePoolEventRegisterAny.assert_any_call(
+            None,
+            mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE,
+            libvirt_events._pool_event_lifecycle_cb,
+            {"prefix": "test/prefix", "object": "pool", "event": "lifecycle"},
+        )
+        mock_cnx.storagePoolEventRegisterAny.assert_any_call(
+            None,
+            mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_REFRESH,
+            libvirt_events._pool_event_refresh_cb,
+            {"prefix": "test/prefix", "object": "pool", "event": "refresh"},
+        )
+        mock_cnx.nodeDeviceEventRegisterAny.assert_any_call(
+            None,
+            mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE,
+            libvirt_events._nodedev_event_lifecycle_cb,
+            {"prefix": "test/prefix", "object": "nodedev", "event": "lifecycle"},
+        )
+        mock_cnx.nodeDeviceEventRegisterAny.assert_any_call(
+            None,
+            mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_UPDATE,
+            libvirt_events._nodedev_event_update_cb,
+            {"prefix": "test/prefix", "object": "nodedev", "event": "update"},
         )
 
         # Check that the deregister events are called with the result of register
