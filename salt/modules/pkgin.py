@@ -694,7 +694,7 @@ def normalize_name(pkgs, **kwargs):
 
     .. note::
         Nothing special to do to normalize, just return
-        the original. (We do need it to be comaptible
+        the original. (We do need it to be compatible
         with the pkg_resource provider.)
     """
     return pkgs
