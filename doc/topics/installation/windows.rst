@@ -41,7 +41,9 @@ The 64bit installer has been tested on Windows 7 64bit and Windows Server
 Please file a bug report on our GitHub repo if issues for other platforms are
 found.
 
-There are installers available for Python 2 and Python 3.
+There are installers available for Python 3. Starting with Salt 3001, only
+Python 3 builds of the Windows Salt Minion will be built. Python 2 builds
+of earlier Salt Minion versions can be found in the archives.
 
 The installer will detect previous installations of Salt and ask if you would
 like to remove them. Clicking OK will remove the Salt binaries and related files
