@@ -30,7 +30,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_default_output(self):
         """
-        Test the output of a fixture tfstate file wich contains libvirt
+        Test the output of a fixture tfstate file which contains libvirt
         resources.
         """
         tfstate = os.path.join(
@@ -79,7 +79,7 @@ class TerraformTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_default_matching(self):
         """
-        Test the output of a fixture tfstate file wich contains libvirt
+        Test the output of a fixture tfstate file which contains libvirt
         resources using matching
         """
         tfstate = os.path.join(
