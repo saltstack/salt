@@ -11,10 +11,11 @@ import salt.utils.files
 # Import Salt Libs
 from salt.cloud.clouds import ec2
 from salt.exceptions import SaltCloudSystemExit
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import PropertyMock, patch
 
 # Import Salt Testing Libs
+from tests.support.helpers import ForceImportErrorOn
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import PropertyMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.unit.test_crypt import PRIVKEY_DATA
@@ -75,12 +76,35 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
                 SaltCloudSystemExit, ec2._validate_key_path_and_mode, "key_file"
             )
 
-    @skipIf(not ec2.HAS_M2 and not ec2.HAS_PYCRYPTO, "Needs crypto library")
+    @skipIf(not ec2.HAS_PYCRYPTO, "Needs Crypto library")
     @patch("salt.cloud.clouds.ec2._get_node")
     @patch("salt.cloud.clouds.ec2.get_location")
     @patch("salt.cloud.clouds.ec2.get_provider")
     @patch("salt.utils.aws.query")
-    def test_get_password_data(self, query, get_provider, get_location, _get_node):
+    def test_get_password_data_crypto(
+        self, query, get_provider, get_location, _get_node
+    ):
+        with ForceImportErrorOn("M2Crypto"):
+            query.return_value = [{"passwordData": PASS_DATA}]
+            _get_node.return_value = {"instanceId": "i-abcdef"}
+            get_location.return_value = "us-west2"
+            get_provider.return_value = "ec2"
+            with salt.utils.files.fopen(self.key_file, "w") as fp:
+                fp.write(PRIVKEY_DATA)
+            ret = ec2.get_password_data(
+                name="i-abcddef", kwargs={"key_file": self.key_file}, call="action"
+            )
+            assert ret["passwordData"] == PASS_DATA
+            assert ret["password"] == "testp4ss!"
+
+    @skipIf(not ec2.HAS_M2, "Needs M2Crypto library")
+    @patch("salt.cloud.clouds.ec2._get_node")
+    @patch("salt.cloud.clouds.ec2.get_location")
+    @patch("salt.cloud.clouds.ec2.get_provider")
+    @patch("salt.utils.aws.query")
+    def test_get_password_data_m2crypto(
+        self, query, get_provider, get_location, _get_node
+    ):
         query.return_value = [{"passwordData": PASS_DATA}]
         _get_node.return_value = {"instanceId": "i-abcdef"}
         get_location.return_value = "us-west2"

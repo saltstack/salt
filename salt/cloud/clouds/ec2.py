@@ -138,7 +138,9 @@ except ImportError:
     HAS_M2 = False
 
 try:
-    import Crypto
+    import Crypto.Hash.SHA
+    import Crypto.PublicKey.RSA
+    import Crypto.Random
 
     # PKCS1_v1_5 was added in PyCrypto 2.5
     from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
