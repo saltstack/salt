@@ -1633,3 +1633,6 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
             assert ".zip" in loader.suffix_order
         finally:
             self.opts["enable_zip_modules"] = False
+        loader = self.__init_loader()
+        assert ".zip" not in loader.suffix_map
+        assert ".zip" not in loader.suffix_order
