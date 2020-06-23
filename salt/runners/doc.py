@@ -25,7 +25,7 @@ def __virtual__():
     return True
 
 
-def runner():
+def runner(mod_name="*"):
     """
     Return all inline documentation for runner modules
 
@@ -36,7 +36,10 @@ def runner():
         salt-run doc.runner
     """
     client = salt.runner.RunnerClient(__opts__)
-    ret = client.get_docs()
+    if mod_name == "*":
+        ret = client.get_docs()
+    else:
+        ret = client.get_docs(mod_name)
     return ret
 
 
