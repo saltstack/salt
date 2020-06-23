@@ -20,7 +20,7 @@ data directory.
         - locale: C
         - runas: postgres
         - allow_group_access: True
-        - data_checksums: True
+        - checksums: True
         - wal_segsize: 32
 
 """
