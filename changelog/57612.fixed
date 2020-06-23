@@ -1,0 +1,2 @@
+Fixes issue with virtual block devices, like loopbacks and LVMs, wrongly
+populating the "disks" or "SSDs" grains.
