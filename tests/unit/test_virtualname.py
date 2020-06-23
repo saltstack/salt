@@ -10,7 +10,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -64,23 +64,19 @@ class VirtualNameTestCase(TestCase):
                     )
         return ret
 
-    @skipIf(
-        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
-        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
-    )
     def test_check_virtualname(self):
         """
         Test that the virtualname is in __name__ of the module
         """
         errors = []
-        for entry in os.listdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt/")):
+        for entry in os.listdir(RUNTIME_VARS.SALT_CODE_DIR):
             name, path = os.path.splitext(os.path.basename(entry))[0], entry
             if name.startswith(".") or name.startswith("_") or not os.path.isdir(path):
                 continue
             if name in ("cli", "defaults", "spm", "daemons", "ext", "templates"):
                 continue
             if name == "cloud":
-                entry = os.path.join(RUNTIME_VARS.CODE_DIR, "salt", "cloud", "clouds")
+                entry = os.path.join(RUNTIME_VARS.SALT_CODE_DIR, "cloud", "clouds")
             errors.extend(self._check_modules(entry))
         for error in errors:
             log.critical(error)

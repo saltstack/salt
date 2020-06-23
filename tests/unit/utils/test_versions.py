@@ -19,7 +19,7 @@ import salt.version
 from salt.utils.versions import LooseVersion, StrictVersion
 from tests.support.helpers import slowTest
 from tests.support.mock import patch
-from tests.support.paths import CODE_DIR
+from tests.support.paths import SALT_CODE_DIR
 from tests.support.unit import TestCase, skipIf
 
 
@@ -103,7 +103,7 @@ class VersionTestCase(TestCase):
         query = "salt.utils.versions.warn_until("
         names = salt.version.SaltStackVersion.NAMES
 
-        cmd = "grep -lr {} -A 1 {}".format(query, os.path.join(CODE_DIR, "salt"))
+        cmd = ["grep", "-lr", query, "-A", "1", SALT_CODE_DIR]
 
         grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
 

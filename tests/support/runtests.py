@@ -206,6 +206,7 @@ RUNTIME_VARS = RuntimeVars(
     RUNNING_TESTS_USER=this_user(),
     RUNTIME_CONFIGS={},
     CODE_DIR=paths.CODE_DIR,
+    SALT_CODE_DIR=paths.SALT_CODE_DIR,
     BASE_FILES=paths.BASE_FILES,
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,

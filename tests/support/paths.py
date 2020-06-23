@@ -16,10 +16,12 @@ import re
 import sys
 import tempfile
 
+import salt
 import salt.utils.path
 
 log = logging.getLogger(__name__)
 
+SALT_CODE_DIR = os.path.dirname(os.path.normpath(os.path.abspath(salt.__file__)))
 TESTS_DIR = os.path.dirname(
     os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 )
