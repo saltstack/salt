@@ -40,9 +40,10 @@ exist for earlier Salt Minion versions.
     The installation executable installs dependencies that the Salt minion
     requires.
 
-The 64bit and 32bit installers have been tested on Windows 10, Windows Server
-2016, and Windows Server 2019. Please file a bug report on our GitHub repo if
-issues for other platforms are found.
+The 64bit and 32bit installers have been tested on Windows 8.1, Windows Server
+2012 R2, Windows 10, Windows Server 2016, and Windows Server 2019. 32bit
+installers have only been tested on 64bit systems. Please file a bug report on
+our GitHub repo if issues for other platforms are found.
 
 The installer will detect previous installations of Salt and ask if you would
 like to remove them. Clicking OK will remove the Salt binaries and related files
