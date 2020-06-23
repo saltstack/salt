@@ -3,11 +3,11 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
-from tests.support.unit import TestCase
-
 import salt.config
 import salt.loader
+
+# Import Salt Testing libs
+from tests.support.unit import TestCase
 
 
 class ConfirmTop(TestCase):
@@ -16,5 +16,5 @@ class ConfirmTop(TestCase):
         self.matchers = salt.loader.matchers(opts)
 
     def test_sanity(self):
-        match = self.matchers['confirm_top.confirm_top']
-        self.assertTrue(match('*', []))
+        match = self.matchers["confirm_top.confirm_top"]
+        self.assertTrue(match("*", []))

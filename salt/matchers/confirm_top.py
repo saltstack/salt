@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-The matcher subsystem needs a function called 'confirm_top', which
+The matcher subsystem needs a function called "confirm_top", which
 takes the data passed to a top file environment and determines if that
 data matches this minion.
 """
@@ -18,7 +18,7 @@ def confirm_top(match, data, nodegroups=None):
     Takes the data passed to a top file environment and determines if the
     data matches this minion
     """
-    matcher = 'compound'
+    matcher = "compound"
     for item in data:
         if isinstance(item, dict):
             if "match" in item:
@@ -32,4 +32,4 @@ def confirm_top(match, data, nodegroups=None):
         m = matchers[funcname]
         return m(match)
     # except TypeError, KeyError:
-    #     log.error('Attempting to match with unknown matcher: %s', matcher)
+    #     log.error("Attempting to match with unknown matcher: %s", matcher)
