@@ -752,7 +752,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["devtype"] = "IPIP"
         for opt in ["my_inner_ipaddr", "my_outer_ipaddr"]:
             if opt not in opts:
-                _raise_error_iface(iface, opts[opt], ["1.2.3.4"])
+                _raise_error_iface(iface, opt, ["1.2.3.4"])
             else:
                 result[opt] = opts[opt]
     if iface_type == "ib":
