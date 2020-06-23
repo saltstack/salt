@@ -711,7 +711,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if iface_type != "slave":
                 ifaces = __salt__["network.interfaces"]()
                 if iface in ifaces and "hwaddr" in ifaces[iface]:
-                    result["addr"] = ifaces[iface]["hwaddr"]
+                    result["hwaddr"] = ifaces[iface]["hwaddr"]
     if iface_type == "eth":
         result["devtype"] = "Ethernet"
     if iface_type == "bridge":
