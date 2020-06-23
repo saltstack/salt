@@ -3593,6 +3593,7 @@ def datadir_init(
         password=password,
         encoding=encoding,
         locale=locale,
+        waldir=waldir,
         checksums=checksums,
         runas=runas,
     )
