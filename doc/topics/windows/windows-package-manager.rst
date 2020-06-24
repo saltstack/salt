@@ -810,7 +810,7 @@ definition file can become quite large. This is a scenario where Jinja can be
 helpful. Consider the following software definition file for Firefox using
 Jinja:
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {%- set lang = salt['config.get']('firefox:pkg:lang', 'en-US') %}
 
