@@ -493,6 +493,17 @@ def managed(name, enabled=True, **kwargs):
     # Pull interface type out of kwargs
     iface_type = str(kwargs.pop("type", "eth"))
 
+    if "addr" in kwargs:
+        hwaddr = kwargs.pop("addr")
+        msg = "'addr' is not a valid argument name, "
+        if "hwaddr" not in kwargs:
+            msg += "its value has been assigned to 'hwaddr' instead."
+            kwargs["hwaddr"] = hwaddr
+        else:
+            msg += "it has been ignored in favor of 'hwaddr'."
+        msg += " Update your SLS file to get rid of this warning."
+        ret.setdefault("warnings", []).append(msg)
+
     # Build interface
     try:
         old = __salt__["ip.get_interface"](name)
