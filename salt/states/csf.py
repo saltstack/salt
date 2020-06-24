@@ -251,6 +251,19 @@ def ports_open(name, ports, proto="tcp", direction="in"):
     """
 
     ports = list(six.moves.map(six.text_type, ports))
+    port_ranges = []
+    for item in ports:
+        if ':' in str(item):
+            port_ranges.append(str(item))
+            ports.remove(item)
+
+    if not port_ranges:
+        port_ranges = sorted(port_ranges)
+        ports = sorted(set(ports), key=int)
+        ports = ports + port_ranges
+    else:
+        ports = sorted(set(ports), key=int)
+
     diff = False
     ret = {
         "name": ",".join(ports),
@@ -260,6 +273,7 @@ def ports_open(name, ports, proto="tcp", direction="in"):
     }
 
     current_ports = __salt__["csf.get_ports"](proto=proto, direction=direction)
+    plist = ', '.join([str(x) for x in ports])
     direction = direction.upper()
     directions = __salt__["csf.build_directions"](direction)
     for direction in directions:
@@ -268,9 +282,19 @@ def ports_open(name, ports, proto="tcp", direction="in"):
         if current_ports[direction] != ports:
             diff = True
     if diff:
-        result = __salt__["csf.allow_ports"](ports, proto=proto, direction=direction)
-        ret["changes"]["Ports"] = "Changed"
-        ret["comment"] = result
+        if __opts__["test"]:
+            result = None
+            ret["changes"]["Ports"] = {"Ports": "test mode - Change Not applied", "List": plist}
+            ret["changes"]["Proto"] = str(proto)
+            ret["changes"]["Direction"] = str(direction)
+            ret["comment"] = "Configuration will update."
+            ret["result"] = result
+        else:
+            result = __salt__["csf.allow_ports"](ports, proto=proto, direction=direction)
+            ret["changes"]["Ports"] = {"Ports": "Changed", "List": plist}
+            ret["changes"]["Proto"] = str(proto)
+            ret["changes"]["Direction"] = str(direction)
+            ret["comment"] = result
     return ret
 
 
@@ -399,6 +423,7 @@ def option_present(name, value, reload=False):
             result = __salt__["csf.set_option"](option, value)
             ret["comment"] = "Option modified."
             ret["changes"]["Option"] = "Changed"
+            ret["changes"]["Value"] = str(value)
     else:
         result = __salt__["file.append"](
             "/etc/csf/csf.conf", args='{0} = "{1}"'.format(option, value)
