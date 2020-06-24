@@ -1,0 +1,6 @@
+# To properly generate the pyobjc dependency tree, run, on a mac, the following
+#   pip install pip-tools
+#   pip-compile --output-file=pkg/osx/req_pyobjc.txt pkg/osx/req_pyobjc.in
+#
+# Should only be necessary when changing the pyobjc version bellow
+pyobjc==5.1.2

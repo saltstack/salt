@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Decrypt pillar data through the builtin NACL renderer
 
 In most cases, you'll want to make this the last external pillar used. For
@@ -18,9 +18,10 @@ this:
 
 Set ``nacl.config`` in your config.
 
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
+
 import salt
 
 

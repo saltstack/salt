@@ -115,13 +115,13 @@ try:
         # py35+
         from collections.abc import Generator as GeneratorType  # type: ignore
     except ImportError:
-        from backports_abc import Generator as GeneratorType  # type: ignore
+        from salt.ext.backports_abc import Generator as GeneratorType  # type: ignore
 
     try:
         # py35+
         from inspect import isawaitable  # type: ignore
     except ImportError:
-        from backports_abc import isawaitable
+        from salt.ext.backports_abc import isawaitable
 except ImportError:
     if 'APPENGINE_RUNTIME' not in os.environ:
         raise
@@ -484,9 +484,8 @@ class WaitIterator(object):
         self.current_future = done
         self.current_index = self._unfinished.pop(done)
 
-    @coroutine
     def __aiter__(self):
-        raise Return(self)
+        raise self
 
     def __anext__(self):
         if self.done():

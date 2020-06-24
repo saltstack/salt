@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Nodegroups Pillar
 =================
 
@@ -32,40 +32,38 @@ Configuring Nodegroups Pillar
       - nodegroups:
           pillar_name: 'nodegroups'
 
-'''
+"""
 
 # Import futures
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-from salt.utils.minions import CkMinions
-
 # Import 3rd-party libs
 from salt.ext import six
 
-__version__ = '0.0.2'
+# Import Salt libs
+from salt.utils.minions import CkMinions
+
+__version__ = "0.0.2"
 
 
 def ext_pillar(minion_id, pillar, pillar_name=None):
-    '''
+    """
     A salt external pillar which provides the list of nodegroups of which the minion is a member.
 
     :param minion_id: used for compound matching nodegroups
     :param pillar: provided by salt, but not used by nodegroups ext_pillar
     :param pillar_name: optional name to use for the pillar, defaults to 'nodegroups'
     :return: a dictionary which is included by the salt master in the pillars returned to the minion
-    '''
+    """
 
-    pillar_name = pillar_name or 'nodegroups'
-    all_nodegroups = __opts__['nodegroups']
+    pillar_name = pillar_name or "nodegroups"
+    all_nodegroups = __opts__["nodegroups"]
     nodegroups_minion_is_in = []
     ckminions = None
     for nodegroup_name in six.iterkeys(all_nodegroups):
         ckminions = ckminions or CkMinions(__opts__)
-        _res = ckminions.check_minions(
-            all_nodegroups[nodegroup_name],
-            'compound')
-        match = _res['minions']
+        _res = ckminions.check_minions(all_nodegroups[nodegroup_name], "compound")
+        match = _res["minions"]
 
         if minion_id in match:
             nodegroups_minion_is_in.append(nodegroup_name)

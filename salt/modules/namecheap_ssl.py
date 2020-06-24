@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Namecheap SSL Certificate Management
 
 .. versionadded:: 2017.7.0
@@ -25,43 +25,48 @@ file, or in the Pillar data.
     namecheap.url: https://api.namecheap.com/xml.response
     #Sandbox url
     #namecheap.url: https://api.sandbox.namecheap.xml.response
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 
+# Import 3rd-party libs
+from salt.ext import six
+
 try:
     import salt.utils.namecheap
+
     CAN_USE_NAMECHEAP = True
 except ImportError:
     CAN_USE_NAMECHEAP = False
 
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Check to make sure requests and xml are installed and requests
-    '''
+    """
     if CAN_USE_NAMECHEAP:
-        return 'namecheap_ssl'
+        return "namecheap_ssl"
     return False
 
 
-def reissue(csr_file,
-            certificate_id,
-            web_server_type,
-            approver_email=None,
-            http_dc_validation=False,
-            **kwargs):
-    '''
+def reissue(
+    csr_file,
+    certificate_id,
+    web_server_type,
+    approver_email=None,
+    http_dc_validation=False,
+    **kwargs
+):
+    """
     Reissues a purchased SSL certificate. Returns a dictionary of result
     values.
 
@@ -123,18 +128,28 @@ def reissue(csr_file,
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.reissue my-csr-file my-cert-id apachessl
-    '''
-    return __get_certificates('namecheap.ssl.reissue', "SSLReissueResult", csr_file, certificate_id, web_server_type,
-                              approver_email, http_dc_validation, kwargs)
+    """
+    return __get_certificates(
+        "namecheap.ssl.reissue",
+        "SSLReissueResult",
+        csr_file,
+        certificate_id,
+        web_server_type,
+        approver_email,
+        http_dc_validation,
+        kwargs,
+    )
 
 
-def activate(csr_file,
-             certificate_id,
-             web_server_type,
-             approver_email=None,
-             http_dc_validation=False,
-             **kwargs):
-    '''
+def activate(
+    csr_file,
+    certificate_id,
+    web_server_type,
+    approver_email=None,
+    http_dc_validation=False,
+    **kwargs
+):
+    """
     Activates a newly-purchased SSL certificate. Returns a dictionary of result
     values.
 
@@ -196,76 +211,85 @@ def activate(csr_file,
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.activate my-csr-file my-cert-id apachessl
-    '''
-    return __get_certificates('namecheap.ssl.activate', 'SSLActivateResult', csr_file, certificate_id, web_server_type,
-                              approver_email, http_dc_validation, kwargs)
+    """
+    return __get_certificates(
+        "namecheap.ssl.activate",
+        "SSLActivateResult",
+        csr_file,
+        certificate_id,
+        web_server_type,
+        approver_email,
+        http_dc_validation,
+        kwargs,
+    )
 
 
-def __get_certificates(command,
-                       result_tag_name,
-                       csr_file,
-                       certificate_id,
-                       web_server_type,
-                       approver_email,
-                       http_dc_validation,
-                       kwargs):
+def __get_certificates(
+    command,
+    result_tag_name,
+    csr_file,
+    certificate_id,
+    web_server_type,
+    approver_email,
+    http_dc_validation,
+    kwargs,
+):
 
-    web_server_types = ('apacheopenssl',
-                        'apachessl',
-                        'apacheraven',
-                        'apachessleay',
-                        'c2net',
-                        'ibmhttp',
-                        'iplanet',
-                        'domino',
-                        'dominogo4625',
-                        'dominogo4626',
-                        'netscape',
-                        'zeusv3',
-                        'apache2',
-                        'apacheapachessl',
-                        'cobaltseries',
-                        'cpanel',
-                        'ensim',
-                        'hsphere',
-                        'ipswitch',
-                        'plesk',
-                        'tomcat',
-                        'weblogic',
-                        'website',
-                        'webstar',
-                        'iis',
-                        'other',
-                        'iis4',
-                        'iis5',
-                        )
+    web_server_types = (
+        "apacheopenssl",
+        "apachessl",
+        "apacheraven",
+        "apachessleay",
+        "c2net",
+        "ibmhttp",
+        "iplanet",
+        "domino",
+        "dominogo4625",
+        "dominogo4626",
+        "netscape",
+        "zeusv3",
+        "apache2",
+        "apacheapachessl",
+        "cobaltseries",
+        "cpanel",
+        "ensim",
+        "hsphere",
+        "ipswitch",
+        "plesk",
+        "tomcat",
+        "weblogic",
+        "website",
+        "webstar",
+        "iis",
+        "other",
+        "iis4",
+        "iis5",
+    )
 
     if web_server_type not in web_server_types:
-        log.error('Invalid option for web_server_type=%s', web_server_type)
-        raise Exception('Invalid option for web_server_type=' + web_server_type)
+        log.error("Invalid option for web_server_type=%s", web_server_type)
+        raise Exception("Invalid option for web_server_type=" + web_server_type)
 
     if approver_email is not None and http_dc_validation:
-        log.error('approver_email and http_dc_validation cannot both have values')
-        raise Exception('approver_email and http_dc_validation cannot both have values')
+        log.error("approver_email and http_dc_validation cannot both have values")
+        raise Exception("approver_email and http_dc_validation cannot both have values")
 
     if approver_email is None and not http_dc_validation:
-        log.error('approver_email or http_dc_validation must have a value')
-        raise Exception('approver_email or http_dc_validation must have a value')
+        log.error("approver_email or http_dc_validation must have a value")
+        raise Exception("approver_email or http_dc_validation must have a value")
 
     opts = salt.utils.namecheap.get_opts(command)
 
-    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = salt.utils.stringutils.to_unicode(
-            csr_handle.read()
-        )
+    with salt.utils.files.fopen(csr_file, "rb") as csr_handle:
+        opts["csr"] = salt.utils.stringutils.to_unicode(csr_handle.read())
 
-    opts['CertificateID'] = certificate_id
-    opts['WebServerType'] = web_server_type
+    opts["CertificateID"] = certificate_id
+    opts["WebServerType"] = web_server_type
     if approver_email is not None:
-        opts['ApproverEmail'] = approver_email
+        opts["ApproverEmail"] = approver_email
 
     if http_dc_validation:
-        opts['HTTPDCValidation'] = 'True'
+        opts["HTTPDCValidation"] = "True"
 
     for key, value in six.iteritems(kwargs):
         opts[key] = value
@@ -279,21 +303,26 @@ def __get_certificates(command,
     result = salt.utils.namecheap.atts_to_dict(sslresult)
 
     if http_dc_validation:
-        validation_tag = sslresult.getElementsByTagName('HttpDCValidation')
+        validation_tag = sslresult.getElementsByTagName("HttpDCValidation")
         if validation_tag is not None and len(validation_tag) > 0:
             validation_tag = validation_tag[0]
 
-            if validation_tag.getAttribute('ValueAvailable').lower() == 'true':
-                validation_dict = {'filename': validation_tag.getElementsByTagName('FileName')[0].childNodes[0].data,
-                                   'filecontent': validation_tag.getElementsByTagName('FileContent')[0].childNodes[
-                                       0].data}
-                result['httpdcvalidation'] = validation_dict
+            if validation_tag.getAttribute("ValueAvailable").lower() == "true":
+                validation_dict = {
+                    "filename": validation_tag.getElementsByTagName("FileName")[0]
+                    .childNodes[0]
+                    .data,
+                    "filecontent": validation_tag.getElementsByTagName("FileContent")[0]
+                    .childNodes[0]
+                    .data,
+                }
+                result["httpdcvalidation"] = validation_dict
 
     return result
 
 
 def renew(years, certificate_id, certificate_type, promotion_code=None):
-    '''
+    """
     Renews an SSL certificate if it is ACTIVE and Expires <= 30 days. Returns
     the following information:
 
@@ -350,65 +379,66 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
-    '''
+    """
 
-    valid_certs = ('QuickSSL Premium',
-                   'RapidSSL',
-                   'RapidSSL Wildcard',
-                   'PremiumSSL',
-                   'InstantSSL',
-                   'PositiveSSL',
-                   'PositiveSSL Wildcard',
-                   'True BusinessID with EV',
-                   'True BusinessID',
-                   'True BusinessID Wildcard',
-                   'True BusinessID Multi Domain',
-                   'True BusinessID with EV Multi Domain',
-                   'Secure Site',
-                   'Secure Site Pro',
-                   'Secure Site with EV',
-                   'Secure Site Pro with EV',
-                   'EssentialSSL',
-                   'EssentialSSL Wildcard',
-                   'InstantSSL Pro',
-                   'PremiumSSL Wildcard',
-                   'EV SSL',
-                   'EV SSL SGC',
-                   'SSL123',
-                   'SSL Web Server',
-                   'SGC Supercert',
-                   'SSL Webserver EV',
-                   'EV Multi Domain SSL',
-                   'Multi Domain SSL',
-                   'PositiveSSL Multi Domain',
-                   'Unified Communications',
-                   )
+    valid_certs = (
+        "QuickSSL Premium",
+        "RapidSSL",
+        "RapidSSL Wildcard",
+        "PremiumSSL",
+        "InstantSSL",
+        "PositiveSSL",
+        "PositiveSSL Wildcard",
+        "True BusinessID with EV",
+        "True BusinessID",
+        "True BusinessID Wildcard",
+        "True BusinessID Multi Domain",
+        "True BusinessID with EV Multi Domain",
+        "Secure Site",
+        "Secure Site Pro",
+        "Secure Site with EV",
+        "Secure Site Pro with EV",
+        "EssentialSSL",
+        "EssentialSSL Wildcard",
+        "InstantSSL Pro",
+        "PremiumSSL Wildcard",
+        "EV SSL",
+        "EV SSL SGC",
+        "SSL123",
+        "SSL Web Server",
+        "SGC Supercert",
+        "SSL Webserver EV",
+        "EV Multi Domain SSL",
+        "Multi Domain SSL",
+        "PositiveSSL Multi Domain",
+        "Unified Communications",
+    )
 
     if certificate_type not in valid_certs:
-        log.error('Invalid option for certificate_type=%s', certificate_type)
-        raise Exception('Invalid option for certificate_type=' + certificate_type)
+        log.error("Invalid option for certificate_type=%s", certificate_type)
+        raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error('Invalid option for years=%s', six.text_type(years))
-        raise Exception('Invalid option for years=' + six.text_type(years))
+        log.error("Invalid option for years=%s", six.text_type(years))
+        raise Exception("Invalid option for years=" + six.text_type(years))
 
-    opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
-    opts['Years'] = six.text_type(years)
-    opts['CertificateID'] = six.text_type(certificate_id)
-    opts['SSLType'] = certificate_type
+    opts = salt.utils.namecheap.get_opts("namecheap.ssl.renew")
+    opts["Years"] = six.text_type(years)
+    opts["CertificateID"] = six.text_type(certificate_id)
+    opts["SSLType"] = certificate_type
     if promotion_code is not None:
-        opts['PromotionCode'] = promotion_code
+        opts["PromotionCode"] = promotion_code
 
     response_xml = salt.utils.namecheap.post_request(opts)
     if response_xml is None:
         return {}
 
-    sslrenewresult = response_xml.getElementsByTagName('SSLRenewResult')[0]
+    sslrenewresult = response_xml.getElementsByTagName("SSLRenewResult")[0]
     return salt.utils.namecheap.atts_to_dict(sslrenewresult)
 
 
 def create(years, certificate_type, promotion_code=None, sans_to_add=None):
-    '''
+    """
     Creates a new SSL certificate. Returns the following information:
 
     - Whether or not the SSL order was successful
@@ -529,62 +559,63 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.create 2 RapidSSL
-    '''
-    valid_certs = ('QuickSSL Premium',
-                   'RapidSSL',
-                   'RapidSSL Wildcard',
-                   'PremiumSSL',
-                   'InstantSSL',
-                   'PositiveSSL',
-                   'PositiveSSL Wildcard',
-                   'True BusinessID with EV',
-                   'True BusinessID',
-                   'True BusinessID Wildcard',
-                   'True BusinessID Multi Domain',
-                   'True BusinessID with EV Multi Domain',
-                   'Secure Site',
-                   'Secure Site Pro',
-                   'Secure Site with EV',
-                   'Secure Site Pro with EV',
-                   'EssentialSSL',
-                   'EssentialSSL Wildcard',
-                   'InstantSSL Pro',
-                   'PremiumSSL Wildcard',
-                   'EV SSL',
-                   'EV SSL SGC',
-                   'SSL123',
-                   'SSL Web Server',
-                   'SGC Supercert',
-                   'SSL Webserver EV',
-                   'EV Multi Domain SSL',
-                   'Multi Domain SSL',
-                   'PositiveSSL Multi Domain',
-                   'Unified Communications',
-                   )
+    """
+    valid_certs = (
+        "QuickSSL Premium",
+        "RapidSSL",
+        "RapidSSL Wildcard",
+        "PremiumSSL",
+        "InstantSSL",
+        "PositiveSSL",
+        "PositiveSSL Wildcard",
+        "True BusinessID with EV",
+        "True BusinessID",
+        "True BusinessID Wildcard",
+        "True BusinessID Multi Domain",
+        "True BusinessID with EV Multi Domain",
+        "Secure Site",
+        "Secure Site Pro",
+        "Secure Site with EV",
+        "Secure Site Pro with EV",
+        "EssentialSSL",
+        "EssentialSSL Wildcard",
+        "InstantSSL Pro",
+        "PremiumSSL Wildcard",
+        "EV SSL",
+        "EV SSL SGC",
+        "SSL123",
+        "SSL Web Server",
+        "SGC Supercert",
+        "SSL Webserver EV",
+        "EV Multi Domain SSL",
+        "Multi Domain SSL",
+        "PositiveSSL Multi Domain",
+        "Unified Communications",
+    )
 
     if certificate_type not in valid_certs:
-        log.error('Invalid option for certificate_type=%s', certificate_type)
-        raise Exception('Invalid option for certificate_type=' + certificate_type)
+        log.error("Invalid option for certificate_type=%s", certificate_type)
+        raise Exception("Invalid option for certificate_type=" + certificate_type)
 
     if years < 1 or years > 5:
-        log.error('Invalid option for years=%s', six.text_type(years))
-        raise Exception('Invalid option for years=' + six.text_type(years))
+        log.error("Invalid option for years=%s", six.text_type(years))
+        raise Exception("Invalid option for years=" + six.text_type(years))
 
-    opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
+    opts = salt.utils.namecheap.get_opts("namecheap.ssl.create")
 
-    opts['Years'] = years
-    opts['Type'] = certificate_type
+    opts["Years"] = years
+    opts["Type"] = certificate_type
     if promotion_code is not None:
-        opts['PromotionCode'] = promotion_code
+        opts["PromotionCode"] = promotion_code
     if sans_to_add is not None:
-        opts['SANStoADD'] = sans_to_add
+        opts["SANStoADD"] = sans_to_add
 
     response_xml = salt.utils.namecheap.post_request(opts)
     if response_xml is None:
         return {}
 
-    sslcreateresult = response_xml.getElementsByTagName('SSLCreateResult')[0]
-    sslcertinfo = sslcreateresult.getElementsByTagName('SSLCertificate')[0]
+    sslcreateresult = response_xml.getElementsByTagName("SSLCreateResult")[0]
+    sslcertinfo = sslcreateresult.getElementsByTagName("SSLCertificate")[0]
 
     result = salt.utils.namecheap.atts_to_dict(sslcreateresult)
     result.update(salt.utils.namecheap.atts_to_dict(sslcertinfo))
@@ -592,7 +623,7 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
 
 
 def parse_csr(csr_file, certificate_type, http_dc_validation=False):
-    '''
+    """
     Parses the CSR. Returns a dictionary of result values.
 
     csr_file
@@ -641,63 +672,62 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
-    '''
-    valid_certs = ('QuickSSL Premium',
-                   'RapidSSL',
-                   'RapidSSL Wildcard',
-                   'PremiumSSL',
-                   'InstantSSL',
-                   'PositiveSSL',
-                   'PositiveSSL Wildcard',
-                   'True BusinessID with EV',
-                   'True BusinessID',
-                   'True BusinessID Wildcard',
-                   'True BusinessID Multi Domain',
-                   'True BusinessID with EV Multi Domain',
-                   'Secure Site',
-                   'Secure Site Pro',
-                   'Secure Site with EV',
-                   'Secure Site Pro with EV',
-                   'EssentialSSL',
-                   'EssentialSSL Wildcard',
-                   'InstantSSL Pro',
-                   'PremiumSSL Wildcard',
-                   'EV SSL',
-                   'EV SSL SGC',
-                   'SSL123',
-                   'SSL Web Server',
-                   'SGC Supercert',
-                   'SSL Webserver EV',
-                   'EV Multi Domain SSL',
-                   'Multi Domain SSL',
-                   'PositiveSSL Multi Domain',
-                   'Unified Communications',
-                   )
+    """
+    valid_certs = (
+        "QuickSSL Premium",
+        "RapidSSL",
+        "RapidSSL Wildcard",
+        "PremiumSSL",
+        "InstantSSL",
+        "PositiveSSL",
+        "PositiveSSL Wildcard",
+        "True BusinessID with EV",
+        "True BusinessID",
+        "True BusinessID Wildcard",
+        "True BusinessID Multi Domain",
+        "True BusinessID with EV Multi Domain",
+        "Secure Site",
+        "Secure Site Pro",
+        "Secure Site with EV",
+        "Secure Site Pro with EV",
+        "EssentialSSL",
+        "EssentialSSL Wildcard",
+        "InstantSSL Pro",
+        "PremiumSSL Wildcard",
+        "EV SSL",
+        "EV SSL SGC",
+        "SSL123",
+        "SSL Web Server",
+        "SGC Supercert",
+        "SSL Webserver EV",
+        "EV Multi Domain SSL",
+        "Multi Domain SSL",
+        "PositiveSSL Multi Domain",
+        "Unified Communications",
+    )
 
     if certificate_type not in valid_certs:
-        log.error('Invalid option for certificate_type=%s', certificate_type)
-        raise Exception('Invalid option for certificate_type=' + certificate_type)
+        log.error("Invalid option for certificate_type=%s", certificate_type)
+        raise Exception("Invalid option for certificate_type=" + certificate_type)
 
-    opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
+    opts = salt.utils.namecheap.get_opts("namecheap.ssl.parseCSR")
 
-    with salt.utils.files.fopen(csr_file, 'rb') as csr_handle:
-        opts['csr'] = salt.utils.stringutils.to_unicode(
-            csr_handle.read()
-        )
+    with salt.utils.files.fopen(csr_file, "rb") as csr_handle:
+        opts["csr"] = salt.utils.stringutils.to_unicode(csr_handle.read())
 
-    opts['CertificateType'] = certificate_type
+    opts["CertificateType"] = certificate_type
     if http_dc_validation:
-        opts['HTTPDCValidation'] = 'true'
+        opts["HTTPDCValidation"] = "true"
 
     response_xml = salt.utils.namecheap.post_request(opts)
 
-    sslparseresult = response_xml.getElementsByTagName('SSLParseCSRResult')[0]
+    sslparseresult = response_xml.getElementsByTagName("SSLParseCSRResult")[0]
 
     return salt.utils.namecheap.xml_to_dict(sslparseresult)
 
 
 def get_list(**kwargs):
-    '''
+    """
     Returns a list of SSL certificates for a particular user
 
     ListType : All
@@ -735,8 +765,8 @@ def get_list(**kwargs):
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.get_list Processing
-    '''
-    opts = salt.utils.namecheap.get_opts('namecheap.ssl.getList')
+    """
+    opts = salt.utils.namecheap.get_opts("namecheap.ssl.getList")
     for key, value in six.iteritems(kwargs):
         opts[key] = value
 
@@ -745,10 +775,10 @@ def get_list(**kwargs):
     if response_xml is None:
         return []
 
-    ssllistresult = response_xml.getElementsByTagName('SSLListResult')[0]
+    ssllistresult = response_xml.getElementsByTagName("SSLListResult")[0]
 
     result = []
-    for e in ssllistresult.getElementsByTagName('SSL'):
+    for e in ssllistresult.getElementsByTagName("SSL"):
         ssl = salt.utils.namecheap.atts_to_dict(e)
         result.append(ssl)
 
@@ -756,7 +786,7 @@ def get_list(**kwargs):
 
 
 def get_info(certificate_id, returncertificate=False, returntype=None):
-    '''
+    """
     Retrieves information about the requested SSL certificate. Returns a
     dictionary of information about the SSL certificate with two keys:
 
@@ -782,25 +812,34 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     .. code-block:: bash
 
         salt 'my-minion' namecheap_ssl.get_info my-cert-id
-    '''
-    opts = salt.utils.namecheap.get_opts('namecheap.ssl.getinfo')
-    opts['certificateID'] = certificate_id
+    """
+    opts = salt.utils.namecheap.get_opts("namecheap.ssl.getinfo")
+    opts["certificateID"] = certificate_id
 
     if returncertificate:
-        opts['returncertificate'] = "true"
+        opts["returncertificate"] = "true"
         if returntype is None:
-            log.error('returntype must be specified when returncertificate is set to True')
-            raise Exception('returntype must be specified when returncertificate is set to True')
+            log.error(
+                "returntype must be specified when returncertificate is set to True"
+            )
+            raise Exception(
+                "returntype must be specified when returncertificate is set to True"
+            )
         if returntype not in ["Individual", "PKCS7"]:
-            log.error('returntype must be specified as Individual or PKCS7, not %s', returntype)
-            raise Exception('returntype must be specified as Individual or PKCS7, not ' + returntype)
-        opts['returntype'] = returntype
+            log.error(
+                "returntype must be specified as Individual or PKCS7, not %s",
+                returntype,
+            )
+            raise Exception(
+                "returntype must be specified as Individual or PKCS7, not " + returntype
+            )
+        opts["returntype"] = returntype
 
     response_xml = salt.utils.namecheap.get_request(opts)
 
     if response_xml is None:
         return {}
 
-    sslinforesult = response_xml.getElementsByTagName('SSLGetInfoResult')[0]
+    sslinforesult = response_xml.getElementsByTagName("SSLGetInfoResult")[0]
 
     return salt.utils.namecheap.xml_to_dict(sslinforesult)

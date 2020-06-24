@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage and query Bower packages
 ===============================
 
@@ -7,7 +7,7 @@ This module manages the installed packages using Bower.
 Note that npm, git and bower must be installed for this module to be
 available.
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -20,64 +20,60 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import LooseVersion as _LooseVersion
 
-
 log = logging.getLogger(__name__)
 
 # Function alias to make sure not to shadow built-in's
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Only work when Bower is installed
-    '''
-    if salt.utils.path.which('bower') is None:
-        return (False, 'The bower module could not be loaded: bower command not found')
+    """
+    if salt.utils.path.which("bower") is None:
+        return (False, "The bower module could not be loaded: bower command not found")
     return True
 
 
 def _check_valid_version():
-    '''
+    """
     Check the version of Bower to ensure this module will work. Currently
     bower must be at least version 1.3.
-    '''
+    """
     # pylint: disable=no-member
-    bower_version = _LooseVersion(
-        __salt__['cmd.run']('bower --version'))
-    valid_version = _LooseVersion('1.3')
+    bower_version = _LooseVersion(__salt__["cmd.run"]("bower --version"))
+    valid_version = _LooseVersion("1.3")
     # pylint: enable=no-member
     if bower_version < valid_version:
         raise CommandExecutionError(
-            '\'bower\' is not recent enough({0} < {1}). '
-            'Please Upgrade.'.format(
-                bower_version, valid_version
-            )
+            "'bower' is not recent enough({0} < {1}). "
+            "Please Upgrade.".format(bower_version, valid_version)
         )
 
 
 def _construct_bower_command(bower_command):
-    '''
+    """
     Create bower command line string
-    '''
+    """
     if not bower_command:
-        raise CommandExecutionError(
-            'bower_command, e.g. install, must be specified')
+        raise CommandExecutionError("bower_command, e.g. install, must be specified")
 
-    cmd = ['bower'] + shlex.split(bower_command)
-    cmd.extend(['--config.analytics', 'false',
-                '--config.interactive', 'false',
-                '--allow-root', '--json'])
+    cmd = ["bower"] + shlex.split(bower_command)
+    cmd.extend(
+        [
+            "--config.analytics",
+            "false",
+            "--config.interactive",
+            "false",
+            "--allow-root",
+            "--json",
+        ]
+    )
     return cmd
 
 
-def install(pkg,
-            dir,
-            pkgs=None,
-            runas=None,
-            env=None):
-    '''
+def install(pkg, dir, pkgs=None, runas=None, env=None):
+    """
     Install a Bower package.
 
     If no package is specified, the dependencies (from bower.json) of the
@@ -109,32 +105,30 @@ def install(pkg,
 
         salt '*' bower.install jquery#2.0 /path/to/project
 
-    '''
+    """
     _check_valid_version()
 
-    cmd = _construct_bower_command('install')
+    cmd = _construct_bower_command("install")
 
     if pkg:
         cmd.append(pkg)
     elif pkgs:
         cmd.extend(pkgs)
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=dir,
-                                     runas=runas,
-                                     env=env,
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=dir, runas=runas, env=env, python_shell=False
+    )
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     # If package is already installed, Bower will emit empty dict to STDOUT
-    stdout = salt.utils.json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result["stdout"])
     return stdout != {}
 
 
 def uninstall(pkg, dir, runas=None, env=None):
-    '''
+    """
     Uninstall a Bower package.
 
     pkg
@@ -158,28 +152,26 @@ def uninstall(pkg, dir, runas=None, env=None):
 
         salt '*' bower.uninstall underscore /path/to/project
 
-    '''
+    """
     _check_valid_version()
 
-    cmd = _construct_bower_command('uninstall')
+    cmd = _construct_bower_command("uninstall")
     cmd.append(pkg)
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=dir,
-                                     runas=runas,
-                                     env=env,
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=dir, runas=runas, env=env, python_shell=False
+    )
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     # If package is not installed, Bower will emit empty dict to STDOUT
-    stdout = salt.utils.json.loads(result['stdout'])
+    stdout = salt.utils.json.loads(result["stdout"])
     return stdout != {}
 
 
 def list_(dir, runas=None, env=None):
-    '''
+    """
     List installed Bower packages.
 
     dir
@@ -199,26 +191,24 @@ def list_(dir, runas=None, env=None):
 
         salt '*' bower.list /path/to/project
 
-    '''
+    """
     _check_valid_version()
 
-    cmd = _construct_bower_command('list')
-    cmd.append('--offline')
+    cmd = _construct_bower_command("list")
+    cmd.append("--offline")
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=dir,
-                                     runas=runas,
-                                     env=env,
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=dir, runas=runas, env=env, python_shell=False
+    )
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
-    return salt.utils.json.loads(result['stdout'])['dependencies']
+    return salt.utils.json.loads(result["stdout"])["dependencies"]
 
 
 def prune(dir, runas=None, env=None):
-    '''
+    """
     .. versionadded:: 2017.7.0
 
     Remove extraneous local Bower packages, i.e. those not referenced in bower.json
@@ -240,19 +230,17 @@ def prune(dir, runas=None, env=None):
 
         salt '*' bower.prune /path/to/project
 
-    '''
+    """
     _check_valid_version()
 
-    cmd = _construct_bower_command('prune')
+    cmd = _construct_bower_command("prune")
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     cwd=dir,
-                                     runas=runas,
-                                     env=env,
-                                     python_shell=False)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=dir, runas=runas, env=env, python_shell=False
+    )
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     # Bower returns an empty dictionary if nothing was pruned
-    return salt.utils.json.loads(result['stdout'])
+    return salt.utils.json.loads(result["stdout"])

@@ -254,7 +254,6 @@ class Queue(object):
         """
         return self._finished.wait(timeout)
 
-    @gen.coroutine
     def __aiter__(self):
         return _QueueIterator(self)
 
