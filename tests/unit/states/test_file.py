@@ -2907,7 +2907,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
             for path in (target_dir, target_file, link_dir, link_to_dir, link_to_file):
                 try:
                     os.chmod(path, expected_mode, follow_symlinks=False)
-                except NotImplementedError:
+                except (NotImplementedError, SystemError):
                     os.chmod(path, expected_mode)
 
             # Set some bad permissions
