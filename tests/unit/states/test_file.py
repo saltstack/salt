@@ -2892,23 +2892,23 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
                     create_files(sub_dir_name)
             # Symlinks on linux systems always have 0o777 permissions.
             # Ensure we are not treating them as modified files.
-            path = os.path.join(root_tmp_dir, "symlink_target_dir")
-            os.mkdir(path)
-            os.chmod(path, expected_mode)
-            file_path = os.path.join(path, "symlink_file")
-            with salt.utils.files.fopen(file_path, "w+"):
+            target_dir = os.path.join(root_tmp_dir, "link_target_dir")
+            target_file = os.path.join(target_dir, "link_target_file")
+            link_dir = os.path.join(root_tmp_dir, "link_dir")
+            link_to_dir = os.path.join(link_dir, "link_to_dir")
+            link_to_file = os.path.join(link_dir, "link_to_file")
+
+            os.mkdir(target_dir)
+            os.mkdir(link_dir)
+            with salt.utils.files.fopen(target_file, "w+"):
                 pass
-            os.chmod(file_path, expected_mode)
-            path = os.path.join(root_tmp_dir, "symlink_dir")
-            os.mkdir(path)
-            os.chmod(path, expected_mode)
-            link_path = os.path.join(path, "symlink")
-            os.symlink(file_path, link_path)
-            try:
-                # For non-linux platforms
-                os.chmod(link_path, expected_mode, follow_symlinks=False)
-            except NotImplementedError:
-                pass
+            os.symlink(target_dir, link_to_dir)
+            os.symlink(target_file, link_to_file)
+            for path in (target_dir, target_file, link_dir, link_to_dir, link_to_file):
+                try:
+                    os.chmod(path, expected_mode, follow_symlinks=False)
+                except NotImplementedError:
+                    os.chmod(path, expected_mode)
 
             # Set some bad permissions
             changed_files = {
