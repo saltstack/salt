@@ -112,6 +112,8 @@ _IFACE_TYPES = [
     "vlan",
     "ipip",
     "ib",
+    "team",
+    "teamport",
 ]
 
 
@@ -692,7 +694,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for opt in vlan:
                 result[opt] = opts[opt]
 
-    if iface_type not in ["bond", "vlan", "bridge", "ipip"]:
+    if iface_type not in ["bond", "vlan", "bridge", "ipip", 'team']:
         auto_addr = False
         if "addr" in opts:
             if salt.utils.validate.net.mac(opts["addr"]):
@@ -747,6 +749,25 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         if "bridge" in opts:
             result["bridge"] = opts["bridge"]
+
+    # When using teamd, we're using DEVICETYPE instead of TYPE as that gives
+    # us better compatibility for RHEL7.0
+    # https://unix.stackexchange.com/a/157252 has details
+    if iface_type == "teamport":
+        result["devicetype"] = "TeamPort"
+        try:
+            result['team_master'] = opts['team_master']
+        except:
+            _raise_error_iface(iface, "team_master", ["interface"])
+        if 'team_port_config' in opts:
+            result['team_port_config'] = opts['team_port_config']
+
+    if iface_type == "team":
+        result["devicetype"] = "Team"
+        try:
+            result['team_config'] = opts['team_config']
+        except:
+            _raise_error_iface(iface, "team_config", ["{}"])
 
     if iface_type == "ipip":
         result["devtype"] = "IPIP"
@@ -1145,10 +1166,18 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == "vlan":
         settings["vlan"] = "yes"
 
+    if iface_type == "teamport":
+        settings["devicetype"] = "TeamPort"
+
+    if iface_type == "team":
+        settings["devicetype"] = "Team"
+        __salt__["pkg.install"]("teamd")
+
     if iface_type == "bridge":
         __salt__["pkg.install"]("bridge-utils")
 
-    if iface_type in ["eth", "bond", "bridge", "slave", "vlan", "ipip", "ib", "alias"]:
+    if iface_type in ["eth", "bond", "bridge", "slave",
+                      "vlan", "ipip", "ib", "alias", "team", "teamport"]:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template("rh{0}_eth.jinja".format(rh_major))
@@ -1165,6 +1194,9 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     return _read_file(path)
 
+def parse_settings(iface, iftype):
+    opts = _parse_settings_eth([], iftype, True, iface)
+    return opts
 
 def build_routes(iface, **settings):
     """

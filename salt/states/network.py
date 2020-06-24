@@ -283,6 +283,47 @@ all interfaces are ignored unless specified.
           - 8.8.8.8
           - 8.8.4.4
 
+    # Teamed network using libteam
+    eth9:
+      network.managed:
+        - enabled: True
+        - type: teamport
+        - team_master: team0
+        - team_port_config:
+            prio: -10
+            sticky: true
+
+    eth10:
+      network.managed:
+        - enabled: True
+        - type: teamport
+        - team_master: team0
+        - team_port_config:
+            prio: 100
+
+    team0:
+      network.managed:
+        - enabled: True
+        - type: team
+        - ipaddr: 192.168.23.11
+        - prefix: 24
+        - team_config:
+            runner:
+              name: activebackup
+            link_watch:
+              name: arp_ping
+              interval: 100
+              missed_max: 30
+              source_host: 192.168.23.2
+              target_host: 192.168.23.1
+
+    .. note::
+        When using teamd, the port/team configuration is a dictionary which
+        means the indentation is very important. Just indenting 2 spaces is
+        not enough and would result in team_config being None, 4 however works.
+
+    .. versionadded:: master
+
     system:
       network.system:
         - enabled: True
