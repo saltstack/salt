@@ -253,7 +253,7 @@ def ports_open(name, ports, proto="tcp", direction="in"):
     ports = list(six.moves.map(six.text_type, ports))
     port_ranges = []
     for item in ports:
-        if ':' in str(item):
+        if ":" in str(item):
             port_ranges.append(str(item))
             ports.remove(item)
 
@@ -273,7 +273,7 @@ def ports_open(name, ports, proto="tcp", direction="in"):
     }
 
     current_ports = __salt__["csf.get_ports"](proto=proto, direction=direction)
-    plist = ', '.join([str(x) for x in ports])
+    plist = ", ".join([str(x) for x in ports])
     direction = direction.upper()
     directions = __salt__["csf.build_directions"](direction)
     for direction in directions:
@@ -284,14 +284,20 @@ def ports_open(name, ports, proto="tcp", direction="in"):
     if diff:
         if __opts__["test"]:
             result = None
-            ret["changes"]["Ports"] = {"Ports": "test mode - Change Not applied", "List": plist}
+            ret["changes"]["Ports"] = {
+                "Ports": "test mode - Change Not applied",
+                "List": plist,
+            }
             ret["changes"]["Proto"] = str(proto)
             ret["changes"]["Direction"] = str(direction)
             ret["comment"] = "Configuration will update."
             ret["result"] = result
         else:
             result = __salt__["csf.allow_ports"](ports, proto=proto, direction=direction)
-            ret["changes"]["Ports"] = {"Ports": "Changed", "List": plist}
+            ret["changes"]["Ports"] = {
+                "Ports": "Changed",
+                "List": plist,
+            }
             ret["changes"]["Proto"] = str(proto)
             ret["changes"]["Direction"] = str(direction)
             ret["comment"] = result
