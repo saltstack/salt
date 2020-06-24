@@ -1227,7 +1227,7 @@ ones in the runner, and are used in the same way; the only difference is that
 After executing the previous commands the repository on the standalone system is
 ready for use.
 
-.. _troubleshooting:
+.. _winrepo-troubleshooting:
 
 Troubleshooting
 ***************
