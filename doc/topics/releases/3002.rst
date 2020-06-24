@@ -4,6 +4,8 @@
 Salt 3002 Release Notes - Codename Magnesium
 ============================================
 
+Salt 3002 is an *unreleased* upcoming feature release.
+
 New Features
 ============
 
