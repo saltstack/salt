@@ -293,7 +293,9 @@ def ports_open(name, ports, proto="tcp", direction="in"):
             ret["comment"] = "Configuration will update."
             ret["result"] = result
         else:
-            result = __salt__["csf.allow_ports"](ports, proto=proto, direction=direction)
+            result = __salt__["csf.allow_ports"](
+                ports, proto=proto, direction=direction
+            )
             ret["changes"]["Ports"] = {
                 "Ports": "Changed",
                 "List": plist,
