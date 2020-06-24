@@ -1636,3 +1636,15 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         loader = self.__init_loader()
         assert ".zip" not in loader.suffix_map
         assert ".zip" not in loader.suffix_order
+
+    def test_lazyloader_pyx_modules(self):
+        self.opts["cython_enable"] = True
+        try:
+            loader = self.__init_loader()
+            assert ".pyx" in loader.suffix_map
+            assert ".pyx" in loader.suffix_order
+        finally:
+            self.opts["cython_enable"] = False
+        loader = self.__init_loader()
+        assert ".pyx" not in loader.suffix_map
+        assert ".pyx" not in loader.suffix_order

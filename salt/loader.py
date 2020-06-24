@@ -1335,13 +1335,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         refresh the mapping of the FS on disk
         """
         # map of suffix to description for imp
-        if self.opts.get("cython_enable", True) is True:
+        if (
+            self.opts.get("cython_enable", True) is True
+            and ".pyx" not in self.suffix_map
+        ):
             try:
                 global pyximport
                 pyximport = __import__("pyximport")  # pylint: disable=import-error
                 pyximport.install()
                 # add to suffix_map so file_mapping will pick it up
                 self.suffix_map[".pyx"] = tuple()
+                if ".pyx" not in self.suffix_order:
+                    self.suffix_order.append(".pyx")
             except ImportError:
                 log.info(
                     "Cython is enabled in the options but not present "
