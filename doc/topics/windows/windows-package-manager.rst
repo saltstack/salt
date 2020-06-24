@@ -628,6 +628,7 @@ You can uninstall a package using :mod:`pkg.remove <salt.modules.win_pkg.remove>
     salt-call --local pkg.remove firefox_x64
 
 .. _software-definition-files:
+
 Software Definition Files
 *************************
 
