@@ -159,21 +159,21 @@ Here are some examples of using the silent installer:
     # Install the Salt Minion
     # Configure the minion and start the service
 
-    Salt-Minion-2017.7.1-Py2-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
 
 .. code-block:: bat
 
     # Install the Salt Minion
     # Configure the minion but don't start the minion service
 
-    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
 
 .. code-block:: bat
 
     # Install the Salt Minion
     # Configure the minion using a custom config and configuring multimaster
 
-    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /custom-config=windows_minion /master=prod_master1,prod_master2
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /custom-config=windows_minion /master=prod_master1,prod_master2
 
 
 Running the Salt Minion on Windows as an Unprivileged User

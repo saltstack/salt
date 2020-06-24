@@ -20,7 +20,7 @@ Instructions are at https://repo.saltstack.com/#suse.
 Installation from the SUSE Repository
 =====================================
 
-Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
+Since openSUSE 13.2, Salt has been available in the primary repositories.
 With the release of SUSE manager 3 a new repository setup has been created.
 The new repo will by systemsmanagement:saltstack, which is the source
 for newer stable packages. For backward compatibility a linkpackage will be
@@ -116,30 +116,17 @@ Unstable Release
 openSUSE
 --------
 
-For openSUSE Tumbleweed run the following as root:
+For openSUSE Leap or Tumbleweed systems, run the following as root:
 
 .. code-block:: bash
 
     zypper install salt salt-minion salt-master
 
-
-For openSUSE 15.0 Leap run the following as root:
-
-.. code-block:: bash
-
-    zypper install salt salt-minion salt-master
-
-
-For openSUSE 15.1 run the following as root:
-
-.. code-block:: bash
-
-    zypper install salt salt-minion salt-master
 
 SUSE Linux Enterprise
 ---------------------
 
-For SLE 15 and above run the following as root:
+For SLES 15 and above run the following as root:
 
 .. code-block:: bash
 
