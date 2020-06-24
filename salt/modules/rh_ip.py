@@ -625,13 +625,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["proto"] = "none"
 
     if iface_type == "team":
-        result["devtype"] = "Team"
-        result["team_devicetype"] = "Team"
+        result["devicetype"] = "Team"
         if "team_config" in opts:
             result["team_config"] = salt.utils.json.dumps(opts["team_config"])
 
     if iface_type == "teamport":
-        result["team_devicetype"] = "TeamPort"
+        result["devicetype"] = "TeamPort"
         result["team_master"] = opts["team_master"]
         if "team_port_config" in opts:
             result["team_port_config"] = salt.utils.json.dumps(opts["team_port_config"])
@@ -655,16 +654,16 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for opt in vlan:
                 result[opt] = opts[opt]
 
-    if iface_type not in ("bond", "team", "teamport", "vlan", "bridge", "ipip"):
+    if iface_type not in ("bond", "team", "vlan", "bridge", "ipip"):
         auto_addr = False
-        if "addr" in opts:
-            if salt.utils.validate.net.mac(opts["addr"]):
-                result["addr"] = opts["addr"]
-            elif opts["addr"] == "auto":
+        if "hwaddr" in opts:
+            if salt.utils.validate.net.mac(opts["hwaddr"]):
+                result["hwaddr"] = opts["hwaddr"]
+            elif opts["hwaddr"] == "auto":
                 auto_addr = True
-            elif opts["addr"] != "none":
+            elif opts["hwaddr"] != "none":
                 _raise_error_iface(
-                    iface, opts["addr"], ["AA:BB:CC:DD:EE:FF", "auto", "none"]
+                    iface, opts["hwaddr"], ("AA:BB:CC:DD:EE:FF", "auto", "none")
                 )
         else:
             auto_addr = True
@@ -674,7 +673,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             if iface_type != "slave":
                 ifaces = __salt__["network.interfaces"]()
                 if iface in ifaces and "hwaddr" in ifaces[iface]:
-                    result["addr"] = ifaces[iface]["hwaddr"]
+                    result["hwaddr"] = ifaces[iface]["hwaddr"]
 
     if iface_type == "eth":
         result["devtype"] = "Ethernet"
