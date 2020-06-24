@@ -3532,9 +3532,9 @@ def directory(
         .. versionadded:: 2014.1.4
 
         .. versionchanged:: 3001.1
-        If set to False symlinks permissions are ignored on Linux systems
-        because it does not support permissions modification. Symlinks
-        permissions are always 0o777 on Linux.
+            If set to False symlinks permissions are ignored on Linux systems
+            because it does not support permissions modification. Symlinks
+            permissions are always 0o777 on Linux.
 
     force
         If the name of the directory exists and is not a directory and
