@@ -23,14 +23,14 @@ The goal here is to make contributions clear, make sure there is a trail for
 where the code has come from, but most importantly, to give credit where credit
 is due!
 
-The `Open Comparison Contributing Docs`__ explains the workflow for forking,
+The `Django Packages Contributing Docs`__ explains the workflow for forking,
 cloning, branching, committing, and sending a pull request for the git
 repository.
 
 ``git pull upstream develop`` is a shorter way to update your local repository
 to the latest version.
 
-.. __: http://opencomparison.readthedocs.org/en/latest/contributing.html
+.. __: https://djangopackages.readthedocs.io/en/latest/contributing.html
 
 Editing and Previewing the Docs
 -------------------------------
