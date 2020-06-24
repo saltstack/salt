@@ -754,10 +754,11 @@ def _check_directory(
                         fchange["user"] = user
                     if group is not None and group != stats.get("group"):
                         fchange["group"] = group
+                    smode = salt.utils.files.normalize_mode(stats.get("mode"))
+                    file_mode = salt.utils.files.normalize_mode(file_mode)
                     if (
                         file_mode is not None
-                        and salt.utils.files.normalize_mode(file_mode)
-                        != salt.utils.files.normalize_mode(stats.get("mode"))
+                        and file_mode != smode
                         and (
                             # Ignore mode for symlinks on linux based systems where we can not
                             # change symlink file permissions
@@ -997,7 +998,17 @@ def _check_dir_meta(name, user, group, mode, follow_symlinks=False):
     # Normalize the dir mode
     smode = salt.utils.files.normalize_mode(stats["mode"])
     mode = salt.utils.files.normalize_mode(mode)
-    if mode is not None and mode != smode:
+    if (
+        mode is not None
+        and mode != smode
+        and (
+            # Ignore mode for symlinks on linux based systems where we can not
+            # change symlink file permissions
+            follow_symlinks
+            or stats.get("type") != "link"
+            or not salt.utils.platform.is_linux()
+        )
+    ):
         changes["mode"] = mode
     return changes
 
