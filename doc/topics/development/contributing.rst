@@ -203,11 +203,11 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
         If your change fixes a bug or implements a feature already filed in the
         `issue tracker`_, be sure to
-	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
+	`reference the issue <https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue>`_
         number in the commit message body.
 
     If you get stuck, there are many introductory Git resources on
-    http://help.github.com.
+    https://help.github.com/en.
 
 #.  Push your locally-committed changes to your GitHub fork.
 
@@ -452,8 +452,8 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _`issue tracker`: https://github.com/saltstack/salt/issues
 .. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
 .. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
-.. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
-.. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html
+.. _`Closing issues via commit message`: https://help.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
+.. _`git format-patch`: https://mirrors.edge.kernel.org/pub/software/scm/git/docs/git-format-patch.html
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
@@ -465,6 +465,6 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _`SEP 15`: https://github.com/saltstack/salt-enhancement-proposals/pull/21
 .. _`pre-commit`: https://pre-commit.com/
 .. _`SaltStack Community Slack`: https://saltstackcommunity.herokuapp.com/
-.. _`#salt on freenode`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. _`#salt on freenode`: https://webchat.freenode.net/#salt
 .. _`saltstack meetup`: https://www.meetup.com/pro/saltstack/
 .. _`saltstack on serverfault`: https://serverfault.com/questions/tagged/saltstack

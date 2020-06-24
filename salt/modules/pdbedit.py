@@ -49,15 +49,15 @@ def __virtual__():
     if not salt.utils.path.which("pdbedit"):
         return (False, "pdbedit command is not available")
 
-    # NOTE: check version is >= 4.8.x
+    # NOTE: check version is >= 4.5.x
     ver = salt.modules.cmdmod.run("pdbedit -V")
-    ver_regex = re.compile(r"^Version\s(\d+)\.(\d+)\.(\d+)$")
+    ver_regex = re.compile(r"^Version\s(\d+)\.(\d+)\.(\d+).*$")
     ver_match = ver_regex.match(ver)
     if not ver_match:
         return (False, "pdbedit -V returned an unknown version format")
 
-    if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 8):
-        return (False, "pdbedit is to old, 4.8.0 or newer is required")
+    if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 5):
+        return (False, "pdbedit is to old, 4.5.0 or newer is required")
 
     return __virtualname__
 

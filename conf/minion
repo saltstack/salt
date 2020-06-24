@@ -157,6 +157,16 @@
 # Set the directory used to hold unix sockets.
 #sock_dir: /var/run/salt/minion
 
+# In order to calculate the fqdns grain, all the IP addresses from the minion
+# are processed with underlying calls to `socket.gethostbyaddr` which can take
+# 5 seconds to be released (after reaching `socket.timeout`) when there is no
+# fqdn for that IP. These calls to `socket.gethostbyaddr` are processed
+# asynchronously, however, it still adds 5 seconds every time grains are
+# generated if an IP does not resolve. In Windows grains are regenerated each
+# time a new process is spawned. Therefore, the default for Windows is `False`.
+# All other OSes default to `True`
+# enable_fqdn_grains: True
+
 # The minion can take a while to start up when lspci and/or dmidecode is used
 # to populate the grains for the minion. Set this to False if you do not need
 # GPU hardware grains for your minion.

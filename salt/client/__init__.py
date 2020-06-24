@@ -340,7 +340,7 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
             pub_data = self.pub(
@@ -404,7 +404,7 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         """
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
 
         try:
             pub_data = yield self.pub_async(
@@ -466,7 +466,7 @@ class LocalClient(object):
         tgt_type="glob",
         ret="",
         kwarg=None,
-        sub=3,
+        subset=3,
         cli=False,
         progress=False,
         full_return=False,
@@ -478,13 +478,13 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :param sub: The number of systems to execute on
+        :param subset: The number of systems to execute on
         :param cli: When this is set to True, a generator is returned,
                     otherwise a dictionary of the minion returns is returned
 
         .. code-block:: python
 
-            >>> SLC.cmd_subset('*', 'test.ping', sub=1)
+            >>> SLC.cmd_subset('*', 'test.ping', subset=1)
             {'jerry': True}
         """
         minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
@@ -494,7 +494,7 @@ class LocalClient(object):
         for minion in minions:
             if fun in minion_ret[minion]:
                 f_tgt.append(minion)
-            if len(f_tgt) >= sub:
+            if len(f_tgt) >= subset:
                 break
         func = self.cmd
         if cli:
@@ -550,7 +550,7 @@ class LocalClient(object):
         # Late import - not used anywhere else in this file
         import salt.cli.batch
 
-        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
+        arg = salt.utils.args.condition_input(arg, kwarg)
         opts = {
             "tgt": tgt,
             "fun": fun,
@@ -582,7 +582,6 @@ class LocalClient(object):
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
-
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -2141,7 +2140,7 @@ class Caller(object):
         """
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
-            func, salt.utils.args.parse_input(args, kwargs=kwargs),
+            func, salt.utils.args.parse_input(args), kwargs
         )
         return func(*args, **kwargs)
 
