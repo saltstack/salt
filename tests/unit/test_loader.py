@@ -1641,8 +1641,10 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         self.opts["cython_enable"] = True
         try:
             loader = self.__init_loader()
-            assert ".pyx" in loader.suffix_map
-            assert ".pyx" in loader.suffix_order
+            # Don't assert if the current environment has no pyximport
+            if salt.loader.pyximport is not None:
+                assert ".pyx" in loader.suffix_map
+                assert ".pyx" in loader.suffix_order
         finally:
             self.opts["cython_enable"] = False
         loader = self.__init_loader()
