@@ -325,69 +325,65 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test that teamport interfaces are properly built
         """
-        grains = {
-            "os": "CentOS",
-            "osmajorrelease": 7,
-            "osrelease": "7",
-        }
-        with patch.dict(rh_ip.__grains__, grains):
-            ret = sorted(
-                rh_ip.build_interface(
-                    "eth1",
-                    "teamport",
-                    enabled=True,
-                    test=True,
-                    team_port_config={"prio": 100},
-                    team_master="team0",
+        ifaces = MagicMock(return_value={"eth1": {"hwaddr": "02:42:ac:11:00:02"}})
+        dunder_salt = {"network.interfaces": ifaces}
+        for version in range(7, 8):
+            with patch.dict(
+                rh_ip.__grains__, {"osmajorrelease": version, "osrelease": str(version)}
+            ), patch.dict(rh_ip.__salt__, dunder_salt):
+                ret = sorted(
+                    rh_ip.build_interface(
+                        "eth1",
+                        "teamport",
+                        enabled=True,
+                        test=True,
+                        team_port_config={"prio": 100},
+                        team_master="team0",
+                    )
                 )
-            )
 
-        expected = [
-            'DEVICE="eth1"',
-            'DEVICETYPE="TeamPort"',
-            'NM_CONTROLLED="no"',
-            'ONBOOT="yes"',
-            'TEAM_MASTER="team0"',
-            "TEAM_PORT_CONFIG='{\"prio\": 100}'",
-            'USERCTL="no"',
-        ]
-        assert ret == expected
+            expected = [
+                'DEVICE="eth1"',
+                'DEVICETYPE="TeamPort"',
+                'HWADDR="02:42:ac:11:00:02"',
+                'NM_CONTROLLED="no"',
+                'ONBOOT="yes"',
+                'TEAM_MASTER="team0"',
+                "TEAM_PORT_CONFIG='{\"prio\": 100}'",
+                'USERCTL="no"',
+            ]
+            assert ret == expected, ret
 
     def test_build_interface_team(self):
         """
         Test that team interfaces are properly built
         """
-        grains = {
-            "os": "CentOS",
-            "osmajorrelease": 7,
-            "osrelease": "7",
-        }
         dunder_salt = {"pkg.version": MagicMock(return_value="1.29-1.el7")}
-        with patch.dict(rh_ip.__grains__, grains), patch.dict(
-            rh_ip.__salt__, dunder_salt
-        ):
-            ret = sorted(
-                rh_ip.build_interface(
-                    "team0",
-                    "team",
-                    enabled=True,
-                    test=True,
-                    ipaddr="1.2.3.4",
-                    team_config={"foo": "bar"},
+        for version in range(7, 8):
+            with patch.dict(
+                rh_ip.__grains__, {"osmajorrelease": version, "osrelease": str(version)}
+            ), patch.dict(rh_ip.__salt__, dunder_salt):
+                ret = sorted(
+                    rh_ip.build_interface(
+                        "team0",
+                        "team",
+                        enabled=True,
+                        test=True,
+                        ipaddr="1.2.3.4",
+                        team_config={"foo": "bar"},
+                    )
                 )
-            )
 
-        expected = [
-            'DEVICE="team0"',
-            'DEVICETYPE="Team"',
-            'IPADDR="1.2.3.4"',
-            'NM_CONTROLLED="no"',
-            'ONBOOT="yes"',
-            'TEAM_CONFIG=\'{"foo": "bar"}\'',
-            'TYPE="Team"',
-            'USERCTL="no"',
-        ]
-        assert ret == expected
+            expected = [
+                'DEVICE="team0"',
+                'DEVICETYPE="Team"',
+                'IPADDR="1.2.3.4"',
+                'NM_CONTROLLED="no"',
+                'ONBOOT="yes"',
+                'TEAM_CONFIG=\'{"foo": "bar"}\'',
+                'USERCTL="no"',
+            ]
+            assert ret == expected
 
     @staticmethod
     def _check_common_opts_bond(lines):
