@@ -38,29 +38,6 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         msg = rh_ip._error_msg_network("fnord", values)
         self.assertTrue(msg.endswith("[1|True|False|no-kaboom]"), msg)
 
-    def test_build_bond(self):
-        """
-        Test to create a bond script in /etc/modprobe.d with the passed
-        settings and load the bonding kernel module.
-        """
-        with patch.dict(rh_ip.__grains__, {"osrelease": "osrelease"}):
-            with patch.object(rh_ip, "_parse_settings_bond", MagicMock()):
-                mock = jinja2.exceptions.TemplateNotFound("foo")
-                with patch.object(
-                    jinja2.Environment, "get_template", MagicMock(side_effect=mock)
-                ):
-                    self.assertEqual(rh_ip.build_bond("iface"), "")
-
-                with patch.dict(
-                    rh_ip.__salt__, {"kmod.load": MagicMock(return_value=None)}
-                ):
-                    with patch.object(rh_ip, "_write_file_iface", return_value=None):
-                        with patch.object(rh_ip, "_read_temp", return_value="A"):
-                            self.assertEqual(rh_ip.build_bond("iface", test="A"), "A")
-
-                        with patch.object(rh_ip, "_read_file", return_value="A"):
-                            self.assertEqual(rh_ip.build_bond("iface", test=None), "A")
-
     def test_build_interface(self):
         """
         Test to build an interface script for a network interface.
@@ -206,14 +183,6 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(rh_ip.down("iface", "iface_type"), "A")
 
         self.assertEqual(rh_ip.down("iface", "slave"), None)
-
-    def test_get_bond(self):
-        """
-        Test to return the content of a bond script
-        """
-        with patch.object(os.path, "join", return_value="A"):
-            with patch.object(rh_ip, "_read_file", return_value="A"):
-                self.assertEqual(rh_ip.get_bond("iface"), "A")
 
     def test_get_interface(self):
         """
