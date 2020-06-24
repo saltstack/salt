@@ -2864,7 +2864,8 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Verify that it returns correctly
         # Delete tmp directory structure
         root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, "test__check_dir")
-        expected_dir_mode = 0o777
+        expected_mode = 0o770
+        changed_mode = 0o755
         depth = 3
         try:
 
@@ -2872,23 +2873,42 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
                 for f in range(depth):
                     path = os.path.join(tmp_dir, "file_{:03}.txt".format(f))
                     with salt.utils.files.fopen(path, "w+"):
-                        os.chmod(path, expected_dir_mode)
+                        os.chmod(path, expected_mode)
 
             # Create tmp directory structure
             os.mkdir(root_tmp_dir)
-            os.chmod(root_tmp_dir, expected_dir_mode)
+            os.chmod(root_tmp_dir, expected_mode)
             create_files(root_tmp_dir)
 
             for d in range(depth):
                 dir_name = os.path.join(root_tmp_dir, "dir{:03}".format(d))
                 os.mkdir(dir_name)
-                os.chmod(dir_name, expected_dir_mode)
+                os.chmod(dir_name, expected_mode)
                 create_files(dir_name)
                 for s in range(depth):
                     sub_dir_name = os.path.join(dir_name, "dir{:03}".format(s))
                     os.mkdir(sub_dir_name)
-                    os.chmod(sub_dir_name, expected_dir_mode)
+                    os.chmod(sub_dir_name, expected_mode)
                     create_files(sub_dir_name)
+            # Symlinks on linux systems always have 0o777 permissions.
+            # Ensure we are not treating them as modified files.
+            path = os.path.join(root_tmp_dir, "symlink_target_dir")
+            os.mkdir(path)
+            os.chmod(path, expected_mode)
+            file_path = os.path.join(path, "symlink_file")
+            with salt.utils.files.fopen(file_path, "w+"):
+                pass
+            os.chmod(file_path, expected_mode)
+            path = os.path.join(root_tmp_dir, "symlink_dir")
+            os.mkdir(path)
+            os.chmod(path, expected_mode)
+            link_path = os.path.join(path, "symlink")
+            os.symlink(file_path, link_path)
+            try:
+                # For non-linux platforms
+                os.chmod(link_path, expected_mode, follow_symlinks=False)
+            except NotImplementedError:
+                pass
 
             # Set some bad permissions
             changed_files = {
@@ -2900,12 +2920,12 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
                 os.path.join(root_tmp_dir, "dir001"),
             }
             for c in changed_files:
-                os.chmod(c, 0o770)
+                os.chmod(c, changed_mode)
 
             ret = filestate._check_directory(
                 root_tmp_dir,
-                dir_mode=oct(expected_dir_mode),
-                file_mode=oct(expected_dir_mode),
+                dir_mode=oct(expected_mode),
+                file_mode=oct(expected_mode),
                 recurse=["mode"],
             )
             self.assertSetEqual(changed_files, set(ret[-1].keys()))
