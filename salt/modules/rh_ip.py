@@ -34,71 +34,6 @@ JINJA = jinja2.Environment(
 # Define the module's virtual name
 __virtualname__ = "ip"
 
-
-def __virtual__():
-    """
-    Confine this module to RHEL/Fedora based distros
-    """
-    if __grains__["os_family"] == "RedHat":
-        if __grains__["os"] == "Amazon":
-            if __grains__["osmajorrelease"] >= 2:
-                return __virtualname__
-        else:
-            return __virtualname__
-    return (
-        False,
-        "The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.",
-    )
-
-
-# Setup networking attributes
-_ETHTOOL_CONFIG_OPTS = (
-    "autoneg",
-    "speed",
-    "duplex",
-    "rx",
-    "tx",
-    "sg",
-    "tso",
-    "ufo",
-    "gso",
-    "gro",
-    "lro",
-    "advertise",
-)
-_RH_CONFIG_OPTS = (
-    "domain",
-    "peerdns",
-    "peerntp",
-    "defroute",
-    "mtu",
-    "static-routes",
-    "gateway",
-    "zone",
-)
-_RH_CONFIG_BONDING_OPTS = (
-    "mode",
-    "miimon",
-    "arp_interval",
-    "arp_ip_target",
-    "downdelay",
-    "updelay",
-    "use_carrier",
-    "lacp_rate",
-    "hashing-algorithm",
-    "max_bonds",
-    "tx_queues",
-    "num_grat_arp",
-    "num_unsol_na",
-    "primary",
-    "primary_reselect",
-    "ad_select",
-    "xmit_hash_policy",
-    "arp_validate",
-    "fail_over_mac",
-    "all_slaves_active",
-    "resend_igmp",
-)
 # Default values for bonding
 _BOND_DEFAULTS = {
     # 803.ad aggregation selection logic
@@ -122,7 +57,6 @@ _BOND_DEFAULTS = {
 }
 _RH_NETWORK_SCRIPT_DIR = "/etc/sysconfig/network-scripts"
 _RH_NETWORK_FILE = "/etc/sysconfig/network"
-_RH_NETWORK_CONF_FILES = "/etc/modprobe.d"
 _CONFIG_TRUE = ("yes", "on", "true", "1", True)
 _CONFIG_FALSE = ("no", "off", "false", "0", False)
 _IFACE_TYPES = (
@@ -140,6 +74,22 @@ _IFACE_TYPES = (
     "ipip",
     "ib",
 )
+
+
+def __virtual__():
+    """
+    Confine this module to RHEL/Fedora based distros
+    """
+    if __grains__["os_family"] == "RedHat":
+        if __grains__["os"] == "Amazon":
+            if __grains__["osmajorrelease"] >= 2:
+                return __virtualname__
+        else:
+            return __virtualname__
+    return (
+        False,
+        "The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.",
+    )
 
 
 def _error_msg_iface(iface, option, expected):
@@ -716,7 +666,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["devtype"] = "IPIP"
         for opt in ("my_inner_ipaddr", "my_outer_ipaddr"):
             if opt not in opts:
-                _raise_error_iface(iface, opts[opt], "1.2.3.4")
+                _raise_error_iface(iface, opt, "1.2.3.4")
             else:
                 result[opt] = opts[opt]
     if iface_type == "ib":
@@ -1028,34 +978,6 @@ def _read_temp(data):
     return lines
 
 
-def build_bond(iface, **settings):
-    """
-    Create a bond script in /etc/modprobe.d with the passed settings
-    and load the bonding kernel module.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ip.build_bond bond0 mode=balance-alb
-    """
-    opts = _parse_settings_bond(settings, iface)
-    try:
-        template = JINJA.get_template("conf.jinja")
-    except jinja2.exceptions.TemplateNotFound:
-        log.error("Could not load template conf.jinja")
-        return ""
-    data = template.render({"name": iface, "bonding": opts})
-    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    path = os.path.join(_RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    __salt__["kmod.load"]("bonding")
-
-    if settings["test"]:
-        return _read_temp(data)
-
-    return _read_file(path)
-
-
 def build_interface(iface, iface_type, enabled, **settings):
     """
     Build an interface script for a network interface.
@@ -1222,20 +1144,6 @@ def down(iface, iface_type):
     if iface_type.lower() not in ("slave", "teamport"):
         return __salt__["cmd.run"]("ifdown {0}".format(iface))
     return None
-
-
-def get_bond(iface):
-    """
-    Return the content of a bond script
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ip.get_bond bond0
-    """
-    path = os.path.join(_RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    return _read_file(path)
 
 
 def get_interface(iface):
