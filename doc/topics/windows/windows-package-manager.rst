@@ -1206,6 +1206,7 @@ installation process.
 :param str locale: Not implemented
 
 .. _standalone-winrepo:
+
 Managing Windows Software on a Standalone Windows Minion
 ********************************************************
 
