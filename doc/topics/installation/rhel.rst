@@ -8,9 +8,8 @@ RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 
 Salt should work properly with all mainstream derivatives of Red Hat Enterprise
 Linux, including CentOS, Scientific Linux, Oracle Linux, and Amazon Linux.
-Report any bugs or issues on the `issue tracker`__.
-
-.. __: https://github.com/saltstack/salt/issues
+Report any bugs or issues on the `issue tracker 
+<https://github.com/saltstack/salt/issues>`__.
 
 Installation from the Official SaltStack Repository
 ===================================================
@@ -74,7 +73,8 @@ Beginning with version 0.9.4, Salt has been available in `EPEL`_.
 
 .. note::
    Packages in this repository are built by community, and it can take a little
-   while until the latest stable SaltStack release become available.
+   while until the latest stable SaltStack release becomes available. Using the
+   SaltStack Repository is highly preferred, instead.
 
 .. _`EPEL`: https://fedoraproject.org/wiki/EPEL
 

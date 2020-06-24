@@ -9,8 +9,8 @@ Ubuntu
 Installation from the Official SaltStack Repository
 ===================================================
 
-Packages for Ubuntu 16 (Xenial), Ubuntu 14 (Trusty), and Ubuntu 12 (Precise)
-are available in the SaltStack repository.
+Packages for Ubuntu 20.04 (Focal), Ubuntu 18.04 (Bionic), and Ubuntu 16
+(Xenial) are available in the SaltStack repository.
 
 Instructions are at https://repo.saltstack.com/#ubuntu.
 
