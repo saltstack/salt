@@ -541,7 +541,7 @@ def managed(name, enabled=True, **kwargs):
         return ret
 
     # Setup up bond modprobe script if required
-    if iface_type == "bond":
+    if iface_type == "bond" and "ip.get_bond" in __salt__:
         try:
             old = __salt__["ip.get_bond"](name)
             new = __salt__["ip.build_bond"](name, **kwargs)
