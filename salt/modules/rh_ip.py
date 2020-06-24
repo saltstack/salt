@@ -40,7 +40,11 @@ def __virtual__():
     Confine this module to RHEL/Fedora based distros
     """
     if __grains__["os_family"] == "RedHat":
-        return __virtualname__
+        if __grains__["os"] == "Amazon":
+            if __grains__["osmajorrelease"] >= 2:
+                return __virtualname__
+        else:
+            return __virtualname__
     return (
         False,
         "The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.",
@@ -1036,8 +1040,6 @@ def build_bond(iface, **settings):
 
         salt '*' ip.build_bond bond0 mode=balance-alb
     """
-    rh_major = __grains__["osrelease"][:1]
-
     opts = _parse_settings_bond(settings, iface)
     try:
         template = JINJA.get_template("conf.jinja")
@@ -1047,16 +1049,6 @@ def build_bond(iface, **settings):
     data = template.render({"name": iface, "bonding": opts})
     _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
     path = os.path.join(_RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    if rh_major == "5":
-        __salt__["cmd.run"](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
-            python_shell=False,
-        )
-        __salt__["cmd.run"](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
-            python_shell=False,
-        )
-        __salt__["file.append"]("/etc/modprobe.conf", path)
     __salt__["kmod.load"]("bonding")
 
     if settings["test"]:
@@ -1076,18 +1068,12 @@ def build_interface(iface, iface_type, enabled, **settings):
         salt '*' ip.build_interface eth0 eth <settings>
     """
     if __grains__["os"] == "Fedora":
-        if __grains__["osmajorrelease"] >= 18:
-            rh_major = "7"
+        if __grains__["osmajorrelease"] >= 28:
+            rh_major = "8"
         else:
-            rh_major = "6"
+            rh_major = "7"
     elif __grains__["os"] == "Amazon":
-        # TODO: Is there a better formula for this? -W. Werner, 2019-05-30
-        # If not, it will need to be updated whenever Amazon releases
-        # Amazon Linux 3
-        if __grains__["osmajorrelease"] == 2:
-            rh_major = "7"
-        else:
-            rh_major = "6"
+        rh_major = "7"
     else:
         rh_major = __grains__["osrelease"][:1]
 
