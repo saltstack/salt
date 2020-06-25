@@ -2145,7 +2145,7 @@ def parse_host_port(host_port):
                 port = int(_s_.lstrip(":"))
             else:
                 if len(_s_) > 1:
-                    raise SaltClientError(
+                    raise ValueError(
                         'found ambiguous "{}" port in "{}"'.format(_s_, host_port)
                     )
     else:
@@ -2154,7 +2154,7 @@ def parse_host_port(host_port):
             try:
                 port = int(port)
             except ValueError as _e_:
-                raise SaltClientError(
+                raise ValueError(
                     'host_port "{}" port value "{}" is not an integer.'.format(
                         host_port, port
                     )
@@ -2169,7 +2169,7 @@ def parse_host_port(host_port):
         log.debug('"%s" Not an IP address? Assuming it is a hostname.', host)
         if host != sanitize_host(host):
             log.error('bad hostname: "%s"', host)
-            raise SaltClientError('bad hostname: "{}"'.format(host))
+            raise ValueError('bad hostname: "{}"'.format(host))
 
     return host, port
 

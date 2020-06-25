@@ -261,7 +261,10 @@ def prep_ip_port(opts):
     if opts["master_uri_format"] == "ip_only":
         ret["master"] = ipaddress.ip_address(opts["master"])
     else:
-        host, port = parse_host_port(opts["master"])
+        try:
+            host, port = parse_host_port(opts["master"])
+        except ValueError as exc:
+            raise SaltClientError(exc)
         ret = {"master": host}
         if port:
             ret.update({"master_port": port})
