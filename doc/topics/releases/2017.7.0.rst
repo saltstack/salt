@@ -675,7 +675,7 @@ Additional Features
 
   .. code-block:: python
 
-      ret1 = __salt__['salt.execute']('*', 'mod.fun')
+      ret1 = __salt__["salt.execute"]("*", "mod.fun")
 
 New Modules
 ===========
