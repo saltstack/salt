@@ -1269,3 +1269,22 @@ times with a 2 second interval, but the file specified did not exist on any run)
      Started: 09:08:12.903000
     Duration: 47000.0 ms
      Changes:
+
+Run State With a Different Umask
+================================
+
+.. versionadded:: 3002
+   NOTE: not available on Windows
+
+The ``umask`` state argument can be used to run a state with a different umask.
+Prior to version 3002 this was available to :mod:`cmd <salt.states.cmd>`
+states, but it is now a global state argument that can be applied to any state.
+
+.. code-block:: yaml
+
+    cleanup_script:
+      cmd.script:
+        - name: salt://myapp/files/my_script.sh
+        - umask: "077"
+        - onchanges:
+          - file: /some/file
