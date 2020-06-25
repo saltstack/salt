@@ -227,7 +227,6 @@ def workgroup(name):
     )
 
     # Return our results based on the changes
-    ret = {}
     if res and current_workgroup.upper() == new_workgroup.upper():
         ret["result"] = True
         ret["comment"] = "The new workgroup '{0}' is the same as '{1}'".format(
