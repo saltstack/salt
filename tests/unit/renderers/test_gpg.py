@@ -3,6 +3,7 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
 from subprocess import PIPE
 from textwrap import dedent
 
@@ -277,20 +278,33 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin, AdaptedConfigurationTestCaseM
                         "salt.renderers.gpg._get_key_dir",
                         MagicMock(return_value=key_dir),
                     ):
-                        self.assertEqual(gpg.render(crypted), expected)
-                        gpg_call = call(
-                            [
-                                "/usr/bin/gpg",
-                                "--homedir",
-                                "/etc/salt/gpgkeys",
-                                "--status-fd",
-                                "2",
-                                "--no-tty",
-                                "-d",
-                            ],
-                            shell=False,
-                            stderr=PIPE,
-                            stdin=PIPE,
-                            stdout=PIPE,
-                        )
-                        popen_mock.assert_has_calls([gpg_call] * 1)
+                        with patch(
+                            "salt.utils.atomicfile.atomic_open", MagicMock(),
+                        ) as atomic_open_mock:
+                            self.assertEqual(gpg.render(crypted), expected)
+                            gpg_call = call(
+                                [
+                                    "/usr/bin/gpg",
+                                    "--homedir",
+                                    "/etc/salt/gpgkeys",
+                                    "--status-fd",
+                                    "2",
+                                    "--no-tty",
+                                    "-d",
+                                ],
+                                shell=False,
+                                stderr=PIPE,
+                                stdin=PIPE,
+                                stdout=PIPE,
+                            )
+                            popen_mock.assert_has_calls([gpg_call] * 1)
+                            atomic_open_mock.assert_has_calls(
+                                [
+                                    call(
+                                        os.path.join(
+                                            minion_opts["cachedir"], "gpg_cache"
+                                        ),
+                                        "wb+",
+                                    )
+                                ]
+                            )
