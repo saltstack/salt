@@ -2,20 +2,21 @@
 
 # Python libs
 from __future__ import absolute_import
-import logging
 
-# Salt testing libs
-from tests.support.unit import TestCase
-from tests.support.mock import patch, mock_open
-from tests.support.mixins import LoaderModuleMockMixin
+import logging
 
 # Salt libs
 import salt.beacons.cert_info as cert_info
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import mock_open, patch
+
+# Salt testing libs
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
 
-_TEST_CERT = '''
+_TEST_CERT = """
 -----BEGIN CERTIFICATE-----
 MIIC/jCCAeagAwIBAgIJAIQMfu6ShHvfMA0GCSqGSIb3DQEBCwUAMCQxIjAgBgNV
 BAMMGXNhbHR0ZXN0LTAxLmV4YW1wbGUubG9jYWwwHhcNMTkwNjAzMjA1OTIyWhcN
@@ -35,70 +36,71 @@ seZBENjwjJA6zZmTXvYyzV5OBP4JyOhYuG9aqr7e6/yjPBEtZv0TJ9KMMbcywvE9
 9FF+l4Y+wgKR/icrpDEpPlC4wYn64sy5vk7EGVagnVyhkjLJ52rn4trzyPox8FmO
 2Zw=
 -----END CERTIFICATE-----
-'''
+"""
 
 
 class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Test case for salt.beacons.cert_info
-    '''
+    """
 
     def setup_loader_modules(self):
-        return {
-            cert_info: {
-                '__context__': {},
-                '__salt__': {},
-            }
-        }
+        return {cert_info: {"__context__": {}, "__salt__": {}}}
 
     def test_non_list_config(self):
         config = {}
 
         ret = cert_info.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for cert_info beacon must'
-                                      ' be a list.'))
+        self.assertEqual(
+            ret, (False, "Configuration for cert_info beacon must be a list.")
+        )
 
     def test_empty_config(self):
         config = [{}]
 
         ret = cert_info.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for cert_info beacon '
-                                      'must contain files option.'))
+        self.assertEqual(
+            ret,
+            (False, "Configuration for cert_info beacon must contain files option."),
+        )
 
     def test_cert_information(self):
-        with patch('salt.utils.files.fopen',
-                   mock_open(read_data=_TEST_CERT)):
-            config = [{'files': ['/etc/pki/tls/certs/mycert.pem'],
-                       'notify_days': -1
-                       }]
+        with patch("salt.utils.files.fopen", mock_open(read_data=_TEST_CERT)):
+            config = [{"files": ["/etc/pki/tls/certs/mycert.pem"], "notify_days": -1}]
 
             ret = cert_info.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            self.assertEqual(ret, (True, "Valid beacon configuration"))
 
             _expected_return = [
                 {
-                    'certificates': [
+                    "certificates": [
                         {
-                            'cert_path': '/etc/pki/tls/certs/mycert.pem',
-                            'extensions': [{'ext_data': 'CA:FALSE',
-                                            'ext_name': 'basicConstraints'},
-                                           {'ext_data': 'DNS:salttest-01.example.local',
-                                            'ext_name': 'subjectAltName'}],
-                            'has_expired': False,
-                            'issuer': 'CN="salttest-01.example.local"',
-                            'issuer_dict': {'CN': 'salttest-01.example.local'},
-                            'notAfter': '2029-05-31 20:59:22Z',
-                            'notAfter_raw': '20290531205922Z',
-                            'notBefore': '2019-06-03 20:59:22Z',
-                            'notBefore_raw': '20190603205922Z',
-                            'serial_number': 9515119675852487647,
-                            'signature_algorithm': 'sha256WithRSAEncryption',
-                            'subject': 'CN="salttest-01.example.local"',
-                            'subject_dict': {'CN': 'salttest-01.example.local'},
-                            'version': 2
+                            "cert_path": "/etc/pki/tls/certs/mycert.pem",
+                            "extensions": [
+                                {
+                                    "ext_data": "CA:FALSE",
+                                    "ext_name": "basicConstraints",
+                                },
+                                {
+                                    "ext_data": "DNS:salttest-01.example.local",
+                                    "ext_name": "subjectAltName",
+                                },
+                            ],
+                            "has_expired": False,
+                            "issuer": 'CN="salttest-01.example.local"',
+                            "issuer_dict": {"CN": "salttest-01.example.local"},
+                            "notAfter": "2029-05-31 20:59:22Z",
+                            "notAfter_raw": "20290531205922Z",
+                            "notBefore": "2019-06-03 20:59:22Z",
+                            "notBefore_raw": "20190603205922Z",
+                            "serial_number": 9515119675852487647,
+                            "signature_algorithm": "sha256WithRSAEncryption",
+                            "subject": 'CN="salttest-01.example.local"',
+                            "subject_dict": {"CN": "salttest-01.example.local"},
+                            "version": 2,
                         }
                     ]
                 }

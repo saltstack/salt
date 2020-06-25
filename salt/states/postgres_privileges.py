@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of PostgreSQL Privileges
 ===================================
 
@@ -63,32 +63,37 @@ Setting the grant option is supported as well.
         - object_name: admins
         - object_type: group
         - maintenance_db: testdb
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
-    '''
+    """
     Only load if the postgres module is present
-    '''
-    if 'postgres.privileges_grant' not in __salt__:
-        return (False, 'Unable to load postgres module.  Make sure `postgres.bins_dir` is set.')
+    """
+    if "postgres.privileges_grant" not in __salt__:
+        return (
+            False,
+            "Unable to load postgres module.  Make sure `postgres.bins_dir` is set.",
+        )
     return True
 
 
-def present(name,
-            object_name,
-            object_type,
-            privileges=None,
-            grant_option=None,
-            prepend='public',
-            maintenance_db=None,
-            user=None,
-            db_password=None,
-            db_host=None,
-            db_port=None,
-            db_user=None):
-    '''
+def present(
+    name,
+    object_name,
+    object_type,
+    privileges=None,
+    grant_option=None,
+    prepend="public",
+    maintenance_db=None,
+    user=None,
+    db_password=None,
+    db_host=None,
+    db_port=None,
+    db_user=None,
+):
+    """
     Grant the requested privilege(s) on the specified object to a role
 
     name
@@ -156,63 +161,70 @@ def present(name,
 
     db_port
         Database port if different from config or default
-    '''
+    """
     ret = {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': 'The requested privilege(s) are already set'
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": "The requested privilege(s) are already set",
     }
 
-    privileges = ','.join(privileges) if privileges else None
+    privileges = ",".join(privileges) if privileges else None
 
     kwargs = {
-        'privileges': privileges,
-        'grant_option': grant_option,
-        'prepend': prepend,
-        'maintenance_db': maintenance_db,
-        'runas': user,
-        'host': db_host,
-        'user': db_user,
-        'port': db_port,
-        'password': db_password,
+        "privileges": privileges,
+        "grant_option": grant_option,
+        "prepend": prepend,
+        "maintenance_db": maintenance_db,
+        "runas": user,
+        "host": db_host,
+        "user": db_user,
+        "port": db_port,
+        "password": db_password,
     }
 
-    if not __salt__['postgres.has_privileges'](
-            name, object_name, object_type, **kwargs):
-        _privs = object_name if object_type == 'group' else privileges
+    if not __salt__["postgres.has_privileges"](
+        name, object_name, object_type, **kwargs
+    ):
+        _privs = object_name if object_type == "group" else privileges
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('The privilege(s): {0} are'
-                ' set to be granted to {1}').format(_privs, name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = (
+                "The privilege(s): {0} are" " set to be granted to {1}"
+            ).format(_privs, name)
             return ret
 
-        if __salt__['postgres.privileges_grant'](
-                name, object_name, object_type, **kwargs):
-            ret['comment'] = ('The privilege(s): {0} have '
-                'been granted to {1}').format(_privs, name)
-            ret['changes'][name] = 'Present'
+        if __salt__["postgres.privileges_grant"](
+            name, object_name, object_type, **kwargs
+        ):
+            ret["comment"] = (
+                "The privilege(s): {0} have " "been granted to {1}"
+            ).format(_privs, name)
+            ret["changes"][name] = "Present"
         else:
-            ret['comment'] = ('Failed to grant privilege(s):'
-                ' {0} to {1}').format(_privs, name)
-            ret['result'] = False
+            ret["comment"] = ("Failed to grant privilege(s):" " {0} to {1}").format(
+                _privs, name
+            )
+            ret["result"] = False
 
     return ret
 
 
-def absent(name,
-            object_name,
-            object_type,
-            privileges=None,
-            prepend='public',
-            maintenance_db=None,
-            user=None,
-            db_password=None,
-            db_host=None,
-            db_port=None,
-            db_user=None):
-    '''
+def absent(
+    name,
+    object_name,
+    object_type,
+    privileges=None,
+    prepend="public",
+    maintenance_db=None,
+    user=None,
+    db_password=None,
+    db_host=None,
+    db_port=None,
+    db_user=None,
+):
+    """
     Revoke the requested privilege(s) on the specificed object(s)
 
     name
@@ -275,46 +287,48 @@ def absent(name,
 
     db_port
         Database port if different from config or default
-    '''
+    """
     ret = {
-        'name': name,
-        'changes': {},
-        'result': True,
-        'comment': ('The requested privilege(s) are '
-            'not set so cannot be revoked')
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": ("The requested privilege(s) are " "not set so cannot be revoked"),
     }
 
-    privileges = ','.join(privileges) if privileges else None
+    privileges = ",".join(privileges) if privileges else None
 
     kwargs = {
-        'privileges': privileges,
-        'prepend': prepend,
-        'maintenance_db': maintenance_db,
-        'runas': user,
-        'host': db_host,
-        'user': db_user,
-        'port': db_port,
-        'password': db_password,
+        "privileges": privileges,
+        "prepend": prepend,
+        "maintenance_db": maintenance_db,
+        "runas": user,
+        "host": db_host,
+        "user": db_user,
+        "port": db_port,
+        "password": db_password,
     }
 
-    if __salt__['postgres.has_privileges'](
-            name, object_name, object_type, **kwargs):
-        _privs = object_name if object_type == 'group' else privileges
+    if __salt__["postgres.has_privileges"](name, object_name, object_type, **kwargs):
+        _privs = object_name if object_type == "group" else privileges
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('The privilege(s): {0} are'
-                ' set to be revoked from {1}').format(_privs, name)
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = (
+                "The privilege(s): {0} are" " set to be revoked from {1}"
+            ).format(_privs, name)
             return ret
 
-        if __salt__['postgres.privileges_revoke'](
-                name, object_name, object_type, **kwargs):
-            ret['comment'] = ('The privilege(s): {0} have '
-                'been revoked from {1}').format(_privs, name)
-            ret['changes'][name] = 'Absent'
+        if __salt__["postgres.privileges_revoke"](
+            name, object_name, object_type, **kwargs
+        ):
+            ret["comment"] = (
+                "The privilege(s): {0} have " "been revoked from {1}"
+            ).format(_privs, name)
+            ret["changes"][name] = "Absent"
         else:
-            ret['comment'] = ('Failed to revoke privilege(s):'
-                ' {0} from {1}').format(_privs, name)
-            ret['result'] = False
+            ret["comment"] = ("Failed to revoke privilege(s):" " {0} from {1}").format(
+                _privs, name
+            )
+            ret["result"] = False
 
     return ret

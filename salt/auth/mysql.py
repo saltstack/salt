@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-'''
+"""
 Provide authentication using MySQL.
 
 When using MySQL as an authentication backend, you will need to create or
@@ -47,9 +47,10 @@ Enable MySQL authentication.
           - test.*
 
 :depends:   - MySQL-python Python module
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 log = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
         import pymysql
+
         pymysql.install_as_MySQLdb()
         import MySQLdb
         import MySQLdb.cursors
@@ -74,52 +76,51 @@ except ImportError:
 
 
 def __virtual__():
-    '''
+    """
     Confirm that a python mysql client is installed.
-    '''
-    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
+    """
+    return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
 def __get_connection_info():
-    '''
+    """
     Grab MySQL Connection Details
-    '''
+    """
     conn_info = {}
 
     try:
-        conn_info['hostname'] = __opts__['mysql_auth']['hostname']
-        conn_info['username'] = __opts__['mysql_auth']['username']
-        conn_info['password'] = __opts__['mysql_auth']['password']
-        conn_info['database'] = __opts__['mysql_auth']['database']
+        conn_info["hostname"] = __opts__["mysql_auth"]["hostname"]
+        conn_info["username"] = __opts__["mysql_auth"]["username"]
+        conn_info["password"] = __opts__["mysql_auth"]["password"]
+        conn_info["database"] = __opts__["mysql_auth"]["database"]
 
-        conn_info['auth_sql'] = __opts__['mysql_auth']['auth_sql']
+        conn_info["auth_sql"] = __opts__["mysql_auth"]["auth_sql"]
     except KeyError as e:
-        log.error('%s does not exist', e)
+        log.error("%s does not exist", e)
         return None
 
     return conn_info
 
 
 def auth(username, password):
-    '''
+    """
     Authenticate using a MySQL user table
-    '''
+    """
     _info = __get_connection_info()
 
     if _info is None:
         return False
 
     try:
-        conn = MySQLdb.connect(_info['hostname'],
-                               _info['username'],
-                               _info['password'],
-                               _info['database'])
+        conn = MySQLdb.connect(
+            _info["hostname"], _info["username"], _info["password"], _info["database"]
+        )
     except OperationalError as e:
         log.error(e)
         return False
 
     cur = conn.cursor()
-    cur.execute(_info['auth_sql'].format(username, password))
+    cur.execute(_info["auth_sql"].format(username, password))
 
     if cur.rowcount == 1:
         return True

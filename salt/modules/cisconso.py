@@ -1,41 +1,44 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execution module for Cisco Network Services Orchestrator Proxy minions
 
 .. versionadded: 2016.11.0
 
 For documentation on setting up the cisconso proxy minion look in the documentation
 for :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt.ext import six
 
-__proxyenabled__ = ['cisconso']
-__virtualname__ = 'cisconso'
+__proxyenabled__ = ["cisconso"]
+__virtualname__ = "cisconso"
 
 
 def __virtual__():
     if salt.utils.platform.is_proxy():
         return __virtualname__
-    return (False, 'The cisconso execution module failed to load: '
-            'only available on proxy minions.')
+    return (
+        False,
+        "The cisconso execution module failed to load: "
+        "only available on proxy minions.",
+    )
 
 
 def info():
-    '''
+    """
     Return system information for grains of the NSO proxy minion
 
     .. code-block:: bash
 
         salt '*' cisconso.info
-    '''
-    return _proxy_cmd('info')
+    """
+    return _proxy_cmd("info")
 
 
 def get_data(datastore, path):
-    '''
+    """
     Get the configuration of the device tree at the given path
 
     :param datastore: The datastore, e.g. running, operational.
@@ -52,14 +55,14 @@ def get_data(datastore, path):
     .. code-block:: bash
 
         salt cisco-nso cisconso.get_data running 'devices/ex0'
-    '''
+    """
     if isinstance(path, six.string_types):
-        path = '/'.split(path)
-    return _proxy_cmd('get_data', datastore, path)
+        path = "/".split(path)
+    return _proxy_cmd("get_data", datastore, path)
 
 
 def set_data_value(datastore, path, data):
-    '''
+    """
     Set a data entry in a datastore
 
     :param datastore: The datastore, e.g. running, operational.
@@ -79,25 +82,25 @@ def set_data_value(datastore, path, data):
     .. code-block:: bash
 
         salt cisco-nso cisconso.set_data_value running 'devices/ex0/routes' 10.0.0.20/24
-    '''
+    """
     if isinstance(path, six.string_types):
-        path = '/'.split(path)
-    return _proxy_cmd('set_data_value', datastore, path, data)
+        path = "/".split(path)
+    return _proxy_cmd("set_data_value", datastore, path, data)
 
 
 def get_rollbacks():
-    '''
+    """
     Get a list of stored configuration rollbacks
 
     .. code-block:: bash
 
         salt cisco-nso cisconso.get_rollbacks
-    '''
-    return _proxy_cmd('get_rollbacks')
+    """
+    return _proxy_cmd("get_rollbacks")
 
 
 def get_rollback(name):
-    '''
+    """
     Get the backup of stored a configuration rollback
 
     :param name: Typically an ID of the backup
@@ -109,12 +112,12 @@ def get_rollback(name):
     .. code-block:: bash
 
         salt cisco-nso cisconso.get_rollback 52
-    '''
-    return _proxy_cmd('get_rollback', name)
+    """
+    return _proxy_cmd("get_rollback", name)
 
 
 def apply_rollback(datastore, name):
-    '''
+    """
     Apply a system rollback
 
     :param datastore: The datastore, e.g. running, operational.
@@ -127,12 +130,12 @@ def apply_rollback(datastore, name):
     .. code-block:: bash
 
         salt cisco-nso cisconso.apply_rollback 52
-    '''
-    return _proxy_cmd('apply_rollback', datastore, name)
+    """
+    return _proxy_cmd("apply_rollback", datastore, name)
 
 
 def _proxy_cmd(command, *args, **kwargs):
-    '''
+    """
     run commands from __proxy__
     :mod:`salt.proxy.cisconso<salt.proxy.cisconso>`
 
@@ -144,12 +147,12 @@ def _proxy_cmd(command, *args, **kwargs):
 
     kwargs
         key word arguments to pass to `command` function
-    '''
-    proxy_prefix = __opts__['proxy']['proxytype']
-    proxy_cmd = '.'.join([proxy_prefix, command])
+    """
+    proxy_prefix = __opts__["proxy"]["proxytype"]
+    proxy_cmd = ".".join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
     for k in kwargs:
-        if k.startswith('__pub_'):
+        if k.startswith("__pub_"):
             kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)

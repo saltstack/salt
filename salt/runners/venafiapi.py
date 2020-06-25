@@ -25,12 +25,13 @@ Support for Venafi
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
-import time
 
+import logging
 
 # Import Salt libs
 import sys
+import time
+
 import salt.cache
 import salt.syspaths as syspaths
 import salt.utils.files
@@ -40,36 +41,45 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
+
 try:
     import vcert
     from vcert.common import CertificateRequest
+
     HAS_VCERT = True
 except ImportError:
     HAS_VCERT = False
 
-CACHE_BANK_NAME = 'venafi/domains'
-__virtualname__ = 'venafi'
+CACHE_BANK_NAME = "venafi/domains"
+__virtualname__ = "venafi"
 log = logging.getLogger(__name__)
 
 
 def _init_connection():
     log.info("Initializing Venafi Trust Platform or Venafi Cloud connection")
-    api_key = __opts__.get('venafi', {}).get('api_key', '')
-    base_url = __opts__.get('venafi', {}).get('base_url', '')
+    api_key = __opts__.get("venafi", {}).get("api_key", "")
+    base_url = __opts__.get("venafi", {}).get("base_url", "")
     log.info("Using base_url: %s", base_url)
-    tpp_user = __opts__.get('venafi', {}).get('tpp_user', '')
-    tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
-    trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
-    fake = __opts__.get('venafi', {}).get('fake', '')
+    tpp_user = __opts__.get("venafi", {}).get("tpp_user", "")
+    tpp_password = __opts__.get("venafi", {}).get("tpp_password", "")
+    trust_bundle = __opts__.get("venafi", {}).get("trust_bundle", "")
+    fake = __opts__.get("venafi", {}).get("fake", "")
     log.info("Finished config processing")
     if fake:
         return vcert.Connection(fake=True)
     elif trust_bundle:
         log.info("Will use trust bundle from file %s", trust_bundle)
-        return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password,
-                                http_request_kwargs={"verify": trust_bundle})
+        return vcert.Connection(
+            url=base_url,
+            token=api_key,
+            user=tpp_user,
+            password=tpp_password,
+            http_request_kwargs={"verify": trust_bundle},
+        )
     else:
-        return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
+        return vcert.Connection(
+            url=base_url, token=api_key, user=tpp_user, password=tpp_password
+        )
 
 
 def __virtual__():
@@ -110,13 +120,20 @@ def request(
         sys.exit(1)
 
     if key_password is not None:
-        if key_password.startswith('sdb://'):
-            key_password = __salt__['sdb.get'](key_password)
+        if key_password.startswith("sdb://"):
+            key_password = __salt__["sdb.get"](key_password)
     conn = _init_connection()
 
     if csr_path is None:
-        request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                     organization=org, organizational_unit=org_unit, key_password=key_password)
+        request = CertificateRequest(
+            common_name=dns_name,
+            country=country,
+            province=state,
+            locality=loc,
+            organization=org,
+            organizational_unit=org_unit,
+            key_password=key_password,
+        )
         zone_config = conn.read_zone_conf(zone)
         log.info("Updating request from zone %s", zone_config)
         request.update_from_zone_config(zone_config)
@@ -129,7 +146,7 @@ def request(
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
             raise Exception(
-                'Unable to open file {file}: {excp}'.format(file=csr_path, excp=e)
+                "Unable to open file {file}: {excp}".format(file=csr_path, excp=e)
             )
     conn.request_cert(request, zone)
 
@@ -151,17 +168,17 @@ def request(
                     private_key = pkey_file.read()
             except Exception as e:
                 raise Exception(
-                    'Unable to open file {file}: {excp}'.format(file=pkey_path, excp=e)
+                    "Unable to open file {file}: {excp}".format(file=pkey_path, excp=e)
                 )
         else:
             private_key = None
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     data = {
-        'minion_id': minion_id,
-        'cert': cert.cert,
-        'chain': cert.chain,
-        'pkey': private_key
+        "minion_id": minion_id,
+        "cert": cert.cert,
+        "chain": cert.chain,
+        "pkey": private_key,
     }
     cache.store(CACHE_BANK_NAME, dns_name, data)
     return cert.cert, private_key
@@ -198,7 +215,7 @@ def show_cert(dns_name):
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     domain_data = cache.fetch(CACHE_BANK_NAME, dns_name) or {}
-    cert = domain_data.get('cert')
+    cert = domain_data.get("cert")
     return cert
 
 
@@ -213,7 +230,7 @@ def list_domain_cache():
         salt-run venafi.list_domain_cache
     """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    return cache.list('venafi/domains')
+    return cache.list("venafi/domains")
 
 
 def del_cached_domain(domains):
@@ -228,11 +245,11 @@ def del_cached_domain(domains):
     """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     if isinstance(domains, six.string_types):
-        domains = domains.split(',')
+        domains = domains.split(",")
     if not isinstance(domains, list):
         raise CommandExecutionError(
-            'You must pass in either a string containing one or more domains '
-            'separated by commas, or a list of single domain strings'
+            "You must pass in either a string containing one or more domains "
+            "separated by commas, or a list of single domain strings"
         )
     success = []
     failed = []
@@ -242,4 +259,4 @@ def del_cached_domain(domains):
             success.append(domain)
         except CommandExecutionError:
             failed.append(domain)
-    return {'Succeeded': success, 'Failed': failed}
+    return {"Succeeded": success, "Failed": failed}

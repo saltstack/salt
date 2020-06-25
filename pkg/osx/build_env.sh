@@ -71,7 +71,7 @@ if [ "$PYVER" == "2" ]; then
     PYTHON=$INSTALL_DIR/bin/python
     PIP=$INSTALL_DIR/bin/pip
 else
-    PYDIR=$INSTALL_DIR/lib/python3.5
+    PYDIR=$INSTALL_DIR/lib/python3.7
     PYTHON=$INSTALL_DIR/bin/python3
     PIP=$INSTALL_DIR/bin/pip3
 fi
@@ -177,8 +177,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium: download\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.17.tar.gz"
-PKGDIR="libsodium-1.0.17"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz"
+PKGDIR="libsodium-1.0.18"
 
 download $PKGURL
 
@@ -200,8 +200,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: zeromq: download\007"
 
-PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.tar.gz"
-PKGDIR="zeromq-4.1.6"
+PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.7/zeromq-4.1.7.tar.gz"
+PKGDIR="zeromq-4.1.7"
 
 download $PKGURL
 
@@ -223,8 +223,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: OpenSSL: download\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2q.tar.gz"
-PKGDIR="openssl-1.0.2q"
+PKGURL="http://openssl.org/source/openssl-1.0.2u.tar.gz"
+PKGDIR="openssl-1.0.2u"
 
 download $PKGURL
 
@@ -250,8 +250,8 @@ if [ "$PYVER" == "2" ]; then
     PKGURL="https://www.python.org/ftp/python/2.7.15/Python-2.7.15.tar.xz"
     PKGDIR="Python-2.7.15"
 else
-    PKGURL="https://www.python.org/ftp/python/3.5.4/Python-3.5.4.tar.xz"
-    PKGDIR="Python-3.5.4"
+    PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
+    PKGDIR="Python-3.7.4"
 fi
 
 download $PKGURL
@@ -271,7 +271,7 @@ $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-$PIP install --upgrade pip
+$PIP install --upgrade pip wheel
 
 ############################################################################
 # Download and install salt python dependencies
@@ -283,15 +283,9 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt \
-             --no-cache-dir
-
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (build_ext)"
-echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
-             --global-option=build_ext \
-             --global-option="-I$INSTALL_DIR/include" \
+$PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
+             --target=$PYDIR/site-packages \
+             --ignore-installed \
              --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"

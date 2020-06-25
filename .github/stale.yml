@@ -2,10 +2,10 @@
 
 # Number of days of inactivity before an issue becomes stale
 # 600 is approximately 1 year and 8 months
-daysUntilStale: 30
+daysUntilStale: 90
 
 # Number of days of inactivity before a stale issue is closed
-daysUntilClose: 7
+daysUntilClose: false
 
 # Issues with these labels will never be considered stale
 exemptLabels:
@@ -17,6 +17,7 @@ exemptLabels:
   - Bug
   - Feature
   - Test Failure
+  -ZD
 
 # Label to use when marking an issue as stale
 staleLabel: stale
@@ -36,4 +37,3 @@ closeComment: false
 
 # Limit to only `issues` or `pulls`
 only: issues
-

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for execution of ServiceNow CI (configuration items)
 
 .. versionadded:: 2016.11.0
@@ -18,13 +18,15 @@ Module for execution of ServiceNow CI (configuration items)
           instance_name: ''
           username: ''
           password: ''
-'''
+"""
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import third party libs
 from salt.ext import six
+
 HAS_LIBS = False
 try:
     from servicenow_rest.api import Client
@@ -35,31 +37,34 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'servicenow'
+__virtualname__ = "servicenow"
 
-SERVICE_NAME = 'servicenow'
+SERVICE_NAME = "servicenow"
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if servicenow is installed on this minion.
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The servicenow execution module failed to load: '
-            'requires servicenow_rest python library to be installed.')
+    return (
+        False,
+        "The servicenow execution module failed to load: "
+        "requires servicenow_rest python library to be installed.",
+    )
 
 
 def _get_client():
-    config = __salt__['config.option'](SERVICE_NAME)
-    instance_name = config['instance_name']
-    username = config['username']
-    password = config['password']
+    config = __salt__["config.option"](SERVICE_NAME)
+    instance_name = config["instance_name"]
+    username = config["username"]
+    password = config["password"]
     return Client(instance_name, username, password)
 
 
-def set_change_request_state(change_id, state='approved'):
-    '''
+def set_change_request_state(change_id, state="approved"):
+    """
     Set the approval state of a change request/record
 
     :param change_id: The ID of the change request, e.g. CHG123545
@@ -74,22 +79,22 @@ def set_change_request_state(change_id, state='approved'):
 
         salt myminion servicenow.set_change_request_state CHG000123 declined
         salt myminion servicenow.set_change_request_state CHG000123 approved
-    '''
+    """
     client = _get_client()
-    client.table = 'change_request'
+    client.table = "change_request"
     # Get the change record first
-    record = client.get({'number': change_id})
+    record = client.get({"number": change_id})
     if record is None or len(record) == 0:
-        log.error('Failed to fetch change record, maybe it does not exist?')
+        log.error("Failed to fetch change record, maybe it does not exist?")
         return False
     # Use the sys_id as the unique system record
-    sys_id = record[0]['sys_id']
-    response = client.update({'approval': state}, sys_id)
+    sys_id = record[0]["sys_id"]
+    response = client.update({"approval": state}, sys_id)
     return response
 
 
 def delete_record(table, sys_id):
-    '''
+    """
     Delete an existing record
 
     :param table: The table name, e.g. sys_user
@@ -103,7 +108,7 @@ def delete_record(table, sys_id):
     .. code-block:: bash
 
         salt myminion servicenow.delete_record sys_computer 2134566
-    '''
+    """
     client = _get_client()
     client.table = table
     response = client.delete(sys_id)
@@ -111,7 +116,7 @@ def delete_record(table, sys_id):
 
 
 def non_structured_query(table, query=None, **kwargs):
-    '''
+    """
     Run a non-structed (not a dict) query on a servicenow table.
     See http://wiki.servicenow.com/index.php?title=Encoded_Query_Strings#gsc.tab=0
     for help on constructing a non-structured query string.
@@ -128,7 +133,7 @@ def non_structured_query(table, query=None, **kwargs):
 
         salt myminion servicenow.non_structured_query sys_computer 'role=web'
         salt myminion servicenow.non_structured_query sys_computer role=web type=computer
-    '''
+    """
     client = _get_client()
     client.table = table
     # underlying lib doesn't use six or past.basestring,
@@ -138,15 +143,15 @@ def non_structured_query(table, query=None, **kwargs):
         # try and assemble a query by keyword
         query_parts = []
         for key, value in kwargs.items():
-            query_parts.append('{0}={1}'.format(key, value))
-        query = '^'.join(query_parts)
+            query_parts.append("{0}={1}".format(key, value))
+        query = "^".join(query_parts)
     query = six.text_type(query)
     response = client.get(query)
     return response
 
 
 def update_record_field(table, sys_id, field, value):
-    '''
+    """
     Update the value of a record's field in a servicenow table
 
     :param table: The table name, e.g. sys_user
@@ -166,7 +171,7 @@ def update_record_field(table, sys_id, field, value):
     .. code-block:: bash
 
         salt myminion servicenow.update_record_field sys_user 2348234 first_name jimmy
-    '''
+    """
     client = _get_client()
     client.table = table
     response = client.update({field: value}, sys_id)

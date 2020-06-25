@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Many aspects of the salt payload need to be managed, from the return of
 encrypted keys to general payload dynamics and packaging, these happen
 in here
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import datetime
+import gc
+
 # import sys  # Use if sys is commented out below
 import logging
-import gc
-import datetime
 
 # Import salt libs
 import salt.log
@@ -18,11 +20,12 @@ import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
 import salt.utils.stringutils
-from salt.exceptions import SaltReqTimeoutError, SaltDeserializationError
-from salt.utils.data import CaseInsensitiveDict
+from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
 
 # Import third party libs
 from salt.ext import six
+from salt.utils.data import CaseInsensitiveDict
+
 try:
     import zmq
 except ImportError:
@@ -33,48 +36,49 @@ log = logging.getLogger(__name__)
 
 
 def package(payload):
-    '''
+    """
     This method for now just wraps msgpack.dumps, but it is here so that
     we can make the serialization a custom option in the future with ease.
-    '''
+    """
     return salt.utils.msgpack.dumps(payload)
 
 
 def unpackage(package_):
-    '''
+    """
     Unpackages a payload
-    '''
+    """
     return salt.utils.msgpack.loads(package_, use_list=True)
 
 
 def format_payload(enc, **kwargs):
-    '''
+    """
     Pass in the required arguments for a payload, the enc type and the cmd,
     then a list of keyword args to generate the body of the load dict.
-    '''
-    payload = {'enc': enc}
+    """
+    payload = {"enc": enc}
     load = {}
     for key in kwargs:
         load[key] = kwargs[key]
-    payload['load'] = load
+    payload["load"] = load
     return package(payload)
 
 
 class Serial(object):
-    '''
+    """
     Create a serialization object, this object manages all message
     serialization in Salt
-    '''
+    """
+
     def __init__(self, opts):
         if isinstance(opts, dict):
-            self.serial = opts.get('serial', 'msgpack')
+            self.serial = opts.get("serial", "msgpack")
         elif isinstance(opts, six.string_types):
             self.serial = opts
         else:
-            self.serial = 'msgpack'
+            self.serial = "msgpack"
 
     def loads(self, msg, encoding=None, raw=False):
-        '''
+        """
         Run the correct loads serialization format
 
         :param encoding: Useful for Python 3 support. If the msgpack data
@@ -89,17 +93,17 @@ class Serial(object):
                          been lost in this case) to what the encoding is
                          set as. In this case, it will fail if any of
                          the contents cannot be converted.
-        '''
+        """
         try:
+
             def ext_type_decoder(code, data):
                 if code == 78:
                     data = salt.utils.stringutils.to_unicode(data)
-                    return datetime.datetime.strptime(data, '%Y%m%dT%H:%M:%S.%f')
+                    return datetime.datetime.strptime(data, "%Y%m%dT%H:%M:%S.%f")
                 return data
 
             gc.disable()  # performance optimization for msgpack
-            loads_kwargs = {'use_list': True,
-                            'ext_hook': ext_type_decoder}
+            loads_kwargs = {"use_list": True, "ext_hook": ext_type_decoder}
             if salt.utils.msgpack.version >= (0, 4, 0):
                 # msgpack only supports 'encoding' starting in 0.4.0.
                 # Due to this, if we don't need it, don't pass it at all so
@@ -107,17 +111,17 @@ class Serial(object):
                 # of msgpack.
                 if salt.utils.msgpack.version >= (0, 5, 2):
                     if encoding is None:
-                        loads_kwargs['raw'] = True
+                        loads_kwargs["raw"] = True
                     else:
-                        loads_kwargs['raw'] = False
+                        loads_kwargs["raw"] = False
                 else:
-                    loads_kwargs['encoding'] = encoding
+                    loads_kwargs["encoding"] = encoding
                 try:
                     ret = salt.utils.msgpack.unpackb(msg, **loads_kwargs)
                 except UnicodeDecodeError:
                     # msg contains binary data
-                    loads_kwargs.pop('raw', None)
-                    loads_kwargs.pop('encoding', None)
+                    loads_kwargs.pop("raw", None)
+                    loads_kwargs.pop("encoding", None)
                     ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             else:
                 ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
@@ -125,17 +129,17 @@ class Serial(object):
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:  # pylint: disable=broad-except
             log.critical(
-                'Could not deserialize msgpack message. This often happens '
-                'when trying to read a file not in binary mode. '
-                'To see message payload, enable debug logging and retry. '
-                'Exception: %s', exc
+                "Could not deserialize msgpack message. This often happens "
+                "when trying to read a file not in binary mode. "
+                "To see message payload, enable debug logging and retry. "
+                "Exception: %s",
+                exc,
             )
-            log.debug('Msgpack deserialization failure on message: %s', msg)
+            log.debug("Msgpack deserialization failure on message: %s", msg)
             gc.collect()
             raise six.raise_from(
                 SaltDeserializationError(
-                    'Could not deserialize msgpack message.'
-                    ' See log for more info.'
+                    "Could not deserialize msgpack message." " See log for more info."
                 ),
                 exc,
             )
@@ -144,19 +148,19 @@ class Serial(object):
         return ret
 
     def load(self, fn_):
-        '''
+        """
         Run the correct serialization to load a file
-        '''
+        """
         data = fn_.read()
         fn_.close()
         if data:
             if six.PY3:
-                return self.loads(data, encoding='utf-8')
+                return self.loads(data, encoding="utf-8")
             else:
                 return self.loads(data)
 
     def dumps(self, msg, use_bin_type=False):
-        '''
+        """
         Run the correct dumps serialization format
 
         :param use_bin_type: Useful for Python 3 support. Tells msgpack to
@@ -164,7 +168,8 @@ class Serial(object):
                              by encoding them differently.
                              Since this changes the wire protocol, this
                              option should not be used outside of IPC.
-        '''
+        """
+
         def ext_type_encoder(obj):
             if isinstance(obj, six.integer_types):
                 # msgpack can't handle the very long Python longs for jids
@@ -174,8 +179,10 @@ class Serial(object):
                 # msgpack doesn't support datetime.datetime and datetime.date datatypes.
                 # So here we have converted these types to custom datatype
                 # This is msgpack Extended types numbered 78
-                return salt.utils.msgpack.ExtType(78, salt.utils.stringutils.to_bytes(
-                    obj.strftime('%Y%m%dT%H:%M:%S.%f')))
+                return salt.utils.msgpack.ExtType(
+                    78,
+                    salt.utils.stringutils.to_bytes(obj.strftime("%Y%m%dT%H:%M:%S.%f")),
+                )
             # The same for immutable types
             elif isinstance(obj, immutabletypes.ImmutableDict):
                 return dict(obj)
@@ -186,21 +193,30 @@ class Serial(object):
                 return tuple(obj)
             elif isinstance(obj, CaseInsensitiveDict):
                 return dict(obj)
-            # Nothing known exceptions found. Let msgpack raise it's own.
+            # Nothing known exceptions found. Let msgpack raise its own.
             return obj
 
         try:
-            return salt.utils.msgpack.packb(msg, default=ext_type_encoder, use_bin_type=use_bin_type)
+            return salt.utils.msgpack.packb(
+                msg, default=ext_type_encoder, use_bin_type=use_bin_type
+            )
         except (OverflowError, salt.utils.msgpack.exceptions.PackValueError):
             # msgpack<=0.4.6 don't call ext encoder on very long integers raising the error instead.
             # Convert any very long longs to strings and call dumps again.
             def verylong_encoder(obj, context):
                 # Make sure we catch recursion here.
                 objid = id(obj)
-                if objid in context:
-                    return '<Recursion on {} with id={}>'.format(type(obj).__name__, id(obj))
+                # This instance list needs to correspond to the types recursed
+                # in the below if/elif chain. Also update
+                # tests/unit/test_payload.py
+                if objid in context and isinstance(obj, (dict, list, tuple)):
+                    return "<Recursion on {} with id={}>".format(
+                        type(obj).__name__, id(obj)
+                    )
                 context.add(objid)
 
+                # The isinstance checks in this if/elif chain need to be
+                # kept in sync with the above recursion check.
                 if isinstance(obj, dict):
                     for key, value in six.iteritems(obj.copy()):
                         obj[key] = verylong_encoder(value, context)
@@ -218,12 +234,14 @@ class Serial(object):
                     return obj
 
             msg = verylong_encoder(msg, set())
-            return salt.utils.msgpack.packb(msg, default=ext_type_encoder, use_bin_type=use_bin_type)
+            return salt.utils.msgpack.packb(
+                msg, default=ext_type_encoder, use_bin_type=use_bin_type
+            )
 
     def dump(self, msg, fn_):
-        '''
+        """
         Serialize the correct data into the named file object
-        '''
+        """
         if six.PY2:
             fn_.write(self.dumps(msg))
         else:
@@ -235,10 +253,11 @@ class Serial(object):
 
 
 class SREQ(object):
-    '''
+    """
     Create a generic interface to wrap salt zeromq req calls.
-    '''
-    def __init__(self, master, id_='', serial='msgpack', linger=0, opts=None):
+    """
+
+    def __init__(self, master, id_="", serial="msgpack", linger=0, opts=None):
         self.master = master
         self.id_ = id_
         self.serial = Serial(serial)
@@ -249,23 +268,21 @@ class SREQ(object):
 
     @property
     def socket(self):
-        '''
+        """
         Lazily create the socket.
-        '''
-        if not hasattr(self, '_socket'):
+        """
+        if not hasattr(self, "_socket"):
             # create a new one
             self._socket = self.context.socket(zmq.REQ)
-            if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-                self._socket.setsockopt(
-                    zmq.RECONNECT_IVL_MAX, 5000
-                )
+            if hasattr(zmq, "RECONNECT_IVL_MAX"):
+                self._socket.setsockopt(zmq.RECONNECT_IVL_MAX, 5000)
 
             self._set_tcp_keepalive()
-            if self.master.startswith('tcp://['):
+            if self.master.startswith("tcp://["):
                 # Hint PF type if bracket enclosed IPv6 address
-                if hasattr(zmq, 'IPV6'):
+                if hasattr(zmq, "IPV6"):
                     self._socket.setsockopt(zmq.IPV6, 1)
-                elif hasattr(zmq, 'IPV4ONLY'):
+                elif hasattr(zmq, "IPV4ONLY"):
                     self._socket.setsockopt(zmq.IPV4ONLY, 0)
             self._socket.linger = self.linger
             if self.id_:
@@ -274,46 +291,44 @@ class SREQ(object):
         return self._socket
 
     def _set_tcp_keepalive(self):
-        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
-            if 'tcp_keepalive' in self.opts:
+        if hasattr(zmq, "TCP_KEEPALIVE") and self.opts:
+            if "tcp_keepalive" in self.opts:
+                self._socket.setsockopt(zmq.TCP_KEEPALIVE, self.opts["tcp_keepalive"])
+            if "tcp_keepalive_idle" in self.opts:
                 self._socket.setsockopt(
-                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+                    zmq.TCP_KEEPALIVE_IDLE, self.opts["tcp_keepalive_idle"]
                 )
-            if 'tcp_keepalive_idle' in self.opts:
+            if "tcp_keepalive_cnt" in self.opts:
                 self._socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+                    zmq.TCP_KEEPALIVE_CNT, self.opts["tcp_keepalive_cnt"]
                 )
-            if 'tcp_keepalive_cnt' in self.opts:
+            if "tcp_keepalive_intvl" in self.opts:
                 self._socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-                )
-            if 'tcp_keepalive_intvl' in self.opts:
-                self._socket.setsockopt(
-                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+                    zmq.TCP_KEEPALIVE_INTVL, self.opts["tcp_keepalive_intvl"]
                 )
 
     def clear_socket(self):
-        '''
+        """
         delete socket if you have it
-        '''
-        if hasattr(self, '_socket'):
+        """
+        if hasattr(self, "_socket"):
             if isinstance(self.poller.sockets, dict):
                 sockets = list(self.poller.sockets.keys())
                 for socket in sockets:
-                    log.trace('Unregistering socket: %s', socket)
+                    log.trace("Unregistering socket: %s", socket)
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
-                    log.trace('Unregistering socket: %s', socket)
+                    log.trace("Unregistering socket: %s", socket)
                     self.poller.unregister(socket[0])
             del self._socket
 
     def send(self, enc, load, tries=1, timeout=60):
-        '''
+        """
         Takes two arguments, the encryption type and the base payload
-        '''
-        payload = {'enc': enc}
-        payload['load'] = load
+        """
+        payload = {"enc": enc}
+        payload["load"] = load
         pkg = self.serial.dumps(payload)
         self.socket.send(pkg)
         self.poller.register(self.socket, zmq.POLLIN)
@@ -325,23 +340,25 @@ class SREQ(object):
                 break
             if tries > 1:
                 log.info(
-                    'SaltReqTimeoutError: after %s seconds. (Try %s of %s)',
-                    timeout, tried, tries
+                    "SaltReqTimeoutError: after %s seconds. (Try %s of %s)",
+                    timeout,
+                    tried,
+                    tries,
                 )
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    'SaltReqTimeoutError: after {0} seconds, ran {1} '
-                    'tries'.format(timeout * tried, tried)
+                    "SaltReqTimeoutError: after {0} seconds, ran {1} "
+                    "tries".format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 
     def send_auto(self, payload, tries=1, timeout=60):
-        '''
+        """
         Detect the encryption type based on the payload
-        '''
-        enc = payload.get('enc', 'clear')
-        load = payload.get('load', {})
+        """
+        enc = payload.get("enc", "clear")
+        load = payload.get("load", {})
         return self.send(enc, load, tries, timeout)
 
     def destroy(self):
@@ -367,4 +384,5 @@ class SREQ(object):
     # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+
     # pylint: enable=W1701

@@ -26,7 +26,7 @@ the Boron feature release.
 A deprecation warning should be in place for at least two major releases before
 the deprecated code and its accompanying deprecation warning are removed.  More
 time should be given for more complex changes.  For example, if the current
-release under development is ``Sodium``, the deprecated code and associated
+release under development is ``3001``, the deprecated code and associated
 warnings should remain in place and warn for at least ``Aluminum``.
 
 To help in this deprecation task, salt provides
@@ -45,10 +45,10 @@ Consider the following example:
     def some_function(bar=False, foo=None):
         if foo is not None:
             salt.utils.versions.warn_until(
-                'Aluminum',
-                'The \'foo\' argument has been deprecated and its '
-                'functionality removed, as such, its usage is no longer '
-                'required.'
+                "Aluminum",
+                "The 'foo' argument has been deprecated and its "
+                "functionality removed, as such, its usage is no longer "
+                "required.",
             )
 
 Development begins on the ``Aluminum`` release when the ``Magnesium`` branch is

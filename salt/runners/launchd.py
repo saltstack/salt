@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage launchd plist files
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
@@ -10,7 +10,7 @@ import sys
 
 
 def write_launchd_plist(program):
-    '''
+    """
     Write a launchd plist for managing salt-master or salt-minion
 
     CLI Example:
@@ -18,8 +18,8 @@ def write_launchd_plist(program):
     .. code-block:: bash
 
         salt-run launchd.write_launchd_plist salt-master
-    '''
-    plist_sample_text = '''
+    """
+    plist_sample_text = """
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -46,18 +46,16 @@ def write_launchd_plist(program):
     </dict>
   </dict>
 </plist>
-    '''.strip()
+    """.strip()
 
-    supported_programs = ['salt-master', 'salt-minion']
+    supported_programs = ["salt-master", "salt-minion"]
 
     if program not in supported_programs:
-        sys.stderr.write(
-            'Supported programs: \'{0}\'\n'.format(supported_programs)
-        )
+        sys.stderr.write("Supported programs: '{0}'\n".format(supported_programs))
         sys.exit(-1)
 
         return plist_sample_text.format(
             program=program,
             python=sys.executable,
-            script=os.path.join(os.path.dirname(sys.executable), program)
+            script=os.path.join(os.path.dirname(sys.executable), program),
         )
