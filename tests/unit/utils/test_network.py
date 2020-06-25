@@ -7,7 +7,6 @@ import pytest
 import salt.exceptions
 import salt.utils.network as network
 from salt._compat import ipaddress
-from salt.exceptions import SaltClientError
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
 from tests.support.unit import TestCase
@@ -274,7 +273,7 @@ class NetworkTestCase(TestCase):
 
         for host_port in bad_host_ports:
             try:
-                self.assertRaises(SaltClientError, network.parse_host_port, host_port)
+                self.assertRaises(ValueError, network.parse_host_port, host_port)
             except AssertionError as _e_:
                 log.error(
                     'bad host_port value: "%s" failed to trigger ValueError exception',
