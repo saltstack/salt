@@ -447,7 +447,7 @@ filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_que
 
 Depends on the `jmespath`_ Python module.
 
-.. _`JMESPath language`: http://jmespath.org/
+.. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Slot Syntax Updates

@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 import logging
-from collections import OrderedDict
 
 import psutil
 import pytest
@@ -19,8 +18,14 @@ import salt.utils.platform
 import salt.utils.yaml
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +64,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     _call_binary_ = "salt-syndic"
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exit_status_unknown_user(self):
         """
         Ensure correct exit status when the syndic is configured to run as an unknown user.
@@ -93,7 +98,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
     # pylint: disable=invalid-name
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-syndic.
@@ -124,7 +129,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             syndic.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-syndic starts correctly.

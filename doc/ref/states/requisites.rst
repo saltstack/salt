@@ -168,17 +168,17 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding `<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
 
-* `require <requisites-require>`: Requires that a list of target states succeed before execution
-* `onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
-* `watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
-* `listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
-* `prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
-* `onfail <requisites-onfail>`: Execute only if a target state fails
-* `use <requisites-use>`: Copy arguments from another state
+* :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
+* :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
+* :ref:`watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
+* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
+* :ref:`prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
+* :ref:`onfail <requisites-onfail>`: Execute only if a target state fails
+* :ref:`use <requisites-use>`: Copy arguments from another state
 
-Several requisite types have a corresponding `requisite_any <requisites-any>` form:
+Several requisite types have a corresponding :ref:`requisite_any <requisites-any>` form:
 
 * ``require_any``
 * ``watch_any``
@@ -190,7 +190,7 @@ logic is desired instead of the default `OR` logic of onfail/onfail_any (which
 are equivalent).
 
 All requisites define specific relationships and always work with the dependency
-logic defined `above <requisites-matching>`.
+logic defined :ref:`above <requisites-matching>`.
 
 .. _requisites-require:
 
@@ -991,6 +991,38 @@ if the gluster commands return a 0 ret value.
               args:
                 - /etc/crontab
                 - 'entry1'
+
+.. _creates-requisite:
+
+Creates
+-------
+
+.. versionadded:: 3001
+
+The ``creates`` requisite specifies that a state should only run when any of
+the specified files do not already exist. Like ``unless``, ``creates`` requisite
+operates as NAND and is useful in giving more granular control over when a state
+should execute. This was previously used by the :mod:`cmd <salt.states.cmd>` and
+:mod:`docker_container <salt.states.docker_container>` states.
+
+    .. code-block:: yaml
+
+      contrived creates example:
+        file.touch:
+          - name: /path/to/file
+          - creates: /path/to/file
+
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files do not exist:
+
+    .. code-block:: yaml
+
+      creates list:
+        file.cmd:
+          - name: /path/to/command
+          - creates:
+              - /path/file
+              - /path/file2
 
 listen
 ~~~~~~

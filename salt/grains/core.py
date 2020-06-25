@@ -9,11 +9,10 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import hashlib
 import locale
 import logging
 import os
@@ -23,16 +22,15 @@ import socket
 import sys
 import time
 import uuid
-import warnings
 from errno import EACCES, EPERM
 
-# Import salt libs
 import salt.exceptions
 import salt.log
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.network
 import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
@@ -42,69 +40,24 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
+from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
+from salt.utils.network import _get_interfaces
 
-# pylint: disable=import-error
 try:
-    import dateutil.tz
+    import dateutil.tz  # pylint: disable=import-error
 
     _DATEUTIL_TZ = True
 except ImportError:
     _DATEUTIL_TZ = False
 
-__proxyenabled__ = ["*"]
-__FQDN__ = None
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    # Extend the default list of supported distros. This will be used for the
-    # /etc/DISTRO-release checking that is part of linux_distribution()
-    from platform import _supported_dists
-
-    _supported_dists += (
-        "arch",
-        "mageia",
-        "meego",
-        "vmware",
-        "bluewhite64",
-        "slamd64",
-        "ovs",
-        "system",
-        "mint",
-        "oracle",
-        "void",
-    )
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(
-                supported_dists=_supported_dists, **kwargs
-            )
-
-
-except ImportError:
-    from distro import linux_distribution
-
-
-if salt.utils.platform.is_windows():
-    import salt.utils.win_osinfo
-
-
-__salt__ = {
-    "cmd.run": salt.modules.cmdmod._run_quiet,
-    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
-    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
-    "smbios.records": salt.modules.smbios.records,
-    "smbios.get": salt.modules.smbios.get,
-}
 log = logging.getLogger(__name__)
 
 HAS_WMI = False
 if salt.utils.platform.is_windows():
+    import salt.utils.win_osinfo
+
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
@@ -119,11 +72,21 @@ if salt.utils.platform.is_windows():
             "Unable to import Python wmi module, some core grains " "will be missing"
         )
 
-HAS_UNAME = True
-if not hasattr(os, "uname"):
-    HAS_UNAME = False
 
-_INTERFACES = {}
+__proxyenabled__ = ["*"]
+__FQDN__ = None
+
+__salt__ = {
+    "cmd.run": salt.modules.cmdmod._run_quiet,
+    "cmd.retcode": salt.modules.cmdmod._retcode_quiet,
+    "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
+    "smbios.records": salt.modules.smbios.records,
+    "smbios.get": salt.modules.smbios.get,
+    "network.fqdns": salt.modules.network.fqdns,
+}
+
+HAS_UNAME = hasattr(os, "uname")
+
 
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
@@ -789,7 +752,7 @@ def _virtual(osdata):
             virtinfo = salt.utils.path.which("virtinfo")
             if virtinfo:
                 try:
-                    ret = __salt__["cmd.run_all"]("{0} -a".format(virtinfo))
+                    ret = __salt__["cmd.run_all"](virtinfo)
                 except salt.exceptions.CommandExecutionError:
                     if salt.log.is_logging_configured():
                         failed_commands.add(virtinfo)
@@ -798,6 +761,7 @@ def _virtual(osdata):
                         command = "prtdiag"
                     else:
                         command = "virtinfo"
+                        args.append("-c current list -H -o name")
             else:
                 command = "prtdiag"
 
@@ -955,9 +919,38 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             elif "joyent smartdc hvm" in model:
                 grains["virtual"] = "kvm"
+            else:
+                # Check if it's a "regular" zone
+                zonename = salt.utils.path.which("zonename")
+                if zonename:
+                    zone = __salt__["cmd.run"]("{0}".format(zonename))
+                    if zone != "global":
+                        grains["virtual"] = "zone"
+                # Check if it's a branded zone
+                elif os.path.isdir("/.SUNWnative"):
+                    grains["virtual"] = "zone"
             break
         elif command == "virtinfo":
-            grains["virtual"] = "LDOM"
+            if output == "logical-domain":
+                grains["virtual"] = "LDOM"
+                roles = []
+                for role in ("control", "io", "root", "service"):
+                    subtype_cmd = "{0} -c current get -H -o value {1}-role".format(
+                        command, role
+                    )
+                    ret = __salt__["cmd.run"]("{0}".format(subtype_cmd))
+                    if ret == "true":
+                        roles.append(role)
+                if roles:
+                    grains["virtual_subtype"] = roles
+            elif output == "non-global-zone":
+                grains["virtual"] = "zone"
+                grains["virtual_subtype"] = "non-global"
+            elif output == "kernel-zone":
+                grains["virtual"] = "zone"
+                grains["virtual_subtype"] = "kernel"
+            elif output == "vmware":
+                grains["virtual"] = "VMware"
             break
 
     choices = ("Linux", "HP-UX")
@@ -1107,28 +1100,6 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             if osdata["manufacturer"] == "OpenBSD":
                 grains["virtual"] = "vmm"
-    elif osdata["kernel"] == "SunOS":
-        if grains["virtual"] == "LDOM":
-            roles = []
-            for role in ("control", "io", "root", "service"):
-                subtype_cmd = "{0} -c current get -H -o value {1}-role".format(
-                    cmd, role
-                )
-                ret = __salt__["cmd.run_all"]("{0}".format(subtype_cmd))
-                if ret["stdout"] == "true":
-                    roles.append(role)
-            if roles:
-                grains["virtual_subtype"] = roles
-        else:
-            # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
-            zonename = salt.utils.path.which("zonename")
-            if zonename:
-                zone = __salt__["cmd.run"]("{0}".format(zonename))
-                if zone != "global":
-                    grains["virtual"] = "zone"
-            # Check if it's a branded zone (i.e. Solaris 8/9 zone)
-            if isdir("/.SUNWnative"):
-                grains["virtual"] = "zone"
     elif osdata["kernel"] == "NetBSD":
         if sysctl:
             if "QEMU Virtual CPU" in __salt__["cmd.run"](
@@ -1327,14 +1298,18 @@ def _windows_os_release_grain(caption, product_type):
     version = "Unknown"
     release = ""
     if "Server" in caption:
-        for item in caption.split(" "):
-            # If it's all digits, then it's version
-            if re.match(r"\d+", item):
-                version = item
-            # If it starts with R and then numbers, it's the release
-            # ie: R2
-            if re.match(r"^R\d+$", item):
-                release = item
+        # Edge case here to handle MS Product that doesn't contain a year
+        if re.match(r"^Microsoft Hyper-V Server$", caption):
+            version = "2019"
+        else:
+            for item in caption.split(" "):
+                # If it's all digits, then it's version
+                if re.match(r"\d+", item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r"^R\d+$", item):
+                    release = item
         os_release = "{0}Server{1}".format(version, release)
     else:
         for item in caption.split(" "):
@@ -1662,17 +1637,6 @@ def _linux_bin_exists(binary):
         )
     except salt.exceptions.CommandExecutionError:
         return False
-
-
-def _get_interfaces():
-    """
-    Provide a dict of the connected interfaces and their ip addresses
-    """
-
-    global _INTERFACES
-    if not _INTERFACES:
-        _INTERFACES = salt.utils.network.interfaces()
-    return _INTERFACES
 
 
 def _parse_lsb_release():
@@ -2383,34 +2347,16 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
     """
     # Provides:
     # fqdns
-
-    grains = {}
-    fqdns = set()
-
-    addresses = salt.utils.network.ip_addrs(
-        include_loopback=False, interface_data=_INTERFACES
-    )
-    addresses.extend(
-        salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_INTERFACES)
-    )
-    err_message = "An exception occurred resolving address '%s': %s"
-    for ip in addresses:
-        try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
-        except socket.herror as err:
-            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
-                # No FQDN for this IP address, so we don't need to know this all the time.
-                log.debug("Unable to resolve address %s: %s", ip, err)
-            else:
-                log.error(err_message, ip, err)
-        except (socket.error, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, ip, err)
-
-    grains["fqdns"] = sorted(list(fqdns))
-    return grains
+    opt = {"fqdns": []}
+    if __opts__.get(
+        "enable_fqdns_grains", False if salt.utils.platform.is_windows() else True
+    ):
+        opt = __salt__["network.fqdns"]()
+    return opt
 
 
 def ip_fqdn():
@@ -2983,29 +2929,8 @@ def get_server_id():
     if salt.utils.platform.is_proxy():
         return {}
     id_ = __opts__.get("id", "")
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__["cmd.run"](
-            [sys.executable, "-c", 'print(hash("{0}"))'.format(id_)],
-            env={"PYTHONHASHSEED": "0"},
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                "Failed to hash the ID to get the server_id grain. Result of "
-                "hash command: %s",
-                id_hash,
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
-
-    return {"server_id": abs(id_hash % (2 ** 31))}
+    hash_ = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
+    return {"server_id": abs(hash_ % (2 ** 31))}
 
 
 def get_master():

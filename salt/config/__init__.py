@@ -66,12 +66,14 @@ if salt.utils.platform.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = "tcp"
+    _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = -1
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
 else:
     _DFLT_IPC_MODE = "ipc"
+    _DFLT_FQDNS_GRAINS = True
     _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
 
@@ -346,12 +348,14 @@ VALID_OPTS = immutabletypes.freeze(
         "log_rotate_backup_count": int,
         # If an event is above this size, it will be trimmed before putting it on the event bus
         "max_event_size": int,
-        # Enable old style events to be sent on minion_startup. Change default to False in Sodium release
+        # Enable old style events to be sent on minion_startup. Change default to False in 3001 release
         "enable_legacy_startup_events": bool,
         # Always execute states with test=True if this flag is set
         "test": bool,
         # Tell the loader to attempt to import *.pyx cython files if cython is available
         "cython_enable": bool,
+        # Whether or not to load grains for FQDNs
+        "enable_fqdns_grains": bool,
         # Whether or not to load grains for the GPU
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
@@ -463,6 +467,16 @@ VALID_OPTS = immutabletypes.freeze(
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
+        # various subprocess niceness levels
+        "req_server_niceness": (type(None), int),
+        "pub_server_niceness": (type(None), int),
+        "fileserver_update_niceness": (type(None), int),
+        "maintenance_niceness": (type(None), int),
+        "mworker_niceness": (type(None), int),
+        "mworker_queue_niceness": (type(None), int),
+        "event_return_niceness": (type(None), int),
+        "event_publisher_niceness": (type(None), int),
+        "reactor_niceness": (type(None), int),
         # The number of MWorker processes for a master to startup. This number needs to scale up as
         # the number of connected minions increases.
         "worker_threads": int,
@@ -577,6 +591,12 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_cache_ttl": int,
         # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
         "pillar_cache_backend": six.string_types,
+        # Cache the GPG data to avoid having to pass through the gpg renderer
+        "gpg_cache": bool,
+        # GPG data cache TTL, in seconds. Has no effect unless `gpg_cache` is True
+        "gpg_cache_ttl": int,
+        # GPG data cache backend. Defaults to `disk` which stores caches in the master cache
+        "gpg_cache_backend": six.string_types,
         "pillar_safe_render_error": bool,
         # When creating a pillar, there are several strategies to choose from when
         # encountering duplicate values
@@ -981,11 +1001,15 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
         "pillar_includes_override_sls": False,
-        # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
+        # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
+        # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
         # are not used on the minion but are unavoidably in the code path
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "gpg_cache": False,
+        "gpg_cache_ttl": 86400,
+        "gpg_cache_backend": "disk",
         "extension_modules": os.path.join(salt.syspaths.CACHE_DIR, "minion", "extmods"),
         "state_top": "top.sls",
         "state_top_saltenv": None,
@@ -1113,6 +1137,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "test": False,
         "ext_job_cache": "",
         "cython_enable": False,
+        "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
         "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,
@@ -1343,6 +1368,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
+        "gpg_cache": False,
+        "gpg_cache_ttl": 86400,
+        "gpg_cache_backend": "disk",
         "ping_on_rotate": False,
         "peer": {},
         "preserve_minion_cache": False,
@@ -1400,6 +1428,16 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        # various subprocess niceness levels
+        "req_server_niceness": None,
+        "pub_server_niceness": None,
+        "fileserver_update_niceness": None,
+        "mworker_niceness": None,
+        "mworker_queue_niceness": None,
+        "maintenance_niceness": None,
+        "event_return_niceness": None,
+        "event_publisher_niceness": None,
+        "reactor_niceness": None,
         "ipv6": None,
         "tcp_master_pub_port": 4512,
         "tcp_master_pull_port": 4513,
@@ -3523,7 +3561,7 @@ def apply_minion_config(
             log.warning(
                 "The 'saltenv' and 'environment' minion config options "
                 "cannot both be used. Ignoring 'environment' in favor of "
-                "'saltenv'.",
+                "'saltenv'."
             )
             # Set environment to saltenv in case someone's custom module is
             # refrencing __opts__['environment']
@@ -3741,7 +3779,7 @@ def apply_master_config(overrides=None, defaults=None):
             log.warning(
                 "The 'saltenv' and 'environment' master config options "
                 "cannot both be used. Ignoring 'environment' in favor of "
-                "'saltenv'.",
+                "'saltenv'."
             )
             # Set environment to saltenv in case someone's custom runner is
             # refrencing __opts__['environment']
