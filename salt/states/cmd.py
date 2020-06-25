@@ -889,6 +889,7 @@ def script(
             More information <https://github.com/saltstack/salt/issues/55080>
 
     password
+    .. versionadded:: 3000
         Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
