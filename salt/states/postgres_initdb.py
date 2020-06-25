@@ -20,8 +20,6 @@ data directory.
         - locale: C
         - runas: postgres
         - checksums: True
-        - wal_segsize: 32
-
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
