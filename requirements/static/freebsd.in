@@ -23,7 +23,7 @@ more-itertools==5.0.0
 moto
 paramiko>=2.1.6
 psutil
-pygit2>=1.2.0
+pygit2==1.1.1
 pyinotify
 pyopenssl
 python-etcd>0.4.2
