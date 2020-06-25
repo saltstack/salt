@@ -8,7 +8,7 @@ import salt.modules.nilrt_ip as nilrt_ip
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -31,15 +31,25 @@ class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
         Tests _change_state when not connected
         and new state is down
         """
-        with patch("salt.modules.nilrt_ip._interface_to_service", return_value=True):
-            with patch("salt.modules.nilrt_ip._connected", return_value=False):
+        iface_mock = MagicMock()
+        iface_mock.name = "test_interface"
+        with patch("pyiface.getIfaces", return_value=[iface_mock]):
+            with patch(
+                "salt.modules.nilrt_ip._change_dhcp_config", return_value=True
+            ) as change_dhcp_config_mock:
                 assert nilrt_ip._change_state("test_interface", "down")
+                assert change_dhcp_config_mock.called_with("test_interface", False)
 
     def test_change_state_up_state(self):
         """
         Tests _change_state when connected
         and new state is up
         """
-        with patch("salt.modules.nilrt_ip._interface_to_service", return_value=True):
-            with patch("salt.modules.nilrt_ip._connected", return_value=True):
+        iface_mock = MagicMock()
+        iface_mock.name = "test_interface"
+        with patch("pyiface.getIfaces", return_value=[iface_mock]):
+            with patch(
+                "salt.modules.nilrt_ip._change_dhcp_config", return_value=True
+            ) as change_dhcp_config_mock:
                 assert nilrt_ip._change_state("test_interface", "up")
+                assert change_dhcp_config_mock.called_with("test_interface")
