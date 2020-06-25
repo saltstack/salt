@@ -19,7 +19,7 @@ data directory.
         - encoding: UTF8
         - locale: C
         - runas: postgres
-        - data_checksums: True
+        - checksums: True
         - wal_segsize: 32
 
 """
