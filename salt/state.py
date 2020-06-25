@@ -100,6 +100,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "runas_password",
         "fire_event",
         "saltenv",
+        "umask",
         "use",
         "use_in",
         "__env__",
@@ -116,6 +117,7 @@ STATE_RUNTIME_KEYWORDS = frozenset(
         "__pub_tgt_type",
         "__prereq__",
         "__prerequired__",
+        "__umask__",
     ]
 )
 
@@ -384,7 +386,7 @@ class Compiler:
             self.opts["renderer"],
             self.opts["renderer_blacklist"],
             self.opts["renderer_whitelist"],
-            **kwargs
+            **kwargs,
         )
         if not high:
             return high
@@ -1319,6 +1321,12 @@ class State:
                     type(data["name"]).__name__,
                 )
             )
+        if "umask" in data:
+            umask = data.pop("umask")
+            try:
+                data["__umask__"] = int(str(umask), 8)
+            except (TypeError, ValueError):
+                errors.append(f"Invalid umask: {umask}")
         if errors:
             return errors
         full = data["state"] + "." + data["fun"]
@@ -2305,9 +2313,10 @@ class State:
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata["full"]](
-                            *cdata["args"], **cdata["kwargs"]
-                        )
+                        with salt.utils.files.set_umask(low.get("__umask__")):
+                            ret = self.states[cdata["full"]](
+                                *cdata["args"], **cdata["kwargs"]
+                            )
                 self.states.inject_globals = {}
             if (
                 "check_cmd" in low
