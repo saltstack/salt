@@ -536,7 +536,6 @@ class MinionBase(object):
         loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
         """
-
         # return early if we are not connecting to a master
         if opts["master_type"] == "disable":
             log.warning("Master is set to disable, skipping connection")
