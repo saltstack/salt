@@ -96,10 +96,6 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if not HAS_APPOPTICS:
-        log.debug(
-            "The appoptics_return module couldn't load the appoptics_metrics module."
-        )
-        log.debug("please make sure it is installed and is in the PYTHON_PATH.")
         return (
             False,
             "Could not import appoptics_metrics module; "
