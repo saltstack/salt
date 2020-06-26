@@ -285,7 +285,10 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
 
         :return:
         """
-        with patch("salt.modules.aptpkg.__salt__", {"lowpkg.info": MagicMock(return_value=LOWPKG_INFO)}) as wget_lowpkg:
+        with patch(
+            "salt.modules.aptpkg.__salt__",
+            {"lowpkg.info": MagicMock(return_value=LOWPKG_INFO)},
+        ) as wget_lowpkg:
             ret = aptpkg.info_installed("wget", attr="version")
             calls = wget_lowpkg["lowpkg.info"].call_args_list.pop()
             self.assertIn("status", calls.kwargs["attr"])

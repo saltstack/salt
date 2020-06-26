@@ -2926,8 +2926,8 @@ def info_installed(*names, **kwargs):
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     failhard = kwargs.pop("failhard", True)
-    kwargs.pop("errors", None)                # Only for compatibility with RPM
-    attr = kwargs.pop("attr", None)           # Package attributes to return
+    kwargs.pop("errors", None)  # Only for compatibility with RPM
+    attr = kwargs.pop("attr", None)  # Package attributes to return
 
     # status is needed to see if a package is installed. So we have to add it,
     # even if it's excluded via attr parameter. Otherwise all packages are
