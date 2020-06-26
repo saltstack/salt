@@ -536,6 +536,7 @@ class MinionBase(object):
         loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
         """
+
         # return early if we are not connecting to a master
         if opts["master_type"] == "disable":
             log.warning("Master is set to disable, skipping connection")
@@ -695,17 +696,17 @@ class MinionBase(object):
                 if opts["master_type"] == "failover":
                     try:
                         opts["master_uri_list"].append(
-                            resolve_dns(opts)["master_uri"], False
+                            resolve_dns(opts, False)["master_uri"]
                         )
                     except SaltClientError:
                         continue
                 else:
                     opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
 
-                if not opts["master_uri_list"]:
-                    msg = "No master could be resolved"
-                    log.error(msg)
-                    raise SaltClientError(msg)
+            if not opts["master_uri_list"]:
+                msg = "No master could be resolved"
+                log.error(msg)
+                raise SaltClientError(msg)
 
             pub_channel = None
             while True:
