@@ -3780,7 +3780,8 @@ def request_vpc_peering_connection(
     """
     conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
 
-    if peer_region is None: peer_region = region
+    if peer_region is None:
+        peer_region = region
 
     if name and _vpc_peering_conn_id_for_name(name, conn):
         raise SaltInvocationError(
