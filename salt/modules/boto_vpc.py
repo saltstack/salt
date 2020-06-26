@@ -3836,7 +3836,7 @@ def request_vpc_peering_connection(
                 PeerVpcId=peer_vpc_id,
                 PeerOwnerId=peer_owner_id,
                 PeerRegion=peer_region,
-                DryRun=dry_run,
+                DryRun=dry_run
             )
         peering = vpc_peering.get("VpcPeeringConnection", {})
         peering_conn_id = peering.get("VpcPeeringConnectionId", "ERROR")
