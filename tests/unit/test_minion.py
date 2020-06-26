@@ -14,7 +14,7 @@ import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
 import salt.utils.process
-from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit, SaltClientError
+from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
