@@ -236,7 +236,7 @@ def claim_mantle_of_responsibility(file_name):
         log.error("pidfile:{} is corrupted".format(file_name))
     except FileNotFoundError:
         log.info("pidfile: {} not found".format(file_name))
-    print(file_process_info)
+
     this_process_info = get_process_info()
 
     # check if this process all ready has the responsibility
