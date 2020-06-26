@@ -1869,6 +1869,7 @@ def request_vpc_peering_connection(
     peer_vpc_name=None,
     conn_name=None,
     peer_owner_id=None,
+    peer_region=None,
     region=None,
     key=None,
     keyid=None,
@@ -1896,8 +1897,11 @@ def request_vpc_peering_connection(
     peer_owner_id
         ID of the owner of the peer VPC. String type. If this isn't supplied AWS uses your account ID.  Required if peering to a different account.
 
+    peer_region
+        Region to issue the request to. Defaults to region if none specified.
+
     region
-        Region to connect to.
+        Region to issue the request from.
 
     key
         Secret key to be used.
@@ -1954,6 +1958,7 @@ def request_vpc_peering_connection(
         peer_vpc_name,
         name=conn_name,
         peer_owner_id=peer_owner_id,
+        peer_region=peer_region,
         region=region,
         key=key,
         keyid=keyid,

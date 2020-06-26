@@ -3713,6 +3713,7 @@ def request_vpc_peering_connection(
     peer_vpc_name=None,
     name=None,
     peer_owner_id=None,
+    peer_region=None,
     region=None,
     key=None,
     keyid=None,
@@ -3746,8 +3747,11 @@ def request_vpc_peering_connection(
         ID of the owner of the peer VPC. Defaults to your account ID, so a value
         is required if peering with a VPC in a different account.
 
+    peer_region
+        Region to issue the request to. Defaults to region if none specified.
+
     region
-        Region to connect to.
+        Region to issue the request from.
 
     key
         Secret key to be used.
@@ -3775,6 +3779,8 @@ def request_vpc_peering_connection(
 
     """
     conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
+
+    if peer_region is None: peer_region = region
 
     if name and _vpc_peering_conn_id_for_name(name, conn):
         raise SaltInvocationError(
@@ -3818,13 +3824,17 @@ def request_vpc_peering_connection(
         log.debug("Trying to request vpc peering connection")
         if not peer_owner_id:
             vpc_peering = conn.create_vpc_peering_connection(
-                VpcId=requester_vpc_id, PeerVpcId=peer_vpc_id, DryRun=dry_run
+                VpcId=requester_vpc_id,
+                PeerVpcId=peer_vpc_id,
+                PeerRegion=peer_region,
+                DryRun=dry_run
             )
         else:
             vpc_peering = conn.create_vpc_peering_connection(
                 VpcId=requester_vpc_id,
                 PeerVpcId=peer_vpc_id,
                 PeerOwnerId=peer_owner_id,
+                PeerRegion=peer_region,
                 DryRun=dry_run,
             )
         peering = vpc_peering.get("VpcPeeringConnection", {})
