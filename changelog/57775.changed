@@ -1,0 +1,3 @@
+Adds network teaming support to ``network.managed`` state for RHEL/CentOS 7 and
+newer. Removes ``ip.get_bond`` and ``ip.build_bond`` for RHEL/CentOS, as it is
+redundant and not needed for any currentl RHEL/CentOS release.
