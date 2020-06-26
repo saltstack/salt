@@ -1539,6 +1539,70 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             info = yumpkg.group_info("@gnome-desktop")
             self.assertDictEqual(info, expected)
 
+    def test_get_repo_with_existent_repo(self):
+        """
+        Test get_repo with an existent repository
+        Expected return is a populated dictionary
+        """
+        repo = "base-source"
+        kwargs = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": True,
+        }
+        parse_repo_file_return = (
+            "",
+            {
+                "base-source": {
+                    "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+                    "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+                    "name": "CentOS-$releasever - Base Sources",
+                    "enabled": "1",
+                }
+            },
+        )
+        expected = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": "1",
+        }
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+        patch_parse_repo_file = patch.object(
+            yumpkg,
+            "_parse_repo_file",
+            autospec=True,
+            return_value=parse_repo_file_return,
+        )
+
+        with patch_list_repos, patch_parse_repo_file:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
+
+    def test_get_repo_with_non_existent_repo(self):
+        """
+        Test get_repo with an non existent repository
+        Expected return is an empty dictionary
+        """
+        repo = "non-existent-repository"
+        kwargs = {
+            "baseurl": "http://fake.centos.org/centos/$releasever/os/Non-Existent/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Non-Existent Repository",
+            "enabled": True,
+        }
+        expected = {}
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+
+        with patch_list_repos:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class YumUtilsTestCase(TestCase, LoaderModuleMockMixin):
