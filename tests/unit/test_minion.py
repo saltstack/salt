@@ -656,8 +656,6 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(opts["master"], "master2")
             return MockPubChannel()
 
-        io_loop = salt.ext.tornado.ioloop.IOLoop()
-        io_loop.make_current()
         with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
             "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
         ):
