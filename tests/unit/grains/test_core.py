@@ -668,6 +668,36 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_centos_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Centos 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "CentOS Linux",
+                "VERSION": "8 (Core)",
+                "VERSION_ID": "8",
+                "PRETTY_NAME": "CentOS Linux 8 (Core)",
+                "ID": "centos",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:centos:centos:8",
+            },
+            "linux_distribution": ("centos", "8.1.1911", "Core"),
+        }
+
+        expectation = {
+            "os": "CentOS",
+            "os_family": "RedHat",
+            "oscodename": "CentOS Linux 8 (Core)",
+            "osfullname": "CentOS Linux",
+            "osrelease": "8.1.1911",
+            "osrelease_info": (8, 1, 1911),
+            "osmajorrelease": 8,
+            "osfinger": "CentOS Linux-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
+
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(
             name="raise_unicode_error", side_effect=UnicodeError

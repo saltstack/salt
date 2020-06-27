@@ -2036,7 +2036,7 @@ def os_data():
                             )
 
         log.trace(
-            "Getting OS name, release, and codename from " "distro.linux_distribution()"
+            "Getting OS name, release, and codename from distro id, version, codename"
         )
         (osname, osrelease, oscodename) = [
             x.strip('"').strip("'") for x in linux_distribution()
