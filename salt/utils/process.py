@@ -208,6 +208,15 @@ def get_process_info(pid=None):
         return
 
     raw_process_info = psutil.Process(pid)
+
+    # pid_exists can have false positives
+    # for example Windows reserves PID 5 in a hack way
+    # another reasons is the the process requires kernel permissions
+    try:
+        raw_process_info.status()
+    except psutil.NoSuchProcess:
+        return None
+
     return {
         "pid": raw_process_info.pid,
         "name": raw_process_info.name(),
@@ -222,6 +231,16 @@ def claim_mantle_of_responsibility(file_name):
     file_name: str
     Return: bool
     """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibly! pidfile: {}".format(
+                file_name
+            )
+        )
+        return True
+
     # add file directory if missing
     file_directory_name = os.path.dirname(file_name)
     if not os.path.isdir(file_directory_name) and file_directory_name:
