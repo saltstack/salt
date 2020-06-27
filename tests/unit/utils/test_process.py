@@ -713,11 +713,28 @@ class TestGetProcessInfo(TestCase):
 
     def test_random_processes(self):
         for pid in range(10000):
-            process_info = salt.utils.process.get_process_info(pid)
-            if psutil.pid_exists(pid):
-                self.assertIsInstance(process_info, dict)
+            random_processes_info = salt.utils.process.get_process_info(pid)
+            if not psutil.pid_exists(pid):
+                self.assertIsNone(random_processes_info)
             else:
-                self.assertIsNone(process_info)
+                try:
+                    psutil.Process(pid).status()  # check process is alive
+                    self.assertIsInstance(random_processes_info, dict)
+                except psutil.NoSuchProcess:
+                    self.assertIsNone(random_processes_info)
+
+        for _ in range(5):
+            random_pid = self.get_random_processes()
+            self.assertIsInstance(salt.utils.process.get_process_info(random_pid), dict)
+
+    @staticmethod
+    def get_random_processes():
+        def random_processes():
+            time.sleep(25)
+
+        process = multiprocessing.Process(target=random_processes, daemon=True)
+        process.start()
+        return process.pid
 
 
 class CMORProcessHelper:
@@ -774,8 +791,12 @@ class CMORProcessHelper:
                 return
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
+    @skipIf(HAS_PSUTIL, "Has psutil")
+    def test_simple_claim_no_psutil(self):
+        salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_simple_claim(self):
         try:
             for _ in range(5):
@@ -785,6 +806,7 @@ class TestClaimMantleOfResponsibility(TestCase):
         finally:
             os.remove("CMOR_TEST_FILE")
 
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_multiple_processes(self):
         try:
             with CMORProcessHelper("CMOR_TEST_FILE") as p1:
