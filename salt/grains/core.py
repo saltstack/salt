@@ -47,9 +47,9 @@ from salt.utils.network import _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
-def linux_distribution(full_distribution_name=True):
+def linux_distribution():
     return (
-        distro.name() if full_distribution_name else distro.id(),
+        distro.id(),
         distro.version(best=True),
         distro.codename(),
     )
@@ -2059,8 +2059,9 @@ def os_data():
             # /etc/centos-release file instead.
             # Commit introducing this comment should be reverted after the upstream bug is released.
             # This also affects Centos 8
-            if "CentOS Linux 7" or "CentOS Linux 8" in grains.get(
-                "lsb_distrib_codename", ""
+            if any(
+                os in grains.get("lsb_distrib_codename", "")
+                for os in ["CentOS Linux 7", "CentOS Linux 8"]
             ):
                 grains.pop("lsb_distrib_release", None)
             grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
