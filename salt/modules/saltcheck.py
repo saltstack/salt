@@ -428,7 +428,7 @@ def report_highstate_tests(saltenv=None):
     }
 
 
-def run_state_tests(state, saltenv=None, check_all=False):
+def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
     """
     Execute tests for a salt state and return results
     Nested states will also be tested
@@ -436,6 +436,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
     :param str state: state name for which to run associated .tst test files
     :param str saltenv: optional saltenv. Defaults to base
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
+    :param bool only_fails: boolean to only print failure results
 
     CLI Example:
 
@@ -512,7 +513,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
         # If passed a duplicate state, don't overwrite with empty res
         if not results.get(state_name):
             results[state_name] = results_dict
-    return _generate_out_list(results)
+    return _generate_out_list(results, only_fails=only_fails)
 
 
 def parallel_scheck(data):
@@ -529,9 +530,12 @@ run_state_tests_ssh = salt.utils.functools.alias_function(
 )
 
 
-def run_highstate_tests(saltenv=None):
+def run_highstate_tests(saltenv=None, only_fails=False):
     """
     Execute all tests for states assigned to the minion through highstate and return results
+
+    :param str saltenv: optional saltenv. Defaults to base
+    :param bool only_fails: boolean to only print failure results
 
     CLI Example:
 
@@ -548,10 +552,10 @@ def run_highstate_tests(saltenv=None):
     sls_list = _get_top_states(saltenv)
     all_states = ",".join(sls_list)
 
-    return run_state_tests(all_states, saltenv=saltenv)
+    return run_state_tests(all_states, saltenv=saltenv, only_fails=only_fails)
 
 
-def _generate_out_list(results):
+def _generate_out_list(results, only_fails=False):
     """
     generate test results output list
     """
@@ -560,12 +564,13 @@ def _generate_out_list(results):
     skipped = 0
     missing_tests = 0
     total_time = 0.0
+    out_list = []
     for state in results:
+        failed_tests = {}
         if not results[state].items():
             missing_tests = missing_tests + 1
         else:
-            for dummy, val in results[state].items():
-                log.info("dummy=%s, val=%s", dummy, val)
+            for _, val in results[state].items():
                 if val["status"].startswith("Pass"):
                     passed = passed + 1
                 if val["status"].startswith("Fail"):
@@ -573,9 +578,18 @@ def _generate_out_list(results):
                 if val["status"].startswith("Skip"):
                     skipped = skipped + 1
                 total_time = total_time + float(val["duration"])
-    out_list = []
-    for key, value in results.items():
-        out_list.append({key: value})
+        if only_fails:
+            # Only display failing tests
+            for test in results[state]:
+                if results[state][test]["status"].startswith("Fail"):
+                    if failed_tests.get(state):
+                        failed_tests[state].update({test: results[state][test]})
+                    else:
+                        failed_tests[state] = {test: results[state][test]}
+            out_list.append(failed_tests)
+        else:
+            # Show all test results
+            out_list.append({state: results[state]})
     out_list = sorted(out_list, key=lambda x: sorted(x.keys()))
     out_list.append(
         {
