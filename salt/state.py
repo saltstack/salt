@@ -883,7 +883,23 @@ class State(object):
         ret = {"result": False, "comment": []}
         cmd_opts = {}
 
-        if "shell" in self.opts["grains"]:
+        # Set arguments from cmd.run state as appropriate
+        POSSIBLE_CMD_ARGS = (
+            "cwd",
+            "root",
+            "runas",
+            "env",
+            "prepend_path",
+            "umask",
+            "timeout",
+            "success_retcodes",
+        )
+        for run_cmd_arg in POSSIBLE_CMD_ARGS:
+            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+
+        if "shell" in low_data:
+            cmd_opts["shell"] = low_data["shell"]
+        elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
 
         if "onlyif" in low_data:

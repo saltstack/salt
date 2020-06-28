@@ -123,7 +123,8 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         low_data = {
             "onlyif": "somecommand",
-            "runas" "doesntexist" "name": "echo something",
+            "runas": "doesntexist",
+            "name": "echo something",
             "state": "cmd",
             "__id__": "this is just a test",
             "fun": "run",
@@ -155,7 +156,8 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         low_data = {
             "unless": "somecommand",
-            "runas" "doesntexist" "name": "echo something",
+            "runas": "doesntexist",
+            "name": "echo something",
             "state": "cmd",
             "__id__": "this is just a test",
             "fun": "run",
@@ -340,6 +342,52 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, {})
             self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_cmd_args(self):
+        """
+        Verify cmd.run state arguments are properly passed to cmd.retcode in onlyif
+        """
+        low_data = {
+            "onlyif": "somecommand",
+            "cwd": "acwd",
+            "root": "aroot",
+            "env": [{"akey": "avalue"}],
+            "prepend_path": "apath",
+            "umask": "0700",
+            "success_retcodes": 1,
+            "timeout": 5,
+            "runas": "doesntexist",
+            "name": "echo something",
+            "shell": "/bin/dash",
+            "state": "cmd",
+            "__id__": "this is just a test",
+            "fun": "run",
+            "__env__": "base",
+            "__sls__": "sometest",
+            "order": 10000,
+        }
+
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            minion_opts = self.get_temp_config("minion")
+            state_obj = salt.state.State(minion_opts)
+            mock = MagicMock()
+            with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+                #  The mock handles the exception, but the runas dict is being passed as it would actually be
+                return_result = state_obj._run_check(low_data)
+                mock.assert_called_once_with(
+                    "somecommand",
+                    ignore_retcode=True,
+                    python_shell=True,
+                    cwd="acwd",
+                    root="aroot",
+                    runas="doesntexist",
+                    env=[{"akey": "avalue"}],
+                    prepend_path="apath",
+                    umask="0700",
+                    timeout=5,
+                    success_retcodes=1,
+                    shell="/bin/dash",
+                )
 
     @with_tempfile()
     def test_verify_unless_parse_slots(self, name):
