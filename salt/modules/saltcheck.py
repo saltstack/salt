@@ -555,6 +555,24 @@ def run_highstate_tests(saltenv=None, only_fails=False):
     return run_state_tests(all_states, saltenv=saltenv, only_fails=only_fails)
 
 
+def _eval_failure_only_print(state_name, results, only_fails):
+    """
+    For given results, only return failures if desired
+    """
+    if only_fails:
+        failed_tests = {}
+        for test in results[state_name]:
+            if results[state_name][test]["status"].startswith("Fail"):
+                if failed_tests.get(state_name):
+                    failed_tests[state_name].update({test: results[state_name][test]})
+                else:
+                    failed_tests[state_name] = {test: results[state_name][test]}
+        return failed_tests
+    else:
+        # Show all test results
+        return {state_name: results[state_name]}
+
+
 def _generate_out_list(results, only_fails=False):
     """
     generate test results output list
@@ -566,7 +584,6 @@ def _generate_out_list(results, only_fails=False):
     total_time = 0.0
     out_list = []
     for state in results:
-        failed_tests = {}
         if not results[state].items():
             missing_tests = missing_tests + 1
         else:
@@ -578,18 +595,7 @@ def _generate_out_list(results, only_fails=False):
                 if val["status"].startswith("Skip"):
                     skipped = skipped + 1
                 total_time = total_time + float(val["duration"])
-        if only_fails:
-            # Only display failing tests
-            for test in results[state]:
-                if results[state][test]["status"].startswith("Fail"):
-                    if failed_tests.get(state):
-                        failed_tests[state].update({test: results[state][test]})
-                    else:
-                        failed_tests[state] = {test: results[state][test]}
-            out_list.append(failed_tests)
-        else:
-            # Show all test results
-            out_list.append({state: results[state]})
+        out_list.append(_eval_failure_only_print(state, results, only_fails))
     out_list = sorted(out_list, key=lambda x: sorted(x.keys()))
     out_list.append(
         {
