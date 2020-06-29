@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    '> /var/log/messages/:
+    '> /var/log/messages/':
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
