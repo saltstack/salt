@@ -113,6 +113,9 @@ except ImportError:
     HAS_WIN_FUNCTIONS = False
 # pylint: enable=import-error
 
+from opentelemetry import trace
+from salt.utils.tracing import setup_jaeger
+
 
 log = logging.getLogger(__name__)
 
@@ -1639,6 +1642,15 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "_handle_decoded_payload"
+        with tracer.start_as_current_span(
+                span_name,
+                kind=trace.SpanKind.INTERNAL,
+            ):
+            print("TEST")
+
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if six.PY2:
             data = salt.utils.data.decode(data, keep=True)
@@ -1690,7 +1702,11 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        from contextvars import copy_context
+        ctx = copy_context()
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
+        # TODO: SignalHandlingProcess does not handle ctx well
+        multiprocessing_enabled = False
         if multiprocessing_enabled:
             if sys.platform.startswith("win"):
                 # let python reconstruct the minion on the other side if we're
@@ -1698,17 +1714,17 @@ class Minion(MinionBase):
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
-                    target=self._target,
+                    target=self._context_target,
                     name="ProcessPayload",
-                    args=(instance, self.opts, data, self.connected),
+                    args=(instance, self.opts, data, self.connected, ctx),
                 )
                 process._after_fork_methods.append(
                     (salt.utils.crypt.reinit_crypto, [], {})
                 )
         else:
             process = threading.Thread(
-                target=self._target,
-                args=(instance, self.opts, data, self.connected),
+                target=self._context_target,
+                args=(instance, self.opts, data, self.connected, ctx),
                 name=data["jid"],
             )
 
@@ -1738,6 +1754,18 @@ class Minion(MinionBase):
             exitstack.enter_context(self.returners.context_dict.clone())
             exitstack.enter_context(self.executors.context_dict.clone())
             return exitstack
+
+    @classmethod
+    def _context_target(cls, minion_instance, opts, data, connected, context):
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "_context_target"
+        with tracer.start_as_current_span(
+                span_name,
+                kind=trace.SpanKind.INTERNAL,
+            ):
+            print("TEST2")
+            return context.run(cls._target, minion_instance, opts, data, connected)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
@@ -1860,17 +1888,27 @@ class Minion(MinionBase):
                     executors[-1] = "sudo"  # replace the last one with sudo
                 log.trace("Executors list %s", executors)  # pylint: disable=no-member
 
-                for name in executors:
-                    fname = "{0}.execute".format(name)
-                    if fname not in minion_instance.executors:
-                        raise SaltInvocationError(
-                            "Executor '{0}' is not available".format(name)
+                setup_jaeger()
+                tracer = trace.get_tracer(__name__)
+                span_name = "Executor.execute"
+                with tracer.start_as_current_span(
+                        span_name,
+                        kind=trace.SpanKind.INTERNAL,
+                        attributes={'func': str(func), 'args': str(args), 'kwargs': str(kwargs)},
+                    ) as span:
+                    for name in executors:
+                        fname = "{0}.execute".format(name)
+                        if fname not in minion_instance.executors:
+                            raise SaltInvocationError(
+                                "Executor '{0}' is not available".format(name)
+                            )
+                        return_data = minion_instance.executors[fname](
+                            opts, data, func, args, kwargs
                         )
-                    return_data = minion_instance.executors[fname](
-                        opts, data, func, args, kwargs
-                    )
-                    if return_data is not None:
-                        break
+                        if return_data is not None:
+                            span.set_attribute("executor", str(name))
+                            span.set_attribute("return", str(return_data))
+                            break
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
