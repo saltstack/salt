@@ -210,3 +210,23 @@ class VirtTest(ModuleCase):
         self.assertIsInstance(info["phymemory"], Number)
         self.assertIsInstance(info["sockets"], Number)
         self.assertIn(info["cpumodel"], self.cpu_models)
+
+    def test_define_xml_path(self):
+        """
+        Define a new domain with virt.define_xml_path,
+        verify that the new domain is shown with virt.list_domains,
+        remove the domain with virt.undefine, and verifies that
+        domain is no longer shown with virt.list_domains.
+        """
+        result = self.run_function(
+            "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
+        )
+        self.assertEqual(result, True)
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, ["core-vm"])
+        result = self.run_function("virt.undefine", ["core-vm"], minion_tgt="virt_minion_0")
+        self.assertEqual(result, True)
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, [])
