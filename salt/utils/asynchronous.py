@@ -130,7 +130,7 @@ class SyncWrapper(object):
         return wrap
 
     def _context_target(self, key, args, kwargs, results, io_loop, context):
-        context.run(self._target, key, args, kwargs, results, io_loop)
+        return context.run(self._target, key, args, kwargs, results, io_loop)
 
     def _target(self, key, args, kwargs, results, io_loop):
         try:

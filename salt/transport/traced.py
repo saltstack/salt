@@ -12,43 +12,8 @@ from salt.transport.ipc import IPCMessageClient
 from opentelemetry import context, propagators, trace
 from opentelemetry.trace.status import Status, StatusCanonicalCode
 
-from contextvars import ContextVar
-service_name = ContextVar('service_name')
+from salt.utils.tracing import setup_jaeger
 
-from functools import wraps
-def service_name_wrapper(func):
-    @wraps(func)
-    def wrapped(*args, **kwargs):
-        service_name.set(func.__name__)
-        setup_jaeger()
-        tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span(func.__name__, kind=trace.SpanKind.INTERNAL) as span:
-            return func(*args, **kwargs)
-    return wrapped
-
-
-def setup_jaeger():
-    import threading
-    print(threading.get_ident(), service_name.get('unknown'))
-    #import traceback
-    #traceback.print_stack()
-    from opentelemetry.ext import jaeger
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchExportSpanProcessor
-
-    trace.set_tracer_provider(TracerProvider())
-
-    # Create a BatchExportSpanProcessor and add the exporter to it
-    trace.get_tracer_provider().add_span_processor(
-        BatchExportSpanProcessor(
-            jaeger.JaegerSpanExporter(
-                service_name=service_name.get('unknown'),
-                # configure agent
-                agent_host_name='localhost',
-                agent_port=6831,
-            )
-        )
-    )
 
 def get_header_from_dict(scope: dict, header_name: str) -> typing.List[str]:
     try:
@@ -78,29 +43,38 @@ class TracedReqChannel(AsyncReqChannel):
 
         attributes = {
             key: str(value) for key, value in load.items()
-            if key in ['id', 'cmd', 'data', 'tag']
+            if key in ['id', 'cmd', 'data', 'tag', 'tgt', 'fun', 'arg', 'user']
         }
         send = tracer.start_span(span_name, kind=trace.SpanKind.PRODUCER, attributes=attributes)
-        with tracer.start_as_current_span(span_name + "(running handler)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
-            propagators.inject(set_header_into_dict, load)
-            reply = self.channel.send(load, tries, timeout, raw)
-        child = tracer.start_span(span_name + "(waiting for callback)", kind=trace.SpanKind.INTERNAL, parent=send)
+        with tracer.use_span(send, end_on_exit=False):
+            with tracer.start_as_current_span(span_name + "(calling send)", kind=trace.SpanKind.INTERNAL, parent=send, attributes=attributes) as span:
+                propagators.inject(set_header_into_dict, load)
+                reply = self.channel.send(load, tries, timeout, raw)
+            # Start a span to register callback wait time
+            waiting_for_callback = tracer.start_span(span_name + "(waiting for callback)", kind=trace.SpanKind.INTERNAL, parent=send)
 
-        from salt.ext.tornado.concurrent import Future
-        wrapped_reply = Future()
+            from salt.ext.tornado.concurrent import Future
+            wrapped_reply = Future()
 
-        def callback(future):
-            child.end()
-            value = future.result()
-            log.warning("%s.send (reply callback) %s", __class__, value)
-            with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
-                wrapped_reply.set_result(value)
-            send.set_status(Status(StatusCanonicalCode.OK))
-            send.end()
+            def callback(future):
+                # No longer waiting for a callback
+                waiting_for_callback.end()
+                # Fetch result and call all handlers via set_result
+                value = future.result()
+                attributes = {
+                    key: str(value) for key, value in value['load'].items()
+                    if key in ['jid', 'minions']
+                }
+                with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send, attributes=attributes) as span:
+                    log.warning("%s.send (reply callback) %s", __class__, value)
+                    wrapped_reply.set_result(value)
+                # Finish top-level
+                send.set_status(Status(StatusCanonicalCode.OK))
+                send.end()
 
-        reply.add_done_callback(callback)
+            reply.add_done_callback(callback)
 
-        return wrapped_reply
+            return wrapped_reply
 
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60

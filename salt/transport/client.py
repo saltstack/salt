@@ -146,7 +146,6 @@ class AsyncReqChannel(AsyncChannel):
         else:
             raise Exception("Channels are only defined for tcp, zeromq, and local")
             # return NewKindOfChannel(opts, **kwargs)'
-
         import salt.transport.traced
         return salt.transport.traced.TracedReqChannel(transport)
 
