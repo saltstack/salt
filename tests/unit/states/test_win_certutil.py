@@ -44,7 +44,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher", retcode=True)
+            add_mock.assert_called_once_with(
+                "/path/to/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_add_serial_missing(self):
@@ -137,7 +139,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher", retcode=True)
+            add_mock.assert_called_once_with(
+                "/path/to/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_del_serial(self):
@@ -168,7 +172,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            del_mock.assert_called_once_with("/tmp/cert.cer", "TrustedPublisher", retcode=True)
+            del_mock.assert_called_once_with(
+                "/tmp/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_del_serial_missing(self):
@@ -261,5 +267,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            del_mock.assert_called_once_with("/tmp/cert.cer", "TrustedPublisher", retcode=True)
+            del_mock.assert_called_once_with(
+                "/tmp/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
