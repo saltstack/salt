@@ -27,6 +27,7 @@ from salt.ext import six
 from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 
+# # pkg_resources is required for opentelemetry
 # sys.modules["pkg_resources"] = None
 
 
@@ -170,8 +171,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         retcodes = []
         errors = []
 
-        print("A")
-
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
@@ -205,7 +204,6 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 if self.options.verbose:
                     kwargs["verbose"] = True
                 ret = {}
-                print("B", cmd_func, kwargs)
                 for full_ret in cmd_func(**kwargs):
                     try:
                         ret_, out, retcode = self._format_ret(full_ret)

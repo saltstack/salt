@@ -816,7 +816,6 @@ class TCPReqServerChannel(
                 raise salt.ext.tornado.gen.Return()
 
             req_fun = req_opts.get("fun", "send")
-            # TODO: Add traceID to stream.write?
             if req_fun == "send_clear":
                 stream.write(salt.transport.frame.frame_msg(ret, header=header))
             elif req_fun == "send":

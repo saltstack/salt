@@ -67,6 +67,8 @@ from salt.exceptions import (
     SaltReqTimeoutError,
 )
 from salt.ext import six
+from opentelemetry import trace
+from salt.utils.tracing import setup_jaeger
 
 HAS_RANGE = False
 try:
@@ -768,13 +770,11 @@ class LocalClient(object):
         was_listening = self.event.cpub
 
         try:
-            print("BC", fun)
-            from opentelemetry import trace
-            from salt.utils.tracing import setup_jaeger
+            # This is where we actually run on the job on the master
             setup_jaeger()
             tracer = trace.get_tracer(__name__)
             with tracer.start_as_current_span(
-                "Sending request",
+                "Run Job",
                 kind=trace.SpanKind.INTERNAL,
             ):
                 self.pub_data = self.run_job(
@@ -788,11 +788,11 @@ class LocalClient(object):
                     listen=True,
                     **kwargs
                 )
-            print("C", self.pub_data)
 
             if not self.pub_data:
                 yield self.pub_data
             else:
+                # This is where we wait for a reply for our job id
                 with tracer.start_as_current_span(
                     "Waiting for reply",
                     kind=trace.SpanKind.INTERNAL,
@@ -1080,7 +1080,6 @@ class LocalClient(object):
                 no_block=True,
                 auto_reconnect=self.auto_reconnect,
             )
-            print("E", raw)
             yield raw
 
     def get_iter_returns(
@@ -1143,7 +1142,6 @@ class LocalClient(object):
             )
         else:
             ret_iter = self.get_returns_no_block("salt/job/{0}".format(jid))
-        print("D", ret_iter)
         # iterator for the info of this job
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later
