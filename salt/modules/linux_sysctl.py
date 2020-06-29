@@ -66,8 +66,8 @@ def show(config_file=False):
     """
     Return a list of sysctl parameters for this minion
 
-    :param config_file: Pull data from the system configuration file
-                        instead of the live kernel.
+    config: Pull the data from the system configuration file
+        instead of the live data.
 
     CLI Example:
 
@@ -108,12 +108,9 @@ def show(config_file=False):
     return ret
 
 
-def get(name, ignore=False):
+def get(name):
     """
     Return a single sysctl parameter for this minion
-
-    :param name: Name of sysctl setting
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -122,19 +119,13 @@ def get(name, ignore=False):
         salt '*' sysctl.get net.ipv4.ip_forward
     """
     cmd = "sysctl -n {0}".format(name)
-    if ignore:
-        cmd += " --ignore"
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
 
-def assign(name, value, ignore=False):
+def assign(name, value):
     """
     Assign a single sysctl parameter for this minion
-
-    :param name: Name of sysctl setting
-    :param value: Desired value of sysctl setting
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -156,13 +147,11 @@ def assign(name, value, ignore=False):
         tran_tab = name.translate(trans_args)
 
     sysctl_file = "/proc/sys/{0}".format(tran_tab)
-    if not ignore and not os.path.exists(sysctl_file):
+    if not os.path.exists(sysctl_file):
         raise CommandExecutionError("sysctl {0} does not exist".format(name))
 
     ret = {}
     cmd = 'sysctl -w {0}="{1}"'.format(name, value)
-    if ignore:
-        cmd += " --ignore"
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
@@ -175,9 +164,6 @@ def assign(name, value, ignore=False):
     if not regex.match(out) or "Invalid argument" in six.text_type(err):
         if data["retcode"] != 0 and err:
             error = err
-        elif ignore:
-            ret[name] = "ignored"
-            return ret
         else:
             error = out
         raise CommandExecutionError("sysctl -w failed: {0}".format(error))
@@ -186,16 +172,11 @@ def assign(name, value, ignore=False):
     return ret
 
 
-def persist(name, value, config=None, ignore=False):
+def persist(name, value, config=None):
     """
     Assign and persist a simple sysctl parameter for this minion. If ``config``
     is not specified, a sensible default will be chosen using
     :mod:`sysctl.default_config <salt.modules.linux_sysctl.default_config>`.
-
-    :param name: Name of sysctl setting
-    :param value: Desired value of sysctl setting
-    :param config: Optional path to sysctl.conf
-    :param ignore: Optional boolean to pass --ignore to sysctl (Default: False)
 
     CLI Example:
 
@@ -259,11 +240,8 @@ def persist(name, value, config=None, ignore=False):
             # This is the line to edit
             if six.text_type(comps[1]) == six.text_type(value):
                 # It is correct in the config, check if it is correct in /proc
-                current_setting = get(name, ignore)
-                if not current_setting:
-                    return "Ignored"
-                if six.text_type(current_setting) != six.text_type(value):
-                    assign(name, value, ignore)
+                if six.text_type(get(name)) != six.text_type(value):
+                    assign(name, value)
                     return "Updated"
                 else:
                     return "Already set"
@@ -282,5 +260,5 @@ def persist(name, value, config=None, ignore=False):
         msg = "Could not write to file: {0}"
         raise CommandExecutionError(msg.format(config))
 
-    assign(name, value, ignore)
+    assign(name, value)
     return "Updated"
