@@ -83,7 +83,7 @@ def add_store(source, store, retcode=False, saltenv="base"):
 
     store
         The certificate store to add the certificate to
-    
+
     retcode
         If true, return the retcode instead of out
 
@@ -115,7 +115,7 @@ def del_store(source, store, retcode=False, saltenv="base"):
 
     store
         The certificate store to delete the certificate from
-    
+
     retcode
         If true, return the retcode instead of out
 
