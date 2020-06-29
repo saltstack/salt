@@ -768,48 +768,62 @@ class LocalClient(object):
         was_listening = self.event.cpub
 
         try:
-            self.pub_data = self.run_job(
-                tgt,
-                fun,
-                arg,
-                tgt_type,
-                ret,
-                timeout,
-                kwarg=kwarg,
-                listen=True,
-                **kwargs
-            )
+            print("BC", fun)
+            from opentelemetry import trace
+            from salt.utils.tracing import setup_jaeger
+            setup_jaeger()
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span(
+                "Sending request",
+                kind=trace.SpanKind.INTERNAL,
+            ):
+                self.pub_data = self.run_job(
+                    tgt,
+                    fun,
+                    arg,
+                    tgt_type,
+                    ret,
+                    timeout,
+                    kwarg=kwarg,
+                    listen=True,
+                    **kwargs
+                )
+            print("C", self.pub_data)
 
             if not self.pub_data:
                 yield self.pub_data
             else:
-                try:
-                    for fn_ret in self.get_cli_event_returns(
-                        self.pub_data["jid"],
-                        self.pub_data["minions"],
-                        self._get_timeout(timeout),
-                        tgt,
-                        tgt_type,
-                        verbose,
-                        progress,
-                        **kwargs
-                    ):
+                with tracer.start_as_current_span(
+                    "Waiting for reply",
+                    kind=trace.SpanKind.INTERNAL,
+                ):
+                    try:
+                        for fn_ret in self.get_cli_event_returns(
+                            self.pub_data["jid"],
+                            self.pub_data["minions"],
+                            self._get_timeout(timeout),
+                            tgt,
+                            tgt_type,
+                            verbose,
+                            progress,
+                            **kwargs
+                        ):
 
-                        if not fn_ret:
-                            continue
+                            if not fn_ret:
+                                continue
 
-                        yield fn_ret
-                except KeyboardInterrupt:
-                    raise SystemExit(
-                        "\n"
-                        "This job's jid is: {0}\n"
-                        "Exiting gracefully on Ctrl-c\n"
-                        "The minions may not have all finished running and any "
-                        "remaining minions will return upon completion. To look "
-                        "up the return data for this job later, run the following "
-                        "command:\n\n"
-                        "salt-run jobs.lookup_jid {0}".format(self.pub_data["jid"])
-                    )
+                            yield fn_ret
+                    except KeyboardInterrupt:
+                        raise SystemExit(
+                            "\n"
+                            "This job's jid is: {0}\n"
+                            "Exiting gracefully on Ctrl-c\n"
+                            "The minions may not have all finished running and any "
+                            "remaining minions will return upon completion. To look "
+                            "up the return data for this job later, run the following "
+                            "command:\n\n"
+                            "salt-run jobs.lookup_jid {0}".format(self.pub_data["jid"])
+                        )
         finally:
             if not was_listening:
                 self.event.close_pub()
@@ -1066,6 +1080,7 @@ class LocalClient(object):
                 no_block=True,
                 auto_reconnect=self.auto_reconnect,
             )
+            print("E", raw)
             yield raw
 
     def get_iter_returns(
@@ -1128,6 +1143,7 @@ class LocalClient(object):
             )
         else:
             ret_iter = self.get_returns_no_block("salt/job/{0}".format(jid))
+        print("D", ret_iter)
         # iterator for the info of this job
         jinfo_iter = []
         # open event jids that need to be un-subscribed from later

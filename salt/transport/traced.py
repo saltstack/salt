@@ -8,8 +8,10 @@ from salt.ext.tornado.concurrent import Future
 
 from salt.transport.client import AsyncReqChannel
 from salt.transport.client import AsyncPubChannel
-from salt.transport.ipc import IPCServer
+from salt.transport.ipc import IPCMessageServer
 from salt.transport.ipc import IPCMessageClient
+from salt.transport.ipc import IPCMessagePublisher
+from salt.transport.ipc import IPCMessageSubscriber
 
 from opentelemetry import context, propagators, trace
 from opentelemetry.trace.status import Status, StatusCanonicalCode
@@ -55,6 +57,8 @@ class TracedReqChannel(AsyncReqChannel):
             key: str(value) for key, value in load.items()
             if key in ['id', 'cmd', 'data', 'tag', 'tgt', 'fun', 'arg', 'user']
         }
+        attributes.update({'raw_' + key: str(value) for key, value in load.items()})
+        attributes['raw'] = str(load)
         send = tracer.start_span(span_name, kind=trace.SpanKind.PRODUCER, attributes=attributes)
         with tracer.use_span(send, end_on_exit=False):
             with tracer.start_as_current_span(span_name + "(calling send)", kind=trace.SpanKind.INTERNAL, parent=send, attributes=attributes) as span:
@@ -72,11 +76,13 @@ class TracedReqChannel(AsyncReqChannel):
                 value = future.result()
                 attributes = {}
                 if value:
+                    attribute_dict = value['load'].items() if 'load' in value else value.items()
                     attributes = {
-                        key: str(value) for key, value in
-                        (value['load'].items() if 'load' in value else value.items())
+                        key: str(value) for key, value in attribute_dict
                         if key in ['jid', 'minions']
                     }
+                    attributes.update({'raw_' + key: str(value) for key, value in attribute_dict})
+                attributes['raw'] = str(value)
                 with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send, attributes=attributes) as span:
                     log.warning("%s.send (reply callback) %s", __class__, value)
                     wrapped_reply.set_result(value)
@@ -192,6 +198,8 @@ class TracedReqServerChannel(object):
                 key: str(value) for key, value in load.items()
                 if key in ['cmd', 'id', 'jiq', 'return', 'retcode', 'fun', 'fun_args', 'data', 'tag', 'tgt', 'arg', 'user']
             }
+            attributes.update({'raw_' + key: str(value) for key, value in load.items()})
+            attributes['raw'] = str(load)
 
             reply = None
             try:
@@ -205,8 +213,17 @@ class TracedReqServerChannel(object):
                 def callback(future):
                     child.end()
                     value = future.result()
+                    attributes = {}
+                    if type(value) == "dict":
+                        attribute_dict = value['load'].items() if 'load' in value else value.items()
+                        attributes = {
+                            key: str(value) for key, value in attribute_dict
+                            if key in ['jid', 'minions']
+                        }
+                        attributes.update({'raw_' + key: str(value) for key, value in attribute_dict})
+                    attributes['raw'] = str(value)
                     log.warning("%s.send (reply callback) %s", __class__, value)
-                    with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send) as span:
+                    with tracer.start_as_current_span(span_name + "(callback)", kind=trace.SpanKind.INTERNAL, parent=send, attributes=attributes) as span:
                         wrapped_reply.set_result(value)
                     send.set_status(Status(StatusCanonicalCode.OK))
                     send.end()
@@ -248,6 +265,8 @@ class TracedPubServerChannel(object):
             key: str(value) for key, value in load.items()
             if key in ['fun', 'jid', 'user']
         }
+        attributes.update({'raw_' + key: str(value) for key, value in load.items()})
+        attributes['raw'] = str(load)
         with tracer.start_as_current_span(
             span_name,
             kind=trace.SpanKind.PRODUCER,
@@ -262,6 +281,8 @@ class TracedPubServerChannel(object):
             return reply
 
 
+# TODO: IPCClient, IPCServer
+
 class TracedPushChannel(IPCMessageClient):
     def __init__(self, baseObject):
         self.__class__ = type(baseObject.__class__.__name__,
@@ -273,13 +294,16 @@ class TracedPushChannel(IPCMessageClient):
 
     @salt.ext.tornado.gen.coroutine
     def send(self, msg, timeout=None, tries=None):
-        log.warning("%s.send %s", __class__, msg)
-        reply = yield self.channel.send(msg, timeout, tries)
-        log.warning("%s.send (reply) %s", __class__, reply)
-        return reply
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "TracedPushChannel.send"
+        with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
+            reply = self.channel.send(msg, timeout, tries)
+            print(span_name, reply)
+            return reply
 
 
-class TracedPullChannel(IPCServer):
+class TracedPullChannel(IPCMessageServer):
     def __init__(self, baseObject):
         self.__class__ = type(baseObject.__class__.__name__,
                               (self.__class__, baseObject.__class__),
@@ -289,11 +313,65 @@ class TracedPullChannel(IPCServer):
         log.warning("%s.__init__", __class__)
 
         # Wrap payload handler for IPC
-        self.payload_handler = self.channel.payload_handler
+        payload_handler = self.channel.payload_handler
+        setup_jaeger()
+
         def wrapped_payload_handler(*args, **kwargs):
-            log.warning("%s.wrapped_payload_handler %s %s", __class__, args, kwargs)
-            reply = self.payload_handler(*args, **kwargs)
-            log.warning("%s.wrapped_payload_handler (reply) %s", __class__, reply)
-            return reply
+            tracer = trace.get_tracer(__name__)
+            span_name = "TracedPullChannel.wrapped_payload_handler"
+            with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
+                reply = payload_handler(*args, **kwargs)
+                print(span_name, reply)
+                return reply
 
         self.channel.payload_handler = wrapped_payload_handler
+
+
+class TracedIPCPubChannel(IPCMessagePublisher):
+    def __init__(self, baseObject):
+        self.__class__ = type(baseObject.__class__.__name__,
+                              (self.__class__, baseObject.__class__),
+                              {})
+        self.__dict__ = baseObject.__dict__
+        self.channel = baseObject
+        log.warning("%s.__init__", __class__)
+
+    def publish(self, msg):
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "TracedIPCPubChannel.publish"
+        with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
+            reply = self.channel.publish(msg)
+            print(span_name, reply)
+            return reply
+
+
+class TracedIPCSubChannel(IPCMessageSubscriber):
+    def __init__(self, baseObject):
+        self.__class__ = type(baseObject.__class__.__name__,
+                              (self.__class__, baseObject.__class__),
+                              {})
+        self.__dict__ = baseObject.__dict__
+        self.channel = baseObject
+        log.warning("%s.__init__", __class__)
+
+    def read_sync(self, timeout=None):
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "TracedIPCSubChannel.read_sync"
+        with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
+            reply = self.channel.read_sync(timeout)
+            print(span_name, reply)
+            return reply
+
+    @salt.ext.tornado.gen.coroutine
+    def read_async(self, callback):
+        setup_jaeger()
+        tracer = trace.get_tracer(__name__)
+        span_name = "TracedIPCSubChannel.read_async"
+        def wrapped_callback(*args, **kwargs):
+            with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
+                reply = callback(*args, **kwargs)
+                print(span_name, reply)
+                return reply
+        return self.channel.read_async(wrapped_callback)

@@ -872,9 +872,11 @@ class ZeroMQReqServerChannel(
             raise salt.ext.tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
+        # TODO: Include traceid in this stream?
         if req_fun == "send_clear":
             stream.send(self.serial.dumps(ret))
         elif req_fun == "send":
+            print("stream.send", ret)
             stream.send(self.serial.dumps(self.crypticle.dumps(ret)))
         elif req_fun == "send_private":
             stream.send(
@@ -1324,6 +1326,7 @@ class AsyncReqMessageClient(object):
 
             try:
                 ret = yield future
+                print("ret", ret)
             except Exception as err:  # pylint: disable=broad-except
                 log.debug("Re-init ZMQ socket: %s", err)
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)

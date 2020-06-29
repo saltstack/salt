@@ -98,7 +98,7 @@ class IPCServer(object):
         "close",
     ]
 
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(self, opts, socket_path, io_loop=None, payload_handler=None):
         """
         Create a new Tornado IPC server
 
@@ -264,7 +264,7 @@ class IPCClient(object):
                                 localhost connection.
     """
 
-    def __init__(self, socket_path, io_loop=None):
+    def __init__(self, opts, socket_path, io_loop=None):
         """
         Create a new IPC client
 
@@ -644,8 +644,8 @@ class IPCMessageSubscriber(IPCClient):
     package = ipc_subscriber.read_sync()
     """
 
-    def __init__(self, socket_path, io_loop=None):
-        super(IPCMessageSubscriber, self).__init__(socket_path, io_loop=io_loop)
+    def __init__(self, opts, socket_path, io_loop=None):
+        super(IPCMessageSubscriber, self).__init__(opts, socket_path, io_loop=io_loop)
         self._read_stream_future = None
         self._saved_data = []
         self._read_in_progress = Lock()

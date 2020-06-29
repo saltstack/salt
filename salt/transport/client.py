@@ -257,7 +257,6 @@ class AsyncPushChannel(object):
         # FIXME for now, just UXD
         # Obviously, this makes the factory approach pointless, but we'll extend later
         import salt.transport.ipc
-
         transport = salt.transport.ipc.IPCMessageClient(opts, **kwargs)
 
         import salt.transport.traced
@@ -275,11 +274,46 @@ class AsyncPullChannel(object):
         If we have additional IPC transports other than UXD and TCP, add them here
         """
         import salt.transport.ipc
-
         transport = salt.transport.ipc.IPCMessageServer(opts, **kwargs)
 
         import salt.transport.traced
         return salt.transport.traced.TracedPullChannel(transport)
+
+
+
+class AsyncIPCSubChannel(object):
+    """
+    Factory class to create IPC sub channels
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        """
+        If we have additional IPC transports other than UXD and TCP, add them here
+        """
+        import salt.transport.ipc
+        transport = salt.transport.ipc.IPCMessageSubscriber(opts, **kwargs)
+
+        import salt.transport.traced
+        return salt.transport.traced.TracedIPCSubChannel(transport)
+
+
+class AsyncIPCPubChannel(object):
+    """
+    Factory class to create IPC pub channels
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        """
+        If we have additional IPC transports other than UXD and TCP, add them here
+        """
+        import salt.transport.ipc
+        transport = salt.transport.ipc.IPCMessagePublisher(opts, **kwargs)
+
+        import salt.transport.traced
+        return salt.transport.traced.TracedIPCPubChannel(transport)
+
 
 
 ## Additional IPC messaging patterns should provide interfaces here, ala router/dealer, pub/sub, etc

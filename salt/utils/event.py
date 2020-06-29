@@ -71,7 +71,6 @@ import salt.ext.tornado.iostream
 import salt.log.setup
 import salt.payload
 import salt.transport.client
-import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
@@ -366,8 +365,8 @@ class SaltEvent(object):
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
-                    self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                        self.puburi, io_loop=self.io_loop
+                    self.subscriber = salt.transport.client.AsyncIPCSubChannel.factory(
+                        self.opts, socket_path=self.puburi, io_loop=self.io_loop
                     )
                 try:
                     self.io_loop.run_sync(
@@ -378,8 +377,8 @@ class SaltEvent(object):
                     pass
         else:
             if self.subscriber is None:
-                self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi, io_loop=self.io_loop
+                self.subscriber = salt.transport.client.AsyncIPCSubChannel.factory(
+                    self.opts, socket_path=self.puburi, io_loop=self.io_loop
                 )
 
             # For the asynchronous case, the connect will be defered to when
@@ -410,8 +409,8 @@ class SaltEvent(object):
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.pusher is None:
-                    self.pusher = salt.transport.ipc.IPCMessageClient(
-                        self.pulluri, io_loop=self.io_loop
+                    self.pusher = salt.transport.client.AsyncPushChannel.factory(
+                        self.opts, socket_path=self.pulluri, io_loop=self.io_loop
                     )
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.connect(timeout=timeout))
@@ -420,8 +419,8 @@ class SaltEvent(object):
                     pass
         else:
             if self.pusher is None:
-                self.pusher = salt.transport.ipc.IPCMessageClient(
-                    self.pulluri, io_loop=self.io_loop
+                self.pusher = salt.transport.client.AsyncPushChannel.factory(
+                    self.opts, socket_path=self.pulluri, io_loop=self.io_loop
                 )
             # For the asynchronous case, the connect will be deferred to when
             # fire_event() is invoked.
@@ -555,7 +554,7 @@ class SaltEvent(object):
                 run_once = True
             try:
                 # salt.ext.tornado.ioloop.IOLoop.run_sync() timeouts are in seconds.
-                # IPCMessageSubscriber.read_sync() uses this type of timeout.
+                # AsyncIPCSubChannel.read_sync() uses this type of timeout.
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
                 raw = self.subscriber.read_sync(timeout=wait)
@@ -1044,12 +1043,12 @@ class AsyncEventPublisher(object):
                         # Let's stop at this stage
                         raise
 
-        self.publisher = salt.transport.ipc.IPCMessagePublisher(
-            self.opts, epub_uri, io_loop=self.io_loop
+        self.publisher = salt.transport.client.AsyncIPCPubChannel.factory(
+            self.opts, socket_path=epub_uri, io_loop=self.io_loop
         )
 
-        self.puller = salt.transport.ipc.IPCMessageServer(
-            epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
+        self.puller = salt.transport.client.AsyncPullChannel.factory(
+            self.opts, socket_path=epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
         )
 
         log.info("Starting pull socket on %s", epull_uri)
@@ -1139,12 +1138,12 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                 epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
                 epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
 
-            self.publisher = salt.transport.ipc.IPCMessagePublisher(
-                self.opts, epub_uri, io_loop=self.io_loop
+            self.publisher = salt.transport.client.AsyncIPCPubChannel.factory(
+                self.opts, socket_path=epub_uri, io_loop=self.io_loop
             )
 
-            self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish,
+            self.puller = salt.transport.client.AsyncPullChannel.factory(
+                self.opts, socket_path=epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish,
             )
 
             # Start the master event publisher
