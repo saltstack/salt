@@ -1,0 +1,1 @@
+win_certutil state will now succeed on non-English systems upon successful addition and deletion of a certificate.
