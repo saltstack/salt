@@ -1,1 +1,1 @@
-win_certutil state will now succeed on non-English systems upon successful addition and deletion of a certificate.
+win_certutil state will no longer fail on non-English systems upon successful additions and deletions of a certificate.
