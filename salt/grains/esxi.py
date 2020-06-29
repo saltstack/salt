@@ -15,7 +15,7 @@ import logging
 import salt.utils.platform
 from salt.exceptions import SaltSystemExit
 
-if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "esxi":
+if salt.utils.platform.is_proxy():
     import salt.modules.vsphere
 
 
