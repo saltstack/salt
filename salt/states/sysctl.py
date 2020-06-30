@@ -114,7 +114,11 @@ def present(name, value, config=None, ignore=False):
         return ret
 
     try:
-        update = __salt__["sysctl.persist"](name, value, config, ignore)
+        if ignore:
+            # ignore is a linux only sysctl setting
+            update = __salt__["sysctl.persist"](name, value, config, ignore)
+        else:
+            update = __salt__["sysctl.persist"](name, value, config)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to set {0} to {1}: {2}".format(name, value, exc)
