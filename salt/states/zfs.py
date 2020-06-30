@@ -437,9 +437,16 @@ def _dataset_present(
     ## NOTE: update the dataset
     if __salt__["zfs.exists"](name, **{"type": dataset_type}):
         ## NOTE: fetch current volume properties
-        properties_current = __salt__["zfs.get"](
-            name, type=dataset_type, fields="value", depth=0, parsable=True,
-        ).get(name, OrderedDict())
+        if __grains__.get('os_family') == 'Solaris':
+            # Solaris does not have a -t option for zfs get
+            # https://docs.oracle.com/cd/E19253-01/816-5166/zfs-1m/index.html
+            properties_current = __salt__["zfs.get"](
+                name, fields="value", depth=0, parsable=True,
+            ).get(name, OrderedDict())
+        else:
+            properties_current = __salt__["zfs.get"](
+                name, type=dataset_type, fields="value", depth=0, parsable=True,
+            ).get(name, OrderedDict())
 
         ## NOTE: add volsize to properties
         if volume_size:
