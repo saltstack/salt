@@ -30,7 +30,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        add_mock = MagicMock(return_value="Added successfully")
+        add_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -158,7 +158,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456", "ABCDEF"])
-        del_mock = MagicMock(return_value="Removed successfully")
+        del_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
