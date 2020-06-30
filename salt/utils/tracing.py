@@ -36,6 +36,7 @@ def service_name_wrapper(*args):
 def setup_jaeger():
     print("setup_jaeger called from thread:", threading.get_ident(), "service name:", service_name.get('unknown'))
 
+    import os
     from opentelemetry.ext import jaeger
     trace.set_tracer_provider(TracerProvider())
 
@@ -45,7 +46,7 @@ def setup_jaeger():
             jaeger.JaegerSpanExporter(
                 service_name=service_name.get('unknown'),
                 # configure agent
-                agent_host_name='jaeger',
+                agent_host_name=os.environ.get('JAEGER_HOST', 'localhost'),
                 agent_port=6831,
             )
         )
