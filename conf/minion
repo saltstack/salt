@@ -165,7 +165,7 @@
 # generated if an IP does not resolve. In Windows grains are regenerated each
 # time a new process is spawned. Therefore, the default for Windows is `False`.
 # All other OSes default to `True`
-# enable_fqdn_grains: True
+# enable_fqdns_grains: True
 
 # The minion can take a while to start up when lspci and/or dmidecode is used
 # to populate the grains for the minion. Set this to False if you do not need
