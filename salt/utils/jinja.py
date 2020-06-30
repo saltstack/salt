@@ -1055,16 +1055,15 @@ class SerializerExtension(Extension, object):
         return value
 
     _load_parsers = {"load_yaml", "load_json", "load_text"}
+    _import_parsers = {"import_yaml", "import_json", "import_text"}
 
     def parse(self, parser):
-        if parser.stream.current.value == "import_yaml":
-            return self.parse_yaml(parser)
-        elif parser.stream.current.value == "import_json":
-            return self.parse_json(parser)
-        elif parser.stream.current.value == "import_text":
-            return self.parse_text(parser)
-        elif parser.stream.current.value in self._load_parsers:
+        if parser.stream.current.value in self._load_parsers:
             return self.parse_load(parser)
+        elif parser.stream.current.value in self._import_parsers:
+            return self.parse_import(
+                parser, parser.stream.current.value.split("_", 1)[1]
+            )
 
         parser.fail(
             "Unknown format " + parser.stream.current.value,
@@ -1104,7 +1103,7 @@ class SerializerExtension(Extension, object):
             ).set_lineno(lineno),
         ]
 
-    def parse_yaml(self, parser):
+    def parse_import(self, parser, converter):
         import_node = parser.parse_import()
         target = import_node.target
         lineno = import_node.lineno
@@ -1115,47 +1114,7 @@ class SerializerExtension(Extension, object):
                 nodes.Name(target, "store").set_lineno(lineno),
                 nodes.Filter(
                     nodes.Name(target, "load").set_lineno(lineno),
-                    "load_yaml",
-                    [],
-                    [],
-                    None,
-                    None,
-                ).set_lineno(lineno),
-            ).set_lineno(lineno),
-        ]
-
-    def parse_json(self, parser):
-        import_node = parser.parse_import()
-        target = import_node.target
-        lineno = import_node.lineno
-
-        return [
-            import_node,
-            nodes.Assign(
-                nodes.Name(target, "store").set_lineno(lineno),
-                nodes.Filter(
-                    nodes.Name(target, "load").set_lineno(lineno),
-                    "load_json",
-                    [],
-                    [],
-                    None,
-                    None,
-                ).set_lineno(lineno),
-            ).set_lineno(lineno),
-        ]
-
-    def parse_text(self, parser):
-        import_node = parser.parse_import()
-        target = import_node.target
-        lineno = import_node.lineno
-
-        return [
-            import_node,
-            nodes.Assign(
-                nodes.Name(target, "store").set_lineno(lineno),
-                nodes.Filter(
-                    nodes.Name(target, "load").set_lineno(lineno),
-                    "load_text",
+                    "load_{}".format(converter),
                     [],
                     [],
                     None,
