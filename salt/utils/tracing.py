@@ -45,7 +45,7 @@ def setup_jaeger():
             jaeger.JaegerSpanExporter(
                 service_name=service_name.get('unknown'),
                 # configure agent
-                agent_host_name='localhost',
+                agent_host_name='jaeger',
                 agent_port=6831,
             )
         )
