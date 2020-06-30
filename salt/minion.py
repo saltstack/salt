@@ -1642,15 +1642,6 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
-        setup_jaeger()
-        tracer = trace.get_tracer(__name__)
-        span_name = "_handle_decoded_payload"
-        with tracer.start_as_current_span(
-                span_name,
-                kind=trace.SpanKind.INTERNAL,
-            ):
-            print("TEST")
-
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if six.PY2:
             data = salt.utils.data.decode(data, keep=True)
@@ -1757,15 +1748,7 @@ class Minion(MinionBase):
 
     @classmethod
     def _context_target(cls, minion_instance, opts, data, connected, context):
-        setup_jaeger()
-        tracer = trace.get_tracer(__name__)
-        span_name = "_context_target"
-        with tracer.start_as_current_span(
-                span_name,
-                kind=trace.SpanKind.INTERNAL,
-            ):
-            print("TEST2")
-            return context.run(cls._target, minion_instance, opts, data, connected)
+        return context.run(cls._target, minion_instance, opts, data, connected)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):

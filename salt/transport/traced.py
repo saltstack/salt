@@ -1,5 +1,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
+import json
+import base64
 import logging
 import typing
 
@@ -281,7 +283,22 @@ class TracedPubServerChannel(object):
             return reply
 
 
-# TODO: IPCClient, IPCServer
+def msg_to_json(msg):
+    load = {'msg': base64.b64encode(msg).decode('utf8')}
+    propagators.inject(set_header_into_dict, load)
+    return json.dumps(load)
+
+
+def json_to_msg(payload):
+    if payload is None:
+        return None
+    load = json.loads(payload)
+    token = context.attach(
+        propagators.extract(get_header_from_dict, load)
+    )
+    msg = base64.b64decode(load['msg'].encode('utf8'))
+    return msg
+
 
 class TracedPushChannel(IPCMessageClient):
     def __init__(self, baseObject):
@@ -298,7 +315,10 @@ class TracedPushChannel(IPCMessageClient):
         tracer = trace.get_tracer(__name__)
         span_name = "TracedPushChannel.send"
         with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
-            reply = self.channel.send(msg, timeout, tries)
+            print(span_name, msg)
+            payload = msg_to_json(msg)
+            print(span_name, payload)
+            reply = self.channel.send(payload, timeout, tries)
             print(span_name, reply)
             return reply
 
@@ -316,13 +336,18 @@ class TracedPullChannel(IPCMessageServer):
         payload_handler = self.channel.payload_handler
         setup_jaeger()
 
-        def wrapped_payload_handler(*args, **kwargs):
+        def wrapped_payload_handler(payload, *args, **kwargs):
+            setup_jaeger()
             tracer = trace.get_tracer(__name__)
             span_name = "TracedPullChannel.wrapped_payload_handler"
+            print(span_name, payload)
+            msg = json_to_msg(payload)
+            print(span_name, msg)
+            reply = None
             with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
-                reply = payload_handler(*args, **kwargs)
+                reply = payload_handler(msg, *args, **kwargs)
                 print(span_name, reply)
-                return reply
+            return reply
 
         self.channel.payload_handler = wrapped_payload_handler
 
@@ -340,8 +365,11 @@ class TracedIPCPubChannel(IPCMessagePublisher):
         setup_jaeger()
         tracer = trace.get_tracer(__name__)
         span_name = "TracedIPCPubChannel.publish"
+        print(span_name, msg)
         with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
-            reply = self.channel.publish(msg)
+            payload = msg_to_json(msg)
+            print(span_name, payload)
+            reply = self.channel.publish(payload)
             print(span_name, reply)
             return reply
 
@@ -360,18 +388,25 @@ class TracedIPCSubChannel(IPCMessageSubscriber):
         tracer = trace.get_tracer(__name__)
         span_name = "TracedIPCSubChannel.read_sync"
         with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
-            reply = self.channel.read_sync(timeout)
-            print(span_name, reply)
-            return reply
+            payload = self.channel.read_sync(timeout)
+            print(span_name, payload)
+            msg = json_to_msg(payload)
+            print(span_name, msg)
+            with tracer.start_as_current_span(span_name + "post_fetch", kind=trace.SpanKind.INTERNAL):
+                return msg
 
     @salt.ext.tornado.gen.coroutine
     def read_async(self, callback):
         setup_jaeger()
         tracer = trace.get_tracer(__name__)
         span_name = "TracedIPCSubChannel.read_async"
-        def wrapped_callback(*args, **kwargs):
+        def wrapped_callback(payload):
+            print(span_name, payload)
+            msg = json_to_msg(payload)
+            print(span_name, msg)
+            reply = None
             with tracer.start_as_current_span(span_name, kind=trace.SpanKind.INTERNAL):
-                reply = callback(*args, **kwargs)
+                reply = callback(msg)
                 print(span_name, reply)
-                return reply
+            return reply
         return self.channel.read_async(wrapped_callback)
