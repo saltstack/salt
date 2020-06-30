@@ -796,8 +796,9 @@ class LocalClient(object):
                 with tracer.start_as_current_span(
                     "Waiting for reply",
                     kind=trace.SpanKind.INTERNAL,
-                ):
+                ) as span:
                     try:
+                        counter = 0
                         for fn_ret in self.get_cli_event_returns(
                             self.pub_data["jid"],
                             self.pub_data["minions"],
@@ -808,9 +809,11 @@ class LocalClient(object):
                             progress,
                             **kwargs
                         ):
-
                             if not fn_ret:
                                 continue
+
+                            span.set_attribute('fn_ret_' + str(counter), str(fn_ret))
+                            counter = counter + 1
 
                             yield fn_ret
                     except KeyboardInterrupt:
