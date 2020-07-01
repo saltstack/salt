@@ -12,6 +12,7 @@ import os.path
 import pipes
 import pprint
 import re
+import time
 import uuid
 import warnings
 from collections.abc import Hashable
@@ -893,6 +894,7 @@ class SerializerExtension(Extension, object):
         "import_json",
         "load_text",
         "import_text",
+        "profile",
     }
 
     def __init__(self, environment):
@@ -1064,6 +1066,8 @@ class SerializerExtension(Extension, object):
             return self.parse_import(
                 parser, parser.stream.current.value.split("_", 1)[1]
             )
+        elif parser.stream.current.value == "profile":
+            return self.parse_profile(parser)
 
         parser.fail(
             "Unknown format " + parser.stream.current.value,
@@ -1071,6 +1075,51 @@ class SerializerExtension(Extension, object):
         )
 
     # pylint: disable=E1120,E1121
+    def parse_profile(self, parser):
+        lineno = next(parser.stream).lineno
+        parser.stream.expect("name:as")
+        label = parser.parse_expression()
+        body = parser.parse_statements(["name:endprofile"], drop_needle=True)
+        return self._parse_profile_block(parser, label, "profile block", body, lineno)
+
+    def _create_profile_id(self, parser):
+        return "_salt_profile_{}".format(parser.free_identifier().name)
+
+    def _profile_start(self, label, source):
+        return (label, source, time.time())
+
+    def _profile_end(self, label, source, previous_time):
+        log.profile(
+            "Time (in seconds) to render {0} '{1}': {2}".format(
+                source, label, time.time() - previous_time
+            )
+        )
+
+    def _parse_profile_block(self, parser, label, source, body, lineno):
+        profile_id = self._create_profile_id(parser)
+        ret = (
+            [
+                nodes.Assign(
+                    nodes.Name(profile_id, "store").set_lineno(lineno),
+                    self.call_method(
+                        "_profile_start",
+                        dyn_args=nodes.List([label, nodes.Const(source)]).set_lineno(
+                            lineno
+                        ),
+                    ).set_lineno(lineno),
+                ).set_lineno(lineno),
+            ]
+            + body
+            + [
+                nodes.ExprStmt(
+                    self.call_method(
+                        "_profile_end", dyn_args=nodes.Name(profile_id, "load")
+                    ),
+                ).set_lineno(lineno),
+            ]
+        )
+        return ret
+
     def parse_load(self, parser):
         filter_name = parser.stream.current.value
         lineno = next(parser.stream).lineno
@@ -1108,7 +1157,7 @@ class SerializerExtension(Extension, object):
         target = import_node.target
         lineno = import_node.lineno
 
-        return [
+        body = [
             import_node,
             nodes.Assign(
                 nodes.Name(target, "store").set_lineno(lineno),
@@ -1122,5 +1171,8 @@ class SerializerExtension(Extension, object):
                 ).set_lineno(lineno),
             ).set_lineno(lineno),
         ]
+        return self._parse_profile_block(
+            parser, import_node.template, "import_{}".format(converter), body, lineno
+        )
 
     # pylint: enable=E1120,E1121
