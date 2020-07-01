@@ -502,11 +502,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         output = template.render(**decoded_context)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        out = _get_jinja_error(trace, context=decoded_context)[1]
-        tmplstr = ""
-        # Don't include the line number, since it is misreported
-        # https://github.com/mitsuhiko/jinja2/issues/276
-        raise SaltRenderError("Jinja variable {}{}".format(exc, out), buf=tmplstr)
+        line, out = _get_jinja_error(trace, context=decoded_context)
+        if not line:
+            tmplstr = ""
+        raise SaltRenderError("Jinja variable {}{}".format(exc, out), line, tmplstr)
     except (
         jinja2.exceptions.TemplateRuntimeError,
         jinja2.exceptions.TemplateSyntaxError,
