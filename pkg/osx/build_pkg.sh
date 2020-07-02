@@ -135,7 +135,7 @@ rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
 if [ "$PYVER" == "2" ]; then
     rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
 else
-    rm -rdf $PKGDIR/opt/salt/lib/python3.5/test
+    rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
 fi
 
 echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
