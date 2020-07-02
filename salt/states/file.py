@@ -7528,6 +7528,7 @@ def serialize(
     merge_if_exists=False,
     encoding=None,
     encoding_errors="strict",
+    serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
     **kwargs
@@ -7552,9 +7553,13 @@ def serialize(
 
         .. versionadded:: 2015.8.0
 
-    formatter
+    serializer (or formatter)
         Write the data as this format. See the list of
         :ref:`all-salt.serializers` for supported output formats.
+
+        .. versionchanged:: 3002
+            ``serializer`` argument added as an alternative to ``formatter``.
+            Both are accepted, but using both will result in an error.
 
     encoding
         If specified, then the specified encoding will be used. Otherwise, the
@@ -7619,7 +7624,7 @@ def serialize(
 
            /etc/dummy/package.yaml
              file.serialize:
-               - formatter: yaml
+               - serializer: yaml
                - serializer_opts:
                  - explicit_start: True
                  - default_flow_style: True
@@ -7632,6 +7637,8 @@ def serialize(
         - For **yaml**: `yaml.dump()`_
         - For **json**: `json.dumps()`_
         - For **python**: `pprint.pformat()`_
+        - For **msgpack**: Run ``python -c 'import msgpack; help(msgpack.Packer)'``
+          to see the available options (``encoding``, ``unicode_errors``, etc.)
 
         .. _`yaml.dump()`: https://pyyaml.org/wiki/PyYAMLDocumentation
         .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
@@ -7649,7 +7656,7 @@ def serialize(
 
            /etc/dummy/package.yaml
              file.serialize:
-               - formatter: yaml
+               - serializer: yaml
                - serializer_opts:
                  - explicit_start: True
                  - default_flow_style: True
@@ -7688,7 +7695,7 @@ def serialize(
                   express: '>= 1.2.0'
                   optimist: '>= 0.1.0'
                 engine: node 0.4.1
-            - formatter: json
+            - serializer: json
 
     will manage the file ``/etc/dummy/package.json``:
 
@@ -7736,7 +7743,10 @@ def serialize(
             ).format(name)
             return ret
 
-    formatter = kwargs.pop("formatter", "yaml").lower()
+    formatter = kwargs.pop("formatter", None)
+    if serializer and formatter:
+        return _error(ret, "Only one of serializer and formatter are allowed")
+    serializer = str(serializer or formatter or "yaml").lower()
 
     if len([x for x in (dataset, dataset_pillar) if x]) > 1:
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
@@ -7756,13 +7766,16 @@ def serialize(
             )
         group = user
 
-    serializer_name = "{0}.serialize".format(formatter)
-    deserializer_name = "{0}.deserialize".format(formatter)
+    serializer_name = "{0}.serialize".format(serializer)
+    deserializer_name = "{0}.deserialize".format(serializer)
 
     if serializer_name not in __serializers__:
         return {
             "changes": {},
-            "comment": "{0} format is not supported".format(formatter.capitalize()),
+            "comment": (
+                "The {0} serializer could not be found. It either does "
+                "not exist or its prerequisites are not installed.".format(serializer)
+            ),
             "name": name,
             "result": False,
         }
@@ -7782,13 +7795,14 @@ def serialize(
             if deserializer_name not in __serializers__:
                 return {
                     "changes": {},
-                    "comment": "merge_if_exists is not supported for the {0} "
-                    "formatter".format(formatter),
+                    "comment": "merge_if_exists is not supported for the {0} serializer".format(
+                        serializer
+                    ),
                     "name": name,
                     "result": False,
                 }
             open_args = "r"
-            if formatter == "plist":
+            if serializer == "plist":
                 open_args += "b"
             with salt.utils.files.fopen(name, open_args) as fhr:
                 try:
@@ -7822,11 +7836,14 @@ def serialize(
         dataset, **serializer_options.get(serializer_name, {})
     )
 
-    if isinstance(contents, str):
+    # Insert a newline, but only if the serialized contents are not a
+    # bytestring. If it's a bytestring, it's almost certainly serialized into a
+    # binary format that does not take kindly to additional bytes being foisted
+    # upon it.
+    try:
         contents += "\n"
-    # adding a new line to a binary plist will invalidate it.
-    elif isinstance(contents, bytes) and formatter != "plist":
-        contents += b"\n"
+    except TypeError:
+        pass
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
