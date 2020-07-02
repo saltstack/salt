@@ -19,7 +19,7 @@ things:
     and does not need the salt-minion daemon.
     
     As of version 2016.11.0 you can have a running minion (with engines and
-    beacons without a master connection. If you wish to run the salt-minion
+    beacons) without a master connection. If you wish to run the salt-minion
     daemon you will need to set the :conf_minion:`master_type` configuration 
     setting to be set to 'disable'.
    
