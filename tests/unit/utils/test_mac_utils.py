@@ -169,15 +169,17 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(mac_utils.validate_enabled(False), "off")
 
-    @patch.object(platform, "mac_ver", lambda: ('10.15.5', ('', '', ''), 'x86_64'))
+    @patch.object(platform, "mac_ver", lambda: ("10.15.5", ("", "", ""), "x86_64"))
     def test_os_version(self):
         """
         test multiple outputs of os_version
         """
         self.assertEqual(mac_utils.os_version(), "10.15")
         self.assertEqual(mac_utils.os_version(as_tuple=True), (10, 15))
-        self.assertEqual(mac_utils.os_version(only_major_minor=False), '10.15.5')
-        self.assertEqual(mac_utils.os_version(only_major_minor=False, as_tuple=True), (10, 15, 5))
+        self.assertEqual(mac_utils.os_version(only_major_minor=False), "10.15.5")
+        self.assertEqual(
+            mac_utils.os_version(only_major_minor=False, as_tuple=True), (10, 15, 5)
+        )
 
     def test_launchctl(self):
         """

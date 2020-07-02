@@ -538,7 +538,7 @@ def os_version(only_major_minor=True, as_tuple=False):
         import salt.utils.mac_utils
         salt.utils.mac_utils.os_version(as_tuple=True)
     """
-    #lovingly borrowed from the munki project
+    # lovingly borrowed from the munki project
     os_version_tuple = platform.mac_ver()[0].split(".")
     if only_major_minor:
         os_version_tuple = os_version_tuple[0:2]
