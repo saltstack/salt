@@ -174,25 +174,55 @@ class RSAX931Test(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
-    def test_find_libcrypto_darwin(self):
+    @patch.object(salt.utils.mac_utils, "os_version", lambda as_tuple: (10.14))
+    @patch.object(glob, "glob", lambda _: [])
+    def test_find_libcrypto_with_system_and_not_catalina(self):
         """
-        Test _find_libcrypto on a Darwin-like or macOS host.
+        Test _find_libcrypto on a Catalina-like macOS host, simulate
+        not finding any other libcryptos and just defaulting to system.
         """
         lib_path = _find_libcrypto()
         passed = False
         for i in (
-            "/usr/lib/libcrypto.*.dylib",
+            "/opt/salt/lib/libcrypto.dylib",
             "/usr/local/opt/openssl/lib/libcrypto.dylib",
             "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
+            "/opt/local/lib/libcrypto.dylib",
+            "/usr/lib/libcrypto.*.dylib",
+        ):
+            if fnmatch.fnmatch(lib_path, i):
+                passed = True
+                break
+        self.assertFalse(passed)
+        self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
+
+    @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
+    @patch.object(salt.utils.mac_utils, "os_version", lambda as_tuple: (10.15))
+    def test_find_libcrypto_darwin_catalina(self):
+        """
+        Test _find_libcrypto on a Darwin-like  macOS host where there isn't a
+        lacation returned by ctypes.util.find_library()
+        """
+        lib_path = _find_libcrypto()
+        passed = False
+        for i in (
+            "/opt/salt/lib/libcrypto.dylib",
+            "/usr/local/opt/openssl/lib/libcrypto.dylib",
+            "/usr/local/opt/openssl@*/lib/libcrypto.dylib",
+            "/opt/local/lib/libcrypto.dylib",
+            "/usr/lib/libcrypto.*.dylib",
         ):
             if fnmatch.fnmatch(lib_path, i):
                 passed = True
                 break
         self.assertTrue(passed)
+        # we should never return the stub on catalina
+        self.assertNotEqual(lib_path, "/usr/lib/libcrypto.dylib")
 
     @patch.object(ctypes.util, "find_library", lambda a: None)
     @patch.object(glob, "glob", lambda a: [])
     @patch.object(sys, "platform", "unknown")
+    @patch.object(salt.utils.platform, "is_darwin", lambda: False)
     def test_find_libcrypto_unsupported(self):
         """
         Ensure that _find_libcrypto works correctly on an unsupported host OS.
