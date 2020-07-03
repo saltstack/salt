@@ -2941,7 +2941,9 @@ def info_installed(*names, **kwargs):
         salt.utils.args.invalid_kwargs(kwargs)
 
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__["lowpkg.info"](*names, failhard=failhard).items():
+    for pkg_name, pkg_nfo in __salt__["lowpkg.info"](
+        *names, failhard=failhard, attr=attr
+    ).items():
         t_nfo = dict()
         if pkg_nfo.get("status", "ii")[1] != "i":
             continue  # return only packages that are really installed
