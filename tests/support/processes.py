@@ -123,9 +123,20 @@ class SaltVirtContainer(object):
     Class which represents virt-minion container
     """
 
-    def __init__(self, container_name, container_img, daemon_config_dir):
+    def __init__(
+        self,
+        container_name,
+        container_img,
+        ssh_port,
+        sshd_port,
+        host_uuid,
+        daemon_config_dir,
+    ):
         self.container_name = container_name
         self.container_img = container_img
+        self.ssh_port = ssh_port
+        self.sshd_port = sshd_port
+        self.host_uuid = host_uuid
         self.daemon_config_dir = daemon_config_dir
         self.pid_file = os.path.join(daemon_config_dir, container_name + ".pid")
 
@@ -142,6 +153,7 @@ class SaltVirtContainer(object):
             )
         )
         salt_root_path = os.path.abspath(os.path.join(__file__, "..", "..", ".."))
+
         # Start container
         process = self._run_cmd(
             [
@@ -151,12 +163,17 @@ class SaltVirtContainer(object):
                 "--rm",
                 "--privileged",
                 "--cap-add=ALL",
-                "--network",
-                "host",
-                "--name",
-                self.container_name,
-                "--hostname",
-                self.container_name,
+                "--network=host",
+                "--add-host=virt_minion_0:127.0.0.1",
+                "--add-host=virt_minion_1:127.0.0.1",
+                "--name=" + self.container_name,
+                "--hostname=" + self.container_name,
+                "-e",
+                "SSH_PORT={}".format(self.ssh_port),
+                "-e",
+                "SSHD_PORT={}".format(self.sshd_port),
+                "-e",
+                "HOST_UUID=" + self.host_uuid,
                 "-v",
                 salt_root_path + ":/salt",
                 "-v",
@@ -201,11 +218,20 @@ class SaltVirtContainer(object):
         os.remove(self.pid_file)
 
 
-def start_virt_daemon(container_name, container_img, daemon_config_dir):
+def start_virt_daemon(
+    container_name, container_img, ssh_port, sshd_port, host_uuid, daemon_config_dir
+):
     """
     Start a salt minion daemon inside a container.
     """
-    container = SaltVirtContainer(container_name, container_img, daemon_config_dir)
+    container = SaltVirtContainer(
+        container_name,
+        container_img,
+        ssh_port,
+        sshd_port,
+        host_uuid,
+        daemon_config_dir,
+    )
     container.start()
     container.wait_until_minion_is_running()
     return container
