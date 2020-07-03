@@ -225,8 +225,46 @@ class VirtTest(ModuleCase):
         domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
         self.assertIsInstance(domains, list)
         self.assertEqual(domains, ["core-vm"])
-        result = self.run_function("virt.undefine", ["core-vm"], minion_tgt="virt_minion_0")
+        result = self.run_function(
+            "virt.undefine", ["core-vm"], minion_tgt="virt_minion_0"
+        )
         self.assertEqual(result, True)
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, [])
+
+    def test_migration(self):
+        """
+        Test domain migration
+        """
+        result = self.run_function(
+            "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
+        )
+        self.assertEqual(result, True)
+
+        result = self.run_function(
+            "virt.start", ["core-vm"], minion_tgt="virt_minion_0"
+        )
+        self.assertEqual(result, True)
+
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, ["core-vm"])
+
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_1")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, [])
+
+        result = self.run_function(
+            "virt.migrate",
+            ["core-vm", "localhost:2202", True],
+            minion_tgt="virt_minion_0",
+        )
+
+        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_1")
+        self.assertIsInstance(domains, list)
+        self.assertEqual(domains, ["core-vm"])
+
         domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
         self.assertIsInstance(domains, list)
         self.assertEqual(domains, [])
