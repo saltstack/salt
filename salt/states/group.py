@@ -180,9 +180,9 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
             ret["result"] = None
-            ret["comment"] = (
-                "Error. Same user(s) can not be added and deleted" " simultaneously"
-            )
+            ret[
+                "comment"
+            ] = "Error. Same user(s) can not be added and deleted simultaneously"
             return ret
 
     changes = _changes(name, gid, addusers, delusers, members)

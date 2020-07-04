@@ -23,7 +23,7 @@ Rob Speer's changes are as follows:
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
+from collections.abc import MutableSet
 
 SLICE_ALL = slice(None)
 __version__ = "2.0.1"
@@ -49,7 +49,7 @@ def is_iterable(obj):
     )
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(MutableSet):
     """
     An OrderedSet is a custom MutableSet that remembers its order, so that
     every entry has an index that can be looked up.
@@ -95,7 +95,7 @@ class OrderedSet(collections.MutableSet):
         return OrderedSet(self)
 
     def __getstate__(self):
-        if len(self) == 0:
+        if not self.items:
             # The state can't be an empty list.
             # We need to return a truthy value, or else __setstate__ won't be run.
             #

@@ -111,7 +111,9 @@ def __virtual__():
     """
     Only load if the sqlite3 module is available
     """
-    return HAS_SQLITE3
+    if HAS_SQLITE3:
+        return True
+    return (False, "Unable to import sqlite3")
 
 
 def row_absent(name, db, table, where_sql, where_args=None):

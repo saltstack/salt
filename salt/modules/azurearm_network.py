@@ -191,7 +191,7 @@ def default_security_rule_get(name, security_group, resource_group, **kwargs):
                 "error": "Unable to find {0} in {1}!".format(name, security_group)
             }
     except KeyError as exc:
-        log.error("Unable to find {0} in {1}!".format(name, security_group))
+        log.error("Unable to find %s in %s!", name, security_group)
         result = {"error": str(exc)}
 
     return result
@@ -227,7 +227,7 @@ def default_security_rules_list(security_group, resource_group, **kwargs):
     try:
         result = secgroup["default_security_rules"]
     except KeyError as exc:
-        log.error("No default security rules found for {0}!".format(security_group))
+        log.error("No default security rules found for %s!", security_group)
         result = {"error": str(exc)}
 
     return result
@@ -362,9 +362,7 @@ def security_rule_create_or_update(
         # pylint: disable=eval-used
         if not eval(params[0]) and not eval(params[1]):
             log.error(
-                "Either the {0} or {1} parameter must be provided!".format(
-                    params[0], params[1]
-                )
+                "Either the %s or %s parameter must be provided!", params[0], params[1]
             )
             return False
         # pylint: disable=eval-used
@@ -1822,7 +1820,7 @@ def get_virtual_machine_scale_set_network_interface(
     """
     .. versionadded:: 2019.2.0
 
-    Get information about a specfic network interface within a scale set.
+    Get information about a specific network interface within a scale set.
 
     :param name: The name of the network interface to query.
 

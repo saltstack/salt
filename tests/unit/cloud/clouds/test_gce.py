@@ -9,6 +9,8 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
+
 # Import Salt Libs
 from salt.cloud.clouds import gce
 from salt.exceptions import SaltCloudSystemExit
@@ -16,6 +18,7 @@ from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock
 from tests.support.mock import __version__ as mock_version
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -52,6 +55,17 @@ except ImportError:
     pass
 
 
+class DummyGCEConn(object):
+    def __init__(self):
+        self.create_node = MagicMock()
+
+    def __getattr__(self, attr):
+        if attr != "create_node":
+            # Return back the first thing passed in (i.e. don't call out to get
+            # the override value).
+            return lambda *args, **kwargs: args[0]
+
+
 class GCETestCase(TestCase, LoaderModuleMockMixin):
     """
     Unit TestCase for salt.cloud.clouds.gce module.
@@ -61,7 +75,13 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
         return {
             gce: {
                 "__active_provider_name__": "",
+                "__utils__": {
+                    "cloud.fire_event": MagicMock(),
+                    "cloud.filter_event": MagicMock(),
+                },
                 "__opts__": {
+                    "sock_dir": True,
+                    "transport": True,
                     "providers": {
                         "my-google-cloud": {
                             "gce": {
@@ -72,10 +92,30 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
                                 "ssh_interface": "public_ips",
                             }
                         }
-                    }
+                    },
                 },
             }
         }
+
+    def setUp(self):
+        self.location = collections.namedtuple("Location", "name")("chicago")
+        self.vm_ = {
+            "name": "new",
+            "driver": "gce",
+            "profile": None,
+            "size": 1234,
+            "image": "myimage",
+            "location": self.location,
+            "ex_network": "mynetwork",
+            "ex_subnetwork": "mysubnetwork",
+            "ex_tags": "mytags",
+            "ex_metadata": "metadata",
+        }
+        self.conn = DummyGCEConn()
+
+    def tearDown(self):
+        del self.vm_
+        del self.conn
 
     def test_destroy_call(self):
         """
@@ -114,3 +154,38 @@ class GCETestCase(TestCase, LoaderModuleMockMixin):
         """
         p = gce.get_configured_provider()
         self.assertNotEqual(p, None)
+
+    def test_request_instance_with_accelerator(self):
+        """
+        Test requesting an instance with GCE accelerators
+        """
+
+        self.vm_.update({"ex_accelerator_type": "foo", "ex_accelerator_count": 42})
+        call_kwargs = {
+            "ex_disk_type": "pd-standard",
+            "ex_metadata": {"items": [{"value": None, "key": "salt-cloud-profile"}]},
+            "ex_accelerator_count": 42,
+            "name": "new",
+            "ex_service_accounts": None,
+            "external_ip": "ephemeral",
+            "ex_accelerator_type": "foo",
+            "ex_tags": None,
+            "ex_disk_auto_delete": True,
+            "ex_network": "default",
+            "ex_disks_gce_struct": None,
+            "ex_preemptible": False,
+            "ex_can_ip_forward": False,
+            "ex_on_host_maintenance": "TERMINATE",
+            "location": self.location,
+            "ex_subnetwork": None,
+            "image": "myimage",
+            "size": 1234,
+        }
+
+        with patch(
+            "salt.cloud.clouds.gce.get_conn", MagicMock(return_value=self.conn)
+        ), patch("salt.cloud.clouds.gce.show_instance", MagicMock()), patch(
+            "salt.cloud.clouds.gce.LIBCLOUD_VERSION_INFO", (2, 3, 0)
+        ):
+            gce.request_instance(self.vm_)
+            self.conn.create_node.assert_called_once_with(**call_kwargs)

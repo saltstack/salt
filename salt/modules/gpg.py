@@ -1107,7 +1107,7 @@ def verify(
         msg = "Invalid trustmodel defined: {}. Use one of: {}".format(
             trustmodel, ", ".join(trustmodels)
         )
-        log.warn(msg)
+        log.warning(msg)
         return {"res": False, "message": msg}
 
     extra_args = []

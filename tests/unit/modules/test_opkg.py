@@ -3,57 +3,54 @@
     :synopsis: Unit Tests for Package Management module 'module.opkg'
     :platform: Linux
 """
-# pylint: disable=import-error,3rd-party-module-not-gated
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import copy
 
 import salt.modules.opkg as opkg
-
-# Import Salt Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-# pylint: disable=import-error,3rd-party-module-not-gated
-OPKG_VIM_INFO = {
-    "vim": {
-        "Package": "vim",
-        "Version": "7.4.769-r0.31",
-        "Status": "install ok installed",
-    }
-}
-
-OPKG_VIM_FILES = {
-    "errors": [],
-    "packages": {
-        "vim": [
-            "/usr/bin/view",
-            "/usr/bin/vim.vim",
-            "/usr/bin/xxd",
-            "/usr/bin/vimdiff",
-            "/usr/bin/rview",
-            "/usr/bin/rvim",
-            "/usr/bin/ex",
-        ]
-    },
-}
-
-INSTALLED = {"vim": {"new": "7.4", "old": six.text_type()}}
-
-REMOVED = {"vim": {"new": six.text_type(), "old": "7.4"}}
-PACKAGES = {"vim": "7.4"}
 
 
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.opkg
     """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opkg_vim_info = {
+            "vim": {
+                "Package": "vim",
+                "Version": "7.4.769-r0.31",
+                "Status": "install ok installed",
+            }
+        }
+        cls.opkg_vim_files = {
+            "errors": [],
+            "packages": {
+                "vim": [
+                    "/usr/bin/view",
+                    "/usr/bin/vim.vim",
+                    "/usr/bin/xxd",
+                    "/usr/bin/vimdiff",
+                    "/usr/bin/rview",
+                    "/usr/bin/rvim",
+                    "/usr/bin/ex",
+                ]
+            },
+        }
+        cls.installed = {"vim": {"new": "7.4", "old": ""}}
+        cls.removed = {"vim": {"new": "", "old": "7.4"}}
+        cls.packages = {"vim": "7.4"}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.opkg_vim_info = (
+            cls.opkg_vim_files
+        ) = cls.installed = cls.removed = cls.packages = None
 
     def setup_loader_modules(self):  # pylint: disable=no-self-use
         """
@@ -66,7 +63,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Returns a string representing the package version or an empty string if
         not installed.
         """
-        version = OPKG_VIM_INFO["vim"]["Version"]
+        version = self.opkg_vim_info["vim"]["Version"]
         mock = MagicMock(return_value=version)
         with patch.dict(opkg.__salt__, {"pkg_resource.version": mock}):
             self.assertEqual(opkg.version(*["vim"]), version)
@@ -82,22 +79,22 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test - List the files that belong to a package, grouped by package.
         """
-        std_out = "\n".join(OPKG_VIM_FILES["packages"]["vim"])
+        std_out = "\n".join(self.opkg_vim_files["packages"]["vim"])
         ret_value = {"stdout": std_out}
         mock = MagicMock(return_value=ret_value)
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):
-            self.assertEqual(opkg.file_dict("vim"), OPKG_VIM_FILES)
+            self.assertEqual(opkg.file_dict("vim"), self.opkg_vim_files)
 
     def test_file_list(self):
         """
         Test - List the files that belong to a package.
         """
-        std_out = "\n".join(OPKG_VIM_FILES["packages"]["vim"])
+        std_out = "\n".join(self.opkg_vim_files["packages"]["vim"])
         ret_value = {"stdout": std_out}
         mock = MagicMock(return_value=ret_value)
         files = {
-            "errors": OPKG_VIM_FILES["errors"],
-            "files": OPKG_VIM_FILES["packages"]["vim"],
+            "errors": self.opkg_vim_files["errors"],
+            "files": self.opkg_vim_files["packages"]["vim"],
         }
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):
             self.assertEqual(opkg.file_list("vim"), files)
@@ -116,7 +113,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Install packages.
         """
         with patch(
-            "salt.modules.opkg.list_pkgs", MagicMock(side_effect=[{}, PACKAGES])
+            "salt.modules.opkg.list_pkgs", MagicMock(side_effect=[{}, self.packages])
         ):
             ret_value = {"retcode": 0}
             mock = MagicMock(return_value=ret_value)
@@ -132,14 +129,15 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.install("vim:7.4"), INSTALLED)
+                self.assertEqual(opkg.install("vim:7.4"), self.installed)
 
     def test_install_noaction(self):
         """
         Test - Install packages.
         """
-        with patch("salt.modules.opkg.list_pkgs", MagicMock(return_value=({}))):
-            ret_value = {"retcode": 0}
+        with patch("salt.modules.opkg.list_pkgs", MagicMock(side_effect=({}, {}))):
+            std_out = "Downloading http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim (7.4) on root\n"
+            ret_value = {"retcode": 0, "stdout": std_out}
             mock = MagicMock(return_value=ret_value)
             patch_kwargs = {
                 "__salt__": {
@@ -153,14 +151,14 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.install("vim:7.4", test=True), {})
+                self.assertEqual(opkg.install("vim:7.4", test=True), self.installed)
 
     def test_remove(self):
         """
         Test - Remove packages.
         """
         with patch(
-            "salt.modules.opkg.list_pkgs", MagicMock(side_effect=[PACKAGES, {}])
+            "salt.modules.opkg.list_pkgs", MagicMock(side_effect=[self.packages, {}])
         ):
             ret_value = {"retcode": 0}
             mock = MagicMock(return_value=ret_value)
@@ -176,14 +174,18 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.remove("vim"), REMOVED)
+                self.assertEqual(opkg.remove("vim"), self.removed)
 
     def test_remove_noaction(self):
         """
         Test - Remove packages.
         """
-        with patch("salt.modules.opkg.list_pkgs", MagicMock(return_value=({}))):
-            ret_value = {"retcode": 0}
+        with patch(
+            "salt.modules.opkg.list_pkgs",
+            MagicMock(side_effect=[self.packages, self.packages]),
+        ):
+            std_out = "\nRemoving vim (7.4) from root...\n"
+            ret_value = {"retcode": 0, "stdout": std_out}
             mock = MagicMock(return_value=ret_value)
             patch_kwargs = {
                 "__salt__": {
@@ -197,17 +199,19 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.remove("vim:7.4", test=True), {})
+                self.assertEqual(opkg.remove("vim:7.4", test=True), self.removed)
 
     def test_info_installed(self):
         """
         Test - Return the information of the named package(s) installed on the system.
         """
-        installed = copy.deepcopy(OPKG_VIM_INFO["vim"])
+        installed = copy.deepcopy(self.opkg_vim_info["vim"])
         del installed["Package"]
         ordered_info = collections.OrderedDict(sorted(installed.items()))
         expected_dict = {"vim": {k.lower(): v for k, v in ordered_info.items()}}
-        std_out = "\n".join([k + ": " + v for k, v in OPKG_VIM_INFO["vim"].items()])
+        std_out = "\n".join(
+            [k + ": " + v for k, v in self.opkg_vim_info["vim"].items()]
+        )
         ret_value = {"stdout": std_out, "retcode": 0}
         mock = MagicMock(return_value=ret_value)
         with patch.dict(opkg.__salt__, {"cmd.run_all": mock}):

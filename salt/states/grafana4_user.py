@@ -48,7 +48,9 @@ from salt.utils.dictdiffer import deep_diff
 
 def __virtual__():
     """Only load if grafana4 module is available"""
-    return "grafana4.get_user" in __salt__
+    if "grafana4.get_user" in __salt__:
+        return True
+    return (False, "grafana4 module could not be loaded")
 
 
 def present(

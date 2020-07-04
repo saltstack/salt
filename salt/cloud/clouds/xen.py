@@ -189,7 +189,7 @@ def list_nodes():
             except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
-                    "VM %s, doesnt have base_template_name attribute",
+                    "VM %s, does not have base_template_name attribute",
                     record["name_label"],
                 )
             ret[record["name_label"]] = {
@@ -308,7 +308,7 @@ def list_nodes_full(session=None):
             except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
-                    "VM %s, doesnt have base_template_name attribute",
+                    "VM %s, does not have base_template_name attribute",
                     record["name_label"],
                 )
             vm_cfg = session.xenapi.VM.get_record(vm)
@@ -472,7 +472,8 @@ def show_instance(name, session=None, call=None):
         except Exception:  # pylint: disable=broad-except
             base_template_name = None
             log.debug(
-                "VM %s, doesnt have base_template_name attribute", record["name_label"]
+                "VM %s, does not have base_template_name attribute",
+                record["name_label"],
             )
         ret = {
             "id": record["uuid"],

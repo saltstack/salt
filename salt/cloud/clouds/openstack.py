@@ -630,7 +630,7 @@ def _clean_create_kwargs(**kwargs):
         "wait": bool,
         "timeout": int,
         "reuse_ips": bool,
-        "network": dict,
+        "network": (dict, list),
         "boot_from_volume": bool,
         "volume_size": int,
         "nat_destination": six.string_types,
@@ -660,7 +660,8 @@ def request_instance(vm_, conn=None, call=None):
     kwargs = copy.deepcopy(vm_)
     log.info("Creating Cloud VM %s", vm_["name"])
     __utils__["cloud.check_name"](vm_["name"], "a-zA-Z0-9._-")
-    conn = get_conn()
+    if conn is None:
+        conn = get_conn()
     userdata = config.get_cloud_config_value(
         "userdata", vm_, __opts__, search_global=False, default=None
     )

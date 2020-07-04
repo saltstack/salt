@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import io
@@ -8,14 +7,11 @@ import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -103,7 +99,7 @@ class WinLgpoTest(ModuleCase):
         )
         self.assertTrue(ret)
         secedit_output_file = os.path.join(
-            RUNTIME_VARS.TMP, generate_random_name("secedit-output-")
+            RUNTIME_VARS.TMP, random_string("secedit-output-")
         )
         secedit_output = self.run_function(
             "cmd.run", (), cmd="secedit /export /cfg {0}".format(secedit_output_file)
@@ -558,6 +554,27 @@ class WinLgpoTest(ModuleCase):
                 r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
             ],
         )
+
+    @destructiveTest
+    def test_set_computer_policy_LockoutDuration(self):
+        """
+        Test setting LockoutDuration
+        """
+        # For LockoutDuration to be meaningful, first configure
+        # LockoutThreshold
+        self._testSeceditPolicy("LockoutThreshold", 3, [r"^LockoutBadCount = 3"])
+
+        # Next set the LockoutDuration non-zero value, as this is required
+        # before setting LockoutWindow
+        self._testSeceditPolicy("LockoutDuration", 60, [r"^LockoutDuration = 60"])
+
+        # Now set LockoutWindow to a valid value <= LockoutDuration. If this
+        # is not set, then the LockoutDuration zero value is ignored by the
+        # Windows API (leading to a false sense of accomplishment)
+        self._testSeceditPolicy("LockoutWindow", 60, [r"^ResetLockoutCount = 60"])
+
+        # set LockoutDuration zero value, the secedit zero value is -1
+        self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
 
     @destructiveTest
     def test_set_computer_policy_GuestAccountStatus(self):

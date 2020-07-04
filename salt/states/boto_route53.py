@@ -90,7 +90,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_route53" if "boto_route53.get_record" in __salt__ else False
+    if "boto_route53.get_record" in __salt__:
+        return "boto_route53"
+    return (False, "boto_route53 module could not be loaded")
 
 
 def rr_present(*args, **kwargs):

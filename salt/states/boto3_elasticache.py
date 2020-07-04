@@ -98,8 +98,7 @@ def __virtual__():
     """
     if "boto3_elasticache.cache_cluster_exists" in __salt__:
         return "boto3_elasticache"
-    else:
-        return False
+    return (False, "boto3_elasticcache module could not be loaded")
 
 
 def _diff_cache_cluster(current, desired):

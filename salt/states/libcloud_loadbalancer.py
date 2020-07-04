@@ -58,7 +58,9 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return True
+    if "libcloud_loadbalancer.list_balancers" in __salt__:
+        return True
+    return (False, "libcloud_loadbalancer module could not be loaded")
 
 
 def __init__(opts):

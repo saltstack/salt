@@ -41,6 +41,7 @@ import sys
 import salt.utils.decorators.path
 import salt.utils.json
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, LoaderError
@@ -54,7 +55,11 @@ try:
 except ImportError:
     ansible = None
 
+# Function alias to make sure not to shadow built-in's
+__func_alias__ = {"list_": "list"}
+
 __virtualname__ = "ansible"
+
 log = logging.getLogger(__name__)
 
 
@@ -180,9 +185,10 @@ class AnsibleModuleCaller(object):
             timeout=self.timeout,
         )
         proc_out.run()
+        proc_out_stdout = salt.utils.stringutils.to_str(proc_out.stdout)
         proc_exc = salt.utils.timed_subprocess.TimedProc(
-            ["python", module.__file__],
-            stdin=proc_out.stdout,
+            [sys.executable, module.__file__],
+            stdin=proc_out_stdout,
             stdout=subprocess.PIPE,
             timeout=self.timeout,
         )
@@ -299,7 +305,7 @@ def help(module=None, *args):
             'Available sections on module "{}"'.format(
                 module.__name__.replace("ansible.modules.", "")
             )
-        ] = doc.keys()
+        ] = list(doc)
     else:
         for arg in args:
             info = doc.get(arg)
@@ -310,7 +316,7 @@ def help(module=None, *args):
 
 
 @depends("ansible")
-def list(pattern=None):
+def list_(pattern=None):
     """
     Lists available modules.
     :return:

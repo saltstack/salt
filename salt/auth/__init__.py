@@ -13,7 +13,6 @@ so that any external authentication system can be used inside of Salt
 # 5. Cache auth token with relative data opts['token_dir']
 # 6. Interface to verify tokens
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
@@ -21,8 +20,8 @@ import getpass
 import logging
 import random
 import time
+from collections.abc import Iterable, Mapping
 
-# Import salt libs
 import salt.config
 import salt.exceptions
 import salt.loader
@@ -202,9 +201,9 @@ class LoadAuth(object):
         if expire_override is True:
             return True
 
-        if isinstance(expire_override, collections.Mapping):
+        if isinstance(expire_override, Mapping):
             expire_whitelist = expire_override.get(load["eauth"], [])
-            if isinstance(expire_whitelist, collections.Iterable):
+            if isinstance(expire_whitelist, Iterable):
                 if load.get("username") in expire_whitelist:
                     return True
 
@@ -310,7 +309,7 @@ class LoadAuth(object):
             return False
 
         if load["eauth"] not in self.opts["external_auth"]:
-            log.debug('The eauth system "%s" is not enabled', load["eauth"])
+            log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
 
@@ -347,6 +346,11 @@ class LoadAuth(object):
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
                 if auth_key != key[self.opts.get("user", "root")]:
+                    log.warning(
+                        "Master runs as %r, but user in payload is %r",
+                        self.opts.get("user", "root"),
+                        load["user"],
+                    )
                     log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():
@@ -536,7 +540,7 @@ class Resolver(object):
             )
             print(
                 "Available eauth types: {0}".format(
-                    ", ".join(self.auth.file_mapping.keys())
+                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
                 )
             )
             return ret

@@ -149,3 +149,39 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(result, expected)
             # Does it populate __context__
             self.assertEqual(chocolatey.__context__["chocolatey._path"], expected)
+
+    def test_version_check_remote_false(self):
+        """
+        Test version when remote is False
+        """
+        list_return_value = {"ack": ["3.1.1"]}
+        with patch.object(chocolatey, "list_", return_value=list_return_value):
+            expected = {"ack": ["3.1.1"]}
+            result = chocolatey.version("ack", check_remote=False)
+            self.assertEqual(result, expected)
+
+    def test_version_check_remote_true(self):
+        """
+        Test version when remote is True
+        """
+        list_side_effect = [
+            {"ack": ["3.1.1"]},
+            {"ack": ["3.1.1"], "Wolfpack": ["3.0.17"], "blackbird": ["1.0.79.3"]},
+        ]
+        with patch.object(chocolatey, "list_", side_effect=list_side_effect):
+            expected = {"ack": {"available": ["3.1.1"], "installed": ["3.1.1"]}}
+            result = chocolatey.version("ack", check_remote=True)
+            self.assertEqual(result, expected)
+
+    def test_version_check_remote_true_not_available(self):
+        """
+        Test version when remote is True but remote version is unavailable
+        """
+        list_side_effect = [
+            {"ack": ["3.1.1"]},
+            {"Wolfpack": ["3.0.17"], "blackbird": ["1.0.79.3"]},
+        ]
+        with patch.object(chocolatey, "list_", side_effect=list_side_effect):
+            expected = {"ack": {"installed": ["3.1.1"]}}
+            result = chocolatey.version("ack", check_remote=True)
+            self.assertEqual(result, expected)

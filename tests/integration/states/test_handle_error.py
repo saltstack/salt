@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 
 
 class HandleErrorTest(ModuleCase):
@@ -15,6 +16,7 @@ class HandleErrorTest(ModuleCase):
     Validate that ordering works correctly
     """
 
+    @slowTest
     def test_function_do_not_return_dictionary_type(self):
         """
         Handling a case when function returns anything but a dictionary type
