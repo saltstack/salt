@@ -1652,6 +1652,7 @@ class VirtualEnv(object):
             self.venv_python = os.path.join(self.venv_dir, "Scripts", "python.exe")
         else:
             self.venv_python = os.path.join(self.venv_dir, "bin", "python")
+        self.venv_bin_dir = os.path.dirname(self.venv_python)
 
     def __enter__(self):
         try:
@@ -1661,7 +1662,7 @@ class VirtualEnv(object):
         return self
 
     def __exit__(self, *args):
-        shutil.rmtree(self.venv_dir, ignore_errors=True)
+        salt.utils.files.rm_rf(self.venv_dir)
 
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)

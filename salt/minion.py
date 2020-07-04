@@ -2368,7 +2368,7 @@ class Minion(MinionBase):
             include_grains = True
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to False in Sodium release.
+            # Old style event. Defaults to False in 3001 release.
             self._fire_master(
                 "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
                 "minion_start",
@@ -3190,7 +3190,7 @@ class Syndic(Minion):
     def fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to false in Sodium release.
+            # Old style event. Defaults to false in 3001 release.
             self._fire_master(
                 "Syndic {0} started at {1}".format(self.opts["id"], time.asctime()),
                 "syndic_start",

@@ -33,7 +33,7 @@ def update(branch=None, repo=None):
         changes were fetched. ``False`` now is reserved only for instances in
         which there were errors.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
         The repo parameter also matches against the repo name.
 
     Fetch one or all configured git_pillar remotes.

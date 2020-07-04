@@ -4,7 +4,7 @@ Win System Utils
 
 Functions shared with salt.modules.win_system and salt.grains.pending_reboot
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 """
 # NOTE: DO NOT USE RAW STRINGS IN THIS MODULE! UNICODE_LITERALS DOES NOT PLAY
 # NICELY WITH RAW STRINGS CONTAINING \u or \U.
@@ -61,7 +61,7 @@ def get_computer_name():
     Get the Windows computer name. Uses the win32api to get the current computer
     name.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         str: Returns the computer name if found. Otherwise returns ``False``.
@@ -85,7 +85,7 @@ def get_pending_computer_name():
     retrieving the pending computer name, ``False`` will be returned, and an
     error message will be logged to the minion log.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         str:
@@ -125,7 +125,7 @@ def get_pending_component_servicing():
     ``HKLM:\\\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootInProgress``
     ``HKLM:\\\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\PackagesPending``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending Component Based Servicing tasks,
@@ -172,7 +172,7 @@ def get_pending_domain_join():
     ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\AvoidSpnSet``
     ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\JoinDomain``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there is a pending domain join action, otherwise
@@ -215,7 +215,7 @@ def get_pending_file_rename():
 
     ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Control\\Session Manager``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending file rename operations, otherwise
@@ -248,7 +248,7 @@ def get_pending_servermanager():
 
     ``HKLM:\\\\SOFTWARE\\Microsoft\\ServerManager``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending Server Manager tasks, otherwise
@@ -287,7 +287,7 @@ def get_pending_dvd_reboot():
 
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the above condition is met, otherwise ``False``
@@ -321,7 +321,7 @@ def get_pending_update():
 
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Services\\Pending``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if any of the above conditions are met, otherwise
@@ -375,7 +375,7 @@ def get_reboot_required_witnessed():
 
     ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the ``Requires reboot`` registry flag is set to ``1``,
@@ -411,7 +411,7 @@ def set_reboot_required_witnessed():
     completes with exit code 3010 and can be extended where appropriate in the
     future.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -440,7 +440,7 @@ def get_pending_update_exe_volatile():
     Checks ``HKLM:\\Microsoft\\Updates``. If the ``UpdateExeVolatile`` value name
     is anything other than 0 there is a reboot pending
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there is a volatile exe, otherwise ``False``
@@ -472,7 +472,7 @@ def get_pending_windows_update():
     This leverages the Windows Update System to determine if the system is
     pending a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the Windows Update system reports a pending update,
@@ -492,7 +492,7 @@ def get_pending_reboot():
     """
     Determine whether there is a reboot pending.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the system is pending reboot, otherwise ``False``
@@ -530,7 +530,7 @@ def get_pending_reboot_details():
     Determine which check is signalling that the system is pending a reboot.
     Useful in determining why your system is signalling that it needs a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         dict: A dictionary of the results of each function that checks for a

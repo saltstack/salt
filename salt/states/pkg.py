@@ -216,7 +216,7 @@ def _fulfills_version_string(
         set this option to ``True`` to ignore the epoch when comparing
         versions.
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
             If no value for this argument is passed to the state that calls
             this helper function, and ``version_conditions_string`` contains no
             epoch or greater-than/less-than, then the epoch will be ignored.
@@ -1391,7 +1391,7 @@ def installed(
 
         .. versionadded:: 2015.8.9
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
             In prior releases, the default behavior was to strictly enforce
             epochs unless this argument was set to ``True``.
 
@@ -3055,7 +3055,7 @@ def removed(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **
 
         .. versionadded:: 2015.8.9
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
             In prior releases, the default behavior was to strictly enforce
             epochs unless this argument was set to ``True``.
 
@@ -3147,7 +3147,7 @@ def purged(name, version=None, pkgs=None, normalize=True, ignore_epoch=None, **k
 
         .. versionadded:: 2015.8.9
 
-        .. versionchanged:: Sodium
+        .. versionchanged:: 3001
             In prior releases, the default behavior was to strictly enforce
             epochs unless this argument was set to ``True``.
 

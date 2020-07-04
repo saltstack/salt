@@ -37,3 +37,11 @@
 	compress
 	notifempty
 }
+
+/var/log/salt/proxy {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
