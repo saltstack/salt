@@ -51,6 +51,7 @@ class TestInFormats(BaseToolsTest):
 
     def test_urlencoded_ctype(self):
         data = {"valid": "stuff"}
+        raw = "valid=stuff"
         request, response = self.request(
             "/",
             method="POST",
@@ -58,6 +59,7 @@ class TestInFormats(BaseToolsTest):
             headers=(("Content-type", "application/x-www-form-urlencoded"),),
         )
         self.assertEqual(response.status, "200 OK")
+        self.assertEqual(request.raw_body, raw)
         self.assertDictEqual(request.unserialized_data, data)
 
     def test_json_ctype(self):
