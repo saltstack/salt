@@ -1,19 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Library for interacting with Slack API
+Library for interacting with Pushover API
 
 .. versionadded:: 2016.3.0
-
-:configuration: This module can be used by specifying the name of a
-    configuration profile in the minion config, minion pillar, or master
-    config.
-
-    For example:
-
-    .. code-block:: yaml
-
-        slack:
-          api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 from __future__ import absolute_import, print_function, unicode_literals
 

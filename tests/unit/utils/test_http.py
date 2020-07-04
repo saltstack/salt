@@ -132,6 +132,30 @@ class HTTPTestCase(TestCase):
         self.assertTrue(isinstance(ret, dict))
         self.assertTrue(isinstance(ret.get("error", None), str))
 
+    def test_parse_cookie_header(self):
+        header = "; ".join(
+            [
+                "foo=bar",
+                "expires=Mon, 03-Aug-20 14:26:27 GMT",
+                "path=/",
+                "domain=.mydomain.tld",
+                "HttpOnly",
+                "SameSite=Lax",
+                "Secure",
+            ]
+        )
+        ret = http.parse_cookie_header(header)
+        cookie = ret.pop(0)
+        assert cookie.name == "foo", cookie.name
+        assert cookie.value == "bar", cookie.value
+        assert cookie.expires == 1596464787, cookie.expires
+        assert cookie.path == "/", cookie.path
+        assert cookie.domain == ".mydomain.tld", cookie.domain
+        assert cookie.secure
+        # Only one cookie should have been returned, if anything is left in the
+        # parse_cookie_header return then something went wrong.
+        assert not ret
+
 
 class HTTPPostTestCase(TestCase):
     """

@@ -926,6 +926,7 @@ def parse_cookie_header(header):
         "secure",
         "comment",
         "max-age",
+        "samesite",
     )
 
     # Split into cookie(s); handles headers with multiple cookies defined
@@ -944,7 +945,8 @@ def parse_cookie_header(header):
     value_set = False
     for morsel in morsels:
         parts = morsel.split("=")
-        if parts[0].lower() in attribs:
+        parts[0] = parts[0].lower()
+        if parts[0] in attribs:
             if parts[0] in cookie:
                 cookies.append(cookie)
                 cookie = {}
@@ -1010,8 +1012,9 @@ def parse_cookie_header(header):
         if cookie["expires"] == "":
             cookie["expires"] = 0
 
-        if "httponly" in cookie:
-            del cookie["httponly"]
+        # Remove attribs that don't apply to Cookie objects
+        cookie.pop("httponly", None)
+        cookie.pop("samesite", None)
         ret.append(
             salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie)
         )
