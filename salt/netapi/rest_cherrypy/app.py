@@ -956,7 +956,11 @@ def urlencoded_processor(entity):
     """
     # cherrypy._cpreqbody.process_urlencoded doesn't preserve the raw
     # "body", so we have to handle parsing the tokens using parse_qsl
-    urlencoded = str(entity.read())
+    urlencoded = entity.read()
+    try:
+        urlencoded = urlencoded.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        pass
     cherrypy.serving.request.raw_body = urlencoded
     cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
 
