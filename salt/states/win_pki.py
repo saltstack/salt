@@ -24,7 +24,7 @@ def __virtual__():
     """
     if "win_pki.get_stores" in __salt__:
         return True
-    return False
+    return (False, "win_pki module could not be loaded")
 
 
 def import_cert(

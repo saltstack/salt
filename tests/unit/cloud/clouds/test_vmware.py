@@ -18,7 +18,7 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
 # Attempt to import pyVim and pyVmomi libs
@@ -427,6 +427,21 @@ class VMwareTestCase(ExtendedTestCase):
         self.assertRaises(
             SaltCloudSystemExit, vmware.destroy, name=VM_NAME, call="function"
         )
+
+    def test_shutdown_host_call(self):
+        """
+        Tests that a SaltCloudSystemExit is raised when trying to call convert_to_template
+        with anything other than --action or -a.
+        """
+        with patch.object(vmware, "_get_si", Mock()), patch(
+            "salt.utils.vmware.get_mor_by_property", Mock()
+        ):
+            self.assertRaises(
+                SaltCloudSystemExit,
+                vmware.shutdown_host,
+                kwargs={"host": VM_NAME},
+                call="action",
+            )
 
     def test_upgrade_tools_call(self):
         """

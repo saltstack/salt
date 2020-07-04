@@ -82,6 +82,31 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
             mock_cmd.assert_called_once_with(vm_, ANY)
             self.assertTrue(result)
 
+    def test_create_no_ssh_host(self):
+        """
+        Test that ssh_host is set to the vm name if not defined
+        """
+        mock_cmd = MagicMock(return_value=True)
+        with patch.dict(
+            "salt.cloud.clouds.saltify.__utils__", {"cloud.bootstrap": mock_cmd}
+        ):
+            vm_ = {
+                "deploy": True,
+                "driver": "saltify",
+                "name": "new2",
+                "profile": "testprofile2",
+            }
+            result = saltify.create(vm_)
+            mock_cmd.assert_called_once_with(vm_, ANY)
+            assert result
+            # Make sure that ssh_host was added to the vm. Note that this is
+            # done in two asserts so that the failure is more explicit about
+            # what is wrong. If ssh_host wasn't inserted in the vm_ dict, the
+            # failure would be a KeyError, which would be harder to
+            # troubleshoot.
+            assert "ssh_host" in vm_
+            assert vm_["ssh_host"] == "new2"
+
     def test_create_wake_on_lan(self):
         """
         Test if wake on lan works

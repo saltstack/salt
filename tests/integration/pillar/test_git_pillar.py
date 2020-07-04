@@ -95,6 +95,7 @@ from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     skip_if_not_root,
+    slowTest,
 )
 from tests.support.unit import skipIf
 
@@ -130,6 +131,7 @@ class GitPythonMixin(object):
     options, so all of the tests for GitPython can be re-used via this mixin.
     """
 
+    @slowTest
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -159,6 +161,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -195,6 +198,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -231,6 +235,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -267,6 +272,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -303,6 +309,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -334,6 +341,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -368,6 +376,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -408,6 +417,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -446,6 +456,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_root_parameter(self):
         """
         Test root parameter
@@ -469,6 +480,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -492,6 +504,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -516,6 +529,7 @@ class GitPythonMixin(object):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -550,6 +564,7 @@ class GitPythonMixin(object):
             },
         )
 
+    @slowTest
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -579,6 +594,41 @@ class GitPythonMixin(object):
                     "master": True,
                     "nested_list": ["master"],
                     "nested_dict": {"master": True},
+                },
+            },
+        )
+
+    def test_fallback(self):
+        """
+        Test fallback parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
                 },
             },
         )
@@ -666,6 +716,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     passphrase = PASSWORD
 
     @requires_system_grains
+    @slowTest
     def test_single_source(self, grains):
         """
         Test using a single ext_pillar repo
@@ -755,6 +806,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_multiple_sources_master_dev_no_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -862,6 +914,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_multiple_sources_dev_master_no_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -969,6 +1022,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_multiple_sources_master_dev_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -1076,6 +1130,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_multiple_sources_dev_master_merge_lists(self, grains):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -1183,6 +1238,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_multiple_sources_with_pillarenv(self, grains):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -1285,6 +1341,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_includes_enabled(self, grains):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -1390,6 +1447,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_includes_disabled(self, grains):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -1503,6 +1561,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -1544,6 +1603,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
 
     @requires_system_grains
+    @slowTest
     def test_root_parameter(self, grains):
         """
         Test root parameter
@@ -1642,6 +1702,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_mountpoint_parameter(self, grains):
         """
         Test mountpoint parameter
@@ -1740,6 +1801,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_root_and_mountpoint_parameters(self, grains):
         """
         Test root and mountpoint parameters
@@ -1842,6 +1904,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_all_saltenvs(self, grains):
         """
         Test all_saltenvs parameter.
@@ -1953,6 +2016,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
     @requires_system_grains
+    @slowTest
     def test_all_saltenvs_base(self, grains):
         """
         Test all_saltenvs parameter.
@@ -2059,6 +2123,121 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @requires_system_grains
+    def test_fallback(self, grains):
+        """
+        Test fallback parameter.
+        """
+        expected = {
+            "branch": "dev",
+            "motd": "The force will be with you. Always.",
+            "mylist": ["dev"],
+            "mydict": {
+                "dev": True,
+                "nested_list": ["dev"],
+                "nested_dict": {"dev": True},
+            },
+        }
+
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        if grains["os_family"] == "Debian":
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+            """
+        )
+        self.assertEqual(ret, expected)
+
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
@@ -2073,6 +2252,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
     Test git_pillar with pygit2 using SSH authentication
     """
 
+    @slowTest
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -2101,6 +2281,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2136,6 +2317,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2171,6 +2353,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2206,6 +2389,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2241,6 +2425,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -2271,6 +2456,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2304,6 +2490,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2343,6 +2530,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -2381,6 +2569,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_root_parameter(self):
         """
         Test root parameter
@@ -2404,6 +2593,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -2427,6 +2617,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -2451,6 +2642,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -2485,6 +2677,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -2514,6 +2707,41 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                     "master": True,
                     "nested_list": ["master"],
                     "nested_dict": {"master": True},
+                },
+            },
+        )
+
+    def test_fallback(self):
+        """
+        Test fallback parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
                 },
             },
         )
@@ -2538,6 +2766,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     user = USERNAME
     password = PASSWORD
 
+    @slowTest
     def test_single_source(self):
         """
         Test using a single ext_pillar repo
@@ -2588,6 +2817,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2650,6 +2880,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2712,6 +2943,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2774,6 +3006,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
@@ -2836,6 +3069,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
@@ -2893,6 +3127,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -2930,6 +3165,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
@@ -2956,6 +3192,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_root_parameter(self):
         """
         Test root parameter
@@ -3006,6 +3243,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
@@ -3073,6 +3311,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_includes_enabled_solves___env___with_mountpoint(self):
         """
         Test with git_pillar_includes enabled and using "__env__" as the branch
@@ -3120,6 +3359,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
@@ -3147,6 +3387,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
@@ -3184,6 +3425,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter with base pillarenv.
@@ -3216,6 +3458,44 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                     "master": True,
                     "nested_list": ["master"],
                     "nested_dict": {"master": True},
+                },
+            },
+        )
+
+    def test_fallback(self):
+        """
+        Test fallback parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {user}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            pillarenv: nonexisting
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - fallback: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - fallback: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
                 },
             },
         )

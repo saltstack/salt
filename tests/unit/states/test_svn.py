@@ -113,7 +113,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                                 "new": "salt",
                                 "comment": "salt was Exported to c://salt",
                             },
-                            "comment": "",
+                            "comment": True,
                             "name": "salt",
                             "result": True,
                         },

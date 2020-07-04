@@ -375,6 +375,26 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 (1, 2, 3, (), {}),
             )
 
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"a": 1, "b": 2, "c": 3}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"c": 3, "a": 1, "b": 2}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"b": 2, "a": 1, "c": 3}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"a": 1, "c": 3, "b": 2}),
+                (1, 2, 3, (), {}),
+            )
+
         with patch.dict(
             module.__salt__,
             {"testfunc": lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)},
@@ -390,6 +410,26 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 module._call_function(
                     "testfunc", func_args=[{"c": 3}, {"a": 1}, {"b": 2}]
                 ),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"a": 1, "b": 2, "c": 3}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"c": 3, "a": 1, "b": 2}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"b": 2, "a": 1, "c": 3}),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function("testfunc", func_kwargs={"a": 1, "c": 3, "b": 2}),
                 (1, 2, 3, (), {}),
             )
 
@@ -411,4 +451,29 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 module._call_function("testfunc", func_args=[3, 1, 2]),
                 (3, 1, 2, (), {}),
+            )
+
+    def test_call_function_ordered_and_named_args(self):
+        """
+        Test _call_function routine when params are not named. Their position should matter.
+
+        :return:
+        """
+        with patch.dict(
+            module.__salt__,
+            {"testfunc": lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)},
+            clear=True,
+        ):
+            self.assertEqual(
+                module._call_function(
+                    "testfunc", func_args=[1], func_kwargs={"b": 2, "c": 3}
+                ),
+                (1, 2, 3, (), {}),
+            )
+
+            self.assertEqual(
+                module._call_function(
+                    "testfunc", func_args=[1, 2], func_kwargs={"c": 3}
+                ),
+                (1, 2, 3, (), {}),
             )

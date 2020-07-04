@@ -6,7 +6,7 @@ Understanding Jinja
 
 `Jinja`_ is the default templating language in SLS files.
 
-.. _Jinja: http://jinja.pocoo.org/docs/templates/
+.. _Jinja: https://jinja.palletsprojects.com/en/2.11.x/templates/
 
 Jinja in States
 ===============
@@ -67,7 +67,7 @@ The filter_by function can also be used to set variables based on grains:
    'Debian': { 'package': 'auditd' },
    }) %}
 
-.. _`for loop`: http://jinja.pocoo.org/docs/templates/#for
+.. _`for loop`: https://jinja.palletsprojects.com/en/2.11.x/templates/#for
 
 Include and Import
 ==================
@@ -87,7 +87,7 @@ the context into the included file is required:
 .. code-block:: jinja
 
     {% from 'lib.sls' import test with context %}
-    
+
 Includes must use full paths, like so:
 
 .. code-block:: jinja
@@ -106,7 +106,7 @@ current context can be passed to an included/imported template.
     {% import 'openssl/vars.sls' as ssl with context %}
 
 
-.. _imports: http://jinja.pocoo.org/docs/templates/#import
+.. _imports: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
 
 Macros
 ======
@@ -151,10 +151,10 @@ Template Inheritance
 `Template inheritance`_ works fine from state files and files. The search path
 starts at the root of the state tree or pillar.
 
-.. _`Template inheritance`: http://jinja.pocoo.org/docs/templates/#template-inheritance
-.. _`Macros`: http://jinja.pocoo.org/docs/templates/#macros
-.. _`macro`: http://jinja.pocoo.org/docs/templates/#macros
-.. _`whitespace control`: http://jinja.pocoo.org/docs/templates/#whitespace-control
+.. _`Template inheritance`: https://jinja.palletsprojects.com/en/2.11.x/templates/#template-inheritance
+.. _`Macros`: https://jinja.palletsprojects.com/en/2.11.x/templates/#macros
+.. _`macro`: https://jinja.palletsprojects.com/en/2.11.x/templates/#macros
+.. _`Whitespace control`: https://jinja.palletsprojects.com/en/2.11.x/templates/#whitespace-control
 
 Errors
 ======
@@ -379,7 +379,7 @@ Returns:
 
 .. code-block:: python
 
-  ('defabcdef',)
+  ("defabcdef",)
 
 
 .. jinja_ref:: regex_match
@@ -649,6 +649,56 @@ Returns:
   1, 4
 
 
+.. jinja_ref:: method_call
+
+``method_call``
+---------------
+
+.. versionadded:: 3001
+
+Returns a result of object's method call.
+
+Example #1:
+
+.. code-block:: jinja
+
+  {{ [1, 2, 1, 3, 4] | method_call('index', 1, 1, 3) }}
+
+Returns:
+
+.. code-block:: text
+
+  2
+
+This filter can be used with the `map filter`_ to apply object methods without
+using loop constructs or temporary variables.
+
+Example #2:
+
+.. code-block:: jinja
+
+  {% set host_list = ['web01.example.com', 'db01.example.com'] %}
+  {% set host_list_split = [] %}
+  {% for item in host_list %}
+    {% do host_list_split.append(item.split('.', 1)) %}
+  {% endfor %}
+  {{ host_list_split }}
+
+Example #3:
+
+.. code-block:: jinja
+
+  {{ host_list|map('method_call', 'split', '.', 1)|list }}
+
+Return of examples #2 and #3:
+
+.. code-block:: text
+
+  [[web01, example.com], [db01, example.com]]
+
+.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+
+
 .. jinja_ref:: is_sorted
 
 ``is_sorted``
@@ -690,7 +740,7 @@ Returns:
 
 .. code-block:: python
 
-  {'new': [4], 'old': [3]}
+  {"new": [4], "old": [3]}
 
 
 .. jinja_ref:: compare_dicts
@@ -712,7 +762,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': {'new': 'c', 'old': 'b'}}
+  {"a": {"new": "c", "old": "b"}}
 
 
 .. jinja_ref:: is_hex
@@ -968,7 +1018,7 @@ Returns:
 
 .. code-block:: python
 
-  {'a': '\xd0\x94'}
+  {"a": "\xd0\x94"}
 
 
 .. jinja_ref:: tojson
@@ -985,7 +1035,7 @@ Jinja release older than version 2.9 installed. If Jinja 2.9 or newer is
 installed, then the upstream version of the filter will be used. See the
 `upstream docs`__ for more information.
 
-.. __: http://jinja.pocoo.org/docs/2.10/templates/#tojson
+.. __: https://jinja.palletsprojects.com/en/2.11.x/templates/#tojson
 
 .. jinja_ref:: random_hash
 
@@ -1331,7 +1381,7 @@ Returns:
 
 .. code-block:: python
 
-  {'c1': 'foo'}
+  {"c1": "foo"}
 
 .. code-block:: jinja
 
@@ -1341,7 +1391,7 @@ Returns:
 
 .. code-block:: python
 
-  'default'
+  "default"
 
 
 .. jinja_ref:: json_query
@@ -1385,9 +1435,9 @@ Returns:
 
   Example 3: [80, 25, 22]
 
-.. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
+.. _`builtin filters`: https://jinja.palletsprojects.com/en/2.11.x/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
-.. _`JMESPath language`: http://jmespath.org/
+.. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 .. jinja_ref:: to_snake_case
@@ -1521,7 +1571,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', 'fe80::']
+  ["192.168.0.1", "fe80::"]
 
 
 .. jinja_ref:: ipv4
@@ -1544,7 +1594,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1']
+  ["192.168.0.1"]
 
 
 .. jinja_ref:: ipv6
@@ -1567,7 +1617,7 @@ Returns:
 
 .. code-block:: python
 
-  ['fe80::']
+  ["fe80::"]
 
 
 .. jinja_ref:: network_hosts
@@ -1594,7 +1644,7 @@ Returns:
 
 .. code-block:: python
 
-  ['192.168.0.1', '192.168.0.2']
+  ["192.168.0.1", "192.168.0.2"]
 
 
 .. jinja_ref:: network_size
@@ -1868,7 +1918,7 @@ Tests
 
 Saltstack extends `builtin tests`_ with these custom tests:
 
-.. _`builtin tests`: http://jinja.pocoo.org/docs/templates/#builtin-tests
+.. _`builtin tests`: https://jinja.palletsprojects.com/en/2.11.x/templates/#builtin-tests
 
 .. jinja_ref:: equalto
 
@@ -1897,7 +1947,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 3}]
+    [{"value": 3}]
 
 .. jinja_ref:: match
 
@@ -1926,7 +1976,7 @@ Returns:
 
 .. code-block:: python
 
-    [{'value': 'b'}, {'value': 'c'}]
+    [{"value": "b"}, {"value": "c"}]
 
 
 Test supports additional optional arguments: ``ignorecase``, ``multiline``
@@ -2065,7 +2115,7 @@ escaped:
           <snipped>
     {% endraw %}
 
-.. _`Escaping`: http://jinja.pocoo.org/docs/dev/templates/#escaping
+.. _`Escaping`: https://jinja.palletsprojects.com/en/2.11.x/templates/#escaping
 
 .. jinja_ref:: calling-salt-functions
 

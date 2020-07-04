@@ -7,7 +7,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import python libs
 from __future__ import absolute_import
 
 import getpass
@@ -16,18 +15,15 @@ import os
 import platform
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
-
-# Import Salt Testing libs
 import tests.integration.utils
-
-# Import 3rd-party libs
 from salt.ext import six
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -37,6 +33,7 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
+@pytest.mark.windows_whitelisted
 class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     """
     Various integration tests for the salt-minion executable.
@@ -250,6 +247,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                 minion.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @slowTest
     def test_exit_status_unknown_user(self):
         """
         Ensure correct exit status when the minion is configured to run as an unknown user.
@@ -282,6 +280,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     #    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
+    @slowTest
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-minion.
@@ -310,6 +309,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             minion.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
+    @slowTest
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-minion starts correctly.

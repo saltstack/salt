@@ -26,7 +26,9 @@ def __virtual__():
     """
     Only load if the pygerduty module is available in __salt__
     """
-    return "pagerduty" if "pagerduty.create_event" in __salt__ else False
+    if "pagerduty.create_event" in __salt__:
+        return "pagerduty"
+    return (False, "pagerduty module could not be loaded")
 
 
 def create_event(name, details, service_key, profile):

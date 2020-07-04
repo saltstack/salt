@@ -23,7 +23,7 @@ def __virtual__():
     """
     if salt.utils.path.which("pcs"):
         return "pcs"
-    return False
+    return (False, "Missing dependency: pcs")
 
 
 def item_show(

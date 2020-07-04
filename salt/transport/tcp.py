@@ -240,6 +240,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        "crypted_transfer_decode_dictentry",
+        "_crypted_transfer",
+        "_uncrypted_transfer",
+        "send",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __new__(cls, opts, **kwargs):
         """
@@ -446,6 +455,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 class AsyncTCPPubChannel(
     salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel
 ):
+    async_methods = [
+        "send_id",
+        "connect_callback",
+        "connect",
+    ]
+    close_methods = [
+        "close",
+    ]
+
     def __init__(self, opts, **kwargs):
         self.opts = opts
 
@@ -545,7 +563,7 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,)
+                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
@@ -576,7 +594,7 @@ class AsyncTCPPubChannel(
                 yield self.auth.authenticate()
             if self.auth.authenticated:
                 # if this is changed from the default, we assume it was intentional
-                if int(self.opts.get("publish_port", 4506)) != 4506:
+                if int(self.opts.get("publish_port", 4505)) != 4505:
                     self.publish_port = self.opts.get("publish_port")
                 # else take the relayed publish_port master reports
                 else:
@@ -699,6 +717,13 @@ class TCPReqServerChannel(
 
         payload_handler: function to call with your payloads
         """
+        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.serial = salt.payload.Serial(self.opts)
@@ -732,7 +757,7 @@ class TCPReqServerChannel(
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, header, payload):
         """
-        Handle incoming messages from underylying tcp streams
+        Handle incoming messages from underlying tcp streams
         """
         try:
             try:
@@ -1166,7 +1191,7 @@ class SaltMessageClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.warn("TCP Message Client encountered an exception %r", exc)
+                log.warning("TCP Message Client encountered an exception %r", exc)
                 yield salt.ext.tornado.gen.sleep(1)  # TODO: backoff
                 # self._connecting_future.set_exception(e)
 
@@ -1660,7 +1685,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,)
+            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
         )
         pub_sock.connect()
 

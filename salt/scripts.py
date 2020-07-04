@@ -113,7 +113,7 @@ def salt_master():
             "Python 2.7 will reach the end of its life on January 1st,"
             " 2020. Please upgrade your Python as Python 2.7 won't be"
             " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
+            " Python 2.7 in the 3001 release or later.",
         )
     # END REMOVEME
     master = salt.cli.daemons.Master()
@@ -222,7 +222,7 @@ def salt_minion():
             "Python 2.7 will reach the end of its life on January 1st,"
             " 2020. Please upgrade your Python as Python 2.7 won't be"
             " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
+            " Python 2.7 in the 3001 release or later.",
         )
     # END REMOVEME
 

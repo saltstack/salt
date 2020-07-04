@@ -2023,7 +2023,7 @@ def usermacro_get(
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["filter"].setdefault("macro", macro)
@@ -2075,7 +2075,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro
@@ -2117,7 +2117,7 @@ def usermacro_createglobal(macro, value, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(macro.keys()[0]) + "}"
+                    macro = "{" + six.text_type(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro
@@ -2550,14 +2550,11 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
         salt '*' zabbix.configuration_import salt://zabbix/config/zabbix_templates.xml \
         "{'screens': {'createMissing': True, 'updateExisting': True}}"
     """
+    zabbix_version = apiinfo_version(**connection_args)
+
     if rules is None:
         rules = {}
     default_rules = {
-        "applications": {
-            "createMissing": True,
-            "updateExisting": False,
-            "deleteMissing": False,
-        },
         "discoveryRules": {
             "createMissing": True,
             "updateExisting": True,
@@ -2592,6 +2589,22 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
         },
         "valueMaps": {"createMissing": True, "updateExisting": False},
     }
+    if _LooseVersion(zabbix_version) >= _LooseVersion("3.2"):
+        # rules/httptests added
+        default_rules["httptests"] = {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        }
+    if _LooseVersion(zabbix_version) >= _LooseVersion("3.4"):
+        # rules/applications/upateExisting deprecated
+        default_rules["applications"] = {"createMissing": True, "deleteMissing": False}
+    else:
+        default_rules["applications"] = {
+            "createMissing": True,
+            "updateExisting": True,
+            "deleteMissing": False,
+        }
     new_rules = dict(default_rules)
 
     if rules:

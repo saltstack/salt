@@ -144,17 +144,27 @@ def status(svc_name=""):
         salt '*' monit.status
         salt '*' monit.status <service name>
     """
+
     cmd = "monit status"
     res = __salt__["cmd.run"](cmd)
-    prostr = "Process" + " " * 28
+
+    # Monit uses a different separator since 5.18.0
+    if version() < "5.18.0":
+        fieldlength = 33
+    else:
+        fieldlength = 28
+
+    separator = 3 + fieldlength
+    prostr = "Process" + " " * fieldlength
+
     s = res.replace("Process", prostr).replace("'", "").split("\n\n")
     entries = {}
     for process in s[1:-1]:
         pro = process.splitlines()
         tmp = {}
         for items in pro:
-            key = items[:36].strip()
-            tmp[key] = items[35:].strip()
+            key = items[:separator].strip()
+            tmp[key] = items[separator - 1 :].strip()
         entries[pro[0].split()[1]] = tmp
     if svc_name == "":
         ret = entries
