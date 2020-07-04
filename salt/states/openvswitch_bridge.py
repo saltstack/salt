@@ -11,7 +11,9 @@ def __virtual__():
     """
     Only make these states available if Open vSwitch module is available.
     """
-    return "openvswitch.bridge_create" in __salt__
+    if "openvswitch.bridge_create" in __salt__:
+        return True
+    return (False, "openvswitch module could not be loaded")
 
 
 def present(name):

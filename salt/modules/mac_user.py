@@ -43,7 +43,7 @@ __virtualname__ = "user"
 
 def __virtual__():
     if __grains__.get("kernel") != "Darwin" or __grains__["osrelease_info"] < (10, 7):
-        return False
+        return (False, "Only available on Mac OS 10.7+ systems")
     else:
         return __virtualname__
 

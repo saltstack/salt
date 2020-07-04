@@ -121,7 +121,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_secgroup" if "boto_secgroup.exists" in __salt__ else False
+    if "boto_secgroup.exists" in __salt__:
+        return "boto_secgroup"
+    return (False, "boto_secgroup module could not be loaded")
 
 
 def present(

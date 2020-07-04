@@ -78,7 +78,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto3_sns" if "boto3_sns.topic_exists" in __salt__ else False
+    if "boto3_sns.topic_exists" in __salt__:
+        return "boto3_sns"
+    return (False, "boto3_sns module could not be loaded")
 
 
 def topic_present(
@@ -167,7 +169,7 @@ def topic_present(
     for attr in ["DisplayName", "Policy", "DeliveryPolicy"]:
         curr_val = current_attrs.get(attr)
         want_val = want_attrs.get(attr)
-        # Some get default values if not set, so it's not safe to enforce absense if they're
+        # Some get default values if not set, so it's not safe to enforce absence if they're
         # not provided at all.  This implies that if you want to clear a value, you must explicitly
         # set it to an empty string.
         if want_val is None:
@@ -231,7 +233,9 @@ def topic_present(
             subscribe += [sub]
     for sub in current_subs:
         minimal = {"Protocol": sub["Protocol"], "Endpoint": sub["Endpoint"]}
-        if minimal not in obfuscated_subs:
+        if minimal not in obfuscated_subs and sub["SubscriptionArn"].startswith(
+            "arn:aws:sns:"
+        ):
             unsubscribe += [sub["SubscriptionArn"]]
     for sub in subscribe:
         prot = sub["Protocol"]

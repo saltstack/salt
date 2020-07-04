@@ -446,7 +446,11 @@ class _Ini(_Section):
             with salt.utils.files.fopen(self.name, "wb") as outfile:
                 ini_gen = self.gen_ini()
                 next(ini_gen)
-                outfile.writelines(salt.utils.data.encode(list(ini_gen)))
+                ini_gen_list = list(ini_gen)
+                # Avoid writing an initial line separator.
+                if ini_gen_list:
+                    ini_gen_list[0] = ini_gen_list[0].lstrip(os.linesep)
+                outfile.writelines(salt.utils.data.encode(ini_gen_list))
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to write file '{0}'. " "Exception: {1}".format(self.name, exc)

@@ -40,7 +40,7 @@ Drivers can be configured in the Salt Configuration/Minion settings. All libclou
 be configured with authentication details for each driver.
 
 Each driver will have a string identifier, these can be found in the libcloud.<api>.types.Provider class 
-for each API, http://libcloud.readthedocs.io/en/latest/supported_providers.html
+for each API, https://libcloud.readthedocs.io/en/latest/supported_providers.html
 
 Some drivers require additional parameters, which are documented in the Apache Libcloud documentation. For example,
 GoDaddy DNS expects "`shopper_id`", which is the customer ID. These additional parameters can be added to the profile settings 
@@ -83,7 +83,7 @@ Using the execution modules
 Amongst over 60 clouds that Apache Libcloud supports, you can add profiles to your Salt configuration to access and control these clouds. 
 Each of the libcloud execution modules exposes the common API methods for controlling Compute, DNS, Load Balancers and Object Storage. 
 To see which functions are supported across specific clouds, see the Libcloud `supported methods 
-<http://libcloud.readthedocs.io/en/latest/supported_providers.html#supported-methods-block-storage>`_ documentation.
+<https://libcloud.readthedocs.io/en/latest/supported_providers.html#supported-methods-block-storage>`_ documentation.
 
 The module documentation explains each of the API methods and how to leverage them.
 
@@ -113,7 +113,7 @@ For example, listing buckets in the Google Storage platform:
                 anthonypjshaw
 
 
-The Apache Libcloud storage module can be used to syncronize files between multiple storage clouds,
+The Apache Libcloud storage module can be used to synchronize files between multiple storage clouds,
 such as Google Storage, S3 and OpenStack Swift
 
 .. code-block:: bash
@@ -223,7 +223,7 @@ Accessing custom arguments in execution modules
 Some cloud providers have additional functionality that can be accessed on top of the base API, for example
 the Google Cloud Engine load balancer service offers the ability to provision load balancers into a specific region.
 
-Looking at the `API documentation <http://libcloud.readthedocs.io/en/latest/loadbalancer/drivers/gce.html#libcloud.loadbalancer.drivers.gce.GCELBDriver.create_balancer>`_, 
+Looking at the `API documentation <https://libcloud.readthedocs.io/en/latest/loadbalancer/drivers/gce.html#libcloud.loadbalancer.drivers.gce.GCELBDriver.create_balancer>`_, 
 we can see that it expects an `ex_region` in the `create_balancer` method, so when we execute the salt command, we can add this additional parameter like this:
 
 .. code-block:: bash

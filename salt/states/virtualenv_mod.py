@@ -29,7 +29,9 @@ __virtualname__ = "virtualenv"
 
 
 def __virtual__():
-    return __virtualname__
+    if "virtualenv.create" in __salt__:
+        return __virtualname__
+    return (False, "virtualenv module could not be loaded")
 
 
 def managed(
@@ -83,7 +85,7 @@ def managed(
     use_wheel: False
         Prefer wheel archives (requires pip >= 1.4).
 
-    python : None
+    python: None
         Python executable used to build the virtualenv
 
     user: None

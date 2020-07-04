@@ -76,7 +76,9 @@ def __virtual__():
     """
     Only load if boto is available.
     """
-    return "boto_sqs" if "boto_sqs.exists" in __salt__ else False
+    if "boto_sqs.exists" in __salt__:
+        return "boto_sqs"
+    return (False, "boto_sqs module could not be loaded")
 
 
 def present(

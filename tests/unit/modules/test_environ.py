@@ -46,24 +46,36 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_val_permanent(self):
         with patch.dict(os.environ, {}), patch.dict(
-            environ.__salt__,
+            environ.__utils__,
             {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
-        ), patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
+        ), patch("salt.utils.platform.is_windows", return_value=True):
 
             environ.setval("key", "Test", permanent=True)
-            environ.__salt__["reg.set_value"].assert_called_with(
+            environ.__utils__["reg.set_value"].assert_called_with(
                 "HKCU", "Environment", "key", "Test"
             )
 
+    def test_set_val_permanent_false_unsets(self):
+        with patch.dict(os.environ, {}), patch.dict(
+            environ.__utils__,
+            {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+        ), patch("salt.utils.platform.is_windows", return_value=True):
+
             environ.setval("key", False, false_unsets=True, permanent=True)
-            environ.__salt__["reg.set_value"].asset_not_called()
-            environ.__salt__["reg.delete_value"].assert_called_with(
+            environ.__utils__["reg.set_value"].assert_not_called()
+            environ.__utils__["reg.delete_value"].assert_called_with(
                 "HKCU", "Environment", "key"
             )
 
+    def test_set_val_permanent_hklm(self):
+        with patch.dict(os.environ, {}), patch.dict(
+            environ.__utils__,
+            {"reg.set_value": MagicMock(), "reg.delete_value": MagicMock()},
+        ), patch("salt.utils.platform.is_windows", return_value=True):
+
             key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
             environ.setval("key", "Test", permanent="HKLM")
-            environ.__salt__["reg.set_value"].assert_called_with(
+            environ.__utils__["reg.set_value"].assert_called_with(
                 "HKLM", key, "key", "Test"
             )
 

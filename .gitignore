@@ -1,5 +1,6 @@
 /build
 /src
+__pycache__/
 *.py[co]
 pkg/arch/*.tar.xz
 *.sw[a-p]

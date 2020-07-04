@@ -1,27 +1,33 @@
 # coding: utf-8
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.ext.tornado.gen
-
-# Import 3rd-party libs
 import salt.ext.tornado.testing
 import salt.utils.asynchronous as asynchronous
 from salt.ext.tornado.testing import AsyncTestCase
 
 
 class HelperA(object):
+
+    async_methods = [
+        "sleep",
+    ]
+
     def __init__(self, io_loop=None):
         pass
 
     @salt.ext.tornado.gen.coroutine
     def sleep(self):
-        yield salt.ext.tornado.gen.sleep(0.5)
+        yield salt.ext.tornado.gen.sleep(0.1)
         raise salt.ext.tornado.gen.Return(True)
 
 
 class HelperB(object):
+
+    async_methods = [
+        "sleep",
+    ]
+
     def __init__(self, a=None, io_loop=None):
         if a is None:
             a = asynchronous.SyncWrapper(HelperA)
@@ -29,7 +35,7 @@ class HelperB(object):
 
     @salt.ext.tornado.gen.coroutine
     def sleep(self):
-        yield salt.ext.tornado.gen.sleep(0.5)
+        yield salt.ext.tornado.gen.sleep(0.1)
         self.a.sleep()
         raise salt.ext.tornado.gen.Return(False)
 

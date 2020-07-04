@@ -3,18 +3,13 @@
 Integration tests for Ruby Gem module
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
+import pytest
 import salt.utils.path
-
-# Import 3rd-party libs
 from salt.ext.tornado.httpclient import HTTPClient
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.unit import skipIf
 
 
@@ -30,6 +25,7 @@ def check_status():
 
 @destructiveTest
 @skipIf(not salt.utils.path.which("gem"), "Gem is not available")
+@pytest.mark.windows_whitelisted
 class GemModuleTest(ModuleCase):
     """
     Validate gem module
@@ -62,6 +58,7 @@ class GemModuleTest(ModuleCase):
 
         self.addCleanup(uninstall_gem)
 
+    @slowTest
     def test_install_uninstall(self):
         """
         gem.install
@@ -74,6 +71,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.GEM])
         self.assertFalse(self.run_function("gem.list", [self.GEM]))
 
+    @slowTest
     def test_install_version(self):
         """
         gem.install rake version=11.1.2
@@ -86,6 +84,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.GEM])
         self.assertFalse(self.run_function("gem.list", [self.GEM]))
 
+    @slowTest
     def test_list(self):
         """
         gem.list
@@ -101,6 +100,7 @@ class GemModuleTest(ModuleCase):
 
         self.run_function("gem.uninstall", [" ".join(self.GEM_LIST)])
 
+    @slowTest
     def test_list_upgrades(self):
         """
         gem.list_upgrades
@@ -113,6 +113,7 @@ class GemModuleTest(ModuleCase):
 
         self.run_function("gem.uninstall", [self.OLD_GEM])
 
+    @slowTest
     def test_sources_add_remove(self):
         """
         gem.sources_add
@@ -128,6 +129,7 @@ class GemModuleTest(ModuleCase):
         sources_list = self.run_function("gem.sources_list")
         self.assertNotIn(source, sources_list)
 
+    @slowTest
     def test_update(self):
         """
         gem.update
@@ -143,6 +145,7 @@ class GemModuleTest(ModuleCase):
         self.run_function("gem.uninstall", [self.OLD_GEM])
         self.assertFalse(self.run_function("gem.list", [self.OLD_GEM]))
 
+    @slowTest
     def test_update_system(self):
         """
         gem.update_system

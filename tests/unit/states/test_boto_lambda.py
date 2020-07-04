@@ -16,6 +16,7 @@ import salt.utils.json
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.versions import LooseVersion
+from tests.support.helpers import slowTest
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -183,6 +184,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
     TestCase for salt.modules.boto_lambda state.module
     """
 
+    @slowTest
     def test_present_when_function_does_not_exist(self):
         """
         Tests present on a function that does not exist.
@@ -211,6 +213,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
             function_ret["FunctionName"],
         )
 
+    @slowTest
     def test_present_when_function_exists(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -238,6 +241,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @slowTest
     def test_present_with_failure(self):
         self.conn.list_functions.side_effect = [
             {"Functions": []},
@@ -297,6 +301,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         self.assertFalse(result["result"])
         self.assertTrue("An error occurred" in result["comment"])
 
+    @slowTest
     def test_present_when_function_exists_and_permissions(self):
         self.conn.list_functions.return_value = {"Functions": [function_ret]}
         self.conn.update_function_code.return_value = function_ret
@@ -405,6 +410,7 @@ class BotoLambdaAliasTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMix
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @slowTest
     def test_present_with_failure(self):
         self.conn.list_aliases.side_effect = [{"Aliases": []}, {"Aliases": [alias_ret]}]
         self.conn.create_alias.side_effect = ClientError(error_content, "create_alias")
@@ -502,6 +508,7 @@ class BotoLambdaEventSourceMappingTestCase(
         self.assertTrue(result["result"])
         self.assertEqual(result["changes"], {})
 
+    @slowTest
     def test_present_with_failure(self):
         self.conn.list_event_source_mappings.side_effect = [
             {"EventSourceMappings": []},

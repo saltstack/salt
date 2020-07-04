@@ -24,7 +24,7 @@ def __virtual__():
     """
     if "win_iis.create_site" in __salt__:
         return __virtualname__
-    return False
+    return (False, "win_iis module could not be loaded")
 
 
 def _get_binding_info(hostheader="", ipaddress="*", port=80):

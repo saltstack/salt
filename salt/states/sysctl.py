@@ -27,7 +27,9 @@ def __virtual__():
     """
     This state is only available on Minions which support sysctl
     """
-    return "sysctl.show" in __salt__
+    if "sysctl.show" in __salt__:
+        return True
+    return (False, "sysctl module could not be loaded")
 
 
 def present(name, value, config=None, ignore=False):

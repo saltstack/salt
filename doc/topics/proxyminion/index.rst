@@ -85,12 +85,14 @@ they are being loaded for the correct proxytype, example below:
 .. code-block:: python
 
     def __virtual__():
-        '''
+        """
         Only work on proxy
-        '''
+        """
         try:
-            if salt.utils.platform.is_proxy() and \
-               __opts__['proxy']['proxytype'] == 'ssh_sample':
+            if (
+                salt.utils.platform.is_proxy()
+                and __opts__["proxy"]["proxytype"] == "ssh_sample"
+            ):
                 return __virtualname__
         except KeyError:
             pass
@@ -110,10 +112,10 @@ to ``__proxy__``.  This enables patterns like
 .. code-block:: python
 
    def get_ip(proxy):
-       '''
+       """
        Ask the remote device what IP it has
-       '''
-       return {'ip':proxy['proxymodulename.get_ip']()}
+       """
+       return {"ip": proxy["proxymodulename.get_ip"]()}
 
 
 Then the grain ``ip`` will contain the result of calling the ``get_ip()`` function
@@ -397,10 +399,10 @@ and status; "package" installation, and a ping.
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     This is a simple proxy-minion designed to connect to and communicate with
     the bottle-based web service contained in https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
-    '''
+    """
     from __future__ import absolute_import
 
     # Import python libs
@@ -410,7 +412,7 @@ and status; "package" installation, and a ping.
     HAS_REST_EXAMPLE = True
 
     # This must be present or the Salt loader won't load this module
-    __proxyenabled__ = ['rest_sample']
+    __proxyenabled__ = ["rest_sample"]
 
 
     # Variables are scoped to this module so we can have persistent data
@@ -425,182 +427,207 @@ and status; "package" installation, and a ping.
     # This does nothing, it's here just as an example and to provide a log
     # entry when the module is loaded.
     def __virtual__():
-        '''
+        """
         Only return if all the modules are available
-        '''
-        log.debug('rest_sample proxy __virtual__() called...')
+        """
+        log.debug("rest_sample proxy __virtual__() called...")
         return True
 
 
     def _complicated_function_that_determines_if_alive():
         return True
 
+
     # Every proxy module needs an 'init', though you can
     # just put DETAILS['initialized'] = True here if nothing
     # else needs to be done.
 
+
     def init(opts):
-        log.debug('rest_sample proxy init() called...')
-        DETAILS['initialized'] = True
+        log.debug("rest_sample proxy init() called...")
+        DETAILS["initialized"] = True
 
         # Save the REST URL
-        DETAILS['url'] = opts['proxy']['url']
+        DETAILS["url"] = opts["proxy"]["url"]
 
         # Make sure the REST URL ends with a '/'
-        if not DETAILS['url'].endswith('/'):
-            DETAILS['url'] += '/'
+        if not DETAILS["url"].endswith("/"):
+            DETAILS["url"] += "/"
+
 
     def alive(opts):
-        '''
+        """
         This function returns a flag with the connection state.
         It is very useful when the proxy minion establishes the communication
         via a channel that requires a more elaborated keep-alive mechanism, e.g.
         NETCONF over SSH.
-        '''
-        log.debug('rest_sample proxy alive() called...')
+        """
+        log.debug("rest_sample proxy alive() called...")
         return _complicated_function_that_determines_if_alive()
 
 
     def initialized():
-        '''
+        """
         Since grains are loaded in many different places and some of those
         places occur before the proxy can be initialized, return whether
         our init() function has been called
-        '''
-        return DETAILS.get('initialized', False)
+        """
+        return DETAILS.get("initialized", False)
 
 
     def grains():
-        '''
+        """
         Get the grains from the proxied device
-        '''
-        if not DETAILS.get('grains_cache', {}):
-            r = salt.utils.http.query(DETAILS['url']+'info', decode_type='json', decode=True)
-            DETAILS['grains_cache'] = r['dict']
-        return DETAILS['grains_cache']
+        """
+        if not DETAILS.get("grains_cache", {}):
+            r = salt.utils.http.query(
+                DETAILS["url"] + "info", decode_type="json", decode=True
+            )
+            DETAILS["grains_cache"] = r["dict"]
+        return DETAILS["grains_cache"]
 
 
     def grains_refresh():
-        '''
+        """
         Refresh the grains from the proxied device
-        '''
-        DETAILS['grains_cache'] = None
+        """
+        DETAILS["grains_cache"] = None
         return grains()
 
 
     def fns():
-        return {'details': 'This key is here because a function in '
-                          'grains/rest_sample.py called fns() here in the proxymodule.'}
+        return {
+            "details": "This key is here because a function in "
+            "grains/rest_sample.py called fns() here in the proxymodule."
+        }
 
 
     def service_start(name):
-        '''
+        """
         Start a "service" on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'service/start/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "service/start/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def service_stop(name):
-        '''
+        """
         Stop a "service" on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'service/stop/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "service/stop/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def service_restart(name):
-        '''
+        """
         Restart a "service" on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'service/restart/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "service/restart/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def service_list():
-        '''
+        """
         List "services" on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'service/list', decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "service/list", decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def service_status(name):
-        '''
+        """
         Check if a service is running on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'service/status/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "service/status/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def package_list():
-        '''
+        """
         List "packages" installed on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'package/list', decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "package/list", decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def package_install(name, **kwargs):
-        '''
+        """
         Install a "package" on the REST server
-        '''
-        cmd = DETAILS['url']+'package/install/'+name
-        if kwargs.get('version', False):
-            cmd += '/'+kwargs['version']
+        """
+        cmd = DETAILS["url"] + "package/install/" + name
+        if kwargs.get("version", False):
+            cmd += "/" + kwargs["version"]
         else:
-            cmd += '/1.0'
-        r = salt.utils.http.query(cmd, decode_type='json', decode=True)
-        return r['dict']
+            cmd += "/1.0"
+        r = salt.utils.http.query(cmd, decode_type="json", decode=True)
+        return r["dict"]
 
 
     def fix_outage():
-        r = salt.utils.http.query(DETAILS['url']+'fix_outage')
+        r = salt.utils.http.query(DETAILS["url"] + "fix_outage")
         return r
 
 
     def uptodate(name):
 
-        '''
+        """
         Call the REST endpoint to see if the packages on the "server" are up to date.
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "package/remove/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def package_remove(name):
 
-        '''
+        """
         Remove a "package" on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "package/remove/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def package_status(name):
-        '''
+        """
         Check the installation status of a package on the REST server
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'package/status/'+name, decode_type='json', decode=True)
-        return r['dict']
+        """
+        r = salt.utils.http.query(
+            DETAILS["url"] + "package/status/" + name, decode_type="json", decode=True
+        )
+        return r["dict"]
 
 
     def ping():
-        '''
+        """
         Is the REST server up?
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
+        """
+        r = salt.utils.http.query(DETAILS["url"] + "ping", decode_type="json", decode=True)
         try:
-            return r['dict'].get('ret', False)
+            return r["dict"].get("ret", False)
         except Exception:
             return False
 
 
     def shutdown(opts):
-        '''
+        """
         For this proxy shutdown is a no-op
-        '''
-        log.debug('rest_sample proxy shutdown() called...')
+        """
+        log.debug("rest_sample proxy shutdown() called...")
 
 
 .. _grains support code:
@@ -617,7 +644,7 @@ are interested in.  Here's an example.  Note the function below called ``proxy_f
 It demonstrates how a grains function can take a single argument, which will be
 set to the value of ``__proxy__``.  Dunder variables are not yet injected into Salt processes
 at the time grains are loaded, so this enables us to get a handle to the proxymodule so we
-can cross-call the functions therein used to commmunicate with the controlled device.
+can cross-call the functions therein used to communicate with the controlled device.
 
 Note that as of 2016.3, grains values can also be calculated in a function called ``grains()``
 in the proxymodule itself.  This might be useful if a proxymodule author wants to keep
@@ -702,19 +729,23 @@ Example from ``salt/grains/rest_sample.py``:
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     Generate baseline proxy minion grains
-    '''
+    """
     from __future__ import absolute_import
     import salt.utils.platform
 
-    __proxyenabled__ = ['rest_sample']
+    __proxyenabled__ = ["rest_sample"]
 
-    __virtualname__ = 'rest_sample'
+    __virtualname__ = "rest_sample"
+
 
     def __virtual__():
         try:
-            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if (
+                salt.utils.platform.is_proxy()
+                and __opts__["proxy"]["proxytype"] == "rest_sample"
+            ):
                 return __virtualname__
         except KeyError:
             pass
@@ -746,12 +777,12 @@ This proxymodule enables "package" installation.
 .. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     This is a simple proxy-minion designed to connect to and communicate with
     a server that exposes functionality via SSH.
     This can be used as an option when the device does not provide
     an api over HTTP and doesn't have the python stack to run a minion.
-    '''
+    """
     from __future__ import absolute_import
 
     # Import python libs
@@ -763,7 +794,7 @@ This proxymodule enables "package" installation.
     from salt.utils.vt import TerminalException
 
     # This must be present or the Salt loader won't load this module
-    __proxyenabled__ = ['ssh_sample']
+    __proxyenabled__ = ["ssh_sample"]
 
     DETAILS = {}
 
@@ -774,25 +805,27 @@ This proxymodule enables "package" installation.
     # This does nothing, it's here just as an example and to provide a log
     # entry when the module is loaded.
     def __virtual__():
-        '''
+        """
         Only return if all the modules are available
-        '''
-        log.info('ssh_sample proxy __virtual__() called...')
+        """
+        log.info("ssh_sample proxy __virtual__() called...")
 
         return True
 
 
     def init(opts):
-        '''
+        """
         Required.
         Can be used to initialize the server connection.
-        '''
+        """
         try:
-            DETAILS['server'] = SSHConnection(host=__opts__['proxy']['host'],
-                                              username=__opts__['proxy']['username'],
-                                              password=__opts__['proxy']['password'])
+            DETAILS["server"] = SSHConnection(
+                host=__opts__["proxy"]["host"],
+                username=__opts__["proxy"]["username"],
+                password=__opts__["proxy"]["password"],
+            )
             # connected to the SSH server
-            out, err = DETAILS['server'].sendline('help')
+            out, err = DETAILS["server"].sendline("help")
 
         except TerminalException as e:
             log.error(e)
@@ -800,73 +833,73 @@ This proxymodule enables "package" installation.
 
 
     def shutdown(opts):
-        '''
+        """
         Disconnect
-        '''
-        DETAILS['server'].close_connection()
+        """
+        DETAILS["server"].close_connection()
 
 
     def parse(out):
-        '''
+        """
         Extract json from out.
 
         Parameter
             out: Type string. The data returned by the
             ssh command.
-        '''
+        """
         jsonret = []
         in_json = False
-        for ln_ in out.split('\n'):
-            if '{' in ln_:
+        for ln_ in out.split("\n"):
+            if "{" in ln_:
                 in_json = True
             if in_json:
                 jsonret.append(ln_)
-            if '}' in ln_:
+            if "}" in ln_:
                 in_json = False
-        return salt.utils.json.loads('\n'.join(jsonret))
+        return salt.utils.json.loads("\n".join(jsonret))
 
 
     def package_list():
-        '''
+        """
         List "packages" by executing a command via ssh
         This function is called in response to the salt command
 
         ..code-block::bash
             salt target_minion pkg.list_pkgs
 
-        '''
+        """
         # Send the command to execute
-        out, err = DETAILS['server'].sendline('pkg_list')
+        out, err = DETAILS["server"].sendline("pkg_list")
 
         # "scrape" the output and return the right fields as a dict
         return parse(out)
 
 
     def package_install(name, **kwargs):
-        '''
+        """
         Install a "package" on the REST server
-        '''
-        cmd = 'pkg_install ' + name
-        if 'version' in kwargs:
-            cmd += '/'+kwargs['version']
+        """
+        cmd = "pkg_install " + name
+        if "version" in kwargs:
+            cmd += "/" + kwargs["version"]
         else:
-            cmd += '/1.0'
+            cmd += "/1.0"
 
         # Send the command to execute
-        out, err = DETAILS['server'].sendline(cmd)
+        out, err = DETAILS["server"].sendline(cmd)
 
         # "scrape" the output and return the right fields as a dict
         return parse(out)
 
 
     def package_remove(name):
-        '''
+        """
         Remove a "package" on the REST server
-        '''
-        cmd = 'pkg_remove ' + name
+        """
+        cmd = "pkg_remove " + name
 
         # Send the command to execute
-        out, err = DETAILS['server'].sendline(cmd)
+        out, err = DETAILS["server"].sendline(cmd)
 
         # "scrape" the output and return the right fields as a dict
         return parse(out)

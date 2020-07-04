@@ -83,10 +83,22 @@ def present(name, save=False, **kwargs):
     Ensure beacon is configured with the included beacon data.
 
     name
-        The name of the beacon ensure is configured.
+        The name of the beacon to ensure is configured.
     save
         True/False, if True the beacons.conf file be updated too. Default is False.
 
+    Example:
+
+    .. code-block:: yaml
+
+        ps_beacon:
+          beacon.present:
+            - name: ps
+            - save: True
+            - enable: False
+            - services:
+                salt-master: running
+                apache2: stopped
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
@@ -135,7 +147,7 @@ def present(name, save=False, **kwargs):
         if __opts__.get("test"):
             ret["comment"].append("Beacon {0} would be saved".format(name))
         else:
-            result = __salt__["beacons.save"]()
+            __salt__["beacons.save"]()
             ret["comment"].append("Beacon {0} saved".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
@@ -147,14 +159,20 @@ def absent(name, save=False, **kwargs):
     Ensure beacon is absent.
 
     name
-        The name of the beacon ensured absent.
+        The name of the beacon that is ensured absent.
     save
         True/False, if True the beacons.conf file be updated too. Default is False.
 
+    Example:
+
+    .. code-block:: yaml
+
+        remove_beacon:
+          beacon.absent:
+            - name: ps
+            - save: True
+
     """
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
@@ -179,7 +197,7 @@ def absent(name, save=False, **kwargs):
         if __opts__.get("test"):
             ret["comment"].append("Beacon {0} would be saved".format(name))
         else:
-            result = __salt__["beacons.save"]()
+            __salt__["beacons.save"]()
             ret["comment"].append("Beacon {0} saved".format(name))
 
     ret["comment"] = "\n".join(ret["comment"])
@@ -193,10 +211,15 @@ def enabled(name, **kwargs):
     name
         The name of the beacon to enable.
 
+    Example:
+
+    .. code-block:: yaml
+
+        enable_beacon:
+          beacon.enabled:
+            - name: ps
+
     """
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
@@ -228,10 +251,15 @@ def disabled(name, **kwargs):
     name
         The name of the beacon to disable.
 
+    Example:
+
+    .. code-block:: yaml
+
+        disable_beacon:
+          beacon.disabled:
+            - name: psp
+
     """
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 

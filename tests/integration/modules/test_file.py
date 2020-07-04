@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import getpass
@@ -8,12 +7,11 @@ import os
 import shutil
 import sys
 
-# Import salt libs
+import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
+from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -41,6 +39,7 @@ def symlink(source, link_name):
         os.symlink(source, link_name)
 
 
+@pytest.mark.windows_whitelisted
 class FileModuleTest(ModuleCase):
     """
     Validate the file module
@@ -73,6 +72,52 @@ class FileModuleTest(ModuleCase):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(FileModuleTest, self).tearDown()
+
+    @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
+    @requires_system_grains
+    def test_get_selinux_context(self, grains):
+        if grains.get("selinux", {}).get("enabled", False):
+            NEW_CONTEXT = "system_u:object_r:system_conf_t:s0"
+            self.run_function(
+                "file.set_selinux_context", arg=[self.myfile, *(NEW_CONTEXT.split(":"))]
+            )
+            ret_file = self.run_function("file.get_selinux_context", arg=[self.myfile])
+            self.assertEqual(ret_file, NEW_CONTEXT)
+
+            # Issue #56557.  Ensure that the context of the directory
+            # containing one file is the context of the directory itself, and
+            # not the context of the first file in the directory.
+            self.run_function(
+                "file.set_selinux_context", arg=[self.mydir, *(NEW_CONTEXT.split(":"))]
+            )
+            ret_dir = self.run_function("file.get_selinux_context", arg=[self.mydir])
+            self.assertEqual(ret_dir, NEW_CONTEXT)
+            ret_updir = self.run_function(
+                "file.get_selinux_context",
+                arg=[os.path.abspath(os.path.join(self.mydir, ".."))],
+            )
+            self.assertNotEqual(ret_updir, NEW_CONTEXT)
+        else:
+            ret_file = self.run_function("file.get_selinux_context", arg=[self.myfile])
+            self.assertIn("No selinux context information is available", ret_file)
+
+    @skipIf(salt.utils.platform.is_windows(), "No security context on Windows")
+    @requires_system_grains
+    def test_set_selinux_context(self, grains):
+        if not grains.get("selinux", {}).get("enabled", False):
+            self.skipTest("selinux not available")
+
+        FILE_CONTEXT = "system_u:object_r:system_conf_t:s0"
+        ret_file = self.run_function(
+            "file.set_selinux_context", arg=[self.myfile, *(FILE_CONTEXT.split(":"))]
+        )
+        self.assertEqual(ret_file, FILE_CONTEXT)
+
+        DIR_CONTEXT = "system_u:object_r:user_home_t:s0"
+        ret_dir = self.run_function(
+            "file.set_selinux_context", arg=[self.mydir, *(DIR_CONTEXT.split(":"))]
+        )
+        self.assertEqual(ret_dir, DIR_CONTEXT)
 
     @skipIf(salt.utils.platform.is_windows(), "No chgrp on Windows")
     def test_chown(self):
@@ -209,6 +254,33 @@ class FileModuleTest(ModuleCase):
             "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
         )
         self.assertIn("Hello" + os.linesep + "+Goodbye", ret)
+
+    def test_file_line_changes_entire_line(self):
+        """
+        Test file.line entire line matching
+
+        Issue #49855
+        """
+        ret = self.minion_run(
+            "file.line", self.myfile, "Goodbye", mode="insert", after="Hello"
+        )
+        assert "Hello" + os.linesep + "+Goodbye" in ret
+
+        ret = self.minion_run(
+            "file.line", self.myfile, "Goodbye 1", mode="insert", after="Hello"
+        )
+        assert (
+            "Hello" + os.linesep + "+Goodbye 1" + os.linesep + " Goodbye" + os.linesep
+            in ret
+        )
+
+        with salt.utils.files.fopen(self.myfile, "r") as fh_:
+            content = fh_.read()
+
+        assert (
+            "Hello" + os.linesep + "Goodbye 1" + os.linesep + "Goodbye" + os.linesep
+            == content
+        )
 
     def test_file_line_content(self):
         self.minion_run(

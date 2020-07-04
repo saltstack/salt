@@ -5,6 +5,8 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import os
+
 import pytest
 import salt.modules.btrfs as btrfs
 
@@ -17,7 +19,7 @@ from salt.exceptions import CommandExecutionError
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
@@ -415,7 +417,6 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         subvolume_exists.return_value = True
         assert not btrfs.subvolume_create("var", dest="/mnt")
 
-    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @patch("salt.modules.btrfs.subvolume_exists")
     def test_subvolume_create(self, subvolume_exists):
         """
@@ -425,12 +426,13 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         salt_mock = {
             "cmd.run_all": MagicMock(return_value={"recode": 0}),
         }
+        expected_path = os.path.join("/mnt", "var")
         with patch.dict(btrfs.__salt__, salt_mock):
             assert btrfs.subvolume_create("var", dest="/mnt")
             subvolume_exists.assert_called_once()
             salt_mock["cmd.run_all"].assert_called_once()
             salt_mock["cmd.run_all"].assert_called_with(
-                ["btrfs", "subvolume", "create", "/mnt/var"]
+                ["btrfs", "subvolume", "create", expected_path]
             )
 
     def test_subvolume_delete_fails_parameters(self):

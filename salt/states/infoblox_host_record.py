@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Infoblox host record managment.
+Infoblox host record management.
 
 functions accept api_opts:
 
