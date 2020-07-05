@@ -390,7 +390,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                             ret.update(
                                 {
                                     "changes": {"locale": "salt"},
-                                    "comment": "Flush nftables rules in table chain ipv4 family",
+                                    "comment": "Flush nftables rules in  table  chain ipv4 family",
                                     "result": True,
                                 }
                             )
@@ -449,7 +449,7 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                         ret.update(
                             {
                                 "changes": {"locale": "salt"},
-                                "comment": "Set default policy for to sal family ipv4",
+                                "comment": "Set default policy for  to sal family ipv4",
                                 "result": True,
                             }
                         )
