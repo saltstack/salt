@@ -11,7 +11,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 import salt.utils.proxy
 from salt.exceptions import SaltSystemExit
 
@@ -106,7 +105,7 @@ def _grains():
                 port=port,
             )
             GRAINS_CACHE.update(ret)
-    except KeyError as e:
+    except KeyError:
         pass
 
     return GRAINS_CACHE
