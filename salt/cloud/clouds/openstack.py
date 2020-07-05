@@ -167,7 +167,7 @@ Anything else from the create_server_ docs can be passed through here.
   for details.
 - **block_device_mapping_v2**: (optional) A list of dictionaries representing
   block device mappings for this server. See
-  `documentation <https://docs.openstack.org/nova/latest/user/block-device-mapping.html#block-device-mapping-v2`_
+  `documentation <https://docs.openstack.org/nova/latest/user/block-device-mapping.html#block-device-mapping-v2>`_
   for details.
 - **nics**:  (optional extension) an ordered list of nics to be
   added to this server, with information about
