@@ -124,82 +124,86 @@ If metadata is set to make sure that the host has finished setting up the
 Anything else from the create_server_ docs can be passed through here.
 
 - **image**: Image dict, name or ID to boot with. image is required
-            unless boot_volume is given.
+  unless boot_volume is given.
 - **flavor**: Flavor dict, name or ID to boot onto.
 - **auto_ip**: Whether to take actions to find a routable IP for
-              the server. (defaults to True)
+  the server. (defaults to True)
 - **ips**: List of IPs to attach to the server (defaults to None)
 - **ip_pool**: Name of the network or floating IP pool to get an
-              address from. (defaults to None)
+  address from. (defaults to None)
 - **root_volume**: Name or ID of a volume to boot from
-                  (defaults to None - deprecated, use boot_volume)
+  (defaults to None - deprecated, use boot_volume)
 - **boot_volume**: Name or ID of a volume to boot from
-                  (defaults to None)
+  (defaults to None)
 - **terminate_volume**: If booting from a volume, whether it should
-                       be deleted when the server is destroyed.
-                       (defaults to False)
+  be deleted when the server is destroyed.
+  (defaults to False)
 - **volumes**: (optional) A list of volumes to attach to the server
 - **meta**: (optional) A dict of arbitrary key/value metadata to
-           store for this server. Both keys and values must be
-           <=255 characters.
+  store for this server. Both keys and values must be
+  <=255 characters.
 - **files**: (optional, deprecated) A dict of files to overwrite
-            on the server upon boot. Keys are file names (i.e.
-            ``/etc/passwd``) and values
-            are the file contents (either as a string or as a
-            file-like object). A maximum of five entries is allowed,
-            and each file must be 10k or less.
+  on the server upon boot. Keys are file names (i.e.
+  ``/etc/passwd``) and values
+  are the file contents (either as a string or as a
+  file-like object). A maximum of five entries is allowed,
+  and each file must be 10k or less.
 - **reservation_id**: a UUID for the set of servers being requested.
 - **min_count**: (optional extension) The minimum number of
-                servers to launch.
+  servers to launch.
 - **max_count**: (optional extension) The maximum number of
-                servers to launch.
+  servers to launch.
 - **security_groups**: A list of security group names
 - **userdata**: user data to pass to be exposed by the metadata
-            server this can be a file type object as well or a
-            string.
+  server this can be a file type object as well or a
+  string.
 - **key_name**: (optional extension) name of previously created
-            keypair to inject into the instance.
+  keypair to inject into the instance.
 - **availability_zone**: Name of the availability zone for instance
-                        placement.
-- **block_device_mapping**: (optional) A dict of block
-            device mappings for this server.
-- **block_device_mapping_v2**: (optional) A dict of block
-            device mappings for this server.
+  placement.
+- **block_device_mapping**: (optional) A list of dictionaries representing
+  legacy block device mappings for this server. See
+  `documentation <https://docs.openstack.org/nova/latest/user/block-device-mapping.html#block-device-mapping-v1-aka-legacy>`_
+  for details.
+- **block_device_mapping_v2**: (optional) A list of dictionaries representing
+  block device mappings for this server. See
+  `documentation <https://docs.openstack.org/nova/latest/user/block-device-mapping.html#block-device-mapping-v2`_
+  for details.
 - **nics**:  (optional extension) an ordered list of nics to be
-            added to this server, with information about
-            connected networks, fixed IPs, port etc.
+  added to this server, with information about
+  connected networks, fixed IPs, port etc.
 - **scheduler_hints**: (optional extension) arbitrary key-value pairs
-                  specified by the client to help boot an instance
+  specified by the client to help boot an instance
 - **config_drive**: (optional extension) value for config drive
-                  either boolean, or volume-id
+  either boolean, or volume-id
 - **disk_config**: (optional extension) control how the disk is
-                  partitioned when the server is created.  possible
-                  values are 'AUTO' or 'MANUAL'.
+  partitioned when the server is created.  possible
+  values are 'AUTO' or 'MANUAL'.
 - **admin_pass**: (optional extension) add a user supplied admin
-                 password.
+  password.
 - **timeout**: (optional) Seconds to wait, defaults to 60.
-              See the ``wait`` parameter.
+  See the ``wait`` parameter.
 - **reuse_ips**: (optional) Whether to attempt to reuse pre-existing
-                           floating ips should a floating IP be
-                           needed (defaults to True)
+  floating ips should a floating IP be
+  needed (defaults to True)
 - **network**: (optional) Network dict or name or ID to attach the
-              server to.  Mutually exclusive with the nics parameter.
-              Can also be be a list of network names or IDs or
-              network dicts.
+  server to.  Mutually exclusive with the nics parameter.
+  Can also be be a list of network names or IDs or
+  network dicts.
 - **boot_from_volume**: Whether to boot from volume. 'boot_volume'
-                       implies True, but boot_from_volume=True with
-                       no boot_volume is valid and will create a
-                       volume from the image and use that.
+  implies True, but boot_from_volume=True with
+  no boot_volume is valid and will create a
+  volume from the image and use that.
 - **volume_size**: When booting an image from volume, how big should
-                  the created volume be? Defaults to 50.
+  the created volume be? Defaults to 50.
 - **nat_destination**: Which network should a created floating IP
-                      be attached to, if it's not possible to
-                      infer from the cloud's configuration.
-                      (Optional, defaults to None)
+  be attached to, if it's not possible to
+  infer from the cloud's configuration.
+  (Optional, defaults to None)
 - **group**: ServerGroup dict, name or id to boot the server in.
-            If a group is provided in both scheduler_hints and in
-            the group param, the group param will win.
-            (Optional, defaults to None)
+  If a group is provided in both scheduler_hints and in
+  the group param, the group param will win.
+  (Optional, defaults to None)
 
 .. note::
 
@@ -601,7 +605,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
 
 def _clean_create_kwargs(**kwargs):
     """
-    Sanatize kwargs to be sent to create_server
+    Sanitize kwargs to be sent to create_server
     """
     VALID_OPTS = {
         "name": six.string_types,
@@ -620,8 +624,8 @@ def _clean_create_kwargs(**kwargs):
         "security_groups": list,
         "key_name": six.string_types,
         "availability_zone": six.string_types,
-        "block_device_mapping": dict,
-        "block_device_mapping_v2": dict,
+        "block_device_mapping": list,
+        "block_device_mapping_v2": list,
         "nics": list,
         "scheduler_hints": dict,
         "config_drive": bool,
