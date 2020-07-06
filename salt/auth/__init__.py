@@ -486,6 +486,16 @@ class LoadAuth(object):
                 auth_list = salt.utils.master.get_values_of_matching_keys(
                     self.opts["publisher_acl"], auth_ret
                 )
+
+                # Extend the auth_list with all acl items ending with % and the user is a member of it
+                groups = salt.utils.user.get_group_dict(auth_ret).keys()
+                for expr in [
+                    expr
+                    for expr in self.opts["publisher_acl"]
+                    if expr.endswith("%") and expr[:-1] in groups
+                ]:
+                    auth_list.extend(self.opts["publisher_acl"][expr])
+
                 if not auth_list:
                     ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                     return ret

@@ -221,6 +221,16 @@ def access_keys(opts):
     if opts.get("user"):
         acl_users.add(opts["user"])
     acl_users.add(salt.utils.user.get_user())
+
+    # Loop all entries which ends with % and add group members to acl_users
+    for group in [group for group in acl_users if group.endswith("%")]:
+        members = salt.utils.user.get_group_members(group[:-1])
+        if members is not None:
+            for member in members:
+                if member not in acl_users:
+                    acl_users.add(member)
+            acl_users.discard(group)
+
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
         key = mk_key(opts, user)

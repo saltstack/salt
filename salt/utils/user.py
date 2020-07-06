@@ -363,6 +363,20 @@ def get_group_dict(user=None, include_default=True):
     return group_dict
 
 
+def get_group_members(group):
+    """
+    Returns a list of users for a given group name. If the group does not
+    exist, None will be returned. On systems which do not support grp it will
+    return None.
+    """
+    if HAS_GRP is False:
+        return None
+    try:
+        return grp.getgrnam(group).gr_mem
+    except KeyError:
+        return None
+
+
 def get_gid_list(user, include_default=True):
     """
     Returns a list of all of the system group IDs of which the user
