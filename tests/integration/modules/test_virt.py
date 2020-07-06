@@ -221,6 +221,7 @@ class VirtTest(ModuleCase):
         result = self.run_function(
             "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
         )
+        self.assertIsInstance(result, bool)
         self.assertEqual(result, True)
         domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
         self.assertIsInstance(domains, list)
@@ -240,6 +241,7 @@ class VirtTest(ModuleCase):
         result = self.run_function(
             "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
         )
+        self.assertIsInstance(result, bool)
         self.assertEqual(result, True)
 
         result = self.run_function(
