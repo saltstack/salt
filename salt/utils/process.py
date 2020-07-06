@@ -288,16 +288,21 @@ def check_mantle_of_responsibility(file_name):
                 file_name
             )
         )
-        return None
+        return
 
     # get process info from file
     try:
         with salt.utils.files.fopen(file_name, "r") as file:
-            return json.load(file)["pid"]
+            file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
         log.error("pidfile:{} is corrupted".format(file_name))
+        return
     except FileNotFoundError:
         log.info("pidfile: {} not found".format(file_name))
+        return
+
+    if file_process_info == get_process_info(file_process_info["pid"]):
+        return file_process_info["pid"]
 
 
 def clean_proc(proc, wait_for_kill=10):
