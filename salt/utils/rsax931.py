@@ -9,13 +9,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import ctypes.util
 import glob
 import os
+import platform
 import sys
 
 # Import 3rd-party libs
 from ctypes import c_char_p, c_int, c_void_p, cdll, create_string_buffer, pointer
 
 # Import Salt libs
-import salt.utils.mac_utils
 import salt.utils.platform
 import salt.utils.stringutils
 
@@ -43,7 +43,7 @@ def _find_libcrypto():
         # look in macports.
         lib = lib or glob.glob("/opt/local/lib/libcrypto.dylib")
         # check if 10.15, regular libcrypto.dylib is just a false pointer.
-        if salt.utils.mac_utils.os_version(as_tuple=True) == (10, 15):
+        if platform.mac_ver()[0].split(".")[:2] == ["10", "15"]:
             lib = lib or glob.glob("/usr/lib/libcrypto.*.dylib")
             lib = list(reversed(sorted(lib)))
         # last but not least all the other macOS versions should work here.

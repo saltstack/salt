@@ -8,7 +8,6 @@ from __future__ import absolute_import, unicode_literals
 # Import Python Libraries
 import logging
 import os
-import platform
 import plistlib
 import subprocess
 import time
@@ -520,34 +519,3 @@ def console_user(username=False):
         return pwd.getpwuid(uid)[0]
 
     return uid
-
-
-def os_version(only_major_minor=True, as_tuple=False):
-    """
-    Get the macOS version of the machine.
-
-    :param bool only_major_minor: If true returns on the major and minor
-    version of the OS (10.15). Otherwise full version 10.15.2. Defaults
-    to ``True``
-
-    :param bool as_tuple: If true will make return type a tuple otherwise
-    a string.
-
-    :return: The current os version.
-
-    :rtype: Tuple of OS version or a string of osversion.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        import salt.utils.mac_utils
-        salt.utils.mac_utils.os_version(as_tuple=True)
-    """
-    # lovingly borrowed from the munki project
-    os_version_tuple = platform.mac_ver()[0].split(".")
-    if only_major_minor:
-        os_version_tuple = os_version_tuple[0:2]
-    if as_tuple:
-        return tuple(map(int, os_version_tuple))
-    return ".".join(os_version_tuple)
