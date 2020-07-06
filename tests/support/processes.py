@@ -146,6 +146,19 @@ class SaltVirtContainer(object):
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True,
         )
 
+    def update_image(self):
+        """
+        `docker run` doesn't pull down the latest image if the image
+        already exists locally. This method invokes `docker pull`
+        explicitly.
+        """
+        process = self._run_cmd(["docker", "pull", self.container_img])
+        output = process.communicate()[0]
+        if process.returncode != 0:
+            raise RuntimeError(
+                "Failed to pull image '{}':\n{}".format(self.container_img, output)
+            )
+
     def start(self):
         log.info(
             "Minion log file: {}/{}.log".format(
@@ -232,6 +245,7 @@ def start_virt_daemon(
         host_uuid,
         daemon_config_dir,
     )
+    container.update_image()
     container.start()
     container.wait_until_minion_is_running()
     return container
