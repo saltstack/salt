@@ -11,6 +11,7 @@ import ctypes.util
 import fnmatch
 import glob
 import os
+import platform
 import sys
 
 import salt.utils.platform
@@ -174,7 +175,7 @@ class RSAX931Test(TestCase):
             )
 
     @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
-    @patch.object(salt.utils.mac_utils, "os_version", lambda as_tuple: (10.14))
+    @patch.object(platform, "mac_ver", lambda: ("10.14.2", (), ""))
     @patch.object(glob, "glob", lambda _: [])
     def test_find_libcrypto_with_system_and_not_catalina(self):
         """
@@ -197,7 +198,7 @@ class RSAX931Test(TestCase):
         self.assertEqual(lib_path, "/usr/lib/libcrypto.dylib")
 
     @skipIf(not salt.utils.platform.is_darwin(), "Host OS is not Darwin-like or macOS.")
-    @patch.object(salt.utils.mac_utils, "os_version", lambda as_tuple: (10.15))
+    @patch.object(platform, "mac_ver", lambda: ("10.15.2", (), ""))
     def test_find_libcrypto_darwin_catalina(self):
         """
         Test _find_libcrypto on a Darwin-like  macOS host where there isn't a
@@ -216,8 +217,6 @@ class RSAX931Test(TestCase):
                 passed = True
                 break
         self.assertTrue(passed)
-        # we should never return the stub on catalina
-        self.assertNotEqual(lib_path, "/usr/lib/libcrypto.dylib")
 
     @patch.object(ctypes.util, "find_library", lambda a: None)
     @patch.object(glob, "glob", lambda a: [])
