@@ -274,6 +274,32 @@ def claim_mantle_of_responsibility(file_name):
     return True
 
 
+def check_mantle_of_responsibility(file_name):
+    """
+    Sees who has the mantle of responsibility
+    file_name: str
+    Return: None or int
+    """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibly! pidfile: {}".format(
+                file_name
+            )
+        )
+        return None
+
+    # get process info from file
+    try:
+        with salt.utils.files.fopen(file_name, "r") as file:
+            return json.load(file)["pid"]
+    except json.decoder.JSONDecodeError:
+        log.error("pidfile:{} is corrupted".format(file_name))
+    except FileNotFoundError:
+        log.info("pidfile: {} not found".format(file_name))
+
+
 def clean_proc(proc, wait_for_kill=10):
     """
     Generic method for cleaning up multiprocessing procs
