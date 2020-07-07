@@ -467,9 +467,9 @@ def restart(name, runas=None):
         salt '*' service.restart org.cups.cupsd
     """
     # Restart the service: will raise an error if it fails
-    if enabled(name):
-        stop(name, runas=runas)
-    start(name, runas=runas)
+    if __salt__["service.loaded"](name, runas=runas):
+        __salt__["service.stop"](name, runas=runas)
+    __salt__["service.start"](name, runas=runas)
 
     return True
 
@@ -527,7 +527,11 @@ def status(name, sig=None, runas=None):
     # mac services are a little different than other platforms as they may be
     # set to run on intervals and may not always active with a PID. This will
     # return a string 'loaded' if it shouldn't always be running and is enabled.
-    if not _always_running_service(name) and enabled(name) and not pids:
+    if (
+        not _always_running_service(name)
+        and __salt__["service.loaded"](name)
+        and not pids
+    ):
         return "loaded"
 
     return pids
@@ -576,11 +580,19 @@ def missing(name):
 
 def enabled(name, runas=None):
     """
-    Check if the specified service is enabled
+    Check if the specified service is enabled (not disabled, capable of being
+    loaded/bootstrapped).
 
-    :param str name: The name of the service to look up
+    .. note::
+        Previously this function would see if the service is loaded via
+        ``launchctl list`` to determine if the service is enabled. This was not
+        an accurate way to do so. The new behavior checks to make sure its not
+        disabled to determine the status. Please use ``service.loaded`` for the
+        previous behavior.
 
-    :param str runas: User to run launchctl commands
+    :param str name: The name of the service to look up.
+
+    :param str runas: User to run launchctl commands.
 
     :return: True if the specified service enabled, otherwise False
     :rtype: bool
@@ -591,12 +603,9 @@ def enabled(name, runas=None):
 
         salt '*' service.enabled org.cups.cupsd
     """
-    # Try to list the service.  If it can't be listed, it's not enabled
-    try:
-        list_(name=name, runas=runas)
-        return True
-    except CommandExecutionError:
-        return False
+    # There isn't a direct way to get enabled, but if its not disabled
+    # then its enabled or capa
+    return not __salt__["service.disabled"](name, runas)
 
 
 def disabled(name, runas=None, domain="system"):
@@ -690,3 +699,28 @@ def get_enabled(runas=None):
         enabled.append(label)
 
     return sorted(set(enabled))
+
+
+def loaded(name, runas=None):
+    """
+    Check if the specified service is loaded.
+
+    :param str name: The name of the service to look up
+
+    :param str runas: User to run launchctl commands
+
+    :return: True if the specified service enabled, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.enabled org.cups.cupsd
+    """
+    # Try to list the service.  If it can't be listed, it's not enabled
+    try:
+        list_(name=name, runas=runas)
+        return True
+    except CommandExecutionError:
+        return False
