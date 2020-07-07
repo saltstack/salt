@@ -1455,3 +1455,25 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
+    def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-other-pip"],
+        ):
+            pip.upgrade(user=expected_user)
+
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "install", "-U", "freeze", "--all", "fnord"],
+                runas=expected_user,
+                cwd=None,
+                use_vt=False,
+            )
