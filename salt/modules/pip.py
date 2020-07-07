@@ -698,7 +698,7 @@ def install(
     if error:
         return error
 
-    cur_version = version(bin_env, cwd)
+    cur_version = version(bin_env, cwd, user=user)
 
     if use_wheel:
         min_version = "1.4"
@@ -1359,7 +1359,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     cmd = _get_pip_bin(bin_env)
     cmd.extend(["list", "--outdated"])
 
-    pip_version = version(bin_env, cwd)
+    pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = "9.0"
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2=min_version):
