@@ -1299,7 +1299,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     return packages
 
 
-def version(bin_env=None, cwd=None):
+def version(bin_env=None, cwd=None, user=None):
     """
     .. versionadded:: 0.17.0
 
@@ -1308,11 +1308,16 @@ def version(bin_env=None, cwd=None):
 
     If unable to detect the pip version, returns ``None``.
 
+    .. versionchanged:: 3001.1
+        The ``user`` parameter was added, to allow specifying the user who runs
+        the version command.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.version
+
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
@@ -1326,8 +1331,7 @@ def version(bin_env=None, cwd=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append("--version")
 
-    # TODO: FIXME -W. Werner, 2020-06-23
-    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, python_shell=False)
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"]:
         raise CommandNotFoundError("Could not find a `pip` binary")
 
