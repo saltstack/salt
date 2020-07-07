@@ -48,7 +48,7 @@ class DisksGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             result = disks._windows_disks()
             expected = {
-                "SSDs": ["\\\\.\\PhysicalDrive0"],
+                "ssds": ["\\\\.\\PhysicalDrive0"],
                 "disks": [
                     "\\\\.\\PhysicalDrive0",
                     "\\\\.\\PhysicalDrive1",
@@ -81,7 +81,7 @@ class DisksGrainsTestCase(TestCase, LoaderModuleMockMixin):
             disks.__salt__, {"cmd.run_all": mock_run_all}
         ):
             result = disks._windows_disks()
-            expected = {"SSDs": [], "disks": []}
+            expected = {"ssds": [], "disks": []}
             self.assertDictEqual(result, expected)
 
     def test__linux_disks(self):
@@ -126,4 +126,4 @@ class DisksGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch_glob, patch_readlink, patch_fopen:
             ret = disks._linux_disks()
 
-        assert ret == {"disks": ["sda", "sdb", "vda"], "SSDs": []}, ret
+        assert ret == {"disks": ["sda", "sdb", "vda"], "ssds": []}, ret
