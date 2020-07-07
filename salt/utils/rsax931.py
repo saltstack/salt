@@ -30,6 +30,7 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
+        # cdll.LoadLibrary on windows requires a 'str' argument
         lib = str("libeay32")
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
@@ -47,8 +48,8 @@ def _find_libcrypto():
             lib = lib or glob.glob("/usr/lib/libcrypto.*.dylib")
             lib = list(reversed(sorted(lib)))
         # last but not least all the other macOS versions should work here.
-        # including Big Sur
-        lib = lib[0] if lib else str("/usr/lib/libcrypto.dylib")
+        # including Big Sur.
+        lib = lib[0] if lib else "/usr/lib/libcrypto.dylib"
     elif getattr(sys, "frozen", False) and salt.utils.platform.is_smartos():
         lib = glob.glob(os.path.join(os.path.dirname(sys.executable), "libcrypto.so*"))
         lib = lib[0] if lib else None
