@@ -634,7 +634,12 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts.update(
-            {"master_type": "failover", "master": ["master1", "master2"], "__role": ""}
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "dns_retry": 0,
+            }
         )
 
         class MockPubChannel:
@@ -669,7 +674,12 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts.update(
-            {"master_type": "failover", "master": ["master1", "master2"], "__role": ""}
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "dns_retry": 0,
+            }
         )
 
         def mock_resolve_dns(opts, fallback=False):
