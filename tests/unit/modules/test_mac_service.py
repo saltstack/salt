@@ -43,6 +43,26 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
             self.assertTrue(mac_service.disabled(srv_name))
 
+    def test_service_enabled_when_enabled(self):
+        """
+        test service.enabled when service is enabled
+        """
+        srv_name = "com.apple.atrun"
+        cmd = 'disabled services = {\n\t"com.saltstack.salt.minion" => false\n\t"com.apple.atrun" => false\n}'
+
+        with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
+            self.assertTrue(mac_service.enabled(srv_name))
+
+    def test_service_enabled_when_disabled(self):
+        """
+        test service.enabled when service is disabled
+        """
+        srv_name = "com.apple.atrun"
+        cmd = 'disabled services = {\n\t"com.saltstack.salt.minion" => false\n\t"com.apple.atrun" => true\n}'
+
+        with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
+            self.assertFalse(mac_service.enabled(srv_name))
+
     def test_service_disabled_srvname_wrong(self):
         """
         test service.disabled when service is just slightly wrong
