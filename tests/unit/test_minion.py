@@ -663,7 +663,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
             "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
-        ):
+        ), patch("salt.loader.grains", MagicMock(return_value=[])):
             with self.assertRaises(SaltClientError, msg="MockedChannel"):
                 minion = salt.minion.SMinion(mock_opts)
 
@@ -686,7 +686,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertFalse(fallback)
             raise SaltClientError("Cannot resolve {0}".format(opts["master"]))
 
-        with patch("salt.minion.resolve_dns", mock_resolve_dns):
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.loader.grains", MagicMock(return_value=[])
+        ):
             with self.assertRaises(SaltClientError, msg="No master could be resolved"):
                 minion = salt.minion.SMinion(mock_opts)
 
