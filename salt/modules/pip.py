@@ -1326,6 +1326,7 @@ def version(bin_env=None, cwd=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append("--version")
 
+    # TODO: FIXME -W. Werner, 2020-06-23
     ret = __salt__["cmd.run_all"](cmd, cwd=cwd, python_shell=False)
     if ret["retcode"]:
         raise CommandNotFoundError("Could not find a `pip` binary")
@@ -1517,7 +1518,7 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, runas=user, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
     errors = False
