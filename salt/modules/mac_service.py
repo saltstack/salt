@@ -605,7 +605,7 @@ def enabled(name, runas=None):
     """
     # There isn't a direct way to get enabled, but if its not disabled
     # then its enabled or capa
-    return not __salt__["service.disabled"](name, runas)
+    return not disabled(name, runas)
 
 
 def disabled(name, runas=None, domain="system"):
@@ -628,6 +628,7 @@ def disabled(name, runas=None, domain="system"):
 
         salt '*' service.disabled org.cups.cupsd
     """
+    domain = _get_domain_target(name, service_target=True)[0]
 
     disabled = launchctl("print-disabled", domain, return_stdout=True, runas=runas)
     for service in disabled.split("\n"):
