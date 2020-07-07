@@ -1477,3 +1477,25 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 cwd=None,
                 use_vt=False,
             )
+
+    # TODO: When we switch to pytest, parameterize the user - None and fnord should be enough, maybe a 3rd user -W. Werner, 2020-07-07
+    def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_runas(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-new-pip"],
+        ):
+            pip.version(user=expected_user)
+            print(fake_run_all.mock_calls)
+            fake_run_all.assert_called_with(
+                ["some-new-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )
