@@ -638,7 +638,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_type": "failover",
                 "master": ["master1", "master2"],
                 "__role": "",
-                "dns_retry": 0,
+                "retry_dns": 0,
             }
         )
 
@@ -678,7 +678,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_type": "failover",
                 "master": ["master1", "master2"],
                 "__role": "",
-                "dns_retry": 0,
+                "retry_dns": 0,
             }
         )
 
