@@ -2074,6 +2074,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
+            # parsing out the epoch, since cli-yum doesn't like it in the version
+            pkg_params[target] = pkg_params[target].split(":")[-1]
             targets.append("{0}-{1}{2}".format(pkgname, pkg_params[target], arch))
     if not targets:
         return {}
