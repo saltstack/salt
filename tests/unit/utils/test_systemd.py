@@ -47,7 +47,7 @@ class SystemdTestCase(TestCase):
 
     def test_has_systemd_support_file_not_found_error(self):
         with patch(
-            "subprocess.check_output", sside_effect=FileNotFoundError
+            "subprocess.check_output", side_effect=FileNotFoundError
         ) as check_output:
             self.assertFalse(_systemd._has_systemd_support())
             check_output.assert_called_once()
