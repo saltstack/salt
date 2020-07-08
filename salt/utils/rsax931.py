@@ -30,7 +30,6 @@ def _find_libcrypto():
     Find the path (or return the short name) of libcrypto.
     """
     if sys.platform.startswith("win"):
-        # cdll.LoadLibrary on windows requires a 'str' argument
         lib = "libeay32"
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
