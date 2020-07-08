@@ -235,7 +235,7 @@ def claim_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibly! pidfile: {}".format(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
                 file_name
             )
         )
@@ -252,7 +252,7 @@ def claim_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile:{} is corrupted".format(file_name))
+        log.error("pidfile: {} is corrupted".format(file_name))
     except FileNotFoundError:
         log.info("pidfile: {} not found".format(file_name))
 
@@ -284,7 +284,7 @@ def check_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibly! pidfile: {}".format(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
                 file_name
             )
         )
@@ -295,7 +295,7 @@ def check_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile:{} is corrupted".format(file_name))
+        log.error("pidfile: {} is corrupted".format(file_name))
         return
     except FileNotFoundError:
         log.info("pidfile: {} not found".format(file_name))
