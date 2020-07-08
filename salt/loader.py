@@ -1260,8 +1260,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_order.append(suffix)
 
         self._lock = threading.RLock()
-        with self._lock:
-            self._refresh_file_mapping()
 
         super(LazyLoader, self).__init__()  # late init the lazy loader
         # create all of the import namespaces
@@ -1497,10 +1495,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.loaded_files = set()
             self.missing_modules = {}
             self.loaded_modules = {}
-            # if we have been loaded before, lets clear the file mapping since
-            # we obviously want a re-do
-            if hasattr(self, "opts"):
-                self._refresh_file_mapping()
+            self._refresh_file_mapping()
             self.initial_load = False
 
     def __prep_mod_opts(self, opts):
