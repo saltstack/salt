@@ -409,7 +409,7 @@ def mount(name=None, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -433,13 +433,13 @@ def mount(name=None, **kwargs):
     if name in [None, "-a"]:
         # NOTE: the new way to mount all filesystems is to have name
         #       set to ```None```. We still accept the old '-a' until
-        #       Sodium. After Sodium we can update the if statement
+        #       3001. After 3001 we can update the if statement
         #       to ```if not name:```
         if name == "-a":
             salt.utils.versions.warn_until(
                 "Sodium",
                 "Passing '-a' as name is deprecated as of Salt 2019.2.0. This "
-                "warning will be removed in Salt Sodium. Please pass name as "
+                "warning will be removed in Salt 3001. Please pass name as "
                 "'None' instead to mount all filesystems.",
             )
         flags.append("-a")
@@ -474,7 +474,7 @@ def unmount(name, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -492,7 +492,7 @@ def unmount(name, **kwargs):
         flags.append("-f")
     if name in [None, "-a"]:
         # NOTE: still accept '-a' as name for backwards compatibility
-        #       until Salt Sodium this should just simplify
+        #       until Salt 3001 this should just simplify
         #       this to just set '-a' if name is not set.
         flags.append("-a")
         name = None
@@ -913,7 +913,7 @@ def hold(tag, *snapshot, **kwargs):
         salt.utils.versions.warn_until(
             "Sodium",
             "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
+            "This warning will be removed in Salt 3001.",
         )
 
     ## Configure command
@@ -978,7 +978,7 @@ def release(tag, *snapshot, **kwargs):
         salt.utils.versions.warn_until(
             "Sodium",
             "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
+            "This warning will be removed in Salt 3001.",
         )
 
     ## Configure command

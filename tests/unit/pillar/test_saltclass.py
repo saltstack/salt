@@ -1,30 +1,13 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.pillar.saltclass as saltclass
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-base_path = os.path.dirname(os.path.realpath(__file__))
-fake_minion_id = "fake_id"
-fake_pillar = {}
-fake_args = {
-    "path": os.path.abspath(
-        os.path.join(
-            base_path, "..", "..", "integration", "files", "saltclass", "examples"
-        )
-    )
-}
-fake_opts = {}
-fake_salt = {}
-fake_grains = {}
 
 
 class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
@@ -33,15 +16,16 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            saltclass: {
-                "__opts__": fake_opts,
-                "__salt__": fake_salt,
-                "__grains__": fake_grains,
-            }
-        }
+        return {saltclass: {}}
 
     def _runner(self, expected_ret):
+        fake_args = {
+            "path": os.path.abspath(
+                os.path.join(RUNTIME_VARS.FILES, "saltclass", "examples")
+            )
+        }
+        fake_pillar = {}
+        fake_minion_id = "fake_id"
         try:
             full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
             parsed_ret = full_ret["__saltclass__"]["classes"]
@@ -49,10 +33,17 @@ class SaltclassPillarTestCase(TestCase, LoaderModuleMockMixin):
         except TypeError as err:
             self.fail(err)
         # Else give the parsed content result
-        self.assertListEqual(parsed_ret, expected_ret)
+        self.assertListEqual(expected_ret, parsed_ret)
 
     def test_succeeds(self):
-        ret = ["default.users", "default.motd", "default.empty", "default", "roles.app"]
+        ret = [
+            "default.users",
+            "default.motd",
+            "default.empty",
+            "default",
+            "roles.app",
+            "roles.nginx",
+        ]
         self._runner(ret)
 
 
@@ -62,17 +53,18 @@ class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            saltclass: {
-                "__opts__": fake_opts,
-                "__salt__": fake_salt,
-                "__grains__": fake_grains,
-            }
-        }
+        return {saltclass: {}}
 
     def _runner(self, expected_ret):
         full_ret = {}
         parsed_ret = []
+        fake_args = {
+            "path": os.path.abspath(
+                os.path.join(RUNTIME_VARS.FILES, "saltclass", "examples")
+            )
+        }
+        fake_pillar = {}
+        fake_minion_id = "fake_id"
         try:
             full_ret = saltclass.ext_pillar(fake_minion_id, fake_pillar, fake_args)
             parsed_ret = full_ret["test_list"]
@@ -80,7 +72,7 @@ class SaltclassPillarTestCaseListExpansion(TestCase, LoaderModuleMockMixin):
         except TypeError as err:
             self.fail(err)
         # Else give the parsed content result
-        self.assertListEqual(parsed_ret, expected_ret)
+        self.assertListEqual(expected_ret, parsed_ret)
 
     def test_succeeds(self):
         ret = [{"a": "192.168.10.10"}, "192.168.10.20"]

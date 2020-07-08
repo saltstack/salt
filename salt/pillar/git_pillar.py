@@ -370,7 +370,7 @@ remotes. The update is handled within the global loop, hence
 fallback
 ~~~~~~~~
 
-.. versionadded:: sodium
+.. versionadded:: 3001
 
 Setting ``fallback`` per-remote or global configuration parameter will map non-existing environments to a default branch. Example:
 

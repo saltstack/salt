@@ -4,8 +4,11 @@ Win System Utils
 
 Functions shared with salt.modules.win_system and salt.grains.pending_reboot
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 """
+# NOTE: DO NOT USE RAW STRINGS IN THIS MODULE! UNICODE_LITERALS DOES NOT PLAY
+# NICELY WITH RAW STRINGS CONTAINING \u or \U.
+
 # When production windows installer is using Python 3, Python 2 code can be removed
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -30,7 +33,7 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "win_system"
-MINION_VOLATILE_KEY = r"SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data"
+MINION_VOLATILE_KEY = "SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data"
 REBOOT_REQUIRED_NAME = "Reboot required"
 
 
@@ -58,7 +61,7 @@ def get_computer_name():
     Get the Windows computer name. Uses the win32api to get the current computer
     name.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         str: Returns the computer name if found. Otherwise returns ``False``.
@@ -82,7 +85,7 @@ def get_pending_computer_name():
     retrieving the pending computer name, ``False`` will be returned, and an
     error message will be logged to the minion log.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         str:
@@ -100,7 +103,7 @@ def get_pending_computer_name():
     try:
         pending = salt.utils.win_reg.read_value(
             hive="HKLM",
-            key=r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters",
+            key="SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters",
             vname="NV Hostname",
         )["vdata"]
     except TypeError:
@@ -112,17 +115,17 @@ def get_pending_computer_name():
 
 
 def get_pending_component_servicing():
-    r"""
+    """
     Determine whether there are pending Component Based Servicing tasks that
     require a reboot.
 
     If any the following registry keys exist then a reboot is pending:
 
-    ``HKLM:\\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending``
-    ``HKLM:\\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress``
-    ``HKLM:\\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\PackagesPending``
+    ``HKLM:\\\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending``
+    ``HKLM:\\\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootInProgress``
+    ``HKLM:\\\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\PackagesPending``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending Component Based Servicing tasks,
@@ -136,22 +139,22 @@ def get_pending_component_servicing():
     """
     # So long as the registry key exists, a reboot is pending
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based "
-        r"Servicing\RebootPending"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based "
+        "Servicing\\RebootPending"
     )
     if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
         return True
 
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based "
-        r"Servicing\RebootInProgress"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based "
+        "Servicing\\RebootInProgress"
     )
     if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
         return True
 
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based "
-        r"Servicing\PackagesPending"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based "
+        "Servicing\\PackagesPending"
     )
     if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
         return True
@@ -160,16 +163,16 @@ def get_pending_component_servicing():
 
 
 def get_pending_domain_join():
-    r"""
+    """
     Determine whether there is a pending domain join action that requires a
     reboot.
 
     If any the following registry keys exist then a reboot is pending:
 
-    ``HKLM:\\SYSTEM\CurrentControlSet\Services\Netlogon\AvoidSpnSet``
-    ``HKLM:\\SYSTEM\CurrentControlSet\Services\Netlogon\JoinDomain``
+    ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\AvoidSpnSet``
+    ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\Netlogon\\JoinDomain``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there is a pending domain join action, otherwise
@@ -182,9 +185,9 @@ def get_pending_domain_join():
         import salt.utils.win_system
         salt.utils.win_system.get_pending_domain_join()
     """
-    base_key = r"SYSTEM\CurrentControlSet\Services\Netlogon"
-    avoid_key = r"{0}\AvoidSpnSet".format(base_key)
-    join_key = r"{0}\JoinDomain".format(base_key)
+    base_key = "SYSTEM\\CurrentControlSet\\Services\\Netlogon"
+    avoid_key = "{0}\\AvoidSpnSet".format(base_key)
+    join_key = "{0}\\JoinDomain".format(base_key)
 
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
@@ -198,7 +201,7 @@ def get_pending_domain_join():
 
 
 def get_pending_file_rename():
-    r"""
+    """
     Determine whether there are pending file rename operations that require a
     reboot.
 
@@ -210,9 +213,9 @@ def get_pending_file_rename():
 
     in the following registry key:
 
-    ``HKLM:\\SYSTEM\CurrentControlSet\Control\Session Manager``
+    ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Control\\Session Manager``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending file rename operations, otherwise
@@ -226,7 +229,7 @@ def get_pending_file_rename():
         salt.utils.win_system.get_pending_file_rename()
     """
     vnames = ("PendingFileRenameOperations", "PendingFileRenameOperations2")
-    key = r"SYSTEM\CurrentControlSet\Control\Session Manager"
+    key = "SYSTEM\\CurrentControlSet\\Control\\Session Manager"
     for vname in vnames:
         reg_ret = salt.utils.win_reg.read_value(hive="HKLM", key=key, vname=vname)
         if reg_ret["success"]:
@@ -236,16 +239,16 @@ def get_pending_file_rename():
 
 
 def get_pending_servermanager():
-    r"""
+    """
     Determine whether there are pending Server Manager tasks that require a
     reboot.
 
     A reboot is pending if the ``CurrentRebootAttempts`` value name exists and
     has an integer value. The value name resides in the following registry key:
 
-    ``HKLM:\\SOFTWARE\Microsoft\ServerManager``
+    ``HKLM:\\\\SOFTWARE\\Microsoft\\ServerManager``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there are pending Server Manager tasks, otherwise
@@ -259,7 +262,7 @@ def get_pending_servermanager():
         salt.utils.win_system.get_pending_servermanager()
     """
     vname = "CurrentRebootAttempts"
-    key = r"SOFTWARE\Microsoft\ServerManager"
+    key = "SOFTWARE\\Microsoft\\ServerManager"
 
     # There are situations where it's possible to have '(value not set)' as
     # the value data, and since an actual reboot won't be pending in that
@@ -276,15 +279,15 @@ def get_pending_servermanager():
 
 
 def get_pending_dvd_reboot():
-    r"""
+    """
     Determine whether the DVD Reboot flag is set.
 
     The system requires a reboot if the ``DVDRebootSignal`` value name exists
     at the following registry location:
 
-    ``HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce``
+    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the above condition is met, otherwise ``False``
@@ -299,26 +302,26 @@ def get_pending_dvd_reboot():
     # So long as the registry key exists, a reboot is pending.
     return salt.utils.win_reg.value_exists(
         hive="HKLM",
-        key=r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+        key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
         vname="DVDRebootSignal",
     )
 
 
 def get_pending_update():
-    r"""
+    """
     Determine whether there are pending updates that require a reboot.
 
     If either of the following registry keys exists, a reboot is pending:
 
-    ``HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired``
-    ``HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting``
+    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired``
+    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\PostRebootReporting``
 
     If there are any subkeys under the following registry key, a reboot is
     pending:
 
-    ``HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending``
+    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Services\\Pending``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if any of the above conditions are met, otherwise
@@ -333,22 +336,23 @@ def get_pending_update():
     """
     # So long as the registry key exists, a reboot is pending.
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto "
-        r"Update\RebootRequired"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto "
+        "Update\\RebootRequired"
     )
     if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
         return True
 
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto "
-        r"Update\PostRebootReporting"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto "
+        "Update\\PostRebootReporting"
     )
     if salt.utils.win_reg.key_exists(hive="HKLM", key=key):
         return True
 
     # So long as the registry key has subkeys, a reboot is pending.
     key = (
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services" r"\Pending"
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Services"
+        "\\Pending"
     )
     list_keys = salt.utils.win_reg.list_keys(hive="HKLM", key=key)
     if len(list_keys) > 0:
@@ -358,7 +362,7 @@ def get_pending_update():
 
 
 def get_reboot_required_witnessed():
-    r"""
+    """
     Determine if at any time during the current boot session the salt minion
     witnessed an event indicating that a reboot is required.
 
@@ -369,9 +373,9 @@ def get_reboot_required_witnessed():
     If the ``Reboot required`` value name exists in the following location and
     has a value of ``1`` then the system is pending reboot:
 
-    ``HKLM:\\SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data``
+    ``HKLM:\\\\SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data``
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the ``Requires reboot`` registry flag is set to ``1``,
@@ -392,7 +396,7 @@ def get_reboot_required_witnessed():
 
 
 def set_reboot_required_witnessed():
-    r"""
+    """
     This function is used to remember that an event indicating that a reboot is
     required was witnessed. This function relies on the salt-minion's ability to
     create the following volatile registry key in the *HKLM* hive:
@@ -407,7 +411,7 @@ def set_reboot_required_witnessed():
     completes with exit code 3010 and can be extended where appropriate in the
     future.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -430,13 +434,13 @@ def set_reboot_required_witnessed():
 
 
 def get_pending_update_exe_volatile():
-    r"""
+    """
     Determine whether there is a volatile update exe that requires a reboot.
 
-    Checks ``HKLM:\Microsoft\Updates``. If the ``UpdateExeVolatile`` value name
+    Checks ``HKLM:\\Microsoft\\Updates``. If the ``UpdateExeVolatile`` value name
     is anything other than 0 there is a reboot pending
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if there is a volatile exe, otherwise ``False``
@@ -448,7 +452,7 @@ def get_pending_update_exe_volatile():
         import salt.utils.win_system
         salt.utils.win_system.get_pending_update_exe_volatile()
     """
-    key = r"SOFTWARE\Microsoft\Updates"
+    key = "SOFTWARE\\Microsoft\\Updates"
     reg_ret = salt.utils.win_reg.read_value(
         hive="HKLM", key=key, vname="UpdateExeVolatile"
     )
@@ -468,7 +472,7 @@ def get_pending_windows_update():
     This leverages the Windows Update System to determine if the system is
     pending a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the Windows Update system reports a pending update,
@@ -488,7 +492,7 @@ def get_pending_reboot():
     """
     Determine whether there is a reboot pending.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the system is pending reboot, otherwise ``False``
@@ -526,7 +530,7 @@ def get_pending_reboot_details():
     Determine which check is signalling that the system is pending a reboot.
     Useful in determining why your system is signalling that it needs a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         dict: A dictionary of the results of each function that checks for a

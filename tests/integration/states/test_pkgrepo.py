@@ -23,6 +23,7 @@ from tests.support.helpers import (
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
+    slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
@@ -82,7 +83,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkgrepo_03_with_comments(self, grains):
         """
         Test adding a repo with comments
@@ -135,7 +136,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_salt_states("pkgrepo.managed")
     @requires_system_grains
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         """
         Test managing a repo with architectures specified

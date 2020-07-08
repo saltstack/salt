@@ -2,7 +2,6 @@
 """
 Tests for the file state
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
@@ -12,18 +11,13 @@ import tempfile
 import textwrap
 import time
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
-
-# Import 3rd-party libs
 from salt.ext import six
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class CMDTest(ModuleCase, SaltReturnAssertsMixin):
@@ -114,7 +108,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 pass
         super(CMDRunRedirectTest, self).tearDown()
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_unless(self):
         """
         test cmd.run unless
@@ -138,7 +132,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", [self.state_name])
         self.assertTrue(ret[state_key]["result"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_unless_multiple_cmds(self):
         """
         test cmd.run using multiple unless options where the first cmd in the
@@ -157,7 +151,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             'Command "echo "hello"" run',
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_creates_exists(self):
         """
         test cmd.run creates already there
@@ -182,7 +176,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret[state_key]["result"])
         self.assertEqual(len(ret[state_key]["changes"]), 0)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_creates_new(self):
         """
         test cmd.run creates not there
@@ -208,7 +202,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(ret[state_key]["result"])
         self.assertEqual(len(ret[state_key]["changes"]), 4)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_run_redirect(self):
         """
         test cmd.run with shell redirect

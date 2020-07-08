@@ -486,7 +486,7 @@ def setup_extended_logging(opts):
 
 def get_multiprocessing_logging_queue():
     global __MP_LOGGING_QUEUE
-    from salt.utils.platform import is_darwin
+    from salt.utils.platform import is_darwin, is_aix
 
     if __MP_LOGGING_QUEUE is not None:
         return __MP_LOGGING_QUEUE
@@ -496,7 +496,7 @@ def get_multiprocessing_logging_queue():
         return __MP_LOGGING_QUEUE
 
     if __MP_LOGGING_QUEUE is None:
-        if is_darwin():
+        if is_darwin() or is_aix():
             __MP_LOGGING_QUEUE = multiprocessing.Queue(32767)
         else:
             __MP_LOGGING_QUEUE = multiprocessing.Queue(100000)

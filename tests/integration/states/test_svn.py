@@ -3,8 +3,6 @@
 """
 Tests for the SVN state
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -12,11 +10,9 @@ import shutil
 import socket
 
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class SvnTest(ModuleCase, SaltReturnAssertsMixin):
@@ -49,7 +45,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         # Reset the dns timeout after the test is over
         socket.setdefaulttimeout(None)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_latest(self):
         """
         svn.latest
@@ -62,7 +58,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltStateChangesEqual(ret, self.name, keys=["new"])
         self.assertSaltStateChangesEqual(ret, self.new_rev, keys=["revision"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_latest_failure(self):
         """
         svn.latest
@@ -76,7 +72,7 @@ class SvnTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         self.assertFalse(os.path.isdir(os.path.join(self.target, ".svn")))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_latest_empty_dir(self):
         """
         svn.latest
