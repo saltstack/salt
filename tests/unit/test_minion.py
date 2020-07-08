@@ -668,7 +668,6 @@ class MinionAsyncTestCase(
         """
         Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
         """
-
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts.update(
             {
@@ -713,7 +712,6 @@ class MinionAsyncTestCase(
         """
         Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
         """
-
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts.update(
             {
