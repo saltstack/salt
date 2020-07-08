@@ -70,6 +70,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
+from salt.utils.systemd import HAS_SYSTEMD
 
 SYSTEMD_ONLY = ("no_block", "unmask", "unmask_runtime")
 
@@ -98,13 +99,13 @@ def _get_systemd_only(func, kwargs):
     warnings = []
     valid_args = _argspec(func).args
     for systemd_arg in SYSTEMD_ONLY:
-        if systemd_arg in kwargs:
-            if systemd_arg in valid_args:
+        if systemd_arg in kwargs and systemd_arg in valid_args:
+            if HAS_SYSTEMD:
                 ret[systemd_arg] = kwargs[systemd_arg]
             else:
                 warnings.append(
                     "The '{0}' argument is not supported by this "
-                    "platform/action".format(systemd_arg)
+                    "platform".format(systemd_arg)
                 )
     return ret, warnings
 
