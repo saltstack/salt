@@ -55,6 +55,7 @@ def gen_password():
 @requires_salt_modules("shadow.set_password")
 @skip_if_not_root
 @skipIf(pwd is None or grp is None, "No pwd or grp module available")
+@skipIf("CentOS Linux" in salt.utils.platform.linux_distribution(), "Fails on Centos8")
 @destructiveTest
 @pytest.mark.windows_whitelisted
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
