@@ -31,7 +31,7 @@ def _find_libcrypto():
     """
     if sys.platform.startswith("win"):
         # cdll.LoadLibrary on windows requires a 'str' argument
-        lib = str("libeay32")
+        lib = "libeay32"
     elif salt.utils.platform.is_darwin():
         # will look for several different location on the system,
         # Search in the following order. salts pkg, homebrew, macports, finnally
