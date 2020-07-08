@@ -663,6 +663,7 @@ class MinionAsyncTestCase(
                 result = False
         self.assertTrue(result)
 
+    @salt.ext.tornado.testing.gen_test
     def test_master_type_failover(self):
         """
         Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
@@ -704,8 +705,10 @@ class MinionAsyncTestCase(
             "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
         ), patch("salt.loader.grains", MagicMock(return_value=[])):
             with self.assertRaises(SaltClientError, msg="MockedChannel"):
-                minion = salt.minion.SMinion(mock_opts)
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
 
+    @salt.ext.tornado.testing.gen_test
     def test_master_type_failover_no_masters(self):
         """
         Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
@@ -729,4 +732,5 @@ class MinionAsyncTestCase(
             "salt.loader.grains", MagicMock(return_value=[])
         ):
             with self.assertRaises(SaltClientError, msg="No master could be resolved"):
-                minion = salt.minion.SMinion(mock_opts)
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
