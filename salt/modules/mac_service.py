@@ -510,7 +510,7 @@ def status(name, sig=None, runas=None):
     if not runas and _launch_agent(name):
         runas = __utils__["mac_utils.console_user"](username=True)
 
-    output = list_(runas=runas)
+    output = __salt__["service.list"](runas=runas)
 
     # Used a string here instead of a list because that's what the linux version
     # of this module does
@@ -605,7 +605,7 @@ def enabled(name, runas=None):
     """
     # There isn't a direct way to get enabled, but if its not disabled
     # then its enabled or capa
-    return not disabled(name, runas)
+    return not __salt__["service.disabled"](name, runas)
 
 
 def disabled(name, runas=None, domain="system"):
@@ -721,7 +721,7 @@ def loaded(name, runas=None):
     """
     # Try to list the service.  If it can't be listed, it's not enabled
     try:
-        list_(name=name, runas=runas)
+        __salt__["service.list"](name=name, runas=runas)
         return True
     except CommandExecutionError:
         return False
