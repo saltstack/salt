@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Environment utilities.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os
 
 
 def get_module_environment(env=None, function=None):
-    '''
+    """
     Get module optional environment.
 
     To setup an environment option for a particular module,
@@ -42,24 +43,34 @@ def get_module_environment(env=None, function=None):
     :param env:
     :param function: name of a particular function
     :return: dict
-    '''
+    """
     result = {}
     if not env:
         env = {}
-    for env_src in [env.get('__opts__', {}), env.get('__pillar__', {})]:
-        fname = env.get('__file__', '')
-        physical_name = os.path.basename(fname).split('.')[0]
+    for env_src in [env.get("__opts__", {}), env.get("__pillar__", {})]:
+        fname = env.get("__file__", "")
+        physical_name = os.path.basename(fname).split(".")[0]
         section = os.path.basename(os.path.dirname(fname))
-        m_names = [env.get('__virtualname__')]
+        m_names = [env.get("__virtualname__")]
         if physical_name not in m_names:
             m_names.append(physical_name)
         for m_name in m_names:
             if not m_name:
                 continue
-            result.update(env_src.get('system-environment', {}).get(
-                section, {}).get(m_name, {}).get('_', {}).copy())
+            result.update(
+                env_src.get("system-environment", {})
+                .get(section, {})
+                .get(m_name, {})
+                .get("_", {})
+                .copy()
+            )
             if function is not None:
-                result.update(env_src.get('system-environment', {}).get(
-                    section, {}).get(m_name, {}).get(function, {}).copy())
+                result.update(
+                    env_src.get("system-environment", {})
+                    .get(section, {})
+                    .get(m_name, {})
+                    .get(function, {})
+                    .copy()
+                )
 
     return result

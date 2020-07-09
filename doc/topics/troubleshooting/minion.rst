@@ -17,7 +17,7 @@ Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
 `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
-.. _`monit`: http://mmonit.com/monit/
+.. _`monit`: https://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
 .. _`supervisord`: http://supervisord.org/
 
@@ -64,10 +64,10 @@ check that no additional access control system such as `SELinux`_ or
 to determine if an intermediate device or firewall is blocking the needed
 TCP ports.
 
-.. _`Nmap`: http://nmap.org/
+.. _`Nmap`: https://nmap.org/
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
-.. _`tcptraceroute`: http://linux.die.net/man/1/tcptraceroute
+.. _`AppArmor`: https://gitlab.com/apparmor/apparmor/-/wikis/home
+.. _`tcptraceroute`: https://linux.die.net/man/1/tcptraceroute
 
 .. _troubleshooting-minion-salt-call:
 

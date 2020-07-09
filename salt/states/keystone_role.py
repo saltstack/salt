@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of OpenStack Keystone Roles
 ======================================
 
@@ -24,21 +24,24 @@ Example States
       keystone_role.present:
         - name: role1
         - description: 'my group'
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
-__virtualname__ = 'keystone_role'
+__virtualname__ = "keystone_role"
 
 
 def __virtual__():
-    if 'keystoneng.role_get' in __salt__:
+    if "keystoneng.role_get" in __salt__:
         return __virtualname__
-    return (False, 'The keystoneng execution module failed to load: shade python module is not available')
+    return (
+        False,
+        "The keystoneng execution module failed to load: shade python module is not available",
+    )
 
 
 def present(name, auth=None, **kwargs):
-    '''
+    """
     Ensure an role exists
 
     name
@@ -46,61 +49,55 @@ def present(name, auth=None, **kwargs):
 
     description
         An arbitrary description of the role
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    __salt__['keystoneng.setup_clouds'](auth)
+    __salt__["keystoneng.setup_clouds"](auth)
 
-    kwargs['name'] = name
-    role = __salt__['keystoneng.role_get'](**kwargs)
+    kwargs["name"] = name
+    role = __salt__["keystoneng.role_get"](**kwargs)
 
     if not role:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = kwargs
-            ret['comment'] = 'Role will be created.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = kwargs
+            ret["comment"] = "Role will be created."
             return ret
 
-        role = __salt__['keystoneng.role_create'](**kwargs)
-        ret['changes']['id'] = role.id
-        ret['changes']['name'] = role.name
-        ret['comment'] = 'Created role'
+        role = __salt__["keystoneng.role_create"](**kwargs)
+        ret["changes"]["id"] = role.id
+        ret["changes"]["name"] = role.name
+        ret["comment"] = "Created role"
         return ret
     # NOTE(SamYaple): Update support pending https://review.openstack.org/#/c/496992/
     return ret
 
 
 def absent(name, auth=None, **kwargs):
-    '''
+    """
     Ensure role does not exist
 
     name
         Name of the role
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    __salt__['keystoneng.setup_clouds'](auth)
+    __salt__["keystoneng.setup_clouds"](auth)
 
-    kwargs['name'] = name
-    role = __salt__['keystoneng.role_get'](**kwargs)
+    kwargs["name"] = name
+    role = __salt__["keystoneng.role_get"](**kwargs)
 
     if role:
-        if __opts__['test'] is True:
-            ret['result'] = None
-            ret['changes'] = {'id': role.id}
-            ret['comment'] = 'Role will be deleted.'
+        if __opts__["test"] is True:
+            ret["result"] = None
+            ret["changes"] = {"id": role.id}
+            ret["comment"] = "Role will be deleted."
             return ret
 
-        __salt__['keystoneng.role_delete'](name=role)
-        ret['changes']['id'] = role.id
-        ret['comment'] = 'Deleted role'
+        __salt__["keystoneng.role_delete"](name=role)
+        ret["changes"]["id"] = role.id
+        ret["comment"] = "Deleted role"
 
     return ret

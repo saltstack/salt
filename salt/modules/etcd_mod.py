@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Execution module to work with etcd
 
 :depends:  - python-etcd
@@ -35,46 +35,46 @@ or clusters are available.
     as this makes all master configuration settings available in all minion's
     pillars.
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import third party libs
 try:
     import salt.utils.etcd_util  # pylint: disable=W0611
+
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
-__virtualname__ = 'etcd'
+__virtualname__ = "etcd"
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 
 # Define a function alias in order not to shadow built-in's
-__func_alias__ = {
-    'get_': 'get',
-    'set_': 'set',
-    'rm_': 'rm',
-    'ls_': 'ls'
-}
+__func_alias__ = {"get_": "get", "set_": "set", "rm_": "rm", "ls_": "ls"}
 
 
 def __virtual__():
-    '''
+    """
     Only return if python-etcd is installed
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The etcd_mod execution module cannot be loaded: '
-            'python etcd library not available.')
+    return (
+        False,
+        "The etcd_mod execution module cannot be loaded: "
+        "python etcd library not available.",
+    )
 
 
 def get_(key, recurse=False, profile=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2014.7.0
 
     Get a value from etcd, by direct path.  Returns None on failure.
@@ -87,8 +87,8 @@ def get_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.get /path/to/key profile=my_etcd_config
         salt myminion etcd.get /path/to/key recurse=True profile=my_etcd_config
         salt myminion etcd.get /path/to/key host=127.0.0.1 port=2379
-    '''
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    """
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     if recurse:
         return client.tree(key)
     else:
@@ -96,7 +96,7 @@ def get_(key, recurse=False, profile=None, **kwargs):
 
 
 def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
-    '''
+    """
     .. versionadded:: 2014.7.0
 
     Set a key in etcd by direct path. Optionally, create a directory
@@ -111,14 +111,14 @@ def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
         salt myminion etcd.set /path/to/key value host=127.0.0.1 port=2379
         salt myminion etcd.set /path/to/dir '' directory=True
         salt myminion etcd.set /path/to/key value ttl=5
-    '''
+    """
 
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.set(key, value, ttl=ttl, directory=directory)
 
 
-def update(fields, path='', profile=None, **kwargs):
-    '''
+def update(fields, path="", profile=None, **kwargs):
+    """
     .. versionadded:: 2016.3.0
 
     Sets a dictionary of values in one call.  Useful for large updates
@@ -166,13 +166,13 @@ def update(fields, path='', profile=None, **kwargs):
         salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" profile=my_etcd_config
         salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" host=127.0.0.1 port=2379
         salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" path='/some/root'
-    '''
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    """
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.update(fields, path)
 
 
 def watch(key, recurse=False, profile=None, timeout=0, index=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Makes a best effort to watch for a key or tree change in etcd.
@@ -190,14 +190,14 @@ def watch(key, recurse=False, profile=None, timeout=0, index=None, **kwargs):
         salt myminion etcd.watch /path/to/key timeout=10
         salt myminion etcd.watch /patch/to/key profile=my_etcd_config index=10
         salt myminion etcd.watch /patch/to/key host=127.0.0.1 port=2379
-    '''
+    """
 
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.watch(key, recurse=recurse, timeout=timeout, index=index)
 
 
-def ls_(path='/', profile=None, **kwargs):
-    '''
+def ls_(path="/", profile=None, **kwargs):
+    """
     .. versionadded:: 2014.7.0
 
     Return all keys and dirs inside a specific path. Returns an empty dict on
@@ -211,13 +211,13 @@ def ls_(path='/', profile=None, **kwargs):
         salt myminion etcd.ls /path/to/dir/
         salt myminion etcd.ls /path/to/dir/ profile=my_etcd_config
         salt myminion etcd.ls /path/to/dir/ host=127.0.0.1 port=2379
-    '''
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    """
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.ls(path)
 
 
 def rm_(key, recurse=False, profile=None, **kwargs):
-    '''
+    """
     .. versionadded:: 2014.7.0
 
     Delete a key from etcd.  Returns True if the key was deleted, False if it was
@@ -232,13 +232,13 @@ def rm_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.rm /path/to/key profile=my_etcd_config
         salt myminion etcd.rm /path/to/key host=127.0.0.1 port=2379
         salt myminion etcd.rm /path/to/dir recurse=True profile=my_etcd_config
-    '''
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    """
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.rm(key, recurse=recurse)
 
 
-def tree(path='/', profile=None, **kwargs):
-    '''
+def tree(path="/", profile=None, **kwargs):
+    """
     .. versionadded:: 2014.7.0
 
     Recurse through etcd and return all values.  Returns None on failure.
@@ -252,6 +252,6 @@ def tree(path='/', profile=None, **kwargs):
         salt myminion etcd.tree profile=my_etcd_config
         salt myminion etcd.tree host=127.0.0.1 port=2379
         salt myminion etcd.tree /path/to/keys profile=my_etcd_config
-    '''
-    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    """
+    client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.tree(path)

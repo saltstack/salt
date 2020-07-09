@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for handling OpenStack Neutron calls
 
 :depends:   - neutronclient Python module
@@ -63,15 +63,17 @@ Module for handling OpenStack Neutron calls
     specify the `verify` option. You can specify True or False to verify (or not)
     against system certificates, a path to a bundle or CA certs to check against, or
     None to allow keystoneauth to search for the certificates on its own.(defaults to True)
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
 try:
     import salt.utils.openstack.neutron as suoneu
+
     HAS_NEUTRON = True
 except NameError as exc:
     HAS_NEUTRON = False
@@ -80,16 +82,14 @@ except NameError as exc:
 log = logging.getLogger(__name__)
 
 # Function alias to not shadow built-ins
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if neutron
     is installed on this minion.
-    '''
+    """
     return HAS_NEUTRON
 
 
@@ -97,64 +97,64 @@ __opts__ = {}
 
 
 def _auth(profile=None):
-    '''
+    """
     Set up neutron credentials
-    '''
+    """
     if profile:
-        credentials = __salt__['config.option'](profile)
-        user = credentials['keystone.user']
-        password = credentials['keystone.password']
-        tenant = credentials['keystone.tenant']
-        auth_url = credentials['keystone.auth_url']
-        region_name = credentials.get('keystone.region_name', None)
-        service_type = credentials.get('keystone.service_type', 'network')
-        os_auth_system = credentials.get('keystone.os_auth_system', None)
-        use_keystoneauth = credentials.get('keystone.use_keystoneauth', False)
-        verify = credentials.get('keystone.verify', True)
+        credentials = __salt__["config.option"](profile)
+        user = credentials["keystone.user"]
+        password = credentials["keystone.password"]
+        tenant = credentials["keystone.tenant"]
+        auth_url = credentials["keystone.auth_url"]
+        region_name = credentials.get("keystone.region_name", None)
+        service_type = credentials.get("keystone.service_type", "network")
+        os_auth_system = credentials.get("keystone.os_auth_system", None)
+        use_keystoneauth = credentials.get("keystone.use_keystoneauth", False)
+        verify = credentials.get("keystone.verify", True)
     else:
-        user = __salt__['config.option']('keystone.user')
-        password = __salt__['config.option']('keystone.password')
-        tenant = __salt__['config.option']('keystone.tenant')
-        auth_url = __salt__['config.option']('keystone.auth_url')
-        region_name = __salt__['config.option']('keystone.region_name')
-        service_type = __salt__['config.option']('keystone.service_type')
-        os_auth_system = __salt__['config.option']('keystone.os_auth_system')
-        use_keystoneauth = __salt__['config.option']('keystone.use_keystoneauth')
-        verify = __salt__['config.option']('keystone.verify')
+        user = __salt__["config.option"]("keystone.user")
+        password = __salt__["config.option"]("keystone.password")
+        tenant = __salt__["config.option"]("keystone.tenant")
+        auth_url = __salt__["config.option"]("keystone.auth_url")
+        region_name = __salt__["config.option"]("keystone.region_name")
+        service_type = __salt__["config.option"]("keystone.service_type")
+        os_auth_system = __salt__["config.option"]("keystone.os_auth_system")
+        use_keystoneauth = __salt__["config.option"]("keystone.use_keystoneauth")
+        verify = __salt__["config.option"]("keystone.verify")
 
     if use_keystoneauth is True:
-        project_domain_name = credentials['keystone.project_domain_name']
-        user_domain_name = credentials['keystone.user_domain_name']
+        project_domain_name = credentials["keystone.project_domain_name"]
+        user_domain_name = credentials["keystone.user_domain_name"]
 
         kwargs = {
-            'username': user,
-            'password': password,
-            'tenant_name': tenant,
-            'auth_url': auth_url,
-            'region_name': region_name,
-            'service_type': service_type,
-            'os_auth_plugin': os_auth_system,
-            'use_keystoneauth': use_keystoneauth,
-            'verify': verify,
-            'project_domain_name': project_domain_name,
-            'user_domain_name': user_domain_name
+            "username": user,
+            "password": password,
+            "tenant_name": tenant,
+            "auth_url": auth_url,
+            "region_name": region_name,
+            "service_type": service_type,
+            "os_auth_plugin": os_auth_system,
+            "use_keystoneauth": use_keystoneauth,
+            "verify": verify,
+            "project_domain_name": project_domain_name,
+            "user_domain_name": user_domain_name,
         }
     else:
         kwargs = {
-            'username': user,
-            'password': password,
-            'tenant_name': tenant,
-            'auth_url': auth_url,
-            'region_name': region_name,
-            'service_type': service_type,
-            'os_auth_plugin': os_auth_system
+            "username": user,
+            "password": password,
+            "tenant_name": tenant,
+            "auth_url": auth_url,
+            "region_name": region_name,
+            "service_type": service_type,
+            "os_auth_plugin": os_auth_system,
         }
 
     return suoneu.SaltNeutron(**kwargs)
 
 
 def get_quotas_tenant(profile=None):
-    '''
+    """
     Fetches tenant info in server's context for following quota operation
 
     CLI Example:
@@ -166,14 +166,14 @@ def get_quotas_tenant(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: Quotas information
-    '''
+    """
 
     conn = _auth(profile)
     return conn.get_quotas_tenant()
 
 
 def list_quotas(profile=None):
-    '''
+    """
     Fetches all tenants quotas
 
     CLI Example:
@@ -185,13 +185,13 @@ def list_quotas(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of quotas
-    '''
+    """
     conn = _auth(profile)
     return conn.list_quotas()
 
 
 def show_quota(tenant_id, profile=None):
-    '''
+    """
     Fetches information of a certain tenant's quotas
 
     CLI Example:
@@ -204,21 +204,23 @@ def show_quota(tenant_id, profile=None):
     :param tenant_id: ID of tenant
     :param profile: Profile to build on (Optional)
     :return: Quota information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_quota(tenant_id)
 
 
-def update_quota(tenant_id,
-                 subnet=None,
-                 router=None,
-                 network=None,
-                 floatingip=None,
-                 port=None,
-                 security_group=None,
-                 security_group_rule=None,
-                 profile=None):
-    '''
+def update_quota(
+    tenant_id,
+    subnet=None,
+    router=None,
+    network=None,
+    floatingip=None,
+    port=None,
+    security_group=None,
+    security_group_rule=None,
+    profile=None,
+):
+    """
     Update a tenant's quota
 
     CLI Example:
@@ -238,15 +240,22 @@ def update_quota(tenant_id,
     :param security_group_rule: Value of security group rule (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated quota
-    '''
+    """
     conn = _auth(profile)
-    return conn.update_quota(tenant_id, subnet, router, network,
-                             floatingip, port, security_group,
-                             security_group_rule)
+    return conn.update_quota(
+        tenant_id,
+        subnet,
+        router,
+        network,
+        floatingip,
+        port,
+        security_group,
+        security_group_rule,
+    )
 
 
 def delete_quota(tenant_id, profile=None):
-    '''
+    """
     Delete the specified tenant's quota value
 
     CLI Example:
@@ -259,13 +268,13 @@ def delete_quota(tenant_id, profile=None):
     :param tenant_id: ID of tenant to quota delete
     :param profile: Profile to build on (Optional)
     :return: True(Delete succeed) or False(Delete failed)
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_quota(tenant_id)
 
 
 def list_extensions(profile=None):
-    '''
+    """
     Fetches a list of all extensions on server side
 
     CLI Example:
@@ -277,13 +286,13 @@ def list_extensions(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of extensions
-    '''
+    """
     conn = _auth(profile)
     return conn.list_extensions()
 
 
 def list_ports(profile=None):
-    '''
+    """
     Fetches a list of all networks for a tenant
 
     CLI Example:
@@ -295,13 +304,13 @@ def list_ports(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of port
-    '''
+    """
     conn = _auth(profile)
     return conn.list_ports()
 
 
 def show_port(port, profile=None):
-    '''
+    """
     Fetches information of a certain port
 
     CLI Example:
@@ -314,17 +323,13 @@ def show_port(port, profile=None):
     :param port: ID or name of port to look up
     :param profile: Profile to build on (Optional)
     :return: Port information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_port(port)
 
 
-def create_port(name,
-                network,
-                device_id=None,
-                admin_state_up=True,
-                profile=None):
-    '''
+def create_port(name, network, device_id=None, admin_state_up=True, profile=None):
+    """
     Creates a new port
 
     CLI Example:
@@ -340,13 +345,13 @@ def create_port(name,
             default: true (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created port information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_port(name, network, device_id, admin_state_up)
 
 
 def update_port(port, name, admin_state_up=True, profile=None):
-    '''
+    """
     Updates a port
 
     CLI Example:
@@ -361,13 +366,13 @@ def update_port(port, name, admin_state_up=True, profile=None):
             default: true (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated port information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_port(port, name, admin_state_up)
 
 
 def delete_port(port, profile=None):
-    '''
+    """
     Deletes the specified port
 
     CLI Example:
@@ -380,13 +385,13 @@ def delete_port(port, profile=None):
     :param port: port name or ID
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_port(port)
 
 
 def list_networks(profile=None):
-    '''
+    """
     Fetches a list of all networks for a tenant
 
     CLI Example:
@@ -398,13 +403,13 @@ def list_networks(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of network
-    '''
+    """
     conn = _auth(profile)
     return conn.list_networks()
 
 
 def show_network(network, profile=None):
-    '''
+    """
     Fetches information of a certain network
 
     CLI Example:
@@ -417,13 +422,22 @@ def show_network(network, profile=None):
     :param network: ID or name of network to look up
     :param profile: Profile to build on (Optional)
     :return: Network information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_network(network)
 
 
-def create_network(name, router_ext=None, admin_state_up=True, network_type=None, physical_network=None, segmentation_id=None, shared=None, profile=None):
-    '''
+def create_network(
+    name,
+    router_ext=None,
+    admin_state_up=True,
+    network_type=None,
+    physical_network=None,
+    segmentation_id=None,
+    shared=None,
+    profile=None,
+):
+    """
     Creates a new network
 
     CLI Example:
@@ -443,13 +457,21 @@ def create_network(name, router_ext=None, admin_state_up=True, network_type=None
     :param shared: is the network shared or not (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created network information
-    '''
+    """
     conn = _auth(profile)
-    return conn.create_network(name, admin_state_up, router_ext, network_type, physical_network, segmentation_id, shared)
+    return conn.create_network(
+        name,
+        admin_state_up,
+        router_ext,
+        network_type,
+        physical_network,
+        segmentation_id,
+        shared,
+    )
 
 
 def update_network(network, name, profile=None):
-    '''
+    """
     Updates a network
 
     CLI Example:
@@ -462,13 +484,13 @@ def update_network(network, name, profile=None):
     :param name: Name of this network
     :param profile: Profile to build on (Optional)
     :return: Value of updated network information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_network(network, name)
 
 
 def delete_network(network, profile=None):
-    '''
+    """
     Deletes the specified network
 
     CLI Example:
@@ -481,13 +503,13 @@ def delete_network(network, profile=None):
     :param network: ID or name of network to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_network(network)
 
 
 def list_subnets(profile=None):
-    '''
+    """
     Fetches a list of all networks for a tenant
 
     CLI Example:
@@ -499,13 +521,13 @@ def list_subnets(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of subnet
-    '''
+    """
     conn = _auth(profile)
     return conn.list_subnets()
 
 
 def show_subnet(subnet, profile=None):
-    '''
+    """
     Fetches information of a certain subnet
 
     CLI Example:
@@ -517,14 +539,13 @@ def show_subnet(subnet, profile=None):
     :param subnet: ID or name of subnet to look up
     :param profile: Profile to build on (Optional)
     :return: Subnet information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_subnet(subnet)
 
 
-def create_subnet(network, cidr, name=None,
-                  ip_version=4, profile=None):
-    '''
+def create_subnet(network, cidr, name=None, ip_version=4, profile=None):
+    """
     Creates a new subnet
 
     CLI Example:
@@ -539,13 +560,13 @@ def create_subnet(network, cidr, name=None,
     :param ip_version: Version to use, default is 4(IPv4) (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created subnet information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_subnet(network, cidr, name, ip_version)
 
 
 def update_subnet(subnet, name, profile=None):
-    '''
+    """
     Updates a subnet
 
     CLI Example:
@@ -558,13 +579,13 @@ def update_subnet(subnet, name, profile=None):
     :param name: Name of this subnet
     :param profile: Profile to build on (Optional)
     :return: Value of updated subnet information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_subnet(subnet, name)
 
 
 def delete_subnet(subnet, profile=None):
-    '''
+    """
     Deletes the specified subnet
 
     CLI Example:
@@ -577,13 +598,13 @@ def delete_subnet(subnet, profile=None):
     :param subnet: ID or name of subnet to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_subnet(subnet)
 
 
 def list_routers(profile=None):
-    '''
+    """
     Fetches a list of all routers for a tenant
 
     CLI Example:
@@ -595,13 +616,13 @@ def list_routers(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of router
-    '''
+    """
     conn = _auth(profile)
     return conn.list_routers()
 
 
 def show_router(router, profile=None):
-    '''
+    """
     Fetches information of a certain router
 
     CLI Example:
@@ -613,14 +634,13 @@ def show_router(router, profile=None):
     :param router: ID or name of router to look up
     :param profile: Profile to build on (Optional)
     :return: Router information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_router(router)
 
 
-def create_router(name, ext_network=None,
-                  admin_state_up=True, profile=None):
-    '''
+def create_router(name, ext_network=None, admin_state_up=True, profile=None):
+    """
     Creates a new router
 
     CLI Example:
@@ -635,17 +655,13 @@ def create_router(name, ext_network=None,
             default:true (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created router information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_router(name, ext_network, admin_state_up)
 
 
-def update_router(router,
-                  name=None,
-                  admin_state_up=None,
-                  profile=None,
-                  **kwargs):
-    '''
+def update_router(router, name=None, admin_state_up=None, profile=None, **kwargs):
+    """
     Updates a router
 
     CLI Example:
@@ -663,13 +679,13 @@ def update_router(router,
     :param profile: Profile to build on (Optional)
     :param kwargs:
     :return: Value of updated router information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_router(router, name, admin_state_up, **kwargs)
 
 
 def delete_router(router, profile=None):
-    '''
+    """
     Delete the specified router
 
     CLI Example:
@@ -681,13 +697,13 @@ def delete_router(router, profile=None):
     :param router: ID or name of router to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_router(router)
 
 
 def add_interface_router(router, subnet, profile=None):
-    '''
+    """
     Adds an internal network interface to the specified router
 
     CLI Example:
@@ -700,13 +716,13 @@ def add_interface_router(router, subnet, profile=None):
     :param subnet: ID or name of the subnet
     :param profile: Profile to build on (Optional)
     :return: Added interface information
-    '''
+    """
     conn = _auth(profile)
     return conn.add_interface_router(router, subnet)
 
 
 def remove_interface_router(router, subnet, profile=None):
-    '''
+    """
     Removes an internal network interface from the specified router
 
     CLI Example:
@@ -719,13 +735,13 @@ def remove_interface_router(router, subnet, profile=None):
     :param subnet: ID or name of the subnet
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.remove_interface_router(router, subnet)
 
 
 def add_gateway_router(router, ext_network, profile=None):
-    '''
+    """
     Adds an external network gateway to the specified router
 
     CLI Example:
@@ -738,13 +754,13 @@ def add_gateway_router(router, ext_network, profile=None):
     :param ext_network: ID or name of the external network the gateway
     :param profile: Profile to build on (Optional)
     :return: Added Gateway router information
-    '''
+    """
     conn = _auth(profile)
     return conn.add_gateway_router(router, ext_network)
 
 
 def remove_gateway_router(router, profile=None):
-    '''
+    """
     Removes an external network gateway from the specified router
 
     CLI Example:
@@ -756,13 +772,13 @@ def remove_gateway_router(router, profile=None):
     :param router: ID or name of router
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.remove_gateway_router(router)
 
 
 def list_floatingips(profile=None):
-    '''
+    """
     Fetch a list of all floatingIPs for a tenant
 
     CLI Example:
@@ -774,13 +790,13 @@ def list_floatingips(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of floatingIP
-    '''
+    """
     conn = _auth(profile)
     return conn.list_floatingips()
 
 
 def show_floatingip(floatingip_id, profile=None):
-    '''
+    """
     Fetches information of a certain floatingIP
 
     CLI Example:
@@ -792,13 +808,13 @@ def show_floatingip(floatingip_id, profile=None):
     :param floatingip_id: ID of floatingIP to look up
     :param profile: Profile to build on (Optional)
     :return: Floating IP information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_floatingip(floatingip_id)
 
 
 def create_floatingip(floating_network, port=None, profile=None):
-    '''
+    """
     Creates a new floatingIP
 
     CLI Example:
@@ -811,13 +827,13 @@ def create_floatingip(floating_network, port=None, profile=None):
     :param port: Of the port to be associated with the floatingIP (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created floatingIP information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_floatingip(floating_network, port)
 
 
 def update_floatingip(floatingip_id, port=None, profile=None):
-    '''
+    """
     Updates a floatingIP
 
     CLI Example:
@@ -831,13 +847,13 @@ def update_floatingip(floatingip_id, port=None, profile=None):
         not specify to disassociate the floatingip (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated floating IP information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_floatingip(floatingip_id, port)
 
 
 def delete_floatingip(floatingip_id, profile=None):
-    '''
+    """
     Deletes the specified floating IP
 
     CLI Example:
@@ -849,13 +865,13 @@ def delete_floatingip(floatingip_id, profile=None):
     :param floatingip_id: ID of floatingIP to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_floatingip(floatingip_id)
 
 
 def list_security_groups(profile=None):
-    '''
+    """
     Fetches a list of all security groups for a tenant
 
     CLI Example:
@@ -867,13 +883,13 @@ def list_security_groups(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of security group
-    '''
+    """
     conn = _auth(profile)
     return conn.list_security_groups()
 
 
 def show_security_group(security_group, profile=None):
-    '''
+    """
     Fetches information of a certain security group
 
     CLI Example:
@@ -885,13 +901,13 @@ def show_security_group(security_group, profile=None):
     :param security_group: ID or name of security group to look up
     :param profile: Profile to build on (Optional)
     :return: Security group information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_security_group(security_group)
 
 
 def create_security_group(name=None, description=None, profile=None):
-    '''
+    """
     Creates a new security group
 
     CLI Example:
@@ -905,14 +921,13 @@ def create_security_group(name=None, description=None, profile=None):
     :param description: Description of security group (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created security group information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_security_group(name, description)
 
 
-def update_security_group(security_group, name=None, description=None,
-                          profile=None):
-    '''
+def update_security_group(security_group, name=None, description=None, profile=None):
+    """
     Updates a security group
 
     CLI Example:
@@ -927,13 +942,13 @@ def update_security_group(security_group, name=None, description=None,
     :param description: Description of security group (Optional)
     :param profile: Profile to build on (Optional)
     :return: Value of updated security group information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_security_group(security_group, name, description)
 
 
 def delete_security_group(security_group, profile=None):
-    '''
+    """
     Deletes the specified security group
 
     CLI Example:
@@ -945,13 +960,13 @@ def delete_security_group(security_group, profile=None):
     :param security_group: ID or name of security group to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_security_group(security_group)
 
 
 def list_security_group_rules(profile=None):
-    '''
+    """
     Fetches a list of all security group rules for a tenant
 
     CLI Example:
@@ -963,13 +978,13 @@ def list_security_group_rules(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of security group rule
-    '''
+    """
     conn = _auth(profile)
     return conn.list_security_group_rules()
 
 
 def show_security_group_rule(security_group_rule_id, profile=None):
-    '''
+    """
     Fetches information of a certain security group rule
 
     CLI Example:
@@ -981,20 +996,22 @@ def show_security_group_rule(security_group_rule_id, profile=None):
     :param security_group_rule_id: ID of security group rule to look up
     :param profile: Profile to build on (Optional)
     :return: Security group rule information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_security_group_rule(security_group_rule_id)
 
 
-def create_security_group_rule(security_group,
-                               remote_group_id=None,
-                               direction='ingress',
-                               protocol=None,
-                               port_range_min=None,
-                               port_range_max=None,
-                               ethertype='IPv4',
-                               profile=None):
-    '''
+def create_security_group_rule(
+    security_group,
+    remote_group_id=None,
+    direction="ingress",
+    protocol=None,
+    port_range_min=None,
+    port_range_max=None,
+    ethertype="IPv4",
+    profile=None,
+):
+    """
     Creates a new security group rule
 
     CLI Example:
@@ -1015,19 +1032,21 @@ def create_security_group_rule(security_group,
     :param ethertype: IPv4/IPv6, default: IPv4 (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created security group rule information
-    '''
+    """
     conn = _auth(profile)
-    return conn.create_security_group_rule(security_group,
-                                           remote_group_id,
-                                           direction,
-                                           protocol,
-                                           port_range_min,
-                                           port_range_max,
-                                           ethertype)
+    return conn.create_security_group_rule(
+        security_group,
+        remote_group_id,
+        direction,
+        protocol,
+        port_range_min,
+        port_range_max,
+        ethertype,
+    )
 
 
 def delete_security_group_rule(security_group_rule_id, profile=None):
-    '''
+    """
     Deletes the specified security group rule
 
     CLI Example:
@@ -1039,13 +1058,13 @@ def delete_security_group_rule(security_group_rule_id, profile=None):
     :param security_group_rule_id: ID of security group rule to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_security_group_rule(security_group_rule_id)
 
 
 def list_vpnservices(retrieve_all=True, profile=None, **kwargs):
-    '''
+    """
     Fetches a list of all configured VPN services for a tenant
 
     CLI Example:
@@ -1057,13 +1076,13 @@ def list_vpnservices(retrieve_all=True, profile=None, **kwargs):
     :param retrieve_all: True or False, default: True (Optional)
     :param profile: Profile to build on (Optional)
     :return: List of VPN service
-    '''
+    """
     conn = _auth(profile)
     return conn.list_vpnservices(retrieve_all, **kwargs)
 
 
 def show_vpnservice(vpnservice, profile=None, **kwargs):
-    '''
+    """
     Fetches information of a specific VPN service
 
     CLI Example:
@@ -1075,13 +1094,13 @@ def show_vpnservice(vpnservice, profile=None, **kwargs):
     :param vpnservice: ID or name of vpn service to look up
     :param profile: Profile to build on (Optional)
     :return: VPN service information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_vpnservice(vpnservice, **kwargs)
 
 
 def create_vpnservice(subnet, router, name, admin_state_up=True, profile=None):
-    '''
+    """
     Creates a new VPN service
 
     CLI Example:
@@ -1097,13 +1116,13 @@ def create_vpnservice(subnet, router, name, admin_state_up=True, profile=None):
             default:True (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created VPN service information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_vpnservice(subnet, router, name, admin_state_up)
 
 
 def update_vpnservice(vpnservice, desc, profile=None):
-    '''
+    """
     Updates a VPN service
 
     CLI Example:
@@ -1116,13 +1135,13 @@ def update_vpnservice(vpnservice, desc, profile=None):
     :param desc: Set a description for the VPN service
     :param profile: Profile to build on (Optional)
     :return: Value of updated VPN service information
-    '''
+    """
     conn = _auth(profile)
     return conn.update_vpnservice(vpnservice, desc)
 
 
 def delete_vpnservice(vpnservice, profile=None):
-    '''
+    """
     Deletes the specified VPN service
 
     CLI Example:
@@ -1134,13 +1153,13 @@ def delete_vpnservice(vpnservice, profile=None):
     :param vpnservice: ID or name of vpn service to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_vpnservice(vpnservice)
 
 
 def list_ipsec_site_connections(profile=None):
-    '''
+    """
     Fetches all configured IPsec Site Connections for a tenant
 
     CLI Example:
@@ -1152,13 +1171,13 @@ def list_ipsec_site_connections(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of IPSec site connection
-    '''
+    """
     conn = _auth(profile)
     return conn.list_ipsec_site_connections()
 
 
 def show_ipsec_site_connection(ipsec_site_connection, profile=None):
-    '''
+    """
     Fetches information of a specific IPsecSiteConnection
 
     CLI Example:
@@ -1171,23 +1190,25 @@ def show_ipsec_site_connection(ipsec_site_connection, profile=None):
             to look up
     :param profile: Profile to build on (Optional)
     :return: IPSec site connection information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_ipsec_site_connection(ipsec_site_connection)
 
 
-def create_ipsec_site_connection(name,
-                                 ipsecpolicy,
-                                 ikepolicy,
-                                 vpnservice,
-                                 peer_cidrs,
-                                 peer_address,
-                                 peer_id,
-                                 psk,
-                                 admin_state_up=True,
-                                 profile=None,
-                                 **kwargs):
-    '''
+def create_ipsec_site_connection(
+    name,
+    ipsecpolicy,
+    ikepolicy,
+    vpnservice,
+    peer_cidrs,
+    peer_address,
+    peer_id,
+    psk,
+    admin_state_up=True,
+    profile=None,
+    **kwargs
+):
+    """
     Creates a new IPsecSiteConnection
 
     CLI Example:
@@ -1218,22 +1239,24 @@ def create_ipsec_site_connection(name,
     :param dpd_timeout: Dead Peer Detection attribute (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created IPSec site connection information
-    '''
+    """
     conn = _auth(profile)
-    return conn.create_ipsec_site_connection(name,
-                                             ipsecpolicy,
-                                             ikepolicy,
-                                             vpnservice,
-                                             peer_cidrs,
-                                             peer_address,
-                                             peer_id,
-                                             psk,
-                                             admin_state_up,
-                                             **kwargs)
+    return conn.create_ipsec_site_connection(
+        name,
+        ipsecpolicy,
+        ikepolicy,
+        vpnservice,
+        peer_cidrs,
+        peer_address,
+        peer_id,
+        psk,
+        admin_state_up,
+        **kwargs
+    )
 
 
 def delete_ipsec_site_connection(ipsec_site_connection, profile=None):
-    '''
+    """
     Deletes the specified IPsecSiteConnection
 
     CLI Example:
@@ -1245,13 +1268,13 @@ def delete_ipsec_site_connection(ipsec_site_connection, profile=None):
     :param ipsec_site_connection: ID or name of ipsec site connection to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_ipsec_site_connection(ipsec_site_connection)
 
 
 def list_ikepolicies(profile=None):
-    '''
+    """
     Fetches a list of all configured IKEPolicies for a tenant
 
     CLI Example:
@@ -1263,13 +1286,13 @@ def list_ikepolicies(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of IKE policy
-    '''
+    """
     conn = _auth(profile)
     return conn.list_ikepolicies()
 
 
 def show_ikepolicy(ikepolicy, profile=None):
-    '''
+    """
     Fetches information of a specific IKEPolicy
 
     CLI Example:
@@ -1281,13 +1304,13 @@ def show_ikepolicy(ikepolicy, profile=None):
     :param ikepolicy: ID or name of ikepolicy to look up
     :param profile: Profile to build on (Optional)
     :return: IKE policy information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_ikepolicy(ikepolicy)
 
 
 def create_ikepolicy(name, profile=None, **kwargs):
-    '''
+    """
     Creates a new IKEPolicy
 
     CLI Example:
@@ -1313,13 +1336,13 @@ def create_ikepolicy(name, profile=None, **kwargs):
     :param profile: Profile to build on (Optional)
     :param kwargs:
     :return: Created IKE policy information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_ikepolicy(name, **kwargs)
 
 
 def delete_ikepolicy(ikepolicy, profile=None):
-    '''
+    """
     Deletes the specified IKEPolicy
 
     CLI Example:
@@ -1331,13 +1354,13 @@ def delete_ikepolicy(ikepolicy, profile=None):
     :param ikepolicy: ID or name of IKE policy to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_ikepolicy(ikepolicy)
 
 
 def list_ipsecpolicies(profile=None):
-    '''
+    """
     Fetches a list of all configured IPsecPolicies for a tenant
 
     CLI Example:
@@ -1349,13 +1372,13 @@ def list_ipsecpolicies(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of IPSec policy
-    '''
+    """
     conn = _auth(profile)
     return conn.list_ipsecpolicies()
 
 
 def show_ipsecpolicy(ipsecpolicy, profile=None):
-    '''
+    """
     Fetches information of a specific IPsecPolicy
 
     CLI Example:
@@ -1367,13 +1390,13 @@ def show_ipsecpolicy(ipsecpolicy, profile=None):
     :param ipsecpolicy: ID or name of IPSec policy to look up
     :param profile: Profile to build on (Optional)
     :return: IPSec policy information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_ipsecpolicy(ipsecpolicy)
 
 
 def create_ipsecpolicy(name, profile=None, **kwargs):
-    '''
+    """
     Creates a new IPsecPolicy
 
     CLI Example:
@@ -1399,13 +1422,13 @@ def create_ipsecpolicy(name, profile=None, **kwargs):
     :param value: IPSec lifetime attribute. default: 3600 (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created IPSec policy information
-    '''
+    """
     conn = _auth(profile)
     return conn.create_ipsecpolicy(name, **kwargs)
 
 
 def delete_ipsecpolicy(ipsecpolicy, profile=None):
-    '''
+    """
     Deletes the specified IPsecPolicy
 
     CLI Example:
@@ -1417,13 +1440,13 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
     :param ipsecpolicy: ID or name of IPSec policy to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_ipsecpolicy(ipsecpolicy)
 
 
 def list_firewall_rules(profile=None):
-    '''
+    """
     Fetches a list of all firewall rules for a tenant
     CLI Example:
 
@@ -1434,13 +1457,13 @@ def list_firewall_rules(profile=None):
     :param profile: Profile to build on (Optional)
 
     :return: List of firewall rules
-    '''
+    """
     conn = _auth(profile)
     return conn.list_firewall_rules()
 
 
 def show_firewall_rule(firewall_rule, profile=None):
-    '''
+    """
     Fetches information of a specific firewall rule
 
     CLI Example:
@@ -1454,13 +1477,13 @@ def show_firewall_rule(firewall_rule, profile=None):
     :param profile: Profile to build on (Optional)
 
     :return: firewall rule information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_firewall_rule(firewall_rule)
 
 
 def create_firewall_rule(protocol, action, profile=None, **kwargs):
-    '''
+    """
     Creates a new firewall rule
 
     CLI Example:
@@ -1484,13 +1507,13 @@ def create_firewall_rule(protocol, action, profile=None, **kwargs):
     :param destination_port: Destination port (integer in [1, 65535] or range in a:b). (Optional)
     :param shared: Set shared to True, default: False. (Optional)
     :param enabled: To enable this rule, default: True. (Optional)
-    '''
+    """
     conn = _auth(profile)
     return conn.create_firewall_rule(protocol, action, **kwargs)
 
 
 def delete_firewall_rule(firewall_rule, profile=None):
-    '''
+    """
     Deletes the specified firewall_rule
 
     CLI Example:
@@ -1502,25 +1525,27 @@ def delete_firewall_rule(firewall_rule, profile=None):
     :param firewall_rule: ID or name of firewall rule to delete
     :param profile: Profile to build on (Optional)
     :return: True(Succeed) or False
-    '''
+    """
     conn = _auth(profile)
     return conn.delete_firewall_rule(firewall_rule)
 
 
-def update_firewall_rule(firewall_rule,
-                         protocol=None,
-                         action=None,
-                         name=None,
-                         description=None,
-                         ip_version=None,
-                         source_ip_address=None,
-                         destination_ip_address=None,
-                         source_port=None,
-                         destination_port=None,
-                         shared=None,
-                         enabled=None,
-                         profile=None):
-    '''
+def update_firewall_rule(
+    firewall_rule,
+    protocol=None,
+    action=None,
+    name=None,
+    description=None,
+    ip_version=None,
+    source_ip_address=None,
+    destination_ip_address=None,
+    source_port=None,
+    destination_port=None,
+    shared=None,
+    enabled=None,
+    profile=None,
+):
+    """
     Update a firewall rule
 
     CLI Example:
@@ -1545,15 +1570,26 @@ def update_firewall_rule(firewall_rule,
     :param shared: Set shared to True, default: False. (Optional)
     :param enabled: To enable this rule, default: True. (Optional)
     :param profile: Profile to build on (Optional)
-    '''
+    """
     conn = _auth(profile)
-    return conn.update_firewall_rule(firewall_rule, protocol, action, name, description, ip_version,
-                                     source_ip_address, destination_ip_address, source_port, destination_port,
-                                     shared, enabled)
+    return conn.update_firewall_rule(
+        firewall_rule,
+        protocol,
+        action,
+        name,
+        description,
+        ip_version,
+        source_ip_address,
+        destination_ip_address,
+        source_port,
+        destination_port,
+        shared,
+        enabled,
+    )
 
 
 def list_firewalls(profile=None):
-    '''
+    """
     Fetches a list of all firewalls for a tenant
     CLI Example:
 
@@ -1563,13 +1599,13 @@ def list_firewalls(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: List of firewalls
-    '''
+    """
     conn = _auth(profile)
     return conn.list_firewalls()
 
 
 def show_firewall(firewall, profile=None):
-    '''
+    """
     Fetches information of a specific firewall rule
 
     CLI Example:
@@ -1581,13 +1617,13 @@ def show_firewall(firewall, profile=None):
     :param firewall: ID or name of firewall to look up
     :param profile: Profile to build on (Optional)
     :return: firewall information
-    '''
+    """
     conn = _auth(profile)
     return conn.show_firewall(firewall)
 
 
 def list_l3_agent_hosting_routers(router, profile=None):
-    '''
+    """
     List L3 agents hosting a router.
 
     CLI Example:
@@ -1599,13 +1635,13 @@ def list_l3_agent_hosting_routers(router, profile=None):
     :param router:router name or ID to query.
     :param profile: Profile to build on (Optional)
     :return: L3 agents message.
-    '''
+    """
     conn = _auth(profile)
     return conn.list_l3_agent_hosting_routers(router)
 
 
 def list_agents(profile=None):
-    '''
+    """
     List agents.
 
     CLI Example:
@@ -1616,6 +1652,6 @@ def list_agents(profile=None):
 
     :param profile: Profile to build on (Optional)
     :return: agents message.
-    '''
+    """
     conn = _auth(profile)
     return conn.list_agents()

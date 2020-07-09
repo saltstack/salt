@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage Elasticsearch Service
 ============================
 
@@ -42,10 +42,11 @@ Manage Elasticsearch Service
 
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 :depends: boto3
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
@@ -55,63 +56,72 @@ from salt.utils.versions import LooseVersion
 # Import 3rd-party libs
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'boto3_elasticsearch'
+__virtualname__ = "boto3_elasticsearch"
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto3 and the required module functions are available.
-    '''
+    """
     requirements = {
-        'salt': [
-            'boto3_elasticsearch.describe_elasticsearch_domain',
-            'boto3_elasticsearch.create_elasticsearch_domain',
-            'boto3_elasticsearch.update_elasticsearch_domain_config',
-            'boto3_elasticsearch.exists',
-            'boto3_elasticsearch.get_upgrade_status',
-            'boto3_elasticsearch.wait_for_upgrade',
-            'boto3_elasticsearch.check_upgrade_eligibility',
-            'boto3_elasticsearch.upgrade_elasticsearch_domain',
+        "salt": [
+            "boto3_elasticsearch.describe_elasticsearch_domain",
+            "boto3_elasticsearch.create_elasticsearch_domain",
+            "boto3_elasticsearch.update_elasticsearch_domain_config",
+            "boto3_elasticsearch.exists",
+            "boto3_elasticsearch.get_upgrade_status",
+            "boto3_elasticsearch.wait_for_upgrade",
+            "boto3_elasticsearch.check_upgrade_eligibility",
+            "boto3_elasticsearch.upgrade_elasticsearch_domain",
         ],
     }
-    for req in requirements['salt']:
+    for req in requirements["salt"]:
         if req not in __salt__:
-            return (False, 'A required function was not found in __salt__: {}'.format(req))
+            return (
+                False,
+                "A required function was not found in __salt__: {}".format(req),
+            )
     return __virtualname__
 
 
 def _check_return_value(ret):
-    '''
+    """
     Helper function to check if the 'result' key of the return value has been
     properly set. This is to detect unexpected code-paths that would otherwise
-    return a 'success'-y value but not actually be succesful.
+    return a 'success'-y value but not actually be successful.
 
     :param dict ret: The returned value of a state function.
-    '''
-    if ret['result'] == 'oops':
-        ret['result'] = False
-        ret['comment'].append('An internal error has occurred: The result value was '
-                              'not properly changed.')
+    """
+    if ret["result"] == "oops":
+        ret["result"] = False
+        ret["comment"].append(
+            "An internal error has occurred: The result value was "
+            "not properly changed."
+        )
     return ret
 
 
 def present(
-        name,
-        elasticsearch_version=None,
-        elasticsearch_cluster_config=None,
-        ebs_options=None,
-        access_policies=None,
-        snapshot_options=None,
-        vpc_options=None,
-        cognito_options=None,
-        encryption_at_rest_options=None,
-        node_to_node_encryption_options=None,
-        advanced_options=None,
-        log_publishing_options=None,
-        blocking=True,
-        tags=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    name,
+    elasticsearch_version=None,
+    elasticsearch_cluster_config=None,
+    ebs_options=None,
+    access_policies=None,
+    snapshot_options=None,
+    vpc_options=None,
+    cognito_options=None,
+    encryption_at_rest_options=None,
+    node_to_node_encryption_options=None,
+    advanced_options=None,
+    log_publishing_options=None,
+    blocking=True,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Ensure an Elasticsearch Domain exists.
 
     :param str name: The name of the Elasticsearch domain that you are creating.
@@ -242,151 +252,185 @@ def present(
           - tags:
               foo: bar
               baz: qux
-    '''
-    ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
+    """
+    ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
 
     action = None
     current_domain = None
-    target_conf = salt.utils.data.filter_falsey({
-        'DomainName': name,
-        'ElasticsearchClusterConfig': elasticsearch_cluster_config,
-        'EBSOptions': ebs_options,
-        'AccessPolicies': (salt.utils.json.dumps(access_policies)
-                           if isinstance(access_policies, dict)
-                           else access_policies),
-        'SnapshotOptions': snapshot_options,
-        'VPCOptions': vpc_options,
-        'CognitoOptions': cognito_options,
-        'AdvancedOptions': advanced_options,
-        'LogPublishingOptions': log_publishing_options,
-    }, recurse_depth=3)
-    res = __salt__['boto3_elasticsearch.describe_elasticsearch_domain'](
-        name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if not res['result']:
-        ret['result'] = False
-        if 'ResourceNotFoundException' in res['error']:
-            action = 'create'
-            config_diff = {'old': None, 'new': target_conf}
+    target_conf = salt.utils.data.filter_falsey(
+        {
+            "DomainName": name,
+            "ElasticsearchClusterConfig": elasticsearch_cluster_config,
+            "EBSOptions": ebs_options,
+            "AccessPolicies": (
+                salt.utils.json.dumps(access_policies)
+                if isinstance(access_policies, dict)
+                else access_policies
+            ),
+            "SnapshotOptions": snapshot_options,
+            "VPCOptions": vpc_options,
+            "CognitoOptions": cognito_options,
+            "AdvancedOptions": advanced_options,
+            "LogPublishingOptions": log_publishing_options,
+        },
+        recurse_depth=3,
+    )
+    res = __salt__["boto3_elasticsearch.describe_elasticsearch_domain"](
+        name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if not res["result"]:
+        ret["result"] = False
+        if "ResourceNotFoundException" in res["error"]:
+            action = "create"
+            config_diff = {"old": None, "new": target_conf}
         else:
-            ret['comment'].append(res['error'])
+            ret["comment"].append(res["error"])
     else:
-        current_domain = salt.utils.data.filter_falsey(res['response'], recurse_depth=3)
-        current_domain_version = current_domain['ElasticsearchVersion']
+        current_domain = salt.utils.data.filter_falsey(res["response"], recurse_depth=3)
+        current_domain_version = current_domain["ElasticsearchVersion"]
         # Remove some values from current_domain that cannot be updated
-        for item in ['DomainId', 'UpgradeProcessing', 'Created', 'Deleted', 'Processing',
-                     'Endpoints', 'ARN', 'EncryptionAtRestOptions', 'NodeToNodeEncryptionOptions',
-                     'ElasticsearchVersion', 'ServiceSoftwareOptions']:
+        for item in [
+            "DomainId",
+            "UpgradeProcessing",
+            "Created",
+            "Deleted",
+            "Processing",
+            "Endpoints",
+            "ARN",
+            "EncryptionAtRestOptions",
+            "NodeToNodeEncryptionOptions",
+            "ElasticsearchVersion",
+            "ServiceSoftwareOptions",
+        ]:
             if item in current_domain:
                 del current_domain[item]
         # Further remove values from VPCOptions (if present) that are read-only
-        for item in ['VPCId', 'AvailabilityZones']:
-            if item in current_domain.get('VPCOptions', {}):
-                del current_domain['VPCOptions'][item]
+        for item in ["VPCId", "AvailabilityZones"]:
+            if item in current_domain.get("VPCOptions", {}):
+                del current_domain["VPCOptions"][item]
         # Some special cases
-        if 'CognitoOptions' in current_domain:
-            if 'CognitoOptions' not in target_conf and not current_domain['CognitoOptions']['Enabled']:
-                del current_domain['CognitoOptions']
-        if 'AdvancedOptions' not in target_conf and \
-                'rest.action.multi.allow_explicit_index' in current_domain['AdvancedOptions']:
-            del current_domain['AdvancedOptions']['rest.action.multi.allow_explicit_index']
-        if not current_domain['AdvancedOptions']:
-            del current_domain['AdvancedOptions']
+        if "CognitoOptions" in current_domain:
+            if (
+                "CognitoOptions" not in target_conf
+                and not current_domain["CognitoOptions"]["Enabled"]
+            ):
+                del current_domain["CognitoOptions"]
+        if (
+            "AdvancedOptions" not in target_conf
+            and "rest.action.multi.allow_explicit_index"
+            in current_domain["AdvancedOptions"]
+        ):
+            del current_domain["AdvancedOptions"][
+                "rest.action.multi.allow_explicit_index"
+            ]
+        if not current_domain["AdvancedOptions"]:
+            del current_domain["AdvancedOptions"]
 
         # Compare current configuration with provided configuration
         config_diff = salt.utils.data.recursive_diff(current_domain, target_conf)
         if config_diff:
-            action = 'update'
+            action = "update"
 
         # Compare ElasticsearchVersion separately, as the update procedure differs.
         if elasticsearch_version and current_domain_version != elasticsearch_version:
-            action = 'upgrade'
+            action = "upgrade"
 
-    if action in ['create', 'update']:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append('The Elasticsearch Domain "{}" would have been {}d.'
-                                  ''.format(name, action))
-            ret['changes'] = config_diff
+    if action in ["create", "update"]:
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append(
+                'The Elasticsearch Domain "{}" would have been {}d.'
+                "".format(name, action)
+            )
+            ret["changes"] = config_diff
         else:
-            boto_kwargs = salt.utils.data.filter_falsey({
-                'elasticsearch_version': elasticsearch_version,
-                'elasticsearch_cluster_config': elasticsearch_cluster_config,
-                'ebs_options': ebs_options,
-                'vpc_options': vpc_options,
-                'access_policies': access_policies,
-                'snapshot_options': snapshot_options,
-                'cognito_options': cognito_options,
-                'encryption_at_rest_options': encryption_at_rest_options,
-                'node_to_node_encryption_options': node_to_node_encryption_options,
-                'advanced_options': advanced_options,
-                'log_publishing_options': log_publishing_options,
-                'blocking': blocking,
-                'region': region, 'keyid': keyid, 'key': key, 'profile': profile,
-            })
-            if action == 'update':
+            boto_kwargs = salt.utils.data.filter_falsey(
+                {
+                    "elasticsearch_version": elasticsearch_version,
+                    "elasticsearch_cluster_config": elasticsearch_cluster_config,
+                    "ebs_options": ebs_options,
+                    "vpc_options": vpc_options,
+                    "access_policies": access_policies,
+                    "snapshot_options": snapshot_options,
+                    "cognito_options": cognito_options,
+                    "encryption_at_rest_options": encryption_at_rest_options,
+                    "node_to_node_encryption_options": node_to_node_encryption_options,
+                    "advanced_options": advanced_options,
+                    "log_publishing_options": log_publishing_options,
+                    "blocking": blocking,
+                    "region": region,
+                    "keyid": keyid,
+                    "key": key,
+                    "profile": profile,
+                }
+            )
+            if action == "update":
                 # Drop certain kwargs that do not apply to updates.
-                for item in ['elasticsearch_version', 'encryption_at_rest_options',
-                             'node_to_node_encryption_options']:
+                for item in [
+                    "elasticsearch_version",
+                    "encryption_at_rest_options",
+                    "node_to_node_encryption_options",
+                ]:
                     if item in boto_kwargs:
                         del boto_kwargs[item]
-            res = __salt__['boto3_elasticsearch.{}_elasticsearch_domain{}'
-                           ''.format(action, '_config' if action == 'update' else '')](
-                name,
-                **boto_kwargs)
-            if 'error' in res:
-                ret['result'] = False
-                ret['comment'].append(res['error'])
+            res = __salt__[
+                "boto3_elasticsearch.{}_elasticsearch_domain{}"
+                "".format(action, "_config" if action == "update" else "")
+            ](name, **boto_kwargs)
+            if "error" in res:
+                ret["result"] = False
+                ret["comment"].append(res["error"])
             else:
-                ret['result'] = True
-                ret['comment'].append('Elasticsearch Domain "{}" has been {}d.'.format(name, action))
-                ret['changes'] = config_diff
-    elif action == 'upgrade':
+                ret["result"] = True
+                ret["comment"].append(
+                    'Elasticsearch Domain "{}" has been {}d.'.format(name, action)
+                )
+                ret["changes"] = config_diff
+    elif action == "upgrade":
         res = upgraded(
             name,
             elasticsearch_version,
-            region=region, keyid=keyid, key=key, profile=profile)
-        ret['result'] = res['result']
-        ret['comment'].extend(res['comment'])
-        if res['changes']:
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        )
+        ret["result"] = res["result"]
+        ret["comment"].extend(res["comment"])
+        if res["changes"]:
             salt.utils.dictupdate.set_dict_key_value(
-                ret,
-                'changes:old:version',
-                res['changes']['old'])
+                ret, "changes:old:version", res["changes"]["old"]
+            )
             salt.utils.dictupdate.set_dict_key_value(
-                ret,
-                'changes:new:version',
-                res['changes']['new'])
+                ret, "changes:new:version", res["changes"]["new"]
+            )
 
     if tags is not None:
         res = tagged(
             name,
             tags=tags,
             replace=True,
-            region=region, keyid=keyid, key=key, profile=profile)
-        ret['result'] = res['result']
-        ret['comment'].extend(res['comment'])
-        if 'old' in res['changes']:
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        )
+        ret["result"] = res["result"]
+        ret["comment"].extend(res["comment"])
+        if "old" in res["changes"]:
             salt.utils.dictupdate.update_dict_key_value(
-                ret,
-                'changes:old:tags',
-                res['changes']['old']
+                ret, "changes:old:tags", res["changes"]["old"]
             )
-        if 'new' in res['changes']:
+        if "new" in res["changes"]:
             salt.utils.dictupdate.update_dict_key_value(
-                ret,
-                'changes:new:tags',
-                res['changes']['new']
+                ret, "changes:new:tags", res["changes"]["new"]
             )
     ret = _check_return_value(ret)
     return ret
 
 
-def absent(
-        name,
-        blocking=True,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None):
+    """
     Ensure the Elasticsearch Domain specified does not exist.
 
     :param str name: The name of the Elasticsearch domain to be made absent.
@@ -403,49 +447,62 @@ def absent(
           boto3_elasticsearch.absent:
           - name: my_domain
           - region: eu-west-1
-    '''
-    ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
+    """
+    ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
 
-    res = __salt__['boto3_elasticsearch.exists'](
-        name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
-        ret['result'] = False
-        ret['comment'].append(res['error'])
-    elif res['result']:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append('Elasticsearch domain "{}" would have been removed.'
-                                  ''.format(name))
-            ret['changes'] = {'old': name, 'new': None}
+    res = __salt__["boto3_elasticsearch.exists"](
+        name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if "error" in res:
+        ret["result"] = False
+        ret["comment"].append(res["error"])
+    elif res["result"]:
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append(
+                'Elasticsearch domain "{}" would have been removed.' "".format(name)
+            )
+            ret["changes"] = {"old": name, "new": None}
         else:
-            res = __salt__['boto3_elasticsearch.delete_elasticsearch_domain'](
+            res = __salt__["boto3_elasticsearch.delete_elasticsearch_domain"](
                 domain_name=name,
                 blocking=blocking,
-                region=region, keyid=keyid, key=key, profile=profile)
-            if 'error' in res:
-                ret['result'] = False
-                ret['comment'].append('Error deleting Elasticsearch domain "{}": {}'
-                                      ''.format(name, res['error']))
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+            )
+            if "error" in res:
+                ret["result"] = False
+                ret["comment"].append(
+                    'Error deleting Elasticsearch domain "{}": {}'
+                    "".format(name, res["error"])
+                )
             else:
-                ret['result'] = True
-                ret['comment'].append('Elasticsearch domain "{}" has been deleted.'
-                                      ''.format(name))
-                ret['changes'] = {'old': name, 'new': None}
+                ret["result"] = True
+                ret["comment"].append(
+                    'Elasticsearch domain "{}" has been deleted.' "".format(name)
+                )
+                ret["changes"] = {"old": name, "new": None}
     else:
-        ret['result'] = True
-        ret['comment'].append('Elasticsearch domain "{}" is already absent.'
-                              ''.format(name))
+        ret["result"] = True
+        ret["comment"].append(
+            'Elasticsearch domain "{}" is already absent.' "".format(name)
+        )
     ret = _check_return_value(ret)
     return ret
 
 
 def upgraded(
-        name,
-        elasticsearch_version,
-        blocking=True,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    name,
+    elasticsearch_version,
+    blocking=True,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Ensures the Elasticsearch domain specified runs on the specified version of
     elasticsearch. Only upgrades are possible as downgrades require a manual snapshot
     and an S3 bucket to store them in.
@@ -467,118 +524,152 @@ def upgraded(
           - name: my_domain
           - elasticsearch_version: '7.2'
           - region: eu-west-1
-    '''
-    ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
+    """
+    ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
     current_domain = None
-    res = __salt__['boto3_elasticsearch.describe_elasticsearch_domain'](
-        name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if not res['result']:
-        ret['result'] = False
-        if 'ResourceNotFoundException' in res['error']:
-            ret['comment'].append('The Elasticsearch domain "{}" does not exist.'
-                                  ''.format(name))
+    res = __salt__["boto3_elasticsearch.describe_elasticsearch_domain"](
+        name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if not res["result"]:
+        ret["result"] = False
+        if "ResourceNotFoundException" in res["error"]:
+            ret["comment"].append(
+                'The Elasticsearch domain "{}" does not exist.' "".format(name)
+            )
         else:
-            ret['comment'].append(res['error'])
+            ret["comment"].append(res["error"])
     else:
-        current_domain = res['response']
-        current_version = current_domain['ElasticsearchVersion']
+        current_domain = res["response"]
+        current_version = current_domain["ElasticsearchVersion"]
         if elasticsearch_version and current_version == elasticsearch_version:
-            ret['result'] = True
-            ret['comment'].append('The Elasticsearch domain "{}" is already '
-                                  'at the desired version {}'
-                                  ''.format(name, elasticsearch_version))
+            ret["result"] = True
+            ret["comment"].append(
+                'The Elasticsearch domain "{}" is already '
+                "at the desired version {}"
+                "".format(name, elasticsearch_version)
+            )
         elif LooseVersion(elasticsearch_version) < LooseVersion(current_version):
-            ret['result'] = False
-            ret['comment'].append('Elasticsearch domain "{}" cannot be downgraded '
-                                  'to version "{}".'
-                                  ''.format(name, elasticsearch_version))
-    if isinstance(ret['result'], bool):
+            ret["result"] = False
+            ret["comment"].append(
+                'Elasticsearch domain "{}" cannot be downgraded '
+                'to version "{}".'
+                "".format(name, elasticsearch_version)
+            )
+    if isinstance(ret["result"], bool):
         return ret
-    log.debug('%s :upgraded: Check upgrade in progress', __name__)
+    log.debug("%s :upgraded: Check upgrade in progress", __name__)
     # Check if an upgrade is already in progress
-    res = __salt__['boto3_elasticsearch.get_upgrade_status'](
-        name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
-        ret['result'] = False
-        ret['comment'].append('Error determining current upgrade status '
-                              'of domain "{}": {}'.format(name, res['error']))
+    res = __salt__["boto3_elasticsearch.get_upgrade_status"](
+        name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if "error" in res:
+        ret["result"] = False
+        ret["comment"].append(
+            "Error determining current upgrade status "
+            'of domain "{}": {}'.format(name, res["error"])
+        )
         return ret
-    if res['response'].get('StepStatus') == 'IN_PROGRESS':
+    if res["response"].get("StepStatus") == "IN_PROGRESS":
         if blocking:
             # An upgrade is already in progress, wait for it to complete
-            res2 = __salt__['boto3_elasticsearch.wait_for_upgrade'](
-                name,
-                region=region, keyid=keyid, key=key, profile=profile)
-            if 'error' in res2:
-                ret['result'] = False
-                ret['comment'].append('Error waiting for upgrade of domain '
-                                      '"{}" to complete: {}'
-                                      ''.format(name, res2['error']))
-            elif res2['response'].get('UpgradeName', '').endswith(elasticsearch_version):
-                ret['result'] = True
-                ret['comment'].append('Elasticsearch Domain "{}" is '
-                                      'already at version "{}".'
-                                      ''.format(name, elasticsearch_version))
+            res2 = __salt__["boto3_elasticsearch.wait_for_upgrade"](
+                name, region=region, keyid=keyid, key=key, profile=profile
+            )
+            if "error" in res2:
+                ret["result"] = False
+                ret["comment"].append(
+                    "Error waiting for upgrade of domain "
+                    '"{}" to complete: {}'
+                    "".format(name, res2["error"])
+                )
+            elif (
+                res2["response"].get("UpgradeName", "").endswith(elasticsearch_version)
+            ):
+                ret["result"] = True
+                ret["comment"].append(
+                    'Elasticsearch Domain "{}" is '
+                    'already at version "{}".'
+                    "".format(name, elasticsearch_version)
+                )
         else:
             # We are not going to wait for it to complete, so bail.
-            ret['result'] = True
-            ret['comment'].append('An upgrade of Elasticsearch domain "{}" '
-                                  'is already underway: {}'
-                                  ''.format(name, res['response'].get('UpgradeName')))
-    if isinstance(ret['result'], bool):
+            ret["result"] = True
+            ret["comment"].append(
+                'An upgrade of Elasticsearch domain "{}" '
+                "is already underway: {}"
+                "".format(name, res["response"].get("UpgradeName"))
+            )
+    if isinstance(ret["result"], bool):
         return ret
 
-    log.debug('%s :upgraded: Check upgrade eligibility', __name__)
+    log.debug("%s :upgraded: Check upgrade eligibility", __name__)
     # Check if the domain is eligible for an upgrade
-    res = __salt__['boto3_elasticsearch.check_upgrade_eligibility'](
+    res = __salt__["boto3_elasticsearch.check_upgrade_eligibility"](
         name,
         elasticsearch_version,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
-        ret['result'] = False
-        ret['comment'].append('Error checking upgrade eligibility for '
-                              'domain "{}": {}'.format(name, res['error']))
-    elif not res['response']:
-        ret['result'] = False
-        ret['comment'].append('The Elasticsearch Domain "{}" is not eligible to '
-                              'be upgraded to version {}.'
-                              ''.format(name, elasticsearch_version))
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+    if "error" in res:
+        ret["result"] = False
+        ret["comment"].append(
+            "Error checking upgrade eligibility for "
+            'domain "{}": {}'.format(name, res["error"])
+        )
+    elif not res["response"]:
+        ret["result"] = False
+        ret["comment"].append(
+            'The Elasticsearch Domain "{}" is not eligible to '
+            "be upgraded to version {}."
+            "".format(name, elasticsearch_version)
+        )
     else:
-        log.debug('%s :upgraded: Start the upgrade', __name__)
+        log.debug("%s :upgraded: Start the upgrade", __name__)
         # Start the upgrade
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append('The Elasticsearch version for domain "{}" would have been upgraded.')
-            ret['changes'] = {'old': current_domain['ElasticsearchVersion'],
-                              'new': elasticsearch_version}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append(
+                'The Elasticsearch version for domain "{}" would have been upgraded.'
+            )
+            ret["changes"] = {
+                "old": current_domain["ElasticsearchVersion"],
+                "new": elasticsearch_version,
+            }
         else:
-            res = __salt__['boto3_elasticsearch.upgrade_elasticsearch_domain'](
+            res = __salt__["boto3_elasticsearch.upgrade_elasticsearch_domain"](
                 name,
                 elasticsearch_version,
                 blocking=blocking,
-                region=region, keyid=keyid, key=key, profile=profile)
-            if 'error' in res:
-                ret['result'] = False
-                ret['comment'].append('Error upgrading Elasticsearch domain "{}": {}'
-                                      ''.format(name, res['error']))
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+            )
+            if "error" in res:
+                ret["result"] = False
+                ret["comment"].append(
+                    'Error upgrading Elasticsearch domain "{}": {}'
+                    "".format(name, res["error"])
+                )
             else:
-                ret['result'] = True
-                ret['comment'].append('The Elasticsearch domain "{}" has been '
-                                      'upgraded to version {}.'
-                                      ''.format(name, elasticsearch_version))
-                ret['changes'] = {'old': current_domain['ElasticsearchVersion'],
-                                  'new': elasticsearch_version}
+                ret["result"] = True
+                ret["comment"].append(
+                    'The Elasticsearch domain "{}" has been '
+                    "upgraded to version {}."
+                    "".format(name, elasticsearch_version)
+                )
+                ret["changes"] = {
+                    "old": current_domain["ElasticsearchVersion"],
+                    "new": elasticsearch_version,
+                }
     ret = _check_return_value(ret)
     return ret
 
 
-def latest(
-        name,
-        minor_only=True,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=None):
+    """
     Ensures the Elasticsearch domain specifies runs on the latest compatible
     version of elasticsearch, upgrading it if it is not.
 
@@ -602,78 +693,98 @@ def latest(
           - name: my_domain
           - minor_only: True
           - region: eu-west-1
-    '''
-    ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
+    """
+    ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
     # Get current version
-    res = __salt__['boto3_elasticsearch.describe_elasticsearch_domain'](
-        domain_name=name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
-        ret['result'] = False
-        ret['comment'].append('Error getting information of Elasticsearch domain "{}": {}'
-                              ''.format(name, res['error']))
+    res = __salt__["boto3_elasticsearch.describe_elasticsearch_domain"](
+        domain_name=name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if "error" in res:
+        ret["result"] = False
+        ret["comment"].append(
+            'Error getting information of Elasticsearch domain "{}": {}'
+            "".format(name, res["error"])
+        )
     else:
-        current_version = res['response']['ElasticsearchVersion']
+        current_version = res["response"]["ElasticsearchVersion"]
         # Get latest compatible version
         latest_version = None
-        res = __salt__['boto3_elasticsearch.get_compatible_elasticsearch_versions'](
-            domain_name=name,
-            region=region, keyid=keyid, key=key, profile=profile)
-        if 'error' in res:
-            ret['result'] = False
-            ret['comment'].append('Error getting compatible Elasticsearch versions '
-                                  'for Elasticsearch domain "{}": {}'
-                                  ''.format(name, res['error']))
-    if isinstance(ret['result'], bool):
+        res = __salt__["boto3_elasticsearch.get_compatible_elasticsearch_versions"](
+            domain_name=name, region=region, keyid=keyid, key=key, profile=profile
+        )
+        if "error" in res:
+            ret["result"] = False
+            ret["comment"].append(
+                "Error getting compatible Elasticsearch versions "
+                'for Elasticsearch domain "{}": {}'
+                "".format(name, res["error"])
+            )
+    if isinstance(ret["result"], bool):
         return ret
     try:
-        latest_version = res['response'][0]['TargetVersions'].pop(-1)
+        latest_version = res["response"][0]["TargetVersions"].pop(-1)
     except IndexError:
         pass
     if not current_version:
-        ret['result'] = True
-        ret['comment'].append('The Elasticsearch domain "{}" can not be upgraded.'
-                              ''.format(name))
+        ret["result"] = True
+        ret["comment"].append(
+            'The Elasticsearch domain "{}" can not be upgraded.' "".format(name)
+        )
     elif not latest_version:
-        ret['result'] = True
-        ret['comment'].append('The Elasticsearch domain "{}" is already at '
-                              'the lastest version "{}".'
-                              ''.format(name, current_version))
+        ret["result"] = True
+        ret["comment"].append(
+            'The Elasticsearch domain "{}" is already at '
+            'the lastest version "{}".'
+            "".format(name, current_version)
+        )
     else:
-        a_current_version = current_version.split('.')
-        a_latest_version = latest_version.split('.')
+        a_current_version = current_version.split(".")
+        a_latest_version = latest_version.split(".")
         if not (minor_only and a_current_version[0] != a_latest_version[0]):
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'].append('Elasticsearch domain "{}" would have been updated '
-                                      'to version "{}".'.format(name, latest_version))
-                ret['changes'] = {'old': current_version, 'new': latest_version}
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["comment"].append(
+                    'Elasticsearch domain "{}" would have been updated '
+                    'to version "{}".'.format(name, latest_version)
+                )
+                ret["changes"] = {"old": current_version, "new": latest_version}
             else:
                 ret = upgraded(
                     name,
                     latest_version,
-                    region=region, keyid=keyid, key=key, profile=profile)
+                    region=region,
+                    keyid=keyid,
+                    key=key,
+                    profile=profile,
+                )
         else:
-            ret['result'] = True
-            ret['comment'].append('Elasticsearch domain "{}" is already at its '
-                                  'latest minor version {}.'
-                                  ''.format(name, current_version))
+            ret["result"] = True
+            ret["comment"].append(
+                'Elasticsearch domain "{}" is already at its '
+                "latest minor version {}."
+                "".format(name, current_version)
+            )
     ret = _check_return_value(ret)
-    if ret['result'] and ret['changes'] and not minor_only:
+    if ret["result"] and ret["changes"] and not minor_only:
         # Try and see if we can upgrade again
-        res = latest(name, minor_only=minor_only, region=region, keyid=keyid, key=key, profile=profile)
-        if res['result'] and res['changes']:
-            ret['changes']['new'] = res['changes']['new']
-            ret['comment'].extend(res['comment'])
+        res = latest(
+            name,
+            minor_only=minor_only,
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        )
+        if res["result"] and res["changes"]:
+            ret["changes"]["new"] = res["changes"]["new"]
+            ret["comment"].extend(res["comment"])
     return ret
 
 
 def tagged(
-        name,
-        tags=None,
-        replace=False,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    name, tags=None, replace=False, region=None, keyid=None, key=None, profile=None
+):
+    """
     Ensures the Elasticsearch domain has the tags provided.
     Adds tags to the domain unless ``replace`` is set to ``True``, in which
     case all existing tags will be replaced with the tags provided in ``tags``.
@@ -686,69 +797,89 @@ def tagged(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'name': name, 'result': 'oops', 'comment': [], 'changes': {}}
+    """
+    ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
     current_tags = {}
     # Check if the domain exists
-    res = __salt__['boto3_elasticsearch.exists'](
-        name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if res['result']:
-        res = __salt__['boto3_elasticsearch.list_tags'](
-            name,
-            region=region, keyid=keyid, key=key, profile=profile)
-        if 'error' in res:
-            ret['result'] = False
-            ret['comment'].append('Error fetching tags of Elasticsearch domain '
-                                  '"{}": {}'.format(name, res['error']))
+    res = __salt__["boto3_elasticsearch.exists"](
+        name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if res["result"]:
+        res = __salt__["boto3_elasticsearch.list_tags"](
+            name, region=region, keyid=keyid, key=key, profile=profile
+        )
+        if "error" in res:
+            ret["result"] = False
+            ret["comment"].append(
+                "Error fetching tags of Elasticsearch domain "
+                '"{}": {}'.format(name, res["error"])
+            )
         else:
-            current_tags = res['response'] or {}
+            current_tags = res["response"] or {}
     else:
-        ret['result'] = False
-        ret['comment'].append('Elasticsearch domain "{}" does not exist.'
-                              ''.format(name))
-    if isinstance(ret['result'], bool):
+        ret["result"] = False
+        ret["comment"].append(
+            'Elasticsearch domain "{}" does not exist.' "".format(name)
+        )
+    if isinstance(ret["result"], bool):
         return ret
 
     diff_tags = salt.utils.dictdiffer.deep_diff(current_tags, tags)
     if not diff_tags:
-        ret['result'] = True
-        ret['comment'].append('Elasticsearch domain "{}" already has the specified '
-                              'tags.'.format(name))
+        ret["result"] = True
+        ret["comment"].append(
+            'Elasticsearch domain "{}" already has the specified ' "tags.".format(name)
+        )
     else:
         if replace:
-            ret['changes'] = diff_tags
+            ret["changes"] = diff_tags
         else:
-            ret['changes'] = {'old': current_tags, 'new': current_tags.update(tags)}
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append('Tags on Elasticsearch domain "{}" would have '
-                                  'been {}ed.'.format(name, 'replac' if replace else 'add'))
+            ret["changes"] = {"old": current_tags, "new": current_tags.update(tags)}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append(
+                'Tags on Elasticsearch domain "{}" would have '
+                "been {}ed.".format(name, "replac" if replace else "add")
+            )
         else:
             if replace:
-                res = __salt__['boto3_elasticsearch.remove_tags'](
+                res = __salt__["boto3_elasticsearch.remove_tags"](
                     tag_keys=current_tags.keys(),
                     domain_name=name,
-                    region=region, keyid=keyid, key=key, profile=profile)
-                if 'error' in res:
-                    ret['result'] = False
-                    ret['comment'].append('Error removing current tags from Elasticsearch '
-                                          'domain "{}": {}'.format(name, res['error']))
-                    ret['changes'] = {}
-            if isinstance(ret['result'], bool):
+                    region=region,
+                    keyid=keyid,
+                    key=key,
+                    profile=profile,
+                )
+                if "error" in res:
+                    ret["result"] = False
+                    ret["comment"].append(
+                        "Error removing current tags from Elasticsearch "
+                        'domain "{}": {}'.format(name, res["error"])
+                    )
+                    ret["changes"] = {}
+            if isinstance(ret["result"], bool):
                 return ret
-            res = __salt__['boto3_elasticsearch.add_tags'](
+            res = __salt__["boto3_elasticsearch.add_tags"](
                 domain_name=name,
                 tags=tags,
-                region=region, keyid=keyid, key=key, profile=profile)
-            if 'error' in res:
-                ret['result'] = False
-                ret['comment'].append('Error tagging Elasticsearch domain '
-                                      '"{}": {}'.format(name, res['error']))
-                ret['changes'] = {}
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+            )
+            if "error" in res:
+                ret["result"] = False
+                ret["comment"].append(
+                    "Error tagging Elasticsearch domain "
+                    '"{}": {}'.format(name, res["error"])
+                )
+                ret["changes"] = {}
             else:
-                ret['result'] = True
-                ret['comment'].append('Tags on Elasticsearch domain "{}" have been '
-                                      '{}ed.'.format(name, 'replac' if replace else 'add'))
+                ret["result"] = True
+                ret["comment"].append(
+                    'Tags on Elasticsearch domain "{}" have been '
+                    "{}ed.".format(name, "replac" if replace else "add")
+                )
     ret = _check_return_value(ret)
     return ret
