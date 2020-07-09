@@ -1767,42 +1767,10 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        @contextlib.contextmanager
-        def exit_context():
-            try:
-                yield
-            except (SystemExit, KeyboardInterrupt) as ex:
-                log.warning(
-                    "Minion job %s is terminated due to minion termination", data["jid"]
-                )
-                ret = {
-                    "fun": data["fun"],
-                    "fun_args": data["arg"],
-                    "jid": data["jid"],
-                    "retcode": salt.defaults.exitcodes.EX_GENERIC,
-                    "return": "Minion terminated",
-                    "success": False,
-                }
-                if "master_id" in data:
-                    ret["master_id"] = data["master_id"]
-                if "metadata" in data:
-                    if isinstance(data["metadata"], dict):
-                        ret["metadata"] = data["metadata"]
-                    else:
-                        log.warning(
-                            "The metadata parameter must be a dictionary. Ignoring."
-                        )
-                if minion_instance.connected:
-                    minion_instance._return_pub(
-                        ret, timeout=minion_instance._return_retry_timer()
-                    )
-
         with salt.ext.tornado.stack_context.StackContext(
             functools.partial(RequestContext, {"data": data, "opts": opts})
         ):
-            with salt.ext.tornado.stack_context.StackContext(
-                minion_instance.ctx
-            ), salt.ext.tornado.stack_context.StackContext(exit_context):
+            with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
                 run_func(minion_instance, opts, data)
 
     @classmethod
