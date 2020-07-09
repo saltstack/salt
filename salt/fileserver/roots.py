@@ -26,7 +26,6 @@ import salt.utils.gzip_util
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.stringutils
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -156,12 +155,11 @@ def update():
 
     old_mtime_map = {}
     # if you have an old map, load that
-    if os.path.exists(mtime_map_path):
-        with salt.utils.files.fopen(mtime_map_path, "rb") as fp_:
+    try:
+        with salt.utils.files.fopen(mtime_map_path) as fp_:
             for line in fp_:
-                line = salt.utils.stringutils.to_unicode(line)
                 try:
-                    file_path, mtime = line.replace("\n", "").split(":", 1)
+                    file_path, mtime = line.strip().rsplit(":", 1)
                     mtime = float(mtime)
                     old_mtime_map[file_path] = mtime
                     if mtime != new_mtime_map.get(file_path, mtime):
@@ -173,13 +171,15 @@ def update():
                         mtime_map_path,
                         line,
                     )
+    except (IOError, OSError):
+        pass
 
     # compare the maps, set changed to the return value
     data["changed"] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
 
     # compute files that were removed and added
-    old_files = set(old_mtime_map.keys())
-    new_files = set(new_mtime_map.keys())
+    old_files = set(old_mtime_map)
+    new_files = set(new_mtime_map)
     data["files"]["removed"] = list(old_files - new_files)
     data["files"]["added"] = list(new_files - old_files)
 
@@ -245,11 +245,9 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.files.fopen(cache_path, "rb") as fp_:
+            with salt.utils.files.fopen(cache_path) as fp_:
                 try:
-                    hsum, mtime = salt.utils.stringutils.to_unicode(fp_.read()).split(
-                        ":"
-                    )
+                    hsum, mtime = fp_.read().split(":")
                 except ValueError:
                     log.debug(
                         "Fileserver attempted to read incomplete cache file. Retrying."
