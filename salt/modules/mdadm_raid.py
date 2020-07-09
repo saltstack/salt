@@ -27,7 +27,7 @@ __func_alias__ = {"list_": "list"}
 # Define the module's virtual name
 __virtualname__ = "raid"
 
-_VOL_REGEX_PATTERN_MATCH = r'^ARRAY\s+{0}\s+.*$'
+_VOL_REGEX_PATTERN_MATCH = r"^ARRAY\s+{0}\s+.*$"
 
 
 def __virtual__():
@@ -295,7 +295,7 @@ def save_config():
         vol_d = dict([(line.split()[1], line) for line in scan])
         for vol in vol_d:
             pattern = _VOL_REGEX_PATTERN_MATCH.format(re.escape(vol))
-            __salt__['file.replace'](
+            __salt__["file.replace"](
                 cfg_file, pattern, vol_d[vol], append_if_not_found=True
             )
     except SaltInvocationError:  # File is missing
