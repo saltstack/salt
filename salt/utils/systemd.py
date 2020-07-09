@@ -18,17 +18,6 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
-def _has_systemd_support():
-    try:
-        output = subprocess.check_output(("systemctl",), shell=False).decode().lower()
-        return "systemd" in output
-    except FileNotFoundError:
-        return False
-
-
-HAS_SYSTEMD = _has_systemd_support()
-
-
 def booted(context=None):
     """
     Return True if the system was booted with systemd, False otherwise.  If the
