@@ -7,10 +7,12 @@ runTestSuite(
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
-    nox_env_name: 'runtests-tcp',
+    nox_env_name: 'pytest-tcp',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
+    //splits: ['unit', 'integration', 'multimaster'],
     testrun_timeout: 6,
-    use_spot_instances: true)
+    use_spot_instances: true,
+)
 
 // vim: ft=groovy

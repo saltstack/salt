@@ -7,7 +7,7 @@ runTestSuite(
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
-    nox_env_name: 'runtests-zeromq-pycryptodome',
+    nox_env_name: 'pytest-zeromq-pycryptodome',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
     testrun_timeout: 6,
