@@ -30,31 +30,6 @@ class SystemdTestCase(TestCase):
     Tests the functions in salt.utils.systemd
     """
 
-    def test_has_systemd_support_true(self):
-        with patch(
-            "subprocess.check_output",
-            return_value="Cats\n\t\n\rSyStemD_data".encode("utf-8"),
-        ) as check_output:
-            self.assertTrue(_systemd._has_systemd_support())
-            check_output.assert_called_once()
-
-    def test_has_systemd_support_false(self):
-        with patch(
-            "subprocess.check_output", return_value="Cats\nMeow".encode("utf-8")
-        ) as check_output:
-            self.assertFalse(_systemd._has_systemd_support())
-            check_output.assert_called_once()
-
-    def test_has_systemd_support_file_not_found_error(self):
-        with patch(
-            "subprocess.check_output", side_effect=FileNotFoundError
-        ) as check_output:
-            self.assertFalse(_systemd._has_systemd_support())
-            check_output.assert_called_once()
-
-    def test_has_systemd_support_no_mock(self):
-        self.assertIsInstance(_systemd._has_systemd_support(), bool)
-
     def test_booted(self):
         """
         Test that salt.utils.systemd.booted() returns True when minion is
