@@ -577,7 +577,7 @@ def function(
         changes[minion] = m_ret
     if not cmd_ret:
         func_ret["result"] = False
-        func_ret["command"] = "No minions responded"
+        func_ret["comment"] = "No minions responded"
     else:
         if changes:
             func_ret["changes"] = {"out": "highstate", "ret": changes}
