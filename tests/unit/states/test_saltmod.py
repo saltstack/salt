@@ -226,6 +226,28 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock_cmd}):
                 self.assertDictEqual(saltmod.function(name, tgt), ret)
 
+    @slowTest
+    def test_function_when_no_minions_match(self):
+        """
+        Test to execute a single module function on a remote
+        minion via salt or salt-ssh
+        """
+        name = "state"
+        tgt = "larry"
+        mock_ret = {}
+        mock_cmd = MagicMock(return_value=mock_ret)
+
+        ret = {
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "No minions responded",
+        }
+
+        with patch.dict(saltmod.__opts__, {"test": False}):
+            with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock_cmd}):
+                self.assertDictEqual(saltmod.function(name, tgt), ret)
+
     # 'wait_for_event' function tests: 1
 
     def test_wait_for_event(self):
