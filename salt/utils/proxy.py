@@ -18,5 +18,5 @@ def is_proxytype(opts, proxytype):
     """
     return (
         salt.utils.platform.is_proxy()
-        and opts.get("proxy", None).get("proxytype", None) == proxytype
+        and opts.get("proxy", {}).get("proxytype", None) == proxytype
     )
