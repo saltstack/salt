@@ -60,7 +60,7 @@ def store(bank, key, data, cachedir):
     os.close(tmpfh)
     try:
         with salt.utils.files.fopen(tmpfname, "w+b") as fh_:
-            fh_.write(__context__["serial"].dumps(data))
+            __context__["serial"].dump(data, fh_)
         # On Windows, os.rename will fail if the destination file exists.
         salt.utils.atomicfile.atomic_rename(tmpfname, outfile)
     except IOError as exc:
