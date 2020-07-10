@@ -39,3 +39,10 @@ class ProxyUtilsTestCase(TestCase):
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
             ret = salt.utils.proxy.is_proxytype(opts, "docker")
             self.assertFalse(ret)
+
+    def test_is_proxytype_not_proxy(self):
+        opts = {}
+
+        with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
+            ret = salt.utils.proxy.is_proxytype(opts, "docker")
+            self.assertFalse(ret)
