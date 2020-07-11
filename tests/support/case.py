@@ -288,12 +288,16 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         )
         return self.run_call(arg_str, with_retcode, catch_stderr, local, timeout)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None, config_dir=None):
         """
         Execute salt-cloud
         """
         if timeout is None:
             timeout = self.RUN_TIMEOUT
+
+        arg_str = "--config-dir={} {}".format(
+            config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        )
         ret = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
         log.debug("Result of run_cloud for command '%s': %s", arg_str, ret)
         return ret
