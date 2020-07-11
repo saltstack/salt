@@ -15,6 +15,7 @@ import glob
 
 # Import python libs
 import logging
+import os
 import re
 
 # Import salt libs
@@ -26,16 +27,12 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # pylint: enable=import-error
 
-
 __func_alias__ = {"reload_": "reload"}
 
 # Define the module's virtual name
 __virtualname__ = "service"
 
 log = logging.getLogger(__name__)
-
-
-_DEFAULT_VER = "7.0.0"
 
 
 def __virtual__():
@@ -58,12 +55,7 @@ def __virtual__():
 
 
 def _service_cmd(*args):
-    osmajor = _osrel()[0]
-    if osmajor < "6":
-        cmd = "/etc/init.d/{0} {1}".format(args[0], " ".join(args[1:]))
-    else:
-        cmd = "service {0} {1}".format(args[0], " ".join(args[1:]))
-    return cmd
+    return "service {0} {1}".format(args[0], " ".join(args[1:]))
 
 
 def _get_runlevel():
@@ -94,9 +86,8 @@ def get_enabled():
     """
     prefix = "/etc/rc[S{0}].d/S".format(_get_runlevel())
     ret = set()
-    lines = glob.glob("{0}*".format(prefix))
-    for line in lines:
-        ret.add(re.split(prefix + r"\d+", line)[1])
+    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob("{0}*".format(prefix))]:
+        ret.add(re.split(r"\d+", line)[-1])
     return sorted(ret)
 
 
@@ -272,13 +263,6 @@ def status(name, sig=None):
     return results[name]
 
 
-def _osrel():
-    osrel = __grains__.get("osrelease", _DEFAULT_VER)
-    if not osrel:
-        osrel = _DEFAULT_VER
-    return osrel
-
-
 def enable(name, **kwargs):
     """
     Enable the named service to start at boot
@@ -289,18 +273,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     """
-    osmajor = _osrel()[0]
-    if osmajor < "6":
-        cmd = "update-rc.d -f {0} defaults 99".format(_cmd_quote(name))
-    else:
-        cmd = "update-rc.d {0} enable".format(_cmd_quote(name))
-    try:
-        if int(osmajor) >= 6:
-            cmd = "insserv {0} && ".format(_cmd_quote(name)) + cmd
-    except ValueError:
-        osrel = _osrel()
-        if osrel == "testing/unstable" or osrel == "unstable" or osrel.endswith("/sid"):
-            cmd = "insserv {0} && ".format(_cmd_quote(name)) + cmd
+    cmd = "insserv {0} && update-rc.d {0} enable".format(_cmd_quote(name))
     return not __salt__["cmd.retcode"](cmd, python_shell=True)
 
 
@@ -314,11 +287,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     """
-    osmajor = _osrel()[0]
-    if osmajor < "6":
-        cmd = "update-rc.d -f {0} remove".format(name)
-    else:
-        cmd = "update-rc.d {0} disable".format(name)
+    cmd = "update-rc.d {0} disable".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
