@@ -416,7 +416,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def delkey(key):
+def delkey(key, force=False):
     """
     .. versionadded:: 2017.7.0
 
@@ -432,10 +432,10 @@ def delkey(key):
 
         salt '*' grains.delkey key
     """
-    return delval(key, destructive=True)
+    return delval(key, destructive=True, force=force)
 
 
-def delval(key, destructive=False):
+def delval(key, destructive=False, force=False):
     """
     .. versionadded:: 0.17.0
 
@@ -455,7 +455,7 @@ def delval(key, destructive=False):
 
         salt '*' grains.delval key
     """
-    return set(key, None, destructive=destructive)
+    return set(key, None, destructive=destructive, force=force)
 
 
 def ls():  # pylint: disable=C0103
