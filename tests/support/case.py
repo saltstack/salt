@@ -60,6 +60,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         catch_stderr=False,
         timeout=None,
         popen_kwargs=None,
+        config_dir=None,
     ):
         r'''
         Run the ``salt`` CLI tool with the provided arguments
@@ -78,15 +79,14 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "-c {0} -t {1} {2}".format(
-            RUNTIME_VARS.TMP_CONF_DIR, timeout, arg_str
-        )
+        arg_str = "-t {1} {2}".format(timeout, arg_str)
         return self.run_script(
             "salt",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
 
     def run_ssh(
@@ -100,6 +100,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         roster_file=None,
         ssh_opts="",
         log_level="error",
+        config_dir=None,
         **kwargs
     ):
         """
@@ -109,11 +110,10 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not roster_file:
             roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
-        arg_str = "{} {} -l{} -c {} -i --priv {} --roster-file {} {} localhost {} --out=json".format(
+        arg_str = "{} {} -l{} -i --priv {} --roster-file {} {} localhost {} --out=json".format(
             " -W" if wipe else "",
             " -r" if raw else "",
             log_level,
-            RUNTIME_VARS.TMP_CONF_DIR,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
             roster_file,
             ssh_opts,
@@ -126,6 +126,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             catch_stderr=catch_stderr,
             raw=True,
             timeout=timeout,
+            config_dir=config_dir,
             **kwargs
         )
         log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
@@ -147,11 +148,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
         asynchronous = kwargs.get("async", asynchronous)
-        arg_str = "-c {0}{async_flag} -t {timeout} {1}".format(
-            config_dir or RUNTIME_VARS.TMP_CONF_DIR,
-            arg_str,
-            timeout=timeout,
-            async_flag=" --async" if asynchronous else "",
+        arg_str = "{async_flag} -t {timeout} {}".format(
+            arg_str, timeout=timeout, async_flag=" --async" if asynchronous else "",
         )
         ret = self.run_script(
             "salt-run",
@@ -159,6 +157,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_run for command '%s': %s", arg_str, ret)
         return ret
@@ -210,16 +209,26 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         )
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False, config_dir=None):
         """
         Execute salt-key
         """
-        arg_str = "-c {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
         return self.run_script(
-            "salt-key", arg_str, catch_stderr=catch_stderr, with_retcode=with_retcode
+            "salt-key",
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode,
+            config_dir=config_dir,
         )
 
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
+    def run_cp(
+        self,
+        arg_str,
+        with_retcode=False,
+        catch_stderr=False,
+        timeout=None,
+        config_dir=None,
+    ):
         """
         Execute salt-cp
         """
@@ -227,13 +236,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         # Note: not logging result of run_cp because it will log a bunch of
         # bytes which will not be very helpful.
-        arg_str = "--config-dir {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
         return self.run_script(
             "salt-cp",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
 
     def run_call(
@@ -249,18 +258,14 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
-        # arg_str = "{0} --config-dir {1} {2}".format(
-        #    "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
-        # )
-        arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", config_dir, arg_str
-        )
+        arg_str = "{0} {1}".format("--local" if local else "", arg_str)
         ret = self.run_script(
             "salt-call",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_call for command '%s': %s", arg_str, ret)
         return ret
@@ -295,14 +300,20 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "--config-dir={} {}".format(
-            config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        ret = self.run_script(
+            "salt-cloud", arg_str, catch_stderr, timeout=timeout, config_dir=config_dir
         )
-        ret = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
         log.debug("Result of run_cloud for command '%s': %s", arg_str, ret)
         return ret
 
-    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
+    def run_spm(
+        self,
+        arg_str,
+        with_retcode=False,
+        catch_stderr=False,
+        timeout=None,
+        config_dir=None,
+    ):
         """
         Execute spm
         """
@@ -314,6 +325,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_spm for command '%s': %s", arg_str, ret)
         return ret
@@ -330,6 +342,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         raw=False,
         popen_kwargs=None,
         log_output=None,
+        config_dir=None,
         **kwargs
     ):
         """
@@ -366,8 +379,9 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             else:
                 cmd += "{0} ".format(":".join(sys.path[0:]))
             cmd += "python{0}.{1} ".format(*sys.version_info)
-        cmd += "{0} ".format(script_path)
-        cmd += "{0} ".format(arg_str)
+        cmd += "{} --config-dir={} {}".format(
+            script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        )
         if kwargs:
             # late import
             import salt.utils.json
