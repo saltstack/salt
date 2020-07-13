@@ -134,3 +134,5 @@ sdbvault:
   driver: vault
 venafi:
   fake: "true"
+
+master_stats: true
