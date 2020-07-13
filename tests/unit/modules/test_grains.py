@@ -785,7 +785,7 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
         ):
             res = grainsmod.delkey("b", force=True)
-            assert res['comment'].find("Use 'force=True' to overwrite.") == -1
+            assert res["comment"].find("Use 'force=True' to overwrite.") == -1
             self.assertTrue(res["result"])
             self.assertEqual(res["changes"], {"b": None})
             self.assertEqual(grainsmod.__grains__, {"a": "aval", "c": 8})
