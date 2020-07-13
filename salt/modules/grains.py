@@ -426,6 +426,10 @@ def delkey(key, force=False):
     key
         The grain key from which to delete the value.
 
+    force
+        Force remove the grain even when it is a mapped value.
+        Defaults to False
+
     CLI Example:
 
     .. code-block:: bash
@@ -448,6 +452,10 @@ def delval(key, destructive=False, force=False):
 
     destructive
         Delete the key, too. Defaults to False.
+
+    force
+        Force remove the grain even when it is a mapped value.
+        Defaults to False
 
     CLI Example:
 
