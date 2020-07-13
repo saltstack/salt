@@ -13,6 +13,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import errno
+import io
 import json
 import logging
 import os
@@ -25,8 +26,6 @@ import time
 from datetime import datetime, timedelta
 
 import salt.utils.files
-from salt.ext import six
-from salt.ext.six.moves import cStringIO
 from saltfactories.utils.processes.helpers import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import RedirectStdStreams, requires_sshd_server
@@ -193,7 +192,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         # Compile output
         # TODO: Support outputters other than nested
         opts["color"] = False
-        opts["output_file"] = cStringIO()
+        opts["output_file"] = io.StringIO()
         try:
             salt.output.display_output(ret["return"], opts=opts, out=output)
             out = opts["output_file"].getvalue()
@@ -512,7 +511,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             finally:
                 try:
                     if os.path.exists(tmp_file.name):
-                        if isinstance(tmp_file.name, six.string_types):
+                        if isinstance(tmp_file.name, str):
                             # tmp_file.name is an int when using SpooledTemporaryFiles
                             # int types cannot be used with os.remove() in Python 3
                             os.remove(tmp_file.name)
@@ -535,7 +534,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         finally:
             try:
                 if os.path.exists(tmp_file.name):
-                    if isinstance(tmp_file.name, six.string_types):
+                    if isinstance(tmp_file.name, str):
                         # tmp_file.name is an int when using SpooledTemporaryFiles
                         # int types cannot be used with os.remove() in Python 3
                         os.remove(tmp_file.name)
@@ -801,7 +800,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, six.string_types):
+                if not isinstance(item, str):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
