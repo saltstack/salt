@@ -32,7 +32,11 @@ class MockNetwork(object):
         """
             Mock interface method
         """
-        return {"salt": {"up": 1}}
+        ifaces = {
+            "salt": {"up": 1},
+            "lo": {"up": 1, "inet": [{"label": "lo"}, {"label": "lo:alias1"}]},
+        }
+        return ifaces
 
 
 class MockGrains(object):
@@ -126,6 +130,27 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                     self.assertDictEqual(
                                         network.managed("salt", "stack", False), ret
                                     )
+
+                    mock = MagicMock(return_value=True)
+                    with patch.dict(network.__salt__, {"ip.down": mock}):
+                        with patch.dict(
+                            network.__salt__, {"saltutil.refresh_modules": mock}
+                        ):
+                            change = {
+                                "interface": "--- \n+++ \n@@ -1 +1 @@\n-A\n+B",
+                                "status": "Interface lo:alias1 down",
+                            }
+                            ret.update(
+                                {
+                                    "name": "lo:alias1",
+                                    "comment": "Interface lo:alias1 updated.",
+                                    "result": True,
+                                    "changes": change,
+                                }
+                            )
+                            self.assertDictEqual(
+                                network.managed("lo:alias1", "eth", False), ret
+                            )
 
     def test_routes(self):
         """
