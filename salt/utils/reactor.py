@@ -7,10 +7,12 @@ Functions which implement running reactor jobs
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import fnmatch
 import glob
 import logging
 import os
+import time
 
 # Import salt libs
 import salt.client
@@ -29,6 +31,7 @@ import salt.wheel
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +59,13 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
         self.is_leader = True
+        self.event = salt.utils.event.get_master_event(
+            opts, opts["sock_dir"], listen=False
+        )
+        self.stats = collections.defaultdict(
+            lambda: {"mean": 0, "latency": 0, "runs": 0}
+        )
+        self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -76,6 +86,26 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
             "log_queue": self.log_queue,
             "log_queue_level": self.log_queue_level,
         }
+
+    def _post_stats(self, stats):
+        """
+        Fire events with stat info if it's time
+        """
+        end_time = time.time()
+        if end_time - self.stat_clock > self.opts["master_stats_event_iter"]:
+            # Fire the event with the stats and wipe the tracker
+            self.event.fire_event(
+                {
+                    "time": end_time - self.stat_clock,
+                    "worker": self.name,
+                    "stats": stats,
+                },
+                tagify(self.name, "stats"),
+            )
+            self.stats = collections.defaultdict(
+                lambda: {"mean": 0, "latency": 0, "runs": 0}
+            )
+            self.stat_clock = end_time
 
     def render_reaction(self, glob_ref, tag, data):
         """
@@ -305,10 +335,18 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                             continue
                         chunks = self.reactions(data["tag"], data["data"], reactors)
                         if chunks:
+                            if self.opts["master_stats"]:
+                                _data = data["data"]
+                                start = time.time()
                             try:
                                 self.call_reactions(chunks)
                             except SystemExit:
                                 log.warning("Exit ignored by reactor")
+                            if self.opts["master_stats"]:
+                                stats = salt.utils.event.update_stats(
+                                    self.stats, start, _data
+                                )
+                                self._post_stats(stats)
 
 
 class ReactWrap(object):
