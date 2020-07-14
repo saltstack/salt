@@ -8,6 +8,7 @@ import copy
 import os
 import shutil
 import sys
+import tarfile
 import tempfile
 
 import jinja2
@@ -20,7 +21,7 @@ import salt.utils.stringutils
 from salt.ext.six.moves import range
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
-from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -704,6 +705,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.tarfile", MagicMock())
     @patch("salt.utils.thin.zipfile", MagicMock())
     @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=True))
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock())
     @patch(
@@ -767,6 +769,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.tarfile", MagicMock())
     @patch("salt.utils.thin.zipfile", MagicMock())
     @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=True))
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock())
@@ -819,6 +822,7 @@ class SSHThinTestCase(TestCase):
     @patch("salt.utils.thin.tarfile", MagicMock())
     @patch("salt.utils.thin.zipfile", MagicMock())
     @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=True))
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -879,7 +883,10 @@ class SSHThinTestCase(TestCase):
     )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -954,7 +961,10 @@ class SSHThinTestCase(TestCase):
     )
     @patch("salt.utils.thin.tarfile", _tarfile(None))
     @patch("salt.utils.thin.zipfile", MagicMock())
-    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch(
+        "salt.utils.thin.os.getcwd",
+        MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    )
     @patch("salt.utils.thin.os.chdir", MagicMock())
     @patch("salt.utils.thin.os.close", MagicMock())
     @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
@@ -1046,6 +1056,63 @@ class SSHThinTestCase(TestCase):
         )
         for t_line in ["second-system-effect:2:7", "solar-interference:2:6"]:
             self.assertIn(t_line, out)
+
+    @patch("salt.exceptions.SaltSystemExit", Exception)
+    @patch("salt.utils.thin.log", MagicMock())
+    @patch("salt.utils.thin.os.makedirs", MagicMock())
+    @patch("salt.utils.files.fopen", MagicMock())
+    @patch("salt.utils.thin._get_salt_call", MagicMock())
+    @patch("salt.utils.thin._get_ext_namespaces", MagicMock())
+    @patch("salt.utils.thin.get_tops", MagicMock(return_value=["/foo3", "/bar3"]))
+    @patch("salt.utils.thin.get_ext_tops", MagicMock(return_value={}))
+    @patch("salt.utils.thin.os.path.isfile", MagicMock())
+    @patch("salt.utils.thin.os.path.isdir", MagicMock(return_value=False))
+    @patch("salt.utils.thin.log", MagicMock())
+    @patch("salt.utils.thin.os.remove", MagicMock())
+    @patch("salt.utils.thin.os.path.exists", MagicMock())
+    @patch("salt.utils.path.os_walk", MagicMock(return_value=[]))
+    @patch(
+        "salt.utils.thin.subprocess.Popen",
+        _popen(
+            None,
+            side_effect=[(bts("2.7"), bts("")), (bts('["/foo27", "/bar27"]'), bts(""))],
+        ),
+    )
+    @patch("salt.utils.thin.tarfile", MagicMock())
+    @patch("salt.utils.thin.zipfile", MagicMock())
+    @patch("salt.utils.thin.os.getcwd", MagicMock())
+    @patch("salt.utils.thin.os.access", MagicMock(return_value=False))
+    @patch("salt.utils.thin.os.chdir", MagicMock())
+    @patch("salt.utils.thin.os.close", MagicMock())
+    @patch("salt.utils.thin.tempfile.mkdtemp", MagicMock(return_value=""))
+    @patch(
+        "salt.utils.thin.tempfile.mkstemp", MagicMock(return_value=(3, ".temporary"))
+    )
+    @patch("salt.utils.thin.shutil", MagicMock())
+    @patch("salt.utils.thin._six.PY3", True)
+    @patch("salt.utils.thin._six.PY2", False)
+    @patch("salt.utils.thin.sys.version_info", _version_info(None, 3, 6))
+    def test_gen_thin_control_files_written_access_denied_cwd(self):
+        """
+        Test thin.gen_thin function if control files are written (version, salt-call etc)
+        when the current working directory is inaccessible, eg. Salt is configured to run as
+        a non-root user but the command is executed in a directory that the user does not
+        have permissions to.  Issue #54317.
+
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
+
+        :return:
+        """
+        thin.gen_thin("")
+        arc_name, arc_mode = thin.tarfile.method_calls[0][1]
+        self.assertEqual(arc_name, ".temporary")
+        self.assertEqual(arc_mode, "w:gz")
+        for idx, fname in enumerate(
+            ["version", ".thin-gen-py-version", "salt-call", "supported-versions"]
+        ):
+            name = thin.tarfile.open().method_calls[idx + 2][1][0]
+            self.assertEqual(name, fname)
+        thin.tarfile.open().close.assert_called()
 
     def test_get_tops_python(self):
         """
@@ -1295,3 +1362,30 @@ class SSHThinTestCase(TestCase):
             calls = self.tar.mock_calls
             for _file in exp_files:
                 assert [x for x in calls if "{}".format(_file) in x.args]
+
+    @skipIf(
+        salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
+    )
+    def test_thin_dir(self):
+        """
+        Test the thin dir to make sure salt-call can run
+
+        Run salt call via a python in a new virtual environment to ensure
+        salt-call has all dependencies needed.
+        """
+        # This was previously an integration test and is now here, as a unit test.
+        # Should actually be a functional test
+        with VirtualEnv() as venv:
+            salt.utils.thin.gen_thin(venv.venv_dir)
+            thin_dir = os.path.join(venv.venv_dir, "thin")
+            thin_archive = os.path.join(thin_dir, "thin.tgz")
+            tar = tarfile.open(thin_archive)
+            tar.extractall(thin_dir)
+            tar.close()
+            ret = venv.run(
+                venv.venv_python,
+                os.path.join(thin_dir, "salt-call"),
+                "--version",
+                check=False,
+            )
+            assert ret.exitcode == 0, ret

@@ -62,6 +62,10 @@ class MockWMI_ComputerSystem(object):
     def JoinDomainOrWorkgroup(Name):
         return [0]
 
+    @staticmethod
+    def UnjoinDomainOrWorkgroup(Password, UserName, FUnjoinOptions):
+        return [0]
+
 
 class MockWMI_OperatingSystem(object):
     """
@@ -349,6 +353,35 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 win_system.join_domain("saltstack", "salt", "salt@123"),
                 "Already joined to saltstack",
             )
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_unjoin_domain(self):
+        """
+            Test unjoining a computer from an Active Directory domain
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Domain": "contoso.com"}),
+        ):
+            self.assertDictEqual(
+                win_system.unjoin_domain(),
+                {"Workgroup": "WORKGROUP", "Restart": False},
+            )
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_unjoin_domain_already_unjoined(self):
+        """
+            Test unjoining a computer from an Active Directory domain
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Workgroup": "WORKGROUP"}),
+        ):
+            self.assertEqual(win_system.unjoin_domain(), "Already joined to WORKGROUP")
 
     def test_get_system_time(self):
         """

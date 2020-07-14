@@ -146,12 +146,12 @@ dictionary. For example:
 .. code-block:: python
 
    def yourfunction():
-        # initialize a grains dictionary
-        grains = {}
-        # Some code for logic that sets grains like
-        grains['yourcustomgrain'] = True
-        grains['anothergrain'] = 'somevalue'
-        return grains
+       # initialize a grains dictionary
+       grains = {}
+       # Some code for logic that sets grains like
+       grains["yourcustomgrain"] = True
+       grains["anothergrain"] = "somevalue"
+       return grains
 
 The name of the function does not matter and will not factor into the grains
 data at all; only the keys/values returned become part of the grains.
@@ -205,14 +205,14 @@ grain data structure. For example, consider this custom grain file:
 
     #!/usr/bin/env python
     def _my_custom_grain():
-        my_grain = {'foo': 'bar', 'hello': 'world'}
+        my_grain = {"foo": "bar", "hello": "world"}
         return my_grain
 
 
     def main():
         # initialize a grains dictionary
         grains = {}
-        grains['my_grains'] = _my_custom_grain()
+        grains["my_grains"] = _my_custom_grain()
         return grains
 
 The output of this example renders like so:
