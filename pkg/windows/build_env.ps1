@@ -196,6 +196,7 @@ If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
     # Remove temp files
     Remove-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU" -Force -Recurse
     Remove-Item "$file" -Force
+}
 
 #------------------------------------------------------------------------------
 # Check for installation of EnVar Plugin for NSIS
