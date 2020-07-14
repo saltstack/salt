@@ -2735,10 +2735,10 @@ data in a state file:
               pillar:
                   test: "foo bar"
 
-If set to ``True`` the ``showpillar`` state will have access to the
+If set to ``True``, the ``showpillar`` state will have access to the
 global pillar data.
 
-If set to ``False`` only the overriding pillar data will be available
+If set to ``False``, only the overriding pillar data will be available
 to the ``showpillar`` state.
 
 Security Settings
@@ -3446,7 +3446,8 @@ have other services that need to go with it.
 Windows Software Repo Settings
 ==============================
 
-These settings apply to all minions whether in masterless or master-minion mode.
+These settings apply to all minions, whether running in masterless or
+master-minion mode.
 
 .. conf_minion:: winrepo_cache_expire_min
 
@@ -3501,7 +3502,7 @@ Standalone Minion Windows Software Repo Settings
 ================================================
 
 The following settings are for configuring the Windows Software Repository
-(winrepo) on a masterless minion. To run in masterless minion mode set the
+(winrepo) on a masterless minion. To run in masterless minion mode, set the
 :conf_minion:`file_client` to ``local`` or run ``salt-call`` with the
 ``--local`` option
 

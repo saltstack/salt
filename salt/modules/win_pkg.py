@@ -2219,7 +2219,7 @@ def purge(name=None, pkgs=None, **kwargs):
     ``remove()``.
 
     .. note::
-        At some point in the future ``pkg.purge`` may direct the installer to
+        At some point in the future, ``pkg.purge`` may direct the installer to
         remove all configs and settings for software packages that support that
         option.
 
