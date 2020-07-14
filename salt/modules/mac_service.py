@@ -526,7 +526,7 @@ def status(name, sig=None, runas=None):
     # we should only check for a PID if it's supposed to have one.
     # If we can't find a PID then something is wrong with the service.
     if _always_running_service(name):
-        return True if "PID" in output else False
+        return True if '"PID" =' in output else False
 
     return True
 
