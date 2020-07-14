@@ -14,7 +14,6 @@ import functools
 import logging
 import multiprocessing
 import os
-import pprint
 import re
 import signal
 import stat
@@ -1058,9 +1057,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
-        self.stats = collections.defaultdict(
-            lambda: {"mean": 0, "latency": 0, "runs": 0}
-        )
         self.stat_clock = time.time()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
@@ -1148,18 +1144,18 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         end_time = time.time()
         if end_time - self.stat_clock > self.opts["master_stats_event_iter"]:
             # Fire the event with the stats and wipe the tracker
-            stats_last = {
-                "time": end_time - self.stat_clock,
-                "worker": self.name,
-                "stats": stats,
-            }
-
-            self.aes_funcs.event.fire_event(stats_last, tagify(self.name, "stats"))
+            self.aes_funcs.event.fire_event(
+                {
+                    "time": end_time - self.stat_clock,
+                    "worker": self.name,
+                    "stats": stats,
+                },
+                tagify(self.name, "stats"),
+            )
             self.stats = collections.defaultdict(
                 lambda: {"mean": 0, "latency": 0, "runs": 0}
             )
             self.stat_clock = end_time
-            log.error("STATS %s", pprint.pformat(stats_last))
 
     def _handle_clear(self, load):
         """
