@@ -10,7 +10,6 @@
     Custom reusable :class:`TestCase<python2:unittest.TestCase>`
     implementations.
 """
-from __future__ import absolute_import, unicode_literals
 
 import errno
 import io
@@ -78,7 +77,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "-t {1} {2}".format(timeout, arg_str)
+        arg_str = "-t {} {}".format(timeout, arg_str)
         return self.run_script(
             "salt",
             arg_str,
@@ -257,7 +256,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
-        arg_str = "{0} {1}".format("--local" if local else "", arg_str)
+        arg_str = "{} {}".format("--local" if local else "", arg_str)
         ret = self.run_script(
             "salt-call",
             arg_str,
@@ -285,10 +284,10 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         This function is added for compatibility with ModuleCase. This makes it possible to use
         decorators like @with_system_user.
         """
-        arg_str = "{0} {1} {2}".format(
+        arg_str = "{} {} {}".format(
             function,
-            " ".join((str(arg_) for arg_ in arg)),
-            " ".join(("{0}={1}".format(*item) for item in kwargs.items())),
+            " ".join(str(arg_) for arg_ in arg),
+            " ".join("{}={}".format(*item) for item in kwargs.items()),
         )
         return self.run_call(arg_str, with_retcode, catch_stderr, local, timeout)
 
@@ -371,13 +370,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             cmd = "PYTHONPATH="
             python_path = os.environ.get("PYTHONPATH", None)
             if python_path is not None:
-                cmd += "{0}:".format(python_path)
+                cmd += "{}:".format(python_path)
 
             if sys.version_info[0] < 3:
-                cmd += "{0} ".format(":".join(sys.path[1:]))
+                cmd += "{} ".format(":".join(sys.path[1:]))
             else:
-                cmd += "{0} ".format(":".join(sys.path[0:]))
-            cmd += "python{0}.{1} ".format(*sys.version_info)
+                cmd += "{} ".format(":".join(sys.path[0:]))
+            cmd += "python{}.{} ".format(*sys.version_info)
         cmd += "{} --config-dir={} {}".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
         )
@@ -386,7 +385,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             import salt.utils.json
 
             for key, value in kwargs.items():
-                cmd += "'{0}={1} '".format(key, salt.utils.json.dumps(value))
+                cmd += "'{}={} '".format(key, salt.utils.json.dumps(value))
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
@@ -472,14 +471,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
         tmp_file.seek(0)
 
-        if sys.version_info >= (3,):
-            try:
-                out = tmp_file.read().decode(__salt_system_encoding__)
-            except (NameError, UnicodeDecodeError):
-                # Let's cross our fingers and hope for the best
-                out = tmp_file.read().decode("utf-8")
-        else:
-            out = tmp_file.read()
+        try:
+            out = tmp_file.read().decode(__salt_system_encoding__)
+        except (NameError, UnicodeDecodeError):
+            # Let's cross our fingers and hope for the best
+            out = tmp_file.read().decode("utf-8")
 
         if catch_stderr:
             if sys.version_info < (2, 7):
@@ -558,7 +554,7 @@ class MultiMasterTestShellCase(ShellCase):
         return RUNTIME_VARS.TMP_MM_CONF_DIR
 
 
-class SPMTestUserInterface(object):
+class SPMTestUserInterface:
     """
     Test user interface to SPMClient
     """
@@ -673,7 +669,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 textwrap.dedent(
                     """\
                      local_repo:
-                       url: file://{0}
+                       url: file://{}
                      """.format(
                         self.config["spm_build_dir"]
                     )
@@ -769,14 +765,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         if minion_tgt not in orig:
             fail_or_skip_func(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion '{0}'. Command output: {1}".format(minion_tgt, orig)
+                "from the minion '{}'. Command output: {}".format(minion_tgt, orig)
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
             fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{0}' from "
-                "the minion '{1}'. Command output: {2}".format(
-                    function, minion_tgt, orig
-                )
+                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{}' from "
+                "the minion '{}'. Command output: {}".format(function, minion_tgt, orig)
             )
 
         # Try to match stalled state functions
@@ -817,12 +811,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 job_kill = self.run_function("saltutil.kill_job", [jid])
                 msg = (
                     "A running state.single was found causing a state lock. "
-                    "Job details: '{0}'  Killing Job Returned: '{1}'".format(
+                    "Job details: '{}'  Killing Job Returned: '{}'".format(
                         job_data, job_kill
                     )
                 )
                 ret.append(
-                    "[TEST SUITE ENFORCED]{0}" "[/TEST SUITE ENFORCED]".format(msg)
+                    "[TEST SUITE ENFORCED]{}" "[/TEST SUITE ENFORCED]".format(msg)
                 )
         return ret
 
@@ -875,14 +869,12 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
         if minion_tgt not in orig:
             fail_or_skip_func(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion '{0}'. Command output: {1}".format(minion_tgt, orig)
+                "from the minion '{}'. Command output: {}".format(minion_tgt, orig)
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
             fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{0}' from "
-                "the minion '{1}'. Command output: {2}".format(
-                    function, minion_tgt, orig
-                )
+                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{}' from "
+                "the minion '{}'. Command output: {}".format(function, minion_tgt, orig)
             )
 
         # Try to match stalled state functions
@@ -932,7 +924,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         if "minion" not in orig:
             fail_or_skip_func(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion. Command output: {0}".format(orig)
+                "from the minion. Command output: {}".format(orig)
             )
         return orig["minion"]
 
@@ -944,7 +936,7 @@ class SSHCase(ShellCase):
     """
 
     def _arg_str(self, function, arg):
-        return "{0} {1}".format(function, " ".join(arg))
+        return "{} {}".format(function, " ".join(arg))
 
     # pylint: disable=arguments-differ
     def run_function(
