@@ -289,7 +289,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     newline = False
 
     if tmplstr and not isinstance(tmplstr, six.text_type):
-        # http://jinja.pocoo.org/docs/api/#unicode
+        # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
     if tmplstr.endswith(os.linesep):
