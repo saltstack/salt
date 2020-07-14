@@ -202,7 +202,7 @@ If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
 # Check for installation of EnVar Plugin for NSIS
 #------------------------------------------------------------------------------
 Write-Output " - Checking for EnVar Plugin of NSIS installation  . . ."
-If (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll" -and TestPath "$($ini[$bitPaths]['NSISPluginsDirU'])\EnVar.dll") {
+If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll") -and (Test-Path "$($ini[$bitPaths]['NSISPluginsDirU'])\EnVar.dll") ) {
     # Found EnVar Plugin for NSIS, do nothing
     Write-Output " - EnVar Plugin for NSIS Found . . ."
 } Else {
@@ -216,7 +216,7 @@ If (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll" -and TestPath "$
 
     # Extract Zip File
     Write-Output " - Extracting . . ."
-    Expand-ZipFile $file "$ini['Settings']['DownloadDir']\nsisenvar"
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\nsisenvar"
 
     # Copy dlls to plugins directory (both ANSI and Unicode)
     Write-Output " - Copying dlls to plugins directory . . ."
