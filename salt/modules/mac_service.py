@@ -598,7 +598,7 @@ def enabled(name, runas=None):
         salt '*' service.enabled org.cups.cupsd
     """
     # There isn't a direct way to get enabled, but if its not disabled
-    # then its enabled or capa
+    # then its enabled.
     return not __salt__["service.disabled"](name, runas)
 
 
@@ -704,7 +704,7 @@ def loaded(name, runas=None):
 
     :param str runas: User to run launchctl commands
 
-    :return: True if the specified service enabled, otherwise False
+    :return: ``True`` if the specified service is loaded, otherwise ``False``
     :rtype: bool
 
     CLI Example:
