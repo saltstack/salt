@@ -1,0 +1,1 @@
+Fixes dictionary being changed during iteration.
