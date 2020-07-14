@@ -22,7 +22,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {mac_service: {}}
+        return {mac_service: {"__context__": {}}}
 
     @patch.object(
         mac_service, "_get_domain_target", lambda name, service_target: ("", "")
@@ -77,18 +77,18 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_service_enabled_when_enabled(self):
         """
-        test service.enabled
+        test service.enabled when not disabled
         """
         mock_cmd = MagicMock(return_value=False)
-        with patch("salt.modules.mac_service.__salt__", {"service.disabled": mock_cmd}):
+        with patch.dict(mac_service.__salt__, {"service.disabled": mock_cmd}):
             self.assertTrue(mac_service.enabled("com.apple.atrun"))
 
     def test_service_enabled_when_disabled(self):
         """
-        test service.enabled
+        test service.enabled if service is disabled
         """
         mock_cmd = MagicMock(return_value=True)
-        with patch("salt.modules.mac_service.__salt__", {"service.disabled": mock_cmd}):
+        with patch.dict(mac_service.__salt__, {"service.disabled": mock_cmd}):
             self.assertFalse(mac_service.enabled("com.apple.atrun"))
 
     def test_service_loaded_when_true(self):
@@ -96,15 +96,15 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         test service.enabled
         """
         mock_cmd = MagicMock(return_value="some_service_string")
-        with patch("salt.modules.mac_service.__salt__", {"service.list": mock_cmd}):
-            self.assertTrue(mac_service.loaded("com.piedpiper.daemon"))
+        with patch.dict(mac_service.__salt__, {"service.list": mock_cmd}):
+            self.assertTrue(mac_service.loaded("com.salt"))
 
     def test_service_loaded_when_false(self):
         """
         test service.enabled
         """
         mock_cmd = MagicMock(side_effect=CommandExecutionError)
-        with patch("salt.modules.mac_service.__salt__", {"service.list": mock_cmd}):
+        with patch.dict(mac_service.__salt__, {"service.list": mock_cmd}):
             self.assertFalse(mac_service.loaded("com.apple.atrun"))
 
     def test_service_keep_alive_pathstate_file_rm(self):
@@ -258,34 +258,32 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             "service.stop": mock_cmd,
             "service.start": mock_cmd,
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            self.assertTrue(mac_service.restart("com.hooli.daemon"))
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertTrue(mac_service.restart("com.salt"))
 
     def test_service_restart_not_loaded(self):
         salt_dict = {
             "service.loaded": MagicMock(return_value=False),
             "service.start": MagicMock(return_value=True),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            self.assertTrue(mac_service.restart("com.hooli.daemon"))
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertTrue(mac_service.restart("com.salt"))
 
     def test_service_restart_failed_stop(self):
         salt_dict = {
             "service.loaded": MagicMock(return_value=True),
             "service.stop": MagicMock(side_effect=CommandExecutionError),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            with self.assertRaises(CommandExecutionError):
-                mac_service.restart("com.hooli.daemon")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertRaises(CommandExecutionError, mac_service.restart, "com.salt")
 
     def test_service_restart_failed_start(self):
         salt_dict = {
             "service.loaded": MagicMock(return_value=False),
             "service.start": MagicMock(side_effect=CommandExecutionError),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            with self.assertRaises(CommandExecutionError):
-                mac_service.restart("com.hooli.daemon")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertRaises(CommandExecutionError, mac_service.restart, "com.salt")
 
     def test_service_status_no_service(self):
         """
@@ -294,7 +292,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(
             mac_service, "_get_service", MagicMock(side_effect=CommandExecutionError)
         ):
-            self.assertEqual(mac_service.status("com.hooli.daemon"), "")
+            self.assertEqual(mac_service.status("com.salt"), False)
 
     @patch.object(mac_service, "_launch_agent", lambda name: False)
     @patch.object(mac_service, "_get_service", lambda name: {"": ""})
@@ -303,13 +301,12 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test service status on dameon with PID.
         """
-        mock_servie_list = "PID\tStatus\tLabel\n1061\t0\tcom.apple.storedownloadd.daemon\n524\t0\tcom.hooli.daemon\n243\t0\tcom.apple.coreservicesd\n451\t0\tcom.apple.touchbarserver\n815\t0\tcom.apple.deleted_helper"
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 0;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
             "service.list": MagicMock(return_value=mock_servie_list),
-            "service.loaded": MagicMock(return_value=True),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            self.assertEqual(mac_service.status("com.hooli.daemon"), "524")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertEqual(mac_service.status("com.salt"), True)
 
     @patch.object(mac_service, "_launch_agent", lambda name: True)
     @patch.object(mac_service, "_get_service", lambda name: {"": ""})
@@ -318,65 +315,101 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test service status on LaunchAgent with PID.
         """
-        mock_servie_list = "PID\tStatus\tLabel\n1061\t0\tcom.apple.storedownloadd.daemon\n524\t0\tcom.hooli.agent\n243\t0\tcom.apple.coreservicesd"
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
         salt_dict = {
             "service.list": MagicMock(return_value=mock_servie_list),
-            "service.loaded": MagicMock(return_value=True),
         }
         utils_dict = {
             "mac_utils.console_user": MagicMock(return_value="spongebob"),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            with patch("salt.modules.mac_service.__utils__", utils_dict):
-                self.assertEqual(mac_service.status("com.hooli.agent"), "524")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            with patch.dict(mac_service.__utils__, utils_dict):
+                self.assertEqual(mac_service.status("com.salt"), True)
 
     @patch.object(mac_service, "_launch_agent", lambda name: True)
     @patch.object(mac_service, "_get_service", lambda name: {"": ""})
     @patch.object(mac_service, "_always_running_service", lambda name: True)
     def test_service_status_on_agent_with_no_pid_and_should_be_running(self):
         """
-        Test service status on LaunchAgent with PID.
+        Test service status on LaunchAgent with No PID and should be running.
         """
-        mock_servie_list = "PID\tStatus\tLabel\n1061\t0\tcom.apple.storedownloadd.daemon\n-\t0\tcom.hooli.agent\n243\t0\tcom.apple.coreservicesd"
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
         salt_dict = {
             "service.list": MagicMock(return_value=mock_servie_list),
-            "service.loaded": MagicMock(return_value=True),
         }
         utils_dict = {
             "mac_utils.console_user": MagicMock(return_value="spongebob"),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            with patch("salt.modules.mac_service.__utils__", utils_dict):
-                self.assertEqual(mac_service.status("com.hooli.agent"), "")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            with patch.dict(mac_service.__utils__, utils_dict):
+                self.assertEqual(mac_service.status("com.salt"), False)
 
     @patch.object(mac_service, "_launch_agent", lambda name: False)
     @patch.object(mac_service, "_get_service", lambda name: {"": ""})
     @patch.object(mac_service, "_always_running_service", lambda name: True)
     def test_service_status_on_daemon_with_no_pid_and_should_be_running(self):
         """
-        Test service status on LaunchDaemon with no PID on an
+        Test service status on LaunchDaemon with no PID and an
         always running service that is loaded.
         """
-        mock_servie_list = "PID\tStatus\tLabel\n1061\t0\tcom.apple.storedownloadd.daemon\n-\t0\tcom.hooli.daemon\n243\t0\tcom.apple.coreservicesd"
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
             "service.list": MagicMock(return_value=mock_servie_list),
-            "service.loaded": MagicMock(return_value=True),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            self.assertEqual(mac_service.status("com.hooli.daemon"), "")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertEqual(mac_service.status("com.salt"), False)
 
     @patch.object(mac_service, "_launch_agent", lambda name: False)
     @patch.object(mac_service, "_get_service", lambda name: {"": ""})
     @patch.object(mac_service, "_always_running_service", lambda name: False)
     def test_service_status_on_daemon_with_no_pid_and_not_always_running(self):
         """
+        Test service status on LaunchDaemon with no PID and not an always
+        running service.
+        """
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
+        salt_dict = {
+            "service.list": MagicMock(return_value=mock_servie_list),
+        }
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertEqual(mac_service.status("com.salt"), True)
+
+    @patch.object(mac_service, "_launch_agent", lambda name: False)
+    @patch.object(mac_service, "_get_service", lambda name: {"": ""})
+    @patch.object(mac_service, "_always_running_service", lambda name: False)
+    def test_service_status_on_daemon_with_failing_list_check(self):
+        """
         Test service status on LaunchDaemon with no PID on an
         always running service that is loaded.
         """
-        mock_servie_list = "PID\tStatus\tLabel\n1061\t0\tcom.apple.storedownloadd.daemon\n-\t0\tcom.hooli.daemon\n243\t0\tcom.apple.coreservicesd"
+        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
-            "service.loaded": MagicMock(return_value=True),
+            "service.list": MagicMock(side_effect=CommandExecutionError),
         }
-        with patch("salt.modules.mac_service.__salt__", salt_dict):
-            self.assertEqual(mac_service.status("com.hooli.daemon"), "loaded")
+        with patch.dict(mac_service.__salt__, salt_dict):
+            self.assertEqual(mac_service.status("com.salt"), False)
+
+    def test_get_service_on_service_dead(self):
+        """
+        Test service.dead changes.
+        https://github.com/saltstack/salt/issues/57907
+        """
+        utils_dict = {
+            "mac_utils.available_services": MagicMock(return_value={}),
+        }
+        context_dict = {
+            "using_cached_services": True,
+            "service.state": "dead",
+        }
+        name_in_service = MagicMock(side_effect=[{}, {"com.salt": True}])
+        with patch.dict(mac_service.__utils__, utils_dict):
+            with patch.object(mac_service, "_name_in_services", name_in_service):
+                with patch.dict(mac_service.__context__, context_dict):
+                    self.assertRaises(
+                        CommandExecutionError, mac_service._get_service, "com.salt"
+                    )
+                # find the service on a second go with no service.dead
+                with patch.dict(mac_service.__context__, {}):
+                    self.assertDictEqual(
+                        mac_service._get_service("com.salt"), {"com.salt": True}
+                    )

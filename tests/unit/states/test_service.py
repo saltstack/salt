@@ -27,7 +27,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {service: {}}
+        return {service: {"__context__": {}}}
 
     def test_running(self):
         """
@@ -79,6 +79,12 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 "warnings": [
                     "The 'unmask' argument is not supported by this platform/action"
                 ],
+            },
+            {
+                "changes": {},
+                "comment": "The service salt is disabled but enable is not True. Set enable to True to successfully start the service.",
+                "name": "salt",
+                "result": False,
             },
         ]
 
@@ -165,7 +171,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     service.__salt__,
                     {
                         "service.status": MagicMock(side_effect=[False, False]),
-                        "service.enabled": MagicMock(side_effecct=[True, True]),
+                        "service.enabled": MagicMock(side_effect=[True, True]),
                         "service.start": MagicMock(return_value="stack"),
                     },
                 ):
@@ -175,6 +181,78 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                         MagicMock(return_value={"changes": "saltstack"}),
                     ):
                         self.assertDictEqual(service.running("salt", True), ret[6])
+                # test some unique cases simulating Windows
+                with patch.object(salt.utils.platform, "is_windows", tmock):
+                    with patch.object(salt.utils.platform, "is_darwin", fmock):
+                        # We should fail if a service is disabled on Windows and enable
+                        # isn't set.
+                        with patch.dict(
+                            service.__salt__,
+                            {
+                                "service.status": fmock,
+                                "service.enabled": fmock,
+                                "service.start": tmock,
+                            },
+                        ):
+                            self.assertDictEqual(service.running("salt", None), ret[8])
+                            self.assertEqual(
+                                service.__context__, {"service.state": "running"}
+                            )
+                # test some unique cases simulating macOS
+                with patch.object(salt.utils.platform, "is_darwin", tmock):
+                    # We should fail if a service is disabled on macOS and enable
+                    # isn't set.
+                    with patch.dict(
+                        service.__salt__,
+                        {
+                            "service.status": fmock,
+                            "service.enabled": fmock,
+                            "service.start": tmock,
+                        },
+                    ):
+                        self.assertDictEqual(service.running("salt", None), ret[8])
+                        self.assertEqual(
+                            service.__context__, {"service.state": "running"}
+                        )
+                    # test enabling a service prior starting it on macOS
+                    with patch.dict(
+                        service.__salt__,
+                        {
+                            "service.status": MagicMock(side_effect=[False, "loaded"]),
+                            "service.enabled": MagicMock(side_effect=[False, True]),
+                            "service.start": tmock,
+                        },
+                    ):
+                        with patch.object(
+                            service,
+                            "_enable",
+                            MagicMock(return_value={"changes": "saltstack"}),
+                        ):
+                            self.assertDictEqual(service.running("salt", True), ret[4])
+                            self.assertEqual(
+                                service.__context__, {"service.state": "running"}
+                            )
+                    # if an enable attempt fails on macOS or windows then a
+                    # disabled service will always fail to start.
+                    with patch.dict(
+                        service.__salt__,
+                        {
+                            "service.status": fmock,
+                            "service.enabled": fmock,
+                            "service.start": fmock,
+                        },
+                    ):
+                        with patch.object(
+                            service,
+                            "_enable",
+                            MagicMock(
+                                return_value={"changes": "saltstack", "result": False}
+                            ),
+                        ):
+                            self.assertDictEqual(service.running("salt", True), ret[6])
+                            self.assertEqual(
+                                service.__context__, {"service.state": "running"}
+                            )
 
     def test_dead(self):
         """
@@ -291,6 +369,8 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(service, "_disable", MagicMock(return_value={})):
                         self.assertDictEqual(service.dead("salt", False), ret[4])
 
+            self.assertEqual(service.__context__, {"service.state": "dead"})
+
     def test_dead_with_missing_service(self):
         """
         Tests the case in which a service.dead state is executed on a state
@@ -321,6 +401,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={"changes": "saltstack"})
         with patch.object(service, "_enable", mock):
             self.assertDictEqual(service.enabled("salt"), ret)
+            self.assertEqual(service.__context__, {"service.state": "enabled"})
 
     def test_disabled(self):
         """
@@ -330,6 +411,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={"changes": "saltstack"})
         with patch.object(service, "_disable", mock):
             self.assertDictEqual(service.disabled("salt"), ret)
+            self.assertEqual(service.__context__, {"service.state": "disabled"})
 
     def test_mod_watch(self):
         """
