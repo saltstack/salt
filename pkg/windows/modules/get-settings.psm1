@@ -27,14 +27,18 @@ Function Get-Settings {
 
         # Prerequisite software
         $Prerequisites = @{
-            "NSIS"           = "nsis-3.03-setup.exe"
-            "VCppBuildTools" = "visualcppbuildtools_full.exe"
+            "NSIS"             = "nsis-3.03-setup.exe"
+            "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
+            "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
+            "VCppBuildTools"   = "visualcppbuildtools_full.exe"
         }
         $ini.Add("Prerequisites", $Prerequisites)
 
         # Location of programs on 64 bit Windows
         $64bitPaths = @{
             "NSISDir"           = "C:\Program Files (x86)\NSIS"
+            "NSISPluginsDirA"   = "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"   = "C:\Program Files (x86)\NSIS\Plugins\x86-unicode"
             "VCforPythonDir"    = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0"
             "VCppBuildToolsDir" = "C:\Program Files (x86)\Microsoft Visual C++ Build Tools"
         }
@@ -43,6 +47,8 @@ Function Get-Settings {
         # Location of programs on 32 bit Windows
         $32bitPaths = @{
             "NSISDir"           = "C:\Program Files\NSIS"
+            "NSISPluginsDirA"   = "C:\Program Files\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"   = "C:\Program Files\NSIS\Plugins\x86-unicode"
             "VCforPythonDir"    = "C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0"
             "VCppBuildToolsDir" = "C:\Program Files\Microsoft Visual C++ Build Tools"
         }

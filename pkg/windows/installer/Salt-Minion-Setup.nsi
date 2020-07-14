@@ -402,23 +402,22 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+
 Section -copy_prereqs
     # Copy prereqs to the Plugins Directory
-    # These files will be KB2999226 for Win8.1 and below
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
     File /r "..\prereqs\"
 SectionEnd
 
-# Check and install the Windows 10 Universal C Runtime (KB2999226)
-# ucrt is needed on Windows 8.1 and lower
-# They are installed as a Microsoft Update package (.msu)
-# ucrt for Windows 8.1 RT is only available via Windows Update
+# Check if the  Windows 10 Universal C Runtime (KB2999226) is installed
+# Python 3 needs the updated ucrt on Windows 8.1 / 2012R2 and lower
+# They are installed via KB2999226, but we're not going to patch the system here
+# Instead, we're going to copy the .dll files to the \salt\bin directory
 Section -install_ucrt
 
-    Var /GLOBAL MsuPrefix
-    Var /GLOBAL MsuFileName
+    Var /GLOBAL UcrtFileName
 
     # Get the Major.Minor version Number
     # Windows 10 introduced CurrentMajorVersionNumber
@@ -441,7 +440,7 @@ Section -install_ucrt
     ClearErrors
 
     # Use WMI to check if it's installed
-    detailPrint "Checking for existing KB2999226 installation"
+    detailPrint "Checking for existing UCRT (KB2999226) installation"
     nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
     # Clean up the stack
     Pop $R0 # Gets the ErrorCode
@@ -450,50 +449,31 @@ Section -install_ucrt
     # If it returned KB2999226 it's already installed
     StrCmp $R1 'KB2999226' lbl_done
 
-    detailPrint "KB2999226 not found"
-
-    # All lower versions of Windows
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentVersion
-
-    # Get the name of the .msu file based on the value of $R0
-    ${Switch} "$R0"
-        ${Case} "6.3"
-            StrCpy $MsuPrefix "Windows8.1"
-            ${break}
-        ${Case} "6.2"
-            StrCpy $MsuPrefix "Windows8-RT"
-            ${break}
-        ${Case} "6.1"
-            StrCpy $MsuPrefix "Windows6.1"
-            ${break}
-        ${Case} "6.0"
-            StrCpy $MsuPrefix "Windows6.0"
-            ${break}
-    ${EndSwitch}
+    detailPrint "UCRT (KB2999226) not found"
 
     # Use RunningX64 here to get the Architecture for the system running the installer
     # CPUARCH is defined when the installer is built and is based on the machine that
     # built the installer, not the target system as we need here.
     ${If} ${RunningX64}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
+        StrCpy $UcrtFileName "ucrt_x64.zip"
     ${Else}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
+        StrCpy $UcrtFileName "ucrt_x86.zip"
     ${EndIf}
 
     ClearErrors
 
-    detailPrint "Installing KB2999226 using file $MsuFileName"
-    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
+    CreateDirectory $INSTDIR\bin
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
+
     # Clean up the stack
     Pop $R0  # Get Error
-    Pop $R1  # Get stdout
-    ${IfNot} $R0 == 0
+
+    ${IfNot} $R0 == "success"
         detailPrint "error: $R0"
-        detailPrint "output: $R2"
         Sleep 3000
     ${Else}
-        detailPrint "KB2999226 installed successfully"
+        detailPrint "UCRT dll files copied successfully"
     ${EndIf}
 
     lbl_done:
