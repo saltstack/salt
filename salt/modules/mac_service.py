@@ -711,7 +711,7 @@ def loaded(name, runas=None):
 
     .. code-block:: bash
 
-        salt '*' service.enabled org.cups.cupsd
+        salt '*' service.loaded org.cups.cupsd
     """
     # Try to list the service.  If it can't be listed, it's not enabled
     try:
