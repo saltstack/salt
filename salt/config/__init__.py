@@ -1173,7 +1173,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
             salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo-ng"
         ),
         "winrepo_cachefile": "winrepo.p",
-        "winrepo_cache_expire_max": 21600,
+        "winrepo_cache_expire_max": 604800,
         "winrepo_cache_expire_min": 1800,
         "winrepo_remotes": ["https://github.com/saltstack/salt-winrepo.git"],
         "winrepo_remotes_ng": ["https://github.com/saltstack/salt-winrepo-ng.git"],
