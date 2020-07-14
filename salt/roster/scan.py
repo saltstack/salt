@@ -51,7 +51,10 @@ class RosterMatcher(object):
             # Comma-separate list of integers
             ports = list(map(int, six.text_type(ports).split(",")))
         try:
-            addrs = [ipaddress.ip_address(tgt) for tgt in self.tgt]
+            if self.tgt_type == "list":
+                addrs = [ipaddress.ip_address(tgt) for tgt in self.tgt]
+            else:
+                addrs = [ipaddress.ip_address(self.tgt)]
         except ValueError:
             try:
                 addrs = ipaddress.ip_network(self.tgt).hosts()
