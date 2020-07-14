@@ -430,6 +430,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
+    # used to let execution modules know which service state is being run.
+    __context__["service.state"] = "running"
+
     # Check for common error: using enabled option instead of enable
     if "enabled" in kwargs:
         return _enabled_used_error(ret)
@@ -510,6 +513,24 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
     if salt.utils.platform.is_windows() and kwargs.get("timeout", False):
         start_kwargs.update({"timeout": kwargs.get("timeout")})
+
+    # macOS and Windows services cant be started if they are disabled. So we need
+    # to enable them prior to starting otherwise we will always fail.
+    macos = salt.utils.platform.is_darwin()
+    windows = salt.utils.platform.is_windows()
+    if (macos or windows) and not before_toggle_enable_status:
+        # fail if enable isn't set.
+        if not enable:
+            ret[
+                "comment"
+            ] = "The service {} is disabled but enable is not True. Set enable to True to successfully start the service.".format(
+                name
+            )
+            ret["result"] = False
+            return ret
+        ret.update(_enable(name, None, **kwargs))
+        # we've already enabled we don't need to enable again later.
+        enable = None
 
     try:
         func_ret = __salt__["service.start"](name, **start_kwargs)
@@ -595,6 +616,9 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         .. versionadded:: 2017.7.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    # used to let execution modules know which service state is being run.
+    __context__["service.state"] = "dead"
 
     # Check for common error: using enabled option instead of enable
     if "enabled" in kwargs:
@@ -724,6 +748,9 @@ def enabled(name, **kwargs):
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
+    # used to let execution modules know which service state is being run.
+    __context__["service.state"] = "enabled"
+
     ret.update(_enable(name, None, **kwargs))
     return ret
 
@@ -739,6 +766,9 @@ def disabled(name, **kwargs):
         The name of the init or rc script used to manage the service
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    # used to let execution modules know which service state is being run.
+    __context__["service.state"] = "disabled"
 
     ret.update(_disable(name, None, **kwargs))
     return ret
