@@ -1,0 +1,1 @@
+Fixes and issue on macOS where salt would take extra time to run on service.dead calls where the service is missing.
