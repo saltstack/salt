@@ -141,6 +141,12 @@ def _get_service(name):
     except KeyError:
         pass
 
+    # if we can't find a service and we are being run from a service.dead
+    # state then there is no reason to check again.
+    # fixes https://github.com/saltstack/salt/issues/57907
+    if __context__.get("service.state") == "dead":
+        raise CommandExecutionError("Service not found: {0}".format(name))
+
     # we used a cached version to check, a service could have been made
     # between now and then, we should refresh our available services.
     services = __utils__["mac_utils.available_services"](refresh=True)
@@ -469,25 +475,27 @@ def restart(name, runas=None):
     # Restart the service: will raise an error if it fails
     if __salt__["service.loaded"](name, runas=runas):
         __salt__["service.stop"](name, runas=runas)
-    __salt__["service.start"](name, runas=runas)
-
-    return True
+    return __salt__["service.start"](name, runas=runas)
 
 
 def status(name, sig=None, runas=None):
     """
     Return the status for a service.
 
-    :param str name: Used to find the service from launchctl.  Can be any part
-        of the service name or a regex expression.
+    .. note::
+        Previously this function would return a PID for a running service with
+        a PID or 'loaded' for a loaded service without a PID. This was changed
+        to have better parity with other service modules that return True/False.
+
+    :param str name: Used to find the service from launchctl.  Can be the
+        service Label, file name, or path to the service file. (normally a plist)
 
     :param str sig: Find the service with status.pid instead.  Note that
         ``name`` must still be provided.
 
-    :param str runas: User to run launchctl commands
+    :param str runas: User to run launchctl commands.
 
-    :return: The PID for the service if it is running, or 'loaded' if the
-        service should not always have a PID, or otherwise an empty string
+    :return: True if running, otherwise False.
 
     :rtype: str
 
@@ -505,36 +513,22 @@ def status(name, sig=None, runas=None):
         _get_service(name)
     except CommandExecutionError as msg:
         log.error(msg)
-        return ""
+        return False
 
     if not runas and _launch_agent(name):
         runas = __utils__["mac_utils.console_user"](username=True)
 
-    output = __salt__["service.list"](runas=runas)
+    try:
+        output = __salt__["service.list"](name, runas=runas)
+    except CommandExecutionError:
+        return False
 
-    # Used a string here instead of a list because that's what the linux version
-    # of this module does
-    pids = ""
-    for line in output.splitlines():
-        if "PID" in line:
-            continue
-        if re.search(name, line.split()[-1]):
-            if line.split()[0].isdigit():
-                if pids:
-                    pids += "\n"
-                pids += line.split()[0]
+    # we should only check for a PID if it's supposed to have one.
+    # If we can't find a PID then something is wrong with the service.
+    if _always_running_service(name):
+        return True if "PID" in output else False
 
-    # mac services are a little different than other platforms as they may be
-    # set to run on intervals and may not always active with a PID. This will
-    # return a string 'loaded' if it shouldn't always be running and is enabled.
-    if (
-        not _always_running_service(name)
-        and __salt__["service.loaded"](name)
-        and not pids
-    ):
-        return "loaded"
-
-    return pids
+    return True
 
 
 def available(name):
