@@ -3,8 +3,10 @@
     :codeauthor: Megan Wilhite<mwilhite@saltstack.com>
 """
 
-# Import Python libs
 from __future__ import absolute_import
+
+# Import Python libs
+import pytest
 
 # Import Salt Libs
 import salt.modules.mac_service as mac_service
@@ -33,7 +35,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         domain_ret = MagicMock(return_value=("", ""))
         with patch.object(mac_service, "_get_domain_target", domain_ret):
             with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
-                self.assertFalse(mac_service.disabled(srv_name))
+                assert mac_service.disabled(srv_name) is False
 
     def test_service_disabled_when_disabled(self):
         """
@@ -44,7 +46,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         domain_ret = MagicMock(return_value=("", ""))
         with patch.object(mac_service, "_get_domain_target", domain_ret):
             with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
-                self.assertTrue(mac_service.disabled(srv_name))
+                assert mac_service.disabled(srv_name) is True
 
     def test_service_disabled_srvname_wrong(self):
         """
@@ -58,7 +60,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(
                     mac_service, "launchctl", MagicMock(return_value=cmd)
                 ):
-                    self.assertFalse(mac_service.disabled(name))
+                    assert mac_service.disabled(name) is False
 
     def test_service_disabled_status_upper_case(self):
         """
@@ -69,7 +71,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         domain_ret = MagicMock(return_value=("", ""))
         with patch.object(mac_service, "_get_domain_target", domain_ret):
             with patch.object(mac_service, "launchctl", MagicMock(return_value=cmd)):
-                self.assertTrue(mac_service.disabled(srv_name))
+                assert mac_service.disabled(srv_name) is True
 
     def test_service_enabled_when_enabled(self):
         """
@@ -271,7 +273,8 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             "service.stop": MagicMock(side_effect=CommandExecutionError),
         }
         with patch.dict(mac_service.__salt__, salt_dict):
-            self.assertRaises(CommandExecutionError, mac_service.restart, "com.salt")
+            with pytest.raises(CommandExecutionError):
+                assert mac_service.restart("com.salt")
 
     def test_service_restart_failed_start(self):
         salt_dict = {
@@ -279,7 +282,8 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
             "service.start": MagicMock(side_effect=CommandExecutionError),
         }
         with patch.dict(mac_service.__salt__, salt_dict):
-            self.assertRaises(CommandExecutionError, mac_service.restart, "com.salt")
+            with pytest.raises(CommandExecutionError):
+                assert mac_service.restart("com.salt")
 
     def test_service_status_no_service(self):
         """
@@ -401,9 +405,8 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_service.__utils__, utils_dict):
             with patch.object(mac_service, "_name_in_services", name_in_service):
                 with patch.dict(mac_service.__context__, context_dict):
-                    self.assertRaises(
-                        CommandExecutionError, mac_service._get_service, "com.salt"
-                    )
+                    with pytest.raises(CommandExecutionError):
+                        assert mac_service._get_service("com.salt")
                 # find the service on a second go with no service.dead
                 with patch.dict(mac_service.__context__, {}):
                     assert mac_service._get_service("com.salt") == {"com.salt": True}
