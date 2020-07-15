@@ -377,7 +377,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             else:
                 cmd += "{} ".format(":".join(sys.path[0:]))
             cmd += "python{}.{} ".format(*sys.version_info)
-        cmd += "{} --config-dir={} {}".format(
+        cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
         )
         if kwargs:
