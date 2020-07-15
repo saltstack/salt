@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon EFS
 
 .. versionadded:: 2017.7.0
@@ -46,47 +46,43 @@ Connection module for Amazon EFS
           region: us-east-1
 
 :depends: boto3
-'''
+"""
 
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
+# Import salt libs
+import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
+
 try:
     import boto3
+
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
 
-# Import salt libs
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto3 libraries exist and if boto3 libraries are greater than
     a given version.
-    '''
-    return salt.utils.versions.check_boto_reqs(
-        boto3_ver='1.0.0',
-        check_boto=False
-    )
+    """
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.0.0", check_boto=False)
 
 
-def _get_conn(key=None,
-              keyid=None,
-              profile=None,
-              region=None,
-              **kwargs):
-    '''
+def _get_conn(key=None, keyid=None, profile=None, region=None, **kwargs):
+    """
     Create a boto3 client connection to EFS
-    '''
+    """
     client = None
     if profile:
         if isinstance(profile, six.string_types):
@@ -97,39 +93,41 @@ def _get_conn(key=None,
     elif key or keyid or region:
         profile = {}
         if key:
-            profile['key'] = key
+            profile["key"] = key
         if keyid:
-            profile['keyid'] = keyid
+            profile["keyid"] = keyid
         if region:
-            profile['region'] = region
+            profile["region"] = region
 
     if isinstance(profile, dict):
-        if 'region' in profile:
-            profile['region_name'] = profile['region']
-            profile.pop('region', None)
-        if 'key' in profile:
-            profile['aws_secret_access_key'] = profile['key']
-            profile.pop('key', None)
-        if 'keyid' in profile:
-            profile['aws_access_key_id'] = profile['keyid']
-            profile.pop('keyid', None)
+        if "region" in profile:
+            profile["region_name"] = profile["region"]
+            profile.pop("region", None)
+        if "key" in profile:
+            profile["aws_secret_access_key"] = profile["key"]
+            profile.pop("key", None)
+        if "keyid" in profile:
+            profile["aws_access_key_id"] = profile["keyid"]
+            profile.pop("keyid", None)
 
-        client = boto3.client('efs', **profile)
+        client = boto3.client("efs", **profile)
     else:
-        client = boto3.client('efs')
+        client = boto3.client("efs")
 
     return client
 
 
-def create_file_system(name,
-                       performance_mode='generalPurpose',
-                       keyid=None,
-                       key=None,
-                       profile=None,
-                       region=None,
-                       creation_token=None,
-                       **kwargs):
-    '''
+def create_file_system(
+    name,
+    performance_mode="generalPurpose",
+    keyid=None,
+    key=None,
+    profile=None,
+    region=None,
+    creation_token=None,
+    **kwargs
+):
+    """
     Creates a new, empty file system.
 
     name
@@ -151,7 +149,7 @@ def create_file_system(name,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_file_system efs-name generalPurpose
-    '''
+    """
 
     if creation_token is None:
         creation_token = name
@@ -160,28 +158,31 @@ def create_file_system(name,
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
-    response = client.create_file_system(CreationToken=creation_token,
-                                         PerformanceMode=performance_mode)
+    response = client.create_file_system(
+        CreationToken=creation_token, PerformanceMode=performance_mode
+    )
 
-    if 'FileSystemId' in response:
-        client.create_tags(FileSystemId=response['FileSystemId'], Tags=tags)
+    if "FileSystemId" in response:
+        client.create_tags(FileSystemId=response["FileSystemId"], Tags=tags)
 
-    if 'Name' in response:
-        response['Name'] = name
+    if "Name" in response:
+        response["Name"] = name
 
     return response
 
 
-def create_mount_target(filesystemid,
-                        subnetid,
-                        ipaddress=None,
-                        securitygroups=None,
-                        keyid=None,
-                        key=None,
-                        profile=None,
-                        region=None,
-                        **kwargs):
-    '''
+def create_mount_target(
+    filesystemid,
+    subnetid,
+    ipaddress=None,
+    securitygroups=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    region=None,
+    **kwargs
+):
+    """
     Creates a mount target for a file system.
     You can then mount the file system on EC2 instances via the mount target.
 
@@ -217,37 +218,34 @@ def create_mount_target(filesystemid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_mount_target filesystemid subnetid
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     if ipaddress is None and securitygroups is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid)
+        return client.create_mount_target(FileSystemId=filesystemid, SubnetId=subnetid)
 
     if ipaddress is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          SecurityGroups=securitygroups)
+        return client.create_mount_target(
+            FileSystemId=filesystemid, SubnetId=subnetid, SecurityGroups=securitygroups
+        )
     if securitygroups is None:
-        return client.create_mount_target(FileSystemId=filesystemid,
-                                          SubnetId=subnetid,
-                                          IpAddress=ipaddress)
+        return client.create_mount_target(
+            FileSystemId=filesystemid, SubnetId=subnetid, IpAddress=ipaddress
+        )
 
-    return client.create_mount_target(FileSystemId=filesystemid,
-                                      SubnetId=subnetid,
-                                      IpAddress=ipaddress,
-                                      SecurityGroups=securitygroups)
+    return client.create_mount_target(
+        FileSystemId=filesystemid,
+        SubnetId=subnetid,
+        IpAddress=ipaddress,
+        SecurityGroups=securitygroups,
+    )
 
 
-def create_tags(filesystemid,
-                tags,
-                keyid=None,
-                key=None,
-                profile=None,
-                region=None,
-                **kwargs):
-    '''
+def create_tags(
+    filesystemid, tags, keyid=None, key=None, profile=None, region=None, **kwargs
+):
+    """
     Creates or overwrites tags associated with a file system.
     Each tag is a key-value pair. If a tag key specified in the request
     already exists on the file system, this operation overwrites
@@ -264,24 +262,21 @@ def create_tags(filesystemid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.create_tags
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
     for k, v in six.iteritems(tags):
-        new_tags.append({'Key': k, 'Value': v})
+        new_tags.append({"Key": k, "Value": v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)
 
 
-def delete_file_system(filesystemid,
-                       keyid=None,
-                       key=None,
-                       profile=None,
-                       region=None,
-                       **kwargs):
-    '''
+def delete_file_system(
+    filesystemid, keyid=None, key=None, profile=None, region=None, **kwargs
+):
+    """
     Deletes a file system, permanently severing access to its contents.
     Upon return, the file system no longer exists and you can't access
     any contents of the deleted file system. You can't delete a file system
@@ -296,20 +291,17 @@ def delete_file_system(filesystemid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_file_system filesystemid
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     client.delete_file_system(FileSystemId=filesystemid)
 
 
-def delete_mount_target(mounttargetid,
-                       keyid=None,
-                       key=None,
-                       profile=None,
-                       region=None,
-                       **kwargs):
-    '''
+def delete_mount_target(
+    mounttargetid, keyid=None, key=None, profile=None, region=None, **kwargs
+):
+    """
     Deletes the specified mount target.
 
     This operation forcibly breaks any mounts of the file system via the
@@ -330,21 +322,17 @@ def delete_mount_target(mounttargetid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_mount_target mounttargetid
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     client.delete_mount_target(MountTargetId=mounttargetid)
 
 
-def delete_tags(filesystemid,
-                tags,
-                keyid=None,
-                key=None,
-                profile=None,
-                region=None,
-                **kwargs):
-    '''
+def delete_tags(
+    filesystemid, tags, keyid=None, key=None, profile=None, region=None, **kwargs
+):
+    """
     Deletes the specified tags from a file system.
 
     filesystemid
@@ -358,21 +346,23 @@ def delete_tags(filesystemid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.delete_tags
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     client.delete_tags(FileSystemId=filesystemid, Tags=tags)
 
 
-def get_file_systems(filesystemid=None,
-                     keyid=None,
-                     key=None,
-                     profile=None,
-                     region=None,
-                     creation_token=None,
-                     **kwargs):
-    '''
+def get_file_systems(
+    filesystemid=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    region=None,
+    creation_token=None,
+    **kwargs
+):
+    """
     Get all EFS properties or a specific instance property
     if filesystemid is specified
 
@@ -393,14 +383,15 @@ def get_file_systems(filesystemid=None,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_file_systems efs-id
-    '''
+    """
 
     result = None
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     if filesystemid and creation_token:
-        response = client.describe_file_systems(FileSystemId=filesystemid,
-                                                CreationToken=creation_token)
+        response = client.describe_file_systems(
+            FileSystemId=filesystemid, CreationToken=creation_token
+        )
         result = response["FileSystems"]
     elif filesystemid:
         response = client.describe_file_systems(FileSystemId=filesystemid)
@@ -414,21 +405,22 @@ def get_file_systems(filesystemid=None,
         result = response["FileSystems"]
 
         while "NextMarker" in response:
-            response = client.describe_file_systems(
-                        Marker=response["NextMarker"])
+            response = client.describe_file_systems(Marker=response["NextMarker"])
             result.extend(response["FileSystems"])
 
     return result
 
 
-def get_mount_targets(filesystemid=None,
-                      mounttargetid=None,
-                      keyid=None,
-                      key=None,
-                      profile=None,
-                      region=None,
-                      **kwargs):
-    '''
+def get_mount_targets(
+    filesystemid=None,
+    mounttargetid=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    region=None,
+    **kwargs
+):
+    """
     Get all the EFS mount point properties for a specific filesystemid or
     the properties for a specific mounttargetid. One or the other must be
     specified
@@ -449,7 +441,7 @@ def get_mount_targets(filesystemid=None,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_mount_targets
-    '''
+    """
 
     result = None
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
@@ -458,8 +450,9 @@ def get_mount_targets(filesystemid=None,
         response = client.describe_mount_targets(FileSystemId=filesystemid)
         result = response["MountTargets"]
         while "NextMarker" in response:
-            response = client.describe_mount_targets(FileSystemId=filesystemid,
-                                                 Marker=response["NextMarker"])
+            response = client.describe_mount_targets(
+                FileSystemId=filesystemid, Marker=response["NextMarker"]
+            )
             result.extend(response["MountTargets"])
     elif mounttargetid:
         response = client.describe_mount_targets(MountTargetId=mounttargetid)
@@ -468,13 +461,8 @@ def get_mount_targets(filesystemid=None,
     return result
 
 
-def get_tags(filesystemid,
-             keyid=None,
-             key=None,
-             profile=None,
-             region=None,
-             **kwargs):
-    '''
+def get_tags(filesystemid, keyid=None, key=None, profile=None, region=None, **kwargs):
+    """
     Return the tags associated with an EFS instance.
 
     filesystemid
@@ -488,27 +476,30 @@ def get_tags(filesystemid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.get_tags efs-id
-    '''
+    """
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     response = client.describe_tags(FileSystemId=filesystemid)
     result = response["Tags"]
 
     while "NextMarker" in response:
-        response = client.describe_tags(FileSystemId=filesystemid,
-                                        Marker=response["NextMarker"])
+        response = client.describe_tags(
+            FileSystemId=filesystemid, Marker=response["NextMarker"]
+        )
         result.extend(response["Tags"])
 
     return result
 
 
-def set_security_groups(mounttargetid,
-                        securitygroup,
-                        keyid=None,
-                        key=None,
-                        profile=None,
-                        region=None,
-                        **kwargs):
-    '''
+def set_security_groups(
+    mounttargetid,
+    securitygroup,
+    keyid=None,
+    key=None,
+    profile=None,
+    region=None,
+    **kwargs
+):
+    """
     Modifies the set of security groups in effect for a mount target
 
     mounttargetid
@@ -522,8 +513,9 @@ def set_security_groups(mounttargetid,
     .. code-block:: bash
 
         salt 'my-minion' boto_efs.set_security_groups my-mount-target-id my-sec-group
-    '''
+    """
 
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
-    client.modify_mount_target_security_groups(MountTargetId=mounttargetid,
-                                               SecurityGroups=securitygroup)
+    client.modify_mount_target_security_groups(
+        MountTargetId=mounttargetid, SecurityGroups=securitygroup
+    )

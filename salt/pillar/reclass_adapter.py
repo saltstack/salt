@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Use the "reclass" database as a Pillar source
 
 .. |reclass| replace:: **reclass**
@@ -44,7 +44,7 @@ note of the differing data types for ``ext_pillar`` and ``master_tops``):
 If you want to run reclass from source, rather than installing it, you can
 either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
-'''
+"""
 
 
 # This file cannot be called reclass.py, because then the module import would
@@ -56,30 +56,31 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-from salt.utils.reclass import (
-    prepend_reclass_source_path,
-    filter_out_source_path_option,
-    set_inventory_base_uri_default
-)
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.utils.reclass import (
+    filter_out_source_path_option,
+    prepend_reclass_source_path,
+    set_inventory_base_uri_default,
+)
 
 # Define the module's virtual name
-__virtualname__ = 'reclass'
+__virtualname__ = "reclass"
 
 
 def __virtual__(retry=False):
     try:
-        import reclass
+        import reclass  # pylint: disable=unused-import
+
         return __virtualname__
 
     except ImportError as e:
         if retry:
             return False
 
-        for pillar in __opts__.get('ext_pillar', []):
-            if 'reclass' not in pillar:
+        for pillar in __opts__.get("ext_pillar", []):
+            if "reclass" not in pillar:
                 continue
 
             # each pillar entry is a single-key hash of name -> options
@@ -91,16 +92,17 @@ def __virtual__(retry=False):
 
 
 def ext_pillar(minion_id, pillar, **kwargs):
-    '''
+    """
     Obtain the Pillar data from **reclass** for the given ``minion_id``.
-    '''
+    """
 
     # If reclass is installed, __virtual__ put it onto the search path, so we
     # don't need to protect against ImportError:
-    # pylint: disable=3rd-party-module-not-gated
+    # pylint: disable=3rd-party-module-not-gated,no-name-in-module
     from reclass.adapters.salt import ext_pillar as reclass_ext_pillar
     from reclass.errors import ReclassException
-    # pylint: enable=3rd-party-module-not-gated
+
+    # pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
     try:
         # the source path we used above isn't something reclass needs to care
@@ -117,19 +119,19 @@ def ext_pillar(minion_id, pillar, **kwargs):
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError as e:
-        if 'unexpected keyword argument' in six.text_type(e):
+        if "unexpected keyword argument" in six.text_type(e):
             arg = six.text_type(e).split()[-1]
-            raise SaltInvocationError('ext_pillar.reclass: unexpected option: '
-                                      + arg)
+            raise SaltInvocationError("ext_pillar.reclass: unexpected option: " + arg)
         else:
             raise
 
     except KeyError as e:
-        if 'id' in six.text_type(e):
-            raise SaltInvocationError('ext_pillar.reclass: __opts__ does not '
-                                      'define minion ID')
+        if "id" in six.text_type(e):
+            raise SaltInvocationError(
+                "ext_pillar.reclass: __opts__ does not " "define minion ID"
+            )
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(e))
+        raise SaltInvocationError("ext_pillar.reclass: {0}".format(e))

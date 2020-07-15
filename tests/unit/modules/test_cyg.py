@@ -5,7 +5,7 @@
 
 # # Import Salt Testing libs
 # from tests.support.unit import skipIf, TestCase
-# from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+# from tests.support.mock import MagicMock, patch
 
 # # Import salt libs
 # import salt.modules.cyg as cyg
@@ -13,7 +13,6 @@
 # cyg.__salt__ = {}
 
 
-# @skipIf(NO_MOCK, NO_MOCK_REASON)
 # class TestcygModule(TestCase):
 
 #     def test__get_cyg_dir(self):

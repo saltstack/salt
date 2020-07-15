@@ -1,44 +1,43 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import sys
+
+# This is imported late so mock can do its job
+import salt.modules.win_status as status
 
 # Import Salt libs
 from salt.ext import six
+from tests.support.mock import ANY, Mock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
+from tests.support.unit import TestCase, skipIf
 
 try:
     import wmi
 except ImportError:
     pass
 
-# This is imported late so mock can do its job
-import salt.modules.win_status as status
 
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(status.HAS_WMI is False, 'This test requires Windows')
+@skipIf(status.HAS_WMI is False, "This test requires Windows")
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
         self.__processes = []
 
     def add_process(
-            self,
-            pid=100,
-            cmd='cmd',
-            name='name',
-            user='user',
-            user_domain='domain',
-            get_owner_result=0):
+        self,
+        pid=100,
+        cmd="cmd",
+        name="name",
+        user="user",
+        user_domain="domain",
+        get_owner_result=0,
+    ):
         process = Mock()
-        process.GetOwner = Mock(
-            return_value=(user_domain, get_owner_result, user)
-        )
+        process.GetOwner = Mock(return_value=(user_domain, get_owner_result, user))
         process.ProcessId = pid
         process.CommandLine = cmd
         process.Name = name
@@ -47,7 +46,7 @@ class TestProcsBase(TestCase):
     def call_procs(self):
         WMI = Mock()
         WMI.win32_process = Mock(return_value=self.__processes)
-        with patch.object(wmi, 'WMI', Mock(return_value=WMI)):
+        with patch.object(wmi, "WMI", Mock(return_value=WMI)):
             self.result = status.procs()
 
 
@@ -66,76 +65,81 @@ class TestProcsCount(TestProcsBase):
 
 class TestProcsAttributes(TestProcsBase):
     def setUp(self):
-        self._expected_name = 'name'
-        self._expected_cmd = 'cmd'
-        self._expected_user = 'user'
-        self._expected_domain = 'domain'
+        self._expected_name = "name"
+        self._expected_cmd = "cmd"
+        self._expected_user = "user"
+        self._expected_domain = "domain"
         pid = 100
         self.add_process(
             pid=pid,
             cmd=self._expected_cmd,
             user=self._expected_user,
             user_domain=self._expected_domain,
-            get_owner_result=0)
+            get_owner_result=0,
+        )
         self.call_procs()
         self.proc = self.result[pid]
 
     def test_process_cmd_is_set(self):
-        self.assertEqual(self.proc['cmd'], self._expected_cmd)
+        self.assertEqual(self.proc["cmd"], self._expected_cmd)
 
     def test_process_name_is_set(self):
-        self.assertEqual(self.proc['name'], self._expected_name)
+        self.assertEqual(self.proc["name"], self._expected_name)
 
     def test_process_user_is_set(self):
-        self.assertEqual(self.proc['user'], self._expected_user)
+        self.assertEqual(self.proc["user"], self._expected_user)
 
     def test_process_user_domain_is_set(self):
-        self.assertEqual(self.proc['user_domain'], self._expected_domain)
+        self.assertEqual(self.proc["user_domain"], self._expected_domain)
 
 
-@skipIf(sys.stdin.encoding != 'UTF-8', 'UTF-8 encoding required for this test is not supported')
+@skipIf(
+    sys.stdin.encoding != "UTF-8",
+    "UTF-8 encoding required for this test is not supported",
+)
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
-        unicode_str = u'\xc1'
-        self.ustr = unicode_str.encode('utf8') if six.PY2 else unicode_str
+        unicode_str = "\xc1"
+        self.ustr = unicode_str.encode("utf8") if six.PY2 else unicode_str
         pid = 100
         self.add_process(
             pid=pid,
             user=unicode_str,
             user_domain=unicode_str,
             cmd=unicode_str,
-            name=unicode_str)
+            name=unicode_str,
+        )
         self.call_procs()
         self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
-        self.assertEqual(self.proc['cmd'], self.ustr)
+        self.assertEqual(self.proc["cmd"], self.ustr)
 
     def test_process_name_is_utf8(self):
-        self.assertEqual(self.proc['name'], self.ustr)
+        self.assertEqual(self.proc["name"], self.ustr)
 
     def test_process_user_is_utf8(self):
-        self.assertEqual(self.proc['user'], self.ustr)
+        self.assertEqual(self.proc["user"], self.ustr)
 
     def test_process_user_domain_is_utf8(self):
-        self.assertEqual(self.proc['user_domain'], self.ustr)
+        self.assertEqual(self.proc["user_domain"], self.ustr)
 
 
 class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
     def setUp(self):
-        self.expected_user = 'SYSTEM'
-        self.expected_domain = 'NT AUTHORITY'
+        self.expected_user = "SYSTEM"
+        self.expected_domain = "NT AUTHORITY"
         self.add_process(pid=0, get_owner_result=2)
         self.add_process(pid=4, get_owner_result=2)
         self.call_procs()
 
     def test_user_is_set(self):
-        self.assertEqual(self.result[0]['user'], self.expected_user)
-        self.assertEqual(self.result[4]['user'], self.expected_user)
+        self.assertEqual(self.result[0]["user"], self.expected_user)
+        self.assertEqual(self.result[4]["user"], self.expected_user)
 
     def test_process_user_domain_is_set(self):
-        self.assertEqual(self.result[0]['user_domain'], self.expected_domain)
-        self.assertEqual(self.result[4]['user_domain'], self.expected_domain)
+        self.assertEqual(self.result[0]["user_domain"], self.expected_domain)
+        self.assertEqual(self.result[4]["user_domain"], self.expected_domain)
 
 
 class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
@@ -144,7 +148,7 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
         self.add_process(get_owner_result=self.expected_error_code)
 
     def test_error_logged_if_process_get_owner_fails(self):
-        with patch('salt.modules.win_status.log') as log:
+        with patch("salt.modules.win_status.log") as log:
             self.call_procs()
         log.warning.assert_called_once_with(ANY, ANY, self.expected_error_code)
 
@@ -158,10 +162,10 @@ class TestEmptyCommandLine(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_cmd_is_empty_string(self):
-        self.assertEqual(self.proc['cmd'], '')
+        self.assertEqual(self.proc["cmd"], "")
 
 
-#class TestProcsComInitialization(TestProcsBase):
+# class TestProcsComInitialization(TestProcsBase):
 #    def setUp(self):
 #        call_count = 5
 #        for _ in range(call_count):

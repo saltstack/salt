@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 HTTP Logstash engine
 ==========================
 
@@ -27,23 +27,24 @@ them onto a logstash endpoint via HTTP requests.
               funs:
                   - probes.results
                   - bgp.config
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import fnmatch
 
+import salt.utils.event
+
 # Import salt libs
 import salt.utils.http
-import salt.utils.event
 import salt.utils.json
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-_HEADERS = {'Content-Type': 'application/json'}
+_HEADERS = {"Content-Type": "application/json"}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -55,19 +56,20 @@ _HEADERS = {'Content-Type': 'application/json'}
 
 
 def _logstash(url, data):
-    '''
+    """
     Issues HTTP queries to the logstash server.
-    '''
+    """
     result = salt.utils.http.query(
         url,
-        'POST',
+        "POST",
         header_dict=_HEADERS,
         data=salt.utils.json.dumps(data),
         decode=True,
         status=True,
-        opts=__opts__
+        opts=__opts__,
     )
     return result
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # main
@@ -75,7 +77,7 @@ def _logstash(url, data):
 
 
 def start(url, funs=None, tags=None):
-    '''
+    """
     Listen to salt events and forward them to logstash.
 
     url
@@ -93,27 +95,29 @@ def start(url, funs=None, tags=None):
     tags: ``None``
         A list of pattern to compare the event tag against.
         By default, this option accepts any event to be submitted to Logstash.
-    '''
-    if __opts__.get('id').endswith('_master'):
-        instance = 'master'
+    """
+    if __opts__.get("id").endswith("_master"):
+        instance = "master"
     else:
-        instance = 'minion'
-    event_bus = salt.utils.event.get_event(instance,
-                                           sock_dir=__opts__['sock_dir'],
-                                           transport=__opts__['transport'],
-                                           opts=__opts__)
-    while True:
-        event = event_bus.get_event(full=True)
-        if event:
-            publish = True
-            if tags and isinstance(tags, list):
-                found_match = False
-                for tag in tags:
-                    if fnmatch.fnmatch(event['tag'], tag):
-                        found_match = True
-                publish = found_match
-            if funs and 'fun' in event['data']:
-                if not event['data']['fun'] in funs:
-                    publish = False
-            if publish:
-                _logstash(url, event['data'])
+        instance = "minion"
+    with salt.utils.event.get_event(
+        instance,
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+        opts=__opts__,
+    ) as event_bus:
+        while True:
+            event = event_bus.get_event(full=True)
+            if event:
+                publish = True
+                if tags and isinstance(tags, list):
+                    found_match = False
+                    for tag in tags:
+                        if fnmatch.fnmatch(event["tag"], tag):
+                            found_match = True
+                    publish = found_match
+                if funs and "fun" in event["data"]:
+                    if not event["data"]["fun"] in funs:
+                        publish = False
+                if publish:
+                    _logstash(url, event["data"])

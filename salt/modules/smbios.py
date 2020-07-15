@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Interface to SMBIOS/DMI
 
 (Parsing through dmidecode)
@@ -10,20 +10,20 @@ External References
 | `System Management BIOS <http://www.dmtf.org/standards/smbios>`_
 | `DMIdecode <http://www.nongnu.org/dmidecode/>`_
 
-'''
+"""
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
-import logging
-import uuid
-import re
+from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
-import salt.utils.path
+import logging
+import re
+import uuid
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 
+# Import salt libs
+import salt.utils.path
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
@@ -31,15 +31,17 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work when dmidecode is installed.
-    '''
-    return (bool(salt.utils.path.which_bin(['dmidecode', 'smbios'])),
-            'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
+    """
+    return (
+        bool(salt.utils.path.which_bin(["dmidecode", "smbios"])),
+        "The smbios execution module failed to load: neither dmidecode nor smbios in the path.",
+    )
 
 
 def get(string, clean=True):
-    '''
+    """
     Get an individual DMI string from SMBIOS info
 
     string
@@ -77,20 +79,20 @@ def get(string, clean=True):
     .. code-block:: bash
 
         salt '*' smbios.get system-uuid clean=False
-    '''
+    """
 
-    val = _dmidecoder('-s {0}'.format(string)).strip()
+    val = _dmidecoder("-s {0}".format(string)).strip()
 
     # Cleanup possible comments in strings.
-    val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
-    if val.startswith('/dev/mem') or clean and not _dmi_isclean(string, val):
+    val = "\n".join([v for v in val.split("\n") if not v.startswith("#")])
+    if val.startswith("/dev/mem") or clean and not _dmi_isclean(string, val):
         val = None
 
     return val
 
 
 def records(rec_type=None, fields=None, clean=True):
-    '''
+    """
     Return DMI records from SMBIOS
 
     type
@@ -158,39 +160,41 @@ def records(rec_type=None, fields=None, clean=True):
         salt '*' smbios.records 14
         salt '*' smbios.records 4 core_count,thread_count,current_speed
 
-    '''
+    """
     if rec_type is None:
         smbios = _dmi_parse(_dmidecoder(), clean, fields)
     else:
-        smbios = _dmi_parse(_dmidecoder('-t {0}'.format(rec_type)), clean, fields)
+        smbios = _dmi_parse(_dmidecoder("-t {0}".format(rec_type)), clean, fields)
 
     return smbios
 
 
 def _dmi_parse(data, clean=True, fields=None):
-    '''
+    """
     Structurize DMI records into a nice list
     Optionally trash bogus entries and filter output
-    '''
+    """
     dmi = []
 
     # Detect & split Handle records
-    dmi_split = re.compile('(handle [0-9]x[0-9a-f]+[^\n]+)\n', re.MULTILINE+re.IGNORECASE)
+    dmi_split = re.compile(
+        "(handle [0-9]x[0-9a-f]+[^\n]+)\n", re.MULTILINE + re.IGNORECASE
+    )
     dmi_raw = iter(re.split(dmi_split, data)[1:])
     for handle, dmi_raw in zip(dmi_raw, dmi_raw):
-        handle, htype = [hline.split()[-1] for hline in handle.split(',')][0:2]
-        dmi_raw = dmi_raw.split('\n')
+        handle, htype = [hline.split()[-1] for hline in handle.split(",")][0:2]
+        dmi_raw = dmi_raw.split("\n")
         # log.debug('%s record contains %s', handle, dmi_raw)
-        log.debug('Parsing handle %s', handle)
+        log.debug("Parsing handle %s", handle)
 
         # The first line of a handle is a description of the type
         record = {
-            'handle':      handle,
-            'description': dmi_raw.pop(0).strip(),
-            'type':        int(htype)
+            "handle": handle,
+            "description": dmi_raw.pop(0).strip(),
+            "type": int(htype),
         }
 
-        if not len(dmi_raw):
+        if not dmi_raw:
             # empty record
             if not clean:
                 dmi.append(record)
@@ -198,8 +202,8 @@ def _dmi_parse(data, clean=True, fields=None):
 
         # log.debug('%s record contains %s', record, dmi_raw)
         dmi_data = _dmi_data(dmi_raw, clean, fields)
-        if len(dmi_data):
-            record['data'] = dmi_data
+        if dmi_data:
+            record["data"] = dmi_data
             dmi.append(record)
         elif not clean:
             dmi.append(record)
@@ -208,21 +212,21 @@ def _dmi_parse(data, clean=True, fields=None):
 
 
 def _dmi_data(dmi_raw, clean, fields):
-    '''
+    """
     Parse the raw DMIdecode output of a single handle
     into a nice dict
-    '''
+    """
     dmi_data = {}
 
     key = None
     key_data = [None, []]
     for line in dmi_raw:
-        if re.match(r'\t[^\s]+', line):
+        if re.match(r"\t[^\s]+", line):
             # Finish previous key
             if key is not None:
                 # log.debug('Evaluating DMI key {0}: {1}'.format(key, key_data))
                 value, vlist = key_data
-                if len(vlist):
+                if vlist:
                     if value is not None:
                         # On the rare occasion
                         # (I counted 1 on all systems we have)
@@ -235,17 +239,16 @@ def _dmi_data(dmi_raw, clean, fields):
 
             # Family: Core i5
             # Keyboard Password Status: Not Implemented
-            key, val = line.split(':', 1)
-            key = key.strip().lower().replace(' ', '_')
-            if (clean and key == 'header_and_data') \
-                    or (fields and key not in fields):
+            key, val = line.split(":", 1)
+            key = key.strip().lower().replace(" ", "_")
+            if (clean and key == "header_and_data") or (fields and key not in fields):
                 key = None
                 continue
             else:
                 key_data = [_dmi_cast(key, val.strip(), clean), []]
         elif key is None:
             continue
-        elif re.match(r'\t\t[^\s]+', line):
+        elif re.match(r"\t\t[^\s]+", line):
             # Installable Languages: 1
             #        en-US
             # Characteristics:
@@ -260,31 +263,31 @@ def _dmi_data(dmi_raw, clean, fields):
 
 
 def _dmi_cast(key, val, clean=True):
-    '''
+    """
     Simple caster thingy for trying to fish out at least ints & lists from strings
-    '''
+    """
     if clean and not _dmi_isclean(key, val):
         return
-    elif not re.match(r'serial|part|asset|product', key, flags=re.IGNORECASE):
-        if ',' in val:
-            val = [el.strip() for el in val.split(',')]
+    elif not re.match(r"serial|part|asset|product", key, flags=re.IGNORECASE):
+        if "," in val:
+            val = [el.strip() for el in val.split(",")]
         else:
             try:
                 val = int(val)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
     return val
 
 
 def _dmi_isclean(key, val):
-    '''
+    """
     Clean out well-known bogus values
-    '''
-    if val is None or not len(val) or re.match('none', val, flags=re.IGNORECASE):
+    """
+    if val is None or not val or re.match("none", val, flags=re.IGNORECASE):
         # log.debug('DMI {0} value {1} seems invalid or empty'.format(key, val))
         return False
-    elif 'uuid' in key:
+    elif "uuid" in key:
         # Try each version (1-5) of RFC4122 to check if it's actually a UUID
         for uuidver in range(1, 5):
             try:
@@ -292,36 +295,50 @@ def _dmi_isclean(key, val):
                 return True
             except ValueError:
                 continue
-        log.trace('DMI %s value %s is an invalid UUID', key, val.replace('\n', ' '))
+        log.trace("DMI %s value %s is an invalid UUID", key, val.replace("\n", " "))
         return False
-    elif re.search('serial|part|version', key):
+    elif re.search("serial|part|version", key):
         # 'To be filled by O.E.M.
         # 'Not applicable' etc.
         # 'Not specified' etc.
         # 0000000, 1234667 etc.
         # begone!
-        return not re.match(r'^[0]+$', val) \
-                and not re.match(r'[0]?1234567[8]?[9]?[0]?', val) \
-                and not re.search(r'sernum|part[_-]?number|specified|filled|applicable', val, flags=re.IGNORECASE)
-    elif re.search('asset|manufacturer', key):
+        return (
+            not re.match(r"^[0]+$", val)
+            and not re.match(r"[0]?1234567[8]?[9]?[0]?", val)
+            and not re.search(
+                r"sernum|part[_-]?number|specified|filled|applicable",
+                val,
+                flags=re.IGNORECASE,
+            )
+        )
+    elif re.search("asset|manufacturer", key):
         # AssetTag0. Manufacturer04. Begone.
-        return not re.search(r'manufacturer|to be filled|available|asset|^no(ne|t)', val, flags=re.IGNORECASE)
+        return not re.search(
+            r"manufacturer|to be filled|available|asset|^no(ne|t)",
+            val,
+            flags=re.IGNORECASE,
+        )
     else:
         # map unspecified, undefined, unknown & whatever to None
-        return not re.search(r'to be filled', val, flags=re.IGNORECASE) \
-            and not re.search(r'un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)',
-                              val, flags=re.IGNORECASE)
+        return not re.search(
+            r"to be filled", val, flags=re.IGNORECASE
+        ) and not re.search(
+            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            val,
+            flags=re.IGNORECASE,
+        )
 
 
 def _dmidecoder(args=None):
-    '''
+    """
     Call DMIdecode
-    '''
-    dmidecoder = salt.utils.path.which_bin(['dmidecode', 'smbios'])
+    """
+    dmidecoder = salt.utils.path.which_bin(["dmidecode", "smbios"])
 
     if not args:
         out = salt.modules.cmdmod._run_quiet(dmidecoder)
     else:
-        out = salt.modules.cmdmod._run_quiet('{0} {1}'.format(dmidecoder, args))
+        out = salt.modules.cmdmod._run_quiet("{0} {1}".format(dmidecoder, args))
 
     return out

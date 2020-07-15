@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display raw output data structure
 =================================
 
@@ -11,10 +11,19 @@ formatted/indented.
 This was the original outputter used by Salt before the outputter system was
 developed.
 
-Example output::
+CLI Example:
 
+.. code-block:: bash
+
+    salt '*' foo.bar --out=raw
+
+Example output:
+
+.. code-block:: python
+
+    salt '*' foo.bar --out=table
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -27,9 +36,9 @@ from salt.ext import six
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
-    '''
+    """
     Rather basic....
-    '''
+    """
     if not isinstance(data, six.string_types):
         data = six.text_type(data)
     return salt.utils.stringutils.to_unicode(data)

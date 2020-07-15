@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 PeeringDB Module
 ================
 
@@ -24,74 +24,68 @@ Configuration (in the opts or Pillar):
     peeringdb:
       username: salt
       password: 5@1t
-'''
+"""
 from __future__ import absolute_import
 
 # Import python libs
 import logging
-log = logging.getLogger(__name__)
 
 # Import salt modules
 import salt.utils.http
-try:
-    from salt.utils import clean_kwargs
-except ImportError:
-    from salt.utils.args import clean_kwargs
+from salt.utils.args import clean_kwargs
 
-__virtualname__ = 'peeringdb'
-__proxyenabled__ = ['*']
+log = logging.getLogger(__name__)
 
-PEERINGDB_URL = 'https://www.peeringdb.com/api'
+
+__virtualname__ = "peeringdb"
+__proxyenabled__ = ["*"]
+
+PEERINGDB_URL = "https://www.peeringdb.com/api"
 
 
 def __virtual__():
     return __virtualname__
 
 
-def _get_auth(username=None,
-              password=None):
-    peeringdb_cfg = __salt__['config.merge']('peeringdb', default={})
+def _get_auth(username=None, password=None):
+    peeringdb_cfg = __salt__["config.merge"]("peeringdb", default={})
     if not username:
-        username = peeringdb_cfg.get('username', username)
+        username = peeringdb_cfg.get("username", username)
     if not password:
-        password = peeringdb_cfg.get('password', password)
+        password = peeringdb_cfg.get("password", password)
     return username, password
 
 
 def _build_url(endpoint, id=None):
     if id:
-        return '{base}/{endp}/{id}'.format(base=PEERINGDB_URL, endp=endpoint, id=id)
-    return '{base}/{endp}'.format(base=PEERINGDB_URL, endp=endpoint)
+        return "{base}/{endp}/{id}".format(base=PEERINGDB_URL, endp=endpoint, id=id)
+    return "{base}/{endp}".format(base=PEERINGDB_URL, endp=endpoint)
 
 
 def _get_endpoint(endpoint, id=None, **kwargs):
-    username, password = _get_auth(kwargs.pop('username', None),
-                                   kwargs.pop('password', None))
+    username, password = _get_auth(
+        kwargs.pop("username", None), kwargs.pop("password", None)
+    )
     kwargs = clean_kwargs(**kwargs)
     url = _build_url(endpoint, id=id)
-    ret = {
-        'comment': '',
-        'result': True,
-        'out': None
-    }
-    res = salt.utils.http.query(url,
-                                method='GET',
-                                decode=True,
-                                username=username,
-                                password=password,
-                                params=kwargs)
-    if 'error' in res:
-        ret.update({
-            'result': False,
-            'comment': res['error']
-        })
+    ret = {"comment": "", "result": True, "out": None}
+    res = salt.utils.http.query(
+        url,
+        method="GET",
+        decode=True,
+        username=username,
+        password=password,
+        params=kwargs,
+    )
+    if "error" in res:
+        ret.update({"result": False, "comment": res["error"]})
         return ret
-    ret['out'] = res['dict']['data']
+    ret["out"] = res["dict"]["data"]
     return ret
 
 
 def get_net(**kwargs):
-    '''
+    """
     Return the details of a network identified using the search filters
     specified in the query.
 
@@ -110,12 +104,12 @@ def get_net(**kwargs):
         salt '*' peeringdb.get_net asn=13335
         salt '*' peeringdb.get_net city='Salt Lake City'
         salt '*' peeringdb.get_net name__startswith=GTT
-    '''
-    return _get_endpoint('net', **kwargs)
+    """
+    return _get_endpoint("net", **kwargs)
 
 
 def get_fac(**kwargs):
-    '''
+    """
     Return the details of the facility identified using the search
     filters specified in the query.
 
@@ -132,12 +126,12 @@ def get_fac(**kwargs):
 
         salt '*' peeringdb.get_fac id=1774
         salt '*' peeringdb.get_fac state=UT
-    '''
-    return _get_endpoint('fac', **kwargs)
+    """
+    return _get_endpoint("fac", **kwargs)
 
 
 def get_ix(**kwargs):
-    '''
+    """
     Return the details of an IX (Internet Exchange) using the search filters
     specified in the query.
 
@@ -154,12 +148,12 @@ def get_ix(**kwargs):
 
         salt '*' peeringdb.get_ix id=1
         salt '*' peeringdb.get_ix city='Milwaukee'
-    '''
-    return _get_endpoint('ix', **kwargs)
+    """
+    return _get_endpoint("ix", **kwargs)
 
 
 def get_ixfac(**kwargs):
-    '''
+    """
     Return the details of an IX (Internet Exchange) facility using the search
     filters specified in the query.
 
@@ -176,12 +170,12 @@ def get_ixfac(**kwargs):
 
         salt '*' peeringdb.get_ixfac id=1
         salt '*' peeringdb.get_ixfac city='Milwaukee'
-    '''
-    return _get_endpoint('ixfac', **kwargs)
+    """
+    return _get_endpoint("ixfac", **kwargs)
 
 
 def get_ixlan(**kwargs):
-    '''
+    """
     Return the details of an IX (Internet Exchange) together with the networks
     available in this location (and their details), using the search filters
     specified in the query.
@@ -199,12 +193,12 @@ def get_ixlan(**kwargs):
 
         salt '*' peeringdb.get_ixlan id=780
         salt '*' peeringdb.get_ixlan city='Milwaukee'
-    '''
-    return _get_endpoint('ixlan', **kwargs)
+    """
+    return _get_endpoint("ixlan", **kwargs)
 
 
 def get_ixpfx(**kwargs):
-    '''
+    """
     Return the details of an IX (Internet Exchange) together with the PeeringDB
     IDs of the networks available in this location, using the search filters
     specified in the query.
@@ -222,12 +216,12 @@ def get_ixpfx(**kwargs):
 
         salt '*' peeringdb.get_ixpfx id=780
         salt '*' peeringdb.get_ixpfx city='Milwaukee'
-    '''
-    return _get_endpoint('ixpfx', **kwargs)
+    """
+    return _get_endpoint("ixpfx", **kwargs)
 
 
 def get_netfac(**kwargs):
-    '''
+    """
     Return the list of facilities used by a particular network, given the ``id``
     or other filters specified in the query.
 
@@ -244,12 +238,12 @@ def get_netfac(**kwargs):
 
         salt '*' peeringdb.get_netfac id=780
         salt '*' peeringdb.get_netfac city='Milwaukee'
-    '''
-    return _get_endpoint('netfac', **kwargs)
+    """
+    return _get_endpoint("netfac", **kwargs)
 
 
 def get_netixlan(**kwargs):
-    '''
+    """
     Return the IP addresses used by a particular network at all the IXs where it
     is available. The network is selected either via the ``id`` argument or the
     other filters specified in the query.
@@ -268,12 +262,12 @@ def get_netixlan(**kwargs):
 
         salt '*' peeringdb.get_netixlan asn=13335
         salt '*' peeringdb.get_netixlan ipaddr4=185.1.114.25
-    '''
-    return _get_endpoint('netixlan', **kwargs)
+    """
+    return _get_endpoint("netixlan", **kwargs)
 
 
 def get_org(**kwargs):
-    '''
+    """
     Return the details of an organisation together with the networks
     available in this location, using the search filters specified in the query.
 
@@ -290,12 +284,12 @@ def get_org(**kwargs):
 
         salt '*' peeringdb.get_org id=2
         salt '*' peeringdb.get_org city=Duesseldorf
-    '''
-    return _get_endpoint('org', **kwargs)
+    """
+    return _get_endpoint("org", **kwargs)
 
 
 def get_poc(**kwargs):
-    '''
+    """
     Return the details of a person of contact together using the search filters
     specified in the query.
 
@@ -312,5 +306,5 @@ def get_poc(**kwargs):
 
         salt '*' peeringdb.get_poc id=6721
         salt '*' peeringdb.get_poc email__contains='@cloudflare.com'
-    '''
-    return _get_endpoint('poc', **kwargs)
+    """
+    return _get_endpoint("poc", **kwargs)

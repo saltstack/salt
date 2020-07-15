@@ -2,20 +2,16 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
 
-# Import Salt Testing Libs
-from tests.support.mock import (
-    mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch
-)
-from tests.support import mixins
-from tests.support.unit import skipIf, TestCase
+import collections
 
 # Import Salt Libs
 import salt.roster.sshconfig as sshconfig
+from tests.support import mixins
+
+# Import Salt Testing Libs
+from tests.support.mock import mock_open, patch
+from tests.support.unit import TestCase
 
 _SAMPLE_SSH_CONFIG = """
 Host *
@@ -37,39 +33,43 @@ Host def.asdfgfdhgjkl.com
     HostName 234.234.234.234
 """
 
-_TARGET_ABC = collections.OrderedDict([
-    ('user', 'user.mcuserface'),
-    ('priv', '~/.ssh/id_rsa_abc'),
-    ('host', 'abc.asdfgfdhgjkl.com')
-])
+_TARGET_ABC = collections.OrderedDict(
+    [
+        ("user", "user.mcuserface"),
+        ("priv", "~/.ssh/id_rsa_abc"),
+        ("host", "abc.asdfgfdhgjkl.com"),
+    ]
+)
 
-_TARGET_ABC123 = collections.OrderedDict([
-    ('user', 'user.mcuserface'),
-    ('priv', '~/.ssh/id_rsa_abc'),
-    ('host', 'abc123.asdfgfdhgjkl.com')
-])
+_TARGET_ABC123 = collections.OrderedDict(
+    [
+        ("user", "user.mcuserface"),
+        ("priv", "~/.ssh/id_rsa_abc"),
+        ("host", "abc123.asdfgfdhgjkl.com"),
+    ]
+)
 
-_TARGET_DEF = collections.OrderedDict([
-    ('user', 'user.mcuserface'),
-    ('priv', '~/.ssh/id_rsa_def'),
-    ('host', 'def.asdfgfdhgjkl.com')
-])
+_TARGET_DEF = collections.OrderedDict(
+    [
+        ("user", "user.mcuserface"),
+        ("priv", "~/.ssh/id_rsa_def"),
+        ("host", "def.asdfgfdhgjkl.com"),
+    ]
+)
 
 _ALL = {
-    'abc.asdfgfdhgjkl.com': _TARGET_ABC,
-    'abc123.asdfgfdhgjkl.com': _TARGET_ABC123,
-    'def.asdfgfdhgjkl.com': _TARGET_DEF
+    "abc.asdfgfdhgjkl.com": _TARGET_ABC,
+    "abc123.asdfgfdhgjkl.com": _TARGET_ABC123,
+    "def.asdfgfdhgjkl.com": _TARGET_DEF,
 }
 
 _ABC_GLOB = {
-    'abc.asdfgfdhgjkl.com': _TARGET_ABC,
-    'abc123.asdfgfdhgjkl.com': _TARGET_ABC123
+    "abc.asdfgfdhgjkl.com": _TARGET_ABC,
+    "abc123.asdfgfdhgjkl.com": _TARGET_ABC123,
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SSHConfigRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
-
     def setUp(self):
         self.mock_fp = mock_open(read_data=_SAMPLE_SSH_CONFIG)
 
@@ -77,13 +77,13 @@ class SSHConfigRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
         return {sshconfig: {}}
 
     def test_all(self):
-        with patch('salt.utils.files.fopen', self.mock_fp):
-            with patch('salt.roster.sshconfig._get_ssh_config_file'):
-                targets = sshconfig.targets('*')
+        with patch("salt.utils.files.fopen", self.mock_fp):
+            with patch("salt.roster.sshconfig._get_ssh_config_file"):
+                targets = sshconfig.targets("*")
         self.assertEqual(targets, _ALL)
 
     def test_abc_glob(self):
-        with patch('salt.utils.files.fopen', self.mock_fp):
-            with patch('salt.roster.sshconfig._get_ssh_config_file'):
-                targets = sshconfig.targets('abc*')
+        with patch("salt.utils.files.fopen", self.mock_fp):
+            with patch("salt.roster.sshconfig._get_ssh_config_file"):
+                targets = sshconfig.targets("abc*")
         self.assertEqual(targets, _ABC_GLOB)

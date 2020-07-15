@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage RDSs
 ===========
 
@@ -67,74 +67,78 @@ config:
 
 :depends: boto3
 
-'''
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
+import salt.utils.data
+from salt.exceptions import SaltInvocationError
+
 # Import Salt Libs
 from salt.ext import six
-from salt.exceptions import SaltInvocationError
-import salt.utils.data
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto is available.
-    '''
-    if 'boto_rds.exists' in __salt__:
-        return 'boto_rds'
-    return(False, __salt__.missing_fun_string('boto_rds.exists'))
+    """
+    if "boto_rds.exists" in __salt__:
+        return "boto_rds"
+    return (False, __salt__.missing_fun_string("boto_rds.exists"))
 
 
-def present(name,
-            allocated_storage,
-            db_instance_class,
-            engine,
-            master_username,
-            master_user_password,
-            db_name=None,
-            storage_type=None,
-            db_security_groups=None,
-            vpc_security_group_ids=None,
-            vpc_security_groups=None,
-            availability_zone=None,
-            db_subnet_group_name=None,
-            preferred_maintenance_window=None,
-            db_parameter_group_name=None,
-            db_cluster_identifier=None,
-            tde_credential_arn=None,
-            tde_credential_password=None,
-            storage_encrypted=None,
-            kms_keyid=None,
-            backup_retention_period=None,
-            preferred_backup_window=None,
-            port=None,
-            multi_az=None,
-            engine_version=None,
-            auto_minor_version_upgrade=None,
-            license_model=None,
-            iops=None,
-            option_group_name=None,
-            character_set_name=None,
-            publicly_accessible=None,
-            wait_status=None,
-            tags=None,
-            copy_tags_to_snapshot=None,
-            region=None,
-            domain=None,
-            key=None,
-            keyid=None,
-            monitoring_interval=None,
-            monitoring_role_arn=None,
-            domain_iam_role_name=None,
-            promotion_tier=None,
-            profile=None):
-    '''
+def present(
+    name,
+    allocated_storage,
+    db_instance_class,
+    engine,
+    master_username,
+    master_user_password,
+    db_name=None,
+    storage_type=None,
+    db_security_groups=None,
+    vpc_security_group_ids=None,
+    vpc_security_groups=None,
+    availability_zone=None,
+    db_subnet_group_name=None,
+    preferred_maintenance_window=None,
+    db_parameter_group_name=None,
+    db_cluster_identifier=None,
+    tde_credential_arn=None,
+    tde_credential_password=None,
+    storage_encrypted=None,
+    kms_keyid=None,
+    backup_retention_period=None,
+    preferred_backup_window=None,
+    port=None,
+    multi_az=None,
+    engine_version=None,
+    auto_minor_version_upgrade=None,
+    license_model=None,
+    iops=None,
+    option_group_name=None,
+    character_set_name=None,
+    publicly_accessible=None,
+    wait_status=None,
+    tags=None,
+    copy_tags_to_snapshot=None,
+    region=None,
+    domain=None,
+    key=None,
+    keyid=None,
+    monitoring_interval=None,
+    monitoring_role_arn=None,
+    domain_iam_role_name=None,
+    promotion_tier=None,
+    profile=None,
+):
+    """
     Ensure RDS instance exists.
 
     name
@@ -301,73 +305,105 @@ def present(name,
         contains a dict with region, key and keyid.
 
     .. _create_db_instance: https://boto3.readthedocs.io/en/latest/reference/services/rds.html#RDS.Client.create_db_instance
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    r = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
+    r = __salt__["boto_rds.exists"](name, tags, region, key, keyid, profile)
 
-    if not r.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'RDS instance {0} would be created.'.format(name)
-            ret['result'] = None
+    if not r.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "RDS instance {0} would be created.".format(name)
+            ret["result"] = None
             return ret
 
-        r = __salt__['boto_rds.create'](name, allocated_storage,
-                                        db_instance_class, engine,
-                                        master_username,
-                                        master_user_password,
-                                        db_name, db_security_groups,
-                                        vpc_security_group_ids,
-                                        vpc_security_groups,
-                                        availability_zone,
-                                        db_subnet_group_name,
-                                        preferred_maintenance_window,
-                                        db_parameter_group_name,
-                                        backup_retention_period,
-                                        preferred_backup_window,
-                                        port, multi_az, engine_version,
-                                        auto_minor_version_upgrade,
-                                        license_model, iops,
-                                        option_group_name,
-                                        character_set_name,
-                                        publicly_accessible, wait_status,
-                                        tags, db_cluster_identifier,
-                                        storage_type, tde_credential_arn,
-                                        tde_credential_password,
-                                        storage_encrypted, kms_keyid,
-                                        domain, copy_tags_to_snapshot,
-                                        monitoring_interval,
-                                        monitoring_role_arn,
-                                        domain_iam_role_name, region,
-                                        promotion_tier, key, keyid, profile)
+        r = __salt__["boto_rds.create"](
+            name,
+            allocated_storage,
+            db_instance_class,
+            engine,
+            master_username,
+            master_user_password,
+            db_name,
+            db_security_groups,
+            vpc_security_group_ids,
+            vpc_security_groups,
+            availability_zone,
+            db_subnet_group_name,
+            preferred_maintenance_window,
+            db_parameter_group_name,
+            backup_retention_period,
+            preferred_backup_window,
+            port,
+            multi_az,
+            engine_version,
+            auto_minor_version_upgrade,
+            license_model,
+            iops,
+            option_group_name,
+            character_set_name,
+            publicly_accessible,
+            wait_status,
+            tags,
+            db_cluster_identifier,
+            storage_type,
+            tde_credential_arn,
+            tde_credential_password,
+            storage_encrypted,
+            kms_keyid,
+            domain,
+            copy_tags_to_snapshot,
+            monitoring_interval,
+            monitoring_role_arn,
+            domain_iam_role_name,
+            region,
+            promotion_tier,
+            key,
+            keyid,
+            profile,
+        )
 
-        if not r.get('created'):
-            ret['result'] = False
-            ret['comment'] = 'Failed to create RDS instance {0}.'.format(r['error']['message'])
+        if not r.get("created"):
+            ret["result"] = False
+            ret["comment"] = "Failed to create RDS instance {0}.".format(
+                r["error"]["message"]
+            )
             return ret
 
-        ret['changes']['old'] = {'instance': None}
-        ret['changes']['new'] = {
-              'instance': __salt__['boto_rds.describe_db_instances'](
-              name=name, jmespath='DBInstances[0]', region=region, key=key,
-              keyid=keyid, profile=profile)}
-        ret['comment'] = 'RDS instance {0} created.'.format(name)
+        ret["changes"]["old"] = {"instance": None}
+        ret["changes"]["new"] = {
+            "instance": __salt__["boto_rds.describe_db_instances"](
+                name=name,
+                jmespath="DBInstances[0]",
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+        }
+        ret["comment"] = "RDS instance {0} created.".format(name)
     else:
-        ret['comment'] = 'RDS instance {0} exists.'.format(name)
+        ret["comment"] = "RDS instance {0} exists.".format(name)
     return ret
 
 
-def replica_present(name, source, db_instance_class=None,
-                    availability_zone=None, port=None,
-                    auto_minor_version_upgrade=None, iops=None,
-                    option_group_name=None, publicly_accessible=None,
-                    tags=None, region=None, key=None, keyid=None,
-                    profile=None, db_parameter_group_name=None):
-    '''
+def replica_present(
+    name,
+    source,
+    db_instance_class=None,
+    availability_zone=None,
+    port=None,
+    auto_minor_version_upgrade=None,
+    iops=None,
+    option_group_name=None,
+    publicly_accessible=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+    db_parameter_group_name=None,
+):
+    """
     Ensure RDS replica exists.
 
     .. code-block:: yaml
@@ -376,62 +412,93 @@ def replica_present(name, source, db_instance_class=None,
           boto_rds.create_replica:
             - name: myreplica
             - source: mydb
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-    replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
-                                                 keyid, profile)
-    if not replica_exists.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
-            ret['result'] = None
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    replica_exists = __salt__["boto_rds.exists"](
+        name, tags, region, key, keyid, profile
+    )
+    if not replica_exists.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "RDS read replica {0} is set to be created ".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto_rds.create_read_replica'](name, source,
-                                                           db_instance_class,
-                                                           availability_zone, port,
-                                                           auto_minor_version_upgrade,
-                                                           iops, option_group_name,
-                                                           publicly_accessible,
-                                                           tags, region, key,
-                                                           keyid, profile)
+        created = __salt__["boto_rds.create_read_replica"](
+            name,
+            source,
+            db_instance_class,
+            availability_zone,
+            port,
+            auto_minor_version_upgrade,
+            iops,
+            option_group_name,
+            publicly_accessible,
+            tags,
+            region,
+            key,
+            keyid,
+            profile,
+        )
         if created:
-            ret['comment'] = 'RDS replica {0} created.'.format(name)
-            ret['changes']['old'] = {'instance': None}
-            ret['changes']['new'] = {
-                  'instance': __salt__['boto_rds.describe_db_instances'](
-                  name=name, jmespath='DBInstances[0]', region=region,
-                  key=key, keyid=keyid, profile=profile)}
+            ret["comment"] = "RDS replica {0} created.".format(name)
+            ret["changes"]["old"] = {"instance": None}
+            ret["changes"]["new"] = {
+                "instance": __salt__["boto_rds.describe_db_instances"](
+                    name=name,
+                    jmespath="DBInstances[0]",
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                )
+            }
         else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create RDS replica {0}.".format(name)
     else:
-        jmespath = 'DBInstances[0].DBParameterGroups[0].DBParameterGroupName'
-        pmg_name = __salt__['boto_rds.describe_db_instances'](name=name,
-              jmespath=jmespath, region=region, key=key, keyid=keyid,
-              profile=profile)
-        pmg_name = pmg_name[0] if len(pmg_name) else None
+        jmespath = "DBInstances[0].DBParameterGroups[0].DBParameterGroupName"
+        pmg_name = __salt__["boto_rds.describe_db_instances"](
+            name=name,
+            jmespath=jmespath,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        pmg_name = pmg_name[0] if pmg_name else None
         if pmg_name != db_parameter_group_name:
-            modified = __salt__['boto_rds.modify_db_instance'](
-                  name=name, db_parameter_group_name=db_parameter_group_name,
-                  region=region, key=key, keyid=keyid, profile=profile)
+            modified = __salt__["boto_rds.modify_db_instance"](
+                name=name,
+                db_parameter_group_name=db_parameter_group_name,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
             if not modified:
-                ret['result'] = False
-                ret['comment'] = ('Failed to update parameter group of {0} RDS '
-                                  'instance.'.format(name))
-            ret['changes']['old'] = pmg_name
-            ret['changes']['new'] = db_parameter_group_name
-        ret['result'] = True
-        ret['comment'] = 'RDS replica {0} exists.'.format(name)
+                ret["result"] = False
+                ret["comment"] = (
+                    "Failed to update parameter group of {0} RDS "
+                    "instance.".format(name)
+                )
+            ret["changes"]["old"] = pmg_name
+            ret["changes"]["new"] = db_parameter_group_name
+        ret["result"] = True
+        ret["comment"] = "RDS replica {0} exists.".format(name)
     return ret
 
 
-def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
-                         tags=None, region=None, key=None, keyid=None,
-                         profile=None):
-    '''
+def subnet_group_present(
+    name,
+    description,
+    subnet_ids=None,
+    subnet_names=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure DB subnet group exists.
 
     name
@@ -463,70 +530,81 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
+    """
     if not salt.utils.data.exactly_one((subnet_ids, subnet_names)):
-        raise SaltInvocationError('One (but not both) of subnet_ids or '
-                                  'subnet_names must be provided.')
+        raise SaltInvocationError(
+            "One (but not both) of subnet_ids or " "subnet_names must be provided."
+        )
 
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     if not subnet_ids:
         subnet_ids = []
 
     if subnet_names:
         for i in subnet_names:
-            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i,
-                                                     region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
+            r = __salt__["boto_vpc.get_resource_id"](
+                "subnet", name=i, region=region, key=key, keyid=keyid, profile=profile
+            )
 
-            if 'error' in r:
-                ret['comment'] = 'Error looking up subnet ids: {0}'.format(
-                    r['error']['message'])
-                ret['result'] = False
+            if "error" in r:
+                ret["comment"] = "Error looking up subnet ids: {0}".format(
+                    r["error"]["message"]
+                )
+                ret["result"] = False
                 return ret
-            if r['id'] is None:
-                ret['comment'] = 'Subnet {0} does not exist.'.format(i)
-                ret['result'] = False
+            if r["id"] is None:
+                ret["comment"] = "Subnet {0} does not exist.".format(i)
+                ret["result"] = False
                 return ret
-            subnet_ids.append(r['id'])
+            subnet_ids.append(r["id"])
 
-    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
-    if not exists.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
-            ret['result'] = None
+    exists = __salt__["boto_rds.subnet_group_exists"](
+        name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not exists.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Subnet group {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto_rds.create_subnet_group'](name=name,
-                                                           description=description,
-                                                           subnet_ids=subnet_ids,
-                                                           tags=tags, region=region,
-                                                           key=key, keyid=keyid,
-                                                           profile=profile)
+        created = __salt__["boto_rds.create_subnet_group"](
+            name=name,
+            description=description,
+            subnet_ids=subnet_ids,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
 
         if not created:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} subnet group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} subnet group.".format(name)
             return ret
-        ret['changes']['old'] = None
-        ret['changes']['new'] = name
-        ret['comment'] = 'Subnet {0} created.'.format(name)
+        ret["changes"]["old"] = None
+        ret["changes"]["new"] = name
+        ret["comment"] = "Subnet {0} created.".format(name)
         return ret
     else:
-        ret['comment'] = 'Subnet {0} present.'.format(name)
+        ret["comment"] = "Subnet {0} present.".format(name)
 
         return ret
 
 
-def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           tags=None, wait_for_deletion=True, timeout=180,
-           region=None, key=None, keyid=None, profile=None):
-    '''
+def absent(
+    name,
+    skip_final_snapshot=None,
+    final_db_snapshot_identifier=None,
+    tags=None,
+    wait_for_deletion=True,
+    timeout=180,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure RDS instance is absent.
 
     name
@@ -563,70 +641,86 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    current = __salt__['boto_rds.describe_db_instances'](
-            name=name, region=region, key=key, keyid=keyid, profile=profile)
-    if not len(current):
-        ret['result'] = True
-        ret['comment'] = '{0} RDS already absent.'.format(name)
+    current = __salt__["boto_rds.describe_db_instances"](
+        name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not current:
+        ret["result"] = True
+        ret["comment"] = "{0} RDS already absent.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'RDS {0} would be removed.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "RDS {0} would be removed.".format(name)
+        ret["result"] = None
         return ret
-    deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
-                                          final_db_snapshot_identifier,
-                                          region, key, keyid, profile, tags,
-                                          wait_for_deletion, timeout)
+    deleted = __salt__["boto_rds.delete"](
+        name,
+        skip_final_snapshot,
+        final_db_snapshot_identifier,
+        region,
+        key,
+        keyid,
+        profile,
+        tags,
+        wait_for_deletion,
+        timeout,
+    )
     if not deleted:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete {0} RDS.'.format(name)
+        ret["result"] = False
+        ret["comment"] = "Failed to delete {0} RDS.".format(name)
         return ret
-    ret['changes']['old'] = {'instance': current[0]}
-    ret['changes']['new'] = {'instance': None}
-    ret['comment'] = 'RDS {0} deleted.'.format(name)
+    ret["changes"]["old"] = {"instance": current[0]}
+    ret["changes"]["new"] = {"instance": None}
+    ret["comment"] = "RDS {0} deleted.".format(name)
     return ret
 
 
-def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
+def subnet_group_absent(
+    name, tags=None, region=None, key=None, keyid=None, profile=None
+):
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
+    exists = __salt__["boto_rds.subnet_group_exists"](
+        name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
     if not exists:
-        ret['result'] = True
-        ret['comment'] = '{0} RDS subnet group does not exist.'.format(name)
+        ret["result"] = True
+        ret["comment"] = "{0} RDS subnet group does not exist.".format(name)
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'RDS subnet group {0} is set to be removed.'.format(name)
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "RDS subnet group {0} is set to be removed.".format(name)
+        ret["result"] = None
         return ret
-    deleted = __salt__['boto_rds.delete_subnet_group'](name, region, key, keyid, profile)
+    deleted = __salt__["boto_rds.delete_subnet_group"](
+        name, region, key, keyid, profile
+    )
     if not deleted:
-        ret['result'] = False
-        ret['comment'] = 'Failed to delete {0} RDS subnet group.'.format(name)
+        ret["result"] = False
+        ret["comment"] = "Failed to delete {0} RDS subnet group.".format(name)
         return ret
-    ret['changes']['old'] = name
-    ret['changes']['new'] = None
-    ret['comment'] = 'RDS subnet group {0} deleted.'.format(name)
+    ret["changes"]["old"] = name
+    ret["changes"]["new"] = None
+    ret["comment"] = "RDS subnet group {0} deleted.".format(name)
     return ret
 
 
-def parameter_present(name, db_parameter_group_family, description, parameters=None,
-                      apply_method="pending-reboot", tags=None, region=None, key=None, keyid=None, profile=None):
-    '''
+def parameter_present(
+    name,
+    db_parameter_group_family,
+    description,
+    parameters=None,
+    apply_method="pending-reboot",
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Ensure DB parameter group exists and update parameters.
 
     name
@@ -668,67 +762,112 @@ def parameter_present(name, db_parameter_group_family, description, parameters=N
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-    res = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
-                                                      keyid=keyid, profile=profile)
-    if not res.get('exists'):
-        if __opts__['test']:
-            ret['comment'] = 'Parameter group {0} is set to be created.'.format(name)
-            ret['result'] = None
+    """
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
+    res = __salt__["boto_rds.parameter_group_exists"](
+        name=name, tags=tags, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not res.get("exists"):
+        if __opts__["test"]:
+            ret["comment"] = "Parameter group {0} is set to be created.".format(name)
+            ret["result"] = None
             return ret
-        created = __salt__['boto_rds.create_parameter_group'](name=name, db_parameter_group_family=db_parameter_group_family,
-                                                              description=description, tags=tags, region=region,
-                                                              key=key, keyid=keyid, profile=profile)
+        created = __salt__["boto_rds.create_parameter_group"](
+            name=name,
+            db_parameter_group_family=db_parameter_group_family,
+            description=description,
+            tags=tags,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
         if not created:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create {0} parameter group.'.format(name)
+            ret["result"] = False
+            ret["comment"] = "Failed to create {0} parameter group.".format(name)
             return ret
-        ret['changes']['New Parameter Group'] = name
-        ret['comment'] = 'Parameter group {0} created.'.format(name)
+        ret["changes"]["New Parameter Group"] = name
+        ret["comment"] = "Parameter group {0} created.".format(name)
     else:
-        ret['comment'] = 'Parameter group {0} present.'.format(name)
+        ret["comment"] = "Parameter group {0} present.".format(name)
     if parameters is not None:
         params = {}
         changed = {}
         for items in parameters:
             for k, value in items.items():
                 if type(value) is bool:
-                    params[k] = 'on' if value else 'off'
+                    params[k] = "on" if value else "off"
                 else:
                     params[k] = six.text_type(value)
-        log.debug('Parameters from user are : %s.', params)
-        options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
-        if not options.get('result'):
-            ret['result'] = False
-            ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
+        log.debug("Parameters from user are : %s.", params)
+        options = __salt__["boto_rds.describe_parameters"](
+            name=name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        if not options.get("result"):
+            ret["result"] = False
+            ret["comment"] = os.linesep.join(
+                [ret["comment"], "Faled to get parameters for group  {0}.".format(name)]
+            )
             return ret
-        for parameter in options['parameters'].values():
-            if parameter['ParameterName'] in params and params.get(parameter['ParameterName']) != six.text_type(parameter['ParameterValue']):
+        for parameter in options["parameters"].values():
+            if parameter["ParameterName"] in params and params.get(
+                parameter["ParameterName"]
+            ) != six.text_type(parameter["ParameterValue"]):
                 log.debug(
-                    'Values that are being compared for %s are %s:%s.',
-                    parameter['ParameterName'],
-                    params.get(parameter['ParameterName']),
-                    parameter['ParameterValue']
+                    "Values that are being compared for %s are %s:%s.",
+                    parameter["ParameterName"],
+                    params.get(parameter["ParameterName"]),
+                    parameter["ParameterValue"],
                 )
-                changed[parameter['ParameterName']] = params.get(parameter['ParameterName'])
+                changed[parameter["ParameterName"]] = params.get(
+                    parameter["ParameterName"]
+                )
         if len(changed) > 0:
-            if __opts__['test']:
-                ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are set to be changed.'.format(changed, name)])
-                ret['result'] = None
+            if __opts__["test"]:
+                ret["comment"] = os.linesep.join(
+                    [
+                        ret["comment"],
+                        "Parameters {0} for group {1} are set to be changed.".format(
+                            changed, name
+                        ),
+                    ]
+                )
+                ret["result"] = None
                 return ret
-            update = __salt__['boto_rds.update_parameter_group'](name, parameters=changed, apply_method=apply_method, tags=tags, region=region,
-                                                                 key=key, keyid=keyid, profile=profile)
-            if 'error' in update:
-                ret['result'] = False
-                ret['comment'] = os.linesep.join([ret['comment'], 'Failed to change parameters {0} for group {1}:'.format(changed, name), update['error']['message']])
+            update = __salt__["boto_rds.update_parameter_group"](
+                name,
+                parameters=changed,
+                apply_method=apply_method,
+                tags=tags,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile,
+            )
+            if "error" in update:
+                ret["result"] = False
+                ret["comment"] = os.linesep.join(
+                    [
+                        ret["comment"],
+                        "Failed to change parameters {0} for group {1}:".format(
+                            changed, name
+                        ),
+                        update["error"]["message"],
+                    ]
+                )
                 return ret
-            ret['changes']['Parameters'] = changed
-            ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are changed.'.format(changed, name)])
+            ret["changes"]["Parameters"] = changed
+            ret["comment"] = os.linesep.join(
+                [
+                    ret["comment"],
+                    "Parameters {0} for group {1} are changed.".format(changed, name),
+                ]
+            )
         else:
-            ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are present.'.format(params, name)])
+            ret["comment"] = os.linesep.join(
+                [
+                    ret["comment"],
+                    "Parameters {0} for group {1} are present.".format(params, name),
+                ]
+            )
     return ret

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 JIRA Execution module
 =====================
 
@@ -17,82 +17,84 @@ Configuration example:
     server: https://jira.atlassian.org
     username: salt
     password: pass
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
-log = logging.getLogger(__name__)
 
 # Import salt modules
-try:
-    from salt.utils import clean_kwargs
-except ImportError:
-    from salt.utils.args import clean_kwargs
+from salt.utils.args import clean_kwargs
+
+log = logging.getLogger(__name__)
+
 
 # Import third party modules
 try:
     import jira
+
     HAS_JIRA = True
 except ImportError:
     HAS_JIRA = False
 
-__virtualname__ = 'jira'
-__proxyenabled__ = ['*']
+__virtualname__ = "jira"
+__proxyenabled__ = ["*"]
 
 JIRA = None
 
 
 def __virtual__():
-    return __virtualname__ if HAS_JIRA else (False, 'Please install the jira Python libary from PyPI')
+    return (
+        __virtualname__
+        if HAS_JIRA
+        else (False, "Please install the jira Python libary from PyPI")
+    )
 
 
-def _get_credentials(server=None,
-                     username=None,
-                     password=None):
-    '''
+def _get_credentials(server=None, username=None, password=None):
+    """
     Returns the credentials merged with the config data (opts + pillar).
-    '''
-    jira_cfg = __salt__['config.merge']('jira', default={})
+    """
+    jira_cfg = __salt__["config.merge"]("jira", default={})
     if not server:
-        server = jira_cfg.get('server')
+        server = jira_cfg.get("server")
     if not username:
-        username = jira_cfg.get('username')
+        username = jira_cfg.get("username")
     if not password:
-        password = jira_cfg.get('password')
+        password = jira_cfg.get("password")
     return server, username, password
 
 
-def _get_jira(server=None,
-              username=None,
-              password=None):
+def _get_jira(server=None, username=None, password=None):
     global JIRA
     if not JIRA:
-        server, username, password = _get_credentials(server=server,
-                                                      username=username,
-                                                      password=password)
-        JIRA = jira.JIRA(basic_auth=(username, password),
-                         server=server,
-                         logging=True)  # We want logging
+        server, username, password = _get_credentials(
+            server=server, username=username, password=password
+        )
+        JIRA = jira.JIRA(
+            basic_auth=(username, password), server=server, logging=True
+        )  # We want logging
     return JIRA
 
 
-def create_issue(project,
-                 summary,
-                 description,
-                 template_engine='jinja',
-                 context=None,
-                 defaults=None,
-                 saltenv='base',
-                 issuetype='Bug',
-                 priority='Normal',
-                 labels=None,
-                 assignee=None,
-                 server=None,
-                 username=None,
-                 password=None,
-                 **kwargs):
-    '''
+def create_issue(
+    project,
+    summary,
+    description,
+    template_engine="jinja",
+    context=None,
+    defaults=None,
+    saltenv="base",
+    issuetype="Bug",
+    priority="Normal",
+    labels=None,
+    assignee=None,
+    server=None,
+    username=None,
+    password=None,
+    **kwargs
+):
+    """
     Create a JIRA issue using the named settings. Return the JIRA ticket ID.
 
     project
@@ -144,36 +146,32 @@ def create_issue(project,
 
         salt '*' jira.create_issue NET 'Ticket title' 'Ticket description'
         salt '*' jira.create_issue NET 'Issue on {{ opts.id }}' 'Error detected on {{ opts.id }}' template_engine=jinja
-    '''
+    """
     if template_engine:
-        summary = __salt__['file.apply_template_on_contents'](summary,
-                                                              template=template_engine,
-                                                              context=context,
-                                                              defaults=defaults,
-                                                              saltenv=saltenv)
-        description = __salt__['file.apply_template_on_contents'](description,
-                                                                  template=template_engine,
-                                                                  context=context,
-                                                                  defaults=defaults,
-                                                                  saltenv=saltenv)
-    jira_ = _get_jira(server=server,
-                      username=username,
-                      password=password)
+        summary = __salt__["file.apply_template_on_contents"](
+            summary,
+            template=template_engine,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv,
+        )
+        description = __salt__["file.apply_template_on_contents"](
+            description,
+            template=template_engine,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv,
+        )
+    jira_ = _get_jira(server=server, username=username, password=password)
     if not labels:
         labels = []
     data = {
-        'project': {
-            'key': project
-        },
-        'summary': summary,
-        'description': description,
-        'issuetype': {
-            'name': issuetype
-        },
-        'priority': {
-            'name': priority
-        },
-        'labels': labels
+        "project": {"key": project},
+        "summary": summary,
+        "description": description,
+        "issuetype": {"name": issuetype},
+        "priority": {"name": priority},
+        "labels": labels,
     }
     data.update(clean_kwargs(**kwargs))
     issue = jira_.create_issue(data)
@@ -183,12 +181,8 @@ def create_issue(project,
     return issue_key
 
 
-def assign_issue(issue_key,
-                 assignee,
-                 server=None,
-                 username=None,
-                 password=None):
-    '''
+def assign_issue(issue_key, assignee, server=None, username=None, password=None):
+    """
     Assign the issue to an existing user. Return ``True`` when the issue has
     been properly assigned.
 
@@ -201,22 +195,22 @@ def assign_issue(issue_key,
     CLI Example:
 
         salt '*' jira.assign_issue NET-123 example_user
-    '''
-    jira_ = _get_jira(server=server,
-                      username=username,
-                      password=password)
+    """
+    jira_ = _get_jira(server=server, username=username, password=password)
     assigned = jira_.assign_issue(issue_key, assignee)
     return assigned
 
 
-def add_comment(issue_key,
-                comment,
-                visibility=None,
-                is_internal=False,
-                server=None,
-                username=None,
-                password=None):
-    '''
+def add_comment(
+    issue_key,
+    comment,
+    visibility=None,
+    is_internal=False,
+    server=None,
+    username=None,
+    password=None,
+):
+    """
     Add a comment to an existing ticket. Return ``True`` when it successfully
     added the comment.
 
@@ -242,22 +236,16 @@ def add_comment(issue_key,
     .. code-block:: bash
 
         salt '*' jira.add_comment NE-123 'This is a comment'
-    '''
-    jira_ = _get_jira(server=server,
-                      username=username,
-                      password=password)
-    comm = jira_.add_comment(issue_key,
-                             comment,
-                             visibility=visibility,
-                             is_internal=is_internal)
+    """
+    jira_ = _get_jira(server=server, username=username, password=password)
+    comm = jira_.add_comment(
+        issue_key, comment, visibility=visibility, is_internal=is_internal
+    )
     return True
 
 
-def issue_closed(issue_key,
-                 server=None,
-                 username=None,
-                 password=None):
-    '''
+def issue_closed(issue_key, server=None, username=None, password=None):
+    """
     Check if the issue is closed.
 
     issue_key
@@ -274,15 +262,13 @@ def issue_closed(issue_key,
     .. code-block:: bash
 
         salt '*' jira.issue_closed NE-123
-    '''
+    """
     if not issue_key:
         return None
-    jira_ = _get_jira(server=server,
-                      username=username,
-                      password=password)
+    jira_ = _get_jira(server=server, username=username, password=password)
     try:
         ticket = jira_.issue(issue_key)
     except jira.exceptions.JIRAError:
         # Ticket not found
         return None
-    return ticket.fields().status.name == 'Closed'
+    return ticket.fields().status.name == "Closed"

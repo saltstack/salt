@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 StatusPage
 ==========
 
@@ -17,46 +17,45 @@ In the minion configuration file, the following block is required:
     page_id: <PAGE_ID>
 
 .. versionadded:: 2017.7.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # import python std lib
 import logging
 
+# import salt
+from salt.ext import six
+
 # import third party
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
-# import salt
-from salt.ext import six
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'statuspage'
+__virtualname__ = "statuspage"
 
 log = logging.getLogger(__file__)
 
-BASE_URL = 'https://api.statuspage.io'
+BASE_URL = "https://api.statuspage.io"
 DEFAULT_VERSION = 1
 
 UPDATE_FORBIDDEN_FILEDS = [
-    'id',  # can't rewrite this
-    'created_at',
-    'updated_at',  # updated_at and created_at are handled by the backend framework of the API
-    'page_id'  # can't move it to a different page
+    "id",  # can't rewrite this
+    "created_at",
+    "updated_at",  # updated_at and created_at are handled by the backend framework of the API
+    "page_id",  # can't move it to a different page
 ]
 INSERT_FORBIDDEN_FILEDS = UPDATE_FORBIDDEN_FILEDS[:]  # they are the same for the moment
 
-METHOD_OK_STATUS = {
-    'POST': 201,
-    'DELETE': 204
-}
+METHOD_OK_STATUS = {"POST": 201, "DELETE": 204}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -64,83 +63,71 @@ METHOD_OK_STATUS = {
 
 
 def __virtual__():
-    '''
+    """
     Return the execution module virtualname.
-    '''
+    """
     if HAS_REQUESTS is False:
-        return False, 'The requests python package is not installed'
+        return False, "The requests python package is not installed"
     return __virtualname__
 
 
 def _default_ret():
-    '''
+    """
     Default dictionary returned.
-    '''
-    return {
-        'result': False,
-        'comment': '',
-        'out': None
-    }
+    """
+    return {"result": False, "comment": "", "out": None}
 
 
-def _get_api_params(api_url=None,
-                    page_id=None,
-                    api_key=None,
-                    api_version=None):
-    '''
+def _get_api_params(api_url=None, page_id=None, api_key=None, api_version=None):
+    """
     Retrieve the API params from the config file.
-    '''
-    statuspage_cfg = __salt__['config.get']('statuspage')
+    """
+    statuspage_cfg = __salt__["config.get"]("statuspage")
     if not statuspage_cfg:
         statuspage_cfg = {}
     return {
-        'api_url': api_url or statuspage_cfg.get('api_url') or BASE_URL,  # optional
-        'api_page_id': page_id or statuspage_cfg.get('page_id'),  # mandatory
-        'api_key': api_key or statuspage_cfg.get('api_key'),  # mandatory
-        'api_version': api_version or statuspage_cfg.get('api_version') or DEFAULT_VERSION
+        "api_url": api_url or statuspage_cfg.get("api_url") or BASE_URL,  # optional
+        "api_page_id": page_id or statuspage_cfg.get("page_id"),  # mandatory
+        "api_key": api_key or statuspage_cfg.get("api_key"),  # mandatory
+        "api_version": api_version
+        or statuspage_cfg.get("api_version")
+        or DEFAULT_VERSION,
     }
 
 
 def _validate_api_params(params):
-    '''
+    """
     Validate the API params as specified in the config file.
-    '''
+    """
     # page_id and API key are mandatory and they must be string/unicode
-    return (isinstance(params['api_page_id'], (six.string_types, six.text_type)) and
-            isinstance(params['api_key'], (six.string_types, six.text_type)))
+    return isinstance(
+        params["api_page_id"], (six.string_types, six.text_type)
+    ) and isinstance(params["api_key"], (six.string_types, six.text_type))
 
 
 def _get_headers(params):
-    '''
+    """
     Return HTTP headers required.
-    '''
-    return {
-        'Authorization': 'OAuth {oauth}'.format(oauth=params['api_key'])
-    }
+    """
+    return {"Authorization": "OAuth {oauth}".format(oauth=params["api_key"])}
 
 
-def _http_request(url,
-                  method='GET',
-                  headers=None,
-                  data=None):
-    '''
+def _http_request(url, method="GET", headers=None, data=None):
+    """
     Make the HTTP request and return the body as python object.
-    '''
-    req = requests.request(method,
-                           url,
-                           headers=headers,
-                           data=data)
+    """
+    req = requests.request(method, url, headers=headers, data=data)
     ret = _default_ret()
     ok_status = METHOD_OK_STATUS.get(method, 200)
     if req.status_code != ok_status:
-        ret.update({
-            'comment': req.json().get('error', '')
-        })
+        ret.update({"comment": req.json().get("error", "")})
         return ret
-    ret.update({
-        'result': True,
-        'out': req.json() if method != 'DELETE' else None  # no body when DELETE
-    })
+    ret.update(
+        {
+            "result": True,
+            "out": req.json() if method != "DELETE" else None,  # no body when DELETE
+        }
+    )
     return ret
 
 
@@ -149,13 +136,15 @@ def _http_request(url,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def create(endpoint='incidents',
-           api_url=None,
-           page_id=None,
-           api_key=None,
-           api_version=None,
-           **kwargs):
-    '''
+def create(
+    endpoint="incidents",
+    api_url=None,
+    page_id=None,
+    api_key=None,
+    api_version=None,
+    **kwargs
+):
+    """
     Insert a new entry under a specific endpoint.
 
     endpoint: incidents
@@ -208,47 +197,39 @@ def create(endpoint='incidents',
                     2017-01-05T19:35:27.135Z
             result:
                 True
-    '''
-    params = _get_api_params(api_url=api_url,
-                             page_id=page_id,
-                             api_key=api_key,
-                             api_version=api_version)
+    """
+    params = _get_api_params(
+        api_url=api_url, page_id=page_id, api_key=api_key, api_version=api_version
+    )
     if not _validate_api_params(params):
-        log.error('Invalid API params.')
+        log.error("Invalid API params.")
         log.error(params)
-        return {
-            'result': False,
-            'comment': 'Invalid API params. See log for details'
-        }
+        return {"result": False, "comment": "Invalid API params. See log for details"}
     endpoint_sg = endpoint[:-1]  # singular
     headers = _get_headers(params)
-    create_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}.json'.format(
-        base_url=params['api_url'],
-        version=params['api_version'],
-        page_id=params['api_page_id'],
-        endpoint=endpoint
+    create_url = "{base_url}/v{version}/pages/{page_id}/{endpoint}.json".format(
+        base_url=params["api_url"],
+        version=params["api_version"],
+        page_id=params["api_page_id"],
+        endpoint=endpoint,
     )
     change_request = {}
     for karg, warg in six.iteritems(kwargs):
-        if warg is None or karg.startswith('__') or karg in INSERT_FORBIDDEN_FILEDS:
+        if warg is None or karg.startswith("__") or karg in INSERT_FORBIDDEN_FILEDS:
             continue
-        change_request_key = '{endpoint_sg}[{karg}]'.format(
-            endpoint_sg=endpoint_sg,
-            karg=karg
+        change_request_key = "{endpoint_sg}[{karg}]".format(
+            endpoint_sg=endpoint_sg, karg=karg
         )
         change_request[change_request_key] = warg
-    return _http_request(create_url,
-                         method='POST',
-                         headers=headers,
-                         data=change_request)
+    return _http_request(
+        create_url, method="POST", headers=headers, data=change_request
+    )
 
 
-def retrieve(endpoint='incidents',
-             api_url=None,
-             page_id=None,
-             api_key=None,
-             api_version=None):
-    '''
+def retrieve(
+    endpoint="incidents", api_url=None, page_id=None, api_key=None, api_version=None
+):
+    """
     Retrieve a specific endpoint from the Statuspage API.
 
     endpoint: incidents
@@ -355,37 +336,34 @@ def retrieve(endpoint='incidents',
                       2015-01-26T20:25:13.379Z
             result:
                 True
-    '''
-    params = _get_api_params(api_url=api_url,
-                             page_id=page_id,
-                             api_key=api_key,
-                             api_version=api_version)
-    if not _validate_api_params(params):
-        log.error('Invalid API params.')
-        log.error(params)
-        return {
-            'result': False,
-            'comment': 'Invalid API params. See log for details'
-        }
-    headers = _get_headers(params)
-    retrieve_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}.json'.format(
-        base_url=params['api_url'],
-        version=params['api_version'],
-        page_id=params['api_page_id'],
-        endpoint=endpoint
+    """
+    params = _get_api_params(
+        api_url=api_url, page_id=page_id, api_key=api_key, api_version=api_version
     )
-    return _http_request(retrieve_url,
-                         headers=headers)
+    if not _validate_api_params(params):
+        log.error("Invalid API params.")
+        log.error(params)
+        return {"result": False, "comment": "Invalid API params. See log for details"}
+    headers = _get_headers(params)
+    retrieve_url = "{base_url}/v{version}/pages/{page_id}/{endpoint}.json".format(
+        base_url=params["api_url"],
+        version=params["api_version"],
+        page_id=params["api_page_id"],
+        endpoint=endpoint,
+    )
+    return _http_request(retrieve_url, headers=headers)
 
 
-def update(endpoint='incidents',
-           id=None,
-           api_url=None,
-           page_id=None,
-           api_key=None,
-           api_version=None,
-           **kwargs):
-    '''
+def update(
+    endpoint="incidents",
+    id=None,
+    api_url=None,
+    page_id=None,
+    api_key=None,
+    api_version=None,
+    **kwargs
+):
+    """
     Update attribute(s) of a specific endpoint.
 
     id
@@ -441,55 +419,53 @@ def update(endpoint='incidents',
                     2017-01-05T15:34:27.676Z
             result:
                 True
-    '''
+    """
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid %s ID', endpoint_sg)
+        log.error("Invalid %s ID", endpoint_sg)
         return {
-            'result': False,
-            'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)
+            "result": False,
+            "comment": "Please specify a valid {endpoint} ID".format(
+                endpoint=endpoint_sg
+            ),
         }
-    params = _get_api_params(api_url=api_url,
-                             page_id=page_id,
-                             api_key=api_key,
-                             api_version=api_version)
+    params = _get_api_params(
+        api_url=api_url, page_id=page_id, api_key=api_key, api_version=api_version
+    )
     if not _validate_api_params(params):
-        log.error('Invalid API params.')
+        log.error("Invalid API params.")
         log.error(params)
-        return {
-            'result': False,
-            'comment': 'Invalid API params. See log for details'
-        }
+        return {"result": False, "comment": "Invalid API params. See log for details"}
     headers = _get_headers(params)
-    update_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}/{id}.json'.format(
-        base_url=params['api_url'],
-        version=params['api_version'],
-        page_id=params['api_page_id'],
+    update_url = "{base_url}/v{version}/pages/{page_id}/{endpoint}/{id}.json".format(
+        base_url=params["api_url"],
+        version=params["api_version"],
+        page_id=params["api_page_id"],
         endpoint=endpoint,
-        id=id
+        id=id,
     )
     change_request = {}
     for karg, warg in six.iteritems(kwargs):
-        if warg is None or karg.startswith('__') or karg in UPDATE_FORBIDDEN_FILEDS:
+        if warg is None or karg.startswith("__") or karg in UPDATE_FORBIDDEN_FILEDS:
             continue
-        change_request_key = '{endpoint_sg}[{karg}]'.format(
-            endpoint_sg=endpoint_sg,
-            karg=karg
+        change_request_key = "{endpoint_sg}[{karg}]".format(
+            endpoint_sg=endpoint_sg, karg=karg
         )
         change_request[change_request_key] = warg
-    return _http_request(update_url,
-                         method='PATCH',
-                         headers=headers,
-                         data=change_request)
+    return _http_request(
+        update_url, method="PATCH", headers=headers, data=change_request
+    )
 
 
-def delete(endpoint='incidents',
-           id=None,
-           api_url=None,
-           page_id=None,
-           api_key=None,
-           api_version=None):
-    '''
+def delete(
+    endpoint="incidents",
+    id=None,
+    api_url=None,
+    page_id=None,
+    api_key=None,
+    api_version=None,
+):
+    """
     Remove an entry from an endpoint.
 
     endpoint: incidents
@@ -524,33 +500,29 @@ def delete(endpoint='incidents',
                 None
             result:
                 True
-    '''
-    params = _get_api_params(api_url=api_url,
-                             page_id=page_id,
-                             api_key=api_key,
-                             api_version=api_version)
+    """
+    params = _get_api_params(
+        api_url=api_url, page_id=page_id, api_key=api_key, api_version=api_version
+    )
     if not _validate_api_params(params):
-        log.error('Invalid API params.')
+        log.error("Invalid API params.")
         log.error(params)
-        return {
-            'result': False,
-            'comment': 'Invalid API params. See log for details'
-        }
+        return {"result": False, "comment": "Invalid API params. See log for details"}
     endpoint_sg = endpoint[:-1]  # singular
     if not id:
-        log.error('Invalid %s ID', endpoint_sg)
+        log.error("Invalid %s ID", endpoint_sg)
         return {
-            'result': False,
-            'comment': 'Please specify a valid {endpoint} ID'.format(endpoint=endpoint_sg)
+            "result": False,
+            "comment": "Please specify a valid {endpoint} ID".format(
+                endpoint=endpoint_sg
+            ),
         }
     headers = _get_headers(params)
-    delete_url = '{base_url}/v{version}/pages/{page_id}/{endpoint}/{id}.json'.format(
-        base_url=params['api_url'],
-        version=params['api_version'],
-        page_id=params['api_page_id'],
+    delete_url = "{base_url}/v{version}/pages/{page_id}/{endpoint}/{id}.json".format(
+        base_url=params["api_url"],
+        version=params["api_version"],
+        page_id=params["api_page_id"],
         endpoint=endpoint,
-        id=id
+        id=id,
     )
-    return _http_request(delete_url,
-                         method='DELETE',
-                         headers=headers)
+    return _http_request(delete_url, method="DELETE", headers=headers)

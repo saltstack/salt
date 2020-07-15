@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM Formula helpers
 ======================
 
@@ -8,68 +8,62 @@ NAPALM Formula helpers
 This is an Execution Module providing helpers for various NAPALM formulas,
 e.g., napalm-interfaces-formula, napalm-bgp-formula, napalm-ntp-formula etc.,
 meant to provide various helper functions to make the templates more readable.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
-import logging
 import fnmatch
+import logging
+
+import salt.ext.six as six
+import salt.utils.dictupdate
 
 # Import salt modules
 import salt.utils.napalm
-import salt.ext.six as six
-import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
-try:
-    from salt.utils.data import traverse_dict_and_list as _traverse_dict_and_list
-except ImportError:
-    from salt.utils import traverse_dict_and_list as _traverse_dict_and_list
+from salt.utils.data import traverse_dict_and_list as _traverse_dict_and_list
 
-__proxyenabled__ = ['*']
-__virtualname__ = 'napalm_formula'
+__proxyenabled__ = ["*"]
+__virtualname__ = "napalm_formula"
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Available only on NAPALM Minions.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
 
 
-def _container_path(model,
-                    key=None,
-                    container=None,
-                    delim=DEFAULT_TARGET_DELIM):
-    '''
+def _container_path(model, key=None, container=None, delim=DEFAULT_TARGET_DELIM):
+    """
     Generate all the possible paths within an OpenConfig-like object.
     This function returns a generator.
-    '''
+    """
     if not key:
-        key = ''
+        key = ""
     if not container:
-        container = 'config'
+        container = "config"
     for model_key, model_value in six.iteritems(model):
         if key:
-            key_depth = '{prev_key}{delim}{cur_key}'.format(prev_key=key,
-                                                            delim=delim,
-                                                            cur_key=model_key)
+            key_depth = "{prev_key}{delim}{cur_key}".format(
+                prev_key=key, delim=delim, cur_key=model_key
+            )
         else:
             key_depth = model_key
         if model_key == container:
             yield key_depth
         else:
-            for value in _container_path(model_value,
-                                         key=key_depth,
-                                         container=container,
-                                         delim=delim):
+            for value in _container_path(
+                model_value, key=key_depth, container=container, delim=delim
+            ):
                 yield value
 
 
 def container_path(model, key=None, container=None, delim=DEFAULT_TARGET_DELIM):
-    '''
+    """
     Return the list of all the possible paths in a container, down to the
     ``config`` container.
     This function can be used to verify that the ``model`` is a Python object
@@ -100,12 +94,12 @@ def container_path(model, key=None, container=None, delim=DEFAULT_TARGET_DELIM):
         - interfaces:interface:Ethernet1:config
         - interfaces:interface:Ethernet1:subinterfaces:subinterface:0:config
         - interfaces:interface:Ethernet2:config
-    '''
+    """
     return list(_container_path(model))
 
 
 def setval(key, val, dict_=None, delim=DEFAULT_TARGET_DELIM):
-    '''
+    """
     Set a value under the dictionary hierarchy identified
     under the key. The target 'foo/bar/baz' returns the
     dictionary hierarchy {'foo': {'bar': {'baz': {}}}}.
@@ -120,7 +114,7 @@ def setval(key, val, dict_=None, delim=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' formula.setval foo:baz:bar True
-    '''
+    """
     if not dict_:
         dict_ = {}
     prev_hier = dict_
@@ -134,7 +128,7 @@ def setval(key, val, dict_=None, delim=DEFAULT_TARGET_DELIM):
 
 
 def traverse(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+    """
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
     using the ``delimiter`` param) target string. The target ``foo:bar:0`` will
     return ``data['foo']['bar'][0]`` if this value exists, and will otherwise
@@ -149,12 +143,12 @@ def traverse(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' napalm_formula.traverse "{'foo': {'bar': {'baz': True}}}" foo:baz:bar
-    '''
+    """
     return _traverse_dict_and_list(data, key, default=default, delimiter=delimiter)
 
 
 def dictupdate(dest, upd, recursive_update=True, merge_lists=False):
-    '''
+    """
     Recursive version of the default dict.update
 
     Merges upd recursively into dest
@@ -166,15 +160,14 @@ def dictupdate(dest, upd, recursive_update=True, merge_lists=False):
     The list in ``upd`` is added to the list in ``dest``, so the resulting list
     is ``dest[key] + upd[key]``. This behaviour is only activated when
     ``recursive_update=True``. By default ``merge_lists=False``.
-    '''
-    return salt.utils.dictupdate.update(dest, upd, recursive_update=recursive_update, merge_lists=merge_lists)
+    """
+    return salt.utils.dictupdate.update(
+        dest, upd, recursive_update=recursive_update, merge_lists=merge_lists
+    )
 
 
-def defaults(model,
-             defaults_,
-             delim='//',
-             flipped_merge=False):
-    '''
+def defaults(model, defaults_, delim="//", flipped_merge=False):
+    """
     Apply the defaults to a Python dictionary having the structure as described
     in the OpenConfig standards.
 
@@ -207,40 +200,36 @@ def defaults(model,
     As one can notice in the example above, the ``*`` corresponds to the
     interface name, therefore, the defaults will be applied on all the
     interfaces.
-    '''
+    """
     merged = {}
-    log.debug('Applying the defaults:')
+    log.debug("Applying the defaults:")
     log.debug(defaults_)
-    log.debug('openconfig like dictionary:')
+    log.debug("openconfig like dictionary:")
     log.debug(model)
     for model_path in _container_path(model, delim=delim):
         for default_path in _container_path(defaults_, delim=delim):
-            log.debug('Comparing %s to %s', model_path, default_path)
-            if not fnmatch.fnmatch(model_path, default_path) or\
-               not len(model_path.split(delim)) == len(default_path.split(delim)):
+            log.debug("Comparing %s to %s", model_path, default_path)
+            if not fnmatch.fnmatch(model_path, default_path) or not len(
+                model_path.split(delim)
+            ) == len(default_path.split(delim)):
                 continue
-            log.debug('%s matches %s', model_path, default_path)
+            log.debug("%s matches %s", model_path, default_path)
             # If there's a match, it will build the dictionary from the top
-            devault_val = _traverse_dict_and_list(defaults_,
-                                                 default_path,
-                                                 delimiter=delim)
+            devault_val = _traverse_dict_and_list(
+                defaults_, default_path, delimiter=delim
+            )
             merged = setval(model_path, devault_val, dict_=merged, delim=delim)
-    log.debug('Complete default dictionary')
+    log.debug("Complete default dictionary")
     log.debug(merged)
-    log.debug('Merging with the model')
+    log.debug("Merging with the model")
     log.debug(model)
     if flipped_merge:
         return salt.utils.dictupdate.update(model, merged)
     return salt.utils.dictupdate.update(merged, model)
 
 
-def render_field(dictionary,
-                 field,
-                 prepend=None,
-                 append=None,
-                 quotes=False,
-                 **opts):
-    '''
+def render_field(dictionary, field, prepend=None, append=None, quotes=False, **opts):
+    """
     Render a field found under the ``field`` level of the hierarchy in the
     ``dictionary`` object.
     This is useful to render a field in a Jinja template without worrying that
@@ -296,28 +285,26 @@ def render_field(dictionary,
     .. code-block:: text
 
         description "Interface description";
-    '''
+    """
     value = traverse(dictionary, field)
     if value is None:
-        return ''
+        return ""
     if prepend is None:
-        prepend = field.replace('_', '-')
+        prepend = field.replace("_", "-")
     if append is None:
-        if __grains__['os'] in ('junos',):
-            append = ';'
+        if __grains__["os"] in ("junos",):
+            append = ";"
         else:
-            append = ''
+            append = ""
     if quotes:
         value = '"{value}"'.format(value=value)
-    return '{prepend} {value}{append}'.format(prepend=prepend,
-                                              value=value,
-                                              append=append)
+    return "{prepend} {value}{append}".format(
+        prepend=prepend, value=value, append=append
+    )
 
 
-def render_fields(dictionary,
-                  *fields,
-                  **opts):
-    '''
+def render_fields(dictionary, *fields, **opts):
+    """
     This function works similarly to
     :mod:`render_field <salt.modules.napalm_formula.render_field>` but for a
     list of fields from the same dictionary, rendering, indenting and
@@ -354,14 +341,14 @@ def render_fields(dictionary,
 
         mtu "68"
         description "Interface description"
-    '''
+    """
     results = []
     for field in fields:
         res = render_field(dictionary, field, **opts)
         if res:
             results.append(res)
-    if 'indent' not in opts:
-        opts['indent'] = 0
-    if 'separator' not in opts:
-        opts['separator'] = '\n{ind}'.format(ind=' '*opts['indent'])
-    return opts['separator'].join(results)
+    if "indent" not in opts:
+        opts["indent"] = 0
+    if "separator" not in opts:
+        opts["separator"] = "\n{ind}".format(ind=" " * opts["indent"])
+    return opts["separator"].join(results)

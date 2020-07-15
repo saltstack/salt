@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 runit service module
 (http://smarden.org/runit)
 
@@ -44,32 +44,33 @@ Service's alias:
 
     XBPS package management uses a service's alias to provides service
     alternative(s), such as chrony and openntpd both aliased to ntpd.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import glob
+import logging
 
 # Import python libs
 import os
-import glob
-import logging
 import time
 
-log = logging.getLogger(__name__)
-
-# Import salt libs
-from salt.exceptions import CommandExecutionError
 import salt.utils.files
 import salt.utils.path
 
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
+log = logging.getLogger(__name__)
+
+
 # Function alias to not shadow built-ins.
-__func_alias__ = {
-    'reload_': 'reload'
-}
+__func_alias__ = {"reload_": "reload"}
 
 # which dir sv works with
 VALID_SERVICE_DIRS = [
-    '/service',
-    '/var/service',
-    '/etc/service',
+    "/service",
+    "/var/service",
+    "/etc/service",
 ]
 SERVICE_DIR = None
 for service_dir in VALID_SERVICE_DIRS:
@@ -81,41 +82,41 @@ for service_dir in VALID_SERVICE_DIRS:
 AVAIL_SVR_DIRS = []
 
 # Define the module's virtual name
-__virtualname__ = 'runit'
-__virtual_aliases__ = ('runit',)
+__virtualname__ = "runit"
+__virtual_aliases__ = ("runit",)
 
 
 def __virtual__():
-    '''
+    """
     Virtual service only on systems using runit as init process (PID 1).
     Otherwise, use this module with the provider mechanism.
-    '''
-    if __grains__.get('init') == 'runit':
-        if __grains__['os'] == 'Void':
-            add_svc_avail_path('/etc/sv')
+    """
+    if __grains__.get("init") == "runit":
+        if __grains__["os"] == "Void":
+            add_svc_avail_path("/etc/sv")
         global __virtualname__
-        __virtualname__ = 'service'
+        __virtualname__ = "service"
         return __virtualname__
-    if salt.utils.path.which('sv'):
+    if salt.utils.path.which("sv"):
         return __virtualname__
-    return (False, 'Runit not available.  Please install sv')
+    return (False, "Runit not available.  Please install sv")
 
 
 def _service_path(name):
-    '''
+    """
     Return SERVICE_DIR+name if possible
 
     name
         the service's name to work on
-    '''
+    """
     if not SERVICE_DIR:
-        raise CommandExecutionError('Could not find service directory.')
+        raise CommandExecutionError("Could not find service directory.")
     return os.path.join(SERVICE_DIR, name)
 
 
-#-- states.service  compatible args
+# -- states.service  compatible args
 def start(name):
-    '''
+    """
     Start service
 
     name
@@ -126,14 +127,14 @@ def start(name):
     .. code-block:: bash
 
         salt '*' runit.start <service name>
-    '''
-    cmd = 'sv start {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    """
+    cmd = "sv start {0}".format(_service_path(name))
+    return not __salt__["cmd.retcode"](cmd)
 
 
-#-- states.service compatible args
+# -- states.service compatible args
 def stop(name):
-    '''
+    """
     Stop service
 
     name
@@ -144,14 +145,14 @@ def stop(name):
     .. code-block:: bash
 
         salt '*' runit.stop <service name>
-    '''
-    cmd = 'sv stop {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    """
+    cmd = "sv stop {0}".format(_service_path(name))
+    return not __salt__["cmd.retcode"](cmd)
 
 
-#-- states.service compatible
+# -- states.service compatible
 def reload_(name):
-    '''
+    """
     Reload service
 
     name
@@ -162,14 +163,14 @@ def reload_(name):
     .. code-block:: bash
 
         salt '*' runit.reload <service name>
-    '''
-    cmd = 'sv reload {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    """
+    cmd = "sv reload {0}".format(_service_path(name))
+    return not __salt__["cmd.retcode"](cmd)
 
 
-#-- states.service compatible
+# -- states.service compatible
 def restart(name):
-    '''
+    """
     Restart service
 
     name
@@ -180,14 +181,14 @@ def restart(name):
     .. code-block:: bash
 
         salt '*' runit.restart <service name>
-    '''
-    cmd = 'sv restart {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    """
+    cmd = "sv restart {0}".format(_service_path(name))
+    return not __salt__["cmd.retcode"](cmd)
 
 
-#-- states.service compatible
+# -- states.service compatible
 def full_restart(name):
-    '''
+    """
     Calls runit.restart()
 
     name
@@ -198,13 +199,13 @@ def full_restart(name):
     .. code-block:: bash
 
         salt '*' runit.full_restart <service name>
-    '''
+    """
     restart(name)
 
 
-#-- states.service compatible
+# -- states.service compatible
 def status(name, sig=None):
-    '''
+    """
     Return ``True`` if service is running
 
     name
@@ -218,11 +219,11 @@ def status(name, sig=None):
     .. code-block:: bash
 
         salt '*' runit.status <service name>
-    '''
+    """
     if sig:
         # usual way to do by others (debian_service, netbsdservice).
         # XXX probably does not work here (check 'runsv sshd' instead of 'sshd' ?)
-        return bool(__salt__['status.pid'](sig))
+        return bool(__salt__["status.pid"](sig))
 
     svc_path = _service_path(name)
     if not os.path.exists(svc_path):
@@ -231,33 +232,35 @@ def status(name, sig=None):
 
     # sv return code is not relevant to get a service status.
     # Check its output instead.
-    cmd = 'sv status {0}'.format(svc_path)
+    cmd = "sv status {0}".format(svc_path)
     try:
-        out = __salt__['cmd.run_stdout'](cmd)
-        return out.startswith('run: ')
-    except Exception:
+        out = __salt__["cmd.run_stdout"](cmd)
+        return out.startswith("run: ")
+    except Exception:  # pylint: disable=broad-except
         # sv (as a command) returned an error
         return False
 
 
 def _is_svc(svc_path):
-    '''
+    """
     Return ``True`` if directory <svc_path> is really a service:
     file <svc_path>/run exists and is executable
 
     svc_path
         the (absolute) directory to check for compatibility
-    '''
-    run_file = os.path.join(svc_path, 'run')
-    if (os.path.exists(svc_path)
-         and os.path.exists(run_file)
-         and os.access(run_file, os.X_OK)):
+    """
+    run_file = os.path.join(svc_path, "run")
+    if (
+        os.path.exists(svc_path)
+        and os.path.exists(run_file)
+        and os.access(run_file, os.X_OK)
+    ):
         return True
     return False
 
 
 def status_autostart(name):
-    '''
+    """
     Return ``True`` if service <name> is autostarted by sv
     (file $service_folder/down does not exist)
     NB: return ``False`` if the service is not enabled.
@@ -270,12 +273,12 @@ def status_autostart(name):
     .. code-block:: bash
 
         salt '*' runit.status_autostart <service name>
-    '''
-    return not os.path.exists(os.path.join(_service_path(name), 'down'))
+    """
+    return not os.path.exists(os.path.join(_service_path(name), "down"))
 
 
-def get_svc_broken_path(name='*'):
-    '''
+def get_svc_broken_path(name="*"):
+    """
     Return list of broken path(s) in SERVICE_DIR that match ``name``
 
     A path is broken if it is a broken symlink or can not be a runit service
@@ -288,9 +291,9 @@ def get_svc_broken_path(name='*'):
     .. code-block:: bash
 
         salt '*' runit.get_svc_broken_path <service name>
-    '''
+    """
     if not SERVICE_DIR:
-        raise CommandExecutionError('Could not find service directory.')
+        raise CommandExecutionError("Could not find service directory.")
 
     ret = set()
 
@@ -301,20 +304,20 @@ def get_svc_broken_path(name='*'):
 
 
 def get_svc_avail_path():
-    '''
+    """
     Return list of paths that may contain available services
-    '''
+    """
     return AVAIL_SVR_DIRS
 
 
 def add_svc_avail_path(path):
-    '''
+    """
     Add a path that may contain available services.
     Return ``True`` if added (or already present), ``False`` on error.
 
     path
         directory to add to AVAIL_SVR_DIRS
-    '''
+    """
     if os.path.exists(path):
         if path not in AVAIL_SVR_DIRS:
             AVAIL_SVR_DIRS.append(path)
@@ -322,8 +325,8 @@ def add_svc_avail_path(path):
     return False
 
 
-def _get_svc_path(name='*', status=None):
-    '''
+def _get_svc_path(name="*", status=None):
+    """
     Return a list of paths to services with ``name`` that have the specified ``status``
 
     name
@@ -333,7 +336,7 @@ def _get_svc_path(name='*', status=None):
         None       : all services (no filter, default choice)
         'DISABLED' : available service(s) that is not enabled
         'ENABLED'  : enabled service (whether started on boot or not)
-    '''
+    """
 
     # This is the core routine to work with services, called by many
     # other functions of this module.
@@ -343,7 +346,7 @@ def _get_svc_path(name='*', status=None):
     # the targeted service.
 
     if not SERVICE_DIR:
-        raise CommandExecutionError('Could not find service directory.')
+        raise CommandExecutionError("Could not find service directory.")
 
     # path list of enabled services as /AVAIL_SVR_DIRS/$service,
     # taking care of any service aliases (do not use os.path.realpath()).
@@ -351,9 +354,9 @@ def _get_svc_path(name='*', status=None):
     for el in glob.glob(os.path.join(SERVICE_DIR, name)):
         if _is_svc(el):
             ena.add(os.readlink(el))
-            log.trace('found enabled service path: %s', el)
+            log.trace("found enabled service path: %s", el)
 
-    if status == 'ENABLED':
+    if status == "ENABLED":
         return sorted(ena)
 
     # path list of available services as /AVAIL_SVR_DIRS/$service
@@ -362,9 +365,9 @@ def _get_svc_path(name='*', status=None):
         for el in glob.glob(os.path.join(d, name)):
             if _is_svc(el):
                 ava.add(el)
-                log.trace('found available service path: %s', el)
+                log.trace("found available service path: %s", el)
 
-    if status == 'DISABLED':
+    if status == "DISABLED":
         # service available but not enabled
         ret = ava.difference(ena)
     else:
@@ -374,8 +377,8 @@ def _get_svc_path(name='*', status=None):
     return sorted(ret)
 
 
-def _get_svc_list(name='*', status=None):
-    '''
+def _get_svc_list(name="*", status=None):
+    """
     Return list of services that have the specified service ``status``
 
     name
@@ -385,18 +388,18 @@ def _get_svc_list(name='*', status=None):
         None       : all services (no filter, default choice)
         'DISABLED' : available service that is not enabled
         'ENABLED'  : enabled service (whether started on boot or not)
-    '''
+    """
     return sorted([os.path.basename(el) for el in _get_svc_path(name, status)])
 
 
 def get_svc_alias():
-    '''
+    """
     Returns the list of service's name that are aliased and their alias path(s)
-    '''
+    """
 
     ret = {}
     for d in AVAIL_SVR_DIRS:
-        for el in glob.glob(os.path.join(d, '*')):
+        for el in glob.glob(os.path.join(d, "*")):
             if not os.path.islink(el):
                 continue
             psvc = os.readlink(el)
@@ -410,7 +413,7 @@ def get_svc_alias():
 
 
 def available(name):
-    '''
+    """
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
@@ -422,12 +425,12 @@ def available(name):
     .. code-block:: bash
 
         salt '*' runit.available <service name>
-    '''
+    """
     return name in _get_svc_list(name)
 
 
 def missing(name):
-    '''
+    """
     The inverse of runit.available.
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
@@ -440,12 +443,12 @@ def missing(name):
     .. code-block:: bash
 
         salt '*' runit.missing <service name>
-    '''
+    """
     return name not in _get_svc_list(name)
 
 
 def get_all():
-    '''
+    """
     Return a list of all available services
 
     CLI Example:
@@ -453,12 +456,12 @@ def get_all():
     .. code-block:: bash
 
         salt '*' runit.get_all
-    '''
+    """
     return _get_svc_list()
 
 
 def get_enabled():
-    '''
+    """
     Return a list of all enabled services
 
     CLI Example:
@@ -466,12 +469,12 @@ def get_enabled():
     .. code-block:: bash
 
         salt '*' service.get_enabled
-    '''
-    return _get_svc_list(status='ENABLED')
+    """
+    return _get_svc_list(status="ENABLED")
 
 
 def get_disabled():
-    '''
+    """
     Return a list of all disabled services
 
     CLI Example:
@@ -479,12 +482,12 @@ def get_disabled():
     .. code-block:: bash
 
         salt '*' service.get_disabled
-    '''
-    return _get_svc_list(status='DISABLED')
+    """
+    return _get_svc_list(status="DISABLED")
 
 
 def enabled(name):
-    '''
+    """
     Return ``True`` if the named service is enabled, ``False`` otherwise
 
     name
@@ -495,13 +498,13 @@ def enabled(name):
     .. code-block:: bash
 
         salt '*' service.enabled <service name>
-    '''
+    """
     # exhaustive check instead of (only) os.path.exists(_service_path(name))
-    return name in _get_svc_list(name, 'ENABLED')
+    return name in _get_svc_list(name, "ENABLED")
 
 
 def disabled(name):
-    '''
+    """
     Return ``True`` if the named service is disabled, ``False``  otherwise
 
     name
@@ -512,13 +515,13 @@ def disabled(name):
     .. code-block:: bash
 
         salt '*' service.disabled <service name>
-    '''
+    """
     # return True for a non-existent service
-    return name not in _get_svc_list(name, 'ENABLED')
+    return name not in _get_svc_list(name, "ENABLED")
 
 
 def show(name):
-    '''
+    """
     Show properties of one or more units/jobs or the manager
 
     name
@@ -527,26 +530,26 @@ def show(name):
     CLI Example:
 
         salt '*' service.show <service name>
-    '''
+    """
     ret = {}
-    ret['enabled'] = False
-    ret['disabled'] = True
-    ret['running'] = False
-    ret['service_path'] = None
-    ret['autostart'] = False
-    ret['command_path'] = None
+    ret["enabled"] = False
+    ret["disabled"] = True
+    ret["running"] = False
+    ret["service_path"] = None
+    ret["autostart"] = False
+    ret["command_path"] = None
 
-    ret['available'] = available(name)
-    if not ret['available']:
+    ret["available"] = available(name)
+    if not ret["available"]:
         return ret
 
-    ret['enabled'] = enabled(name)
-    ret['disabled'] = not ret['enabled']
-    ret['running'] = status(name)
-    ret['autostart'] = status_autostart(name)
-    ret['service_path'] = _get_svc_path(name)[0]
-    if ret['service_path']:
-        ret['command_path'] = os.path.join(ret['service_path'], 'run')
+    ret["enabled"] = enabled(name)
+    ret["disabled"] = not ret["enabled"]
+    ret["running"] = status(name)
+    ret["autostart"] = status_autostart(name)
+    ret["service_path"] = _get_svc_path(name)[0]
+    if ret["service_path"]:
+        ret["command_path"] = os.path.join(ret["service_path"], "run")
 
     # XXX provide info about alias ?
 
@@ -554,7 +557,7 @@ def show(name):
 
 
 def enable(name, start=False, **kwargs):
-    '''
+    """
     Start service ``name`` at boot.
     Returns ``True`` if operation is successful
 
@@ -569,7 +572,7 @@ def enable(name, start=False, **kwargs):
     .. code-block:: bash
 
         salt '*' service.enable <name> [start=True]
-    '''
+    """
 
     # non-existent service
     if not available(name):
@@ -578,12 +581,12 @@ def enable(name, start=False, **kwargs):
     # if service is aliased, refuse to enable it
     alias = get_svc_alias()
     if name in alias:
-        log.error('This service is aliased, enable its alias instead')
+        log.error("This service is aliased, enable its alias instead")
         return False
 
     # down_file: file that disables sv autostart
     svc_realpath = _get_svc_path(name)[0]
-    down_file = os.path.join(svc_realpath, 'down')
+    down_file = os.path.join(svc_realpath, "down")
 
     # if service already enabled, remove down_file to
     # let service starts on boot (as requested)
@@ -592,7 +595,7 @@ def enable(name, start=False, **kwargs):
             try:
                 os.unlink(down_file)
             except OSError:
-                log.error('Unable to remove file %s', down_file)
+                log.error("Unable to remove file %s", down_file)
                 return False
         return True
 
@@ -601,12 +604,14 @@ def enable(name, start=False, **kwargs):
     if not start:
         # create a temp 'down' file BEFORE enabling service.
         # will prevent sv from starting this service automatically.
-        log.trace('need a temporary file %s', down_file)
+        log.trace("need a temporary file %s", down_file)
         if not os.path.exists(down_file):
             try:
-                salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
+                # pylint: disable=resource-leakage
+                salt.utils.files.fopen(down_file, "w").close()
+                # pylint: enable=resource-leakage
             except IOError:
-                log.error('Unable to create file {0}'.format(down_file))
+                log.error("Unable to create file {0}".format(down_file))
                 return False
 
     # enable the service
@@ -615,7 +620,7 @@ def enable(name, start=False, **kwargs):
 
     except IOError:
         # (attempt to) remove temp down_file anyway
-        log.error('Unable to create symlink {0}'.format(down_file))
+        log.error("Unable to create symlink {0}".format(down_file))
         if not start:
             os.unlink(down_file)
         return False
@@ -624,21 +629,21 @@ def enable(name, start=False, **kwargs):
     # if not, down_file might be removed too quickly,
     # before 'sv' have time to take care about it.
     # Documentation indicates that a change is handled within 5 seconds.
-    cmd = 'sv status {0}'.format(_service_path(name))
+    cmd = "sv status {0}".format(_service_path(name))
     retcode_sv = 1
     count_sv = 0
     while retcode_sv != 0 and count_sv < 10:
         time.sleep(0.5)
         count_sv += 1
-        call = __salt__['cmd.run_all'](cmd)
-        retcode_sv = call['retcode']
+        call = __salt__["cmd.run_all"](cmd)
+        retcode_sv = call["retcode"]
 
     # remove the temp down_file in any case.
     if (not start) and os.path.exists(down_file):
         try:
             os.unlink(down_file)
         except OSError:
-            log.error('Unable to remove temp file %s', down_file)
+            log.error("Unable to remove temp file %s", down_file)
             retcode_sv = 1
 
     # if an error happened, revert our changes
@@ -649,7 +654,7 @@ def enable(name, start=False, **kwargs):
 
 
 def disable(name, stop=False, **kwargs):
-    '''
+    """
     Don't start service ``name`` at boot
     Returns ``True`` if operation is successful
 
@@ -664,7 +669,7 @@ def disable(name, stop=False, **kwargs):
     .. code-block:: bash
 
         salt '*' service.disable <name> [stop=True]
-    '''
+    """
 
     # non-existent as registrered service
     if not enabled(name):
@@ -672,23 +677,25 @@ def disable(name, stop=False, **kwargs):
 
     # down_file: file that prevent sv autostart
     svc_realpath = _get_svc_path(name)[0]
-    down_file = os.path.join(svc_realpath, 'down')
+    down_file = os.path.join(svc_realpath, "down")
 
     if stop:
         stop(name)
 
     if not os.path.exists(down_file):
         try:
-            salt.utils.files.fopen(down_file, "w").close()  # pylint: disable=resource-leakage
+            # pylint: disable=resource-leakage
+            salt.utils.files.fopen(down_file, "w").close()
+            # pylint: enable=resource-leakage
         except IOError:
-            log.error('Unable to create file %s', down_file)
+            log.error("Unable to create file %s", down_file)
             return False
 
     return True
 
 
 def remove(name):
-    '''
+    """
     Remove the service <name> from system.
     Returns ``True`` if operation is successful.
     The service will be also stopped.
@@ -701,23 +708,23 @@ def remove(name):
     .. code-block:: bash
 
         salt '*' service.remove <name>
-    '''
+    """
 
     if not enabled(name):
         return False
 
     svc_path = _service_path(name)
     if not os.path.islink(svc_path):
-        log.error('%s is not a symlink: not removed', svc_path)
+        log.error("%s is not a symlink: not removed", svc_path)
         return False
 
     if not stop(name):
-        log.error('Failed to stop service %s', name)
+        log.error("Failed to stop service %s", name)
         return False
     try:
         os.remove(svc_path)
     except IOError:
-        log.error('Unable to remove symlink %s', svc_path)
+        log.error("Unable to remove symlink %s", svc_path)
         return False
     return True
 

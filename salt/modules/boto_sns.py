@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon SNS
 
 :configuration: This module accepts explicit sns credentials but can also
@@ -38,12 +38,13 @@ Connection module for Amazon SNS
             region: us-east-1
 
 :depends: boto
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import Salt libs
@@ -53,36 +54,35 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto.sns
-    #pylint: enable=unused-import
-    logging.getLogger('boto').setLevel(logging.CRITICAL)
+
+    # pylint: enable=unused-import
+    logging.getLogger("boto").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist.
-    '''
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(
-        check_boto3=False
-    )
+    """
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
     if has_boto_reqs is True:
-        __utils__['boto.assign_funcs'](__name__, 'sns', pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "sns", pack=__salt__)
     return has_boto_reqs
 
 
 def get_all_topics(region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Returns a list of the all topics..
 
     CLI example::
 
         salt myminion boto_sns.get_all_topics
-    '''
+    """
     cache_key = _cache_get_key()
     try:
         return __context__[cache_key]
@@ -93,66 +93,67 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     __context__[cache_key] = {}
     # TODO: support >100 SNS topics (via NextToken)
     topics = conn.get_all_topics()
-    for t in topics['ListTopicsResponse']['ListTopicsResult']['Topics']:
-        short_name = t['TopicArn'].split(':')[-1]
-        __context__[cache_key][short_name] = t['TopicArn']
+    for t in topics["ListTopicsResponse"]["ListTopicsResult"]["Topics"]:
+        short_name = t["TopicArn"].split(":")[-1]
+        __context__[cache_key][short_name] = t["TopicArn"]
     return __context__[cache_key]
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Check to see if an SNS topic exists.
 
     CLI example::
 
         salt myminion boto_sns.exists mytopic region=us-east-1
-    '''
-    topics = get_all_topics(region=region, key=key, keyid=keyid,
-                            profile=profile)
-    if name.startswith('arn:aws:sns:'):
+    """
+    topics = get_all_topics(region=region, key=key, keyid=keyid, profile=profile)
+    if name.startswith("arn:aws:sns:"):
         return name in list(topics.values())
     else:
         return name in list(topics.keys())
 
 
 def create(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Create an SNS topic.
 
     CLI example to create a topic::
 
         salt myminion boto_sns.create mytopic region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.create_topic(name)
-    log.info('Created SNS topic %s', name)
+    log.info("Created SNS topic %s", name)
     _invalidate_cache()
     return True
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Delete an SNS topic.
 
     CLI example to delete a topic::
 
         salt myminion boto_sns.delete mytopic region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.delete_topic(get_arn(name, region, key, keyid, profile))
-    log.info('Deleted SNS topic %s', name)
+    log.info("Deleted SNS topic %s", name)
     _invalidate_cache()
     return True
 
 
-def get_all_subscriptions_by_topic(name, region=None, key=None, keyid=None, profile=None):
-    '''
+def get_all_subscriptions_by_topic(
+    name, region=None, key=None, keyid=None, profile=None
+):
+    """
     Get list of all subscriptions to a specific topic.
 
     CLI example to delete a topic::
 
         salt myminion boto_sns.get_all_subscriptions_by_topic mytopic region=us-east-1
-    '''
+    """
     cache_key = _subscriptions_cache_key(name)
     try:
         return __context__[cache_key]
@@ -160,22 +161,28 @@ def get_all_subscriptions_by_topic(name, region=None, key=None, keyid=None, prof
         pass
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    ret = conn.get_all_subscriptions_by_topic(get_arn(name, region, key, keyid, profile))
-    __context__[cache_key] = ret['ListSubscriptionsByTopicResponse']['ListSubscriptionsByTopicResult']['Subscriptions']
+    ret = conn.get_all_subscriptions_by_topic(
+        get_arn(name, region, key, keyid, profile)
+    )
+    __context__[cache_key] = ret["ListSubscriptionsByTopicResponse"][
+        "ListSubscriptionsByTopicResult"
+    ]["Subscriptions"]
     return __context__[cache_key]
 
 
-def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, profile=None):
-    '''
+def subscribe(
+    topic, protocol, endpoint, region=None, key=None, keyid=None, profile=None
+):
+    """
     Subscribe to a Topic.
 
     CLI example to delete a topic::
 
         salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
-    log.info('Subscribe %s %s to %s topic', protocol, endpoint, topic)
+    log.info("Subscribe %s %s to %s topic", protocol, endpoint, topic)
     try:
         del __context__[_subscriptions_cache_key(topic)]
     except KeyError:
@@ -183,8 +190,10 @@ def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, prof
     return True
 
 
-def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, profile=None):
-    '''
+def unsubscribe(
+    topic, subscription_arn, region=None, key=None, keyid=None, profile=None
+):
+    """
     Unsubscribe a specific SubscriptionArn of a topic.
 
     CLI Example:
@@ -194,17 +203,17 @@ def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, prof
         salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
 
     .. versionadded:: 2016.11.0
-    '''
+    """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if subscription_arn.startswith('arn:aws:sns:') is False:
+    if subscription_arn.startswith("arn:aws:sns:") is False:
         return False
 
     try:
         conn.unsubscribe(subscription_arn)
-        log.info('Unsubscribe %s to %s topic', subscription_arn, topic)
-    except Exception as e:
-        log.error('Unsubscribe Error', exc_info=True)
+        log.info("Unsubscribe %s to %s topic", subscription_arn, topic)
+    except Exception as e:  # pylint: disable=broad-except
+        log.error("Unsubscribe Error", exc_info=True)
         return False
     else:
         __context__.pop(_subscriptions_cache_key(topic), None)
@@ -212,38 +221,39 @@ def unsubscribe(topic, subscription_arn, region=None, key=None, keyid=None, prof
 
 
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
-    '''
+    """
     Returns the full ARN for a given topic name.
 
     CLI example::
 
         salt myminion boto_sns.get_arn mytopic
-    '''
-    if name.startswith('arn:aws:sns:'):
+    """
+    if name.startswith("arn:aws:sns:"):
         return name
 
-    account_id = __salt__['boto_iam.get_account_id'](
+    account_id = __salt__["boto_iam.get_account_id"](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region, profile),
-                                            account_id, name)
+    return "arn:aws:sns:{0}:{1}:{2}".format(
+        _get_region(region, profile), account_id, name
+    )
 
 
 def _get_region(region=None, profile=None):
-    if profile and 'region' in profile:
-        return profile['region']
-    if not region and __salt__['config.option'](profile):
-        _profile = __salt__['config.option'](profile)
-        region = _profile.get('region', None)
-    if not region and __salt__['config.option']('sns.region'):
-        region = __salt__['config.option']('sns.region')
+    if profile and "region" in profile:
+        return profile["region"]
+    if not region and __salt__["config.option"](profile):
+        _profile = __salt__["config.option"](profile)
+        region = _profile.get("region", None)
+    if not region and __salt__["config.option"]("sns.region"):
+        region = __salt__["config.option"]("sns.region")
     if not region:
-        region = 'us-east-1'
+        region = "us-east-1"
     return region
 
 
 def _subscriptions_cache_key(name):
-    return '{0}_{1}_subscriptions'.format(_cache_get_key(), name)
+    return "{0}_{1}_subscriptions".format(_cache_get_key(), name)
 
 
 def _invalidate_cache():
@@ -254,4 +264,4 @@ def _invalidate_cache():
 
 
 def _cache_get_key():
-    return 'boto_sns.topics_cache'
+    return "boto_sns.topics_cache"

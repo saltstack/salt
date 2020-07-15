@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Apache Libcloud Storage Management
 ==================================
 
@@ -26,11 +26,11 @@ Clouds include Amazon S3, Google Storage, Aliyun, Azure Blobs, Ceph, OpenStack s
               secret: mysecret
 
 :depends: apache-libcloud
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -43,27 +43,31 @@ from salt.utils.versions import LooseVersion as _LooseVersion
 log = logging.getLogger(__name__)
 
 # Import third party libs
-REQUIRED_LIBCLOUD_VERSION = '1.5.0'
+REQUIRED_LIBCLOUD_VERSION = "1.5.0"
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import libcloud
     from libcloud.storage.providers import get_driver
-    #pylint: enable=unused-import
-    if hasattr(libcloud, '__version__') and _LooseVersion(libcloud.__version__) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
+
+    # pylint: enable=unused-import
+    if hasattr(libcloud, "__version__") and _LooseVersion(
+        libcloud.__version__
+    ) < _LooseVersion(REQUIRED_LIBCLOUD_VERSION):
         raise ImportError()
-    logging.getLogger('libcloud').setLevel(logging.CRITICAL)
+    logging.getLogger("libcloud").setLevel(logging.CRITICAL)
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
 
 
 def __virtual__():
-    '''
+    """
     Only load if libcloud libraries exist.
-    '''
+    """
     if not HAS_LIBCLOUD:
-        msg = ('A apache-libcloud library with version at least {0} was not '
-               'found').format(REQUIRED_LIBCLOUD_VERSION)
+        msg = (
+            "A apache-libcloud library with version at least {0} was not " "found"
+        ).format(REQUIRED_LIBCLOUD_VERSION)
         return (False, msg)
     return True
 
@@ -73,20 +77,20 @@ def __init__(opts):
 
 
 def _get_driver(profile):
-    config = __salt__['config.option']('libcloud_storage')[profile]
-    cls = get_driver(config['driver'])
+    config = __salt__["config.option"]("libcloud_storage")[profile]
+    cls = get_driver(config["driver"])
     args = config.copy()
-    del args['driver']
-    args['key'] = config.get('key')
-    args['secret'] = config.get('secret', None)
-    args['secure'] = config.get('secure', True)
-    args['host'] = config.get('host', None)
-    args['port'] = config.get('port', None)
+    del args["driver"]
+    args["key"] = config.get("key")
+    args["secret"] = config.get("secret", None)
+    args["secure"] = config.get("secure", True)
+    args["host"] = config.get("host", None)
+    args["port"] = config.get("port", None)
     return cls(**args)
 
 
 def list_containers(profile, **libcloud_kwargs):
-    '''
+    """
     Return a list of containers.
 
     :param profile: The profile key
@@ -100,21 +104,18 @@ def list_containers(profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.list_containers profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     containers = conn.list_containers(**libcloud_kwargs)
     ret = []
     for container in containers:
-        ret.append({
-            'name': container.name,
-            'extra': container.extra
-        })
+        ret.append({"name": container.name, "extra": container.extra})
     return ret
 
 
 def list_container_objects(container_name, profile, **libcloud_kwargs):
-    '''
+    """
     List container objects (e.g. files) for the given container_id on the given profile
 
     :param container_name: Container name
@@ -131,26 +132,28 @@ def list_container_objects(container_name, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.list_container_objects MyFolder profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     container = conn.get_container(container_name)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     objects = conn.list_container_objects(container, **libcloud_kwargs)
     ret = []
     for obj in objects:
-        ret.append({
-            'name': obj.name,
-            'size': obj.size,
-            'hash': obj.hash,
-            'container': obj.container.name,
-            'extra': obj.extra,
-            'meta_data': obj.meta_data
-        })
+        ret.append(
+            {
+                "name": obj.name,
+                "size": obj.size,
+                "hash": obj.hash,
+                "container": obj.container.name,
+                "extra": obj.extra,
+                "meta_data": obj.meta_data,
+            }
+        )
     return ret
 
 
 def create_container(container_name, profile, **libcloud_kwargs):
-    '''
+    """
     Create a container in the cloud
 
     :param container_name: Container name
@@ -167,18 +170,15 @@ def create_container(container_name, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.create_container MyFolder profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     container = conn.create_container(container_name, **libcloud_kwargs)
-    return {
-        'name': container.name,
-        'extra': container.extra
-        }
+    return {"name": container.name, "extra": container.extra}
 
 
 def get_container(container_name, profile, **libcloud_kwargs):
-    '''
+    """
     List container details for the given container_name on the given profile
 
     :param container_name: Container name
@@ -195,18 +195,15 @@ def get_container(container_name, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.get_container MyFolder profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name, **libcloud_kwargs)
-    return {
-        'name': container.name,
-        'extra': container.extra
-        }
+    return {"name": container.name, "extra": container.extra}
 
 
 def get_container_object(container_name, object_name, profile, **libcloud_kwargs):
-    '''
+    """
     Get the details for a container object (file or object in the cloud)
 
     :param container_name: Container name
@@ -226,22 +223,30 @@ def get_container_object(container_name, object_name, profile, **libcloud_kwargs
     .. code-block:: bash
 
         salt myminion libcloud_storage.get_container_object MyFolder MyFile.xyz profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     obj = conn.get_container_object(container_name, object_name, **libcloud_kwargs)
     return {
-        'name': obj.name,
-        'size': obj.size,
-        'hash': obj.hash,
-        'container': obj.container.name,
-        'extra': obj.extra,
-        'meta_data': obj.meta_data}
+        "name": obj.name,
+        "size": obj.size,
+        "hash": obj.hash,
+        "container": obj.container.name,
+        "extra": obj.extra,
+        "meta_data": obj.meta_data,
+    }
 
 
-def download_object(container_name, object_name, destination_path, profile,
-                    overwrite_existing=False, delete_on_failure=True, **libcloud_kwargs):
-    '''
+def download_object(
+    container_name,
+    object_name,
+    destination_path,
+    profile,
+    overwrite_existing=False,
+    delete_on_failure=True,
+    **libcloud_kwargs
+):
+    """
     Download an object to the specified destination path.
 
     :param container_name: Container name
@@ -279,16 +284,26 @@ def download_object(container_name, object_name, destination_path, profile,
 
         salt myminion libcloud_storage.download_object MyFolder me.jpg /tmp/me.jpg profile1
 
-    '''
+    """
     conn = _get_driver(profile=profile)
     obj = conn.get_object(container_name, object_name)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
-    return conn.download_object(obj, destination_path, overwrite_existing, delete_on_failure, **libcloud_kwargs)
+    return conn.download_object(
+        obj, destination_path, overwrite_existing, delete_on_failure, **libcloud_kwargs
+    )
 
 
-def upload_object(file_path, container_name, object_name, profile, extra=None,
-                  verify_hash=True, headers=None, **libcloud_kwargs):
-    '''
+def upload_object(
+    file_path,
+    container_name,
+    object_name,
+    profile,
+    extra=None,
+    verify_hash=True,
+    headers=None,
+    **libcloud_kwargs
+):
+    """
     Upload an object currently located on a disk.
 
     :param file_path: Path to the object on disk.
@@ -326,16 +341,24 @@ def upload_object(file_path, container_name, object_name, profile, extra=None,
 
         salt myminion libcloud_storage.upload_object /file/to/me.jpg MyFolder me.jpg profile1
 
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name)
-    obj = conn.upload_object(file_path, container, object_name, extra, verify_hash, headers, **libcloud_kwargs)
+    obj = conn.upload_object(
+        file_path,
+        container,
+        object_name,
+        extra,
+        verify_hash,
+        headers,
+        **libcloud_kwargs
+    )
     return obj.name
 
 
 def delete_object(container_name, object_name, profile, **libcloud_kwargs):
-    '''
+    """
     Delete an object in the cloud
 
     :param container_name: Container name
@@ -359,7 +382,7 @@ def delete_object(container_name, object_name, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.delete_object MyFolder me.jpg profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     obj = conn.get_object(container_name, object_name, **libcloud_kwargs)
@@ -367,7 +390,7 @@ def delete_object(container_name, object_name, profile, **libcloud_kwargs):
 
 
 def delete_container(container_name, profile, **libcloud_kwargs):
-    '''
+    """
     Delete an object container in the cloud
 
     :param container_name: Container name
@@ -388,7 +411,7 @@ def delete_container(container_name, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.delete_container MyFolder profile1
-    '''
+    """
     conn = _get_driver(profile=profile)
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     container = conn.get_container(container_name)
@@ -396,7 +419,7 @@ def delete_container(container_name, profile, **libcloud_kwargs):
 
 
 def extra(method, profile, **libcloud_kwargs):
-    '''
+    """
     Call an extended method on the driver
 
     :param method: Driver's method name
@@ -413,7 +436,7 @@ def extra(method, profile, **libcloud_kwargs):
     .. code-block:: bash
 
         salt myminion libcloud_storage.extra ex_get_permissions google container_name=my_container object_name=me.jpg --out=yaml
-    '''
+    """
     libcloud_kwargs = salt.utils.args.clean_kwargs(**libcloud_kwargs)
     conn = _get_driver(profile=profile)
     connection_method = getattr(conn, method)

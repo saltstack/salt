@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage PHP pecl extensions.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 import re
-import logging
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils.data
@@ -20,42 +16,48 @@ import salt.utils.path
 # Import 3rd-party libs
 from salt.ext import six
 
-__func_alias__ = {
-    'list_': 'list'
-}
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
+
+__func_alias__ = {"list_": "list"}
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'pecl'
+__virtualname__ = "pecl"
 
 
 def __virtual__():
-    if salt.utils.path.which('pecl'):
+    if salt.utils.path.which("pecl"):
         return __virtualname__
-    return (False, 'The pecl execution module not loaded: '
-            'pecl binary is not in the path.')
+    return (
+        False,
+        "The pecl execution module not loaded: pecl binary is not in the path.",
+    )
 
 
 def _pecl(command, defaults=False):
-    '''
+    """
     Execute the command passed with pecl
-    '''
-    cmdline = 'pecl {0}'.format(command)
+    """
+    cmdline = "pecl {0}".format(command)
     if salt.utils.data.is_true(defaults):
-        cmdline = 'yes ' "''" + ' | ' + cmdline
+        cmdline = "yes " "''" + " | " + cmdline
 
-    ret = __salt__['cmd.run_all'](cmdline, python_shell=True)
+    ret = __salt__["cmd.run_all"](cmdline, python_shell=True)
 
-    if ret['retcode'] == 0:
-        return ret['stdout']
+    if ret["retcode"] == 0:
+        return ret["stdout"]
     else:
-        log.error('Problem running pecl. Is php-pear installed?')
-        return ''
+        log.error("Problem running pecl. Is php-pear installed?")
+        return ""
 
 
-def install(pecls, defaults=False, force=False, preferred_state='stable'):
-    '''
+def install(pecls, defaults=False, force=False, preferred_state="stable"):
+    """
     .. versionadded:: 0.17.0
 
     Installs one or several pecl extensions.
@@ -76,29 +78,32 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
     .. code-block:: bash
 
         salt '*' pecl.install fuse
-    '''
+    """
     if isinstance(pecls, six.string_types):
         pecls = [pecls]
-    preferred_state = '-d preferred_state={0}'.format(_cmd_quote(preferred_state))
+    preferred_state = "-d preferred_state={0}".format(_cmd_quote(preferred_state))
     if force:
-        return _pecl('{0} install -f {1}'.format(preferred_state, _cmd_quote(' '.join(pecls))),
-                     defaults=defaults)
+        return _pecl(
+            "{0} install -f {1}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            defaults=defaults,
+        )
     else:
-        _pecl('{0} install {1}'.format(preferred_state, _cmd_quote(' '.join(pecls))),
-              defaults=defaults)
+        _pecl(
+            "{0} install {1}".format(preferred_state, _cmd_quote(" ".join(pecls))),
+            defaults=defaults,
+        )
         if not isinstance(pecls, list):
             pecls = [pecls]
         for pecl in pecls:
             found = False
-            if '/' in pecl:
-                channel, pecl = pecl.split('/')
+            if "/" in pecl:
+                channel, pecl = pecl.split("/")
             else:
                 channel = None
             installed_pecls = list_(channel)
             for pecl in installed_pecls:
-                installed_pecl_with_version = '{0}-{1}'.format(
-                    pecl,
-                    installed_pecls.get(pecl)[0]
+                installed_pecl_with_version = "{0}-{1}".format(
+                    pecl, installed_pecls.get(pecl)[0]
                 )
                 if pecl in installed_pecl_with_version:
                     found = True
@@ -108,7 +113,7 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
 
 
 def uninstall(pecls):
-    '''
+    """
     Uninstall one or several pecl extensions.
 
     pecls
@@ -119,14 +124,14 @@ def uninstall(pecls):
     .. code-block:: bash
 
         salt '*' pecl.uninstall fuse
-    '''
+    """
     if isinstance(pecls, six.string_types):
         pecls = [pecls]
-    return _pecl('uninstall {0}'.format(_cmd_quote(' '.join(pecls))))
+    return _pecl("uninstall {0}".format(_cmd_quote(" ".join(pecls))))
 
 
 def update(pecls):
-    '''
+    """
     Update one or several pecl extensions.
 
     pecls
@@ -137,14 +142,14 @@ def update(pecls):
     .. code-block:: bash
 
         salt '*' pecl.update fuse
-    '''
+    """
     if isinstance(pecls, six.string_types):
         pecls = [pecls]
-    return _pecl('install -U {0}'.format(_cmd_quote(' '.join(pecls))))
+    return _pecl("install -U {0}".format(_cmd_quote(" ".join(pecls))))
 
 
 def list_(channel=None):
-    '''
+    """
     List installed pecl extensions.
 
     CLI Example:
@@ -152,12 +157,12 @@ def list_(channel=None):
     .. code-block:: bash
 
         salt '*' pecl.list
-    '''
-    pecl_channel_pat = re.compile('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)')
+    """
+    pecl_channel_pat = re.compile("^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)")
     pecls = {}
-    command = 'list'
+    command = "list"
     if channel:
-        command = '{0} -c {1}'.format(command, _cmd_quote(channel))
+        command = "{0} -c {1}".format(command, _cmd_quote(channel))
     lines = _pecl(command).splitlines()
     lines = (l for l in lines if pecl_channel_pat.match(l))
 

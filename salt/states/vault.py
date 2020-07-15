@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 States for managing Hashicorp Vault.
 Currently handles policies. Configuration instructions are documented in the execution module docs.
 
@@ -9,17 +9,18 @@ Currently handles policies. Configuration instructions are documented in the exe
 
 .. versionadded:: 2017.7.0
 
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
+
 import difflib
+import logging
 
 log = logging.getLogger(__name__)
 
 
 def policy_present(name, rules):
-    '''
+    """
     Ensure a Vault policy with the given name and rules is present.
 
     name
@@ -42,82 +43,86 @@ def policy_present(name, rules):
                   policy = "write"
                 }
 
-    '''
+    """
     url = "v1/sys/policy/{0}".format(name)
-    response = __utils__['vault.make_request']('GET', url)
+    response = __utils__["vault.make_request"]("GET", url)
     try:
         if response.status_code == 200:
-            return _handle_existing_policy(name, rules, response.json()['rules'])
+            return _handle_existing_policy(name, rules, response.json()["rules"])
         elif response.status_code == 404:
             return _create_new_policy(name, rules)
         else:
             response.raise_for_status()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': 'Failed to get policy: {0}'.format(e)
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "Failed to get policy: {0}".format(e),
         }
 
 
 def _create_new_policy(name, rules):
-    if __opts__['test']:
+    if __opts__["test"]:
         return {
-            'name': name,
-            'changes': {name: {'old': '', 'new': rules}},
-            'result': None,
-            'comment': 'Policy would be created'
+            "name": name,
+            "changes": {name: {"old": "", "new": rules}},
+            "result": None,
+            "comment": "Policy would be created",
         }
 
-    payload = {'rules': rules}
+    payload = {"rules": rules}
     url = "v1/sys/policy/{0}".format(name)
-    response = __utils__['vault.make_request']('PUT', url, json=payload)
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': 'Failed to create policy: {0}'.format(response.reason)
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "Failed to create policy: {0}".format(response.reason),
         }
 
     return {
-        'name': name,
-        'result': True,
-        'changes': {name: {'old': None, 'new': rules}},
-        'comment': 'Policy was created'
+        "name": name,
+        "result": True,
+        "changes": {name: {"old": None, "new": rules}},
+        "comment": "Policy was created",
     }
 
 
 def _handle_existing_policy(name, new_rules, existing_rules):
-    ret = {'name': name}
+    ret = {"name": name}
     if new_rules == existing_rules:
-        ret['result'] = True
-        ret['changes'] = {}
-        ret['comment'] = 'Policy exists, and has the correct content'
+        ret["result"] = True
+        ret["changes"] = {}
+        ret["comment"] = "Policy exists, and has the correct content"
         return ret
 
-    change = ''.join(difflib.unified_diff(existing_rules.splitlines(True), new_rules.splitlines(True)))
-    if __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {name: {'change': change}}
-        ret['comment'] = 'Policy would be changed'
+    change = "".join(
+        difflib.unified_diff(
+            existing_rules.splitlines(True), new_rules.splitlines(True)
+        )
+    )
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["changes"] = {name: {"change": change}}
+        ret["comment"] = "Policy would be changed"
         return ret
 
-    payload = {'rules': new_rules}
+    payload = {"rules": new_rules}
 
     url = "v1/sys/policy/{0}".format(name)
-    response = __utils__['vault.make_request']('PUT', url, json=payload)
+    response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
-            'name': name,
-            'changes': {},
-            'result': False,
-            'comment': 'Failed to change policy: {0}'.format(response.reason)
+            "name": name,
+            "changes": {},
+            "result": False,
+            "comment": "Failed to change policy: {0}".format(response.reason),
         }
 
-    ret['result'] = True
-    ret['changes'] = {name: {'change': change}}
-    ret['comment'] = 'Policy was updated'
+    ret["result"] = True
+    ret["changes"] = {name: {"change": change}}
+    ret["comment"] = "Policy was updated"
 
     return ret

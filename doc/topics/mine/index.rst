@@ -42,12 +42,55 @@ the example below:
       test.ping: []
       network.ip_addrs:
         interface: eth0
-        cidr: '10.0.0.0/8'
+        cidr: 10.0.0.0/8
 
 In the example above :py:mod:`salt.modules.network.ip_addrs` has additional
 filters to help narrow down the results.  In the above example IP addresses
 are only returned if they are on a eth0 interface and in the 10.0.0.0/8 IP
 range.
+
+.. versionchanged:: 3000
+
+The format to define mine_functions has been changed to allow the same format
+as used for module.run. The old format (above) will still be supported.
+
+.. code-block:: yaml
+
+    mine_functions:
+      test.ping: []
+      network.ip_addrs:
+        - interface: eth0
+        - cidr: 10.0.0.0/8
+      test.arg:
+        - isn't
+        - this
+        - fun
+        - this: that
+        - salt: stack
+
+.. _mine_minion-side-acl:
+
+Minion-side Access Control
+--------------------------
+
+.. versionadded:: 3000
+
+Mine functions can be targeted to only be available to specific minions. This
+uses the same targeting parameters as :ref:`targeting` but with keywords ``allow_tgt``
+and ``allow_tgt_type``. When a minion requests a function from the salt mine that
+is not allowed to be requested by that minion (i.e. when looking up the combination
+of ``allow_tgt`` and ``allow_tgt_type`` and the requesting minion is not in the list)
+it will get no data, just as if the requested function is not present in the salt mine.
+
+.. code-block:: yaml
+
+    mine_functions:
+      network.ip_addrs:
+        - interface: eth0
+        - cidr: 10.0.0.0/8
+        - allow_tgt: 'G@role:master'
+        - allow_tgt_type: 'compound'
+
 
 Mine Functions Aliases
 ----------------------
@@ -71,6 +114,25 @@ positional and key-value arguments is not supported.
         - mine_function: grains.get
         - ip_interfaces
 
+.. versionchanged:: 3000
+
+With the addition of the module.run-like format for defining mine_functions, the
+method of adding aliases remains similar. Just add a ``mine_function`` kwarg with
+the name of the real function to call, making the key below ``mine_functions``
+the alias:
+
+.. code-block:: yaml
+
+    mine_functions:
+      alias_name:
+        - mine_function: network.ip_addrs
+        - eth0
+      internal_ip_addrs:
+        - mine_function: network.ip_addrs
+        - cidr: 192.168.0.0/16
+      ip_list:
+        - mine_function: grains.get
+        - ip_interfaces
 
 .. _mine_interval:
 
@@ -122,6 +184,7 @@ stored in a different location. Here is an example of a flat roster containing
     as a wrapper function, so we can retrieve the function args from the pillar
     of the Minion in question. This results in a non-trivial delay in
     retrieving the requested data.
+
 
 Minions Targeting with Mine
 ===========================

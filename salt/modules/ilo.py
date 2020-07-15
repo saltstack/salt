@@ -1,74 +1,80 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage HP ILO
 
 :depends: hponcfg (SmartStart Scripting Toolkit Linux Edition)
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import tempfile
 
+import salt.utils.path
+
 # Import Salt libs
 from salt._compat import ElementTree as ET
 from salt.ext import six
-import salt.utils.path
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Make sure hponcfg tool is accessible
-    '''
-    if salt.utils.path.which('hponcfg'):
+    """
+    if salt.utils.path.which("hponcfg"):
         return True
 
-    return (False, 'ilo execution module not loaded: the hponcfg binary is not in the path.')
+    return (
+        False,
+        "ilo execution module not loaded: the hponcfg binary is not in the path.",
+    )
 
 
 def __execute_cmd(name, xml):
-    '''
+    """
     Execute ilom commands
-    '''
-    ret = {name.replace('_', ' '): {}}
+    """
+    ret = {name.replace("_", " "): {}}
     id_num = 0
 
-    tmp_dir = os.path.join(__opts__['cachedir'], 'tmp')
+    tmp_dir = os.path.join(__opts__["cachedir"], "tmp")
     if not os.path.isdir(tmp_dir):
         os.mkdir(tmp_dir)
-    with tempfile.NamedTemporaryFile(dir=tmp_dir,
-                                     prefix=name + six.text_type(os.getpid()),
-                                     suffix='.xml',
-                                     delete=False) as fh:
+    with tempfile.NamedTemporaryFile(
+        dir=tmp_dir,
+        prefix=name + six.text_type(os.getpid()),
+        suffix=".xml",
+        mode="w",
+        delete=False,
+    ) as fh:
         tmpfilename = fh.name
         fh.write(xml)
 
-    cmd = __salt__['cmd.run_all']('hponcfg -f {0}'.format(tmpfilename))
+    cmd = __salt__["cmd.run_all"]("hponcfg -f {0}".format(tmpfilename))
 
     # Clean up the temp file
-    __salt__['file.remove'](tmpfilename)
+    __salt__["file.remove"](tmpfilename)
 
-    if cmd['retcode'] != 0:
-        for i in cmd['stderr'].splitlines():
-            if i.startswith('     MESSAGE='):
-                return {'Failed': i.split('=')[-1]}
+    if cmd["retcode"] != 0:
+        for i in cmd["stderr"].splitlines():
+            if i.startswith("     MESSAGE="):
+                return {"Failed": i.split("=")[-1]}
         return False
 
     try:
-        for i in ET.fromstring(''.join(cmd['stdout'].splitlines()[3:-1])):
+        for i in ET.fromstring("".join(cmd["stdout"].splitlines()[3:-1])):
             # Make sure dict keys don't collide
-            if ret[name.replace('_', ' ')].get(i.tag, False):
-                ret[name.replace('_', ' ')].update(
-                    {i.tag + '_' + six.text_type(id_num): i.attrib}
+            if ret[name.replace("_", " ")].get(i.tag, False):
+                ret[name.replace("_", " ")].update(
+                    {i.tag + "_" + six.text_type(id_num): i.attrib}
                 )
                 id_num += 1
             else:
-                ret[name.replace('_', ' ')].update(
-                    {i.tag: i.attrib}
-                )
+                ret[name.replace("_", " ")].update({i.tag: i.attrib})
     except SyntaxError:
         return True
 
@@ -76,7 +82,7 @@ def __execute_cmd(name, xml):
 
 
 def global_settings():
-    '''
+    """
     Show global settings
 
     CLI Example:
@@ -84,7 +90,7 @@ def global_settings():
     .. code-block:: bash
 
         salt '*' ilo.global_settings
-    '''
+    """
     _xml = """<!-- Sample file for Get Global command -->
               <RIBCL VERSION="2.0">
                  <LOGIN USER_LOGIN="x" PASSWORD="x">
@@ -94,11 +100,11 @@ def global_settings():
                  </LOGIN>
                </RIBCL>"""
 
-    return __execute_cmd('Global_Settings', _xml)
+    return __execute_cmd("Global_Settings", _xml)
 
 
 def set_http_port(port=80):
-    '''
+    """
     Configure the port HTTP should listen on
 
     CLI Example:
@@ -106,10 +112,10 @@ def set_http_port(port=80):
     .. code-block:: bash
 
         salt '*' ilo.set_http_port 8080
-    '''
+    """
     _current = global_settings()
 
-    if _current['Global Settings']['HTTP_PORT']['VALUE'] == port:
+    if _current["Global Settings"]["HTTP_PORT"]["VALUE"] == port:
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -120,13 +126,15 @@ def set_http_port(port=80):
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
-              </RIBCL>""".format(port)
+              </RIBCL>""".format(
+        port
+    )
 
-    return __execute_cmd('Set_HTTP_Port', _xml)
+    return __execute_cmd("Set_HTTP_Port", _xml)
 
 
 def set_https_port(port=443):
-    '''
+    """
     Configure the port HTTPS should listen on
 
     CLI Example:
@@ -134,10 +142,10 @@ def set_https_port(port=443):
     .. code-block:: bash
 
         salt '*' ilo.set_https_port 4334
-    '''
+    """
     _current = global_settings()
 
-    if _current['Global Settings']['HTTP_PORT']['VALUE'] == port:
+    if _current["Global Settings"]["HTTP_PORT"]["VALUE"] == port:
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -148,13 +156,15 @@ def set_https_port(port=443):
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
-              </RIBCL>""".format(port)
+              </RIBCL>""".format(
+        port
+    )
 
-    return __execute_cmd('Set_HTTPS_Port', _xml)
+    return __execute_cmd("Set_HTTPS_Port", _xml)
 
 
 def enable_ssh():
-    '''
+    """
     Enable the SSH daemon
 
     CLI Example:
@@ -162,10 +172,10 @@ def enable_ssh():
     .. code-block:: bash
 
         salt '*' ilo.enable_ssh
-    '''
+    """
     _current = global_settings()
 
-    if _current['Global Settings']['SSH_STATUS']['VALUE'] == 'Y':
+    if _current["Global Settings"]["SSH_STATUS"]["VALUE"] == "Y":
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -178,11 +188,11 @@ def enable_ssh():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('Enable_SSH', _xml)
+    return __execute_cmd("Enable_SSH", _xml)
 
 
 def disable_ssh():
-    '''
+    """
     Disable the SSH daemon
 
     CLI Example:
@@ -190,10 +200,10 @@ def disable_ssh():
     .. code-block:: bash
 
         salt '*' ilo.disable_ssh
-    '''
+    """
     _current = global_settings()
 
-    if _current['Global Settings']['SSH_STATUS']['VALUE'] == 'N':
+    if _current["Global Settings"]["SSH_STATUS"]["VALUE"] == "N":
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -206,11 +216,11 @@ def disable_ssh():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('Disable_SSH', _xml)
+    return __execute_cmd("Disable_SSH", _xml)
 
 
 def set_ssh_port(port=22):
-    '''
+    """
     Enable SSH on a user defined port
 
     CLI Example:
@@ -218,10 +228,10 @@ def set_ssh_port(port=22):
     .. code-block:: bash
 
         salt '*' ilo.set_ssh_port 2222
-    '''
+    """
     _current = global_settings()
 
-    if _current['Global Settings']['SSH_PORT']['VALUE'] == port:
+    if _current["Global Settings"]["SSH_PORT"]["VALUE"] == port:
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -232,13 +242,15 @@ def set_ssh_port(port=22):
                     </MOD_GLOBAL_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
-              </RIBCL>""".format(port)
+              </RIBCL>""".format(
+        port
+    )
 
-    return __execute_cmd('Configure_SSH_Port', _xml)
+    return __execute_cmd("Configure_SSH_Port", _xml)
 
 
 def set_ssh_key(public_key):
-    '''
+    """
     Configure SSH public keys for specific users
 
     CLI Example:
@@ -249,7 +261,7 @@ def set_ssh_key(public_key):
 
     The SSH public key needs to be DSA and the last argument in the key needs
     to be the username (case-senstive) of the ILO username.
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -260,13 +272,15 @@ def set_ssh_key(public_key):
                     </IMPORT_SSH_KEY>
                   </RIB_INFO>
                 </LOGIN>
-              </RIBCL>""".format(public_key)
+              </RIBCL>""".format(
+        public_key
+    )
 
-    return __execute_cmd('Import_SSH_Publickey', _xml)
+    return __execute_cmd("Import_SSH_Publickey", _xml)
 
 
 def delete_ssh_key(username):
-    '''
+    """
     Delete a users SSH key from the ILO
 
     CLI Example:
@@ -274,7 +288,7 @@ def delete_ssh_key(username):
     .. code-block:: bash
 
         salt '*' ilo.delete_user_sshkey damian
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="admin" PASSWORD="admin123">
                   <USER_INFO MODE="write">
@@ -283,13 +297,15 @@ def delete_ssh_key(username):
                     </MOD_USER>
                   </USER_INFO>
                 </LOGIN>
-              </RIBCL>""".format(username)
+              </RIBCL>""".format(
+        username
+    )
 
-    return __execute_cmd('Delete_user_SSH_key', _xml)
+    return __execute_cmd("Delete_user_SSH_key", _xml)
 
 
 def list_users():
-    '''
+    """
     List all users
 
     CLI Example:
@@ -297,7 +313,7 @@ def list_users():
     .. code-block:: bash
 
         salt '*' ilo.list_users
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="x" PASSWORD="x">
                     <USER_INFO MODE="read">
@@ -306,11 +322,11 @@ def list_users():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('All_users', _xml)
+    return __execute_cmd("All_users", _xml)
 
 
 def list_users_info():
-    '''
+    """
     List all users in detail
 
     CLI Example:
@@ -318,7 +334,7 @@ def list_users_info():
     .. code-block:: bash
 
         salt '*' ilo.list_users_info
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="read">
@@ -327,11 +343,11 @@ def list_users_info():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('All_users_info', _xml)
+    return __execute_cmd("All_users_info", _xml)
 
 
 def create_user(name, password, *privileges):
-    '''
+    """
     Create user
 
     CLI Example:
@@ -358,12 +374,14 @@ def create_user(name, password, *privileges):
 
     * CONFIG_ILO_PRIV
       Enables the user to configure iLO settings.
-    '''
-    _priv = ['ADMIN_PRIV',
-             'REMOTE_CONS_PRIV',
-             'RESET_SERVER_PRIV',
-             'VIRTUAL_MEDIA_PRIV',
-             'CONFIG_ILO_PRIV']
+    """
+    _priv = [
+        "ADMIN_PRIV",
+        "REMOTE_CONS_PRIV",
+        "RESET_SERVER_PRIV",
+        "VIRTUAL_MEDIA_PRIV",
+        "CONFIG_ILO_PRIV",
+    ]
 
     _xml = """<RIBCL version="2.2">
                 <LOGIN USER_LOGIN="x" PASSWORD="y">
@@ -379,13 +397,23 @@ def create_user(name, password, *privileges):
                    </ADD_USER>
                  </USER_INFO>
                </LOGIN>
-             </RIBCL>""".format(name, password, '\n'.join(['<{0} value="Y" />'.format(i.upper()) for i in privileges if i.upper() in _priv]))
+             </RIBCL>""".format(
+        name,
+        password,
+        "\n".join(
+            [
+                '<{0} value="Y" />'.format(i.upper())
+                for i in privileges
+                if i.upper() in _priv
+            ]
+        ),
+    )
 
-    return __execute_cmd('Create_user', _xml)
+    return __execute_cmd("Create_user", _xml)
 
 
 def delete_user(username):
-    '''
+    """
     Delete a user
 
     CLI Example:
@@ -393,20 +421,22 @@ def delete_user(username):
     .. code-block:: bash
 
         salt '*' ilo.delete_user damian
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="write">
                     <DELETE_USER USER_LOGIN="{0}" />
                   </USER_INFO>
                 </LOGIN>
-              </RIBCL>""".format(username)
+              </RIBCL>""".format(
+        username
+    )
 
-    return __execute_cmd('Delete_user', _xml)
+    return __execute_cmd("Delete_user", _xml)
 
 
 def get_user(username):
-    '''
+    """
     Returns local user information, excluding the password
 
     CLI Example:
@@ -414,20 +444,22 @@ def get_user(username):
     .. code-block:: bash
 
         salt '*' ilo.get_user damian
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="read">
                     <GET_USER USER_LOGIN="{0}" />
                   </USER_INFO>
                 </LOGIN>
-              </RIBCL>""".format(username)
+              </RIBCL>""".format(
+        username
+    )
 
-    return __execute_cmd('User_Info', _xml)
+    return __execute_cmd("User_Info", _xml)
 
 
 def change_username(old_username, new_username):
-    '''
+    """
     Change a username
 
     CLI Example:
@@ -435,7 +467,7 @@ def change_username(old_username, new_username):
     .. code-block:: bash
 
         salt '*' ilo.change_username damian diana
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="write">
@@ -445,13 +477,15 @@ def change_username(old_username, new_username):
                     </MOD_USER>
                   </USER_INFO>
                 </LOGIN>
-              </RIBCL>""".format(old_username, new_username)
+              </RIBCL>""".format(
+        old_username, new_username
+    )
 
-    return __execute_cmd('Change_username', _xml)
+    return __execute_cmd("Change_username", _xml)
 
 
 def change_password(username, password):
-    '''
+    """
     Reset a users password
 
     CLI Example:
@@ -459,7 +493,7 @@ def change_password(username, password):
     .. code-block:: bash
 
         salt '*' ilo.change_password damianMyerscough
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <USER_INFO MODE="write">
@@ -468,13 +502,15 @@ def change_password(username, password):
                     </MOD_USER>
                   </USER_INFO>
                 </LOGIN>
-              </RIBCL>""".format(username, password)
+              </RIBCL>""".format(
+        username, password
+    )
 
-    return __execute_cmd('Change_password', _xml)
+    return __execute_cmd("Change_password", _xml)
 
 
 def network():
-    '''
+    """
     Grab the current network settings
 
     CLI Example:
@@ -482,7 +518,7 @@ def network():
     .. code-block:: bash
 
         salt '*' ilo.network
-    '''
+    """
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="read">
@@ -491,11 +527,11 @@ def network():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('Network_Settings', _xml)
+    return __execute_cmd("Network_Settings", _xml)
 
 
 def configure_network(ip, netmask, gateway):
-    '''
+    """
     Configure Network Interface
 
     CLI Example:
@@ -503,13 +539,15 @@ def configure_network(ip, netmask, gateway):
     .. code-block:: bash
 
         salt '*' ilo.configure_network [IP ADDRESS] [NETMASK] [GATEWAY]
-    '''
+    """
     current = network()
 
     # Check to see if the network is already configured
-    if (ip in current['Network Settings']['IP_ADDRESS']['VALUE'] and
-            netmask in current['Network Settings']['SUBNET_MASK']['VALUE'] and
-            gateway in current['Network Settings']['GATEWAY_IP_ADDRESS']['VALUE']):
+    if (
+        ip in current["Network Settings"]["IP_ADDRESS"]["VALUE"]
+        and netmask in current["Network Settings"]["SUBNET_MASK"]["VALUE"]
+        and gateway in current["Network Settings"]["GATEWAY_IP_ADDRESS"]["VALUE"]
+    ):
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -522,13 +560,15 @@ def configure_network(ip, netmask, gateway):
                     </MOD_NETWORK_SETTINGS>
                   </RIB_INFO>
                 </LOGIN>
-              </RIBCL> """.format(ip, netmask, gateway)
+              </RIBCL> """.format(
+        ip, netmask, gateway
+    )
 
-    return __execute_cmd('Configure_Network', _xml)
+    return __execute_cmd("Configure_Network", _xml)
 
 
 def enable_dhcp():
-    '''
+    """
     Enable DHCP
 
     CLI Example:
@@ -536,10 +576,10 @@ def enable_dhcp():
     .. code-block:: bash
 
         salt '*' ilo.enable_dhcp
-    '''
+    """
     current = network()
 
-    if current['Network Settings']['DHCP_ENABLE']['VALUE'] == 'Y':
+    if current["Network Settings"]["DHCP_ENABLE"]["VALUE"] == "Y":
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -552,11 +592,11 @@ def enable_dhcp():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('Enable_DHCP', _xml)
+    return __execute_cmd("Enable_DHCP", _xml)
 
 
 def disable_dhcp():
-    '''
+    """
     Disable DHCP
 
     CLI Example:
@@ -564,10 +604,10 @@ def disable_dhcp():
     .. code-block:: bash
 
         salt '*' ilo.disable_dhcp
-    '''
+    """
     current = network()
 
-    if current['Network Settings']['DHCP_ENABLE']['VALUE'] == 'N':
+    if current["Network Settings"]["DHCP_ENABLE"]["VALUE"] == "N":
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -580,11 +620,11 @@ def disable_dhcp():
                 </LOGIN>
               </RIBCL>"""
 
-    return __execute_cmd('Disable_DHCP', _xml)
+    return __execute_cmd("Disable_DHCP", _xml)
 
 
 def configure_snmp(community, snmp_port=161, snmp_trapport=161):
-    '''
+    """
     Configure SNMP
 
     CLI Example:
@@ -592,7 +632,7 @@ def configure_snmp(community, snmp_port=161, snmp_trapport=161):
     .. code-block:: bash
 
         salt '*' ilo.configure_snmp [COMMUNITY STRING] [SNMP PORT] [SNMP TRAP PORT]
-    '''
+    """
     _xml = """<RIBCL VERSION="2.2">
                 <LOGIN USER_LOGIN="x" PASSWORD="y">
                   <RIB_INFO mode="write">
@@ -612,6 +652,8 @@ def configure_snmp(community, snmp_port=161, snmp_trapport=161):
                   </MOD_SNMP_IM_SETTINGS>
                 </RIB_INFO>
               </LOGIN>
-           </RIBCL>""".format(snmp_port, snmp_trapport, community)
+           </RIBCL>""".format(
+        snmp_port, snmp_trapport, community
+    )
 
-    return __execute_cmd('Configure_SNMP', _xml)
+    return __execute_cmd("Configure_SNMP", _xml)

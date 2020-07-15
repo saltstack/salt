@@ -1,76 +1,86 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage and query NPM packages.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
+
+import salt.modules.cmdmod
 
 # Import salt libs
 import salt.utils.json
 import salt.utils.path
 import salt.utils.user
-import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
-from salt.utils.versions import LooseVersion as _LooseVersion
 from salt.ext import six
+from salt.utils.versions import LooseVersion as _LooseVersion
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 
 log = logging.getLogger(__name__)
 
 # Function alias to make sure not to shadow built-in's
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
 
 def __virtual__():
-    '''
+    """
     Only work when npm is installed.
-    '''
+    """
     try:
-        if salt.utils.path.which('npm') is not None:
+        if salt.utils.path.which("npm") is not None:
             _check_valid_version()
             return True
         else:
-            return (False, 'npm execution module could not be loaded '
-                           'because the npm binary could not be located')
+            return (
+                False,
+                "npm execution module could not be loaded "
+                "because the npm binary could not be located",
+            )
     except CommandExecutionError as exc:
         return (False, six.text_type(exc))
 
 
 def _check_valid_version():
-    '''
+    """
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
-    '''
+    """
+
+    # Locate the full path to npm
+    npm_path = salt.utils.path.which("npm")
+
     # pylint: disable=no-member
-    npm_version = _LooseVersion(
-        salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
-    valid_version = _LooseVersion('1.2')
+    res = salt.modules.cmdmod.run(
+        "{npm} --version".format(npm=npm_path), output_loglevel="quiet"
+    )
+    npm_version, valid_version = _LooseVersion(res), _LooseVersion("1.2")
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
-            '\'npm\' is not recent enough({0} < {1}). Please Upgrade.'.format(
+            "'npm' is not recent enough({0} < {1}). Please Upgrade.".format(
                 npm_version, valid_version
             )
         )
 
 
-def install(pkg=None,
-            pkgs=None,
-            dir=None,
-            runas=None,
-            registry=None,
-            env=None,
-            dry_run=False,
-            silent=True):
-    '''
+def install(
+    pkg=None,
+    pkgs=None,
+    dir=None,
+    runas=None,
+    registry=None,
+    env=None,
+    dry_run=False,
+    silent=True,
+):
+    """
     Install an NPM package.
 
     If no directory is specified, the package will be installed globally. If
@@ -128,7 +138,7 @@ def install(pkg=None,
 
         salt '*' npm.install coffee-script@1.0.1
 
-    '''
+    """
     # Protect against injection
     if pkg:
         pkgs = [_cmd_quote(pkg)]
@@ -139,18 +149,18 @@ def install(pkg=None,
     if registry:
         registry = _cmd_quote(registry)
 
-    cmd = ['npm', 'install', '--json']
+    cmd = ["npm", "install", "--json"]
     if silent:
-        cmd.append('--silent')
+        cmd.append("--silent")
 
     if not dir:
-        cmd.append('--global')
+        cmd.append("--global")
 
     if registry:
         cmd.append('--registry="{0}"'.format(registry))
 
     if dry_run:
-        cmd.append('--dry-run')
+        cmd.append("--dry-run")
 
     cmd.extend(pkgs)
 
@@ -159,20 +169,18 @@ def install(pkg=None,
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ' '.join(cmd)
-    result = __salt__['cmd.run_all'](cmd,
-                                     python_shell=True,
-                                     cwd=dir,
-                                     runas=runas,
-                                     env=env)
+    cmd = " ".join(cmd)
+    result = __salt__["cmd.run_all"](
+        cmd, python_shell=True, cwd=dir, runas=runas, env=env
+    )
 
-    if result['retcode'] != 0:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0:
+        raise CommandExecutionError(result["stderr"])
 
     # npm >1.2.21 is putting the output to stderr even though retcode is 0
-    npm_output = result['stdout'] or result['stderr']
+    npm_output = result["stdout"] or result["stderr"]
     try:
         return salt.utils.json.find_json(npm_output)
     except ValueError:
@@ -180,7 +188,7 @@ def install(pkg=None,
 
 
 def uninstall(pkg, dir=None, runas=None, env=None):
-    '''
+    """
     Uninstall an NPM package.
 
     If no directory is specified, the package will be uninstalled globally.
@@ -208,7 +216,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
 
         salt '*' npm.uninstall coffee-script
 
-    '''
+    """
     # Protect against injection
     if pkg:
         pkg = _cmd_quote(pkg)
@@ -218,24 +226,26 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ['npm', 'uninstall', '"{0}"'.format(pkg)]
+    cmd = ["npm", "uninstall", '"{0}"'.format(pkg)]
     if not dir:
-        cmd.append('--global')
+        cmd.append("--global")
 
-    cmd = ' '.join(cmd)
+    cmd = " ".join(cmd)
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
+    result = __salt__["cmd.run_all"](
+        cmd, python_shell=True, cwd=dir, runas=runas, env=env
+    )
 
-    if result['retcode'] != 0:
-        log.error(result['stderr'])
+    if result["retcode"] != 0:
+        log.error(result["stderr"])
         return False
     return True
 
 
 def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
-    '''
+    """
     List installed NPM packages.
 
     If no directory is specified, this will return the list of globally-
@@ -271,43 +281,46 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
 
         salt '*' npm.list
 
-    '''
+    """
     env = env or {}
 
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ['npm', 'list', '--json', '--silent']
+    cmd = ["npm", "list", "--json", "--silent"]
 
     if not dir:
-        cmd.append('--global')
+        cmd.append("--global")
 
     if depth is not None:
         if not isinstance(depth, (int, float)):
-            raise salt.exceptions.SaltInvocationError('Error: depth {0} must be a number'.format(depth))
-        cmd.append('--depth={0}'.format(int(depth)))
+            raise salt.exceptions.SaltInvocationError(
+                "Error: depth {0} must be a number".format(depth)
+            )
+        cmd.append("--depth={0}".format(int(depth)))
 
     if pkg:
         # Protect against injection
         pkg = _cmd_quote(pkg)
         cmd.append('"{0}"'.format(pkg))
-    cmd = ' '.join(cmd)
+    cmd = " ".join(cmd)
 
-    result = __salt__['cmd.run_all'](
-        cmd, cwd=dir, runas=runas, env=env, python_shell=True, ignore_retcode=True)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=dir, runas=runas, env=env, python_shell=True, ignore_retcode=True
+    )
 
     # npm will return error code 1 for both no packages found and an actual
     # error. The only difference between the two cases are if stderr is empty
-    if result['retcode'] != 0 and result['stderr']:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0 and result["stderr"]:
+        raise CommandExecutionError(result["stderr"])
 
-    return salt.utils.json.loads(result['stdout']).get('dependencies', {})
+    return salt.utils.json.loads(result["stdout"]).get("dependencies", {})
 
 
 def cache_clean(path=None, runas=None, env=None, force=False):
-    '''
+    """
     Clean cached NPM packages.
 
     If no path for a specific package is provided the entire cache will be cleared.
@@ -334,32 +347,33 @@ def cache_clean(path=None, runas=None, env=None, force=False):
 
         salt '*' npm.cache_clean force=True
 
-    '''
+    """
     env = env or {}
 
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ['npm', 'cache', 'clean']
+    cmd = ["npm", "cache", "clean"]
     if path:
         cmd.append(path)
     if force is True:
-        cmd.append('--force')
+        cmd.append("--force")
 
-    cmd = ' '.join(cmd)
-    result = __salt__['cmd.run_all'](
-        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
+    cmd = " ".join(cmd)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True
+    )
 
-    if result['retcode'] != 0:
-        log.error(result['stderr'])
+    if result["retcode"] != 0:
+        log.error(result["stderr"])
         return False
     return True
 
 
 def cache_list(path=None, runas=None, env=None):
-    '''
+    """
     List NPM cached packages.
 
     If no path for a specific package is provided this will list all the cached packages.
@@ -381,30 +395,31 @@ def cache_list(path=None, runas=None, env=None):
 
         salt '*' npm.cache_clean
 
-    '''
+    """
     env = env or {}
 
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ['npm', 'cache', 'ls']
+    cmd = ["npm", "cache", "ls"]
     if path:
         cmd.append(path)
 
-    cmd = ' '.join(cmd)
-    result = __salt__['cmd.run_all'](
-        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
+    cmd = " ".join(cmd)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True
+    )
 
-    if result['retcode'] != 0 and result['stderr']:
-        raise CommandExecutionError(result['stderr'])
+    if result["retcode"] != 0 and result["stderr"]:
+        raise CommandExecutionError(result["stderr"])
 
-    return result['stdout']
+    return result["stdout"]
 
 
 def cache_path(runas=None, env=None):
-    '''
+    """
     List path of the NPM cache directory.
 
     runas
@@ -421,17 +436,18 @@ def cache_path(runas=None, env=None):
 
         salt '*' npm.cache_path
 
-    '''
+    """
     env = env or {}
 
     if runas:
         uid = salt.utils.user.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = 'npm config get cache'
+    cmd = "npm config get cache"
 
-    result = __salt__['cmd.run_all'](
-        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True)
+    result = __salt__["cmd.run_all"](
+        cmd, cwd=None, runas=runas, env=env, python_shell=True, ignore_retcode=True
+    )
 
-    return result.get('stdout') or result.get('stderr')
+    return result.get("stdout") or result.get("stderr")

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Store key/value pairs in a CSV file
 
 .. versionadded:: 2016.11.0
@@ -44,13 +44,14 @@ Will produce the following Pillar values for a minion named "jerry":
         'role': 'web',
         'env': 'prod',
     }
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import csv
 
 import salt.utils.files
 
-__virtualname__ = 'csv'
+__virtualname__ = "csv"
 
 
 def __virtual__():
@@ -58,16 +59,17 @@ def __virtual__():
 
 
 def ext_pillar(
-        mid,
-        pillar,
-        path,
-        idkey='id',
-        namespace=None,
-        fieldnames=None,
-        restkey=None,
-        restval=None,
-        dialect='excel'):
-    '''
+    mid,
+    pillar,
+    path,
+    idkey="id",
+    namespace=None,
+    fieldnames=None,
+    restkey=None,
+    restval=None,
+    dialect="excel",
+):
+    """
     Read a CSV into Pillar
 
     :param str path: Absolute path to a CSV file.
@@ -75,10 +77,11 @@ def ext_pillar(
     :param str namespace: (Optional) A pillar key to namespace the values under.
     :param list fieldnames: (Optional) if the first row of the CSV is not
         column names they may be specified here instead.
-    '''
-    with salt.utils.files.fopen(path, 'rb') as f:
-        sheet = csv.DictReader(f, fieldnames,
-                restkey=restkey, restval=restval, dialect=dialect)
+    """
+    with salt.utils.files.fopen(path, "r") as f:
+        sheet = csv.DictReader(
+            f, fieldnames, restkey=restkey, restval=restval, dialect=dialect
+        )
 
         for row in sheet:
             if row[idkey] == mid:

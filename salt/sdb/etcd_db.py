@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 etcd Database Module
 
 :maintainer:    SaltStack
@@ -30,68 +30,68 @@ is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 
     password: sdb://myetcd/mypassword
 
-'''
+"""
 
 # import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 try:
     import salt.utils.etcd_util
+
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
 
 log = logging.getLogger(__name__)
 
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
-__virtualname__ = 'etcd'
+__virtualname__ = "etcd"
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if keyring is installed
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
     return False
 
 
 def set_(key, value, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Set a key/value pair in the etcd service
-    '''
+    """
     client = _get_conn(profile)
     client.set(key, value)
     return get(key, service, profile)
 
 
 def get(key, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Get a value from the etcd service
-    '''
+    """
     client = _get_conn(profile)
     result = client.get(key)
     return result.value
 
 
 def delete(key, service=None, profile=None):  # pylint: disable=W0613
-    '''
+    """
     Get a value from the etcd service
-    '''
+    """
     client = _get_conn(profile)
     try:
         client.delete(key)
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
 def _get_conn(profile):
-    '''
+    """
     Get a connection
-    '''
+    """
     return salt.utils.etcd_util.get_conn(profile)

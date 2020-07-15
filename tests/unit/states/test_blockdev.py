@@ -1,122 +1,124 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    Mock,
-    MagicMock,
-    patch)
+import os
 
 # Import Salt Libs
 import salt.states.blockdev as blockdev
 import salt.utils.path
 
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, Mock, patch
+from tests.support.unit import TestCase
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+
 class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Test cases for salt.states.blockdev
-    '''
+    """
+
     def setup_loader_modules(self):
         return {blockdev: {}}
 
     # 'tuned' function tests: 1
 
     def test_tuned(self):
-        '''
+        """
         Test to manage options of block device
-        '''
-        name = '/dev/vg/master-data'
+        """
+        name = "/dev/vg/master-data"
 
-        ret = {'name': name,
-               'result': True,
-               'changes': {},
-               'comment': ''}
+        ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
-        comt = ('Changes to {0} cannot be applied. '
-                'Not a block device. ').format(name)
-        with patch.dict(blockdev.__salt__, {'file.is_blkdev': False}):
-            ret.update({'comment': comt})
+        comt = ("Changes to {0} cannot be applied. " "Not a block device. ").format(
+            name
+        )
+        with patch.dict(blockdev.__salt__, {"file.is_blkdev": False}):
+            ret.update({"comment": comt})
             self.assertDictEqual(blockdev.tuned(name), ret)
 
-        comt = ('Changes to {0} will be applied '.format(name))
-        with patch.dict(blockdev.__salt__, {'file.is_blkdev': True}):
-            ret.update({'comment': comt, 'result': None})
-            with patch.dict(blockdev.__opts__, {'test': True}):
+        comt = "Changes to {0} will be applied ".format(name)
+        with patch.dict(blockdev.__salt__, {"file.is_blkdev": True}):
+            ret.update({"comment": comt, "result": None})
+            with patch.dict(blockdev.__opts__, {"test": True}):
                 self.assertDictEqual(blockdev.tuned(name), ret)
 
     # 'formatted' function tests: 1
 
     def test_formatted(self):
-        '''
+        """
         Test to manage filesystems of partitions.
-        '''
-        name = '/dev/vg/master-data'
+        """
+        name = "/dev/vg/master-data"
 
-        ret = {'name': name,
-               'result': False,
-               'changes': {},
-               'comment': ''}
+        ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-        with patch.object(os.path, 'exists', MagicMock(side_effect=[False, True,
-                                                                    True, True,
-                                                                    True])):
-            comt = ('{0} does not exist'.format(name))
-            ret.update({'comment': comt})
+        with patch.object(
+            os.path, "exists", MagicMock(side_effect=[False, True, True, True, True])
+        ):
+            comt = "{0} does not exist".format(name)
+            ret.update({"comment": comt})
             self.assertDictEqual(blockdev.formatted(name), ret)
 
-            mock_ext4 = MagicMock(return_value='ext4')
+            mock_ext4 = MagicMock(return_value="ext4")
 
             # Test state return when block device is already in the correct state
-            with patch.dict(blockdev.__salt__, {'cmd.run': mock_ext4}):
-                comt = '{0} already formatted with ext4'.format(name)
-                ret.update({'comment': comt, 'result': True})
+            with patch.dict(blockdev.__salt__, {"cmd.run": mock_ext4}):
+                comt = "{0} already formatted with ext4".format(name)
+                ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(blockdev.formatted(name), ret)
 
             # Test state return when provided block device is an invalid fs_type
-            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='')}):
-                ret.update({'comment': 'Invalid fs_type: foo-bar',
-                            'result': False})
-                with patch.object(salt.utils.path, 'which',
-                                  MagicMock(return_value=False)):
-                    self.assertDictEqual(blockdev.formatted(name, fs_type='foo-bar'), ret)
+            with patch.dict(blockdev.__salt__, {"cmd.run": MagicMock(return_value="")}):
+                ret.update({"comment": "Invalid fs_type: foo-bar", "result": False})
+                with patch.object(
+                    salt.utils.path, "which", MagicMock(return_value=False)
+                ):
+                    self.assertDictEqual(
+                        blockdev.formatted(name, fs_type="foo-bar"), ret
+                    )
 
             # Test state return when provided block device state will change and test=True
-            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value='new-thing')}):
-                comt = ('Changes to {0} will be applied '.format(name))
-                ret.update({'comment': comt, 'result': None})
-                with patch.object(salt.utils.path, 'which',
-                                  MagicMock(return_value=True)):
-                    with patch.dict(blockdev.__opts__, {'test': True}):
+            with patch.dict(
+                blockdev.__salt__, {"cmd.run": MagicMock(return_value="new-thing")}
+            ):
+                comt = "Changes to {0} will be applied ".format(name)
+                ret.update({"comment": comt, "result": None})
+                with patch.object(
+                    salt.utils.path, "which", MagicMock(return_value=True)
+                ):
+                    with patch.dict(blockdev.__opts__, {"test": True}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
 
             # Test state return when block device format fails
-            with patch.dict(blockdev.__salt__, {'cmd.run': MagicMock(return_value=mock_ext4),
-                                                'disk.format': MagicMock(return_value=True)}):
-                comt = ('Failed to format {0}'.format(name))
-                ret.update({'comment': comt, 'result': False})
-                with patch.object(salt.utils.path, 'which',
-                                  MagicMock(return_value=True)):
-                    with patch.dict(blockdev.__opts__, {'test': False}):
+            with patch.dict(
+                blockdev.__salt__,
+                {
+                    "cmd.run": MagicMock(return_value=mock_ext4),
+                    "disk.format": MagicMock(return_value=True),
+                },
+            ):
+                comt = "Failed to format {0}".format(name)
+                ret.update({"comment": comt, "result": False})
+                with patch.object(
+                    salt.utils.path, "which", MagicMock(return_value=True)
+                ):
+                    with patch.dict(blockdev.__opts__, {"test": False}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
 
     def test__checkblk(self):
-        '''
+        """
         Confirm that we call cmd.run with ignore_retcode=True
-        '''
+        """
         cmd_mock = Mock()
-        with patch.dict(blockdev.__salt__, {'cmd.run': cmd_mock}):
-            blockdev._checkblk('/dev/foo')
+        with patch.dict(blockdev.__salt__, {"cmd.run": cmd_mock}):
+            blockdev._checkblk("/dev/foo")
 
         cmd_mock.assert_called_once_with(
-            ['blkid', '-o', 'value', '-s', 'TYPE', '/dev/foo'],
-            ignore_retcode=True)
+            ["blkid", "-o", "value", "-s", "TYPE", "/dev/foo"], ignore_retcode=True
+        )

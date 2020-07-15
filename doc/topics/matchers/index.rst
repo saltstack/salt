@@ -4,10 +4,10 @@
 Matchers
 ========
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Matchers are modules that provide Salt's targeting abilities.  As of the
-Neon release, matchers can be dynamically loaded.  Currently new matchers
+3000 release, matchers can be dynamically loaded.  Currently new matchers
 cannot be created because the required plumbing for the CLI does not exist yet.
 Existing matchers may have their functionality altered or extended.
 
@@ -22,7 +22,7 @@ take a ``delimiter`` argument and should default to ``DEFAULT_TARGET_DELIM``.
 Like other Salt loadable modules, modules that override built-in functionality
 can be placed in ``file_roots`` in a special directory and then copied to the
 minion through the normal sync process.  :py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
-will transfer all loadable modules, and the Neon release introduces
+will transfer all loadable modules, and the 3000 release introduces
 :py:func:`saltutil.sync_matchers <salt.modules.saltutil.sync_matchers>`.  For matchers, the directory is
 ``/srv/salt/_matchers`` (assuming your ``file_roots`` is set to the default
 ``/srv/salt``).
@@ -36,14 +36,15 @@ As an example, let's modify the ``list`` matcher to have the separator be a
     from __future__ import absolute_import, print_function, unicode_literals
     from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
+
     def match(self, tgt):
-        '''
+        """
         Determines if this host is on the list
-        '''
+        """
         if isinstance(tgt, six.string_types):
             # The stock matcher splits on `,`.  Change to `/` below.
-            tgt = tgt.split('/')
-        return bool(self.opts['id'] in tgt)
+            tgt = tgt.split("/")
+        return bool(self.opts["id"] in tgt)
 
 
 Place this code in a file called ``list_matcher.py`` in ``_matchers`` in your

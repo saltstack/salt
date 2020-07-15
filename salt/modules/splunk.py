@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for interop with the Splunk API
 
 .. versionadded:: 2016.3.0.
@@ -19,80 +19,89 @@ Module for interop with the Splunk API
             password: abc123
             host: example.splunkcloud.com
             port: 8080
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import base64
+import hmac
 
 # Import python libs
 import logging
-import hmac
-import base64
 import subprocess
 
 # Import 3rd-party libs
 from salt.ext import six
+
 HAS_LIBS = False
 try:
     import splunklib.client
     from splunklib.client import AuthenticationError
     from splunklib.binding import HTTPError
+
     HAS_LIBS = True
 except ImportError:
     pass
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'splunk'
+__virtualname__ = "splunk"
 
 SERVICE_NAME = "splunk"
 
 ALLOWED_FIELDS_FOR_MODIFICATION = [
-    'realname',
-    'roles',
-    'defaultApp',
-    'tz',
+    "realname",
+    "roles",
+    "defaultApp",
+    "tz",
     #'capabilities',
-    'name'
+    "name",
 ]
 
-REQUIRED_FIELDS_FOR_CREATE = [
-    'realname',
-    'name',
-    'roles'
-]
+REQUIRED_FIELDS_FOR_CREATE = ["realname", "name", "roles"]
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if splunk is installed on this minion.
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The splunk execution module failed to load: '
-            'requires splunk python library to be installed.')
+    return (
+        False,
+        "The splunk execution module failed to load: "
+        "requires splunk python library to be installed.",
+    )
 
 
 def _get_secret_key(profile):
-    config = __salt__['config.option'](profile)
-    return config.get('password_secret_key')
+    config = __salt__["config.option"](profile)
+    return config.get("password_secret_key")
 
 
 def _generate_password(email):
-    m = hmac.new(base64.b64decode(_get_secret_key('splunk')), six.text_type([email, SERVICE_NAME]))
-    return base64.urlsafe_b64encode(m.digest()).strip().replace('=', '')
+    m = hmac.new(
+        base64.b64decode(_get_secret_key("splunk")),
+        six.text_type([email, SERVICE_NAME]),
+    )
+    return base64.urlsafe_b64encode(m.digest()).strip().replace("=", "")
 
 
 def _send_email(name, email):
     "send a email to inform user of account creation"
-    config = __salt__['config.option']('splunk')
-    email_object = config.get('email')
+    config = __salt__["config.option"]("splunk")
+    email_object = config.get("email")
     if email_object:
-        cc = email_object.get('cc')
-        subject = email_object.get('subject')
-        message = email_object.get('message').format(name, name, _generate_password(email), name)
+        cc = email_object.get("cc")
+        subject = email_object.get("subject")
+        message = email_object.get("message").format(
+            name, name, _generate_password(email), name
+        )
 
         try:
-            mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
-        except Exception as e:
+            mail_process = subprocess.Popen(
+                ["mail", "-s", subject, "-c", cc, email], stdin=subprocess.PIPE
+            )
+        except Exception as e:  # pylint: disable=broad-except
             log.error("unable to send email to %s: %s", email, e)
 
         mail_process.communicate(message)
@@ -101,15 +110,13 @@ def _send_email(name, email):
 
 
 def _populate_cache(profile="splunk"):
-    config = __salt__['config.option'](profile)
+    config = __salt__["config.option"](profile)
 
-    key = "splunk.users.{0}".format(
-        config.get('host')
-    )
+    key = "splunk.users.{0}".format(config.get("host"))
 
     if key not in __context__:
         client = _get_splunk(profile)
-        kwargs = {'sort_key': 'realname', 'sort_dir': 'asc'}
+        kwargs = {"sort_key": "realname", "sort_dir": "asc"}
         users = client.users.list(count=-1, **kwargs)
 
         result = {}
@@ -122,41 +129,40 @@ def _populate_cache(profile="splunk"):
 
 
 def _get_splunk(profile):
-    '''
+    """
     Return the splunk client, cached into __context__ for performance
-    '''
-    config = __salt__['config.option'](profile)
+    """
+    config = __salt__["config.option"](profile)
 
     key = "splunk.{0}:{1}:{2}:{3}".format(
-        config.get('host'),
-        config.get('port'),
-        config.get('username'),
-        config.get('password')
+        config.get("host"),
+        config.get("port"),
+        config.get("username"),
+        config.get("password"),
     )
 
     if key not in __context__:
         __context__[key] = splunklib.client.connect(
-            host=config.get('host'),
-            port=config.get('port'),
-            username=config.get('username'),
-            password=config.get('password'))
+            host=config.get("host"),
+            port=config.get("port"),
+            username=config.get("username"),
+            password=config.get("password"),
+        )
 
     return __context__[key]
 
 
 def list_users(profile="splunk"):
-    '''
+    """
     List all users in the splunk DB
 
     CLI Example:
 
         salt myminion splunk.list_users
-    '''
+    """
 
-    config = __salt__['config.option'](profile)
-    key = "splunk.users.{0}".format(
-        config.get('host')
-    )
+    config = __salt__["config.option"](profile)
+    key = "splunk.users.{0}".format(config.get("host"))
 
     if key not in __context__:
         _populate_cache(profile)
@@ -165,31 +171,31 @@ def list_users(profile="splunk"):
 
 
 def get_user(email, profile="splunk", **kwargs):
-    '''
+    """
     Get a splunk user by name/email
 
     CLI Example:
 
         salt myminion splunk.get_user 'user@example.com' user_details=false
         salt myminion splunk.get_user 'user@example.com' user_details=true
-    '''
+    """
 
     user_map = list_users(profile)
     user_found = email.lower() in user_map.keys()
 
-    if not kwargs.get('user_details', False) and user_found:
+    if not kwargs.get("user_details", False) and user_found:
         # The user is in splunk group, just return
         return True
-    elif kwargs.get('user_details', False) and user_found:
+    elif kwargs.get("user_details", False) and user_found:
         user = user_map[email.lower()]
 
         response = {}
-        for field in ['defaultApp', 'realname', 'name', 'email']:
+        for field in ["defaultApp", "realname", "name", "email"]:
             response[field] = user[field]
 
-        response['roles'] = []
+        response["roles"] = []
         for role in user.role_entities:
-            response['roles'].append(role.name)
+            response["roles"].append(role.name)
 
         return response
 
@@ -197,13 +203,13 @@ def get_user(email, profile="splunk", **kwargs):
 
 
 def create_user(email, profile="splunk", **kwargs):
-    '''
+    """
     create a splunk user by name/email
 
     CLI Example:
 
         salt myminion splunk.create_user user@example.com roles=['user'] realname="Test User" name=testuser
-    '''
+    """
 
     client = _get_splunk(profile)
 
@@ -225,35 +231,39 @@ def create_user(email, profile="splunk", **kwargs):
         # create
         for req_field in REQUIRED_FIELDS_FOR_CREATE:
             if not property_map.get(req_field):
-                log.error("Missing required params %s",
-                          ', '.join([six.text_type(k) for k in REQUIRED_FIELDS_FOR_CREATE]))
+                log.error(
+                    "Missing required params %s",
+                    ", ".join([six.text_type(k) for k in REQUIRED_FIELDS_FOR_CREATE]),
+                )
                 return False
 
-        newuser = client.users.create(username=property_map['name'],
-                                password=_generate_password(email),
-                                roles=property_map['roles'],
-                                email=email,
-                                realname=property_map['realname'])
+        newuser = client.users.create(
+            username=property_map["name"],
+            password=_generate_password(email),
+            roles=property_map["roles"],
+            email=email,
+            realname=property_map["realname"],
+        )
 
         _send_email(newuser.name, newuser.email)
 
         response = {}
-        for field in ['email', 'password', 'realname', 'roles']:
+        for field in ["email", "password", "realname", "roles"]:
             response[field] = newuser[field]
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Caught exception %s", e)
         return False
 
 
 def update_user(email, profile="splunk", **kwargs):
-    '''
+    """
     Create a splunk user by email
 
     CLI Example:
 
         salt myminion splunk.update_user example@domain.com roles=['user'] realname="Test User"
-    '''
+    """
 
     client = _get_splunk(profile)
 
@@ -279,13 +289,13 @@ def update_user(email, profile="splunk", **kwargs):
         resource_value = user[k]
         if resource_value is not None:
             # you can't update the username in update api call
-            if k.lower() == 'name':
+            if k.lower() == "name":
                 continue
-            if k.lower() == 'roles':
+            if k.lower() == "roles":
                 if isinstance(v, six.string_types):
-                    v = v.split(',')
+                    v = v.split(",")
                 if set(roles) != set(v):
-                    kwargs['roles'] = list(set(v))
+                    kwargs["roles"] = list(set(v))
             elif resource_value != v:
                 kwargs[k] = v
 
@@ -297,18 +307,18 @@ def update_user(email, profile="splunk", **kwargs):
             fields_modified[field] = user[field]
 
     else:
-        #succeeded, no change
+        # succeeded, no change
         return True
 
 
 def delete_user(email, profile="splunk"):
-    '''
+    """
     Delete a splunk user by email
 
     CLI Example:
 
         salt myminion splunk_user.delete 'user@example.com'
-    '''
+    """
 
     client = _get_splunk(profile)
 
@@ -318,7 +328,7 @@ def delete_user(email, profile="splunk"):
         try:
             client.users.delete(user.name)
         except (AuthenticationError, HTTPError) as e:
-            log.info('Exception: %s', e)
+            log.info("Exception: %s", e)
             return False
     else:
         return False

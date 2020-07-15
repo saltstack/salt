@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM Users
 ============
 
 Manages the configuration of the users on network devices.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -18,24 +18,26 @@ Dependencies
     :mod:`Users management state <salt.states.netusers>`
 
 .. versionadded:: 2016.11.0
-'''
+"""
 
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-log = logging.getLogger(__file__)
 
 # import NAPALM utils
 import salt.utils.napalm
 from salt.utils.napalm import proxy_napalm_wrap
 
+log = logging.getLogger(__file__)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'users'
-__proxyenabled__ = ['napalm']
-__virtual_aliases__ = ('napalm_users',)
+__virtualname__ = "users"
+__proxyenabled__ = ["napalm"]
+__virtual_aliases__ = ("napalm_users",)
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -44,10 +46,11 @@ __virtual_aliases__ = ('napalm_users',)
 
 
 def __virtual__():
-    '''
+    """
     NAPALM library must be installed for this module to work and run in a (proxy) minion.
-    '''
+    """
     return salt.utils.napalm.virtual(__opts__, __virtualname__, __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -61,7 +64,7 @@ def __virtual__():
 @proxy_napalm_wrap
 def config(**kwargs):  # pylint: disable=unused-argument
 
-    '''
+    """
     Returns the configuration of the users on the device
 
     CLI Example:
@@ -88,20 +91,19 @@ def config(**kwargs):  # pylint: disable=unused-argument
                 ]
             }
         }
-    '''
+    """
 
     return salt.utils.napalm.call(
-        napalm_device,  # pylint: disable=undefined-variable
-        'get_users',
-        **{
-        }
+        napalm_device, "get_users", **{}  # pylint: disable=undefined-variable
     )
 
 
 @proxy_napalm_wrap
-def set_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
+def set_users(
+    users, test=False, commit=True, **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Configures users on network devices.
 
     :param users: Dictionary formatted as the output of the function config()
@@ -132,19 +134,25 @@ def set_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unus
     .. code-block:: bash
 
         salt '*' users.set_users "{'mircea': {}}"
-    '''
+    """
 
-    return __salt__['net.load_template']('set_users',
-                                         users=users,
-                                         test=test,
-                                         commit=commit,
-                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_template"](
+        "set_users",
+        users=users,
+        test=test,
+        commit=commit,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable
 
 
 @proxy_napalm_wrap
-def delete_users(users, test=False, commit=True, **kwargs):  # pylint: disable=unused-argument
+def delete_users(
+    users, test=False, commit=True, **kwargs
+):  # pylint: disable=unused-argument
 
-    '''
+    """
     Removes users from the configuration of network devices.
 
     :param users: Dictionary formatted as the output of the function config()
@@ -169,10 +177,14 @@ def delete_users(users, test=False, commit=True, **kwargs):  # pylint: disable=u
     .. code-block:: bash
 
         salt '*' users.delete_users "{'mircea': {}}"
-    '''
+    """
 
-    return __salt__['net.load_template']('delete_users',
-                                         users=users,
-                                         test=test,
-                                         commit=commit,
-                                         inherit_napalm_device=napalm_device)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return __salt__["net.load_template"](
+        "delete_users",
+        users=users,
+        test=test,
+        commit=commit,
+        inherit_napalm_device=napalm_device,
+    )
+    # pylint: enable=undefined-variable

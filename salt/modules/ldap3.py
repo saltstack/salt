@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Query and modify an LDAP database (alternative interface)
 =========================================================
 
@@ -9,50 +9,54 @@ This is an alternative to the ``ldap`` interface provided by the
 :py:mod:`ldapmod <salt.modules.ldapmod>` execution module.
 
 :depends: - ``ldap`` Python module
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import sys
+
+import salt.utils.data
+from salt.ext import six
 
 available_backends = set()
 try:
     import ldap
-    import ldap.ldapobject
-    import ldap.modlist
-    import ldap.sasl
-    available_backends.add('ldap')
+    import ldap.ldapobject  # pylint: disable=no-name-in-module
+    import ldap.modlist  # pylint: disable=no-name-in-module
+    import ldap.sasl  # pylint: disable=no-name-in-module
+
+    available_backends.add("ldap")
 except ImportError:
     pass
 
-import salt.utils.data
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''Only load this module if the Python ldap module is present'''
+    """Only load this module if the Python ldap module is present"""
     return bool(len(available_backends))
 
 
 class LDAPError(Exception):
-    '''Base class of all LDAP exceptions raised by backends.
+    """Base class of all LDAP exceptions raised by backends.
 
     This is only used for errors encountered while interacting with
     the LDAP server; usage errors (e.g., invalid backend name) will
     have a different type.
 
     :ivar cause: backend exception object, if applicable
-    '''
+    """
+
     def __init__(self, message, cause=None):
         super(LDAPError, self).__init__(message)
         self.cause = cause
 
 
 def _convert_exception(e):
-    '''Convert an ldap backend exception to an LDAPError and raise it.'''
-    args = ('exception in ldap backend: {0}'.format(repr(e)), e)
+    """Convert an ldap backend exception to an LDAPError and raise it."""
+    args = ("exception in ldap backend: {0}".format(repr(e)), e)
     if six.PY2:
         six.reraise(LDAPError, args, sys.exc_info()[2])
     else:
@@ -60,29 +64,31 @@ def _convert_exception(e):
 
 
 def _bind(l, bind=None):
-    '''Bind helper.'''
+    """Bind helper."""
     if bind is None:
         return
-    method = bind.get('method', 'simple')
+    method = bind.get("method", "simple")
     if method is None:
         return
-    elif method == 'simple':
-        l.simple_bind_s(bind.get('dn', ''), bind.get('password', ''))
-    elif method == 'sasl':
-        sasl_class = getattr(ldap.sasl,
-                             bind.get('mechanism', 'EXTERNAL').lower())
-        creds = bind.get('credentials', None)
+    elif method == "simple":
+        l.simple_bind_s(bind.get("dn", ""), bind.get("password", ""))
+    elif method == "sasl":
+        sasl_class = getattr(ldap.sasl, bind.get("mechanism", "EXTERNAL").lower())
+        creds = bind.get("credentials", None)
         if creds is None:
             creds = {}
-        auth = sasl_class(*creds.get('args', []), **creds.get('kwargs', {}))
-        l.sasl_interactive_bind_s(bind.get('dn', ''), auth)
+        auth = sasl_class(*creds.get("args", []), **creds.get("kwargs", {}))
+        l.sasl_interactive_bind_s(bind.get("dn", ""), auth)
     else:
-        raise ValueError('unsupported bind method "' + method
-                         + '"; supported bind methods: simple sasl')
+        raise ValueError(
+            'unsupported bind method "'
+            + method
+            + '"; supported bind methods: simple sasl'
+        )
 
 
 def _format_unicode_password(pwd):
-    '''Formats a string per Microsoft AD password specifications.
+    """Formats a string per Microsoft AD password specifications.
     The string must be enclosed in double quotes and UTF-16 encoded.
     See: https://msdn.microsoft.com/en-us/library/cc223248.aspx
 
@@ -91,8 +97,8 @@ def _format_unicode_password(pwd):
 
     :returns:
         A unicode string
-    '''
-    return '"{0}"'.format(pwd).encode('utf-16-le')
+    """
+    return '"{0}"'.format(pwd).encode("utf-16-le")
 
 
 class _connect_ctx(object):
@@ -107,7 +113,7 @@ class _connect_ctx(object):
 
 
 def connect(connect_spec=None):
-    '''Connect and optionally bind to an LDAP server.
+    """Connect and optionally bind to an LDAP server.
 
     :param connect_spec:
         This can be an LDAP connection object returned by a previous
@@ -259,56 +265,66 @@ def connect(connect_spec=None):
                 'dn': 'cn=admin,dc=example,dc=com',
                 'password': 'secret'}
         }"
-    '''
+    """
     if isinstance(connect_spec, _connect_ctx):
         return connect_spec
     if connect_spec is None:
         connect_spec = {}
-    backend_name = connect_spec.get('backend', 'ldap')
+    backend_name = connect_spec.get("backend", "ldap")
     if backend_name not in available_backends:
-        raise ValueError('unsupported backend or required Python module'
-                         + ' unavailable: {0}'.format(backend_name))
-    url = connect_spec.get('url', 'ldapi:///')
+        raise ValueError(
+            "unsupported backend or required Python module"
+            + " unavailable: {0}".format(backend_name)
+        )
+    url = connect_spec.get("url", "ldapi:///")
     try:
         l = ldap.initialize(url)
         l.protocol_version = ldap.VERSION3
 
         # set up tls
-        tls = connect_spec.get('tls', None)
+        tls = connect_spec.get("tls", None)
         if tls is None:
             tls = {}
         vars = {}
         for k, v in six.iteritems(tls):
-            if k in ('starttls', 'newctx'):
+            if k in ("starttls", "newctx"):
                 vars[k] = True
-            elif k in ('crlcheck', 'require_cert'):
-                l.set_option(getattr(ldap, 'OPT_X_TLS_' + k.upper()),
-                             getattr(ldap, 'OPT_X_TLS_' + v.upper()))
+            elif k in ("crlcheck", "require_cert"):
+                l.set_option(
+                    getattr(ldap, "OPT_X_TLS_" + k.upper()),
+                    getattr(ldap, "OPT_X_TLS_" + v.upper()),
+                )
             else:
-                l.set_option(getattr(ldap, 'OPT_X_TLS_' + k.upper()), v)
-        if vars.get('starttls', False):
+                l.set_option(getattr(ldap, "OPT_X_TLS_" + k.upper()), v)
+        if vars.get("starttls", False):
             l.start_tls_s()
-        if vars.get('newctx', False):
+        if vars.get("newctx", False):
             l.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
 
         # set up other options
         l.set_option(ldap.OPT_REFERRALS, 0)
-        opts = connect_spec.get('opts', None)
+        opts = connect_spec.get("opts", None)
         if opts is None:
             opts = {}
         for k, v in six.iteritems(opts):
-            opt = getattr(ldap, 'OPT_' + k.upper())
+            opt = getattr(ldap, "OPT_" + k.upper())
             l.set_option(opt, v)
 
-        _bind(l, connect_spec.get('bind', None))
+        _bind(l, connect_spec.get("bind", None))
     except ldap.LDAPError as e:
         _convert_exception(e)
     return _connect_ctx(l)
 
 
-def search(connect_spec, base, scope='subtree', filterstr='(objectClass=*)',
-           attrlist=None, attrsonly=0):
-    '''Search an LDAP database.
+def search(
+    connect_spec,
+    base,
+    scope="subtree",
+    filterstr="(objectClass=*)",
+    attrlist=None,
+    attrsonly=0,
+):
+    """Search an LDAP database.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -357,9 +373,9 @@ def search(connect_spec, base, scope='subtree', filterstr='(objectClass=*)',
                 'password': 'secret',
             },
         }" "base='dc=example,dc=com'"
-    '''
+    """
     l = connect(connect_spec)
-    scope = getattr(ldap, 'SCOPE_' + scope.upper())
+    scope = getattr(ldap, "SCOPE_" + scope.upper())
     try:
         results = l.c.search_s(base, scope, filterstr, attrlist, attrsonly)
     except ldap.NO_SUCH_OBJECT:
@@ -370,7 +386,7 @@ def search(connect_spec, base, scope='subtree', filterstr='(objectClass=*)',
 
 
 def add(connect_spec, dn, attributes):
-    '''Add an entry to an LDAP database.
+    """Add an entry to an LDAP database.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -397,19 +413,25 @@ def add(connect_spec, dn, attributes):
                 'password': 'secret',
             },
         }" "dn='dc=example,dc=com'" "attributes={'example': 'values'}"
-    '''
+    """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
     # addModlist() expects (also to ensure that the caller's objects
     # are not modified)
-    attributes = dict(((attr, salt.utils.data.encode(list(vals)))
-                       for attr, vals in six.iteritems(attributes)))
-    log.info('adding entry: dn: %s attributes: %s', repr(dn), repr(attributes))
+    attributes = dict(
+        (
+            (attr, salt.utils.data.encode(list(vals)))
+            for attr, vals in six.iteritems(attributes)
+        )
+    )
+    log.info("adding entry: dn: %s attributes: %s", repr(dn), repr(attributes))
 
-    if 'unicodePwd' in attributes:
-        attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
+    if "unicodePwd" in attributes:
+        attributes["unicodePwd"] = [
+            _format_unicode_password(x) for x in attributes["unicodePwd"]
+        ]
 
-    modlist = ldap.modlist.addModlist(attributes),
+    modlist = ldap.modlist.addModlist(attributes)
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:
@@ -418,7 +440,7 @@ def add(connect_spec, dn, attributes):
 
 
 def delete(connect_spec, dn):
-    '''Delete an entry from an LDAP database.
+    """Delete an entry from an LDAP database.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -440,9 +462,9 @@ def delete(connect_spec, dn):
                 'method': 'simple',
                 'password': 'secret'}
         }" dn='cn=admin,dc=example,dc=com'
-    '''
+    """
     l = connect(connect_spec)
-    log.info('deleting entry: dn: %s', repr(dn))
+    log.info("deleting entry: dn: %s", repr(dn))
     try:
         l.c.delete_s(dn)
     except ldap.LDAPError as e:
@@ -451,7 +473,7 @@ def delete(connect_spec, dn):
 
 
 def modify(connect_spec, dn, directives):
-    '''Modify an entry in an LDAP database.
+    """Modify an entry in an LDAP database.
 
     :param connect_spec:
         See the documentation for the ``connect_spec`` parameter for
@@ -496,18 +518,23 @@ def modify(connect_spec, dn, directives):
                 'password': 'secret'}
         }" dn='cn=admin,dc=example,dc=com'
         directives="('add', 'example', ['example_val'])"
-    '''
+    """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
     # modify_s() expects (also to ensure that the caller's objects are
     # not modified)
-    modlist = [(getattr(ldap, 'MOD_' + op.upper()), attr, list(vals))
-               for op, attr, vals in directives]
+    modlist = [
+        (getattr(ldap, "MOD_" + op.upper()), attr, list(vals))
+        for op, attr, vals in directives
+    ]
 
     for idx, mod in enumerate(modlist):
-        if mod[1] == 'unicodePwd':
-            modlist[idx] = (mod[0], mod[1],
-                [_format_unicode_password(x) for x in mod[2]])
+        if mod[1] == "unicodePwd":
+            modlist[idx] = (
+                mod[0],
+                mod[1],
+                [_format_unicode_password(x) for x in mod[2]],
+            )
 
     modlist = salt.utils.data.decode(modlist, to_str=True, preserve_tuples=True)
     try:
@@ -518,7 +545,7 @@ def modify(connect_spec, dn, directives):
 
 
 def change(connect_spec, dn, before, after):
-    '''Modify an entry in an LDAP database.
+    """Modify an entry in an LDAP database.
 
     This does the same thing as :py:func:`modify`, but with a simpler
     interface.  Instead of taking a list of directives, it takes a
@@ -563,18 +590,26 @@ def change(connect_spec, dn, before, after):
         }" dn='cn=admin,dc=example,dc=com'
         before="{'example_value': 'before_val'}"
         after="{'example_value': 'after_val'}"
-    '''
+    """
     l = connect(connect_spec)
     # convert the "iterable of values" to lists in case that's what
     # modifyModlist() expects (also to ensure that the caller's dicts
     # are not modified)
-    before = dict(((attr, salt.utils.data.encode(list(vals)))
-                   for attr, vals in six.iteritems(before)))
-    after = dict(((attr, salt.utils.data.encode(list(vals)))
-                  for attr, vals in six.iteritems(after)))
+    before = dict(
+        (
+            (attr, salt.utils.data.encode(list(vals)))
+            for attr, vals in six.iteritems(before)
+        )
+    )
+    after = dict(
+        (
+            (attr, salt.utils.data.encode(list(vals)))
+            for attr, vals in six.iteritems(after)
+        )
+    )
 
-    if 'unicodePwd' in after:
-        after['unicodePwd'] = [_format_unicode_password(x) for x in after['unicodePwd']]
+    if "unicodePwd" in after:
+        after["unicodePwd"] = [_format_unicode_password(x) for x in after["unicodePwd"]]
 
     modlist = ldap.modlist.modifyModlist(before, after)
 

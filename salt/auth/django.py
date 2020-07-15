@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Provide authentication using Django Web Framework
 
 :depends:   - Django Web Framework
@@ -45,26 +45,28 @@ When a user attempts to authenticate via Django, Salt will import the package
 indicated via the keyword ``^model``.  That model must have the fields
 indicated above, though the model DOES NOT have to be named
 'SaltExternalAuthModel'.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import sys
 
-
 # Import 3rd-party libs
 from salt.ext import six
+
 # pylint: disable=import-error
 try:
     import django
-    from django.db import connection
+    from django.db import connection  # pylint: disable=no-name-in-module
+
     HAS_DJANGO = True
-except Exception as exc:
+except Exception as exc:  # pylint: disable=broad-except
     # If Django is installed and is not detected, uncomment
     # the following line to display additional information
-    #log.warning('Could not load Django auth module. Found exception: %s', exc)
+    # log.warning('Could not load Django auth module. Found exception: %s', exc)
     HAS_DJANGO = False
 # pylint: enable=import-error
 
@@ -72,7 +74,7 @@ DJANGO_AUTH_CLASS = None
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'django'
+__virtualname__ = "django"
 
 
 def __virtual__():
@@ -84,16 +86,16 @@ def __virtual__():
 def is_connection_usable():
     try:
         connection.connection.ping()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
     else:
         return True
 
 
 def __django_auth_setup():
-    '''
+    """
     Prepare the connection to the Django authentication framework
-    '''
+    """
     if django.VERSION >= (1, 7):
         django.setup()
 
@@ -106,46 +108,53 @@ def __django_auth_setup():
     # they are needed.  When using framework facilities outside the
     # web application container we need to run django.setup() to
     # get the model definitions cached.
-    if '^model' in __opts__['external_auth']['django']:
-        django_model_fullname = __opts__['external_auth']['django']['^model']
-        django_model_name = django_model_fullname.split('.')[-1]
-        django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
+    if "^model" in __opts__["external_auth"]["django"]:
+        django_model_fullname = __opts__["external_auth"]["django"]["^model"]
+        django_model_name = django_model_fullname.split(".")[-1]
+        django_module_name = ".".join(django_model_fullname.split(".")[0:-1])
 
-        django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
-        DJANGO_AUTH_CLASS_str = 'django_auth_module.{0}'.format(django_model_name)
+        # pylint: disable=possibly-unused-variable
+        django_auth_module = __import__(
+            django_module_name, globals(), locals(), "SaltExternalAuthModel"
+        )
+        # pylint: enable=possibly-unused-variable
+        DJANGO_AUTH_CLASS_str = "django_auth_module.{0}".format(django_model_name)
         DJANGO_AUTH_CLASS = eval(DJANGO_AUTH_CLASS_str)  # pylint: disable=W0123
 
 
 def auth(username, password):
-    '''
+    """
     Simple Django auth
-    '''
-    django_auth_path = __opts__['django_auth_path']
+    """
+    django_auth_path = __opts__["django_auth_path"]
     if django_auth_path not in sys.path:
         sys.path.append(django_auth_path)
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', __opts__['django_auth_settings'])
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", __opts__["django_auth_settings"])
 
     __django_auth_setup()
 
     if not is_connection_usable():
         connection.close()
 
-    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated
+    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
+
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
-            log.debug('Django authentication successful')
+            log.debug("Django authentication successful")
             return True
         else:
-            log.debug('Django authentication: the password is valid but the account is disabled.')
+            log.debug(
+                "Django authentication: the password is valid but the account is disabled."
+            )
     else:
-        log.debug('Django authentication failed.')
+        log.debug("Django authentication failed.")
 
     return False
 
 
 def acl(username):
-    '''
+    """
 
     :param username: Username to filter for
     :return: Dictionary that can be slotted into the ``__opts__`` structure for
@@ -181,7 +190,7 @@ def acl(username):
           - server1:
             - .*
 
-    '''
+    """
     __django_auth_setup()
 
     if username is None:
@@ -203,10 +212,14 @@ def acl(username):
             for d in auth_dict[a.user_fk.username]:
                 if isinstance(d, dict):
                     if a.minion_or_fn_matcher in six.iterkeys(d):
-                        auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(a.minion_fn)
+                        auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(
+                            a.minion_fn
+                        )
                         found = True
             if not found:
-                auth_dict[a.user_fk.username].append({a.minion_or_fn_matcher: [a.minion_fn]})
+                auth_dict[a.user_fk.username].append(
+                    {a.minion_or_fn_matcher: [a.minion_fn]}
+                )
 
-    log.debug('django auth_dict is %s', auth_dict)
+    log.debug("django auth_dict is %s", auth_dict)
     return auth_dict

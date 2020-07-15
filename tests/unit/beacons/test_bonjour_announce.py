@@ -3,26 +3,24 @@
 # Python libs
 from __future__ import absolute_import
 
-# Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.mixins import LoaderModuleMockMixin
-
 # Salt libs
 import salt.beacons.bonjour_announce as bonjour_announce
+from tests.support.mixins import LoaderModuleMockMixin
+
+# Salt testing libs
+from tests.support.unit import TestCase
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    '''
+    """
     Test case for salt.beacons.avahi_announce
-    '''
+    """
 
     def setup_loader_modules(self):
         return {
             bonjour_announce: {
-                'last_state': {},
-                'last_state_extra': {'no_devices': False}
+                "last_state": {},
+                "last_state_extra": {"no_devices": False},
             }
         }
 
@@ -31,14 +29,21 @@ class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = bonjour_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for bonjour_announce'
-                                      ' beacon must be a list.'))
+        self.assertEqual(
+            ret, (False, "Configuration for bonjour_announce beacon must be a list.")
+        )
 
     def test_empty_config(self):
         config = [{}]
 
         ret = bonjour_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for bonjour_announce'
-                                      ' beacon must contain servicetype, port'
-                                      ' and txt items.'))
+        self.assertEqual(
+            ret,
+            (
+                False,
+                "Configuration for bonjour_announce"
+                " beacon must contain servicetype, port"
+                " and txt items.",
+            ),
+        )

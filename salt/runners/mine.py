@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A runner to access data from the salt mine
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import logging
 
 # Import salt libs
-import salt.utils.minions
+import salt.daemons.masterapi
 
 log = logging.getLevelName(__name__)
 
 
-def get(tgt, fun, tgt_type='glob'):
-    '''
+def get(tgt, fun, tgt_type="glob"):
+    """
     Gathers the data from the specified minions' mine, pass in the target,
     function to look up and the target type
 
@@ -23,16 +23,20 @@ def get(tgt, fun, tgt_type='glob'):
     .. code-block:: bash
 
         salt-run mine.get '*' network.interfaces
-    '''
-    ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
+    """
+    masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
+    load = {
+        "id": __opts__["id"],
+        "fun": fun,
+        "tgt": tgt,
+        "tgt_type": tgt_type,
+    }
+    ret = masterapi._mine_get(load)
     return ret
 
 
-def update(tgt,
-           tgt_type='glob',
-           clear=False,
-           mine_functions=None):
-    '''
+def update(tgt, tgt_type="glob", clear=False, mine_functions=None):
+    """
     .. versionadded:: 2017.7.0
 
     Update the mine data on a certain group of minions.
@@ -60,10 +64,12 @@ def update(tgt,
 
         salt-run mine.update '*'
         salt-run mine.update 'juniper-edges' tgt_type='nodegroup'
-    '''
-    ret = __salt__['salt.execute'](tgt,
-                                   'mine.update',
-                                   tgt_type=tgt_type,
-                                   clear=clear,
-                                   mine_functions=mine_functions)
+    """
+    ret = __salt__["salt.execute"](
+        tgt,
+        "mine.update",
+        tgt_type=tgt_type,
+        clear=clear,
+        mine_functions=mine_functions,
+    )
     return ret

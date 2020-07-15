@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Retrieve Pillar data by doing a postgres query
 
 .. versionadded:: 2017.7.0
@@ -27,12 +27,13 @@ Complete Example
             depth: 5
             as_list: True
             with_lists: [1,3]
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import python libs
 from contextlib import contextmanager
-import logging
 
 # Import Salt libs
 from salt.pillar.sql_base import SqlBaseExtPillar
@@ -43,6 +44,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import psycopg2
+
     HAS_POSTGRES = True
 except ImportError:
     HAS_POSTGRES = False
@@ -55,27 +57,30 @@ def __virtual__():
 
 
 class POSTGRESExtPillar(SqlBaseExtPillar):
-    '''
+    """
     This class receives and processes the database rows from POSTGRES.
-    '''
+    """
+
     @classmethod
     def _db_name(cls):
-        return 'POSTGRES'
+        return "POSTGRES"
 
     def _get_options(self):
-        '''
+        """
         Returns options used for the POSTGRES connection.
-        '''
-        defaults = {'host': 'localhost',
-                    'user': 'salt',
-                    'pass': 'salt',
-                    'db': 'salt',
-                    'port': 5432}
+        """
+        defaults = {
+            "host": "localhost",
+            "user": "salt",
+            "pass": "salt",
+            "db": "salt",
+            "port": 5432,
+        }
         _options = {}
-        _opts = __opts__.get('postgres', {})
+        _opts = __opts__.get("postgres", {})
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for POSTGRES %s', attr)
+                log.debug("Using default for POSTGRES %s", attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -83,37 +88,36 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
 
     @contextmanager
     def _get_cursor(self):
-        '''
+        """
         Yield a POSTGRES cursor
-        '''
+        """
         _options = self._get_options()
-        conn = psycopg2.connect(host=_options['host'],
-                                user=_options['user'],
-                                password=_options['pass'],
-                                dbname=_options['db'],
-                                port=_options['port'])
+        conn = psycopg2.connect(
+            host=_options["host"],
+            user=_options["user"],
+            password=_options["pass"],
+            dbname=_options["db"],
+            port=_options["port"],
+        )
         cursor = conn.cursor()
         try:
             yield cursor
-            log.debug('Connected to POSTGRES DB')
+            log.debug("Connected to POSTGRES DB")
         except psycopg2.DatabaseError as err:
-            log.exception('Error in ext_pillar POSTGRES: %s', err.args)
+            log.exception("Error in ext_pillar POSTGRES: %s", err.args)
         finally:
             conn.close()
 
-    def extract_queries(self, args, kwargs):
-        '''
+    def extract_queries(self, args, kwargs):  # pylint: disable=useless-super-delegation
+        """
             This function normalizes the config block into a set of queries we
             can use.  The return is a list of consistently laid out dicts.
-        '''
+        """
         return super(POSTGRESExtPillar, self).extract_queries(args, kwargs)
 
 
-def ext_pillar(minion_id,
-               pillar,
-               *args,
-               **kwargs):
-    '''
+def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
     Execute queries against POSTGRES, merge and return as a dict
-    '''
+    """
     return POSTGRESExtPillar().fetch(minion_id, pillar, *args, **kwargs)

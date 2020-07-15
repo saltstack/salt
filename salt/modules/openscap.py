@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for OpenSCAP Management
 
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import tempfile
+
 import shlex
 import shutil
-from subprocess import Popen, PIPE
+import tempfile
+from subprocess import PIPE, Popen
 
 # Import Salt libs
 from salt.ext import six
-
 
 ArgumentParser = object
 
 try:
     import argparse  # pylint: disable=minimum-python-version
+
     ArgumentParser = argparse.ArgumentParser
     HAS_ARGPARSE = True
 except ImportError:  # python 2.6
@@ -26,30 +27,27 @@ except ImportError:  # python 2.6
 
 
 _XCCDF_MAP = {
-    'eval': {
-        'parser_arguments': [
-            (('--profile',), {'required': True}),
-        ],
-        'cmd_pattern': (
+    "eval": {
+        "parser_arguments": [(("--profile",), {"required": True})],
+        "cmd_pattern": (
             "oscap xccdf eval "
             "--oval-results --results results.xml --report report.html "
             "--profile {0} {1}"
-        )
+        ),
     }
 }
 
 
 def __virtual__():
-    return HAS_ARGPARSE, 'argparse module is required.'
+    return HAS_ARGPARSE, "argparse module is required."
 
 
 class _ArgumentParser(ArgumentParser):
-
     def __init__(self, action=None, *args, **kwargs):
-        super(_ArgumentParser, self).__init__(*args, prog='oscap', **kwargs)
-        self.add_argument('action', choices=['eval'])
+        super(_ArgumentParser, self).__init__(*args, prog="oscap", **kwargs)
+        self.add_argument("action", choices=["eval"])
         add_arg = None
-        for params, kwparams in _XCCDF_MAP['eval']['parser_arguments']:
+        for params, kwparams in _XCCDF_MAP["eval"]["parser_arguments"]:
             self.add_argument(*params, **kwparams)
 
     def error(self, message, *args, **kwargs):
@@ -59,12 +57,12 @@ class _ArgumentParser(ArgumentParser):
 _OSCAP_EXIT_CODES_MAP = {
     0: True,  # all rules pass
     1: False,  # there is an error during evaluation
-    2: True  # there is at least one rule with either fail or unknown result
+    2: True,  # there is at least one rule with either fail or unknown result
 }
 
 
 def xccdf(params):
-    '''
+    """
     Run ``oscap xccdf`` commands on minions.
     It uses cp.push_dir to upload the generated files to the salt master
     in the master's minion files cachedir
@@ -77,7 +75,7 @@ def xccdf(params):
     .. code-block:: bash
 
         salt '*'  openscap.xccdf "eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
-    '''
+    """
     params = shlex.split(params)
     policy = params[-1]
 
@@ -91,25 +89,22 @@ def xccdf(params):
         parser = _ArgumentParser()
         action = parser.parse_known_args(params)[0].action
         args, argv = _ArgumentParser(action=action).parse_known_args(args=params)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         success = False
         error = six.text_type(err)
 
     if success:
-        cmd = _XCCDF_MAP[action]['cmd_pattern'].format(args.profile, policy)
+        cmd = _XCCDF_MAP[action]["cmd_pattern"].format(args.profile, policy)
         tempdir = tempfile.mkdtemp()
-        proc = Popen(
-            shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
+        proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
         (stdoutdata, error) = proc.communicate()
         success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
         returncode = proc.returncode
         if success:
-            __salt__['cp.push_dir'](tempdir)
+            __salt__["cp.push_dir"](tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
 
     return dict(
-        success=success,
-        upload_dir=upload_dir,
-        error=error,
-        returncode=returncode)
+        success=success, upload_dir=upload_dir, error=error, returncode=returncode
+    )

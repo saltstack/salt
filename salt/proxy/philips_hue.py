@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''
+"""
 Philips HUE lamps module for proxy.
 
 .. versionadded:: 2015.8.3
@@ -31,30 +31,31 @@ To configure the proxy minion:
       host: [hostname or ip]
       user: [username]
 
-'''
+"""
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from __future__ import absolute_import, print_function, unicode_literals
-import salt.ext.six.moves.http_client as http_client
 
 # Import python libs
 import logging
 import time
+
+import salt.ext.six.moves.http_client as http_client
 import salt.utils.json
-from salt.exceptions import (CommandExecutionError, MinionError)
+from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext import six
 
-
-__proxyenabled__ = ['philips_hue']
+__proxyenabled__ = ["philips_hue"]
 
 CONFIG = {}
 log = logging.getLogger(__file__)
 
 
 class Const(object):
-    '''
+    """
     Constants for the lamp operations.
-    '''
+    """
+
     LAMP_ON = {"on": True, "transitiontime": 0}
     LAMP_OFF = {"on": False, "transitiontime": 0}
 
@@ -70,57 +71,61 @@ class Const(object):
 
 
 def __virtual__():
-    '''
+    """
     Validate the module.
-    '''
+    """
     return True
 
 
 def init(cnf):
-    '''
+    """
     Initialize the module.
-    '''
-    CONFIG['host'] = cnf.get('proxy', {}).get('host')
-    if not CONFIG['host']:
-        raise MinionError(message="Cannot find 'host' parameter in the proxy configuration")
+    """
+    CONFIG["host"] = cnf.get("proxy", {}).get("host")
+    if not CONFIG["host"]:
+        raise MinionError(
+            message="Cannot find 'host' parameter in the proxy configuration"
+        )
 
-    CONFIG['user'] = cnf.get('proxy', {}).get('user')
-    if not CONFIG['user']:
-        raise MinionError(message="Cannot find 'user' parameter in the proxy configuration")
+    CONFIG["user"] = cnf.get("proxy", {}).get("user")
+    if not CONFIG["user"]:
+        raise MinionError(
+            message="Cannot find 'user' parameter in the proxy configuration"
+        )
 
-    CONFIG['uri'] = "/api/{0}".format(CONFIG['user'])
+    CONFIG["uri"] = "/api/{0}".format(CONFIG["user"])
 
 
 def ping(*args, **kw):
-    '''
+    """
     Ping the lamps.
-    '''
+    """
     # Here blink them
     return True
 
 
 def shutdown(opts, *args, **kw):
-    '''
+    """
     Shuts down the service.
-    '''
+    """
     # This is no-op method, which is required but makes nothing at this point.
     return True
 
 
-def _query(lamp_id, state, action='', method='GET'):
-    '''
+def _query(lamp_id, state, action="", method="GET"):
+    """
     Query the URI
 
     :return:
-    '''
+    """
     # Because salt.utils.query is that dreadful... :(
 
     err = None
-    url = "{0}/lights{1}".format(CONFIG['uri'],
-                                 lamp_id and '/{0}'.format(lamp_id) or '') \
-          + (action and "/{0}".format(action) or '')
-    conn = http_client.HTTPConnection(CONFIG['host'])
-    if method == 'PUT':
+    url = "{0}/lights{1}".format(
+        CONFIG["uri"], lamp_id and "/{0}".format(lamp_id) or ""
+    ) + (action and "/{0}".format(action) or "")
+    conn = http_client.HTTPConnection(CONFIG["host"])
+    if method == "PUT":
         conn.request(method, url, salt.utils.json.dumps(state))
     else:
         conn.request(method, url)
@@ -138,53 +143,58 @@ def _query(lamp_id, state, action='', method='GET'):
 
 
 def _set(lamp_id, state, method="state"):
-    '''
+    """
     Set state to the device by ID.
 
     :param lamp_id:
     :param state:
     :return:
-    '''
+    """
     try:
-        res = _query(lamp_id, state, action=method, method='PUT')
-    except Exception as err:
+        res = _query(lamp_id, state, action=method, method="PUT")
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError(err)
 
     res = len(res) > 1 and res[-1] or res[0]
-    if res.get('success'):
-        res = {'result': True}
-    elif res.get('error'):
-        res = {'result': False,
-               'description': res['error']['description'],
-               'type': res['error']['type']}
+    if res.get("success"):
+        res = {"result": True}
+    elif res.get("error"):
+        res = {
+            "result": False,
+            "description": res["error"]["description"],
+            "type": res["error"]["type"],
+        }
 
     return res
 
 
 def _get_devices(params):
-    '''
+    """
     Parse device(s) ID(s) from the common params.
 
     :param params:
     :return:
-    '''
-    if 'id' not in params:
+    """
+    if "id" not in params:
         raise CommandExecutionError("Parameter ID is required.")
 
-    return type(params['id']) == int and [params['id']] \
-           or [int(dev) for dev in params['id'].split(",")]
+    return (
+        type(params["id"]) == int
+        and [params["id"]]
+        or [int(dev) for dev in params["id"].split(",")]
+    )
 
 
 def _get_lights():
-    '''
+    """
     Get all available lighting devices.
-    '''
+    """
     return _query(None, None)
 
 
 # Callers
 def call_lights(*args, **kwargs):
-    '''
+    """
     Get info about all available lamps.
 
     Options:
@@ -198,10 +208,10 @@ def call_lights(*args, **kwargs):
         salt '*' hue.lights
         salt '*' hue.lights id=1
         salt '*' hue.lights id=1,2,3
-    '''
+    """
     res = dict()
     lights = _get_lights()
-    for dev_id in 'id' in kwargs and _get_devices(kwargs) or sorted(lights.keys()):
+    for dev_id in "id" in kwargs and _get_devices(kwargs) or sorted(lights.keys()):
         if lights.get(six.text_type(dev_id)):
             res[dev_id] = lights[six.text_type(dev_id)]
 
@@ -209,7 +219,7 @@ def call_lights(*args, **kwargs):
 
 
 def call_switch(*args, **kwargs):
-    '''
+    """
     Switch lamp ON/OFF.
 
     If no particular state is passed,
@@ -227,22 +237,26 @@ def call_switch(*args, **kwargs):
         salt '*' hue.switch
         salt '*' hue.switch id=1
         salt '*' hue.switch id=1,2,3 on=True
-    '''
+    """
     out = dict()
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
-        if 'on' in kwargs:
-            state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+        if "on" in kwargs:
+            state = kwargs["on"] and Const.LAMP_ON or Const.LAMP_OFF
         else:
             # Invert the current state
-            state = devices[six.text_type(dev_id)]['state']['on'] and Const.LAMP_OFF or Const.LAMP_ON
+            state = (
+                devices[six.text_type(dev_id)]["state"]["on"]
+                and Const.LAMP_OFF
+                or Const.LAMP_ON
+            )
         out[dev_id] = _set(dev_id, state)
 
     return out
 
 
 def call_blink(*args, **kwargs):
-    '''
+    """
     Blink a lamp. If lamp is ON, then blink ON-OFF-ON, otherwise OFF-ON-OFF.
 
     Options:
@@ -256,12 +270,12 @@ def call_blink(*args, **kwargs):
 
         salt '*' hue.blink id=1
         salt '*' hue.blink id=1,2,3
-    '''
+    """
     devices = _get_lights()
-    pause = kwargs.get('pause', 0)
+    pause = kwargs.get("pause", 0)
     res = dict()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
-        state = devices[six.text_type(dev_id)]['state']['on']
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+        state = devices[six.text_type(dev_id)]["state"]["on"]
         _set(dev_id, state and Const.LAMP_OFF or Const.LAMP_ON)
         if pause:
             time.sleep(pause)
@@ -271,7 +285,7 @@ def call_blink(*args, **kwargs):
 
 
 def call_ping(*args, **kwargs):
-    '''
+    """
     Ping the lamps by issuing a short inversion blink to all available devices.
 
     CLI Example:
@@ -279,17 +293,17 @@ def call_ping(*args, **kwargs):
     .. code-block:: bash
 
         salt '*' hue.ping
-    '''
+    """
     errors = dict()
     for dev_id, dev_status in call_blink().items():
-        if not dev_status['result']:
+        if not dev_status["result"]:
             errors[dev_id] = False
 
     return errors or True
 
 
 def call_status(*args, **kwargs):
-    '''
+    """
     Return the status of the lamps.
 
     Options:
@@ -303,21 +317,21 @@ def call_status(*args, **kwargs):
         salt '*' hue.status
         salt '*' hue.status id=1
         salt '*' hue.status id=1,2,3
-    '''
+    """
     res = dict()
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         dev_id = six.text_type(dev_id)
         res[dev_id] = {
-            'on': devices[dev_id]['state']['on'],
-            'reachable': devices[dev_id]['state']['reachable']
+            "on": devices[dev_id]["state"]["on"],
+            "reachable": devices[dev_id]["state"]["reachable"],
         }
 
     return res
 
 
 def call_rename(*args, **kwargs):
-    '''
+    """
     Rename a device.
 
     Options:
@@ -330,19 +344,19 @@ def call_rename(*args, **kwargs):
     .. code-block:: bash
 
         salt '*' hue.rename id=1 title='WC for cats'
-    '''
+    """
     dev_id = _get_devices(kwargs)
     if len(dev_id) > 1:
         raise CommandExecutionError("Only one device can be renamed at a time")
 
-    if 'title' not in kwargs:
+    if "title" not in kwargs:
         raise CommandExecutionError("Title is missing")
 
-    return _set(dev_id[0], {"name": kwargs['title']}, method="")
+    return _set(dev_id[0], {"name": kwargs["title"]}, method="")
 
 
 def call_alert(*args, **kwargs):
-    '''
+    """
     Lamp alert
 
     Options:
@@ -357,18 +371,20 @@ def call_alert(*args, **kwargs):
         salt '*' hue.alert
         salt '*' hue.alert id=1
         salt '*' hue.alert id=1,2,3 on=false
-    '''
+    """
     res = dict()
 
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
-        res[dev_id] = _set(dev_id, {"alert": kwargs.get("on", True) and "lselect" or "none"})
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+        res[dev_id] = _set(
+            dev_id, {"alert": kwargs.get("on", True) and "lselect" or "none"}
+        )
 
     return res
 
 
 def call_effect(*args, **kwargs):
-    '''
+    """
     Set an effect to the lamp.
 
     Options:
@@ -383,18 +399,18 @@ def call_effect(*args, **kwargs):
         salt '*' hue.effect
         salt '*' hue.effect id=1
         salt '*' hue.effect id=1,2,3 type=colorloop
-    '''
+    """
     res = dict()
 
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"effect": kwargs.get("type", "none")})
 
     return res
 
 
 def call_color(*args, **kwargs):
-    '''
+    """
     Set a color to the lamp.
 
     Options:
@@ -417,19 +433,19 @@ def call_color(*args, **kwargs):
         salt '*' hue.color id=1
         salt '*' hue.color id=1,2,3 oolor=red transition=30
         salt '*' hue.color id=1 gamut=0.3,0.5
-    '''
+    """
     res = dict()
 
     colormap = {
-        'red': Const.COLOR_RED,
-        'green': Const.COLOR_GREEN,
-        'blue': Const.COLOR_BLUE,
-        'orange': Const.COLOR_ORANGE,
-        'pink': Const.COLOR_PINK,
-        'white': Const.COLOR_WHITE,
-        'yellow': Const.COLOR_YELLOW,
-        'daylight': Const.COLOR_DAYLIGHT,
-        'purple': Const.COLOR_PURPLE,
+        "red": Const.COLOR_RED,
+        "green": Const.COLOR_GREEN,
+        "blue": Const.COLOR_BLUE,
+        "orange": Const.COLOR_ORANGE,
+        "pink": Const.COLOR_PINK,
+        "white": Const.COLOR_WHITE,
+        "yellow": Const.COLOR_YELLOW,
+        "daylight": Const.COLOR_DAYLIGHT,
+        "purple": Const.COLOR_PURPLE,
     }
 
     devices = _get_lights()
@@ -439,23 +455,23 @@ def call_color(*args, **kwargs):
         if len(color) == 2:
             try:
                 color = {"xy": [float(color[0]), float(color[1])]}
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 color = None
         else:
             color = None
 
     if not color:
-        color = colormap.get(kwargs.get("color", 'white'), Const.COLOR_WHITE)
+        color = colormap.get(kwargs.get("color", "white"), Const.COLOR_WHITE)
     color.update({"transitiontime": max(min(kwargs.get("transition", 0), 200), 0)})
 
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, color)
 
     return res
 
 
 def call_brightness(*args, **kwargs):
-    '''
+    """
     Set an effect to the lamp.
 
     Arguments:
@@ -474,31 +490,31 @@ def call_brightness(*args, **kwargs):
         salt '*' hue.brightness value=100
         salt '*' hue.brightness id=1 value=150
         salt '*' hue.brightness id=1,2,3 value=255
-    '''
+    """
     res = dict()
 
-    if 'value' not in kwargs:
+    if "value" not in kwargs:
         raise CommandExecutionError("Parameter 'value' is missing")
 
     try:
-        brightness = max(min(int(kwargs['value']), 244), 1)
-    except Exception as err:
+        brightness = max(min(int(kwargs["value"]), 244), 1)
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     try:
-        transition = max(min(int(kwargs['transition']), 200), 0)
-    except Exception as err:
+        transition = max(min(int(kwargs["transition"]), 200), 0)
+    except Exception as err:  # pylint: disable=broad-except
         transition = 0
 
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"bri": brightness, "transitiontime": transition})
 
     return res
 
 
 def call_temperature(*args, **kwargs):
-    '''
+    """
     Set the mired color temperature. More: http://en.wikipedia.org/wiki/Mired
 
     Arguments:
@@ -516,18 +532,18 @@ def call_temperature(*args, **kwargs):
         salt '*' hue.temperature value=150
         salt '*' hue.temperature value=150 id=1
         salt '*' hue.temperature value=150 id=1,2,3
-    '''
+    """
     res = dict()
 
-    if 'value' not in kwargs:
+    if "value" not in kwargs:
         raise CommandExecutionError("Parameter 'value' (150~500) is missing")
     try:
-        value = max(min(int(kwargs['value']), 500), 150)
-    except Exception as err:
+        value = max(min(int(kwargs["value"]), 500), 150)
+    except Exception as err:  # pylint: disable=broad-except
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     devices = _get_lights()
-    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
+    for dev_id in "id" not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"ct": value})
 
     return res

@@ -1,3 +1,4 @@
 # Lint requirements
-pylint==1.6.5
-SaltPyLint>=v2019.11.14
+pylint==2.4.4
+SaltPyLint>=v2020.5.22
+toml

@@ -30,8 +30,10 @@ the debugger should be started:
 
 .. code-block:: python
 
-    test = 'test123'
-    import IPython; IPython.embed_kernel()
+    test = "test123"
+    import IPython
+
+    IPython.embed_kernel()
 
 After running a Salt command that hits that line, the following will show up in
 the log file:
@@ -146,8 +148,8 @@ functions to be called as they have been set up by the salt loader.
 
 .. code-block:: python
 
-    __salt__['cmd.run']('fdisk -l')
-    __salt__['network.ip_addrs']()
+    __salt__["cmd.run"]("fdisk -l")
+    __salt__["network.ip_addrs"]()
 
 .. note::
 
@@ -170,11 +172,18 @@ While ``__grains__`` is defined for every module, it's only filled in for some.
 __pillar__
 -----------
 
-Filled in for: Execution, Returner, SSH Wrapper, State
+Filled in for: Execution, Renderer, Returner, SSH Wrapper, State
 
 The ``__pillar__`` dictionary contains the pillar for the respective minion.
 
 While ``__pillar__`` is defined for every module, it's only filled in for some.
+
+__ext_pillar__
+--------------
+
+Filled in for: Pillar
+
+The ``__ext_pillar__`` dictionary contains the external pillar modules.
 
 .. _dunder-context:
 
@@ -198,8 +207,8 @@ each file. Here is an example from salt/modules/cp.py:
 
 .. code-block:: python
 
-    if not 'cp.fileclient' in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+    if not "cp.fileclient" in __context__:
+        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
 
 
 .. note:: Because __context__ may or may not have been destroyed, always be
@@ -208,19 +217,26 @@ each file. Here is an example from salt/modules/cp.py:
 
 __utils__
 ---------
-Defined in: Cloud, Engine, Execution, File Server, Pillar, Proxy, Runner, SDB.
+Defined in: Cloud, Engine, Execution, File Server, Grain, Pillar, Proxy, Roster, Runner, SDB, State
 
 __proxy__
 ---------
 Defined in: Beacon, Engine, Execution, Executor, Proxy, Renderer, Returner, State, Util
 
-__runners__
+__runner__
 -----------
 Defined in: Engine, Roster, Thorium
 
+.. note:: When used in engines, it should be called __runners__ (plural)
+
+__executors__
+-------------
+
+Defined in: Executor
+
 __ret__
 -------
-Defined in: Proxy, Search
+Defined in: Proxy
 
 __thorium__
 -----------

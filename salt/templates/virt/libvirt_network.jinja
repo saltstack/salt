@@ -6,4 +6,15 @@
   <vlan>
     <tag id='{{ tag }}'/>
   </vlan>{% endif %}
+  {% for ip_config in ip_configs %}
+  <ip family='ipv{{ ip_config.address.version }}'
+      address='{{ ip_config.address.network_address }}'
+      prefix='{{ ip_config.address.prefixlen }}'>
+    <dhcp>
+      {% for range in ip_config.dhcp_ranges %}
+      <range start='{{ range.start }}' end='{{ range.end }}' />
+      {% endfor %}
+    </dhcp>
+  </ip>
+  {% endfor %}
 </network>

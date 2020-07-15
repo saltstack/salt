@@ -16,17 +16,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function
+
+import logging
 import os
 import sys
-from subprocess import Popen, PIPE, STDOUT
-import logging
-
-# Import Salt Libs
-from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
-from salt.modules.inspectlib import EnvLoader
-from salt.modules.inspectlib import kiwiproc
-from salt.modules.inspectlib.entities import (AllowedDir, IgnoredDir, Package,
-                                              PayloadFile, PackageCfgFile)
+from subprocess import PIPE, STDOUT, Popen
 
 import salt.utils.crypt
 import salt.utils.files
@@ -34,6 +28,17 @@ import salt.utils.fsutils
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+from salt.modules.inspectlib import EnvLoader, kiwiproc
+from salt.modules.inspectlib.entities import (
+    AllowedDir,
+    IgnoredDir,
+    Package,
+    PackageCfgFile,
+    PayloadFile,
+)
+
+# Import Salt Libs
+from salt.modules.inspectlib.exceptions import InspectorSnapshotException
 
 try:
     import kiwi
@@ -44,72 +49,92 @@ log = logging.getLogger(__name__)
 
 
 class Inspector(EnvLoader):
-    DEFAULT_MINION_CONFIG_PATH = '/etc/salt/minion'
+    DEFAULT_MINION_CONFIG_PATH = "/etc/salt/minion"
 
-    MODE = ['configuration', 'payload', 'all']
+    MODE = ["configuration", "payload", "all"]
     IGNORE_MOUNTS = ["proc", "sysfs", "devtmpfs", "tmpfs", "fuse.gvfs-fuse-daemon"]
     IGNORE_FS_TYPES = ["autofs", "cifs", "nfs", "nfs4"]
-    IGNORE_PATHS = ["/tmp", "/var/tmp", "/lost+found", "/var/run",
-                    "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh",
-                    "/root", "/home"]
+    IGNORE_PATHS = [
+        "/tmp",
+        "/var/tmp",
+        "/lost+found",
+        "/var/run",
+        "/var/lib/rpm",
+        "/.snapshots",
+        "/.zfs",
+        "/etc/ssh",
+        "/root",
+        "/home",
+    ]
 
     def __init__(self, cachedir=None, piddir=None, pidfilename=None):
-        EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
+        EnvLoader.__init__(
+            self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename
+        )
 
     def create_snapshot(self):
-        '''
+        """
         Open new snapshot.
 
         :return:
-        '''
+        """
         self.db.open(new=True)
         return self
 
     def reuse_snapshot(self):
-        '''
+        """
         Open an existing, latest snapshot.
 
         :return:
-        '''
+        """
         self.db.open()
         return self
 
     def _syscall(self, command, input=None, env=None, *params):
-        '''
+        """
         Call an external system command.
-        '''
-        return Popen([command] + list(params), stdout=PIPE, stdin=PIPE, stderr=STDOUT,
-                     env=env or os.environ).communicate(input=input)
+        """
+        return Popen(
+            [command] + list(params),
+            stdout=PIPE,
+            stdin=PIPE,
+            stderr=STDOUT,
+            env=env or os.environ,
+        ).communicate(input=input)
 
     def _get_cfg_pkgs(self):
-        '''
+        """
         Package scanner switcher between the platforms.
 
         :return:
-        '''
-        if self.grains_core.os_data().get('os_family') == 'Debian':
+        """
+        if self.grains_core.os_data().get("os_family") == "Debian":
             return self.__get_cfg_pkgs_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get("os_family") in ["Suse", "redhat"]:
             return self.__get_cfg_pkgs_rpm()
         else:
             return dict()
 
     def __get_cfg_pkgs_dpkg(self):
-        '''
+        """
         Get packages with configuration files on Dpkg systems.
         :return:
-        '''
+        """
         # Get list of all available packages
         data = dict()
 
-        for pkg_name in salt.utils.stringutils.to_str(self._syscall('dpkg-query', None, None,
-                                                        '-Wf', "${binary:Package}\\n")[0]).split(os.linesep):
+        for pkg_name in salt.utils.stringutils.to_str(
+            self._syscall("dpkg-query", None, None, "-Wf", "${binary:Package}\\n")[0]
+        ).split(os.linesep):
             pkg_name = pkg_name.strip()
             if not pkg_name:
                 continue
             data[pkg_name] = list()
-            for pkg_cfg_item in salt.utils.stringutils.to_str(self._syscall('dpkg-query', None, None, '-Wf', "${Conffiles}\\n",
-                                                                pkg_name)[0]).split(os.linesep):
+            for pkg_cfg_item in salt.utils.stringutils.to_str(
+                self._syscall(
+                    "dpkg-query", None, None, "-Wf", "${Conffiles}\\n", pkg_name
+                )[0]
+            ).split(os.linesep):
                 pkg_cfg_item = pkg_cfg_item.strip()
                 if not pkg_cfg_item:
                     continue
@@ -124,11 +149,18 @@ class Inspector(EnvLoader):
         return data
 
     def __get_cfg_pkgs_rpm(self):
-        '''
+        """
         Get packages with configuration files on RPM systems.
-        '''
-        out, err = self._syscall('rpm', None, None, '-qa', '--configfiles',
-                                 '--queryformat', '%{name}-%{version}-%{release}\\n')
+        """
+        out, err = self._syscall(
+            "rpm",
+            None,
+            None,
+            "-qa",
+            "--configfiles",
+            "--queryformat",
+            "%{name}-%{version}-%{release}\\n",
+        )
         data = dict()
         pkg_name = None
         pkg_configs = []
@@ -152,23 +184,35 @@ class Inspector(EnvLoader):
         return data
 
     def _get_changed_cfg_pkgs(self, data):
-        '''
+        """
         Filter out unchanged packages on the Debian or RPM systems.
 
         :param data: Structure {package-name -> [ file .. file1 ]}
         :return: Same structure as data, except only files that were changed.
-        '''
+        """
         f_data = dict()
         for pkg_name, pkg_files in data.items():
             cfgs = list()
             cfg_data = list()
-            if self.grains_core.os_data().get('os_family') == 'Debian':
-                cfg_data = salt.utils.stringutils.to_str(self._syscall("dpkg", None, None, '--verify',
-                                                           pkg_name)[0]).split(os.linesep)
-            elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
-                cfg_data = salt.utils.stringutils.to_str(self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
-                                                           '--nosignature', '--nomtime', '--nolinkto',
-                                                           pkg_name)[0]).split(os.linesep)
+            if self.grains_core.os_data().get("os_family") == "Debian":
+                cfg_data = salt.utils.stringutils.to_str(
+                    self._syscall("dpkg", None, None, "--verify", pkg_name)[0]
+                ).split(os.linesep)
+            elif self.grains_core.os_data().get("os_family") in ["Suse", "redhat"]:
+                cfg_data = salt.utils.stringutils.to_str(
+                    self._syscall(
+                        "rpm",
+                        None,
+                        None,
+                        "-V",
+                        "--nodeps",
+                        "--nodigest",
+                        "--nosignature",
+                        "--nomtime",
+                        "--nolinkto",
+                        pkg_name,
+                    )[0]
+                ).split(os.linesep)
             for line in cfg_data:
                 line = line.strip()
                 if not line or line.find(" c ") < 0 or line.split(" ")[0].find("5") < 0:
@@ -182,12 +226,12 @@ class Inspector(EnvLoader):
         return f_data
 
     def _save_cfg_packages(self, data):
-        '''
+        """
         Save configuration packages. (NG)
 
         :param data:
         :return:
-        '''
+        """
         pkg_id = 0
         pkg_cfg_id = 0
         for pkg_name, pkg_configs in data.items():
@@ -207,17 +251,21 @@ class Inspector(EnvLoader):
             pkg_id += 1
 
     def _save_payload(self, files, directories, links):
-        '''
+        """
         Save payload (unmanaged files)
 
         :param files:
         :param directories:
         :param links:
         :return:
-        '''
+        """
 
         idx = 0
-        for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
+        for p_type, p_list in (
+            ("f", files),
+            ("d", directories),
+            ("l", links,),
+        ):
             for p_obj in p_list:
                 stats = os.stat(p_obj)
 
@@ -237,32 +285,35 @@ class Inspector(EnvLoader):
                 self.db.store(payload)
 
     def _get_managed_files(self):
-        '''
+        """
         Build a in-memory data of all managed files.
-        '''
-        if self.grains_core.os_data().get('os_family') == 'Debian':
+        """
+        if self.grains_core.os_data().get("os_family") == "Debian":
             return self.__get_managed_files_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get("os_family") in ["Suse", "redhat"]:
             return self.__get_managed_files_rpm()
 
         return list(), list(), list()
 
     def __get_managed_files_dpkg(self):
-        '''
+        """
         Get a list of all system files, belonging to the Debian package manager.
-        '''
+        """
         dirs = set()
         links = set()
         files = set()
 
-        for pkg_name in salt.utils.stringutils.to_str(self._syscall("dpkg-query", None, None,
-                                                        '-Wf', '${binary:Package}\\n')[0]).split(os.linesep):
+        for pkg_name in salt.utils.stringutils.to_str(
+            self._syscall("dpkg-query", None, None, "-Wf", "${binary:Package}\\n")[0]
+        ).split(os.linesep):
             pkg_name = pkg_name.strip()
             if not pkg_name:
                 continue
-            for resource in salt.utils.stringutils.to_str(self._syscall("dpkg", None, None, '-L', pkg_name)[0]).split(os.linesep):
+            for resource in salt.utils.stringutils.to_str(
+                self._syscall("dpkg", None, None, "-L", pkg_name)[0]
+            ).split(os.linesep):
                 resource = resource.strip()
-                if not resource or resource in ['/', './', '.']:
+                if not resource or resource in ["/", "./", "."]:
                     continue
                 if os.path.isdir(resource):
                     dirs.add(resource)
@@ -274,14 +325,16 @@ class Inspector(EnvLoader):
         return sorted(files), sorted(dirs), sorted(links)
 
     def __get_managed_files_rpm(self):
-        '''
+        """
         Get a list of all system files, belonging to the RedHat package manager.
-        '''
+        """
         dirs = set()
         links = set()
         files = set()
 
-        for line in salt.utils.stringutils.to_str(self._syscall("rpm", None, None, '-qlav')[0]).split(os.linesep):
+        for line in salt.utils.stringutils.to_str(
+            self._syscall("rpm", None, None, "-qlav")[0]
+        ).split(os.linesep):
             line = line.strip()
             if not line:
                 continue
@@ -296,9 +349,9 @@ class Inspector(EnvLoader):
         return sorted(files), sorted(dirs), sorted(links)
 
     def _get_all_files(self, path, *exclude):
-        '''
+        """
         Walk implementation. Version in python 2.x and 3.x works differently.
-        '''
+        """
         files = list()
         dirs = list()
         links = list()
@@ -327,20 +380,22 @@ class Inspector(EnvLoader):
         return sorted(files), sorted(dirs), sorted(links)
 
     def _get_unmanaged_files(self, managed, system_all):
-        '''
+        """
         Get the intersection between all files and managed files.
-        '''
+        """
         m_files, m_dirs, m_links = managed
         s_files, s_dirs, s_links = system_all
 
-        return (sorted(list(set(s_files).difference(m_files))),
-                sorted(list(set(s_dirs).difference(m_dirs))),
-                sorted(list(set(s_links).difference(m_links))))
+        return (
+            sorted(list(set(s_files).difference(m_files))),
+            sorted(list(set(s_dirs).difference(m_dirs))),
+            sorted(list(set(s_links).difference(m_links))),
+        )
 
     def _scan_payload(self):
-        '''
+        """
         Scan the system.
-        '''
+        """
         # Get ignored points
         allowed = list()
         for allowed_dir in self.db.get(AllowedDir):
@@ -366,12 +421,14 @@ class Inspector(EnvLoader):
             all_dirs.extend(e_dirs)
             all_links.extend(e_links)
 
-        return self._get_unmanaged_files(self._get_managed_files(), (all_files, all_dirs, all_links,))
+        return self._get_unmanaged_files(
+            self._get_managed_files(), (all_files, all_dirs, all_links,)
+        )
 
     def _prepare_full_scan(self, **kwargs):
-        '''
+        """
         Prepare full system scan by setting up the database etc.
-        '''
+        """
         self.db.open(new=True)
         # Add ignored filesystems
         ignored_fs = set()
@@ -380,11 +437,11 @@ class Inspector(EnvLoader):
         for device, data in mounts.items():
             if device in self.IGNORE_MOUNTS:
                 for mpt in data:
-                    ignored_fs.add(mpt['mount_point'])
+                    ignored_fs.add(mpt["mount_point"])
                 continue
             for mpt in data:
-                if mpt['type'] in self.IGNORE_FS_TYPES:
-                    ignored_fs.add(mpt['mount_point'])
+                if mpt["type"] in self.IGNORE_FS_TYPES:
+                    ignored_fs.add(mpt["mount_point"])
 
         # Remove leafs of ignored filesystems
         ignored_all = list()
@@ -412,60 +469,71 @@ class Inspector(EnvLoader):
         return ignored_all
 
     def _init_env(self):
-        '''
+        """
         Initialize some Salt environment.
-        '''
+        """
         from salt.config import minion_config
         from salt.grains import core as g_core
+
         g_core.__opts__ = minion_config(self.DEFAULT_MINION_CONFIG_PATH)
         self.grains_core = g_core
 
     def snapshot(self, mode):
-        '''
+        """
         Take a snapshot of the system.
-        '''
+        """
         self._init_env()
 
         self._save_cfg_packages(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
         self._save_payload(*self._scan_payload())
 
     def request_snapshot(self, mode, priority=19, **kwargs):
-        '''
+        """
         Take a snapshot of the system.
-        '''
+        """
         if mode not in self.MODE:
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
         if is_alive(self.pidfile):
-            raise CommandExecutionError('Inspection already in progress.')
+            raise CommandExecutionError("Inspection already in progress.")
 
         self._prepare_full_scan(**kwargs)
 
-        os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
-            priority, __file__, os.path.dirname(self.pidfile), os.path.dirname(self.dbfile), mode))
+        os.system(
+            "nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
+                priority,
+                __file__,
+                os.path.dirname(self.pidfile),
+                os.path.dirname(self.dbfile),
+                mode,
+            )
+        )
 
-    def export(self, description, local=False, path='/tmp', format='qcow2'):
-        '''
+    def export(self, description, local=False, path="/tmp", format="qcow2"):
+        """
         Export description for Kiwi.
 
         :param local:
         :param path:
         :return:
-        '''
+        """
         kiwiproc.__salt__ = __salt__
-        return kiwiproc.KiwiExporter(grains=__grains__,
-                                     format=format).load(**description).export('something')
+        return (
+            kiwiproc.KiwiExporter(grains=__grains__, format=format)
+            .load(**description)
+            .export("something")
+        )
 
-    def build(self, format='qcow2', path='/tmp'):
-        '''
+    def build(self, format="qcow2", path="/tmp"):
+        """
         Build an image using Kiwi.
 
         :param format:
         :param path:
         :return:
-        '''
+        """
         if kiwi is None:
-            msg = 'Unable to build the image due to the missing dependencies: Kiwi module is not available.'
+            msg = "Unable to build the image due to the missing dependencies: Kiwi module is not available."
             log.error(msg)
             raise CommandExecutionError(msg)
 
@@ -473,32 +541,32 @@ class Inspector(EnvLoader):
 
 
 def is_alive(pidfile):
-    '''
+    """
     Check if PID is still alive.
-    '''
+    """
     try:
         with salt.utils.files.fopen(pidfile) as fp_:
             os.kill(int(fp_.read().strip()), 0)
         return True
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         if os.access(pidfile, os.W_OK) and os.path.isfile(pidfile):
             os.unlink(pidfile)
         return False
 
 
 def main(dbfile, pidfile, mode):
-    '''
+    """
     Main analyzer routine.
-    '''
+    """
     Inspector(dbfile, pidfile).reuse_snapshot().snapshot(mode)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("This module is not intended to use directly!", file=sys.stderr)
         sys.exit(1)
 
-    pidfile, dbfile, mode = sys.argv[1:]
+    pidfile, dbfile, mode = sys.argv[1:]  # pylint: disable=unbalanced-tuple-unpacking
     if is_alive(pidfile):
         sys.exit(1)
 
@@ -519,8 +587,10 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             salt.utils.crypt.reinit_crypto()
-            with salt.utils.files.fopen(os.path.join(pidfile, EnvLoader.PID_FILE), 'w') as fp_:
-                fp_.write('{0}\n'.format(pid))
+            with salt.utils.files.fopen(
+                os.path.join(pidfile, EnvLoader.PID_FILE), "w"
+            ) as fp_:
+                fp_.write("{0}\n".format(pid))
             sys.exit(0)
     except OSError as ex:
         sys.exit(1)

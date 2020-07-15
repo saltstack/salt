@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for interop with the Splunk API
 
 .. versionadded:: 2015.5.0
@@ -18,71 +18,77 @@ Module for interop with the Splunk API
             password: abc123
             host: example.splunkcloud.com
             port: 8080
-'''
+"""
 
 # Import python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import urllib
 
+# Import salt libs
+import salt.utils.yaml
+
 # Import third party libs
 from salt.ext import six
+from salt.utils.odict import OrderedDict
+
 HAS_LIBS = False
 try:
     import splunklib.client
     import requests
+
     HAS_LIBS = True
 except ImportError:
     pass
 
-# Import salt libs
-import salt.utils.yaml
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
-__func_alias__ = {
-    'list_': 'list'
-}
+__func_alias__ = {"list_": "list"}
 
-__virtualname__ = 'splunk_search'
+__virtualname__ = "splunk_search"
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if splunk is installed on this minion.
-    '''
+    """
     if HAS_LIBS:
         return __virtualname__
-    return (False, 'The splunk_search execution module failed to load: '
-        'requires both the requests and the splunk-sdk python library to be installed.')
+    return (
+        False,
+        "The splunk_search execution module failed to load: "
+        "requires both the requests and the splunk-sdk python library to be installed.",
+    )
 
 
 def _get_splunk(profile):
-    '''
+    """
     Return the splunk client, cached into __context__ for performance
-    '''
-    config = __salt__['config.option'](profile)
+    """
+    config = __salt__["config.option"](profile)
     key = "splunk_search.{0}:{1}:{2}:{3}".format(
-        config.get('host'),
-        config.get('port'),
-        config.get('username'),
-        config.get('password')
+        config.get("host"),
+        config.get("port"),
+        config.get("username"),
+        config.get("password"),
     )
     if key not in __context__:
         __context__[key] = splunklib.client.connect(
-            host=config.get('host'),
-            port=config.get('port'),
-            username=config.get('username'),
-            password=config.get('password'))
+            host=config.get("host"),
+            port=config.get("port"),
+            username=config.get("username"),
+            password=config.get("password"),
+        )
     return __context__[key]
 
 
 def _get_splunk_search_props(search):
-    '''
+    """
     Get splunk search properties from an object
-    '''
+    """
     props = search.content
     props["app"] = search.access.app
     props["sharing"] = search.access.sharing
@@ -90,13 +96,13 @@ def _get_splunk_search_props(search):
 
 
 def get(name, profile="splunk"):
-    '''
+    """
     Get a splunk search
 
     CLI Example:
 
         splunk_search.get 'my search name'
-    '''
+    """
     client = _get_splunk(profile)
     search = None
     # uglyness of splunk lib
@@ -108,13 +114,13 @@ def get(name, profile="splunk"):
 
 
 def update(name, profile="splunk", **kwargs):
-    '''
+    """
     Update a splunk search
 
     CLI Example:
 
         splunk_search.update 'my search name' sharing=app
-    '''
+    """
     client = _get_splunk(profile)
     search = client.saved_searches[name]
     props = _get_splunk_search_props(search)
@@ -132,9 +138,7 @@ def update(name, profile="splunk", **kwargs):
         if old_value != new_value:
             update_set[key] = new_value
             update_needed = True
-            diffs.append("{0}: '{1}' => '{2}'".format(
-                key, old_value, new_value
-            ))
+            diffs.append("{0}: '{1}' => '{2}'".format(key, old_value, new_value))
     if update_needed:
         search.update(**update_set).refresh()
         return update_set, diffs
@@ -142,22 +146,22 @@ def update(name, profile="splunk", **kwargs):
 
 
 def create(name, profile="splunk", **kwargs):
-    '''
+    """
     Create a splunk search
 
     CLI Example:
 
         splunk_search.create 'my search name' search='error msg'
-    '''
+    """
     client = _get_splunk(profile)
     search = client.saved_searches.create(name, **kwargs)
 
     # use the REST API to set owner and permissions
     # this is hard-coded for now; all managed searches are app scope and
     # readable by all
-    config = __salt__['config.option'](profile)
-    url = "https://{0}:{1}".format(config.get('host'), config.get('port'))
-    auth = (config.get('username'), config.get('password'))
+    config = __salt__["config.option"](profile)
+    url = "https://{0}:{1}".format(config.get("host"), config.get("port"))
+    auth = (config.get("username"), config.get("password"))
     data = {
         "owner": config.get("username"),
         "sharing": "app",
@@ -171,13 +175,13 @@ def create(name, profile="splunk", **kwargs):
 
 
 def delete(name, profile="splunk"):
-    '''
+    """
     Delete a splunk search
 
     CLI Example:
 
        splunk_search.delete 'my search name'
-    '''
+    """
     client = _get_splunk(profile)
     try:
         client.saved_searches.delete(name)
@@ -187,20 +191,26 @@ def delete(name, profile="splunk"):
 
 
 def list_(profile="splunk"):
-    '''
+    """
     List splunk searches (names only)
 
     CLI Example:
         splunk_search.list
-    '''
+    """
     client = _get_splunk(profile)
-    searches = [x['name'] for x in client.saved_searches]
+    searches = [x["name"] for x in client.saved_searches]
     return searches
 
 
-def list_all(prefix=None, app=None, owner=None, description_contains=None,
-             name_not_contains=None, profile="splunk"):
-    '''
+def list_all(
+    prefix=None,
+    app=None,
+    owner=None,
+    description_contains=None,
+    name_not_contains=None,
+    profile="splunk",
+):
+    """
     Get all splunk search details. Produces results that can be used to create
     an sls file.
 
@@ -236,7 +246,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
             6.  Get all searches again, verify no changes
                 $ salt-call splunk_search.list_all --out=txt | sed "s/local: //" > final_searches.sls
                 $ diff final_searches.sls managed_searches.sls
-    '''
+    """
     client = _get_splunk(profile)
 
     # splunklib doesn't provide the default settings for saved searches.
@@ -246,7 +256,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     name = "splunk_search.list_all get defaults"
     try:
         client.saved_searches.delete(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
     search = client.saved_searches.create(name, search="nothing")
     defaults = dict(search.content)
@@ -254,14 +264,16 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
 
     # stuff that splunk returns but that you should not attempt to set.
     # cf http://dev.splunk.com/view/python-sdk/SP-CAAAEK2
-    readonly_keys = ("triggered_alert_count",
-                     "action.email",
-                     "action.populate_lookup",
-                     "action.rss",
-                     "action.script",
-                     "action.summary_index",
-                     "qualifiedSearch",
-                     "next_scheduled_time")
+    readonly_keys = (
+        "triggered_alert_count",
+        "action.email",
+        "action.populate_lookup",
+        "action.rss",
+        "action.script",
+        "action.summary_index",
+        "qualifiedSearch",
+        "next_scheduled_time",
+    )
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
@@ -280,7 +292,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
         # put name in the OrderedDict first
         d = [{"name": name}]
         # add the rest of the splunk settings, ignoring any defaults
-        description = ''
+        description = ""
         for (k, v) in sorted(search.content.items()):
             if k in readonly_keys:
                 continue
@@ -291,7 +303,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
             if k in defaults and defaults[k] == v:
                 continue
             d.append({k: v})
-            if k == 'description':
+            if k == "description":
                 description = v
         if description_contains and description_contains not in description:
             continue

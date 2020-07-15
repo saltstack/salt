@@ -30,5 +30,6 @@ This section contains a list of the Python modules that are used to extend the v
     ../ref/serializers/all/index
     ../ref/states/all/index
     ../ref/thorium/all/index
+    ../ref/tokens/all/index
     ../ref/tops/all/index
     ../ref/wheel/all/index

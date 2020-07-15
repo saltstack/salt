@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
 =========================================================================================
 
@@ -7,7 +7,7 @@ NAPALM: Network Automation and Programmability Abstraction Layer with Multivendo
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -156,23 +156,26 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     For example, if the usual command is ``salt '*' net.arp``, you can use the
     following to connect using a different username instead:
     ``salt '*' net.arp username=my-alt-usr force_reconnect=True``.
-'''
+"""
 
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python lib
 import logging
-log = logging.getLogger(__file__)
+
+import salt.utils.napalm
 
 # Import Salt modules
 from salt.ext import six
-import salt.utils.napalm
+
+log = logging.getLogger(__file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # proxy properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ["napalm"]
 # proxy name
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -188,7 +191,8 @@ DETAILS = {}
 
 
 def __virtual__():
-    return salt.utils.napalm.virtual(__opts__, 'napalm', __file__)
+    return salt.utils.napalm.virtual(__opts__, "napalm", __file__)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -200,28 +204,29 @@ def __virtual__():
 
 
 def init(opts):
-    '''
+    """
     Opens the connection with the network device.
-    '''
+    """
     NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
-    DETAILS['initialized'] = True
+    DETAILS["initialized"] = True
     return True
 
 
 def alive(opts):
-    '''
+    """
     Return the connection status with the remote device.
 
     .. versionadded:: 2017.7.0
-    '''
+    """
     if salt.utils.napalm.not_always_alive(opts):
         return True  # don't force reconnection for not-always alive proxies
         # or regular minion
-    is_alive_ret = call('is_alive', **{})
-    if not is_alive_ret.get('result', False):
+    is_alive_ret = call("is_alive", **{})
+    if not is_alive_ret.get("result", False):
         log.debug(
-            '[%s] Unable to execute `is_alive`: %s',
-            opts.get('id'), is_alive_ret.get('comment')
+            "[%s] Unable to execute `is_alive`: %s",
+            opts.get("id"),
+            is_alive_ret.get("comment"),
         )
         # if `is_alive` is not implemented by the underneath driver,
         # will consider the connection to be still alive
@@ -229,74 +234,73 @@ def alive(opts):
         # NOTE: revisit this if IOS is still not stable
         #       and return False to force reconnection
         return True
-    flag = is_alive_ret.get('out', {}).get('is_alive', False)
-    log.debug('Is %s still alive? %s', opts.get('id'), 'Yes.' if flag else 'No.')
+    flag = is_alive_ret.get("out", {}).get("is_alive", False)
+    log.debug("Is %s still alive? %s", opts.get("id"), "Yes." if flag else "No.")
     return flag
 
 
 def ping():
-    '''
+    """
     Connection open successfully?
-    '''
-    return NETWORK_DEVICE.get('UP', False)
+    """
+    return NETWORK_DEVICE.get("UP", False)
 
 
 def initialized():
-    '''
+    """
     Connection finished initializing?
-    '''
-    return DETAILS.get('initialized', False)
+    """
+    return DETAILS.get("initialized", False)
 
 
 def get_device():
-    '''
+    """
     Returns the network device object.
-    '''
+    """
     return NETWORK_DEVICE
 
 
 def get_grains():
-    '''
+    """
     Retrieve facts from the network device.
-    '''
-    return call('get_facts', **{})
+    """
+    return call("get_facts", **{})
 
 
 def grains_refresh():
-    '''
+    """
     Refresh the grains.
-    '''
-    DETAILS['grains_cache'] = {}
+    """
+    DETAILS["grains_cache"] = {}
     return get_grains()
 
 
 def fns():
-    '''
+    """
     Method called by NAPALM grains module.
-    '''
-    return {
-        'details': 'Network device grains.'
-    }
+    """
+    return {"details": "Network device grains."}
 
 
 def shutdown(opts):
-    '''
+    """
     Closes connection with the device.
-    '''
+    """
     try:
-        if not NETWORK_DEVICE.get('UP', False):
-            raise Exception('not connected!')
-        NETWORK_DEVICE.get('DRIVER').close()
-    except Exception as error:
-        port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
+        if not NETWORK_DEVICE.get("UP", False):
+            raise Exception("not connected!")
+        NETWORK_DEVICE.get("DRIVER").close()
+    except Exception as error:  # pylint: disable=broad-except
+        port = NETWORK_DEVICE.get("OPTIONAL_ARGS", {}).get("port")
         log.error(
-            'Cannot close connection with %s%s! Please check error: %s',
-            NETWORK_DEVICE.get('HOSTNAME', '[unknown hostname]'),
-            ':{0}'.format(port) if port else '',
-            error
+            "Cannot close connection with %s%s! Please check error: %s",
+            NETWORK_DEVICE.get("HOSTNAME", "[unknown hostname]"),
+            ":{0}".format(port) if port else "",
+            error,
         )
 
     return True
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Callable functions
@@ -304,7 +308,7 @@ def shutdown(opts):
 
 
 def call(method, *args, **kwargs):
-    '''
+    """
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
 
@@ -335,7 +339,7 @@ def call(method, *args, **kwargs):
                                         'show chassis fan'
                                     ]
                                  })
-    '''
+    """
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
     for karg, warg in six.iteritems(kwargs_copy):
