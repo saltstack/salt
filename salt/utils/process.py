@@ -11,6 +11,7 @@ import copy
 import errno
 import functools
 import io
+import json
 import logging
 import multiprocessing
 import multiprocessing.util
@@ -127,7 +128,7 @@ def dup2(file1, file2):
         try:
             fno1 = file1.fileno()
         except io.UnsupportedOperation:
-            log.warn("Unsupported operation on file: %r", file1)
+            log.warning("Unsupported operation on file: %r", file1)
             return
     if isinstance(file2, int):
         fno2 = file2
@@ -135,7 +136,7 @@ def dup2(file1, file2):
         try:
             fno2 = file2.fileno()
         except io.UnsupportedOperation:
-            log.warn("Unsupported operation on file: %r", file2)
+            log.warning("Unsupported operation on file: %r", file2)
             return
     os.dup2(fno1, fno2)
 
@@ -195,71 +196,113 @@ def notify_systemd():
             pass
 
 
-def set_pidfile(pidfile, user):
+def get_process_info(pid=None):
     """
-    Save the pidfile
+    Gets basic info about a process.
+    pid: None, or int: None will get the current process pid
+    Return: None or Dict
     """
-    pdir = os.path.dirname(pidfile)
-    if not os.path.isdir(pdir) and pdir:
-        os.makedirs(pdir)
-    try:
-        with salt.utils.files.fopen(pidfile, "w+") as ofile:
-            ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
-    except IOError:
-        pass
-
-    log.debug("Created pidfile: %s", pidfile)
-    if salt.utils.platform.is_windows():
-        return True
-
-    import pwd  # after confirming not running Windows
-
-    # import grp
-    try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
-        gid = pwnam[3]
-        # groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
-    except (KeyError, IndexError):
-        sys.stderr.write(
-            "Failed to set the pid to user: {0}. The user is not "
-            "available.\n".format(user)
-        )
-        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
-
-    if os.getuid() == uid:
-        # The current user already owns the pidfile. Return!
+    if pid is None:
+        pid = os.getpid()
+    elif not psutil.pid_exists(pid):
         return
 
+    raw_process_info = psutil.Process(pid)
+
+    # pid_exists can have false positives
+    # for example Windows reserves PID 5 in a hack way
+    # another reasons is the the process requires kernel permissions
     try:
-        os.chown(pidfile, uid, gid)
-    except OSError as err:
-        msg = "Failed to set the ownership of PID file {0} to user {1}.".format(
-            pidfile, user
+        raw_process_info.status()
+    except psutil.NoSuchProcess:
+        return None
+
+    return {
+        "pid": raw_process_info.pid,
+        "name": raw_process_info.name(),
+        "start_time": raw_process_info.create_time(),
+    }
+
+
+def claim_mantle_of_responsibility(file_name):
+    """
+    Checks that no other live processes has this responsibility.
+    If claiming the mantle of responsibility was successful True will be returned.
+    file_name: str
+    Return: bool
+    """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
+                file_name
+            )
         )
-        log.debug("%s Traceback follows:", msg, exc_info=True)
-        sys.stderr.write("{0}\n".format(msg))
-        sys.exit(err.errno)
-    log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
+        return True
 
+    # add file directory if missing
+    file_directory_name = os.path.dirname(file_name)
+    if not os.path.isdir(file_directory_name) and file_directory_name:
+        os.makedirs(file_directory_name)
 
-def check_pidfile(pidfile):
-    """
-    Determine if a pidfile has been written out
-    """
-    return os.path.isfile(pidfile)
-
-
-def get_pidfile(pidfile):
-    """
-    Return the pid from a pidfile as an integer
-    """
+    # get process info from file
+    file_process_info = None
     try:
-        with salt.utils.files.fopen(pidfile) as pdf:
-            pid = pdf.read().strip()
-        return int(pid)
-    except (OSError, IOError, TypeError, ValueError):
-        return -1
+        with salt.utils.files.fopen(file_name, "r") as file:
+            file_process_info = json.load(file)
+    except json.decoder.JSONDecodeError:
+        log.error("pidfile: {} is corrupted".format(file_name))
+    except FileNotFoundError:
+        log.info("pidfile: {} not found".format(file_name))
+
+    this_process_info = get_process_info()
+
+    # check if this process all ready has the responsibility
+    if file_process_info == this_process_info:
+        return True
+
+    # check if process is still alive
+    if file_process_info is not None and file_process_info == get_process_info(
+        file_process_info["pid"]
+    ):
+        return False
+
+    # process can take the mantle of responsibility
+    with salt.utils.files.fopen(file_name, "w") as file:
+        json.dump(this_process_info, file)
+    return True
+
+
+def check_mantle_of_responsibility(file_name):
+    """
+    Sees who has the mantle of responsibility
+    file_name: str
+    Return: None or int
+    """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
+                file_name
+            )
+        )
+        return
+
+    # get process info from file
+    try:
+        with salt.utils.files.fopen(file_name, "r") as file:
+            file_process_info = json.load(file)
+    except json.decoder.JSONDecodeError:
+        log.error("pidfile: {} is corrupted".format(file_name))
+        return
+    except FileNotFoundError:
+        log.info("pidfile: {} not found".format(file_name))
+        return
+
+    if file_process_info == get_process_info(file_process_info["pid"]):
+        return file_process_info["pid"]
 
 
 def clean_proc(proc, wait_for_kill=10):
@@ -547,7 +590,7 @@ class ProcessManager(object):
                     yield gen.sleep(10)
                 else:
                     time.sleep(10)
-                if len(self._process_map) == 0:
+                if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
@@ -847,14 +890,14 @@ class SignalHandlingProcess(Process):
                             if child.is_running():
                                 child.terminate()
                         except psutil.NoSuchProcess:
-                            log.warn(
+                            log.warning(
                                 "Unable to kill child of process %d, it does "
                                 "not exist. My pid is %d",
                                 self.pid,
                                 os.getpid(),
                             )
             except psutil.NoSuchProcess:
-                log.warn(
+                log.warning(
                     "Unable to kill children of process %d, it does not exist."
                     "My pid is %d",
                     self.pid,

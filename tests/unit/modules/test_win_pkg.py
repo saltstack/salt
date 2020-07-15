@@ -13,6 +13,7 @@ import salt.modules.win_pkg as win_pkg
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
+from salt.exceptions import MinionError
 
 # Import 3rd Party Libs
 from salt.ext import six
@@ -283,3 +284,209 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             self.assertFalse(
                 "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
             )
+
+    def test_pkg_install_minion_error_https(self):
+        """
+        Test pkg.install when cp.cache_file encounters a minion error
+        """
+        ret__get_package_info = {
+            "3.03": {
+                "uninstaller": "%program.exe",
+                "reboot": False,
+                "msiexec": False,
+                "installer": "https://repo.test.com/runme.exe",
+                "uninstall_flags": "/S",
+                "locale": "en_US",
+                "install_flags": "/s",
+                "full_name": "Firebox 3.03 (x86 en-US)",
+            }
+        }
+
+        err_msg = "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+        mock_none = MagicMock(return_value=None)
+        mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
+        mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
+        with patch.object(
+            salt.utils.data, "is_true", MagicMock(return_value=True)
+        ), patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+        ), patch.dict(
+            win_pkg.__salt__,
+            {
+                "pkg_resource.parse_targets": mock_parse,
+                "cp.is_cached": mock_none,
+                "cp.cache_file": mock_minion_error,
+            },
+        ):
+            ret = win_pkg.install(name="firebox", version="3.03",)
+            expected = (
+                "Failed to cache https://repo.test.com/runme.exe\n"
+                "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+            )
+
+            self.assertEqual(ret, expected)
+
+    def test_pkg_install_minion_error_salt(self):
+        """
+        Test pkg.install when cp.cache_file encounters a minion error
+        """
+        ret__get_package_info = {
+            "3.03": {
+                "uninstaller": "%program.exe",
+                "reboot": False,
+                "msiexec": False,
+                "installer": "salt://software/runme.exe",
+                "uninstall_flags": "/S",
+                "locale": "en_US",
+                "install_flags": "/s",
+                "full_name": "Firebox 3.03 (x86 en-US)",
+            }
+        }
+
+        err_msg = "Error: [Errno 1] failed reading salt://software/runme.exe"
+        mock_none = MagicMock(return_value=None)
+        mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
+        mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
+        with patch.object(
+            salt.utils.data, "is_true", MagicMock(return_value=True)
+        ), patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+        ), patch.dict(
+            win_pkg.__salt__,
+            {
+                "pkg_resource.parse_targets": mock_parse,
+                "cp.is_cached": mock_none,
+                "cp.cache_file": mock_minion_error,
+            },
+        ):
+            ret = win_pkg.install(name="firebox", version="3.03",)
+            expected = (
+                "Failed to cache salt://software/runme.exe\n"
+                "Error: [Errno 1] failed reading salt://software/runme.exe"
+            )
+
+            self.assertEqual(ret, expected)
+
+    def test_pkg_install_minion_error_salt_cache_dir(self):
+        """
+        Test pkg.install when cp.cache_dir encounters a minion error
+        """
+        ret__get_package_info = {
+            "3.03": {
+                "uninstaller": "%program.exe",
+                "reboot": False,
+                "msiexec": False,
+                "installer": "salt://software/runme.exe",
+                "cache_dir": True,
+                "uninstall_flags": "/S",
+                "locale": "en_US",
+                "install_flags": "/s",
+                "full_name": "Firebox 3.03 (x86 en-US)",
+            }
+        }
+
+        err_msg = "Error: [Errno 1] failed reading salt://software"
+        mock_none = MagicMock(return_value=None)
+        mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
+        mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
+        with patch.object(
+            salt.utils.data, "is_true", MagicMock(return_value=True)
+        ), patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+        ), patch.dict(
+            win_pkg.__salt__, {"cp.cache_dir": mock_minion_error},
+        ):
+            ret = win_pkg.install(name="firebox", version="3.03",)
+            expected = (
+                "Failed to cache salt://software\n"
+                "Error: [Errno 1] failed reading salt://software"
+            )
+
+            self.assertEqual(ret, expected)
+
+    def test_pkg_remove_minion_error_salt_cache_dir(self):
+        """
+        Test pkg.remove when cp.cache_dir encounters a minion error
+        """
+        ret__get_package_info = {
+            "3.03": {
+                "uninstaller": "salt://software/runme.exe",
+                "reboot": False,
+                "msiexec": False,
+                "installer": "salt://software/runme.exe",
+                "cache_dir": True,
+                "uninstall_flags": "/U /S",
+                "locale": "en_US",
+                "install_flags": "/s",
+                "full_name": "Firebox 3.03 (x86 en-US)",
+            }
+        }
+
+        err_msg = "Error: [Errno 1] failed reading salt://software"
+        mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
+        mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
+        se_list_pkgs = {"firebox": ["3.03"]}
+        with patch.object(
+            win_pkg, "list_pkgs", return_value=se_list_pkgs
+        ), patch.object(
+            salt.utils.data, "is_true", MagicMock(return_value=True)
+        ), patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+        ), patch.dict(
+            win_pkg.__salt__,
+            {
+                "pkg_resource.parse_targets": mock_parse,
+                "cp.cache_dir": mock_minion_error,
+            },
+        ):
+            ret = win_pkg.remove(name="firebox")
+            expected = (
+                "Failed to cache salt://software\n"
+                "Error: [Errno 1] failed reading salt://software"
+            )
+
+            self.assertEqual(ret, expected)
+
+    def test_pkg_remove_minion_error_salt(self):
+        """
+        Test pkg.remove when cp.cache_file encounters a minion error
+        """
+        ret__get_package_info = {
+            "3.03": {
+                "uninstaller": "salt://software/runme.exe",
+                "reboot": False,
+                "msiexec": False,
+                "installer": "salt://software/runme.exe",
+                "uninstall_flags": "/U /S",
+                "locale": "en_US",
+                "install_flags": "/s",
+                "full_name": "Firebox 3.03 (x86 en-US)",
+            }
+        }
+
+        err_msg = "Error: [Errno 1] failed reading salt://software/runme.exe"
+        mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
+        mock_none = MagicMock(return_value=None)
+        mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
+        se_list_pkgs = {"firebox": ["3.03"]}
+        with patch.object(
+            win_pkg, "list_pkgs", return_value=se_list_pkgs
+        ), patch.object(
+            salt.utils.data, "is_true", MagicMock(return_value=True)
+        ), patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+        ), patch.dict(
+            win_pkg.__salt__,
+            {
+                "pkg_resource.parse_targets": mock_parse,
+                "cp.is_cached": mock_none,
+                "cp.cache_file": mock_minion_error,
+            },
+        ):
+            ret = win_pkg.remove(name="firebox")
+            expected = (
+                "Failed to cache salt://software/runme.exe\n"
+                "Error: [Errno 1] failed reading salt://software/runme.exe"
+            )
+
+            self.assertEqual(ret, expected)

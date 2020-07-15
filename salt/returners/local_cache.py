@@ -246,7 +246,7 @@ def save_minions(jid, minions, syndic_id=None):
     """
     Save/update the serialized list of minions for a given job
     """
-    # Ensure we have a list for Python 3 compatability
+    # Ensure we have a list for Python 3 compatibility
     minions = list(minions)
 
     log.debug(

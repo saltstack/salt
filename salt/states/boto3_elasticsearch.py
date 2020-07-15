@@ -88,7 +88,7 @@ def _check_return_value(ret):
     """
     Helper function to check if the 'result' key of the return value has been
     properly set. This is to detect unexpected code-paths that would otherwise
-    return a 'success'-y value but not actually be succesful.
+    return a 'success'-y value but not actually be successful.
 
     :param dict ret: The returned value of a state function.
     """

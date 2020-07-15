@@ -1,0 +1,2 @@
+Redact passwords in the return when setting credentials using
+``win_iis.container_setting``

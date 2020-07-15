@@ -96,7 +96,7 @@ def _parse_options(entry, options, include_unset=True):
     """
     log_cfg = {}
     options = shlex.split(options)
-    if len(options) == 0:
+    if not options:
         return None
 
     ## identifier is entry or log?

@@ -2,13 +2,9 @@
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
-
-# Import Salt libs
 from salt import client
 from salt.exceptions import (
     EauthAuthenticationError,
@@ -16,8 +12,7 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-
-# Import Salt Testing libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -102,7 +97,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             },
         ):
             with patch("salt.client.LocalClient.cmd_cli") as cmd_cli_mock:
-                self.client.cmd_subset("*", "first.func", sub=1, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2"],
@@ -125,7 +120,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                         full_return=False,
                         ret="",
                     )
-                self.client.cmd_subset("*", "first.func", sub=10, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2", "minion1"],
@@ -150,7 +145,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                     )
 
                 ret = self.client.cmd_subset(
-                    "*", "first.func", sub=1, cli=True, full_return=True
+                    "*", "first.func", subset=1, cli=True, full_return=True
                 )
                 try:
                     cmd_cli_mock.assert_called_with(
@@ -210,6 +205,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                 )
 
     @skipIf(not salt.utils.platform.is_windows(), "Windows only test")
+    @slowTest
     def test_pub_win32(self):
         """
         Tests that the client raises a timeout error when using ZeroMQ's TCP

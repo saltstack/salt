@@ -2,22 +2,16 @@
 """
 Modules used to control the master itself
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.client.mixins
 import salt.config
 import salt.loader
 import salt.transport.client
 import salt.utils.error
 import salt.utils.zeromq
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 class WheelClient(
@@ -76,15 +70,14 @@ class WheelClient(
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface),
-            six.text_type(self.opts["ret_port"]),
+            salt.utils.zeromq.ip_bracket(interface), str(self.opts["ret_port"]),
         )
         with salt.transport.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)
 
-        if isinstance(ret, collections.Mapping):
+        if isinstance(ret, Mapping):
             if "error" in ret:
                 salt.utils.error.raise_error(**ret["error"])
 

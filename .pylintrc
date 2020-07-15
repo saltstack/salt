@@ -128,13 +128,15 @@ disable=R,
   import-outside-toplevel,
   deprecated-method,
   repr-flag-used-in-string,
-  keyword-arg-before-vararg
+  keyword-arg-before-vararg,
+  incompatible-py3-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=c-extension-no-member
+enable=c-extension-no-member,
+  literal-comparison
 
 
 [REPORTS]
@@ -680,8 +682,10 @@ allowed-3rd-party-modules=msgpack,
                           libcloud,
                           zmq,
                           pytest,
+                          setuptools,
                           pytestsalt,
-                          setuptools
+                          saltfactories,
+                          distro
 
 
 [EXCEPTIONS]

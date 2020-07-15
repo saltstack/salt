@@ -85,7 +85,7 @@ def managed(
     use_wheel: False
         Prefer wheel archives (requires pip >= 1.4).
 
-    python : None
+    python: None
         Python executable used to build the virtualenv
 
     user: None

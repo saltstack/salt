@@ -230,7 +230,7 @@ def version(*names, **kwargs):
 info = salt.utils.functools.alias_function(version, "info")
 
 
-def refresh_db(jail=None, chroot=None, root=None, force=False):
+def refresh_db(jail=None, chroot=None, root=None, force=False, **kwargs):
     """
     Refresh PACKAGESITE contents
 
@@ -1188,19 +1188,43 @@ def upgrade(*names, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.upgrade <package name> dryrun=True
+
+    fromrepo
+        In multi-repo mode, override the pkg.conf ordering and only attempt
+        to upgrade packages from the named repository.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade <package name> fromrepo=repo
+
+    fetchonly
+        Do not perform installation of packages, merely fetch
+        packages that should be upgraded and detect possible conflicts.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade <package name> fetchonly=True
     """
     jail = kwargs.pop("jail", None)
     chroot = kwargs.pop("chroot", None)
     root = kwargs.pop("root", None)
+    fromrepo = kwargs.pop("fromrepo", None)
     force = kwargs.pop("force", False)
     local = kwargs.pop("local", False)
     dryrun = kwargs.pop("dryrun", False)
+    fetchonly = kwargs.pop("fetchonly", False)
     pkgs = kwargs.pop("pkgs", [])
     opts = ""
     if force:
         opts += "f"
     if local:
         opts += "L"
+    if fetchonly:
+        opts += "F"
     if dryrun:
         opts += "n"
     if not dryrun:
@@ -1214,6 +1238,8 @@ def upgrade(*names, **kwargs):
         cmd.extend(names)
     if pkgs:
         cmd.extend(pkgs)
+    if fromrepo:
+        cmd.extend(["--repository", fromrepo])
 
     old = list_pkgs()
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
@@ -1884,7 +1910,7 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Version-lock packages
 
     .. note::
-        This function is provided primarily for compatibilty with some
+        This function is provided primarily for compatibility with some
         parts of :py:mod:`states.pkg <salt.states.pkg>`.
         Consider using Consider using :py:func:`pkg.lock <salt.modules.pkgng.lock>` instead. instead.
 
@@ -1948,7 +1974,7 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     Remove version locks
 
     .. note::
-        This function is provided primarily for compatibilty with some parts of
+        This function is provided primarily for compatibility with some parts of
         :py:mod:`states.pkg <salt.states.pkg>`.  Consider using
         :py:func:`pkg.unlock <salt.modules.pkgng.unlock>` instead.
 
@@ -2432,7 +2458,7 @@ def _parse_upgrade(stdout):
     return result
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     """
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem

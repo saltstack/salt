@@ -1,0 +1,1 @@
+Fixed permissions issue with certain pip/virtualenv states/modules when configured for non-root user.

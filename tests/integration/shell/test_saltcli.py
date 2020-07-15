@@ -20,6 +20,8 @@ import salt.utils.files
 import salt.utils.path
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
+from tests.support.helpers import slowTest
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class SaltTest(testprogram.TestProgramCase):
     """
 
     # pylint: disable=invalid-name
+    @slowTest
     def test_exit_status_unknown_argument(self):
         """
         Ensure correct exit status when an unknown argument is passed to salt-run.
@@ -49,6 +52,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
         # runner.shutdown() should be unnecessary since the start-up should fail
 
+    @slowTest
     def test_exit_status_correct_usage(self):
         """
         Ensure correct exit status when salt-run starts correctly.
@@ -118,6 +122,7 @@ class RetcodeTestCase(ShellCase):
         retcode = _run('test.echo "{foo: bar, success: False}"')
         assert retcode == self.error_status, retcode
 
+    @slowTest
     def test_zero_exit_code(self):
         """
         Test that a zero exit code is set when there are no errors and there is
@@ -129,6 +134,7 @@ class RetcodeTestCase(ShellCase):
         retcode = self._salt_call("test.ping")
         assert retcode == 0, retcode
 
+    @slowTest
     def test_context_retcode(self):
         """
         Test that a nonzero retcode set in the context dunder will cause the
@@ -165,6 +171,7 @@ class RetcodeTestCase(ShellCase):
         )
         assert retcode == self.state_compiler_error, retcode
 
+    @slowTest
     def test_salt_error(self):
         """
         Test that we return the expected retcode when a minion function raises
@@ -173,6 +180,7 @@ class RetcodeTestCase(ShellCase):
         self._test_error()
         self._test_error(salt_call=True)
 
+    @slowTest
     def test_missing_minion(self):
         """
         Test that a minion which doesn't respond results in a nonzeo exit code
@@ -187,7 +195,7 @@ class RetcodeTestCase(ShellCase):
                 fhw.write(fhr.read())
             retcode = self.run_script(
                 "salt",
-                "-c {0} -t 5 minion2 test.ping".format(self.config_dir),
+                "-c {0} -t 5 minion2 test.ping".format(RUNTIME_VARS.TMP_CONF_DIR),
                 with_retcode=True,
                 timeout=60,
             )[1]
