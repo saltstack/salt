@@ -21,7 +21,7 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -747,3 +747,49 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=True,
                 username="Darth Vader",
             )
+
+    def test_call_apt_dpkg_lock(self):
+        """
+        Call apt and ensure the dpkg locking is handled
+        :return:
+        """
+        cmd_side_effect = [
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "", "stdout": ""},
+        ]
+
+        cmd_mock = MagicMock(side_effect=cmd_side_effect)
+        cmd_call = (
+            call(
+                ["dpkg", "-l", "python"],
+                env={},
+                ignore_retcode=False,
+                output_loglevel="quiet",
+                python_shell=True,
+                username="Darth Vader",
+            ),
+        )
+        expected_calls = [cmd_call * 5]
+
+        with patch.dict(
+            aptpkg.__salt__,
+            {"cmd.run_all": cmd_mock, "config.get": MagicMock(return_value=False)},
+        ):
+            with patch("time.sleep", MagicMock()) as sleep_mock:
+                aptpkg._call_apt(
+                    ["dpkg", "-l", "python"],
+                    python_shell=True,
+                    output_loglevel="quiet",
+                    ignore_retcode=False,
+                    username="Darth Vader",
+                )  # pylint: disable=W0106
+
+                # We should sleep 4 times
+                self.assertEqual(sleep_mock.call_count, 4)
+
+                # We should attempt to call the cmd 5 times
+                self.assertEqual(cmd_mock.call_count, 5)
+                cmd_mock.has_calls(expected_calls)
