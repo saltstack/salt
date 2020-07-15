@@ -1,0 +1,1 @@
+When running scheduled jobs from a proxy minion with multiprocessing turned off (default) a recursive error occurs as __pub_fun_args is repeated over and over again in the kwargs element in the data dictionary.  Now we make a copy of data['kwargs'] instead of using a reference.

@@ -28,6 +28,7 @@ Function Get-Settings {
         # Prerequisite software
         $Prerequisites = @{
             "NSIS"             = "nsis-3.03-setup.exe"
+            "NSISPluginEnVar"  = "nsis-plugin-envar.zip"
             "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
             "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
             "VCppBuildTools"   = "visualcppbuildtools_full.exe"
