@@ -24,6 +24,7 @@ Changed
 Fixed
 -----
 
+- When running scheduled jobs from a proxy minion with multiprocessing turned off (default) a recursive error occurs as __pub_fun_args is repeated over and over again in the kwargs element in the data dictionary.  Now we make a copy of data['kwargs'] instead of using a reference. (#57941)
 - The `x509.certificate_managed` state no longer triggers a change because of sorting issues if the certificate being evaluated was previously generated under Python 2. (#56556)
 - Added support to lo ip alias in network.managed state by checking if lo inet data
   from network.interfaces contains label with the name of managed interface.
