@@ -1,0 +1,2 @@
+Fixes an issue with filesystems options ordering which kept already
+applied NFS fstab entries being updated.
