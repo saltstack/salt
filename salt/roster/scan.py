@@ -44,7 +44,7 @@ class RosterMatcher(object):
         Return ip addrs based on netmask, sitting in the "glob" spot because
         it is the default
         """
-        addrs = ()
+        addrs = []
         ret = {}
         ports = __opts__["ssh_scan_ports"]
         if not isinstance(ports, list):
@@ -56,25 +56,25 @@ class RosterMatcher(object):
             tgts = [self.tgt]
         for tgt in tgts:
             try:
-                addrs = [ipaddress.ip_address(tgt)]
+                addrs.append(ipaddress.ip_address(tgt))
             except ValueError:
                 try:
-                    addrs = ipaddress.ip_network(tgt).hosts()
+                    addrs.extend(ipaddress.ip_network(tgt).hosts())
                 except ValueError:
                     pass
-            for addr in addrs:
-                addr = six.text_type(addr)
-                ret[addr] = copy.deepcopy(__opts__.get("roster_defaults", {}))
-                log.trace("Scanning host: %s", addr)
-                for port in ports:
-                    log.trace("Scanning port: %s", port)
-                    try:
-                        sock = salt.utils.network.get_socket(addr, socket.SOCK_STREAM)
-                        sock.settimeout(float(__opts__["ssh_scan_timeout"]))
-                        sock.connect((addr, port))
-                        sock.shutdown(socket.SHUT_RDWR)
-                        sock.close()
-                        ret[addr].update({"host": addr, "port": port})
-                    except socket.error:
-                        pass
+        for addr in addrs:
+            addr = six.text_type(addr)
+            ret[addr] = copy.deepcopy(__opts__.get("roster_defaults", {}))
+            log.trace("Scanning host: %s", addr)
+            for port in ports:
+                log.trace("Scanning port: %s", port)
+                try:
+                    sock = salt.utils.network.get_socket(addr, socket.SOCK_STREAM)
+                    sock.settimeout(float(__opts__["ssh_scan_timeout"]))
+                    sock.connect((addr, port))
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
+                    ret[addr].update({"host": addr, "port": port})
+                except socket.error:
+                    pass
         return ret
