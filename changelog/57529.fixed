@@ -1,3 +1,0 @@
-Improves performance. Profiling `test.ping` on Windows shows that 13 of 17 
-seconds are wasted when the esxi grain loads vsphere before noting that
-the OS is not a esxi host.
