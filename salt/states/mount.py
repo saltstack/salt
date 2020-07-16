@@ -344,6 +344,8 @@ def mounted(
                 device_list.append(uuid_device)
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
+            if opts:
+                opts.sort()
 
                 mount_invisible_options = [
                     "_netdev",
