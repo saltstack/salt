@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Send a message to PushOver
+Send a message to Pushover
 ==========================
 
-This state is useful for sending messages to PushOver during state runs.
+This state is useful for sending messages to Pushover during state runs.
 
 .. versionadded:: 2015.5.0
 
@@ -13,7 +13,7 @@ This state is useful for sending messages to PushOver during state runs.
       pushover.post_message:
         - user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         - token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        - title: Salt Returner
+        - title: Salt State message
         - device: phone
         - priority: -1
         - expire: 3600
@@ -21,6 +21,7 @@ This state is useful for sending messages to PushOver during state runs.
         - message: 'This state was executed successfully.'
 
 The api key can be specified in the master or minion configuration like below:
+
 .. code-block:: yaml
 
     pushover:
@@ -55,7 +56,7 @@ def post_message(
     token=None,
 ):
     """
-    Send a message to a PushOver channel.
+    Send a message to a Pushover channel.
 
     .. code-block:: yaml
 
@@ -63,7 +64,7 @@ def post_message(
           pushover.post_message:
             - user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             - token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            - title: Salt Returner
+            - title: Salt State message
             - device: phone
             - priority: -1
             - expire: 3600
@@ -79,7 +80,7 @@ def post_message(
         or email address.
 
     message
-        The message that is to be sent to the PushOver channel.
+        The message that is to be sent to the Pushover channel.
 
     The following parameters are optional:
 
@@ -99,25 +100,25 @@ def post_message(
         The message should be resent this many times.
 
     token
-        The token for PushOver to use for authentication,
+        The token for Pushover to use for authentication,
         if not specified in the configuration options of master or minion.
 
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "The following message is to be sent to PushOver: {0}".format(
+        ret["comment"] = "The following message is to be sent to Pushover: {0}".format(
             message
         )
         ret["result"] = None
         return ret
 
     if not user:
-        ret["comment"] = "PushOver user is missing: {0}".format(user)
+        ret["comment"] = "Pushover user is missing: {0}".format(user)
         return ret
 
     if not message:
-        ret["comment"] = "PushOver message is missing: {0}".format(message)
+        ret["comment"] = "Pushover message is missing: {0}".format(message)
         return ret
 
     result = __salt__["pushover.post_message"](

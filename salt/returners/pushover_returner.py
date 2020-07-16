@@ -27,7 +27,7 @@ the default location::
     alternative.pushover.expire
     alternative.pushover.retry
 
-PushOver settings may also be configured as::
+Pushover settings may also be configured as::
 
     pushover:
         user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -58,7 +58,7 @@ PushOver settings may also be configured as::
         user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         profile: pushover_profile
 
-  To use the PushOver returner, append '--return pushover' to the salt command. ex:
+  To use the Pushover returner, append '--return pushover' to the salt command. ex:
 
   .. code-block:: bash
 
@@ -170,12 +170,12 @@ def _post_message(
     """
     Send a message to a Pushover user or group.
     :param user:        The user or group to send to, must be key of user or group not email address.
-    :param message:     The message to send to the PushOver user or group.
+    :param message:     The message to send to the Pushover user or group.
     :param title:       Specify who the message is from.
     :param priority     The priority of the message, defaults to 0.
-    :param api_version: The PushOver API version, if not specified in the configuration.
+    :param api_version: The Pushover API version, if not specified in the configuration.
     :param notify:      Whether to notify the room, default: False.
-    :param token:       The PushOver token, if not specified in the configuration.
+    :param token:       The Pushover token, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
     """
 
@@ -211,7 +211,7 @@ def _post_message(
 
 def returner(ret):
     """
-    Send an PushOver message with the data
+    Send an Pushover message with the data
     """
 
     _options = _get_options(ret)

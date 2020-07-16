@@ -62,14 +62,14 @@ def post_message(
     Send a message to a Pushover user or group.
 
     :param user:        The user or group to send to, must be key of user or group not email address.
-    :param message:     The message to send to the PushOver user or group.
+    :param message:     The message to send to the Pushover user or group.
     :param title:       Specify who the message is from.
     :param priority:    The priority of the message, defaults to 0.
     :param expire:      The message should expire after N number of seconds.
     :param retry:       The number of times the message should be retried.
     :param sound:       The sound to associate with the message.
-    :param api_version: The PushOver API version, if not specified in the configuration.
-    :param token:       The PushOver token, if not specified in the configuration.
+    :param api_version: The Pushover API version, if not specified in the configuration.
+    :param token:       The Pushover token, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
