@@ -612,26 +612,51 @@ def _libvirt_creds():
     return {"user": user, "group": group}
 
 
-def _get_migrate_command():
+def _migrate(dom, dst_uri, **kwargs):
     """
-    Returns the command shared by the different migration types
+    Migrate the domain object from its current host to the destination
+    host given by URI.
+
+    :param dom: domain object to migrate
+    :param dst_uri: destination URI
+    :param kwargs:
+        - copy_storage: migrate non-shared storage
+            "all": full disk copy
+            "inc" or "incremental": incremental copy
+        - username: username to connect with target host
+        - password: password to connect with target host
     """
-    tunnel = __salt__["config.get"]("virt:tunnel")
-    if tunnel:
-        return (
-            "virsh migrate --p2p --tunnelled --live --persistent " "--undefinesource "
+    flags = libvirt.VIR_MIGRATE_LIVE
+    flags |= libvirt.VIR_MIGRATE_PERSIST_DEST
+    flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+
+    if __salt__["config.get"]("virt:tunnel"):
+        flags |= libvirt.VIR_MIGRATE_PEER2PEER
+        flags |= libvirt.VIR_MIGRATE_TUNNELLED
+
+    copy_storage = kwargs.get("copy_storage")
+    if copy_storage:
+        if copy_storage == "all":
+            flags |= libvirt.VIR_MIGRATE_NON_SHARED_DISK
+        elif copy_storage in ["inc", "incremental"]:
+            flags |= libvirt.VIR_MIGRATE_NON_SHARED_INC
+        else:
+            raise SaltInvocationError("invalid copy_storage value")
+    try:
+        state = False
+        dst_conn = __get_conn(
+            connection=dst_uri,
+            username=kwargs.get("username"),
+            password=kwargs.get("password"),
         )
-    return "virsh migrate --live --persistent --undefinesource "
-
-
-def _get_target(target, ssh):
-    """
-    Compute libvirt URL for target migration host.
-    """
-    proto = "qemu"
-    if ssh:
-        proto += "+ssh"
-    return " {}://{}/{}".format(proto, target, "system")
+        new_dom = dom.migrate(dst_conn, flags=flags)
+        if new_dom:
+            state = new_dom.state()
+        dst_conn.close()
+        return state and libvirt.VIR_DOMAIN_RUNNING_MIGRATED in state
+    except libvirt.libvirtError as err:
+        dst_conn.close()
+        raise CommandExecutionError(err.get_error_message())
 
 
 def _gen_xml(
@@ -3746,13 +3771,21 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         return False
 
 
-def migrate_non_shared(vm_, target, ssh=False):
+def migrate_non_shared(vm_, target, ssh=False, **kwargs):
     """
     Attempt to execute non-shared storage "all" migration
 
     :param vm_: domain name
     :param target: target libvirt host name
     :param ssh: True to connect over ssh
+
+        .. deprecated:: 3002
+
+    :param kwargs:
+        - username: username to connect with target host
+        - password: password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -3771,21 +3804,29 @@ def migrate_non_shared(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = (
-        _get_migrate_command() + " --copy-storage-all " + vm_ + _get_target(target, ssh)
+    salt.utils.versions.warn_until(
+        "Silicon",
+        "The 'migrate_non_shared' feature has been deprecated. "
+        "Use 'migrate' with copy_storage='all' instead.",
     )
-
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    return migrate(vm_, target, ssh, copy_storage="all", **kwargs)
 
 
-def migrate_non_shared_inc(vm_, target, ssh=False):
+def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
     """
-    Attempt to execute non-shared storage "all" migration
+    Attempt to execute non-shared storage "inc" migration
 
     :param vm_: domain name
     :param target: target libvirt host name
     :param ssh: True to connect over ssh
+
+        .. deprecated:: 3002
+
+    :param kwargs:
+        - username: username to connect with target host
+        - password: password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -3804,27 +3845,41 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = (
-        _get_migrate_command() + " --copy-storage-inc " + vm_ + _get_target(target, ssh)
+    salt.utils.versions.warn_until(
+        "Silicon",
+        "The 'migrate_non_shared_inc' feature has been deprecated. "
+        "Use 'migrate' with copy_storage='inc' instead.",
     )
-
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    return migrate(vm_, target, ssh, copy_storage="inc", **kwargs)
 
 
-def migrate(vm_, target, ssh=False):
+def migrate(vm_, target, ssh=False, **kwargs):
     """
     Shared storage migration
 
     :param vm_: domain name
-    :param target: target libvirt host name
+    :param target: target libvirt URI or host name
     :param ssh: True to connect over ssh
+
+       .. deprecated:: 3002
+
+    :param kwargs:
+        - copy_storage: migrate non-shared storage
+            "all": full disk copy
+            "inc" or "incremental": incremental copy
+        - username: username to connect with target host
+        - password: password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.migrate <domain> <target hypervisor>
+        salt '*' virt.migrate <domain> <target hypervisor URI>
+        salt src virt.migrate guest qemu+ssh://dst/system
+        salt src virt.migrate guest qemu+tls://dst/system
+        salt src virt.migrate guest qemu+tcp://dst/system
 
     A tunnel data migration can be performed by setting this in the
     configuration:
@@ -3837,10 +3892,29 @@ def migrate(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = _get_migrate_command() + " " + vm_ + _get_target(target, ssh)
 
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    if ssh:
+        salt.utils.versions.warn_until(
+            "Silicon",
+            "The 'ssh' argument has been deprecated and "
+            "will be removed in a future release. "
+            "Use libvirt URI string 'target' instead.",
+        )
+
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+
+    if not urlparse(target).scheme:
+        proto = "qemu"
+        if ssh:
+            proto += "+ssh"
+        dst_uri = "{}://{}/system".format(proto, target)
+    else:
+        dst_uri = target
+
+    ret = _migrate(dom, dst_uri, **kwargs)
+    conn.close()
+    return ret
 
 
 def seed_non_shared_migrate(disks, force=False):
