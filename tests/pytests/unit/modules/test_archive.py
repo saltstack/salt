@@ -549,3 +549,30 @@ def test_trim_files():
             ):
                 ret = archive.unrar(source, tmp_dir, trim_output=test_trim_opts)
                 assert ret == test_expected
+
+
+def test_glob_no_wildcards():
+    """
+    Tests _glob handling of pathname without wildcards
+    """
+    with patch("glob.glob", lambda pathname: [pathname]):
+        ret = archive._glob("foo")
+        assert ["foo"] == ret
+
+
+def test_glob_wildcards():
+    """
+    Tests _glob handling of pathname with wildcards
+    """
+    with patch("glob.glob", MagicMock(return_value=["foo", "foobar"])):
+        ret = archive._glob("foo*")
+        assert ["foo", "foobar"] == ret
+
+
+def test_glob_wildcards_cwd():
+    """
+    Tests _glob handling of pathname with wildcards and with cwd
+    """
+    with patch("glob.glob", MagicMock(return_value=["/tmp/foo", "/tmp/foobar"])):
+        ret = archive._glob("foo*", cwd="/tmp")
+        assert ["foo", "foobar"] == ret
