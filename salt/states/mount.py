@@ -222,6 +222,8 @@ def mounted(
     # string
     if isinstance(opts, str):
         opts = opts.split(",")
+    if opts:
+        opts.sort()
 
     if isinstance(hidden_opts, str):
         hidden_opts = hidden_opts.split(",")
@@ -342,8 +344,6 @@ def mounted(
                 device_list.append(uuid_device)
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
-            if opts:
-                opts.sort()
 
                 mount_invisible_options = [
                     "_netdev",
