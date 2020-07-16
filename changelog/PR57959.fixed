@@ -1,0 +1,1 @@
+Fixed the use of wildcards in `sources` while also using the `cwd` argument.
