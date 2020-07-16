@@ -12,6 +12,7 @@ import errno
 import glob
 import logging
 import os
+import os.path
 import re
 import shlex
 import stat
@@ -447,19 +448,23 @@ def list_(
 _glob_wildcards = re.compile("[*?[]")
 
 
-def _glob(pathname):
+def _glob(pathname, cwd=None):
     """
     In case ``pathname`` contains glob wildcards, performs expansion and returns
     the possibly empty list of matching pathnames. Otherwise returns a list that
     contains only ``pathname`` itself.
+
+    If ``cwd`` is supplied, glob will use it to perform expansion, but ``cwd`` will
+    be stripped from the results.
     """
     if _glob_wildcards.search(pathname) is None:
         return [pathname]
-    else:
-        return glob.glob(pathname)
+    res = glob.glob(os.path.join(cwd or "", pathname))
+    # Remove the cwd prefix and the joining path separator from res if cwd
+    return [item[len(cwd + os.path.sep) :] for item in res] if cwd else res
 
 
-def _expand_sources(sources):
+def _expand_sources(sources, cwd=None):
     """
     Expands a user-provided specification of source files into a list of paths.
     """
@@ -469,7 +474,7 @@ def _expand_sources(sources):
         sources = [x.strip() for x in sources.split(",")]
     elif isinstance(sources, (float, six.integer_types)):
         sources = [six.text_type(sources)]
-    return [path for source in sources for path in _glob(source)]
+    return [path for source in sources for path in _glob(source, cwd=cwd)]
 
 
 @salt.utils.decorators.path.which("tar")
@@ -534,6 +539,8 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
         # Create a tarfile using globbing (2017.7.0 and later)
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 '/tmp/file_*'
+        # Create a tarfile using globbing and cwd (3002.0 and later)
+        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 'file_*' cwd=/tmp
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     """
@@ -548,7 +555,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
         cmd.extend(options.split())
 
     cmd.extend(["{0}".format(tarfile)])
-    cmd.extend(_expand_sources(sources))
+    cmd.extend(_expand_sources(sources, cwd=cwd))
     if dest:
         cmd.extend(["-C", "{0}".format(dest)])
 
@@ -693,10 +700,12 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.cmd_zip /tmp/zipfile.zip '/tmp/sourcefile*'
+        # Globbing for sources combined with cwd (3002.0 and later)
+        salt '*' archive.cmd_zip /tmp/zipfile.zip 'sourcefile*' cwd=/tmp
     """
     cmd = ["zip", "-r"]
     cmd.append("{0}".format(zip_file))
-    cmd.extend(_expand_sources(sources))
+    cmd.extend(_expand_sources(sources, cwd=cwd))
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
     ).splitlines()
@@ -764,6 +773,8 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.zip /tmp/zipfile.zip '/tmp/sourcefile*'
+        # Globbing for sources combined with cwd (3002.0 and later)
+        salt '*' archive.zip /tmp/zipfile.zip 'sourcefile*' cwd=/tmp
     """
     if runas:
         euid = os.geteuid()
@@ -772,20 +783,15 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
         if not uinfo:
             raise SaltInvocationError("User '{0}' does not exist".format(runas))
 
-    zip_file, sources = _render_filenames(zip_file, sources, None, template)
-    sources = _expand_sources(sources)
+    if cwd and not os.path.isabs(cwd):
+        raise SaltInvocationError("cwd must be absolute")
 
-    if not cwd:
-        for src in sources:
-            if not os.path.isabs(src):
-                raise SaltInvocationError("Relative paths require the 'cwd' parameter")
-    else:
-        err_msg = "cwd must be absolute"
-        try:
-            if not os.path.isabs(cwd):
-                raise SaltInvocationError(err_msg)
-        except AttributeError:
-            raise SaltInvocationError(err_msg)
+    zip_file, sources = _render_filenames(zip_file, sources, None, template)
+    sources = _expand_sources(sources, cwd=cwd)
+
+    if cwd is None:
+        if any([not os.path.isabs(src) for src in sources]):
+            raise SaltInvocationError("Relative paths require the 'cwd' parameter")
 
     if runas and (euid != uinfo["uid"] or egid != uinfo["gid"]):
         # Change the egid first, as changing it after the euid will fail
@@ -808,7 +814,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
                     else:
                         rel_root = cwd if cwd is not None else "/"
                     if os.path.isdir(src):
-                        for dir_name, sub_dirs, files in salt.utils.path.os_walk(src):
+                        for dir_name, _, files in salt.utils.path.os_walk(src):
                             if cwd and dir_name.startswith(cwd):
                                 arc_dir = os.path.relpath(dir_name, cwd)
                             else:
@@ -1051,6 +1057,7 @@ def unzip(
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ password='BadPassword'
     """
+    _ = options
     if not excludes:
         excludes = []
     if runas:
@@ -1165,7 +1172,8 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
             salt '*' archive.is_encrypted salt://foo.zip
             salt '*' archive.is_encrypted salt://foo.zip saltenv=dev
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip clean=True
-            salt '*' archive.is_encrypted https://domain.tld/myfile.zip source_hash=f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+            salt '*' archive.is_encrypted https://domain.tld/myfile.zip \
+                source_hash=f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     """
     cached = __salt__["cp.cache_file"](name, saltenv, source_hash=source_hash)
@@ -1240,9 +1248,11 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         salt '*' archive.rar /tmp/rarfile.rar /tmp/sourcefile1,/tmp/sourcefile2
         # Globbing for sources (2017.7.0 and later)
         salt '*' archive.rar /tmp/rarfile.rar '/tmp/sourcefile*'
+        # Globbing for sources combined with cwd (3002.0 and later)
+        salt '*' archive.rar /tmp/zipfile.rar 'sourcefile*' cwd=/tmp
     """
     cmd = ["rar", "a", "-idp", "{0}".format(rarfile)]
-    cmd.extend(_expand_sources(sources))
+    cmd.extend(_expand_sources(sources, cwd=cwd))
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
     ).splitlines()
