@@ -14,6 +14,7 @@ import textwrap
 
 import salt.grains.core as core
 import salt.modules.cmdmod
+import salt.modules.network
 import salt.modules.smbios
 
 # Import Salt Libs
@@ -1022,6 +1023,92 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "Xen PV DomU",
                 )
 
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_illumos_virtual(self):
+        """
+        Test if virtual grains are parsed correctly inside illumos/solaris zone
+        """
+
+        def _cmd_side_effect(cmd):
+            if cmd == "/usr/bin/zonename":
+                # NOTE: we return the name of the zone
+                return "myzone"
+            log.debug("cmd.run: '{}'".format(cmd))
+
+        def _cmd_all_side_effect(cmd):
+            # NOTE: prtdiag doesn't work inside a zone
+            #       so we return the expected result
+            if cmd == "/usr/sbin/prtdiag ":
+                return {
+                    "pid": 32208,
+                    "retcode": 1,
+                    "stdout": "",
+                    "stderr": "prtdiag can only be run in the global zone",
+                }
+            log.debug("cmd.run_all: '{}'".format(cmd))
+
+        def _which_side_effect(path):
+            if path == "prtdiag":
+                return "/usr/sbin/prtdiag"
+            elif path == "zonename":
+                return "/usr/bin/zonename"
+            return None
+
+        with patch.dict(
+            core.__salt__,
+            {
+                "cmd.run": MagicMock(side_effect=_cmd_side_effect),
+                "cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect),
+            },
+        ):
+            with patch(
+                "salt.utils.path.which", MagicMock(side_effect=_which_side_effect)
+            ):
+                grains = core._virtual({"kernel": "SunOS"})
+                self.assertEqual(
+                    grains.get("virtual"), "zone",
+                )
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_illumos_fallback_virtual(self):
+        """
+        Test if virtual grains are parsed correctly inside illumos/solaris zone
+        """
+
+        def _cmd_all_side_effect(cmd):
+            # NOTE: prtdiag doesn't work inside a zone
+            #       so we return the expected result
+            if cmd == "/usr/sbin/prtdiag ":
+                return {
+                    "pid": 32208,
+                    "retcode": 1,
+                    "stdout": "",
+                    "stderr": "prtdiag can only be run in the global zone",
+                }
+            log.debug("cmd.run_all: '{}'".format(cmd))
+
+        def _which_side_effect(path):
+            if path == "prtdiag":
+                return "/usr/sbin/prtdiag"
+            return None
+
+        def _isdir_side_effect(path):
+            if path == "/.SUNWnative":
+                return True
+            return False
+
+        with patch.dict(
+            core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+        ):
+            with patch(
+                "salt.utils.path.which", MagicMock(side_effect=_which_side_effect)
+            ):
+                with patch("os.path.isdir", MagicMock(side_effect=_isdir_side_effect)):
+                    grains = core._virtual({"kernel": "SunOS"})
+                    self.assertEqual(
+                        grains.get("virtual"), "zone",
+                    )
+
     def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
         def mockstat(path):
             if path == "/":
@@ -1192,6 +1279,45 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             assert core.dns() == ret
 
+    def test_enable_fqdns_false(self):
+        """
+        tests enable_fqdns_grains is set to False
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": False}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enable_fqdns_true(self):
+        """
+        testing that grains uses network.fqdns module
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
+                assert core.fqdns() == "my.fake.domain"
+
+    def test_enable_fqdns_none(self):
+        """
+        testing default fqdns grains is returned when enable_fqdns_grains is None
+        """
+        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": None}):
+            assert core.fqdns() == {"fqdns": []}
+
+    def test_enable_fqdns_without_patching(self):
+        """
+        testing fqdns grains is enabled by default
+        """
+        with patch.dict(
+            "salt.grains.core.__salt__",
+            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+        ):
+            # fqdns is disabled by default on Windows
+            if salt.utils.platform.is_windows():
+                assert core.fqdns() == {"fqdns": []}
+            else:
+                assert core.fqdns() == "my.fake.domain"
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
@@ -1215,11 +1341,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ("bluesniff.foo.bar", [], ["fe80::a8b2:93ff:dead:beef"]),
         ]
         ret = {"fqdns": ["bluesniff.foo.bar", "foo.bar.baz", "rinzler.evil-corp.com"]}
-        with patch.object(socket, "gethostbyaddr", side_effect=reverse_resolv_mock):
-            fqdns = core.fqdns()
-            self.assertIn("fqdns", fqdns)
-            self.assertEqual(len(fqdns["fqdns"]), len(ret["fqdns"]))
-            self.assertEqual(set(fqdns["fqdns"]), set(ret["fqdns"]))
+        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
+            with patch.object(socket, "gethostbyaddr", side_effect=reverse_resolv_mock):
+                fqdns = core.fqdns()
+                assert "fqdns" in fqdns
+                assert len(fqdns["fqdns"]) == len(ret["fqdns"])
+                assert set(fqdns["fqdns"]) == set(ret["fqdns"])
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch("salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4"]))
@@ -1239,20 +1366,26 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
         for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
             mock_log = MagicMock()
-            with patch.object(
-                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+            with patch.dict(
+                core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
             ):
-                with patch("salt.grains.core.log", mock_log):
-                    self.assertEqual(core.fqdns(), {"fqdns": []})
-                    mock_log.debug.assert_called_once()
-                    mock_log.error.assert_not_called()
+                with patch.object(
+                    socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+                ):
+                    with patch("salt.modules.network.log", mock_log):
+                        self.assertEqual(core.fqdns(), {"fqdns": []})
+                        mock_log.debug.assert_called()
+                        mock_log.error.assert_not_called()
 
         mock_log = MagicMock()
-        with patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
-            with patch("salt.grains.core.log", mock_log):
-                self.assertEqual(core.fqdns(), {"fqdns": []})
-                mock_log.debug.assert_not_called()
-                mock_log.error.assert_called_once()
+        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
+            with patch.object(
+                socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)
+            ):
+                with patch("salt.modules.network.log", mock_log):
+                    self.assertEqual(core.fqdns(), {"fqdns": []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_called()
 
     def test_core_virtual(self):
         """
@@ -1978,3 +2111,11 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 assert ret[count]["model"] == device[2]
                 assert ret[count]["vendor"] == device[3]
                 count += 1
+
+    def test_get_server_id(self):
+        expected = {"server_id": 94889706}
+        with patch.dict(core.__opts__, {"id": "anid"}):
+            assert core.get_server_id() == expected
+
+        with patch.dict(core.__opts__, {"id": "otherid"}):
+            assert core.get_server_id() != expected

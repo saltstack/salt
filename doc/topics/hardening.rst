@@ -36,7 +36,8 @@ General hardening tips
 - Don't expose the Salt master any more than what is required.
 - Harden the system as you would with any high-priority target.
 - Keep the system patched and up-to-date.
-- Use tight firewall rules.
+- Use tight firewall rules. Pay particular attention to TCP/4505 and TCP/4506
+  on the salt master and avoid exposing these ports unnecessarily.
 
 Salt hardening tips
 ===================

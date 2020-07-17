@@ -23,6 +23,7 @@ import salt
 import salt.client
 import salt.client.ssh.client
 import salt.config
+import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
@@ -1141,19 +1142,31 @@ def refresh_pillar(wait=False, timeout=30):
     .. code-block:: bash
 
         salt '*' saltutil.refresh_pillar
+        salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
     try:
-        ret = __salt__["event.fire"]({}, "pillar_refresh")
+        if wait:
+            #  If we're going to block, first setup a listener
+            with salt.utils.event.get_event(
+                "minion", opts=__opts__, listen=True
+            ) as eventer:
+                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                # Wait for the finish event to fire
+                log.trace("refresh_pillar waiting for pillar refresh to complete")
+                # Blocks until we hear this event or until the timeout expires
+                event_ret = eventer.get_event(
+                    tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
+                    wait=timeout,
+                )
+                if not event_ret or event_ret["complete"] is False:
+                    log.warn(
+                        "Pillar refresh did not complete within timeout %s", timeout
+                    )
+        else:
+            ret = __salt__["event.fire"]({}, "pillar_refresh")
     except KeyError:
-        log.error("Event module not available. Module refresh failed.")
+        log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
-    if wait:
-        eventer = salt.utils.event.get_event("minion", opts=__opts__, listen=True)
-        event_ret = eventer.get_event(
-            tag="/salt/minion/minion_pillar_refresh_complete", wait=timeout
-        )
-        if not event_ret or event_ret["complete"] is False:
-            log.warning("Pillar refresh did not complete within timeout %s", timeout)
     return ret
 
 
@@ -1177,17 +1190,19 @@ def refresh_modules(**kwargs):
     asynchronous = bool(kwargs.get("async", True))
     try:
         if asynchronous:
-            #  If we're going to block, first setup a listener
             ret = __salt__["event.fire"]({}, "module_refresh")
         else:
+            #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
-            ) as event_bus:
+            ) as eventer:
                 ret = __salt__["event.fire"]({"notify": True}, "module_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_modules waiting for module refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
-                event_bus.get_event(tag="/salt/minion/minion_mod_complete", wait=30)
+                eventer.get_event(
+                    tag=salt.defaults.events.MINION_MOD_REFRESH_COMPLETE, wait=30
+                )
     except KeyError:
         log.error("Event module not available. Module refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1555,45 +1570,41 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
     return client
 
 
-def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
+def _exec(
+    client,
+    tgt,
+    fun,
+    arg,
+    timeout,
+    tgt_type,
+    ret,
+    kwarg,
+    batch=False,
+    subset=False,
+    **kwargs
+):
     fcn_ret = {}
     seen = 0
-    if "batch" in kwargs:
+
+    cmd_kwargs = {
+        "tgt": tgt,
+        "fun": fun,
+        "arg": arg,
+        "timeout": timeout,
+        "tgt_type": tgt_type,
+        "ret": ret,
+        "kwarg": kwarg,
+    }
+
+    if batch:
         _cmd = client.cmd_batch
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "kwarg": kwarg,
-            "batch": kwargs["batch"],
-        }
-        del kwargs["batch"]
-    elif "subset" in kwargs:
+        cmd_kwargs.update({"batch": batch})
+    elif subset:
         _cmd = client.cmd_subset
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "cli": True,
-            "kwarg": kwarg,
-            "sub": kwargs["subset"],
-        }
-        del kwargs["subset"]
+        cmd_kwargs.update({"subset": subset, "cli": True})
     else:
         _cmd = client.cmd_iter
-        cmd_kwargs = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "timeout": timeout,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "kwarg": kwarg,
-        }
+
     cmd_kwargs.update(kwargs)
     for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
@@ -1603,6 +1614,17 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             # do not wait for timeout when explicit list matching
             # and all results are there
             break
+
+    if batch:
+        old_ret, fcn_ret = fcn_ret, {}
+        for key, value in old_ret.items():
+            fcn_ret[key] = {
+                "out": value.get("out", "highstate")
+                if isinstance(value, dict)
+                else "highstate",
+                "ret": value,
+            }
+
     return fcn_ret
 
 
@@ -1644,16 +1666,6 @@ def cmd(
     ):
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         fcn_ret = _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
-
-    if "batch" in kwargs:
-        old_ret, fcn_ret = fcn_ret, {}
-        for key, value in old_ret.items():
-            fcn_ret[key] = {
-                "out": value.get("out", "highstate")
-                if isinstance(value, dict)
-                else "highstate",
-                "ret": value,
-            }
 
     return fcn_ret
 

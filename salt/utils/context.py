@@ -14,17 +14,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import python libs
 import copy
 import threading
+from collections.abc import MutableMapping
 from contextlib import contextmanager
 
 from salt.ext import six
-
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import MutableMapping
-
-    # pylint: enable=no-name-in-module
 
 
 @contextmanager
@@ -207,21 +200,12 @@ class NamespacedDictWrapper(MutableMapping, dict):
     MUST inherit from dict to serialize through msgpack correctly
     """
 
-    def __init__(self, d, pre_keys, override_name=None):  # pylint: disable=W0231
+    def __init__(self, d, pre_keys):  # pylint: disable=W0231
         self.__dict = d
         if isinstance(pre_keys, six.string_types):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
-        if override_name is not None:
-            import salt.utils.versions
-
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "Overriding the class name is no longer supported. Please "
-                "remove the override_name argument before it is removed in "
-                "Salt Sodium.",
-            )
         super(NamespacedDictWrapper, self).__init__(self._dict())
 
     def _dict(self):
