@@ -1012,7 +1012,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
     def can_run(self):
         """
-        Check if this process can run
+        Check if this process can run. If it can it will claim the pidfile.
         """
         return salt.utils.process.claim_mantle_of_responsibility(self.config["pidfile"])
 
