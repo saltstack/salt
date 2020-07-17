@@ -99,61 +99,107 @@ def call_function(salt_function, *args, **kwargs):
     Calls a function from the specified module.
 
     :param function salt_function: Function reference to call
+    :param any args: Arguments to pass to the salt_function.
+        As this is called by states/module.py:run, this will accept
+        dicts with (one or more) item(s) to be handled as a kwarg (or arg :P )
     :return: The result of the function call
     """
+    # These go into the function call at the very end
+    function_args, function_varargs, function_kwargs = {}, [], {}
+    # First, find out things about the function that is to be called
     argspec = salt.utils.args.get_function_argspec(salt_function)
-    # function_kwargs is initialized to a dictionary of keyword arguments the function to be run accepts
-    function_kwargs = dict(
-        zip(
-            argspec.args[
-                -len(argspec.defaults or []) :
-            ],  # pylint: disable=incompatible-py3-code
-            argspec.defaults or [],
-        )
-    )
+    num_args_or_kwargs = len(argspec.args or [])
+    num_expected_kwargs = len(argspec.defaults or [])
     # expected_args is initialized to a list of positional arguments that the function to be run accepts
-    expected_args = argspec.args[
-        : len(argspec.args or []) - len(argspec.defaults or [])
-    ]
-    function_args, kw_to_arg_type = [], {}
-    for funcset in reversed(args or []):
-        if not isinstance(funcset, dict):
-            # We are just receiving a list of args to the function to be run, so just append
-            # those to the arg list that we will pass to the func.
-            function_args.append(funcset)
-        else:
-            for kwarg_key in six.iterkeys(funcset):
-                # We are going to pass in a keyword argument. The trick here is to make certain
-                # that if we find that in the *args* list that we pass it there and not as a kwarg
-                if kwarg_key in expected_args:
-                    kw_to_arg_type[kwarg_key] = funcset[kwarg_key]
+    expected_args = argspec.args[: num_args_or_kwargs - num_expected_kwargs]
+    num_expected_args = len(expected_args)
+    # expected_kwargs is initialized to a dictionary of keyword arguments the function to be run accepts
+    expected_kwargs = dict(
+        zip(argspec.args[-num_expected_kwargs:], argspec.defaults or [])
+    )
+
+    # First, go over all the args provided and save them in function_args
+    # if the keyword is the currently expected arg. Complain about duplicates.
+    # Process dict args as containing possibly multiple (but preferringly just
+    # a single) kwarg(s) and store them in function_kwargs.
+    duplicates = set()  # accumulate here for more specific error
+
+    for idx, item in enumerate(args):
+        if isinstance(item, dict):
+            for kwarg, value in item.items():
+                if kwarg in expected_args:
+                    if kwarg in function_args:
+                        duplicates.add(kwarg)
+                        continue
+                    function_args[kwarg] = value
+                elif kwarg in expected_kwargs or argspec.keywords:
+                    if kwarg in function_kwargs:
+                        duplicates.add(kwarg)
+                        continue
+                    function_kwargs[kwarg] = value
                 else:
-                    # Otherwise, we're good and just go ahead and pass the keyword/value pair into
-                    # the kwargs list to be run.
-                    function_kwargs.update(funcset)
-    function_args.reverse()
-    # Add kwargs passed as kwargs :)
-    function_kwargs.update(kwargs)
-    for arg in expected_args:
-        if arg in kw_to_arg_type:
-            function_args.append(kw_to_arg_type[arg])
-    _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
-    _passed_prm = len(function_args)
-    missing = []
-    if _exp_prm > _passed_prm:
-        for arg in argspec.args[_passed_prm:]:
-            if arg not in function_kwargs:
-                missing.append(arg)
-            else:
-                # Found the expected argument as a keyword
-                # increase the _passed_prm count
-                _passed_prm += 1
-    if missing:
-        raise SaltInvocationError("Missing arguments: {0}".format(", ".join(missing)))
-    elif _exp_prm > _passed_prm:
+                    raise SaltInvocationError(
+                        "{}() got an unexpected keyword argument '{}'"
+                        "".format(salt_function.__name__, kwarg)
+                    )
+        else:
+            if idx >= num_expected_args and argspec.varargs:
+                function_varargs.append(item)
+                continue
+            if idx >= num_args_or_kwargs:
+                raise SaltInvocationError(
+                    "Too many positional arguments supplied: {}, expected max {}"
+                    "".format(idx, num_expected_args)
+                )
+            keyword = argspec.args[idx]
+            if keyword in expected_args:
+                if keyword in function_args:
+                    duplicates.add(keyword)
+                    continue
+                function_args[keyword] = item
+            else:  # elif keyword in expected_kwargs:
+                if keyword in function_kwargs:
+                    duplicates.add(keyword)
+                    continue
+                function_kwargs[keyword] = item
+
+    # Process kwargs into function_args or arg_as_kwarg
+    for keyword, value in (kwargs or {}).items():
+        if keyword in expected_args:
+            if keyword in function_args:
+                duplicates.add(keyword)
+                continue
+            function_args[keyword] = value
+        elif keyword in expected_kwargs or argspec.keywords:
+            if keyword in function_kwargs:
+                duplicates.add(keyword)
+                continue
+            function_kwargs[keyword] = value
+        else:
+            raise SaltInvocationError(
+                "{}() got an unexpected keyword argument '{}'"
+                "".format(salt_function.__name__, keyword)
+            )
+
+    if duplicates:
+        # For niceness, present them in order of argspec.args
         raise SaltInvocationError(
-            "Function expects {0} positional parameters, "
-            "got only {1}".format(_exp_prm, _passed_prm)
+            "Received multiple values for '{}'".format(
+                ",".join([keyword for keyword in argspec.args if keyword in duplicates])
+            )
         )
 
-    return salt_function(*function_args, **function_kwargs)
+    # Now we check for missing args
+    missing_args = [
+        keyword for keyword in expected_args if keyword not in function_args
+    ]
+    if missing_args:
+        raise SaltInvocationError(
+            "Missing arguments: {}".format(",".join(missing_args))
+        )
+
+    return salt_function(
+        *[function_args[keyword] for keyword in expected_args],
+        *function_varargs,
+        **function_kwargs
+    )
