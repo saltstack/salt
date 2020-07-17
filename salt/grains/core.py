@@ -919,16 +919,6 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             elif "joyent smartdc hvm" in model:
                 grains["virtual"] = "kvm"
-            else:
-                # Check if it's a "regular" zone
-                zonename = salt.utils.path.which("zonename")
-                if zonename:
-                    zone = __salt__["cmd.run"]("{0}".format(zonename))
-                    if zone != "global":
-                        grains["virtual"] = "zone"
-                # Check if it's a branded zone
-                elif os.path.isdir("/.SUNWnative"):
-                    grains["virtual"] = "zone"
             break
         elif command == "virtinfo":
             if output == "logical-domain":
@@ -1121,6 +1111,18 @@ def _virtual(osdata):
             ):
                 if os.path.isfile("/var/run/xenconsoled.pid"):
                     grains["virtual_subtype"] = "Xen Dom0"
+    elif osdata["kernel"] == "SunOS":
+        # we did not get any data from virtinfo or prtdiag
+        # check the zonename here as fallback
+        zonename = salt.utils.path.which("zonename")
+        if zonename:
+            zone = __salt__["cmd.run"]("{0}".format(zonename))
+            if zone != "global":
+                grains["virtual"] = "zone"
+
+        # last ditch efford to check the brand identifier
+        elif os.path.isdir("/.SUNWnative"):
+            grains["virtual"] = "zone"
 
     # If we have a virtual_subtype, we're virtual, but maybe we couldn't
     # figure out what specific virtual type we were?
