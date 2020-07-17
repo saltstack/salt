@@ -494,6 +494,19 @@ def managed(name, type, enabled=True, **kwargs):
                     for second in interfaces[iface]["secondary"]:
                         if second.get("label", "") == name:
                             interface_status = True
+                if iface == "lo":
+                    if "inet" in interfaces[iface]:
+                        inet_data = interfaces[iface]["inet"]
+                        if len(inet_data) > 1:
+                            for data in inet_data:
+                                if data.get("label", "") == name:
+                                    interface_status = True
+                    if "inet6" in interfaces[iface]:
+                        inet6_data = interfaces[iface]["inet6"]
+                        if len(inet6_data) > 1:
+                            for data in inet6_data:
+                                if data.get("label", "") == name:
+                                    interface_status = True
         if enabled:
             if "noifupdown" not in kwargs:
                 if interface_status:
