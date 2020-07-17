@@ -11,6 +11,7 @@ from inspect import ArgSpec
 
 # Import Salt Libs
 import salt.states.module as module
+from salt.exceptions import SaltInvocationError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -376,22 +377,22 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"a": 1, "b": 2, "c": 3}),
+                module._call_function("testfunc", func_args=[{"a": 1, "b": 2, "c": 3}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"c": 3, "a": 1, "b": 2}),
+                module._call_function("testfunc", func_args=[{"c": 3, "a": 1, "b": 2}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"b": 2, "a": 1, "c": 3}),
+                module._call_function("testfunc", func_args=[{"b": 2, "a": 1, "c": 3}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"a": 1, "c": 3, "b": 2}),
+                module._call_function("testfunc", func_args=[{"a": 1, "c": 3, "b": 2}]),
                 (1, 2, 3, (), {}),
             )
 
@@ -414,22 +415,22 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"a": 1, "b": 2, "c": 3}),
+                module._call_function("testfunc", func_args=[{"a": 1, "b": 2, "c": 3}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"c": 3, "a": 1, "b": 2}),
+                module._call_function("testfunc", func_args=[{"c": 3, "a": 1, "b": 2}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"b": 2, "a": 1, "c": 3}),
+                module._call_function("testfunc", func_args=[{"b": 2, "a": 1, "c": 3}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function("testfunc", func_kwargs={"a": 1, "c": 3, "b": 2}),
+                module._call_function("testfunc", func_args=[{"a": 1, "c": 3, "b": 2}]),
                 (1, 2, 3, (), {}),
             )
 
@@ -465,15 +466,132 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             clear=True,
         ):
             self.assertEqual(
-                module._call_function(
-                    "testfunc", func_args=[1], func_kwargs={"b": 2, "c": 3}
-                ),
+                module._call_function("testfunc", func_args=[1, {"b": 2, "c": 3}]),
                 (1, 2, 3, (), {}),
             )
 
             self.assertEqual(
-                module._call_function(
-                    "testfunc", func_args=[1, 2], func_kwargs={"c": 3}
-                ),
+                module._call_function("testfunc", func_args=[1, 2, {"c": 3}]),
                 (1, 2, 3, (), {}),
+            )
+
+    def test_call_function_arg_to_kwarg_shift(self):
+        """
+        Tests _call_function moving excess args into kwargs
+        """
+        with patch.dict(
+            module.__salt__,
+            {"testfunc": lambda a, b, c, d=None, e=None: (a, b, c, {"d": d, "e": e})},
+            clear=True,
+        ):
+            self.assertEqual(
+                module._call_function("testfunc", func_args=[1, 2, 3, 4, 5]),
+                (1, 2, 3, {"d": 4, "e": 5}),
+            )
+
+    def test_call_function_args_to_varargs_shift(self):
+        """
+        Tests _call_function moving excess args into varargs
+        """
+        with patch.dict(
+            module.__salt__,
+            {"testfunc": lambda a, b, c, *args: (a, b, c, args)},
+            clear=True,
+        ):
+            # Move extra positional arguments into varargs
+            self.assertEqual(
+                module._call_function("testfunc", func_args=[1, 2, 3, 4, 5]),
+                (1, 2, 3, (4, 5)),
+            )
+
+    def test_call_function_extra_kwargs_to_kwargs(self):
+        """
+        Tests _call_function handling extra kwargs
+        """
+        with patch.dict(
+            module.__salt__,
+            {
+                "testfunc": lambda a, b=None, c=None, **kwargs: (
+                    a,
+                    {"b": b, "c": c},
+                    kwargs,
+                )
+            },
+            clear=True,
+        ):
+            self.assertEqual(
+                module._call_function(
+                    "testfunc", func_args=[1, {"b": 2, "c": 3, "d": 4, "e": 5}]
+                ),
+                (1, {"b": 2, "c": 3}, {"d": 4, "e": 5}),
+            )
+
+    def test_call_function_error_on_multiple_values(self):
+        """
+        Tests _call_function erroring on multiple entries for the same (kw)arg
+        """
+        with patch.dict(
+            module.__salt__,
+            {"testfunc": lambda a, b, c, **kwargs: (a, b, c, kwargs)},
+            clear=True,
+        ):
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Received multiple values for 'a'$",
+                module._call_function,
+                "testfunc",
+                func_args=["1", "2", "3", {"a": 4}],
+            )
+
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Received multiple values for 'b,c'$",
+                module._call_function,
+                "testfunc",
+                func_args=["1", "2", "3", {"c": 4, "b": 5}],
+            )
+
+            # Multiple argument-error precedes missing argument-error.
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Received multiple values for 'a'",
+                module._call_function,
+                "testfunc",
+                func_args=[2, {"a": 1}],
+            )
+
+    def test_call_function_missing_arguments(self):
+        """
+        Tests _call_function erroring on missing entries
+        """
+        with patch.dict(
+            module.__salt__,
+            {"testfunc": lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)},
+            clear=True,
+        ):
+            # Classical case, too few args (missing arg at the end)
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Missing arguments: c$",
+                module._call_function,
+                "testfunc",
+                func_args=[1, 2],
+            )
+
+            # Missing argument in the middle
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Missing arguments: b$",
+                module._call_function,
+                "testfunc",
+                func_args=[1, {"c": 3}],
+            )
+
+            # Missing argument up front
+            self.assertRaisesRegex(
+                SaltInvocationError,
+                "Missing arguments: a$",
+                module._call_function,
+                "testfunc",
+                func_args=[{"c": 3, "b": 2}],
             )
