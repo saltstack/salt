@@ -6,7 +6,8 @@ from tests.support.helpers import slowTest
 
 
 class SaltAPITestCase(TestCase):
-    def test_ping(self):
+    @slowTest
+    def test_start_shutdown(self):
         api = SaltAPI()
         try:
             with patch.object(sys, "argv", [sys.argv[0]]):
