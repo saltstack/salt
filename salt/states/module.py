@@ -450,7 +450,7 @@ def run(**kwargs):
     return ret
 
 
-def _call_function(name, returner=None, func_args=None, func_kwargs=None):
+def _call_function(name, returner=None, func_args=None):
     """
     Calls a function from the specified module.
 
@@ -463,10 +463,7 @@ def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     if func_args is None:
         func_args = []
 
-    if func_kwargs is None:
-        func_kwargs = {}
-
-    mret = salt.utils.functools.call_function(__salt__[name], *func_args, **func_kwargs)
+    mret = salt.utils.functools.call_function(__salt__[name], *func_args)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
