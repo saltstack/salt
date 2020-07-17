@@ -1,0 +1,3 @@
+Fixes proper arg/kwarg parsing for salt.utils.functools:call_function.
+This fixes 59496, 57055 (which was incorrectly labelled as a duplicate imo), 56584 
+by reimplementing 56635 in a fashion that does not needlessly add func_kwargs to call_function.
