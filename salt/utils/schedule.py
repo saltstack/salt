@@ -752,12 +752,12 @@ class Schedule(object):
 
             args = tuple()
             if "args" in data:
-                args = data["args"]
+                args = copy.deepcopy(data["args"])
                 ret["fun_args"].extend(data["args"])
 
             kwargs = {}
             if "kwargs" in data:
-                kwargs = data["kwargs"]
+                kwargs = copy.deepcopy(data["kwargs"])
                 ret["fun_args"].append(copy.deepcopy(kwargs))
 
             if func not in self.functions:
