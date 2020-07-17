@@ -314,6 +314,12 @@ def launchctl(sub_cmd, *args, **kwargs):
     cmd = ["launchctl", sub_cmd]
     cmd.extend(args)
 
+    # fix for https://github.com/saltstack/salt/issues/57436
+    if sub_cmd == "bootout":
+        kwargs["success_retcodes"] = [
+            36,
+        ]
+
     # Run command
     kwargs["python_shell"] = False
     kwargs = salt.utils.args.clean_kwargs(**kwargs)

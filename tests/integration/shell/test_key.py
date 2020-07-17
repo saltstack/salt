@@ -231,7 +231,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
     @destructiveTest
     @skipIf(salt.utils.platform.is_windows(), "PAM eauth not available on Windows")
     @with_system_user(USERA, password=USERA_PWD)
-    @skipIf(True, "SLOWTEST skip")
     @slowTest
     def test_list_acc_eauth_bad_creds(self, username):
         """
