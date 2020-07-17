@@ -13,9 +13,11 @@ import os
 import shutil
 import stat
 import sys
+import textwrap
 
 import pytest
 import salt.utils.files
+import saltfactories.utils.ports
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.runtests import RUNTIME_VARS
@@ -59,6 +61,11 @@ def _get_virtualenv_binary_path():
             virtualenv_binary = None
         _get_virtualenv_binary_path.__virtualenv_binary__ = virtualenv_binary
         return virtualenv_binary
+
+
+@pytest.fixture(scope="session")
+def salt_ssh_sshd_port():
+    return saltfactories.utils.ports.get_unused_localhost_port()
 
 
 @pytest.fixture(scope="session")
@@ -145,7 +152,7 @@ def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
 
 
 @pytest.fixture(scope="session")
-def salt_syndic_master_config(request, salt_factories):
+def salt_syndic_master_config(request, salt_factories, salt_ssh_sshd_port):
     root_dir = salt_factories._get_root_dir_for_daemon("syndic_master")
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
@@ -224,6 +231,22 @@ def salt_syndic_master_config(request, salt_factories):
         }
     )
 
+    # We also need a salt-ssh roster config file
+    with salt.utils.files.fopen(str(conf_dir / "roster"), "w") as wfh:
+        wfh.write(
+            textwrap.dedent(
+                """\
+                localhost:
+                  host: 127.0.0.1
+                  port: {}
+                  mine_functions:
+                    test.arg: ['itworked']
+                """.format(
+                    salt_ssh_sshd_port
+                )
+            )
+        )
+
     return salt_factories.configure_master(
         request,
         "syndic_master",
@@ -241,7 +264,9 @@ def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
 
 
 @pytest.fixture(scope="session")
-def salt_master_config(request, salt_factories, salt_syndic_master_config):
+def salt_master_config(
+    request, salt_factories, salt_syndic_master_config, salt_ssh_sshd_port
+):
     root_dir = salt_factories._get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
@@ -341,6 +366,22 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
             shutil.copytree(source, dest)
         else:
             shutil.copyfile(source, dest)
+
+    # We also need a salt-ssh roster config file
+    with salt.utils.files.fopen(str(conf_dir / "roster"), "w") as wfh:
+        wfh.write(
+            textwrap.dedent(
+                """\
+                localhost:
+                  host: 127.0.0.1
+                  port: {}
+                  mine_functions:
+                    test.arg: ['itworked']
+                """.format(
+                    salt_ssh_sshd_port
+                )
+            )
+        )
 
     return salt_factories.configure_master(
         request,
