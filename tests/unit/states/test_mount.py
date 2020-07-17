@@ -253,7 +253,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         # Test to check the options order #57520
                         set_fstab_mock.assert_called_with(
-                            "/mnt/cifs",
+                            name2,
                             "//SERVER/SHARE/",
                             "cifs",
                             ["gid=group1", "uid=user1"],
