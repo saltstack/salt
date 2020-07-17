@@ -67,8 +67,8 @@ def integration_files_dir(salt_factories):
     Fixture which returns the salt integration files directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = salt_factories.root_dir.join("integration-files")
-    dirname.ensure(dir=True)
+    dirname = salt_factories.root_dir / "integration-files"
+    dirname.mkdir(exist_ok=True)
     return dirname
 
 
@@ -78,8 +78,8 @@ def state_tree_root_dir(integration_files_dir):
     Fixture which returns the salt state tree root directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = integration_files_dir.join("state-tree")
-    dirname.ensure(dir=True)
+    dirname = integration_files_dir / "state-tree"
+    dirname.mkdir(exist_ok=True)
     return dirname
 
 
@@ -89,8 +89,8 @@ def pillar_tree_root_dir(integration_files_dir):
     Fixture which returns the salt pillar tree root directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = integration_files_dir.join("pillar-tree")
-    dirname.ensure(dir=True)
+    dirname = integration_files_dir / "pillar-tree"
+    dirname.mkdir(exist_ok=True)
     return dirname
 
 
@@ -100,9 +100,9 @@ def base_env_state_tree_root_dir(state_tree_root_dir):
     Fixture which returns the salt base environment state tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = state_tree_root_dir.join("base")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_STATE_TREE = dirname.realpath().strpath
+    dirname = state_tree_root_dir / "base"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_STATE_TREE = str(dirname.resolve())
     RUNTIME_VARS.TMP_BASEENV_STATE_TREE = RUNTIME_VARS.TMP_STATE_TREE
     return dirname
 
@@ -113,9 +113,9 @@ def prod_env_state_tree_root_dir(state_tree_root_dir):
     Fixture which returns the salt prod environment state tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = state_tree_root_dir.join("prod")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = dirname.realpath().strpath
+    dirname = state_tree_root_dir / "prod"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = str(dirname.resolve())
     return dirname
 
 
@@ -125,9 +125,9 @@ def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
     Fixture which returns the salt base environment pillar tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = pillar_tree_root_dir.join("base")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PILLAR_TREE = dirname.realpath().strpath
+    dirname = pillar_tree_root_dir / "base"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PILLAR_TREE = str(dirname.resolve())
     RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE = RUNTIME_VARS.TMP_PILLAR_TREE
     return dirname
 
@@ -138,26 +138,28 @@ def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
     Fixture which returns the salt prod environment pillar tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = pillar_tree_root_dir.join("prod")
-    dirname.ensure(dir=True)
-    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = dirname.realpath().strpath
+    dirname = pillar_tree_root_dir / "prod"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = str(dirname.resolve())
     return dirname
 
 
 @pytest.fixture(scope="session")
 def salt_syndic_master_config(request, salt_factories):
     root_dir = salt_factories._get_root_dir_for_daemon("syndic_master")
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
 
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "syndic_master")
     ) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
 
-        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
+        tests_known_hosts_file = str(root_dir / "salt_ssh_known_hosts")
         with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
             known_hosts.write("")
 
-    config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["root_dir"] = str(root_dir)
     config_defaults["known_hosts_file"] = tests_known_hosts_file
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
@@ -179,7 +181,7 @@ def salt_syndic_master_config(request, salt_factories):
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
-    extension_modules_path = root_dir.join("extension_modules").strpath
+    extension_modules_path = str(root_dir / "extension_modules")
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
@@ -187,7 +189,7 @@ def salt_syndic_master_config(request, salt_factories):
         )
 
     # Copy the autosign_file to the new  master root_dir
-    autosign_file_path = root_dir.join("autosign_file").strpath
+    autosign_file_path = str(root_dir / "autosign_file")
     shutil.copyfile(
         os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
     )
@@ -221,6 +223,7 @@ def salt_syndic_master_config(request, salt_factories):
             },
         }
     )
+
     return salt_factories.configure_master(
         request,
         "syndic_master",
@@ -240,16 +243,17 @@ def salt_syndic_config(request, salt_factories, salt_syndic_master_config):
 @pytest.fixture(scope="session")
 def salt_master_config(request, salt_factories, salt_syndic_master_config):
     root_dir = salt_factories._get_root_dir_for_daemon("master")
-    conf_dir = root_dir.join("conf").ensure(dir=True)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
 
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "master")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
 
-        tests_known_hosts_file = root_dir.join("salt_ssh_known_hosts").strpath
+        tests_known_hosts_file = str(root_dir / "salt_ssh_known_hosts")
         with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
             known_hosts.write("")
 
-    config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["root_dir"] = str(root_dir)
     config_defaults["known_hosts_file"] = tests_known_hosts_file
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
@@ -284,7 +288,7 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
-    extension_modules_path = root_dir.join("extension_modules").strpath
+    extension_modules_path = str(root_dir / "extension_modules")
     if not os.path.exists(extension_modules_path):
         shutil.copytree(
             os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
@@ -292,7 +296,7 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
         )
 
     # Copy the autosign_file to the new  master root_dir
-    autosign_file_path = root_dir.join("autosign_file").strpath
+    autosign_file_path = str(root_dir / "autosign_file")
     shutil.copyfile(
         os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
     )
@@ -332,7 +336,7 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
         if not entry.startswith("cloud"):
             continue
         source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
-        dest = conf_dir.join(entry).strpath
+        dest = str(conf_dir / entry)
         if os.path.isdir(source):
             shutil.copytree(source, dest)
         else:
@@ -502,7 +506,7 @@ def bridge_pytest_and_runtests(
     )
 
     # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP_ROOT_DIR = salt_factories.root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_ROOT_DIR = str(salt_factories.root_dir.resolve())
     RUNTIME_VARS.TMP_CONF_DIR = os.path.dirname(salt_master_config["conf_file"])
     RUNTIME_VARS.TMP_MINION_CONF_DIR = os.path.dirname(salt_minion_config["conf_file"])
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = os.path.dirname(
