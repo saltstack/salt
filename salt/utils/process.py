@@ -263,8 +263,8 @@ def claim_mantle_of_responsibility(file_name):
         return True
 
     # check if process is still alive
-    if file_process_info is not None and file_process_info == get_process_info(
-        file_process_info["pid"]
+    if isinstance(file_process_info, dict) and file_process_info == get_process_info(
+        file_process_info.get("pid")
     ):
         return False
 
