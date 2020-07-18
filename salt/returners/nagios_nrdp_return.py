@@ -51,7 +51,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import cgi
+import html
 import logging
 
 import salt.ext.six.moves.http_client
@@ -125,20 +125,20 @@ def _prepare_xml(options=None, state=None):
             + six.text_type(options["checktype"])
             + "'>"
         )
-        xml += "<hostname>" + cgi.escape(options["hostname"], True) + "</hostname>"
-        xml += "<servicename>" + cgi.escape(options["service"], True) + "</servicename>"
+        xml += "<hostname>" + html.escape(options["hostname"]) + "</hostname>"
+        xml += "<servicename>" + html.escape(options["service"]) + "</servicename>"
     else:
         xml += (
             "<checkresult type='host' checktype='"
             + six.text_type(options["checktype"])
             + "'>"
         )
-        xml += "<hostname>" + cgi.escape(options["hostname"], True) + "</hostname>"
+        xml += "<hostname>" + html.escape(options["hostname"]) + "</hostname>"
 
     xml += "<state>" + _state + "</state>"
 
     if "output" in options:
-        xml += "<output>" + cgi.escape(options["output"], True) + "</output>"
+        xml += "<output>" + html.escape(options["output"]) + "</output>"
 
     xml += "</checkresult>"
 
