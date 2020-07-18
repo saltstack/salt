@@ -29,6 +29,7 @@ pyobjc-framework-coreaudio==6.2.2  # via pyobjc, pyobjc-framework-coreaudiokit
 pyobjc-framework-coreaudiokit==6.2.2  # via pyobjc
 pyobjc-framework-corebluetooth==6.2.2  # via pyobjc
 pyobjc-framework-coredata==6.2.2  # via pyobjc, pyobjc-framework-cloudkit, pyobjc-framework-syncservices
+pyobjc-framework-corehaptics==6.2.2  # via pyobjc
 pyobjc-framework-corelocation==6.2.2  # via pyobjc, pyobjc-framework-cloudkit, pyobjc-framework-mapkit
 pyobjc-framework-coremedia==6.2.2  # via pyobjc, pyobjc-framework-avfoundation, pyobjc-framework-oslog, pyobjc-framework-videotoolbox
 pyobjc-framework-coremediaio==6.2.2  # via pyobjc

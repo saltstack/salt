@@ -11,6 +11,7 @@ pyobjc-framework-adsupport==6.2.2  # 10.14, 10.15
 pyobjc-framework-authenticationservices==6.2.2  # 10.15
 pyobjc-framework-automaticassessmentconfiguration==6.2.2  # 10.15
 pyobjc-framework-businesschat==6.2.2  # 10.14, 10.15
+pyobjc-framework-corehaptics==6.2.2  # 10.15
 pyobjc-framework-coremotion==6.2.2  # 10.15
 pyobjc-framework-devicecheck==6.2.2  # 10.15
 pyobjc-framework-executionpolicy==6.2.2  # 10.15
