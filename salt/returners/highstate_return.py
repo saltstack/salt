@@ -79,7 +79,7 @@ the time of execution.
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import cgi
+import html
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -226,7 +226,7 @@ def _generate_html_table(data, out, level=0, extra_style=""):
                                 "td",
                                 [cell_style, second_style, "value", new_extra_style],
                             ),
-                            cgi.escape(six.text_type(value)),
+                            html.escape(six.text_type(value)),
                         ),
                         file=out,
                     )
@@ -251,7 +251,7 @@ def _generate_html_table(data, out, level=0, extra_style=""):
                     _lookup_style(
                         "td", [cell_style, first_style, "value", extra_style]
                     ),
-                    cgi.escape(six.text_type(subdata)),
+                    html.escape(six.text_type(subdata)),
                 ),
                 file=out,
             )
