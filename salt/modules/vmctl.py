@@ -64,7 +64,7 @@ def create_disk(name, size):
         salt '*' vmctl.create_disk /path/to/disk.img size=10G
     """
     ret = False
-    cmd = "vmctl create {0} -s {1}".format(name, size)
+    cmd = "vmctl create -s {0} {1}".format(size, name)
 
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
@@ -223,14 +223,6 @@ def start(
     ret = {"changes": False, "console": None}
     cmd = ["vmctl", "start"]
 
-    if not (name or id):
-        raise SaltInvocationError('Must provide either "name" or "id"')
-    elif name:
-        cmd.append(name)
-    else:
-        cmd.append(id)
-        name = _id_to_name(id)
-
     if nics > 0:
         cmd.append("-i {0}".format(nics))
 
@@ -256,6 +248,14 @@ def start(
 
     if disks and len(disks) > 0:
         cmd.extend(["-d", x] for x in disks)
+
+    if not (name or id):
+        raise SaltInvocationError('Must provide either "name" or "id"')
+    elif name:
+        cmd.append(name)
+    else:
+        cmd.append(id)
+        name = _id_to_name(id)
 
     # Before attempting to define a new VM, make sure it doesn't already exist.
     # Otherwise return to indicate nothing was changed.

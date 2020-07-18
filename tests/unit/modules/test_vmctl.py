@@ -139,12 +139,12 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
                     [
                         "vmctl",
                         "start",
-                        "web1",
                         "-i 2",
                         "-b",
                         "/bsd.rd",
                         "-d",
                         "/disk.img",
+                        "web1",
                     ],
                     output_loglevel="trace",
                     python_shell=False,
