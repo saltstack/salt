@@ -148,7 +148,7 @@ def compile_template(
     return ret
 
 
-def compile_template_str(template, renderers, default, blacklist, whitelist):
+def compile_template_str(template, renderers, default, blacklist, whitelist, jid):
     """
     Take template as a string and return the high data structure
     derived from the template.
@@ -156,7 +156,7 @@ def compile_template_str(template, renderers, default, blacklist, whitelist):
     fn_ = salt.utils.files.mkstemp()
     with salt.utils.files.fopen(fn_, "wb") as ofile:
         ofile.write(SLS_ENCODER(template)[0])
-    return compile_template(fn_, renderers, default, blacklist, whitelist)
+    return compile_template(fn_, renderers, default, blacklist, whitelist, jid)
 
 
 def template_shebang(template, renderers, default, blacklist, whitelist, input_data):
