@@ -316,7 +316,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         mock = MagicMock(return_value="A\nB")
-        with patch.dict(linux_lvm.__salt__, {"cmd.run": mock}):
+        with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
             with patch.object(linux_lvm, "lvdisplay", return_value={}):
                 self.assertDictEqual(
                     linux_lvm.lvcreate(None, None, None, 1),
@@ -329,7 +329,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         for which physical volume to be used
         """
         mock = MagicMock(return_value="A\nB")
-        with patch.dict(linux_lvm.__salt__, {"cmd.run": mock}):
+        with patch.dict(linux_lvm.__salt__, {"cmd.run_all": mock}):
             with patch.object(linux_lvm, "lvdisplay", return_value={}):
                 self.assertDictEqual(
                     linux_lvm.lvcreate(None, None, None, 1, force=True),

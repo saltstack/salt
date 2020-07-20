@@ -496,10 +496,14 @@ def lvcreate(
     if force:
         cmd.append("--yes")
 
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    lvdev = "/dev/{0}/{1}".format(vgname, lvname)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
     lvdata = lvdisplay(lvdev)
-    lvdata["Output from lvcreate"] = out[0].strip()
+    if out.get('retcode') == 0:
+        lvdata['Output from lvcreate'] = out['stdout']
+    else:
+        lvdata['Output from lvcreate'] = out['stderr']
+    lvdata['retcode'] = out['retcode']
     return lvdata
 
 
