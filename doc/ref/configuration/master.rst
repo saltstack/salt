@@ -5814,7 +5814,7 @@ authenticate is protected by a passphrase.
 .. conf_master:: winrepo_refspecs
 
 ``winrepo_refspecs``
-~~~~~~~~~~~~~~~~~~~~
+********************
 
 .. versionadded:: 2017.7.0
 
