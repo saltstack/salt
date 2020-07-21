@@ -5,6 +5,7 @@ integration tests for mac_service
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -154,16 +155,14 @@ class MacServiceModuleTest(ModuleCase):
         """
         # A running service
         self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
-        self.assertTrue(
-            self.run_function("service.status", [self.SERVICE_NAME]).isdigit()
-        )
+        self.assertTrue(self.run_function("service.status", [self.SERVICE_NAME]))
 
         # A stopped service
         self.assertTrue(self.run_function("service.stop", [self.SERVICE_NAME]))
-        self.assertEqual("", self.run_function("service.status", [self.SERVICE_NAME]))
+        self.assertFalse(self.run_function("service.status", [self.SERVICE_NAME]))
 
         # Service not found
-        self.assertEqual("", self.run_function("service.status", ["spongebob"]))
+        self.assertFalse(self.run_function("service.status", ["spongebob"]))
 
     @slowTest
     def test_available(self):
@@ -193,7 +192,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.stop", [self.SERVICE_NAME]))
         self.assertFalse(self.run_function("service.enabled", [self.SERVICE_NAME]))
 
-        self.assertFalse(self.run_function("service.enabled", ["spongebob"]))
+        self.assertTrue(self.run_function("service.enabled", ["spongebob"]))
 
     @destructiveTest
     @slowTest
@@ -208,8 +207,9 @@ class MacServiceModuleTest(ModuleCase):
         self.assertTrue(self.run_function("service.disable", [SERVICE_NAME]))
         self.assertTrue(self.run_function("service.disabled", [SERVICE_NAME]))
         self.assertTrue(self.run_function("service.enable", [SERVICE_NAME]))
-
-        self.assertFalse(self.run_function("service.disabled", ["spongebob"]))
+        self.assertIn(
+            "Service not found", self.run_function("service.stop", ["spongebob"])
+        )
 
     @slowTest
     def test_get_all(self):
