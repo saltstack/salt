@@ -122,3 +122,7 @@ vault:
     token: testsecret
   policies:
   - testpolicy
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
