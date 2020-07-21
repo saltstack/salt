@@ -31,7 +31,15 @@ Instructions are at https://repo.saltstack.com/#debian.
 
     If looking to use archives, the same directions from the `Debian install
     directions <https://repo.saltstack.com/#debian>`__ can be used by replacing
-    the URL paths with the appropriate archive location.
+    the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/apt/sources.list.d/saltstack.list directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/apt/sources.list.d/saltstack.list
+
 
 .. warning::
     Regular security support for Debian 8 ended on June 30th 2018. As a result,

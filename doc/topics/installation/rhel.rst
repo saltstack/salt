@@ -30,7 +30,15 @@ the SaltStack Repository.
 
     If looking to use archives, the same directions from the `RHEL/CentOS
     install directions <https://repo.saltstack.com/#rhel>`__ can be used by
-    replacing the URL paths with the appropriate archive location.
+    replacing the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/yum.repos.d/ directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/yum.repos.d/salt*.repo
+
 
     **Amazon Linux**
 
@@ -39,7 +47,15 @@ the SaltStack Repository.
 
     If looking to use archives, the same directions from the `Amazon
     install directions <https://repo.saltstack.com/#amzn>`__ can be used by
-    replacing the URL paths with the appropriate archive location.
+    replacing the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/yum.repos.d/ directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/yum.repos.d/salt*.repo
+
 
 .. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
