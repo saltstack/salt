@@ -47,7 +47,7 @@ from salt.utils.network import _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
-def linux_distribution():
+def _linux_distribution():
     return (
         distro.id(),
         distro.version(best=True),
@@ -2041,7 +2041,7 @@ def os_data():
             "Getting OS name, release, and codename from distro id, version, codename"
         )
         (osname, osrelease, oscodename) = [
-            x.strip('"').strip("'") for x in linux_distribution()
+            x.strip('"').strip("'") for x in _linux_distribution()
         ]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
