@@ -5,16 +5,15 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os.path
-
 # Import Salt Libs
 import salt.states.cmd as cmd
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CmdTestCase(TestCase, LoaderModuleMockMixin):
@@ -24,73 +23,6 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {cmd: {"__env__": "base"}}
-
-    # 'mod_run_check' function tests: 1
-
-    def test_mod_run_check(self):
-        """
-        Test to execute the onlyif and unless logic.
-        """
-        cmd_kwargs = {}
-        creates = "/tmp"
-
-        mock = MagicMock(return_value=1)
-        with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-            with patch.dict(cmd.__opts__, {"test": True}):
-                ret = {
-                    "comment": "onlyif condition is false",
-                    "result": True,
-                    "skip_watch": True,
-                }
-                self.assertDictEqual(
-                    cmd.mod_run_check(cmd_kwargs, "", "", creates), ret
-                )
-
-                self.assertDictEqual(
-                    cmd.mod_run_check(cmd_kwargs, {}, "", creates), ret
-                )
-
-        mock = MagicMock(return_value=1)
-        with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-            with patch.dict(cmd.__opts__, {"test": True}):
-                ret = {
-                    "comment": "onlyif condition is false: ",
-                    "result": True,
-                    "skip_watch": True,
-                }
-                self.assertDictEqual(
-                    cmd.mod_run_check(cmd_kwargs, [""], "", creates), ret
-                )
-
-        mock = MagicMock(return_value=0)
-        with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-            ret = {
-                "comment": "unless condition is true",
-                "result": True,
-                "skip_watch": True,
-            }
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, "", creates), ret)
-
-            self.assertDictEqual(
-                cmd.mod_run_check(cmd_kwargs, None, [""], creates), ret
-            )
-
-            self.assertDictEqual(
-                cmd.mod_run_check(cmd_kwargs, None, True, creates), ret
-            )
-
-        with patch.object(os.path, "exists", MagicMock(sid_effect=[True, True, False])):
-            ret = {"comment": "/tmp exists", "result": True}
-            self.assertDictEqual(
-                cmd.mod_run_check(cmd_kwargs, None, None, creates), ret
-            )
-
-            ret = {"comment": "All files in creates exist", "result": True}
-            self.assertDictEqual(
-                cmd.mod_run_check(cmd_kwargs, None, None, [creates]), ret
-            )
-
-            self.assertTrue(cmd.mod_run_check(cmd_kwargs, None, None, {}))
 
     # 'wait' function tests: 1
 
@@ -153,13 +85,6 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": comt, "result": None, "changes": {}})
                 self.assertDictEqual(cmd.run(name), ret)
 
-            mock = MagicMock(return_value=1)
-            with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-                with patch.dict(cmd.__opts__, {"test": False}):
-                    comt = "onlyif condition is false"
-                    ret.update({"comment": comt, "result": True, "skip_watch": True})
-                    self.assertDictEqual(cmd.run(name, onlyif=""), ret)
-
     def test_run_root(self):
         """
         Test to run a command with a different root
@@ -220,19 +145,49 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                     )
                     self.assertDictEqual(cmd.script(name), ret)
 
-            mock = MagicMock(return_value=1)
-            with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-                with patch.dict(cmd.__opts__, {"test": False}):
-                    comt = "onlyif condition is false"
-                    ret.update(
-                        {
-                            "comment": comt,
-                            "result": True,
-                            "skip_watch": True,
-                            "changes": {},
-                        }
-                    )
-                    self.assertDictEqual(cmd.script(name, onlyif=""), ret)
+    @skipIf(not salt.utils.platform.is_windows(), "windows test only")
+    def test_script_runas_no_password(self):
+        """
+        Test to download a script and execute it, specifically on windows.
+        Make sure that when using runas, and a password is not supplied we check.
+        """
+        name = "cmd.script"
+        ret = {
+            "name": "cmd.script",
+            "changes": {},
+            "result": False,
+            "comment": "",
+            "commnd": "Must supply a password if runas argument is used on Windows.",
+        }
+
+        patch_opts = patch.dict(cmd.__opts__, {"test": False})
+        patch_shell = patch.dict(cmd.__grains__, {"shell": "shell"})
+
+        # Fake the execution module call
+        mock = MagicMock(side_effect=[CommandExecutionError, {"retcode": 1}])
+        patch_call = patch.dict(cmd.__salt__, {"cmd.script": mock})
+
+        with patch_opts, patch_shell, patch_call:
+            self.assertDictEqual(cmd.script(name, runas="User"), ret)
+
+    @skipIf(not salt.utils.platform.is_windows(), "windows test only")
+    def test_script_runas_password(self):
+        """
+        Test to download a script and execute it, specifically on windows.
+        Make sure that when we do supply a password, we get into the function call.
+        """
+        name = "cmd.script"
+        ret = {"changes": {}, "comment": "", "name": "cmd.script", "result": False}
+
+        patch_opts = patch.dict(cmd.__opts__, {"test": False})
+        patch_shell = patch.dict(cmd.__grains__, {"shell": "shell"})
+
+        # Fake the execution module call
+        mock = MagicMock(side_effect=[CommandExecutionError, {"retcode": 1}])
+        patch_call = patch.dict(cmd.__salt__, {"cmd.script": mock})
+
+        with patch_opts, patch_shell, patch_call:
+            self.assertDictEqual(cmd.script(name, runas="User", password="Test"), ret)
 
     # 'call' function tests: 1
 
@@ -262,23 +217,8 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(cmd.call(name, func), ret)
 
             flag = False
-            comt = "onlyif condition is false"
             ret.update({"comment": "", "result": False, "changes": {"retval": []}})
             self.assertDictEqual(cmd.call(name, func), ret)
-
-            mock = MagicMock(return_value=1)
-            with patch.dict(cmd.__salt__, {"cmd.retcode": mock}):
-                with patch.dict(cmd.__opts__, {"test": True}):
-                    comt = "onlyif condition is false"
-                    ret.update(
-                        {
-                            "comment": comt,
-                            "skip_watch": True,
-                            "result": True,
-                            "changes": {},
-                        }
-                    )
-                    self.assertDictEqual(cmd.call(name, func, onlyif=""), ret)
 
     # 'wait_call' function tests: 1
 

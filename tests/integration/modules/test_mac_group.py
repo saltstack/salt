@@ -13,8 +13,8 @@ from tests.support.helpers import (
     random_string,
     runs_on,
     skip_if_not_root,
+    slowTest,
 )
-from tests.support.unit import skipIf
 
 # Create group name strings for tests
 ADD_GROUP = random_string("RS-", lowercase=False)
@@ -32,7 +32,15 @@ class MacGroupModuleTest(ModuleCase):
     Integration tests for the mac_group module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    def setUp(self):
+        """
+        Sets up test requirements
+        """
+        os_grain = self.run_function("grains.item", ["kernel"])
+        if os_grain["kernel"] not in "Darwin":
+            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
+
+    @slowTest
     def test_mac_group_add(self):
         """
         Tests the add group function
@@ -45,7 +53,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_group_delete(self):
         """
         Tests the delete group function
@@ -59,7 +67,7 @@ class MacGroupModuleTest(ModuleCase):
         ret = self.run_function("group.delete", [DEL_GROUP])
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_group_chgid(self):
         """
         Tests changing the group id
@@ -77,7 +85,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [CHANGE_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_adduser(self):
         """
         Tests adding user to the group
@@ -95,7 +103,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_deluser(self):
         """
         Test deleting user from a group
@@ -114,7 +122,7 @@ class MacGroupModuleTest(ModuleCase):
         group_info = self.run_function("group.info", [ADD_GROUP])
         self.assertNotIn(ADD_USER, "".join(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_members(self):
         """
         Test replacing members of a group
@@ -137,7 +145,7 @@ class MacGroupModuleTest(ModuleCase):
         self.assertIn(REP_USER_GROUP, six.text_type(group_info["members"]))
         self.assertNotIn(ADD_USER, six.text_type(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_getent(self):
         """
         Test returning info on all groups

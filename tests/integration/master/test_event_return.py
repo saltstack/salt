@@ -15,15 +15,14 @@ import shutil
 import subprocess
 import time
 
-import pytest
 import salt.ext.six as six
 from salt.utils.nb_popen import NonBlockingPopen
-from tests.support.case import TestCase
+from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.processes.helpers import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import SkipTest, TestCase
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
         cls.root_dir = temp_config["root_dir"]
         cls.config_dir = os.path.dirname(temp_config["conf_file"])
         if temp_config["transport"] == "tcp":
-            pytest.skip("Test only applicable to the ZMQ transport")
+            raise SkipTest("Test only applicable to the ZMQ transport")
 
     @classmethod
     def tearDownClass(cls):

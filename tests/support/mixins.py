@@ -22,7 +22,6 @@ import sys
 import tempfile
 import time
 import types
-from collections import OrderedDict
 
 import salt.config
 import salt.exceptions
@@ -43,6 +42,11 @@ from salt.utils.verify import verify_env
 from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -200,6 +204,10 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_config_file_path(filename):
+        if filename == "master":
+            return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+        if filename == "minion":
+            return os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, filename)
         if filename == "syndic_master":
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
         if filename == "syndic":
@@ -211,9 +219,9 @@ class AdaptedConfigurationTestCaseMixin(object):
         if filename == "mm_sub_master":
             return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "master")
         if filename == "mm_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR, "minion")
         if filename == "mm_sub_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR, "minion")
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property

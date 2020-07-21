@@ -16,12 +16,12 @@ if %errorLevel%==0 (
 )
 echo.
 
-:CheckPython2
-if exist "\Python27" goto RemovePython2
+:CheckPython27
+if exist "\Python27" goto RemovePython27
 
-goto CheckPython3
+goto CheckPython35
 
-:RemovePython2
+:RemovePython27
     rem Uninstall Python 2.7
     echo %0 :: Uninstalling Python 2 ...
     echo ---------------------------------------------------------------------
@@ -54,12 +54,12 @@ goto CheckPython3
         echo Failed, please remove manually
     )
 
-:CheckPython3
-if exist "\Python35" goto RemovePython3
+:CheckPython35
+if exist "\Python35" goto RemovePython35
 
 goto CheckPython37
 
-:RemovePython3
+:RemovePython35
     echo %0 :: Uninstalling Python 3 ...
     echo ---------------------------------------------------------------------
     :: 64 bit

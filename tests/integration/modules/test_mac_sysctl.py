@@ -2,7 +2,6 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
@@ -11,8 +10,7 @@ import random
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.helpers import destructiveTest, runs_on, skip_if_not_root, slowTest
 
 # Module Variables
 ASSIGN_CMD = "net.inet.icmp.icmplim"
@@ -47,7 +45,7 @@ class DarwinSysctlModuleTest(ModuleCase):
                 raise CommandExecutionError(msg.format(CONFIG))
             os.remove(CONFIG)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_assign(self):
         """
         Tests assigning a single sysctl parameter
@@ -67,7 +65,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             self.run_function("sysctl.assign", [ASSIGN_CMD, self.val])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_persist_new_file(self):
         """
         Tests assigning a sysctl value to a system without a sysctl.conf file
@@ -84,7 +82,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_persist_already_set(self):
         """
         Tests assigning a sysctl value that is already set in sysctl.conf file
@@ -100,7 +98,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             os.remove(CONFIG)
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_persist_apply_change(self):
         """
         Tests assigning a sysctl value and applying the change to system
