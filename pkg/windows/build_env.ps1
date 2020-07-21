@@ -199,6 +199,37 @@ If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
 }
 
 #------------------------------------------------------------------------------
+# Check for installation of EnVar Plugin for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for EnVar Plugin of NSIS installation  . . ."
+If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\EnVar.dll") -and (Test-Path "$($ini[$bitPaths]['NSISPluginsDirU'])\EnVar.dll") ) {
+    # Found EnVar Plugin for NSIS, do nothing
+    Write-Output " - EnVar Plugin for NSIS Found . . ."
+} Else {
+    # EnVar Plugin for NSIS not found, install
+    Write-Output " - EnVar Plugin for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISPluginEnVar']) . . ."
+    $file = "$($ini['Prerequisites']['NSISPluginEnVar'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Zip File
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file "$($ini['Settings']['DownloadDir'])\nsisenvar"
+
+    # Copy dlls to plugins directory (both ANSI and Unicode)
+    Write-Output " - Copying dlls to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-ansi\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\EnVar.dll" -Force
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar\Plugins\x86-unicode\EnVar.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\EnVar.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisenvar" -Force -Recurse
+    Remove-Item "$file" -Force
+
+}
+
+#------------------------------------------------------------------------------
 # Check for installation of Microsoft Visual C++ Build Tools
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Microsoft Visual C++ Build Tools installation . . ."
@@ -225,7 +256,7 @@ If (Test-Path "$($ini[$bitPaths]['VCppBuildToolsDir'])\vcbuildtools.bat") {
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Python 3 installation . . ."
 If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
-    # Found Python 3.5, do nothing
+    # Found Python 3, do nothing
     Write-Output " - Python 3 Found . . ."
 } Else {
     Write-Output " - Downloading $($ini[$bitPrograms]['Python3']) . . ."

@@ -7,7 +7,6 @@ cherrypy==17.3.0
 croniter>=0.3.0,!=0.3.22
 dnspython
 docker
-futures>=2.0; python_version < '3.0'
 GitPython
 hgtools
 jmespath
@@ -35,7 +34,6 @@ salttesting==2017.6.1
 setproctitle
 setuptools-scm
 strict_rfc3339
-supervisor==3.3.5; python_version < '3'
 timelib
 toml
 vcert~=0.7.0
@@ -46,4 +44,3 @@ watchdog
 Genshi
 Cheetah3==3.1.0
 Mako
-wempy; python_version <'3'

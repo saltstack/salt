@@ -1,2 +1,0 @@
-Changes the 'SSDs' grain name to 'ssds' as all grains needs to be 
-resolved in lowered case.
