@@ -199,7 +199,7 @@ class CloudTest(ShellCase):
 
     def setUp(self):
         """
-        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail
+        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_PROVIDER_CONFIG_ITEMS or this will fail
         """
         super(CloudTest, self).setUp()
 
