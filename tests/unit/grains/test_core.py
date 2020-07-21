@@ -1023,6 +1023,92 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     "Xen PV DomU",
                 )
 
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_illumos_virtual(self):
+        """
+        Test if virtual grains are parsed correctly inside illumos/solaris zone
+        """
+
+        def _cmd_side_effect(cmd):
+            if cmd == "/usr/bin/zonename":
+                # NOTE: we return the name of the zone
+                return "myzone"
+            log.debug("cmd.run: '{}'".format(cmd))
+
+        def _cmd_all_side_effect(cmd):
+            # NOTE: prtdiag doesn't work inside a zone
+            #       so we return the expected result
+            if cmd == "/usr/sbin/prtdiag ":
+                return {
+                    "pid": 32208,
+                    "retcode": 1,
+                    "stdout": "",
+                    "stderr": "prtdiag can only be run in the global zone",
+                }
+            log.debug("cmd.run_all: '{}'".format(cmd))
+
+        def _which_side_effect(path):
+            if path == "prtdiag":
+                return "/usr/sbin/prtdiag"
+            elif path == "zonename":
+                return "/usr/bin/zonename"
+            return None
+
+        with patch.dict(
+            core.__salt__,
+            {
+                "cmd.run": MagicMock(side_effect=_cmd_side_effect),
+                "cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect),
+            },
+        ):
+            with patch(
+                "salt.utils.path.which", MagicMock(side_effect=_which_side_effect)
+            ):
+                grains = core._virtual({"kernel": "SunOS"})
+                self.assertEqual(
+                    grains.get("virtual"), "zone",
+                )
+
+    @skipIf(salt.utils.platform.is_windows(), "System is Windows")
+    def test_illumos_fallback_virtual(self):
+        """
+        Test if virtual grains are parsed correctly inside illumos/solaris zone
+        """
+
+        def _cmd_all_side_effect(cmd):
+            # NOTE: prtdiag doesn't work inside a zone
+            #       so we return the expected result
+            if cmd == "/usr/sbin/prtdiag ":
+                return {
+                    "pid": 32208,
+                    "retcode": 1,
+                    "stdout": "",
+                    "stderr": "prtdiag can only be run in the global zone",
+                }
+            log.debug("cmd.run_all: '{}'".format(cmd))
+
+        def _which_side_effect(path):
+            if path == "prtdiag":
+                return "/usr/sbin/prtdiag"
+            return None
+
+        def _isdir_side_effect(path):
+            if path == "/.SUNWnative":
+                return True
+            return False
+
+        with patch.dict(
+            core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+        ):
+            with patch(
+                "salt.utils.path.which", MagicMock(side_effect=_which_side_effect)
+            ):
+                with patch("os.path.isdir", MagicMock(side_effect=_isdir_side_effect)):
+                    grains = core._virtual({"kernel": "SunOS"})
+                    self.assertEqual(
+                        grains.get("virtual"), "zone",
+                    )
+
     def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
         def mockstat(path):
             if path == "/":

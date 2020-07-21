@@ -314,6 +314,42 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         user_info = self.run_function("user.info", [self.user_name])
         self.assertTrue(os.path.exists(user_info["home"]))
 
+    @skipIf(not salt.utils.platform.is_linux(), "only supported on linux")
+    def test_user_present_gid_from_name(self):
+        """
+        Test that gid_from_name results in warning, while it is on a
+        deprecation path.
+        """
+        # Add the user
+        ret = self.run_state("user.present", name=self.user_name, gid_from_name=True)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        expected = [
+            "The 'gid_from_name' argument in the user.present state has been "
+            "replaced with 'usergroup'. Update your SLS file to get rid of "
+            "this warning."
+        ]
+        assert ret["warnings"] == expected, ret["warnings"]
+
+    @skipIf(not salt.utils.platform.is_linux(), "only supported on linux")
+    def test_user_present_gid_from_name_and_usergroup(self):
+        """
+        Test that gid_from_name results in warning, while it is on a
+        deprecation path.
+        """
+        # Add the user
+        ret = self.run_state(
+            "user.present", name=self.user_name, usergroup=True, gid_from_name=True
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        expected = [
+            "The 'gid_from_name' argument in the user.present state has been "
+            "replaced with 'usergroup'. Ignoring since 'usergroup' was also "
+            "used."
+        ]
+        assert ret["warnings"] == expected, ret["warnings"]
+
     @skipIf(
         salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(),
         "groups/gid not fully supported",
@@ -381,6 +417,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             if USER in check_user:
                 del_user = self.run_function("user.delete", [USER], remove=True)
         self.assertSaltTrueReturn(self.run_state("user.absent", name=self.user_name))
+        self.assertSaltTrueReturn(self.run_state("group.absent", name=self.user_name))
 
 
 @destructiveTest
