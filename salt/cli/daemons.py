@@ -193,7 +193,6 @@ class Master(
         self.master = salt.master.Master(self.config)
 
         self.daemonize_if_required()
-        self.set_pidfile()
         salt.utils.process.notify_systemd()
 
     def start(self):
@@ -293,7 +292,7 @@ class Minion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if self.check_running():
+        if not self.claim_pid_file():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
@@ -309,7 +308,6 @@ class Minion(
             # the boot process waiting for a key to be accepted on the master.
             # This is the latest safe place to daemonize
             self.daemonize_if_required()
-            self.set_pidfile()
             if self.config.get("master_type") == "func":
                 salt.minion.eval_master_func(self.config)
             self.minion = salt.minion.MinionManager(self.config)
@@ -486,7 +484,7 @@ class ProxyMinion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if self.check_running():
+        if not self.claim_pid_file():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
@@ -499,7 +497,6 @@ class ProxyMinion(
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
-        self.set_pidfile()
         if self.config.get("master_type") == "func":
             salt.minion.eval_master_func(self.config)
         self.minion = salt.minion.ProxyMinionManager(self.config)
@@ -596,7 +593,6 @@ class Syndic(
 
         self.daemonize_if_required()
         self.syndic = salt.minion.SyndicManager(self.config)
-        self.set_pidfile()
 
     def start(self):
         """

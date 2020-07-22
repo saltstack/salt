@@ -770,11 +770,9 @@ class TestDaemon(TestProgram):
     @property
     def daemon_pid(self):
         """Return the daemon PID"""
-        daemon_pid = None
-        pid_path = self.abs_path(self.pid_path)
-        if salt.utils.process.check_pidfile(pid_path):
-            daemon_pid = salt.utils.process.get_pidfile(pid_path)
-        return daemon_pid
+        return salt.utils.process.check_mantle_of_responsibility(
+            self.abs_path(self.pid_path)
+        )
 
     def wait_for_daemon_pid(self, timeout=10):
         """Wait up to timeout seconds for the PID file to appear and return the PID"""
