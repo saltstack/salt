@@ -211,6 +211,65 @@ class VirtTest(ModuleCase):
         self.assertIsInstance(info["sockets"], Number)
         self.assertIn(info["cpumodel"], self.cpu_models)
 
+
+class VirtMinion(object):
+    def __init__(self, module_case, target_name, sshd_port, tcp_port, tls_port):
+        self.target_name = target_name
+        self.uri = "localhost:{}".format(sshd_port)
+        self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
+        self.tcp_uri = "qemu+tcp://localhost:{}/system".format(tcp_port)
+        self.tls_uri = "qemu+tls://localhost:{}/system".format(tls_port)
+        self.module_case = module_case
+
+    def run(self, func, args=None):
+        return self.module_case.run_function(func, args or [], minion_tgt=self.target_name)
+
+@skip_if_binaries_missing("docker")
+@slowTest
+class VirtMigrateTest(ModuleCase):
+    def setUp(self):
+        super(VirtMigrateTest, self).setUp()
+        self.minion_0 = VirtMinion(
+            self,
+            "virt_minion_0",
+            sshd_port=2201,
+            tcp_port=2203,
+            tls_port=2204
+        )
+        self.minion_1 = VirtMinion(
+            self,
+            "virt_minion_1",
+            sshd_port=2202,
+            tcp_port=2205,
+            tls_port=2206
+        )
+        self.domain = "core-vm"
+        self.skipSetUpTearDown = ["test_define_xml_path"]
+
+        if self._testMethodName not in self.skipSetUpTearDown:
+            self.minion_0.run("virt.define_xml_path", ["/core-vm.xml"])
+            self.minion_0.run("virt.start", [self.domain])
+            self.wait_for_all_jobs(
+                minions=(
+                    self.minion_0.target_name,
+                    self.minion_1.target_name,
+                )
+            )
+
+    def tearDown(self):
+        if self._testMethodName not in self.skipSetUpTearDown:
+            self.minion_0.run("virt.stop", [self.domain])
+            self.minion_1.run("virt.stop", [self.domain])
+            self.minion_0.run("virt.undefine", [self.domain])
+            self.minion_1.run("virt.undefine", [self.domain])
+            self.wait_for_all_jobs(
+                minions=(
+                    self.minion_0.target_name,
+                    self.minion_1.target_name,
+                )
+            )
+        super(VirtMigrateTest, self).tearDown()
+
     def test_define_xml_path(self):
         """
         Define a new domain with virt.define_xml_path,
@@ -218,55 +277,75 @@ class VirtTest(ModuleCase):
         remove the domain with virt.undefine, and verifies that
         domain is no longer shown with virt.list_domains.
         """
-        result = self.run_function(
-            "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
-        )
+        result = self.minion_0.run("virt.define_xml_path", ["/core-vm.xml"])
         self.assertIsInstance(result, bool)
-        self.assertEqual(result, True)
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertTrue(result)
+
+        domains = self.minion_0.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, ["core-vm"])
-        result = self.run_function(
-            "virt.undefine", ["core-vm"], minion_tgt="virt_minion_0"
-        )
-        self.assertEqual(result, True)
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        self.assertListEqual(domains, [self.domain])
+
+        result = self.minion_0.run("virt.undefine", [self.domain])
+        self.assertTrue(result)
+
+        domains = self.minion_0.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, [])
+        self.assertListEqual(domains, [])
 
     def test_migration(self):
         """
-        Test domain migration
+        Test domain migration over SSH, TCP and TLS transport protocol
         """
-        result = self.run_function(
-            "virt.define_xml_path", ["/core-vm.xml"], minion_tgt="virt_minion_0"
+        # Verify that the VM has been created
+        domains = self.minion_0.run("virt.list_domains")
+        self.assertIsInstance(domains, list)
+        self.assertListEqual(domains, [self.domain])
+
+        domains = self.minion_1.run("virt.list_domains")
+        self.assertIsInstance(domains, list)
+        self.assertListEqual(domains, [])
+
+        # Migration over SSH
+        result = self.minion_0.run(
+            "virt.migrate", [self.domain, self.minion_1.uri, True],
         )
-        self.assertIsInstance(result, bool)
         self.assertEqual(result, True)
 
-        result = self.run_function(
-            "virt.start", ["core-vm"], minion_tgt="virt_minion_0"
+        # Verify that the VM has been migrated
+        domains = self.minion_1.run("virt.list_domains")
+        self.assertIsInstance(domains, list)
+        self.assertListEqual(domains, [self.domain], "Failed to migrate domain")
+
+        domains = self.minion_0.run("virt.list_domains")
+        self.assertIsInstance(domains, list)
+        self.assertListEqual(domains, [], "Failed to migrate domain")
+
+        # Migrate over TCP
+        result = self.minion_1.run(
+            "virt.migrate", [self.domain, self.minion_0.tcp_uri],
         )
         self.assertEqual(result, True)
 
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        # Verify that the VM has been migrated
+        domains = self.minion_0.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, ["core-vm"])
+        self.assertListEqual(domains, [self.domain])
 
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_1")
+        domains = self.minion_1.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, [])
+        self.assertListEqual(domains, [])
 
-        result = self.run_function(
-            "virt.migrate",
-            ["core-vm", "localhost:2202", True],
-            minion_tgt="virt_minion_0",
+        # Migrate over TLS
+        result = self.minion_0.run(
+            "virt.migrate", [self.domain, self.minion_1.tls_uri],
         )
+        self.assertEqual(result, True)
 
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_1")
+        # Verify that the VM has been migrated
+        domains = self.minion_1.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, ["core-vm"])
+        self.assertListEqual(domains, [self.domain])
 
-        domains = self.run_function("virt.list_domains", minion_tgt="virt_minion_0")
+        domains = self.minion_0.run("virt.list_domains")
         self.assertIsInstance(domains, list)
-        self.assertEqual(domains, [])
+        self.assertListEqual(domains, [])
