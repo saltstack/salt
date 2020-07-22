@@ -427,7 +427,7 @@ class Compiler(object):
                     comps = key.split(".")
                     if len(comps) >= 2:
                         # Merge the comps
-                        comps[1] = ".".join(comps[1 : len(comps)])
+                        comps[1] = ".".join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
@@ -1807,19 +1807,16 @@ class State(object):
                                     else:
                                         found = False
                                         for _id in iter(high):
-                                            for state in [
-                                                state
-                                                for state in iter(high[_id])
-                                                if not state.startswith("__")
-                                            ]:
-                                                for j in iter(high[_id][state]):
-                                                    if (
-                                                        isinstance(j, dict)
-                                                        and "name" in j
-                                                    ):
-                                                        if j["name"] == ind:
-                                                            ind = {state: _id}
-                                                            found = True
+                                            for state in iter(high[_id]):
+                                                # When a requisite is tied to an excluded id, state is an ordered dict.
+                                                if hasattr(state, 'startswith'):
+                                                    if not state.startswith("__"):
+                                                        for j in iter(high[_id][state]):
+                                                            if (isinstance(j, dict) and "name" in j):
+                                                                if j["name"] == ind:
+                                                                    ind = {state: _id}
+                                                                    found = True
+
                                         if not found:
                                             continue
                                 if len(ind) < 1:
