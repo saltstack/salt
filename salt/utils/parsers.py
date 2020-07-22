@@ -1010,9 +1010,9 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
 
-    def can_run(self):
+    def claim_pid_file(self):
         """
-        Check if this process can run
+        Try's to claim the pidfile
         """
         return salt.utils.process.claim_mantle_of_responsibility(self.config["pidfile"])
 
