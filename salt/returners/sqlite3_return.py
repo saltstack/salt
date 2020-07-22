@@ -28,6 +28,13 @@ the default location:
     alternative.sqlite3.database: /usr/lib/salt/salt.db
     alternative.sqlite3.timeout: 5.0
 
+This returner supports the following optional values configured
+in the master or minion config:
+
+.. code-block:: yaml
+
+    sqlite3.log_utc: True
+
 Use the commands to create the sqlite3 database and tables:
 
 .. code-block:: sql
@@ -82,7 +89,7 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import datetime
+from datetime import datetime
 
 # Import python libs
 import logging
@@ -120,7 +127,7 @@ def _get_options(ret=None):
     """
     Get the SQLite3 options from salt.
     """
-    attrs = {"database": "database", "timeout": "timeout"}
+    attrs = {"database": "database", "timeout": "timeout", "log_utc": "log_utc"}
 
     _options = salt.returners.get_returner_options(
         __virtualname__, ret, attrs, __salt__=__salt__, __opts__=__opts__
@@ -166,6 +173,10 @@ def returner(ret):
     sql = """INSERT INTO salt_returns
              (fun, jid, id, fun_args, date, full_ret, success)
              VALUES (:fun, :jid, :id, :fun_args, :date, :full_ret, :success)"""
+    _options = _get_options(ret)
+    log_utc = _options.get("log_utc")
+    if not log_utc == True:
+        log_utc = False
     cur.execute(
         sql,
         {
@@ -173,7 +184,7 @@ def returner(ret):
             "jid": ret["jid"],
             "id": ret["id"],
             "fun_args": six.text_type(ret["fun_args"]) if ret.get("fun_args") else None,
-            "date": six.text_type(datetime.datetime.now()),
+            "date": six.text_type(datetime.utcnow() if log_utc else datetime.now()),
             "full_ret": salt.utils.json.dumps(ret["return"]),
             "success": ret.get("success", ""),
         },
