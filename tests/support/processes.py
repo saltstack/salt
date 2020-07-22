@@ -129,6 +129,8 @@ class SaltVirtContainer(object):
         container_img,
         ssh_port,
         sshd_port,
+        libvirt_tcp_port,
+        libvirt_tls_port,
         host_uuid,
         daemon_config_dir,
     ):
@@ -136,6 +138,8 @@ class SaltVirtContainer(object):
         self.container_img = container_img
         self.ssh_port = ssh_port
         self.sshd_port = sshd_port
+        self.libvirt_tcp_port = libvirt_tcp_port
+        self.libvirt_tls_port = libvirt_tls_port
         self.host_uuid = host_uuid
         self.daemon_config_dir = daemon_config_dir
         self.pid_file = os.path.join(daemon_config_dir, container_name + ".pid")
@@ -181,6 +185,10 @@ class SaltVirtContainer(object):
                 "--add-host=virt_minion_1:127.0.0.1",
                 "--name=" + self.container_name,
                 "--hostname=" + self.container_name,
+                "-e",
+                "LIBVIRT_TCP_PORT={}".format(self.libvirt_tcp_port),
+                "-e",
+                "LIBVIRT_TLS_PORT={}".format(self.libvirt_tls_port),
                 "-e",
                 "SSH_PORT={}".format(self.ssh_port),
                 "-e",
@@ -232,18 +240,27 @@ class SaltVirtContainer(object):
 
 
 def start_virt_daemon(
-    container_name, container_img, ssh_port, sshd_port, host_uuid, daemon_config_dir
+    container_name,
+    container_img,
+    ssh_port,
+    sshd_port,
+    libvirt_tcp_port,
+    libvirt_tls_port,
+    host_uuid,
+    daemon_config_dir
 ):
     """
     Start a salt minion daemon inside a container.
     """
     container = SaltVirtContainer(
-        container_name,
-        container_img,
-        ssh_port,
-        sshd_port,
-        host_uuid,
-        daemon_config_dir,
+        container_name=container_name,
+        container_img=container_img,
+        ssh_port=ssh_port,
+        sshd_port=sshd_port,
+        libvirt_tcp_port=libvirt_tcp_port,
+        libvirt_tls_port=libvirt_tls_port,
+        host_uuid=host_uuid,
+        daemon_config_dir=daemon_config_dir,
     )
     container.update_image()
     container.start()

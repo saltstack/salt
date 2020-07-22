@@ -270,7 +270,14 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
-    def start_virt_minion(self, name, config_dir, ssh_port, sshd_port, host_uuid):
+    def start_virt_minion(self,
+                          name,
+                          config_dir,
+                          libvirt_tcp_port,
+                          libvirt_tls_port,
+                          ssh_port,
+                          sshd_port,
+                          host_uuid):
         """
         Start virt minion daemon
         """
@@ -284,6 +291,8 @@ class TestDaemon(object):
             process = start_virt_daemon(
                 container_img="quay.io/rst0git/virt-minion",
                 container_name=name,
+                libvirt_tcp_port=libvirt_tcp_port,
+                libvirt_tls_port=libvirt_tls_port,
                 ssh_port=ssh_port,
                 sshd_port=sshd_port,
                 host_uuid=host_uuid,
@@ -378,6 +387,8 @@ class TestDaemon(object):
         if self.virt_minion_enabled:
             self.virt_minion_0_process = self.start_virt_minion(
                 name="virt_minion_0",
+                libvirt_tcp_port=2203,
+                libvirt_tls_port=2204,
                 ssh_port=2202,
                 sshd_port=2201,
                 host_uuid="e1b1e6bb-20ef-4c99-8208-3067725e0e46",
@@ -385,6 +396,8 @@ class TestDaemon(object):
             )
             self.virt_minion_1_process = self.start_virt_minion(
                 name="virt_minion_1",
+                libvirt_tcp_port=2205,
+                libvirt_tls_port=2206,
                 ssh_port=2201,
                 sshd_port=2202,
                 host_uuid="2b1de640-a3fd-81e3-3d89-40167e11160e",
