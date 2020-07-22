@@ -2,8 +2,6 @@
 """
 Integration tests for the vault modules
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
@@ -12,10 +10,8 @@ import time
 
 import salt.utils.path
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import destructiveTest, flaky, slowTest
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -111,7 +107,7 @@ class VaultTestCase(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_sdb(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -123,7 +119,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_sdb_runner(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -135,7 +131,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_config(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"
@@ -234,7 +230,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_sdb_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -246,7 +242,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_sdb_runner_kv2(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -258,7 +254,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_config_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"

@@ -20,7 +20,7 @@ accomplished with module templating. The default module templating system used
 is `Jinja2`_  and may be configured by changing the :conf_master:`renderer`
 value in the master config.
 
-.. _`Jinja2`: http://jinja.pocoo.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
 
 All states are passed through a templating system when they are initially read.
 To make use of the templating system, simply add some templating markup.
@@ -146,7 +146,8 @@ a value equivalent to the following python pseudo-code:
 .. code-block:: python
 
     import salt.modules.file
-    file.group_to_gid('some_group_that_exists')
+
+    file.group_to_gid("some_group_that_exists")
 
 Note that for the above example to work, ``some_group_that_exists`` must exist
 before the state file is processed by the templating engine.
@@ -156,7 +157,7 @@ MAC address for eth0:
 
 .. code-block:: python
 
-    salt['network.hw_addr']('eth0')
+    salt["network.hw_addr"]("eth0")
 
 To examine the possible arguments to each execution module function,
 one can examine the `module reference documentation </ref/modules/all>`_:

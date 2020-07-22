@@ -87,11 +87,11 @@ def bin_pkg_info(path, saltenv="base"):
     ret = {}
     for line in result["stdout"].splitlines():
         line = line.strip()
-        if line.startswith("Package:"):
+        if re.match(r"^Package[ ]*:", line):
             ret["name"] = line.split()[-1]
-        elif line.startswith("Version:"):
+        elif re.match(r"^Version[ ]*:", line):
             ret["version"] = line.split()[-1]
-        elif line.startswith("Architecture:"):
+        elif re.match(r"^Architecture[ ]*:", line):
             ret["arch"] = line.split()[-1]
 
     missing = [x for x in ("name", "version", "arch") if x not in ret]
@@ -134,7 +134,7 @@ def unpurge(*packages):
     return salt.utils.data.compare_dicts(old, new)
 
 
-def list_pkgs(*packages):
+def list_pkgs(*packages, **kwargs):
     """
     List the packages currently installed in a dict::
 
@@ -170,7 +170,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     """
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -205,7 +205,7 @@ def file_list(*packages):
     return {"errors": errors, "files": sorted(ret)}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     """
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's

@@ -598,7 +598,10 @@ def get_system_info():
             "os_version": system.Version,
             "windows_directory": system.WindowsDirectory,
         }
-
+        # Must get chassis_sku_number this way for backwards compatibility
+        # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+        product = conn.Win32_ComputerSystemProduct()[0]
+        ret.update({"chassis_sku_number": product.SKUNumber})
         system = conn.Win32_ComputerSystem()[0]
         # Get pc_system_type depending on Windows version
         if platform.release() in ["Vista", "7", "8"]:
@@ -613,7 +616,6 @@ def get_system_info():
                 "bootup_state": system.BootupState,
                 "caption": system.Caption,
                 "chassis_bootup_state": warning_states[system.ChassisBootupState],
-                "chassis_sku_number": system.ChassisSKUNumber,
                 "dns_hostname": system.DNSHostname,
                 "domain": system.Domain,
                 "domain_role": domain_role[system.DomainRole],
@@ -645,7 +647,14 @@ def get_system_info():
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
             ret["processor_cores"] += processor.NumberOfCores
-            ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            # Older versions of Windows do not have the NumberOfEnabledCore
+            # property. In that case, we'll just skip it
+            try:
+                ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            except (AttributeError, TypeError):
+                pass
+        if ret["processor_cores_enabled"] == 0:
+            ret.pop("processor_cores_enabled", False)
 
         bios = conn.Win32_BIOS()[0]
         ret.update(
@@ -730,7 +739,7 @@ def set_hostname(hostname):
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
         comp = conn.Win32_ComputerSystem()[0]
-    return comp.Rename(Name=hostname)
+        return comp.Rename(Name=hostname)
 
 
 def join_domain(
@@ -853,13 +862,6 @@ def _join_domain(
 
     Returns:
         int:
-
-    :param domain:
-    :param username:
-    :param password:
-    :param account_ou:
-    :param account_exists:
-    :return:
     """
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
@@ -875,18 +877,18 @@ def _join_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
 
-    # Return the results of the command as an error
-    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
-    # (0,) so return the first item
-    return comp.JoinDomainOrWorkgroup(
-        Name=domain,
-        Password=password,
-        UserName=username,
-        AccountOU=account_ou,
-        FJoinOptions=join_options,
-    )[0]
+        # Return the results of the command as an error
+        # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+        # (0,) so return the first item
+        return comp.JoinDomainOrWorkgroup(
+            Name=domain,
+            Password=password,
+            UserName=username,
+            AccountOU=account_ou,
+            FJoinOptions=join_options,
+        )[0]
 
 
 def unjoin_domain(
@@ -973,29 +975,29 @@ def unjoin_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
-    err = comp.UnjoinDomainOrWorkgroup(
-        Password=password, UserName=username, FUnjoinOptions=unjoin_options
-    )
+        comp = conn.Win32_ComputerSystem()[0]
+        err = comp.UnjoinDomainOrWorkgroup(
+            Password=password, UserName=username, FUnjoinOptions=unjoin_options
+        )
 
-    # you have to do this because UnjoinDomainOrWorkgroup returns a
-    # strangely formatted value that looks like (0,)
-    if not err[0]:
-        err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+        # you have to do this because UnjoinDomainOrWorkgroup returns a
+        # strangely formatted value that looks like (0,)
         if not err[0]:
-            ret = {"Workgroup": workgroup, "Restart": False}
-            if restart:
-                ret["Restart"] = reboot()
+            err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+            if not err[0]:
+                ret = {"Workgroup": workgroup, "Restart": False}
+                if restart:
+                    ret["Restart"] = reboot()
 
-            return ret
+                return ret
+            else:
+                log.error(win32api.FormatMessage(err[0]).rstrip())
+                log.error("Failed to unjoin the computer from %s", workgroup)
+                return False
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error("Failed to join the computer to %s", workgroup)
+            log.error("Failed to unjoin computer from %s", status["Domain"])
             return False
-    else:
-        log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error("Failed to unjoin computer from %s", status["Domain"])
-        return False
 
 
 def get_domain_workgroup():
@@ -1027,7 +1029,7 @@ def set_domain_workgroup(workgroup):
     """
     Set the domain or workgroup the computer belongs to.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1483,7 +1485,7 @@ def get_pending_reboot_details():
     Determine which check is signalling that the system is pending a reboot.
     Useful in determining why your system is signalling that it needs a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         dict: A dictionary of the results of each system that would indicate a
@@ -1505,7 +1507,7 @@ def get_pending_windows_update():
     This leverages the Windows Update System to determine if the system is
     pending a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the Windows Update system reports a pending update,

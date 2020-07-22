@@ -3724,6 +3724,9 @@ def powershell(
         **kwargs
     )
 
+    # Sometimes Powershell returns an empty string, which isn't valid JSON
+    if response == "":
+        response = "{}"
     try:
         return salt.utils.json.loads(response)
     except Exception:  # pylint: disable=broad-except

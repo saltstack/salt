@@ -9,7 +9,13 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string, skip_if_not_root
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+    slowTest,
+)
 from tests.support.unit import skipIf
 
 if not salt.utils.platform.is_windows():
@@ -19,6 +25,7 @@ if not salt.utils.platform.is_windows():
 @skip_if_not_root
 @destructiveTest
 @pytest.mark.windows_whitelisted
+@runs_on(kernel=("Linux", "Windows"))
 class GroupModuleTest(ModuleCase):
     """
     Validate the linux group system module
@@ -34,13 +41,12 @@ class GroupModuleTest(ModuleCase):
         self._no_user = random_string("tg-", uppercase=False)
         self._group = random_string("tg-", uppercase=False)
         self._no_group = random_string("tg-", uppercase=False)
-        self.os_grain = self.run_function("grains.item", ["kernel"])
-        self._gid = 64989 if "Windows" not in self.os_grain["kernel"] else None
-        self._new_gid = 64998 if "Windows" not in self.os_grain["kernel"] else None
-        if self.os_grain["kernel"] not in ("Linux", "Windows"):
-            self.skipTest(
-                "Test not applicable to '{kernel}' kernel".format(**self.os_grain)
-            )
+        _gid = _new_gid = None
+        if not salt.utils.platform.is_windows():
+            _gid = 64989
+            _new_gid = 64998
+        self._gid = _gid
+        self._new_gid = _new_gid
 
     def tearDown(self):
         """
@@ -92,7 +98,7 @@ class GroupModuleTest(ModuleCase):
                 return gid
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_add(self):
         """
         Test the add group function
@@ -107,7 +113,7 @@ class GroupModuleTest(ModuleCase):
 
     @destructiveTest
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_add_system_group(self):
         """
         Test the add group function with system=True
@@ -125,7 +131,7 @@ class GroupModuleTest(ModuleCase):
 
     @destructiveTest
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_add_system_group_gid(self):
         """
         Test the add group function with system=True and a specific gid
@@ -142,7 +148,7 @@ class GroupModuleTest(ModuleCase):
         self.assertFalse(self.run_function("group.add", [self._group, gid]))
 
     @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_delete(self):
         """
         Test the delete group function
@@ -155,7 +161,7 @@ class GroupModuleTest(ModuleCase):
         # group does not exist
         self.assertFalse(self.run_function("group.delete", [self._no_group]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_info(self):
         """
         Test the info group function
@@ -170,7 +176,7 @@ class GroupModuleTest(ModuleCase):
         self.assertIn(self._user, str(group_info["members"]))
 
     @skipIf(salt.utils.platform.is_windows(), "gid test skipped on windows")
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_chgid(self):
         """
         Test the change gid function
@@ -180,7 +186,7 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function("group.info", [self._group])
         self.assertEqual(group_info["gid"], self._new_gid)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_adduser(self):
         """
         Test the add user to group function
@@ -203,7 +209,7 @@ class GroupModuleTest(ModuleCase):
             self.run_function("group.adduser", [self._no_group, self._no_user])
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_deluser(self):
         """
         Test the delete user from group function
@@ -215,7 +221,7 @@ class GroupModuleTest(ModuleCase):
         group_info = self.run_function("group.info", [self._group])
         self.assertNotIn(self._user, str(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_members(self):
         """
         Test the members function
@@ -230,7 +236,7 @@ class GroupModuleTest(ModuleCase):
         self.assertIn(self._user, str(group_info["members"]))
         self.assertIn(self._user1, str(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_getent(self):
         """
         Test the getent function

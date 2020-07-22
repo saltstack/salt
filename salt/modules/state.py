@@ -349,7 +349,7 @@ def orchestrate(
     .. seealso:: More Orchestrate documentation
 
         * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
-        * :py:mod:`Docs for the ``salt`` state module <salt.states.saltmod>`
+        * Docs for the salt state module :py:mod:`salt.states.saltmod`
 
     CLI Examples:
 
@@ -803,7 +803,7 @@ def apply_(mods=None, **kwargs):
 
 def test(*args, **kwargs):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Alias for `state.apply` with the kwarg `test` forced to `True`.
 
