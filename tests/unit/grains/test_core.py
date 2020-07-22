@@ -2129,6 +2129,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "GeForce GTX 950M",
                 "nvidia",
             ],  # 3D controller
+            [
+                "Display controller",
+                "Intel Corporation",
+                "HD Graphics P630",
+                "intel",
+            ],  # Display controller
         ]
         with patch.dict(
             core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
