@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 import traceback
+import string
 
 import salt.grains.extra
 
@@ -286,6 +287,7 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
+    chcp_code=65001,
     **kwargs
 ):
     """
@@ -337,8 +339,11 @@ def _run(
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = "The shell {0} is not available".format(shell)
             raise CommandExecutionError(msg)
-    if salt.utils.platform.is_windows() and use_vt:  # Memozation so not much overhead
+    elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
+    else:
+        if chcp(chcp_code) != chcp_code:
+            log.error("Code page failed to change to %s!", chcp_code)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
@@ -4290,3 +4295,19 @@ def run_bg(
     )
 
     return {"pid": res["pid"]}
+
+
+def chcp(page=None):
+    if page is not None:
+        current_page = chcp()
+        if current_page == page:
+            return current_page
+    else:
+        page = ""
+    try:
+        chcp_process = subprocess.Popen("chcp.com {}".format(page), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except FileNotFoundError:
+        return ""
+    chcp_ret, _ = chcp_process.communicate(timeout=10)
+    chcp_ret = chcp_ret.decode("ascii", "ignore")
+    return "".join([c for c in chcp_ret if c in string.digits])
