@@ -728,18 +728,6 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
             refresh_pillar=False
         )
 
-    def test_setval_unicode(self):
-        key = "塩"  # salt
-        value = "塩人生です"  # salt is life
-
-        # Note: call setvals 2 times is important
-        # 1: add key to conf grains
-        # 2: update and read key from conf grains
-        for _ in range(2):
-            ret = grainsmod.setvals({key: value})
-            self.assertIn(key, ret)
-            self.assertEqual(ret[key], value)
-
     def test_delval_single(self):
         with patch.dict(
             grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
