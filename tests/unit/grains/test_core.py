@@ -1445,6 +1445,25 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     ret = core._virtual(osdata)
                     self.assertEqual(ret["virtual"], virt)
 
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": f"\n\n{virt}",
+                            }
+                        )
+                    },
+                ):
+                    osdata = {
+                        "kernel": "test",
+                    }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret["virtual"], virt)
+
     def test_solaris_sparc_s7zone(self):
         """
         verify productname grain for s7 zone
