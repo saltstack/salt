@@ -409,7 +409,7 @@ class Compiler(object):
                         comps = high[name].split(".")
                         if len(comps) >= 2:
                             # Merge the comps
-                            comps[1] = ".".join(comps[1 : len(comps)])
+                            comps[1] = ".".join(comps[1:len(comps)])
                         high[name] = {
                             # '__sls__': template,
                             # '__env__': None,
@@ -427,7 +427,7 @@ class Compiler(object):
                     comps = key.split(".")
                     if len(comps) >= 2:
                         # Merge the comps
-                        comps[1] = ".".join(comps[1 : len(comps)])
+                        comps[1] = ".".join(comps[1:len(comps)])
                     # Salt doesn't support state files such as:
                     #
                     # /etc/redis/redis.conf:
@@ -1151,7 +1151,7 @@ class State(object):
                         )
                         if funcs:
                             for func in funcs:
-                                f_key = "{0}{1}".format(mod, func[func.rindex(".") :])
+                                f_key = "{0}{1}".format(mod, func[func.rindex("."):])
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
@@ -1807,19 +1807,16 @@ class State(object):
                                     else:
                                         found = False
                                         for _id in iter(high):
-                                            for state in [
-                                                state
-                                                for state in iter(high[_id])
-                                                if not state.startswith("__")
-                                            ]:
-                                                for j in iter(high[_id][state]):
-                                                    if (
-                                                        isinstance(j, dict)
-                                                        and "name" in j
-                                                    ):
-                                                        if j["name"] == ind:
-                                                            ind = {state: _id}
-                                                            found = True
+                                            for state in iter(high[_id]):
+                                                # When a requisite is tied to an excluded id, state is an ordered dict.
+                                                if hasattr(state, "startswith"):
+                                                    if not state.startswith("__"):
+                                                        for j in iter(high[_id][state]):
+                                                            if (isinstance(j, dict) and "name" in j):
+                                                                if j["name"] == ind:
+                                                                    ind = {state: _id}
+                                                                    found = True
+
                                         if not found:
                                             continue
                                 if len(ind) < 1:
@@ -2318,7 +2315,7 @@ class State(object):
         # everything after first closing paren: )
         return_get = None
         try:
-            return_get = slot_text[slot_text.rindex(")") + 1 :]
+            return_get = slot_text[slot_text.rindex(")") + 1:]
         except ValueError:
             pass
         if return_get:
