@@ -1813,8 +1813,8 @@ class State(object):
                                                     if not state.startswith("__"):
                                                         for j in iter(high[_id][state]):
                                                             if (
-                                                                    isinstance(j, dict)
-                                                                    and "name" in j
+                                                                isinstance(j, dict)
+                                                                and "name" in j
                                                             ):
                                                                 if j["name"] == ind:
                                                                     ind = {state: _id}
