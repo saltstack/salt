@@ -292,7 +292,7 @@ class Minion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if not self.can_run():
+        if not self.claim_pid_file():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
@@ -484,7 +484,7 @@ class ProxyMinion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if not self.can_run():
+        if not self.claim_pid_file():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
