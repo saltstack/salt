@@ -231,6 +231,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
     )
+    config.addinivalue_line(
+        "markers", "requires_sshd_server: Mark test that require an SSH server running"
+    )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
 
@@ -445,6 +448,13 @@ def pytest_runtest_setup(item):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
+
+    requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
+    if requires_sshd_server_marker is not None:
+        if not item.config.getoption("--ssh-tests"):
+            item._skipped_by_mark = True
+            pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
+        item.fixturenames.append("sshd_server")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:

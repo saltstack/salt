@@ -10,12 +10,7 @@ import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
 from tests.support.case import SSHCase
-from tests.support.helpers import (
-    SaveRequestsPostHandler,
-    Webserver,
-    requires_sshd_server,
-    slowTest,
-)
+from tests.support.helpers import SaveRequestsPostHandler, Webserver, slowTest
 from tests.support.mock import patch
 from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.runtests import RUNTIME_VARS
@@ -166,7 +161,7 @@ class NetapiClientTest(TestCase):
             ret = self.netapi.run(low)
 
 
-@requires_sshd_server
+@pytest.mark.requires_sshd_server
 class NetapiSSHClientTest(SSHCase):
     eauth_creds = {
         "username": "saltdev_auto",

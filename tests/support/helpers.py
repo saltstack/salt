@@ -283,27 +283,9 @@ def requires_sshd_server(caller):
             def test_create_user(self):
                 pass
     """
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-                self.skipTest("SSH tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-            cls.skipTest("SSH tests are disabled")
-        return caller(cls)
-
-    return wrap
+    raise RuntimeError(
+        "Please replace @requires_sshd_server with @pytest.mark.requires_sshd_server"
+    )
 
 
 class RedirectStdStreams(object):
