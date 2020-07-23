@@ -14,9 +14,9 @@ The following provider parameters are supported:
 
 - **apikey**: (required) The key to use to authenticate with the Linode API.
 - **password**: (required) The default password to set on new VMs. Must be 8 characters with at least one lowercase, uppercase, and numeric.
-- **api_version**: (optional) The version of the Linode API to interact with. (Defaults to ``v3``)
-- **poll_interval**: (optional) The rate of time in milliseconds to poll the Linode API for changes. (Defaults to ``500``)
-- **ratelimit_sleep**: (optional) The time in seconds to wait before retrying after a ratelimit has been enforced. (Defaults to ``0``)
+- **api_version**: (optional) The version of the Linode API to interact with. Defaults to ``v3``.
+- **poll_interval**: (optional) The rate of time in milliseconds to poll the Linode API for changes. Defaults to ``500``.
+- **ratelimit_sleep**: (optional) The time in seconds to wait before retrying after a ratelimit has been enforced. Defaults to ``0``.
 
 .. note::
 
@@ -27,6 +27,7 @@ The following provider parameters are supported:
 Set up the provider configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/linode.conf``:
 
 .. code-block:: yaml
+
     my-linode-provider:
         driver: linode
         api_version: v4
@@ -36,6 +37,7 @@ Set up the provider configuration at ``/etc/salt/cloud.providers`` or ``/etc/sal
 For use with APIv3 (deprecated):
 
 .. code-block:: yaml
+
     my-linode-provider-v3:
         driver: linode
         apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
@@ -50,16 +52,17 @@ The following profile parameters are supported:
 - **location**: (required) The location of the VM. This should be a Linode region (e.g. ``us-east``). For APIv3, this would be a datacenter location (i.e. ``Newark, NJ, USA``). Run ``salt-cloud -f avail_locations my-linode-provider`` for options.
 - **image**: (required) The image to deploy the boot disk from. This should be an image ID (e.g. ``linode/ubuntu16.04``); official images start with ``linode/``. For APIv3, this would be an image label (i.e. Ubuntu 16.04). Run ``salt-cloud -f avail_images my-linode-provider`` for more options.
 - **password**: (*required) The default password for the VM. Must be provided at the profile or provider level.
-- **assign_private_ip**: (optional) Whether or not to assign a private key to the VM. (Defaults to ``False``)
-- **ssh_interface**: (optional) The interface with which to connect over SSH. Valid options are ``private_ips`` or ``public_ips``. (Defaults to ``public_ips``)
+- **assign_private_ip**: (optional) Whether or not to assign a private key to the VM. Defaults to ``False``.
+- **ssh_interface**: (optional) The interface with which to connect over SSH. Valid options are ``private_ips`` or ``public_ips``. Defaults to ``public_ips``.
 - **ssh_pubkey**: (optional) The public key to authorize for SSH with the VM.
-- **swap**: (optional) The amount of disk space to allocate for the swap partition. (Defaults to ``256``)
+- **swap**: (optional) The amount of disk space to allocate for the swap partition. Defaults to ``256``.
 - **clonefrom**: (optional) The name of the Linode to clone from.
 - **disk_size**: (deprecated, optional) The amount of disk space to allocate for the OS disk. This has no effect with APIv4; the size of the boot disk will be the remainder of disk space after the swap parition is allocated.
 
 Set up a profile configuration in ``/etc/salt/cloud.profiles.d/``:
 
 .. code-block:: yaml
+
     my-linode-profile:
         # a minimal configuration
         provider: my-linode-provider
@@ -91,11 +94,11 @@ Migrating to APIv4
 
 In order to target APIv4, ensure your provider configuration has ``api_version`` set to ``v4``.
 
-You will also need to generate a new token for your account.
+You will also need to generate a new token for your account. See https://www.linode.com/docs/platform/api/getting-started-with-the-linode-api/#create-an-api-token
 
 There are a few changes to note:
 - There has been a general move from label references to ID references. The profile configuration parameters ``location``, ``size``, and ``image`` have moved from being label based references to IDs. See the profile section for more information. In addition to these inputs being changed, ``avail_sizes``, ``avail_locations``, and ``avail_images`` now output options sorted by ID instead of label.
-- The ``disk_size`` profile configuration parameter has been deprecated and will not be taken into account when creating new VMs while targeting APIv3.
+- The ``disk_size`` profile configuration parameter has been deprecated and will not be taken into account when creating new VMs while targeting APIv4.
 
 :maintainer: Charles Kenney <ckenney@linode.com>
 :maintainer: Phillip Campbell <pcampbell@linode.com>
@@ -140,8 +143,6 @@ HAS_WARNED_FOR_API_V3 = False
 
 # The epoch of the last time a query was made
 LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
-
-LINODE_BUSY_REASON = "Linode busy."
 
 # Human-readable status fields for APIv3 (documentation: https://www.linode.com/api/linode/linode.list)
 LINODE_STATUS = {
