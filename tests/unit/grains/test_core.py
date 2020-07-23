@@ -1453,7 +1453,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 "pid": 78,
                                 "retcode": 0,
                                 "stderr": "",
-                                "stdout": f"\n\n{virt}",
+                                "stdout": "\n\n{0}".format(virt),
                             }
                         )
                     },
