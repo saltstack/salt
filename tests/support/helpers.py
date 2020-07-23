@@ -42,7 +42,7 @@ import salt.utils.versions
 from salt.ext import six
 from salt.ext.six.moves import builtins, range
 from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes.bases import ProcessResult
+from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion

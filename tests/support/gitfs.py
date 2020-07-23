@@ -11,20 +11,19 @@ import logging
 import os
 import pprint
 import shutil
-import sys
 import tempfile
 import textwrap
 
-import salt.ext.six as six
+import attr
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
+from saltfactories.factories.base import DaemonFactory
+from saltfactories.factories.daemons.sshd import SshdDaemonFactory
 from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes.bases import FactoryDaemonScriptBase
-from saltfactories.utils.processes.helpers import start_daemon, terminate_process
-from saltfactories.utils.processes.sshd import SshdDaemon
+from saltfactories.utils.processes.helpers import start_factory, terminate_process
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import (
@@ -80,16 +79,10 @@ _OPTS = {
 PROC_TIMEOUT = 10
 
 
-class UwsgiDaemon(FactoryDaemonScriptBase):
-    def __init__(self, *args, **kwargs):
-        config_dir = kwargs.pop("config_dir")
-        check_port = kwargs.pop("check_port")
-        super(UwsgiDaemon, self).__init__(*args, **kwargs)
-        self.config_dir = config_dir
-        self.check_port = check_port
+@attr.s(kw_only=True, slots=True)
+class UwsgiDaemon(DaemonFactory):
 
-    def get_log_prefix(self):
-        return "[uWSGI] "
+    config_dir = attr.ib()
 
     def get_base_script_args(self):
         """
@@ -97,35 +90,17 @@ class UwsgiDaemon(FactoryDaemonScriptBase):
         """
         return ["--yaml", os.path.join(self.config_dir, "uwsgi.yml")]
 
-    def get_check_ports(self):
-        """
-        Return a list of ports to check against to ensure the daemon is running
-        """
-        return [self.check_port]
 
+@attr.s(kw_only=True, slots=True)
+class NginxDaemon(DaemonFactory):
 
-class NginxDaemon(FactoryDaemonScriptBase):
-    def __init__(self, *args, **kwargs):
-        config_dir = kwargs.pop("config_dir")
-        check_port = kwargs.pop("check_port")
-        super(NginxDaemon, self).__init__(*args, **kwargs)
-        self.config_dir = config_dir
-        self.check_port = check_port
-
-    def get_log_prefix(self):
-        return "[Nginx] "
+    config_dir = attr.ib()
 
     def get_base_script_args(self):
         """
         Returns any additional arguments to pass to the CLI script
         """
         return ["-c", os.path.join(self.config_dir, "nginx.conf")]
-
-    def get_check_ports(self):
-        """
-        Return a list of ports to check against to ensure the daemon is running
-        """
-        return [self.check_port]
 
 
 class SaltClientMixin(ModuleCase):
@@ -174,7 +149,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
 
     @classmethod
     def setUpClass(cls):  # pylint: disable=arguments-differ
-        super(SSHDMixin, cls).setUpClass()
+        super().setUpClass()
         try:
             log.info("%s: prep_server()", cls.__name__)
             cls.sshd_bin = salt.utils.path.which("sshd")
@@ -215,7 +190,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                         }
                     },
                 )
-                assert next(six.itervalues(ret))["result"] is True
+                assert next(iter(ret.values()))["result"] is True
                 cls.prep_states_ran = True
                 log.info("%s: States applied", cls.__name__)
             if cls.sshd_proc is not None:
@@ -226,16 +201,16 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     )
                     cls.sshd_proc = None
             if cls.sshd_proc is None:
-                cls.sshd_proc = start_daemon(
-                    cls.sshd_bin,
-                    SshdDaemon,
+                cls.sshd_proc = start_factory(
+                    SshdDaemonFactory,
+                    cli_script_name=cls.sshd_bin,
                     config_dir=cls.sshd_config_dir,
-                    serve_port=cls.sshd_port,
+                    listen_port=cls.sshd_port,
                 )
                 log.info("%s: sshd started", cls.__name__)
         except AssertionError:
             cls.tearDownClass()
-            six.reraise(*sys.exc_info())
+            raise
 
         if cls.known_hosts_setup is False:
             known_hosts_ret = cls.cls_run_function(
@@ -251,10 +226,8 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             if "error" in known_hosts_ret:
                 cls.tearDownClass()
                 raise AssertionError(
-                    "Failed to add key to {0} user's known_hosts "
-                    "file: {1}".format(
-                        cls.master_opts["user"], known_hosts_ret["error"]
-                    )
+                    "Failed to add key to {} user's known_hosts "
+                    "file: {}".format(cls.master_opts["user"], known_hosts_ret["error"])
                 )
             cls.known_hosts_setup = True
 
@@ -279,7 +252,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             )
             try:
                 if ret and "minion" in ret:
-                    ret_data = next(six.itervalues(ret["minion"]))
+                    ret_data = next(iter(ret["minion"].values()))
                     if not ret_data["result"]:
                         log.warning("Failed to delete test account %s", cls.username)
             except KeyError:
@@ -303,7 +276,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise
-        super(SSHDMixin, cls).tearDownClass()
+        super().tearDownClass()
 
 
 class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
@@ -321,7 +294,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
         """
-        super(WebserverMixin, cls).setUpClass()
+        super().setUpClass()
         cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.config_dir = os.path.join(cls.root_dir, "config")
         cls.nginx_conf = os.path.join(cls.config_dir, "nginx.conf")
@@ -375,7 +348,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                 ret = cls.cls_run_function(
                     "state.apply", mods="git_pillar.http", pillar=pillar
                 )
-                assert next(six.itervalues(ret))["result"] is True
+                assert next(iter(ret.values()))["result"] is True
                 cls.prep_states_ran = True
                 log.info("%s: States applied", cls.__name__)
             if cls.uwsgi_proc is not None:
@@ -386,11 +359,12 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     )
                     cls.uwsgi_proc = None
             if cls.uwsgi_proc is None:
-                cls.uwsgi_proc = start_daemon(
-                    cls.uwsgi_bin,
+                cls.uwsgi_proc = start_factory(
                     UwsgiDaemon,
+                    display_name="uWSGI",
                     config_dir=cls.config_dir,
-                    check_port=cls.uwsgi_port,
+                    check_ports=[cls.uwsgi_port],
+                    cli_script_name=cls.uwsgi_bin,
                 )
                 log.info("%s: %s started", cls.__name__, cls.uwsgi_bin)
             if cls.nginx_proc is not None:
@@ -401,16 +375,17 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     )
                     cls.nginx_proc = None
             if cls.nginx_proc is None:
-                cls.nginx_proc = start_daemon(
-                    "nginx",
+                cls.nginx_proc = start_factory(
                     NginxDaemon,
+                    display_name="Nginx",
                     config_dir=cls.config_dir,
-                    check_port=cls.nginx_port,
+                    check_ports=[cls.nginx_port],
+                    cli_script_name="nginx",
                 )
                 log.info("%s: nginx started", cls.__name__)
         except AssertionError:
             cls.tearDownClass()
-            six.reraise(*sys.exc_info())
+            raise
 
     @classmethod
     def tearDownClass(cls):
@@ -442,7 +417,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
             cls.uwsgi_proc = None
         shutil.rmtree(cls.root_dir, ignore_errors=True)
         cls.prep_states_ran = False
-        super(WebserverMixin, cls).tearDownClass()
+        super().tearDownClass()
 
 
 class GitTestBase(ModuleCase):
@@ -738,7 +713,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
 
     @classmethod
     def tearDownClass(cls):
-        super(GitPillarTestBase, cls).tearDownClass()
+        super().tearDownClass()
         for dirname in (
             cls.admin_repo,
             cls.admin_repo_backup,
@@ -766,11 +741,11 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         Create the SSH server and user, and create the git repo
         """
         log.info("%s.setUp() started...", self.__class__.__name__)
-        super(GitPillarSSHTestBase, self).setUp()
-        root_dir = os.path.expanduser("~{0}".format(self.username))
+        super().setUp()
+        root_dir = os.path.expanduser("~{}".format(self.username))
         if root_dir.startswith("~"):
             raise AssertionError(
-                "Unable to resolve homedir for user '{0}'".format(self.username)
+                "Unable to resolve homedir for user '{}'".format(self.username)
             )
         self.make_repo(root_dir, user=self.username)
         self.make_extra_repo(root_dir, user=self.username)
@@ -784,7 +759,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         user's ssh config file.
         """
         with patched_environ(GIT_SSH=self.git_ssh):
-            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
+            return super().get_pillar(ext_pillar_conf)
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
@@ -797,7 +772,7 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
         Create and start the webserver, and create the git repo
         """
         log.info("%s.setUp() started...", self.__class__.__name__)
-        super(GitPillarHTTPTestBase, self).setUp()
+        super().setUp()
         self.make_repo(self.repo_dir)
         self.make_extra_repo(self.repo_dir)
         log.info("%s.setUp() complete", self.__class__.__name__)
