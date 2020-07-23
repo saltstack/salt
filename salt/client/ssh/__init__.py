@@ -1132,6 +1132,7 @@ class Single(object):
             opts_pkg["extension_modules"] = self.opts["extension_modules"]
             opts_pkg["module_dirs"] = self.opts["module_dirs"]
             opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
+            opts_pkg["thin_dir"] = self.opts["thin_dir"]
             opts_pkg["__master_opts__"] = self.context["master_opts"]
             if "known_hosts_file" in self.opts:
                 opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
