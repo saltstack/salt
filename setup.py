@@ -129,7 +129,6 @@ SALT_ZEROMQ_REQS = os.path.join(
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
 SALT_OSX_REQS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_ext.txt"),
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
 ]
 SALT_WINDOWS_REQS = [
@@ -1072,8 +1071,12 @@ class SaltDistribution(distutils.dist.Distribution):
         return [
             "Programming Language :: Python",
             "Programming Language :: Cython",
-            "Programming Language :: Python :: 2.6",
-            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",

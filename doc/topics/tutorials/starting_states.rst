@@ -484,12 +484,12 @@ This example shows a very basic Python SLS file:
 
     #!py
 
+
     def run():
-        '''
+        """
         Install the django package
-        '''
-        return {'include': ['python'],
-                'django': {'pkg': ['installed']}}
+        """
+        return {"include": ["python"], "django": {"pkg": ["installed"]}}
 
 This is a very simple example; the first line has an SLS shebang that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
@@ -504,8 +504,8 @@ renderer, the above example can be written more succinctly as:
 
     #!pydsl
 
-    include('python', delayed=True)
-    state('django').pkg.installed()
+    include("python", delayed=True)
+    state("django").pkg.installed()
 
 The :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 provides an `"Pythonic"`_ object based approach for building the state data.
@@ -515,7 +515,7 @@ The above example could be written as:
 
     #!pyobjects
 
-    include('python')
+    include("python")
     Pkg.installed("django")
 
 
