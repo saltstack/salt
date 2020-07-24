@@ -262,9 +262,14 @@ def claim_mantle_of_responsibility(file_name):
     if file_process_info == this_process_info:
         return True
 
+    if not isinstance(file_process_info, dict) or not isinstance(
+        file_process_info.get("pid"), int
+    ):
+        file_process_info = None
+
     # check if process is still alive
-    if file_process_info is not None and file_process_info == get_process_info(
-        file_process_info["pid"]
+    if isinstance(file_process_info, dict) and file_process_info == get_process_info(
+        file_process_info.get("pid")
     ):
         return False
 
@@ -299,6 +304,11 @@ def check_mantle_of_responsibility(file_name):
         return
     except FileNotFoundError:
         log.info("pidfile: {} not found".format(file_name))
+        return
+
+    if not isinstance(file_process_info, dict) or not isinstance(
+        file_process_info.get("pid"), int
+    ):
         return
 
     if file_process_info == get_process_info(file_process_info["pid"]):
