@@ -52,7 +52,7 @@ class SaltAPI(parsers.SaltAPIParser):
         log.info("Setting up the Salt API")
         self.api = salt.client.netapi.NetapiClient(self.config)
         self.daemonize_if_required()
-        self.set_pidfile()
+        self.claim_pid_file()
 
     def start(self):
         """

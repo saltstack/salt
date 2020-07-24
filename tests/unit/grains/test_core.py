@@ -243,7 +243,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         # - Skip the init grain compilation (not pertinent)
         # - Ensure that lsb_release fails to import
         # - Skip all the /etc/*-release stuff (not pertinent)
-        # - Mock linux_distribution to give us the OS name that we want
+        # - Mock _linux_distribution to give us the OS name that we want
         # - Make a bunch of functions return empty dicts, we don't care about
         #   these grains for the purposes of this test.
         # - Mock the osarch
@@ -265,7 +265,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             core, "_parse_lsb_release", empty_mock
         ), patch.object(
-            core, "linux_distribution", distro_mock
+            core, "_linux_distribution", distro_mock
         ), patch.object(
             core, "_linux_cpudata", empty_mock
         ), patch.object(
@@ -326,7 +326,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         # - Skip the init grain compilation (not pertinent)
         # - Ensure that lsb_release fails to import
         # - Skip all the /etc/*-release stuff (not pertinent)
-        # - Mock linux_distribution to give us the OS name that we want
+        # - Mock _linux_distribution to give us the OS name that we want
         # - Mock the osarch
         with patch.object(
             salt.utils.platform, "is_proxy", MagicMock(return_value=False)
@@ -343,7 +343,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             core, "_parse_lsb_release", empty_mock
         ), patch.object(
-            core, "linux_distribution", distro_mock
+            core, "_linux_distribution", distro_mock
         ), patch.object(
             core, "_linux_gpu_data", empty_mock
         ), patch.object(
@@ -396,9 +396,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         # - Skip the init grain compilation (not pertinent)
         # - Ensure that lsb_release fails to import
         # - Skip all the /etc/*-release stuff (not pertinent)
-        # - Mock linux_distribution to give us the OS name that we want
+        # - Mock _linux_distribution to give us the OS name that we want
         # - Mock the osarch
-        distro_mock = MagicMock(return_value=os_release_map["linux_distribution"])
+        distro_mock = MagicMock(return_value=os_release_map["_linux_distribution"])
         with patch.object(
             salt.utils.platform, "is_proxy", MagicMock(return_value=False)
         ), patch.object(
@@ -416,7 +416,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.files.fopen", mock_open(read_data=file_contents)
         ), patch.object(
-            core, "linux_distribution", distro_mock
+            core, "_linux_distribution", distro_mock
         ), patch.object(
             core, "_linux_gpu_data", empty_mock
         ), patch.object(
@@ -448,7 +448,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(grains, expectation)
 
     def _run_suse_os_grains_tests(self, os_release_map, expectation):
-        os_release_map["linux_distribution"] = ("SUSE test", "version", "arch")
+        os_release_map["_linux_distribution"] = ("SUSE test", "version", "arch")
         expectation["os"] = "SUSE"
         expectation["os_family"] = "Suse"
         self._run_os_grains_tests(None, os_release_map, expectation)
@@ -614,7 +614,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in Debian 7 "wheezy"
         """
         _os_release_map = {
-            "linux_distribution": ("debian", "7.11", ""),
+            "_linux_distribution": ("debian", "7.11", ""),
         }
         expectation = {
             "os": "Debian",
@@ -634,7 +634,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in Debian 8 "jessie"
         """
         _os_release_map = {
-            "linux_distribution": ("debian", "8.10", ""),
+            "_linux_distribution": ("debian", "8.10", ""),
         }
         expectation = {
             "os": "Debian",
@@ -654,7 +654,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in Debian 9 "stretch"
         """
         _os_release_map = {
-            "linux_distribution": ("debian", "9.3", ""),
+            "_linux_distribution": ("debian", "9.3", ""),
         }
         expectation = {
             "os": "Debian",
@@ -667,6 +667,36 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             "osfinger": "Debian-9",
         }
         self._run_os_grains_tests("debian-9", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_centos_8_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Centos 8
+        """
+        _os_release_map = {
+            "os_release_file": {
+                "NAME": "CentOS Linux",
+                "VERSION": "8 (Core)",
+                "VERSION_ID": "8",
+                "PRETTY_NAME": "CentOS Linux 8 (Core)",
+                "ID": "centos",
+                "ANSI_COLOR": "0;31",
+                "CPE_NAME": "cpe:/o:centos:centos:8",
+            },
+            "_linux_distribution": ("centos", "8.1.1911", "Core"),
+        }
+
+        expectation = {
+            "os": "CentOS",
+            "os_family": "RedHat",
+            "oscodename": "CentOS Linux 8 (Core)",
+            "osfullname": "CentOS Linux",
+            "osrelease": "8.1.1911",
+            "osrelease_info": (8, 1, 1911),
+            "osmajorrelease": 8,
+            "osfinger": "CentOS Linux-8",
+        }
+        self._run_os_grains_tests(None, _os_release_map, expectation)
 
     def test_unicode_error(self):
         raise_unicode_mock = MagicMock(
@@ -683,7 +713,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
         """
         _os_release_map = {
-            "linux_distribution": ("Ubuntu", "16.04", "xenial"),
+            "_linux_distribution": ("Ubuntu", "16.04", "xenial"),
         }
         expectation = {
             "os": "Ubuntu",
@@ -703,7 +733,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
         """
         _os_release_map = {
-            "linux_distribution": ("Ubuntu", "17.10", "artful"),
+            "_linux_distribution": ("Ubuntu", "17.10", "artful"),
         }
         expectation = {
             "os": "Ubuntu",
