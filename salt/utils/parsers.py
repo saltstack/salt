@@ -1081,11 +1081,15 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                     return True
         return False
 
-    def claim_pid_file(self):
+    def claim_process_responsibility(self):
         """
-        Try's to claim the pidfile
+        This will stop from more than on prcoess from doing the same task
         """
-        return salt.utils.process.claim_mantle_of_responsibility(self.config["pidfile"])
+        responsibility_file = os.path.split(self.config["pidfile"])
+        responsibility_file = os.path.join(
+            responsibility_file[0], "process_responsibility_" + responsibility_file[1]
+        )
+        return salt.utils.process.claim_mantle_of_responsibility(responsibility_file)
 
     def is_daemonized(self, pid):
         from salt.utils.process import os_is_running
