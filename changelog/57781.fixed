@@ -1,0 +1,1 @@
+Fixed bug with distro version breaking osrelease on Centos 7.
