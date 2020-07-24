@@ -259,6 +259,45 @@ A State Module must return a dict containing the following keys/values:
 
     States should not return data which cannot be serialized such as frozensets.
 
+Sub State Runs
+--------------
+
+Some states can return multiple state runs from an external engine.
+State modules that extend tools like Puppet, Chef, Ansible, and idem can run multiple external
+states and then return their results individually in the "sub_state_run" portion of their return
+as long as their individual state runs are formatted like salt states with low and high data.
+
+For example, the idem state module can execute multiple idem states
+via it's runtime and report the status of all those runs by attaching them to "sub_state_run" in it's state return.
+These sub_state_runs will be formatted and printed alongside other salt states.
+
+Example:
+
+.. code-block:: python
+
+    state_return = {
+        "name": None,  # The parent state name
+        "result": None,  # The overall status of the external state engine run
+        "comment": None,  # Comments on the overall external state engine run
+        "changes": {},  # An empty dictionary, each sub state run has it's own changes to report
+        "sub_state_run": [
+            {
+                "changes": {},  # A dictionary describing the changes made in the external state run
+                "result": None,  # The external state run name
+                "comment": None,  # Comment on the external state run
+                "duration": None,  # Optional, the duration in seconds of the external state run
+                "start_time": None,  # Optional, the timestamp of the external state run's start time
+                "low": {
+                    "name": None,  # The name of the state from the external state run
+                    "state": None,  # Name of the external state run
+                    "__id__": None,  # ID of the external state run
+                    "fun": None,  # The Function name from the external state run
+                },
+            }
+        ],
+    }
+
+
 Test State
 ==========
 
