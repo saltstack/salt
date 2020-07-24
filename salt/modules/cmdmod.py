@@ -17,12 +17,12 @@ import logging
 import os
 import re
 import shutil
-import string
 import subprocess
 import sys
 import tempfile
 import time
 import traceback
+import string
 
 import salt.grains.extra
 
@@ -342,8 +342,7 @@ def _run(
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
     else:
-        if chcp(chcp_code) != chcp_code:
-            log.error("Code page failed to change to %s!", chcp_code)
+        chcp(chcp_code)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
@@ -3724,9 +3723,6 @@ def powershell(
         **kwargs
     )
 
-    # Sometimes Powershell returns an empty string, which isn't valid JSON
-    if response == "":
-        response = "{}"
     try:
         return salt.utils.json.loads(response)
     except Exception:  # pylint: disable=broad-except
@@ -4300,19 +4296,29 @@ def run_bg(
     return {"pid": res["pid"]}
 
 
-def chcp(page=None):
-    if page is not None:
+def chcp(page_id=None, raise_error=False):
+    # check if code page needs to change
+    if page_id is not None:
         current_page = chcp()
-        if current_page == page:
+        if current_page == str(page_id):
             return current_page
     else:
-        page = ""
+        page_id = ""
+
+    # change or get code page
     try:
-        chcp_process = subprocess.Popen(
-            "chcp.com {}".format(page), stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        chcp_process = subprocess.Popen("chcp.com {}".format(page_id), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except FileNotFoundError:
         return ""
-    chcp_ret, _ = chcp_process.communicate(timeout=10)
-    chcp_ret = chcp_ret.decode("ascii", "ignore")
-    return "".join([c for c in chcp_ret if c in string.digits])
+    chcp_ret = chcp_process.communicate(timeout=10)[0].decode("ascii", "ignore").encode("ascii").decode("utf-8")
+    chcp_ret = "".join([c for c in chcp_ret if c in string.digits])
+
+    # check if code page changed
+    if page_id != "":
+        if str(page_id) != chcp_ret:
+            if raise_error:
+                raise TypeError()
+            else:
+                log.error("Code page failed to change to %s!", page_id)
+    log.debug("Code page is %s", chcp_ret)
+    return chcp_ret
