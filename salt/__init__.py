@@ -3,12 +3,17 @@
 Salt package
 """
 
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import importlib
 import sys
 import warnings
+
+if sys.version_info < (3,):
+    sys.stderr.write(
+        "\n\nAfter the Sodium release, 3001, Salt no longer supports Python 2. Exiting.\n\n"
+    )
+    sys.stderr.flush()
 
 
 class TornadoImporter(object):

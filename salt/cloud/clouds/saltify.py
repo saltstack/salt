@@ -95,7 +95,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     vm_ = get_configured_provider()
@@ -125,7 +125,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     nodes = _list_nodes_full(call)
@@ -171,7 +171,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
     """
 
     ret = _list_nodes_full(call)
@@ -518,7 +518,7 @@ def reboot(name, call=None):
     """
     Reboot a saltify minion.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.
