@@ -682,7 +682,7 @@ def from_filenames_collection_modifyitems(config, items):
     selected = []
     deselected = []
     for item in items:
-        itempath = pathlib.Path(str(item.fspath)).relative_to(CODE_DIR)
+        itempath = pathlib.Path(str(item.fspath)).resolve().relative_to(CODE_DIR)
         if itempath in test_module_paths:
             selected.append(item)
         else:
