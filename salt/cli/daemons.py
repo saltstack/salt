@@ -19,12 +19,13 @@ from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
 from salt.utils import migrations
+from salt.utils.process import HAS_PSUTIL
 from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
-    "",  # No deprecation message match
+    "",  # No deprecation message matchHAS_PSUTIL
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
 )
@@ -193,6 +194,7 @@ class Master(
         self.master = salt.master.Master(self.config)
 
         self.daemonize_if_required()
+        self.set_pidfile()
         salt.utils.process.notify_systemd()
 
     def start(self):
@@ -292,7 +294,9 @@ class Minion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if not self.can_run():
+        if (HAS_PSUTIL and not self.claim_process_responsibility()) or (
+            not HAS_PSUTIL and self.check_running()
+        ):
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
@@ -308,6 +312,7 @@ class Minion(
             # the boot process waiting for a key to be accepted on the master.
             # This is the latest safe place to daemonize
             self.daemonize_if_required()
+            self.set_pidfile()
             if self.config.get("master_type") == "func":
                 salt.minion.eval_master_func(self.config)
             self.minion = salt.minion.MinionManager(self.config)
@@ -484,7 +489,7 @@ class ProxyMinion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if not self.can_run():
+        if self.check_running():
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 
@@ -497,6 +502,7 @@ class ProxyMinion(
         # the boot process waiting for a key to be accepted on the master.
         # This is the latest safe place to daemonize
         self.daemonize_if_required()
+        self.set_pidfile()
         if self.config.get("master_type") == "func":
             salt.minion.eval_master_func(self.config)
         self.minion = salt.minion.ProxyMinionManager(self.config)
@@ -593,6 +599,7 @@ class Syndic(
 
         self.daemonize_if_required()
         self.syndic = salt.minion.SyndicManager(self.config)
+        self.set_pidfile()
 
     def start(self):
         """
