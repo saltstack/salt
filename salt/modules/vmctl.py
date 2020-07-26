@@ -223,6 +223,9 @@ def start(
     ret = {"changes": False, "console": None}
     cmd = ["vmctl", "start"]
 
+    if not (name or id):
+        raise SaltInvocationError('Must provide either "name" or "id"')
+
     if nics > 0:
         cmd.append("-i {0}".format(nics))
 
@@ -249,9 +252,7 @@ def start(
     if disks and len(disks) > 0:
         cmd.extend(["-d", x] for x in disks)
 
-    if not (name or id):
-        raise SaltInvocationError('Must provide either "name" or "id"')
-    elif name:
+    if name:
         cmd.append(name)
     else:
         cmd.append(id)
