@@ -2,7 +2,7 @@
 
 // Pre-nox pipeline
 runTestSuite(
-    concurrent_builds: 2,
+    concurrent_builds: 1,
     distro_name: 'macosx',
     distro_version: 'catalina',
     env: env,
@@ -12,10 +12,8 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
-    //splits: ['unit', 'integration', 'multimaster'],
     testrun_timeout: 6,
     use_spot_instances: false,
-    //fast_slow_staged_testrun: true
 )
 
 // vim: ft=groovy
