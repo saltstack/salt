@@ -36,7 +36,7 @@ If applicable, add screenshots to help explain your problem.
 <details><summary>salt --versions-report</summary>
 (Provided by running salt --versions-report. Please also mention any differences in master/minion versions.) 
 
-```
+```yaml
 PASTE HERE
 ```
 </details>
