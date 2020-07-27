@@ -698,7 +698,7 @@ def install(
     if error:
         return error
 
-    cur_version = version(bin_env, cwd)
+    cur_version = version(bin_env, cwd, user=user)
 
     if use_wheel:
         min_version = "1.4"
@@ -1299,7 +1299,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     return packages
 
 
-def version(bin_env=None, cwd=None):
+def version(bin_env=None, cwd=None, user=None):
     """
     .. versionadded:: 0.17.0
 
@@ -1308,11 +1308,16 @@ def version(bin_env=None, cwd=None):
 
     If unable to detect the pip version, returns ``None``.
 
+    .. versionchanged:: 3001.1
+        The ``user`` parameter was added, to allow specifying the user who runs
+        the version command.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.version
+
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
@@ -1326,7 +1331,7 @@ def version(bin_env=None, cwd=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append("--version")
 
-    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, python_shell=False)
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"]:
         raise CommandNotFoundError("Could not find a `pip` binary")
 
@@ -1354,7 +1359,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     cmd = _get_pip_bin(bin_env)
     cmd.extend(["list", "--outdated"])
 
-    pip_version = version(bin_env, cwd)
+    pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = "9.0"
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2=min_version):
@@ -1517,7 +1522,7 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, runas=user, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
     errors = False

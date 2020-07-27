@@ -61,7 +61,7 @@ markupsafe==1.1.1
 mock==3.0.5
 more-itertools==5.0.0
 moto==1.3.7
-msgpack==0.5.6
+msgpack==1.0.0
 ncclient==0.6.4           # via junos-eznc
 netaddr==0.7.19           # via junos-eznc
 ntc-templates==1.4.1      # via junos-eznc
@@ -86,7 +86,7 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.10.6
+pytest-salt-factories==0.10.7
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==5.4.2 ; sys_platform != "win32"
@@ -96,7 +96,7 @@ python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
-pyyaml==5.1.2
+pyyaml==5.3.1
 pyzmq==19.0.0
 requests==2.21.0
 responses==0.10.6         # via moto
