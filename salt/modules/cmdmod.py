@@ -603,10 +603,6 @@ def _run(
             env.setdefault("LC_MEASUREMENT", "C")
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
-        else:
-            # On Windows set the codepage to US English.
-            if python_shell:
-                cmd = "chcp 437 > nul & " + cmd
 
     if clean_env:
         run_env = env
@@ -4309,8 +4305,11 @@ def chcp(page_id=None, raise_error=False):
     try:
         chcp_process = subprocess.Popen("chcp.com {}".format(page_id), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except FileNotFoundError:
+        log.error("Code Page was not found!")
         return ""
-    chcp_ret = chcp_process.communicate(timeout=10)[0].decode("ascii", "ignore").encode("ascii").decode("utf-8")
+
+    # get code page id
+    chcp_ret = chcp_process.communicate(timeout=10)[0].decode("ascii", "ignore")
     chcp_ret = "".join([c for c in chcp_ret if c in string.digits])
 
     # check if code page changed
