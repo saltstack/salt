@@ -42,6 +42,7 @@ import salt.utils.versions
 import salt.utils.vt
 import salt.utils.win_dacl
 import salt.utils.win_reg
+import salt.utils.chcp
 from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
@@ -287,7 +288,7 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
-    chcp_code=65001,
+    chcp_code=437,
     **kwargs
 ):
     """
@@ -341,8 +342,8 @@ def _run(
             raise CommandExecutionError(msg)
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
-    else:
-        chcp(chcp_code)
+    elif chcp_code is not None:
+        salt.utils.chcp.chcp(chcp_code)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
@@ -4293,34 +4294,3 @@ def run_bg(
     )
 
     return {"pid": res["pid"]}
-
-
-def chcp(page_id=None, raise_error=False):
-    # check if code page needs to change
-    if page_id is not None:
-        current_page = chcp()
-        if current_page == str(page_id):
-            return current_page
-    else:
-        page_id = ""
-
-    # change or get code page
-    try:
-        chcp_process = subprocess.Popen("chcp.com {}".format(page_id), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except FileNotFoundError:
-        log.error("Code Page was not found!")
-        return ""
-
-    # get code page id
-    chcp_ret = chcp_process.communicate(timeout=10)[0].decode("ascii", "ignore")
-    chcp_ret = "".join([c for c in chcp_ret if c in string.digits])
-
-    # check if code page changed
-    if page_id != "":
-        if str(page_id) != chcp_ret:
-            if raise_error:
-                raise TypeError()
-            else:
-                log.error("Code page failed to change to %s!", page_id)
-    log.debug("Code page is %s", chcp_ret)
-    return chcp_ret
