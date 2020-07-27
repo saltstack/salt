@@ -315,6 +315,73 @@ def check_mantle_of_responsibility(file_name):
         return file_process_info["pid"]
 
 
+def set_pidfile(pidfile, user):
+    """
+    Save the pidfile
+    """
+    pdir = os.path.dirname(pidfile)
+    if not os.path.isdir(pdir) and pdir:
+        os.makedirs(pdir)
+    try:
+        with salt.utils.files.fopen(pidfile, "w+") as ofile:
+            ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
+    except IOError:
+        pass
+
+    log.debug("Created pidfile: %s", pidfile)
+    if salt.utils.platform.is_windows():
+        return True
+
+    import pwd  # after confirming not running Windows
+
+    # import grp
+    try:
+        pwnam = pwd.getpwnam(user)
+        uid = pwnam[2]
+        gid = pwnam[3]
+        # groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
+    except (KeyError, IndexError):
+        sys.stderr.write(
+            "Failed to set the pid to user: {0}. The user is not "
+            "available.\n".format(user)
+        )
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
+    if os.getuid() == uid:
+        # The current user already owns the pidfile. Return!
+        return
+
+    try:
+        os.chown(pidfile, uid, gid)
+    except OSError as err:
+        msg = "Failed to set the ownership of PID file {0} to user {1}.".format(
+            pidfile, user
+        )
+        log.debug("%s Traceback follows:", msg, exc_info=True)
+        sys.stderr.write("{0}\n".format(msg))
+        sys.exit(err.errno)
+    log.debug("Chowned pidfile: %s to user: %s", pidfile, user)
+
+
+def check_pidfile(pidfile):
+    """
+    Determine if a pidfile has been written out
+    """
+    return os.path.isfile(pidfile)
+
+
+def get_pidfile(pidfile):
+    """
+    Return the pid from a pidfile as an integer
+    """
+    try:
+        with salt.utils.files.fopen(pidfile) as pdf:
+            pid = pdf.read().strip()
+        return int(pid)
+    except (OSError, IOError, TypeError, ValueError):
+        return -1
+
+
 def clean_proc(proc, wait_for_kill=10):
     """
     Generic method for cleaning up multiprocessing procs
