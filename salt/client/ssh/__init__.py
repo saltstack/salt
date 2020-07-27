@@ -1119,6 +1119,7 @@ class Single(object):
                 minion_opts=self.minion_opts,
                 **self.target
             )
+
             opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
             if "_error" in opts_pkg:
                 # Refresh failed
@@ -1196,6 +1197,7 @@ class Single(object):
             minion_opts=self.minion_opts,
             **self.target
         )
+        wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 

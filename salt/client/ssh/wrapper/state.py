@@ -184,7 +184,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     )
     st_.push_active()
     mods = _parse_mods(mods)
-    high_data, errors = st_.render_highstate({saltenv: mods})
+    high_data, errors = st_.render_highstate({saltenv: mods}, context=__context__)
     if exclude:
         if isinstance(exclude, six.string_types):
             exclude = exclude.split(",")

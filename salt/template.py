@@ -42,6 +42,7 @@ def compile_template(
     saltenv="base",
     sls="",
     input_data="",
+    context=None,
     **kwargs
 ):
     """
@@ -99,6 +100,8 @@ def compile_template(
         if salt.utils.stringio.is_readable(input_data):
             input_data.seek(0)  # pylint: disable=no-member
         render_kwargs = dict(renderers=renderers, tmplpath=template)
+        if context:
+            render_kwargs["context"] = context
         render_kwargs.update(kwargs)
         if argline:
             render_kwargs["argline"] = argline
