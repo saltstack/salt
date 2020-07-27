@@ -1688,10 +1688,10 @@ def _handle_remote_boot_params(orig_boot):
 
 def _handle_efi_param(boot, desc):
     """
-       Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
-       :param boot: The boot parameters passed to the init or update functions.
-       :param desc: The XML description of that domain.
-       :return: A boolean value.
+    Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
+    :param boot: The boot parameters passed to the init or update functions.
+    :param desc: The XML description of that domain.
+    :return: A boolean value.
     """
     efi_value = boot.get("efi", None) if boot else None
     parent_tag = desc.find("os")
@@ -2152,6 +2152,7 @@ def init(
             boot_dev,
             **kwargs
         )
+        log.debug("New virtual machine definition: %s", vm_xml)
         conn.defineXML(vm_xml)
     except libvirt.libvirtError as err:
         conn.close()
@@ -2638,9 +2639,9 @@ def update(
                         _disk_volume_create(conn, all_disks[idx])
 
             if not test:
-                conn.defineXML(
-                    salt.utils.stringutils.to_str(ElementTree.tostring(desc))
-                )
+                xml_desc = ElementTree.tostring(desc)
+                log.debug("Update virtual machine definition: %s", xml_desc)
+                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -4287,7 +4288,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
