@@ -5,14 +5,18 @@ Helpers/utils for working with tornado asynchronous stuff
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import contextlib
-import logging
 import sys
 import threading
+import logging
 
-import salt.ext.tornado.concurrent
 import salt.ext.tornado.ioloop
-from salt.ext import six
+import salt.ext.tornado.concurrent
+import contextlib
+
+# from salt.ext import six
+# from salt.utils import zeromq
+from salt.ext.six import reraise
+
 
 log = logging.getLogger(__name__)
 
@@ -31,20 +35,6 @@ def current_ioloop(io_loop):
 
 
 class SyncWrapper(object):
-    """
-    A wrapper to make Async classes synchronous
-
-    This is uses as a simple wrapper, for example:
-
-    asynchronous = AsyncClass()
-    # this method would reguarly return a future
-    future = asynchronous.async_method()
-
-    sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})
-    # the sync wrapper will automatically wait on the future
-    ret = sync.async_method()
-    """
-
     def __init__(
         self,
         cls,
@@ -123,7 +113,7 @@ class SyncWrapper(object):
             if results[0]:
                 return results[1]
             else:
-                six.reraise(*results[1])
+                reraise(*results[1])
 
         return wrap
 

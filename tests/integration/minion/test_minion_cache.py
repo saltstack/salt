@@ -38,10 +38,8 @@ class BasePillarTest(ModuleCase):
         }
         with patch("salt.loader.grains", return_value={}), patch(
             "salt.minion.SMinion.gen_modules"
-        ), patch("salt.minion.SMinion.eval_master"), patch(
-            "salt.minion.install_zmq"
         ), patch(
-            "salt.minion.ZMQDefaultLoop.current"
+            "salt.ext.tornado.ioloop.IOLoop.current"
         ):
             minion = salt.minion.SMinion(opts)
             self.assertTrue("pillar" in os.listdir(tempdir))

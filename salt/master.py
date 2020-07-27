@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals, with_s
 import collections
 import copy
 import ctypes
+import hashlib
 import functools
 import logging
 import multiprocessing
@@ -78,7 +79,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
+from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -1097,10 +1098,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop()
-        self.io_loop.make_current()
+        log.error("MWorker starting")
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         for req_channel in self.req_channels:
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
@@ -1110,9 +1109,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         except (KeyboardInterrupt, SystemExit):
             # Tornado knows what to do
             pass
+        log.error("MWorker stopping")
 
     @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    def _handle_payload(self, payload, host=None, port=None):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -1133,8 +1133,17 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
+        #log.error("GOT PAYLOAD %r", payload)
         key = payload["enc"]
         load = payload["load"]
+        if 'mmid' in payload:
+            mmid = payload['mmid']
+        else:
+            #log.error("no mmid? %r", payload)
+            mmid = None
+        #log.error("MSG RECV %s %s %s",
+        #    host, port, mmid
+        #)
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
         raise salt.ext.tornado.gen.Return(ret)
 
@@ -1168,6 +1177,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :return: The result of passing the load to a function in ClearFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
+        if not 'cmd' in load:
+            return {}, {"fun": "send_clear"}
         log.trace("Clear payload received with command %s", load["cmd"])
         cmd = load["cmd"]
         method = self.clear_funcs.get_method(cmd)
@@ -1176,7 +1187,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
+        #log.error("BEFORE CLEARFUNC %r", load)
         ret = method(load), {"fun": "send_clear"}
+        #log.error("AFTER CLEARFUNC %r %r", load, ret)
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1207,7 +1220,9 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         with StackContext(
             functools.partial(RequestContext, {"data": data, "opts": self.opts})
         ):
+            #log.error("BEFORE RUNFUNC %r", data)
             ret = run_func(data)
+            #log.error("AFTER RUNFUNC %r %r", data, ret)
 
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)

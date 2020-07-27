@@ -29,11 +29,19 @@ from salt.ext.six.moves import range, zip
 # Set up logging
 log = logging.getLogger(__name__)
 
-ntdll = ctypes.WinDLL("ntdll")
-secur32 = ctypes.WinDLL("secur32")
-kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
-userenv = ctypes.WinDLL("userenv", use_last_error=True)
+class libs(object):
+
+    @classmethod
+    def load(cls):
+        cls.ntdll = ctypes.WinDLL("ntdll")
+        cls.secur32 = ctypes.WinDLL("secur32")
+        cls.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        cls.advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+        cls.userenv = ctypes.WinDLL("userenv", use_last_error=True)
+        cdefs()
+
+
+
 
 SYSTEM_SID = "S-1-5-18"
 LOCAL_SRV_SID = "S-1-5-19"
@@ -152,7 +160,7 @@ SecurityDelegation = 3
 
 class NTSTATUS(wintypes.LONG):
     def to_error(self):
-        return ntdll.RtlNtStatusToDosError(self)
+        return libs.ntdll.RtlNtStatusToDosError(self)
 
     def __repr__(self):
         name = self.__class__.__name__
@@ -183,7 +191,9 @@ class HANDLE(wintypes.HANDLE):
             return value
         raise ValueError("already closed")
 
-    def Close(self, CloseHandle=kernel32.CloseHandle):
+    def Close(self, CloseHandle=None):
+        if CloseHandle is None:
+            CloseHandle = libs.kernel32.CloseHandle
         if self and not getattr(self, "closed", False):
             CloseHandle(self.Detach())
 
@@ -194,13 +204,13 @@ class HANDLE(wintypes.HANDLE):
 
 
 class LARGE_INTEGER(wintypes.LARGE_INTEGER):
-    # https://msdn.microsoft.com/en-us/library/ff553204
-    ntdll.RtlSecondsSince1970ToTime.restype = None
-    _unix_epoch = wintypes.LARGE_INTEGER()
-    ntdll.RtlSecondsSince1970ToTime(0, ctypes.byref(_unix_epoch))
-    _unix_epoch = _unix_epoch.value
 
     def __int__(self):
+        # https://msdn.microsoft.com/en-us/library/ff553204
+        libs.ntdll.RtlSecondsSince1970ToTime.restype = None
+        _unix_epoch = wintypes.LARGE_INTEGER()
+        libs.ntdll.RtlSecondsSince1970ToTime(0, ctypes.byref(_unix_epoch))
+        _unix_epoch = _unix_epoch.value
         return self.value
 
     def __repr__(self):
@@ -304,13 +314,12 @@ class TOKEN_SOURCE(ctypes.Structure):
             # pylint: disable=access-member-before-definition
             luid = self.SourceIdentifier
             # pylint: enable=access-member-before-definition
-            ntdll.NtAllocateLocallyUniqueId(ctypes.byref(luid))
+            libs.ntdll.NtAllocateLocallyUniqueId(ctypes.byref(luid))
         else:
             self.SourceIdentifier = SourceIdentifier
 
 
 LPTOKEN_SOURCE = ctypes.POINTER(TOKEN_SOURCE)
-py_source_context = TOKEN_SOURCE(b"PYTHON  ")
 py_origin_name = __name__.encode()
 py_logon_process_name = "{}-{}".format(py_origin_name, os.getpid())
 SIZE_T = ctypes.c_size_t
@@ -649,200 +658,183 @@ def _win(func, restype, *argtypes):
         func.errcheck = errcheck_bool
 
 
-# https://msdn.microsoft.com/en-us/library/ms683231
-_win(kernel32.GetStdHandle, HANDLE_IHV, wintypes.DWORD)  # _In_ nStdHandle
+def cdefs():
+    # https://msdn.microsoft.com/en-us/library/ms683231
+    _win(libs.kernel32.GetStdHandle, HANDLE_IHV, wintypes.DWORD)  # _In_ nStdHandle
+
+    # https://msdn.microsoft.com/en-us/library/ms724211
+    _win(libs.kernel32.CloseHandle, wintypes.BOOL, wintypes.HANDLE)  # _In_ hObject
+
+    # https://msdn.microsoft.com/en-us/library/ms724935
+    _win(
+        libs.kernel32.SetHandleInformation,
+        wintypes.BOOL,
+        wintypes.HANDLE,  # _In_ hObject
+        wintypes.DWORD,  # _In_ dwMask
+        wintypes.DWORD,
+    )  # _In_ dwFlags
+
+    # https://msdn.microsoft.com/en-us/library/ms724251
+    _win(
+        libs.kernel32.DuplicateHandle,
+        wintypes.BOOL,
+        wintypes.HANDLE,  # _In_  hSourceProcessHandle,
+        wintypes.HANDLE,  # _In_  hSourceHandle,
+        wintypes.HANDLE,  # _In_  hTargetProcessHandle,
+        LPHANDLE,  # _Out_ lpTargetHandle,
+        wintypes.DWORD,  # _In_  dwDesiredAccess,
+        wintypes.BOOL,  # _In_  bInheritHandle,
+        wintypes.DWORD,
+    )  # _In_  dwOptions
+
+    # https://msdn.microsoft.com/en-us/library/ms683179
+    _win(libs.kernel32.GetCurrentProcess, wintypes.HANDLE)
+
+    # https://msdn.microsoft.com/en-us/library/ms683189
+    _win(
+        libs.kernel32.GetExitCodeProcess,
+        wintypes.BOOL,
+        wintypes.HANDLE,  # _In_  hProcess,
+        LPDWORD,
+    )  # _Out_ lpExitCode
+
+    # https://msdn.microsoft.com/en-us/library/aa365152
+    _win(
+        libs.kernel32.CreatePipe,
+        wintypes.BOOL,
+        PHANDLE,  # _Out_    hReadPipe,
+        PHANDLE,  # _Out_    hWritePipe,
+        LPSECURITY_ATTRIBUTES,  # _In_opt_ lpPipeAttributes,
+        wintypes.DWORD,
+    )  # _In_     nSize
+
+    # https://msdn.microsoft.com/en-us/library/ms682431
+    # _win(advapi32.CreateProcessWithTokenW, wintypes.BOOL,
+    #    PHANDLE,       # _In_        lpUsername
+    #    wintypes.DWORD,         # _In_        dwLogonFlags
+    #    wintypes.LPCWSTR,       # _In_opt_    lpApplicationName
+    #    wintypes.LPWSTR,        # _Inout_opt_ lpCommandLine
+    #    wintypes.DWORD,         # _In_        dwCreationFlags
+    #    wintypes.LPVOID,        # _In_opt_     lpEnvironment
+    #    wintypes.LPCWSTR,       # _In_opt_    lpCurrentDirectory
+    #    LPSTARTUPINFO,          # _In_        lpStartupInfo
+    #    LPPROCESS_INFORMATION)  # _Out_       lpProcessInformation
+
+    # https://msdn.microsoft.com/en-us/library/ms682431
+    _win(
+        libs.advapi32.CreateProcessWithLogonW,
+        wintypes.BOOL,
+        wintypes.LPCWSTR,  # _In_        lpUsername
+        wintypes.LPCWSTR,  # _In_opt_    lpDomain
+        wintypes.LPCWSTR,  # _In_        lpPassword
+        wintypes.DWORD,  # _In_        dwLogonFlags
+        wintypes.LPCWSTR,  # _In_opt_    lpApplicationName
+        wintypes.LPWSTR,  # _Inout_opt_ lpCommandLine
+        wintypes.DWORD,  # _In_        dwCreationFlags
+        wintypes.LPCWSTR,  # _In_opt_    lpEnvironment
+        wintypes.LPCWSTR,  # _In_opt_    lpCurrentDirectory
+        LPSTARTUPINFO,  # _In_        lpStartupInfo
+        LPPROCESS_INFORMATION,
+    )  # _Out_       lpProcessInformation
+
+    # https://msdn.microsoft.com/en-us/library/ms683179
+    _win(libs.kernel32.GetCurrentProcess, wintypes.HANDLE)
+
+    # https://msdn.microsoft.com/en-us/library/ms724251
+    _win(
+        libs.kernel32.DuplicateHandle,
+        BOOL,
+        wintypes.HANDLE,  # _In_  hSourceProcessHandle
+        wintypes.HANDLE,  # _In_  hSourceHandle
+        wintypes.HANDLE,  # _In_  hTargetProcessHandle
+        LPHANDLE,  # _Out_ lpTargetHandle
+        wintypes.DWORD,  # _In_  dwDesiredAccess
+        wintypes.BOOL,  # _In_  bInheritHandle
+        wintypes.DWORD,
+    )  # _In_  dwOptions
+
+    # https://msdn.microsoft.com/en-us/library/ms724295
+    _win(
+        libs.kernel32.GetComputerNameW, BOOL, wintypes.LPWSTR, LPDWORD  # _Out_   lpBuffer
+    )  # _Inout_ lpnSize
+
+    # https://msdn.microsoft.com/en-us/library/aa379295
+    _win(
+        libs.advapi32.OpenProcessToken,
+        BOOL,
+        wintypes.HANDLE,  # _In_  ProcessHandle
+        wintypes.DWORD,  # _In_  DesiredAccess
+        LPHANDLE,
+    )  # _Out_ TokenHandle
+
+    # https://msdn.microsoft.com/en-us/library/aa446617
+    _win(
+        libs.advapi32.DuplicateTokenEx,
+        BOOL,
+        wintypes.HANDLE,  # _In_     hExistingToken
+        wintypes.DWORD,  # _In_     dwDesiredAccess
+        LPSECURITY_ATTRIBUTES,  # _In_opt_ lpTokenAttributes
+        SECURITY_IMPERSONATION_LEVEL,  # _In_     ImpersonationLevel
+        TOKEN_TYPE,  # _In_     TokenType
+        LPHANDLE,
+    )  # _Out_    phNewToken
+
+    # https://msdn.microsoft.com/en-us/library/ff566415
+    _win(libs.ntdll.NtAllocateLocallyUniqueId, NTSTATUS, LPLUID)  # _Out_ LUID
+
+    # https://msdn.microsoft.com/en-us/library/aa378279
+    _win(
+        libs.secur32.LsaFreeReturnBuffer, NTSTATUS, wintypes.LPVOID,
+    )  # _In_ Buffer
+
+    # https://msdn.microsoft.com/en-us/library/aa378265
+    _win(
+        libs.secur32.LsaConnectUntrusted, NTSTATUS, LPHANDLE,
+    )  # _Out_ LsaHandle
+
+    # https://msdn.microsoft.com/en-us/library/aa378318
+    _win(
+        libs.secur32.LsaRegisterLogonProcess,
+        NTSTATUS,
+        LPSTRING,  # _In_  LogonProcessName
+        LPHANDLE,  # _Out_ LsaHandle
+        LPLSA_OPERATIONAL_MODE,
+    )  # _Out_ SecurityMode
+
+    # https://msdn.microsoft.com/en-us/library/aa378269
+    _win(libs.secur32.LsaDeregisterLogonProcess, NTSTATUS, wintypes.HANDLE)  # _In_ LsaHandle
+
+    # https://msdn.microsoft.com/en-us/library/aa378297
+    _win(
+        libs.secur32.LsaLookupAuthenticationPackage,
+        NTSTATUS,
+        wintypes.HANDLE,  # _In_  LsaHandle
+        LPSTRING,  # _In_  PackageName
+        LPULONG,
+    )  # _Out_ AuthenticationPackage
+
+    # https://msdn.microsoft.com/en-us/library/aa378292
+    _win(
+        libs.secur32.LsaLogonUser,
+        NTSTATUS,
+        wintypes.HANDLE,  # _In_     LsaHandle
+        LPSTRING,  # _In_     OriginName
+        SECURITY_LOGON_TYPE,  # _In_     LogonType
+        wintypes.ULONG,  # _In_     AuthenticationPackage
+        wintypes.LPVOID,  # _In_     AuthenticationInformation
+        wintypes.ULONG,  # _In_     AuthenticationInformationLength
+        LPTOKEN_GROUPS,  # _In_opt_ LocalGroups
+        LPTOKEN_SOURCE,  # _In_     SourceContext
+        LPLPVOID,  # _Out_    ProfileBuffer
+        LPULONG,  # _Out_    ProfileBufferLength
+        LPLUID,  # _Out_    LogonId
+        LPHANDLE,  # _Out_    Token
+        LPQUOTA_LIMITS,  # _Out_    Quotas
+        PNTSTATUS,
+    )  # _Out_    SubStatus
 
 
-# https://msdn.microsoft.com/en-us/library/ms724211
-_win(kernel32.CloseHandle, wintypes.BOOL, wintypes.HANDLE)  # _In_ hObject
-
-
-# https://msdn.microsoft.com/en-us/library/ms724935
-_win(
-    kernel32.SetHandleInformation,
-    wintypes.BOOL,
-    wintypes.HANDLE,  # _In_ hObject
-    wintypes.DWORD,  # _In_ dwMask
-    wintypes.DWORD,
-)  # _In_ dwFlags
-
-
-# https://msdn.microsoft.com/en-us/library/ms724251
-_win(
-    kernel32.DuplicateHandle,
-    wintypes.BOOL,
-    wintypes.HANDLE,  # _In_  hSourceProcessHandle,
-    wintypes.HANDLE,  # _In_  hSourceHandle,
-    wintypes.HANDLE,  # _In_  hTargetProcessHandle,
-    LPHANDLE,  # _Out_ lpTargetHandle,
-    wintypes.DWORD,  # _In_  dwDesiredAccess,
-    wintypes.BOOL,  # _In_  bInheritHandle,
-    wintypes.DWORD,
-)  # _In_  dwOptions
-
-
-# https://msdn.microsoft.com/en-us/library/ms683179
-_win(kernel32.GetCurrentProcess, wintypes.HANDLE)
-
-
-# https://msdn.microsoft.com/en-us/library/ms683189
-_win(
-    kernel32.GetExitCodeProcess,
-    wintypes.BOOL,
-    wintypes.HANDLE,  # _In_  hProcess,
-    LPDWORD,
-)  # _Out_ lpExitCode
-
-
-# https://msdn.microsoft.com/en-us/library/aa365152
-_win(
-    kernel32.CreatePipe,
-    wintypes.BOOL,
-    PHANDLE,  # _Out_    hReadPipe,
-    PHANDLE,  # _Out_    hWritePipe,
-    LPSECURITY_ATTRIBUTES,  # _In_opt_ lpPipeAttributes,
-    wintypes.DWORD,
-)  # _In_     nSize
-
-
-# https://msdn.microsoft.com/en-us/library/ms682431
-# _win(advapi32.CreateProcessWithTokenW, wintypes.BOOL,
-#    PHANDLE,       # _In_        lpUsername
-#    wintypes.DWORD,         # _In_        dwLogonFlags
-#    wintypes.LPCWSTR,       # _In_opt_    lpApplicationName
-#    wintypes.LPWSTR,        # _Inout_opt_ lpCommandLine
-#    wintypes.DWORD,         # _In_        dwCreationFlags
-#    wintypes.LPVOID,        # _In_opt_     lpEnvironment
-#    wintypes.LPCWSTR,       # _In_opt_    lpCurrentDirectory
-#    LPSTARTUPINFO,          # _In_        lpStartupInfo
-#    LPPROCESS_INFORMATION)  # _Out_       lpProcessInformation
-
-
-# https://msdn.microsoft.com/en-us/library/ms682431
-_win(
-    advapi32.CreateProcessWithLogonW,
-    wintypes.BOOL,
-    wintypes.LPCWSTR,  # _In_        lpUsername
-    wintypes.LPCWSTR,  # _In_opt_    lpDomain
-    wintypes.LPCWSTR,  # _In_        lpPassword
-    wintypes.DWORD,  # _In_        dwLogonFlags
-    wintypes.LPCWSTR,  # _In_opt_    lpApplicationName
-    wintypes.LPWSTR,  # _Inout_opt_ lpCommandLine
-    wintypes.DWORD,  # _In_        dwCreationFlags
-    wintypes.LPCWSTR,  # _In_opt_    lpEnvironment
-    wintypes.LPCWSTR,  # _In_opt_    lpCurrentDirectory
-    LPSTARTUPINFO,  # _In_        lpStartupInfo
-    LPPROCESS_INFORMATION,
-)  # _Out_       lpProcessInformation
-
-
-# https://msdn.microsoft.com/en-us/library/ms683179
-_win(kernel32.GetCurrentProcess, wintypes.HANDLE)
-
-
-# https://msdn.microsoft.com/en-us/library/ms724251
-_win(
-    kernel32.DuplicateHandle,
-    BOOL,
-    wintypes.HANDLE,  # _In_  hSourceProcessHandle
-    wintypes.HANDLE,  # _In_  hSourceHandle
-    wintypes.HANDLE,  # _In_  hTargetProcessHandle
-    LPHANDLE,  # _Out_ lpTargetHandle
-    wintypes.DWORD,  # _In_  dwDesiredAccess
-    wintypes.BOOL,  # _In_  bInheritHandle
-    wintypes.DWORD,
-)  # _In_  dwOptions
-
-
-# https://msdn.microsoft.com/en-us/library/ms724295
-_win(
-    kernel32.GetComputerNameW, BOOL, wintypes.LPWSTR, LPDWORD  # _Out_   lpBuffer
-)  # _Inout_ lpnSize
-
-
-# https://msdn.microsoft.com/en-us/library/aa379295
-_win(
-    advapi32.OpenProcessToken,
-    BOOL,
-    wintypes.HANDLE,  # _In_  ProcessHandle
-    wintypes.DWORD,  # _In_  DesiredAccess
-    LPHANDLE,
-)  # _Out_ TokenHandle
-
-
-# https://msdn.microsoft.com/en-us/library/aa446617
-_win(
-    advapi32.DuplicateTokenEx,
-    BOOL,
-    wintypes.HANDLE,  # _In_     hExistingToken
-    wintypes.DWORD,  # _In_     dwDesiredAccess
-    LPSECURITY_ATTRIBUTES,  # _In_opt_ lpTokenAttributes
-    SECURITY_IMPERSONATION_LEVEL,  # _In_     ImpersonationLevel
-    TOKEN_TYPE,  # _In_     TokenType
-    LPHANDLE,
-)  # _Out_    phNewToken
-
-
-# https://msdn.microsoft.com/en-us/library/ff566415
-_win(ntdll.NtAllocateLocallyUniqueId, NTSTATUS, LPLUID)  # _Out_ LUID
-
-
-# https://msdn.microsoft.com/en-us/library/aa378279
-_win(
-    secur32.LsaFreeReturnBuffer, NTSTATUS, wintypes.LPVOID,
-)  # _In_ Buffer
-
-
-# https://msdn.microsoft.com/en-us/library/aa378265
-_win(
-    secur32.LsaConnectUntrusted, NTSTATUS, LPHANDLE,
-)  # _Out_ LsaHandle
-
-
-# https://msdn.microsoft.com/en-us/library/aa378318
-_win(
-    secur32.LsaRegisterLogonProcess,
-    NTSTATUS,
-    LPSTRING,  # _In_  LogonProcessName
-    LPHANDLE,  # _Out_ LsaHandle
-    LPLSA_OPERATIONAL_MODE,
-)  # _Out_ SecurityMode
-
-
-# https://msdn.microsoft.com/en-us/library/aa378269
-_win(secur32.LsaDeregisterLogonProcess, NTSTATUS, wintypes.HANDLE)  # _In_ LsaHandle
-
-
-# https://msdn.microsoft.com/en-us/library/aa378297
-_win(
-    secur32.LsaLookupAuthenticationPackage,
-    NTSTATUS,
-    wintypes.HANDLE,  # _In_  LsaHandle
-    LPSTRING,  # _In_  PackageName
-    LPULONG,
-)  # _Out_ AuthenticationPackage
-
-
-# https://msdn.microsoft.com/en-us/library/aa378292
-_win(
-    secur32.LsaLogonUser,
-    NTSTATUS,
-    wintypes.HANDLE,  # _In_     LsaHandle
-    LPSTRING,  # _In_     OriginName
-    SECURITY_LOGON_TYPE,  # _In_     LogonType
-    wintypes.ULONG,  # _In_     AuthenticationPackage
-    wintypes.LPVOID,  # _In_     AuthenticationInformation
-    wintypes.ULONG,  # _In_     AuthenticationInformationLength
-    LPTOKEN_GROUPS,  # _In_opt_ LocalGroups
-    LPTOKEN_SOURCE,  # _In_     SourceContext
-    LPLPVOID,  # _Out_    ProfileBuffer
-    LPULONG,  # _Out_    ProfileBufferLength
-    LPLUID,  # _Out_    LogonId
-    LPHANDLE,  # _Out_    Token
-    LPQUOTA_LIMITS,  # _Out_    Quotas
-    PNTSTATUS,
-)  # _Out_    SubStatus
-
+libs.load()
 
 def duplicate_token(
     source_token=None,
@@ -855,12 +847,12 @@ def duplicate_token(
     if source_token is None:
         close_source = True
         source_token = HANDLE()
-        advapi32.OpenProcessToken(
-            kernel32.GetCurrentProcess(), TOKEN_ALL_ACCESS, ctypes.byref(source_token)
+        libs.advapi32.OpenProcessToken(
+            libs.kernel32.GetCurrentProcess(), TOKEN_ALL_ACCESS, ctypes.byref(source_token)
         )
     token = HANDLE()
     try:
-        advapi32.DuplicateTokenEx(
+        libs.advapi32.DuplicateTokenEx(
             source_token,
             access,
             attributes,
@@ -876,7 +868,7 @@ def duplicate_token(
 
 def lsa_connect_untrusted():
     handle = wintypes.HANDLE()
-    secur32.LsaConnectUntrusted(ctypes.byref(handle))
+    libs.secur32.LsaConnectUntrusted(ctypes.byref(handle))
     return handle.value
 
 
@@ -888,7 +880,7 @@ def lsa_register_logon_process(logon_process_name):
     name = STRING(len(logon_process_name), len(buf), buf)
     handle = wintypes.HANDLE()
     mode = LSA_OPERATIONAL_MODE()
-    secur32.LsaRegisterLogonProcess(
+    libs.secur32.LsaRegisterLogonProcess(
         ctypes.byref(name), ctypes.byref(handle), ctypes.byref(mode)
     )
     return handle.value
@@ -901,7 +893,7 @@ def lsa_lookup_authentication_package(lsa_handle, package_name):
     buf = ctypes.create_string_buffer(package_name)
     name = STRING(len(package_name), len(buf), buf)
     package = wintypes.ULONG()
-    secur32.LsaLookupAuthenticationPackage(
+    libs.secur32.LsaLookupAuthenticationPackage(
         lsa_handle, ctypes.byref(name), ctypes.byref(package)
     )
     return package.value
@@ -926,7 +918,7 @@ def lsa_logon_user(
     else:
         plocal_groups = ctypes.byref(local_groups)
     if source_context is None:
-        source_context = py_source_context
+        source_context = TOKEN_SOURCE(b"PYTHON  ")
     if not isinstance(origin_name, bytes):
         origin_name = origin_name.encode("mbcs")
     buf = ctypes.create_string_buffer(origin_name)
@@ -958,7 +950,7 @@ def lsa_logon_user(
         if isinstance(auth_package, (str, bytes)):
             auth_package = lsa_lookup_authentication_package(lsa_handle, auth_package)
         try:
-            secur32.LsaLogonUser(
+            libs.secur32.LsaLogonUser(
                 lsa_handle,
                 ctypes.byref(origin_name),
                 logon_type,
@@ -986,10 +978,10 @@ def lsa_logon_user(
                     profile = MSV1_0_INTERACTIVE_PROFILE.from_address_copy(
                         address, profile_buffer_length.value
                     )
-                secur32.LsaFreeReturnBuffer(address)
+                libs.secur32.LsaFreeReturnBuffer(address)
     finally:
         if deregister:
-            secur32.LsaDeregisterLogonProcess(lsa_handle)
+            libs.secur32.LsaDeregisterLogonProcess(lsa_handle)
     return LOGONINFO(htoken, logonid, profile, quotas)
 
 
@@ -1014,7 +1006,7 @@ def logon_msv1_s4u(
 ):
     domain = ctypes.create_unicode_buffer(MAX_COMPUTER_NAME_LENGTH + 1)
     length = wintypes.DWORD(len(domain))
-    kernel32.GetComputerNameW(domain, ctypes.byref(length))
+    libs.kernel32.GetComputerNameW(domain, ctypes.byref(length))
     return lsa_logon_user(
         MSV1_0_S4U_LOGON(name, domain.value), local_groups, origin_name, source_context
     )
@@ -1038,19 +1030,19 @@ def logon_kerb_s4u(
             lsa_handle=lsa_handle,
         )
     finally:
-        secur32.LsaDeregisterLogonProcess(lsa_handle)
+        libs.secur32.LsaDeregisterLogonProcess(lsa_handle)
 
 
 def DuplicateHandle(
-    hsrc=kernel32.GetCurrentProcess(),
-    srchandle=kernel32.GetCurrentProcess(),
-    htgt=kernel32.GetCurrentProcess(),
+    hsrc=libs.kernel32.GetCurrentProcess(),
+    srchandle=libs.kernel32.GetCurrentProcess(),
+    htgt=libs.kernel32.GetCurrentProcess(),
     access=0,
     inherit=False,
     options=win32con.DUPLICATE_SAME_ACCESS,
 ):
     tgthandle = wintypes.HANDLE()
-    kernel32.DuplicateHandle(
+    libs.kernel32.DuplicateHandle(
         hsrc, srchandle, htgt, ctypes.byref(tgthandle), access, inherit, options
     )
     return tgthandle.value
@@ -1058,13 +1050,13 @@ def DuplicateHandle(
 
 def CreatePipe(inherit_read=False, inherit_write=False):
     read, write = wintypes.HANDLE(), wintypes.HANDLE()
-    kernel32.CreatePipe(ctypes.byref(read), ctypes.byref(write), None, 0)
+    libs.kernel32.CreatePipe(ctypes.byref(read), ctypes.byref(write), None, 0)
     if inherit_read:
-        kernel32.SetHandleInformation(
+        libs.kernel32.SetHandleInformation(
             read, win32con.HANDLE_FLAG_INHERIT, win32con.HANDLE_FLAG_INHERIT
         )
     if inherit_write:
-        kernel32.SetHandleInformation(
+        libs.kernel32.SetHandleInformation(
             write, win32con.HANDLE_FLAG_INHERIT, win32con.HANDLE_FLAG_INHERIT
         )
     return read.value, write.value
@@ -1141,7 +1133,7 @@ def CreateProcessWithTokenW(
     if environment is not None:
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
-    ret = advapi32.CreateProcessWithTokenW(
+    ret = libs.advapi32.CreateProcessWithTokenW(
         token,
         logonflags,
         applicationname,
@@ -1319,7 +1311,7 @@ def CreateProcessWithLogonW(
     if environment is not None:
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
-    advapi32.CreateProcessWithLogonW(
+    libs.advapi32.CreateProcessWithLogonW(
         username,
         domain,
         password,

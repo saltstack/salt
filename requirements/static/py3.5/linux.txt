@@ -94,6 +94,7 @@ azure-storage-file==1.4.0  # via azure
 azure-storage-queue==1.4.0  # via azure
 azure==4.0.0
 backports.functools-lru-cache==1.5  # via cheroot
+backports.ssl-match-hostname==3.7.0.1  # via websocket-client
 bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
@@ -210,6 +211,7 @@ terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via ntc-templates
 timelib==0.2.4
 toml==0.10.0
+tornado==5.1.1
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3

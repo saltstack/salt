@@ -13,6 +13,7 @@ import logging
 import os
 
 # Import salt libs
+import salt.log.setup
 import salt.client
 import salt.defaults.exitcodes
 import salt.runner
@@ -236,6 +237,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         Enter into the server loop
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
         if self.opts["reactor_niceness"] and not salt.utils.platform.is_windows():
             log.info("Reactor setting niceness to %i", self.opts["reactor_niceness"])
@@ -480,14 +482,14 @@ class ReactWrap(object):
 
         except SystemExit:
             log.warning("Reactor '%s' attempted to exit. Ignored.", low["__id__"])
-        except Exception:  # pylint: disable=broad-except
-            log.error(
-                "Reactor '%s' failed to execute %s '%s'",
-                low["__id__"],
-                low["state"],
-                low["fun"],
-                exc_info=True,
-            )
+#        except Exception:  # pylint: disable=broad-except
+#            log.error(
+#                "Reactor '%s' failed to execute %s '%s'",
+#                low["__id__"],
+#                low["state"],
+#                low["fun"],
+#                exc_info=True,
+#            )
 
     def runner(self, fun, **kwargs):
         """
@@ -505,6 +507,7 @@ class ReactWrap(object):
         """
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         """
+        #log.error("WTF SON %r", self.client_cache['local'].opts['master_uri'])
         self.client_cache["local"].cmd_async(tgt, fun, **kwargs)
 
     def caller(self, fun, **kwargs):

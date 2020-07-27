@@ -208,6 +208,7 @@ terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via ntc-templates
 timelib==0.2.4
 toml==0.10.0
+tornado==5.1.1
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3

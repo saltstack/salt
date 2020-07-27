@@ -1802,7 +1802,7 @@ class LocalClient(object):
         tgt_type="glob",
         ret="",
         jid="",
-        timeout=5,
+        timeout=15,
         listen=False,
         **kwargs
     ):
@@ -1845,6 +1845,7 @@ class LocalClient(object):
             salt.utils.zeromq.ip_bracket(self.opts["interface"]),
             six.text_type(self.opts["ret_port"]),
         )
+        #log.error("GRRRR %r", master_uri)
 
         with salt.transport.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri

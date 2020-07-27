@@ -722,8 +722,18 @@ class AsyncAuth(object):
 
         :return: Return a string on failure indicating the reason for failure. On success, return a dictionary
         with the publication port and the shared AES key.
-
         """
+        if channel:
+            auth = yield self._sign_in(channel, timeout, safe, tries)
+        else:
+            with salt.transport.client.AsyncReqChannel.factory(
+                self.opts, crypt="clear", io_loop=self.io_loop
+            ) as channel:
+                auth = yield self._sign_in(channel, timeout, safe, tries)
+        raise salt.ext.tornado.gen.Return(auth)
+
+    @salt.ext.tornado.gen.coroutine
+    def _sign_in(self, channel, timeout=60, safe=True, tries=1):
         auth = {}
 
         auth_timeout = self.opts.get("auth_timeout", None)
@@ -740,13 +750,6 @@ class AsyncAuth(object):
 
         auth["master_uri"] = self.opts["master_uri"]
 
-        close_channel = False
-        if not channel:
-            close_channel = True
-            channel = salt.transport.client.AsyncReqChannel.factory(
-                self.opts, crypt="clear", io_loop=self.io_loop
-            )
-
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
@@ -760,9 +763,6 @@ class AsyncAuth(object):
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout error"
                 )
-        finally:
-            if close_channel:
-                channel.close()
 
         if not isinstance(payload, dict):
             log.error("Sign-in attempt failed: %s", payload)
@@ -1344,6 +1344,16 @@ class SAuth(AsyncAuth):
         with the publication port and the shared AES key.
 
         """
+        if channel:
+            auth = self._sign_in(channel, timeout, safe, tries)
+        else:
+            with salt.transport.client.AsyncReqChannel.factory(
+                self.opts, crypt="clear", io_loop=self.io_loop
+            ) as channel:
+                auth = self._sign_in(channel, timeout, safe, tries)
+        return auth
+
+    def _sign_in(self, channel, timeout=60, safe=True, tries=1):
         auth = {}
 
         auth_timeout = self.opts.get("auth_timeout", None)
@@ -1359,12 +1369,6 @@ class SAuth(AsyncAuth):
         m_pub_fn = os.path.join(self.opts["pki_dir"], self.mpub)
 
         auth["master_uri"] = self.opts["master_uri"]
-
-        close_channel = False
-        if not channel:
-            close_channel = True
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt="clear")
-
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = channel.send(sign_in_payload, tries=tries, timeout=timeout)
@@ -1375,9 +1379,6 @@ class SAuth(AsyncAuth):
             raise SaltClientError(
                 "Attempt to authenticate with the salt master failed with timeout error"
             )
-        finally:
-            if close_channel:
-                channel.close()
 
         if "load" in payload:
             if "ret" in payload["load"]:
@@ -1524,8 +1525,10 @@ class Crypticle(object):
             data = salt.utils.stringutils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
-            log.debug("Failed to authenticate message")
-            raise AuthenticationError("message authentication failed")
+            log.debug("Failed to authenticate message (invalid mac length)")
+            raise AuthenticationError(
+                "message authentication failed (invalid mac length)"
+            )
         result = 0
 
         if six.PY2:
@@ -1535,8 +1538,10 @@ class Crypticle(object):
             for zipped_x, zipped_y in zip(mac_bytes, sig):
                 result |= zipped_x ^ zipped_y
         if result != 0:
-            log.debug("Failed to authenticate message")
-            raise AuthenticationError("message authentication failed")
+            log.debug("Failed to authenticate message (invalid signature)")
+            raise AuthenticationError(
+                "message authentication failed (invalid signature)"
+            )
         iv_bytes = data[: self.AES_BLOCK_SIZE]
         data = data[self.AES_BLOCK_SIZE :]
         if HAS_M2:

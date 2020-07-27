@@ -7,7 +7,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import importlib
 import sys
+import os
 import warnings
+
 
 if sys.version_info < (3,):
     sys.stderr.write(
@@ -16,14 +18,21 @@ if sys.version_info < (3,):
     sys.stderr.flush()
 
 
+if os.name == 'nt':
+    import asyncio
+    asyncio.DefaultEventLoopPolicy = asyncio.WindowsSelectorEventLoopPolicy
+
+
 class TornadoImporter(object):
     def find_module(self, module_name, package_path=None):
-        if module_name.startswith("tornado"):
+        #if module_name.startswith("tornado"):
+        if module_name.startswith("salt.ext.tornado"):
             return self
         return None
 
     def load_module(self, name):
-        mod = importlib.import_module("salt.ext.{}".format(name))
+        #mod = importlib.import_module("salt.ext.{}".format(name))
+        mod = importlib.import_module(name[9:])
         sys.modules[name] = mod
         return mod
 

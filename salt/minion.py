@@ -44,6 +44,7 @@ import salt.serializers.msgpack
 import salt.syspaths
 import salt.transport.client
 import salt.utils.args
+import salt.utils.asynchronous
 import salt.utils.context
 import salt.utils.crypt
 import salt.utils.data
@@ -87,7 +88,7 @@ from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
 from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
+from salt.utils.zeromq import zmq
 
 HAS_PSUTIL = False
 try:
@@ -916,8 +917,7 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            install_zmq()
-            io_loop = ZMQDefaultLoop.current()
+            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
             io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
         self.gen_modules(initial_load=True, context=context or {})
 
@@ -1021,9 +1021,7 @@ class MinionManager(MinionBase):
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
         self.jid_queue = []
-
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop.current()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
@@ -1220,20 +1218,10 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
-        # Warn if ZMQ < 3.2
-        if zmq:
-            if ZMQ_VERSION_INFO < (3, 2):
-                log.warning(
-                    "You have a version of ZMQ less than ZMQ 3.2! There are "
-                    "known connection keep-alive issues with ZMQ < 3.2 which "
-                    "may result in loss of contact with minions. Please "
-                    "upgrade your ZMQ!"
-                )
         # Late setup of the opts grains, so we can log from the grains
         # module.  If this is a proxy, however, we need to init the proxymodule
         # before we can get the grains.  We do this for proxies in the
@@ -1361,6 +1349,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                io_loop=self.io_loop,
             )
             self.opts["pillar"] = yield async_pillar.compile_pillar()
             async_pillar.destroy()
@@ -1616,6 +1605,7 @@ class Minion(MinionBase):
             except Exception:  # pylint: disable=broad-except
                 log.info("fire_master failed: %s", traceback.format_exc())
                 return False
+            return True
         else:
             if timeout_handler is None:
 
@@ -1629,9 +1619,8 @@ class Minion(MinionBase):
 
             with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
                 # pylint: disable=unexpected-keyword-arg
-                self._send_req_async(load, timeout, callback=lambda f: None)
+                return self._send_req_async(load, timeout, callback=lambda f: None)
                 # pylint: enable=unexpected-keyword-arg
-        return True
 
     @salt.ext.tornado.gen.coroutine
     def _handle_decoded_payload(self, data):
@@ -1741,6 +1730,11 @@ class Minion(MinionBase):
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
+        #if salt.utils.platform.is_windows():
+        #    __import__("salt.platform.win")
+        #    salt.platform.win.libs.load()
+        io_loop = salt.ext.tornado.ioloop.IOLoop()
+        io_loop.make_current()
         if not minion_instance:
             minion_instance = cls(opts)
             minion_instance.connected = connected
@@ -1767,11 +1761,11 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with salt.ext.tornado.stack_context.StackContext(
-            functools.partial(RequestContext, {"data": data, "opts": opts})
-        ):
-            with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+        #with salt.ext.tornado.stack_context.StackContext(
+        #    functools.partial(RequestContext, {"data": data, "opts": opts})
+        #):
+        #    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
+        run_func(minion_instance, opts, data)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -1811,9 +1805,9 @@ class Minion(MinionBase):
         if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
                 minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts["pillar"].get(
-                    "minion_blackout", False
-                ):
+                if minion_instance.connected and minion_instance.opts.get(
+                    "pillar", {}
+                ).get("minion_blackout", False):
                     whitelist = minion_instance.opts["pillar"].get(
                         "minion_blackout_whitelist", []
                     )
@@ -1944,8 +1938,8 @@ class Minion(MinionBase):
                 ret["return"] = msg
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-            except Exception:  # pylint: disable=broad-except
-                msg = "The minion function caused an exception"
+            except Exception as exc:  # pylint: disable=broad-except
+                msg = "The minion function caused an exception: {}".format(exc)
                 log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(
                     salt.exceptions.MinionError(msg), opts, job=data
@@ -2366,19 +2360,31 @@ class Minion(MinionBase):
         include_grains = False
         if self.opts["start_event_grains"]:
             include_grains = True
+
+        def callback(future):
+            log.info("fired minion start: %r", future.result())
+
         # Send an event to the master that the minion is live
         if self.opts["enable_legacy_startup_events"]:
-            # Old style event. Defaults to False in 3001 release.
-            self._fire_master(
-                "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
-                "minion_start",
-                include_startup_grains=include_grains,
+            # Old style event. Defaults to False in Sodium release.
+            self.io_loop.add_future(
+                self._fire_master(
+                    "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
+                    "minion_start",
+                    include_startup_grains=include_grains,
+                    sync=False,
+                ),
+                callback,
             )
         # send name spaced event
-        self._fire_master(
-            "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
-            tagify([self.opts["id"], "start"], "minion"),
-            include_startup_grains=include_grains,
+        self.io_loop.add_future(
+            self._fire_master(
+                "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
+                tagify([self.opts["id"], "start"], "minion"),
+                include_startup_grains=include_grains,
+                sync=False,
+            ),
+            callback,
         )
 
     def module_refresh(self, force_refresh=False, notify=False):
@@ -2425,6 +2431,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                io_loop=self.io_loop,
             )
             try:
                 self.opts["pillar"] = yield async_pillar.compile_pillar()
@@ -3298,8 +3305,7 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 

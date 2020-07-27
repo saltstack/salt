@@ -808,6 +808,12 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
             "_finalize_methods": self._finalize_methods,
         }
 
+    def join(self, *args, **kwargs):
+        super(Process, self).join(*args, **kwargs)
+        self._after_fork_methods = None
+        self._finalize_methods = None
+        self.run = None
+
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 

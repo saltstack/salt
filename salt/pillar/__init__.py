@@ -113,6 +113,7 @@ def get_async_pillar(
     pillar_override=None,
     pillarenv=None,
     extra_minion_data=None,
+    io_loop=None,
 ):
     """
     Return the correct pillar driver based on the file_client option
@@ -135,6 +136,7 @@ def get_async_pillar(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
         extra_minion_data=extra_minion_data,
+        io_loop=io_loop,
     )
 
 
@@ -203,13 +205,16 @@ class AsyncRemotePillar(RemotePillarMixin):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        io_loop=None,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
         self.ext = ext
         self.grains = grains
         self.minion_id = minion_id
-        self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
+        self.channel = salt.transport.client.AsyncReqChannel.factory(
+            opts, io_loop=io_loop
+        )
         if pillarenv is not None:
             self.opts["pillarenv"] = pillarenv
         self.pillar_override = pillar_override or {}
@@ -491,6 +496,7 @@ class Pillar(object):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        io_loop=None,
     ):
         self.minion_id = minion_id
         self.ext = ext

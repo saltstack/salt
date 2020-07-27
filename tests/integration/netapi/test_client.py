@@ -73,6 +73,10 @@ class NetapiClientTest(TestCase):
         low = {"client": "local_async", "tgt": "*", "fun": "test.ping"}
         low.update(self.eauth_creds)
 
+        opts = salt.config.client_config(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        )
+        self.netapi = salt.netapi.NetapiClient(opts)
         ret = self.netapi.run(low)
 
         # Remove all the volatile values before doing the compare.

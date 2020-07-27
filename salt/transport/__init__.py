@@ -37,6 +37,7 @@ def iter_transport_opts(opts):
 class MessageClientPool(object):
     def __init__(self, tgt, opts, args=None, kwargs=None):
         sock_pool_size = opts["sock_pool_size"] if "sock_pool_size" in opts else 1
+        sock_pool_size = 1 #opts["sock_pool_size"] if "sock_pool_size" in opts else 1
         if sock_pool_size < 1:
             log.warning(
                 "sock_pool_size is not correctly set, the option should be "

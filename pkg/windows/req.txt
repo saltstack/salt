@@ -38,3 +38,6 @@ wheel==0.33.4
 GitPython==2.1.10
 gitdb2==2.0.5             # via gitpython
 smmap2==2.0.5             # via gitdb2
+
+# Tornado
+tornado==5.1.1

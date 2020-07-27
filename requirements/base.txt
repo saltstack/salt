@@ -4,3 +4,8 @@ PyYAML
 MarkupSafe
 requests>=1.0.0
 distro
+# Requirements for Tornado 4.5.3 (vendored as salt.ext.tornado)
+singledispatch==3.4.0.3; python_version < '3.4'
+# Required by Tornado to handle threads stuff.
+futures>=2.0; python_version < '3.0'
+tornado==5.1.1
