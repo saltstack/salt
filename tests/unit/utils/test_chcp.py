@@ -12,7 +12,7 @@ from salt.utils import platform
 @skipIf(not platform.is_windows(), "Windows only tests!")
 class CHCPTest(TestCase):
     """
-    Test case for salt.utils.cache.ContextCache
+    Test case for salt.utils.chcp
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
