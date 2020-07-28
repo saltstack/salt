@@ -287,7 +287,7 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
-    chcp_code=437,
+    windows_codepage=437,
     **kwargs
 ):
     """
@@ -341,8 +341,8 @@ def _run(
             raise CommandExecutionError(msg)
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
-    elif chcp_code is not None:
-        salt.utils.chcp.chcp(chcp_code)
+    elif windows_codepage is not None:
+        salt.utils.chcp.chcp(windows_codepage)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
