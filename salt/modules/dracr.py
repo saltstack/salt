@@ -150,6 +150,7 @@ def __execute_ret(
 def get_property(host=None, admin_username=None, admin_password=None, property=None):
     """
     .. versionadded:: Fluorine
+
     Return specific property
 
     host
@@ -186,6 +187,7 @@ def set_property(
 ):
     """
     .. versionadded:: Fluorine
+
     Set specific property
 
     host
@@ -227,6 +229,7 @@ def ensure_property_set(
 ):
     """
     .. versionadded:: Fluorine
+
     Ensure that property is set to specific value.
 
     host
