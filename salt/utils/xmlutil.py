@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Various XML utilities
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
+import re
+from xml.etree import ElementTree
 
 
 def _conv_name(x):
@@ -99,3 +100,37 @@ def to_dict(xmltree, attr=False):
         return _to_full_dict(xmltree)
     else:
         return _to_dict(xmltree)
+
+
+def get_xml_node(node, xpath):
+    """
+    Get an XML node using a path (super simple xpath showing complete node ancestry).
+    This also creates the missing nodes.
+
+    The supported XPath can contain elements filtering using [@attr='value'].
+
+    Args:
+        node: an Element object
+        xpath: simple XPath to look for.
+    """
+    if not xpath.startswith("./"):
+        xpath = "./{}".format(xpath)
+    res = node.find(xpath)
+    if res is None:
+        parent_xpath = xpath[: xpath.rfind("/")]
+        parent = node.find(parent_xpath)
+        if parent is None:
+            parent = get_xml_node(node, parent_xpath)
+        segment = xpath[xpath.rfind("/") + 1 :]
+        # We may have [] filter in the segment
+        matcher = re.match(
+            r"""(?P<tag>[^[]+)(?:\[@(?P<attr>\w+)=["'](?P<value>[^"']+)["']])?""",
+            segment,
+        )
+        attrib = (
+            {matcher.group("attr"): matcher.group("value")}
+            if matcher.group("attr") and matcher.group("value")
+            else {}
+        )
+        res = ElementTree.SubElement(parent, matcher.group("tag"), attrib)
+    return res
