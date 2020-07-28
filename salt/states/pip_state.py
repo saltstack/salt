@@ -150,7 +150,11 @@ def __virtual__():
     """
     Only load if the pip module is available in __salt__
     """
-    return "pip.list" in __salt__ and __virtualname__ or False
+    if not HAS_PKG_RESOURCES:
+        return False, "The pkg_resources python library is not installed"
+    if "pip.list" not in __salt__:
+        return False, "pip.list is not available"
+    return __virtualname__
 
 
 def _fulfills_version_spec(version, version_spec):
