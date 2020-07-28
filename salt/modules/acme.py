@@ -184,7 +184,7 @@ def cert(
         renew=14 webroot=/opt/gitlab/embedded/service/gitlab-rails/public
     """
 
-    cmd = [LEA, "certonly", "--non-interactive", "--agree-tos"]
+    cmd = [LEA, "certonly", "--non-interactive", "--agree-tos", "--no-eff-email"]
     if certname is None:
         certname = name
 
