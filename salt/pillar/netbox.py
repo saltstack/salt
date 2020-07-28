@@ -13,6 +13,7 @@ Configuring the NetBox ext_pillar
     - netbox:
         api_url: http://netbox_url.com/api/
         api_token: 123abc
+        endpoint: devices
 
 Create a token in your NetBox instance at
 http://netbox_url.com/user/api-tokens/
@@ -46,6 +47,9 @@ site_details: ``True``
 
 site_prefixes: ``True``
     Whether should retrieve the prefixes of the site the device belongs to.
+
+endpoint: ``devices``
+    Specify if you want to fetch devices or virtual-machines.
 """
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -69,6 +73,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     # Pull settings from kwargs
     api_url = kwargs["api_url"].rstrip("/")
     api_token = kwargs.get("api_token")
+    endpoint = kwargs.get("endpoint", "devices")
     site_details = kwargs.get("site_details", True)
     site_prefixes = kwargs.get("site_prefixes", True)
     proxy_username = kwargs.get("proxy_username", None)
@@ -79,23 +84,29 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     headers = {}
     if api_token:
         headers = {"Authorization": "Token {}".format(api_token)}
-    device_url = "{api_url}/{app}/{endpoint}".format(
-        api_url=api_url, app="dcim", endpoint="devices"
-    )
-    device_results = salt.utils.http.query(
-        device_url, params={"name": minion_id}, header_dict=headers, decode=True
+
+    if endpoint == "virtual-machines":
+        url = "{api_url}/{app}/{endpoint}".format(
+            api_url=api_url, app="virtualization", endpoint="virtual-machines"
+        )
+    else:
+        url = "{api_url}/{app}/{endpoint}".format(
+            api_url=api_url, app="dcim", endpoint="devices"
+        )
+    search_results = salt.utils.http.query(
+        url, params={"name": minion_id}, header_dict=headers, decode=True
     )
     # Check status code for API call
-    if "error" in device_results:
+    if "error" in search_results:
         log.error(
             'API query failed for "%s", status code: %d',
             minion_id,
-            device_results["status"],
+            search_results["status"],
         )
-        log.error(device_results["error"])
+        log.error(search_results["error"])
         return ret
     # Assign results from API call to "netbox" key
-    devices = device_results["dict"]["results"]
+    devices = search_results["dict"]["results"]
     if len(devices) == 1:
         ret["netbox"] = devices[0]
     elif len(devices) > 1:
