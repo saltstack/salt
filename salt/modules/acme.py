@@ -26,9 +26,13 @@ Most parameters will fall back to cli.ini defaults if None is given.
 DNS plugins
 -----------
 
-This module currently supports the CloudFlare certbot DNS plugin.  The DNS
-plugin credentials file needs to be passed in using the
-``dns_plugin_credentials`` argument.
+This module currently supports:
+
+ - the CloudFlare certbot DNS plugin. The DNS plugin credentials file
+   needs to be passed in using the ``dns_plugin_credentials`` argument.
+ - the AWS route53 certbot DNS plugin. Credentials will be read from
+   boto usual configuration
+   https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html
 
 Make sure the appropriate certbot plugin for the wanted DNS provider is
 installed before using this module.
@@ -166,7 +170,7 @@ def cert(
         the port Certbot listens on. A conforming ACME server will still attempt
         to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
-    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare'
+    :param dns_plugin: Name of a DNS plugin to use ('cloudflare' or 'route53'
         or 'digitalocean')
     :param dns_plugin_credentials: Path to the credentials file if required by
         the specified DNS plugin
@@ -188,7 +192,7 @@ def cert(
     if certname is None:
         certname = name
 
-    supported_dns_plugins = ["cloudflare"]
+    supported_dns_plugins = ["cloudflare", "route53"]
 
     cert_file = _cert_file(certname, "cert")
     if not __salt__["file.file_exists"](cert_file):
@@ -222,6 +226,8 @@ def cert(
             cmd.append(
                 "--dns-cloudflare-credentials {0}".format(dns_plugin_credentials)
             )
+        elif dns_plugin == "route53":
+            cmd.append("--dns-route53")
         else:
             return {
                 "result": False,
