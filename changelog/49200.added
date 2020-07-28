@@ -1,0 +1,1 @@
+Added user and passwd functionality to couchdb returner, including functionality to redact passwords & minimize return data (requires bolotons library).

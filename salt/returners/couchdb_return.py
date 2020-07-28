@@ -577,7 +577,7 @@ def save_load(jid, load):  # pylint: disable=unused-argument
 
 def get_load(jid):
     """
-    Included for API consistency
+    Return the load data that marks the specified jid.
     """
     options = _get_options(ret=None)
     _response = _request("GET", options["url"] + options["db"] + "/" + jid)
