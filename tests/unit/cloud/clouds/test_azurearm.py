@@ -121,3 +121,40 @@ class AzureTestCase(TestCase, LoaderModuleMockMixin):
         for combo in bad_combos:
             mock_azure.__opts__["providers"] = {"azure_test": {"azurearm": combo}}
             self.assertFalse(azure.get_configured_provider())
+
+    def test_get_conn(self):
+        mock_azure = mock_module(
+            azure, sut=["get_conn", "six", "__opts__", "__utils__"]
+        )
+        mock_azure.__utils__["azurearm.get_client"] = lambda client_type, **kw: kw
+
+        mock_azure.__opts__["providers"] = {
+            "azure_test": {
+                "azurearm": {
+                    "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+                    "driver": "azurearm",
+                    "password": "monkeydonkey",
+                }
+            }
+        }
+        # password is stripped if username not provided
+        expected = {"subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617"}
+        self.assertEqual(azure.get_conn(client_type="compute"), expected)
+
+        mock_azure.__opts__["providers"] = {
+            "azure_test": {
+                "azurearm": {
+                    "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+                    "driver": "azurearm",
+                    "username": "donkeymonkey",
+                    "password": "monkeydonkey",
+                }
+            }
+        }
+        # username and password via provider config
+        expected = {
+            "subscription_id": "3287abc8-f98a-c678-3bde-326766fd3617",
+            "username": "donkeymonkey",
+            "password": "monkeydonkey",
+        }
+        self.assertEqual(azure.get_conn(client_type="compute"), expected)
