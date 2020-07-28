@@ -1,0 +1,1 @@
+Fix broken VMCTL module to work on OpenBSD >= 6.6
