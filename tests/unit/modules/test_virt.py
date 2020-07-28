@@ -2437,6 +2437,43 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ],
         )
 
+    def test_update_xen_boot_params(self):
+        """
+        Test virt.update() a Xen definition no boot parameter.
+        """
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+        xml_boot = """
+            <domain type='xen' id='8'>
+              <name>vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='xenfv'>hvm</type>
+                <loader type='rom'>/usr/lib/xen/boot/hvmloader</loader>
+              </os>
+            </domain>
+        """
+        domain_mock_boot = self.set_mock_vm("vm", xml_boot)
+        domain_mock_boot.OSType = MagicMock(return_value="hvm")
+        define_mock_boot = MagicMock(return_value=True)
+        define_mock_boot.setVcpusFlags = MagicMock(return_value=0)
+        self.mock_conn.defineXML = define_mock_boot
+        self.assertEqual(
+            {
+                "cpu": False,
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm", cpu=2),
+        )
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("loader").attrib.get("type"), "rom")
+        self.assertEqual(
+            setxml.find("os").find("loader").text, "/usr/lib/xen/boot/hvmloader"
+        )
+
     def test_update_existing_boot_params(self):
         """
         Test virt.update() with existing boot parameters.
