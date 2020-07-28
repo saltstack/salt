@@ -2042,8 +2042,15 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.files.fopen", _fopen):
             self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
 
+    @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    def test_kernelparams_return_windows(self):
+        """
+        Should return empty dictionary on Windows
+        """
+        self.assertEqual(core.kernelparams(), {})
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
-    def test_kernelparams_return(self):
+    def test_kernelparams_return_linux(self):
         expectations = [
             (
                 "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
