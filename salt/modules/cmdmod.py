@@ -1137,6 +1137,14 @@ def run(
 
       .. versionadded:: 2019.2.0
 
+    :param int windows_codepage: 65001
+        Only apllies to Windows: the `C:\Windows\System32\chcp.com` command is used to 
+        verify or ensure the code page is set before the command `cmd` is executed. 
+        Code page 65001 corresponds with UTF-8 and allows international localization of Windows.
+
+      .. versionadded:: 3002
+
+
     CLI Example:
 
     .. code-block:: bash
