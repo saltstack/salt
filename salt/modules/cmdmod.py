@@ -22,7 +22,6 @@ import sys
 import tempfile
 import time
 import traceback
-import string
 
 import salt.grains.extra
 
