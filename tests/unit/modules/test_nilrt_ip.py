@@ -1,15 +1,24 @@
-# -*- coding: utf-8 -*-
-
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.nilrt_ip as nilrt_ip
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
+
+NO_PYCONNMAN = False
+NO_DBUS = False
+try:
+    import pyconnman  # pylint: disable=W0611
+except ImportError:
+    NO_PYCONNMAN = True
+
+try:
+    import dbus  # pylint: disable=W0611
+except ImportError:
+    NO_DBUS = True
 
 
 class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
@@ -37,3 +46,27 @@ class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.nilrt_ip._interface_to_service", return_value=True):
             with patch("salt.modules.nilrt_ip._connected", return_value=True):
                 assert nilrt_ip._change_state("test_interface", "up")
+
+    @skipIf(NO_PYCONNMAN, "Install pyconnman before running NilrtIP unit tests.")
+    @skipIf(NO_DBUS, "Install dbus before running NilrtIP unit tests.")
+    def test_get_service_info(self):
+        """
+        Tests key ipv6 exists in response of _get_service_info when expecting
+        IPv6 information
+        """
+
+        def side_effect(prop):
+            """
+            Return expected properties to get _get_service_info to return
+            IPv6 information
+            """
+            if prop == "State":
+                return "ready"
+            elif prop == "IPv6":
+                return {"Prefix": "stub"}
+            return {"Interface": None, "Address": None, "Method": None}
+
+        with patch("pyconnman.ConnService") as mock:
+            instance = mock.return_value
+            instance.get_property = MagicMock(side_effect=side_effect)
+            assert "ipv6" in nilrt_ip._get_service_info("service").keys()
