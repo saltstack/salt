@@ -48,7 +48,7 @@ class DigitalOceanTest(CloudTest):
         image_list = self.run_cloud(
             "--list-images {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
-        self.assertIn("14.04.5 x64", [i.strip() for i in image_list])
+        self.assertIn("ubuntu-18-04-x64", [i.strip() for i in image_list])
 
     def test_list_locations(self):
         """
