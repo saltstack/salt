@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for RHEL/Fedora based distros
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -19,7 +17,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -39,7 +36,7 @@ def __virtual__():
     """
     Confine this module to RHEL/Fedora based distros
     """
-    if __grains__["os_family"] == "RedHat":
+    if __grains__.get("os_family") == "RedHat":
         return __virtualname__
     return (
         False,
@@ -195,7 +192,7 @@ def _parse_ethtool_opts(opts, iface):
 
     if "speed" in opts:
         valid = ["10", "100", "1000", "10000"]
-        if six.text_type(opts["speed"]) in valid:
+        if str(opts["speed"]) in valid:
             config.update({"speed": opts["speed"]})
         else:
             _raise_error_iface(iface, opts["speed"], valid)
@@ -220,7 +217,7 @@ def _parse_ethtool_opts(opts, iface):
             "0x2000000",
             "0x4000000",
         ]
-        if six.text_type(opts["advertise"]) in valid:
+        if str(opts["advertise"]) in valid:
             config.update({"advertise": opts["advertise"]})
         else:
             _raise_error_iface(iface, "advertise", valid)
@@ -907,7 +904,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    opts = {k.lower(): v for (k, v) in opts.items()}
     result = {}
     if "routes" not in opts:
         _raise_error_routes(iface, "routes", "List of routes")
@@ -924,8 +921,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     """
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
-    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
+    opts = {k.lower(): v for (k, v) in opts.items()}
+    current = {k.lower(): v for (k, v) in current.items()}
 
     # Check for supported parameters
     retain_settings = opts.get("retain_settings", False)
@@ -1084,15 +1081,15 @@ def build_bond(iface, **settings):
         log.error("Could not load template conf.jinja")
         return ""
     data = template.render({"name": iface, "bonding": opts})
-    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
-    path = os.path.join(_RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
+    _write_file_iface(iface, data, _RH_NETWORK_CONF_FILES, "{}.conf".format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, "{}.conf".format(iface))
     if rh_major == "5":
         __salt__["cmd.run"](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            'sed -i -e "/^alias\\s{}.*/d" /etc/modprobe.conf'.format(iface),
             python_shell=False,
         )
         __salt__["cmd.run"](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            'sed -i -e "/^options\\s{}.*/d" /etc/modprobe.conf'.format(iface),
             python_shell=False,
         )
         __salt__["file.append"]("/etc/modprobe.conf", path)
@@ -1151,7 +1148,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ["eth", "bond", "bridge", "slave", "vlan", "ipip", "ib", "alias"]:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = JINJA.get_template("rh{0}_eth.jinja".format(rh_major))
+            template = JINJA.get_template("rh{}_eth.jinja".format(rh_major))
         except jinja2.exceptions.TemplateNotFound:
             log.error("Could not load template rh%s_eth.jinja", rh_major)
             return ""
@@ -1161,7 +1158,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}")
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
 
     return _read_file(path)
 
@@ -1214,8 +1211,8 @@ def build_routes(iface, **settings):
     _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, "route-{0}")
     _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, "route6-{0}")
 
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{0}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
 
     routes = _read_file(path)
     routes.extend(_read_file(path6))
@@ -1234,7 +1231,7 @@ def down(iface, iface_type):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ifdown {0}".format(iface))
+        return __salt__["cmd.run"]("ifdown {}".format(iface))
     return None
 
 
@@ -1248,7 +1245,7 @@ def get_bond(iface):
 
         salt '*' ip.get_bond bond0
     """
-    path = os.path.join(_RH_NETWORK_CONF_FILES, "{0}.conf".format(iface))
+    path = os.path.join(_RH_NETWORK_CONF_FILES, "{}.conf".format(iface))
     return _read_file(path)
 
 
@@ -1262,7 +1259,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
     return _read_file(path)
 
 
@@ -1278,7 +1275,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ifup {0}".format(iface))
+        return __salt__["cmd.run"]("ifup {}".format(iface))
     return None
 
 
@@ -1292,8 +1289,8 @@ def get_routes(iface):
 
         salt '*' ip.get_routes eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{0}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{0}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
     routes = _read_file(path)
     routes.extend(_read_file(path6))
     return routes

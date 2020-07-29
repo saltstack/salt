@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
@@ -11,7 +10,6 @@ A module to wrap pacman calls, since Arch is the best
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import fnmatch
@@ -28,7 +26,6 @@ import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -41,9 +38,9 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is Arch
     """
-    if __grains__["os_family"] == "Arch":
+    if __grains__.get("os_family") == "Arch":
         return __virtualname__
-    return (False, "The pacman module could not be loaded: unsupported OS family.")
+    return False, "The pacman module could not be loaded: unsupported OS family."
 
 
 def _list_removed(old, new):
@@ -558,7 +555,7 @@ def install(
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []
-        for param, version_num in six.iteritems(pkg_params):
+        for param, version_num in pkg_params.items():
             if version_num is None:
                 targets.append(param)
             else:
@@ -570,12 +567,10 @@ def install(
                         wildcards.append((param, verstr))
                     else:
                         errors.append(
-                            "Invalid wildcard for {0}{1}{2}".format(
-                                param, prefix, verstr
-                            )
+                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
                         )
                     continue
-                targets.append("{0}{1}{2}".format(param, prefix, verstr))
+                targets.append("{}{}{}".format(param, prefix, verstr))
 
         if wildcards:
             # Resolve wildcard matches
@@ -587,8 +582,8 @@ def install(
                     targets.append("=".join((pkgname, match)))
                 else:
                     errors.append(
-                        "No version matching '{0}' found for package '{1}' "
-                        "(available: {2})".format(
+                        "No version matching '{}' found for package '{}' "
+                        "(available: {})".format(
                             verstr,
                             pkgname,
                             ", ".join(candidates) if candidates else "none",
@@ -902,7 +897,7 @@ def file_dict(*packages, **kwargs):
             comps = line.split()
             if not comps[0] in ret:
                 ret[comps[0]] = []
-            ret[comps[0]].append((" ".join(comps[1:])))
+            ret[comps[0]].append(" ".join(comps[1:]))
     return {"errors": errors, "packages": ret}
 
 
@@ -931,7 +926,7 @@ def owner(*paths, **kwargs):
     for path in paths:
         ret[path] = __salt__["cmd.run_stdout"](cmd_prefix + [path], python_shell=False)
     if len(ret) == 1:
-        return next(six.itervalues(ret))
+        return next(iter(ret.values()))
     return ret
 
 
@@ -999,7 +994,7 @@ def list_repo_pkgs(*args, **kwargs):
         try:
             repos = [x.strip() for x in fromrepo.split(",")]
         except AttributeError:
-            repos = [x.strip() for x in six.text_type(fromrepo).split(",")]
+            repos = [x.strip() for x in str(fromrepo).split(",")]
     else:
         repos = []
 

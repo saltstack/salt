@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for ``pkgng``, the new package manager for FreeBSD
 
@@ -36,7 +35,6 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -53,7 +51,6 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -68,11 +65,11 @@ def __virtual__():
     Load as 'pkg' on FreeBSD 9 when config option
     ``providers:pkg`` is set to 'pkgng'.
     """
-    if __grains__["kernel"] == "DragonFly":
+    if __grains__.get("kernel") == "DragonFly":
         return __virtualname__
-    if __grains__["os"] == "FreeBSD" and float(__grains__["osrelease"]) >= 10:
+    if __grains__.get("os") == "FreeBSD" and float(__grains__["osrelease"]) >= 10:
         return __virtualname__
-    if __grains__["os"] == "FreeBSD" and int(__grains__["osmajorrelease"]) == 9:
+    if __grains__.get("os") == "FreeBSD" and int(__grains__["osmajorrelease"]) == 9:
         providers = {}
         if "providers" in __opts__:
             providers = __opts__["providers"]
@@ -137,11 +134,11 @@ def _contextkey(jail=None, chroot=None, root=None, prefix="pkg.list_pkgs"):
     unique to that jail/chroot is used.
     """
     if jail:
-        return six.text_type(prefix) + ".jail_{0}".format(jail)
+        return str(prefix) + ".jail_{}".format(jail)
     elif chroot:
-        return six.text_type(prefix) + ".chroot_{0}".format(chroot)
+        return str(prefix) + ".chroot_{}".format(chroot)
     elif root:
-        return six.text_type(prefix) + ".root_{0}".format(root)
+        return str(prefix) + ".root_{}".format(root)
     return prefix
 
 
@@ -159,7 +156,7 @@ def parse_config(file_name="/usr/local/etc/pkg.conf"):
     """
     ret = {}
     if not os.path.isfile(file_name):
-        return "Unable to find {0} on file system".format(file_name)
+        return "Unable to find {} on file system".format(file_name)
 
     with salt.utils.files.fopen(file_name) as ifile:
         for line in ifile:
@@ -218,12 +215,7 @@ def version(*names, **kwargs):
     if len(names) == 1:
         ret = {names[0]: ret}
     origins = __context__.get("pkg.origin", {})
-    return dict(
-        [
-            (x, {"origin": origins.get(x, ""), "version": y})
-            for x, y in six.iteritems(ret)
-        ]
-    )
+    return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
 
 
 # Support pkg.info get version info, since this is the CLI usage
@@ -351,10 +343,8 @@ def latest_version(*names, **kwargs):
                 ret[name] = pkgver
             else:
                 if not any(
-                    (
-                        salt.utils.versions.compare(ver1=x, oper=">=", ver2=pkgver)
-                        for x in installed
-                    )
+                    salt.utils.versions.compare(ver1=x, oper=">=", ver2=pkgver)
+                    for x in installed
                 ):
                     ret[name] = pkgver
 
@@ -424,12 +414,9 @@ def list_pkgs(
             __salt__["pkg_resource.stringify"](ret)
         if salt.utils.data.is_true(with_origin):
             origins = __context__.get(contextkey_origins, {})
-            return dict(
-                [
-                    (x, {"origin": origins.get(x, ""), "version": y})
-                    for x, y in six.iteritems(ret)
-                ]
-            )
+            return {
+                x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()
+            }
         return ret
 
     ret = {}
@@ -456,12 +443,7 @@ def list_pkgs(
     if not versions_as_list:
         __salt__["pkg_resource.stringify"](ret)
     if salt.utils.data.is_true(with_origin):
-        return dict(
-            [
-                (x, {"origin": origins.get(x, ""), "version": y})
-                for x, y in six.iteritems(ret)
-            ]
-        )
+        return {x: {"origin": origins.get(x, ""), "version": y} for x, y in ret.items()}
     return ret
 
 
@@ -479,7 +461,7 @@ def update_package_site(new_url):
     """
     config_file = parse_config()["config_file"]
     __salt__["file.sed"](
-        config_file, "PACKAGESITE.*", "PACKAGESITE\t : {0}".format(new_url)
+        config_file, "PACKAGESITE.*", "PACKAGESITE\t : {}".format(new_url)
     )
 
     # add change return later
@@ -889,11 +871,11 @@ def install(
             # comma-separated list
             pkg_params = {name: kwargs.get("version")}
         targets = []
-        for param, version_num in six.iteritems(pkg_params):
+        for param, version_num in pkg_params.items():
             if version_num is None:
                 targets.append(param)
             else:
-                targets.append("{0}-{1}".format(param, version_num))
+                targets.append("{}-{}".format(param, version_num))
     else:
         raise CommandExecutionError("Problem encountered installing package(s)")
 
@@ -1054,7 +1036,7 @@ def remove(
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         if pkg[0].find("/") > 0:
             origin = pkg[0]
-            pkg = [k for k, v in six.iteritems(old) if v["origin"] == origin][0]
+            pkg = [k for k, v in old.items() if v["origin"] == origin][0]
 
         if pkg[0] in old:
             targets.append(pkg[0])
@@ -1893,9 +1875,9 @@ def updating(name, jail=None, chroot=None, root=None, filedate=None, filename=No
 
     opts = ""
     if filedate:
-        opts += "d {0}".format(filedate)
+        opts += "d {}".format(filedate)
     if filename:
-        opts += "f {0}".format(filename)
+        opts += "f {}".format(filename)
 
     cmd = _pkg(jail, chroot, root)
     cmd.append("updating")
@@ -1941,29 +1923,29 @@ def hold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(six.iterkeys(target))
+            target = next(iter(target.keys()))
 
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if not locked(target, **kwargs):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {0} is set to be held.".format(target)
+                ret[target]["comment"] = "Package {} is set to be held.".format(target)
             else:
                 if lock(target, **kwargs):
                     ret[target].update(result=True)
-                    ret[target]["comment"] = "Package {0} is now being held.".format(
+                    ret[target]["comment"] = "Package {} is now being held.".format(
                         target
                     )
                     ret[target]["changes"]["new"] = "hold"
                     ret[target]["changes"]["old"] = ""
                 else:
-                    ret[target][
-                        "comment"
-                    ] = "Package {0} was unable to be held.".format(target)
+                    ret[target]["comment"] = "Package {} was unable to be held.".format(
+                        target
+                    )
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {0} is already set to be held.".format(
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
                 target
             )
     return ret
@@ -2005,20 +1987,20 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(six.iterkeys(target))
+            target = next(iter(target.keys()))
 
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if locked(target, **kwargs):
             if __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {0} is set to be unheld.".format(
+                ret[target]["comment"] = "Package {} is set to be unheld.".format(
                     target
                 )
             else:
                 if unlock(target, **kwargs):
                     ret[target].update(result=True)
-                    ret[target]["comment"] = "Package {0} is no longer held.".format(
+                    ret[target]["comment"] = "Package {} is no longer held.".format(
                         target
                     )
                     ret[target]["changes"]["new"] = ""
@@ -2026,10 +2008,10 @@ def unhold(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 else:
                     ret[target][
                         "comment"
-                    ] = "Package {0} was unable to be " "unheld.".format(target)
+                    ] = "Package {} was unable to be " "unheld.".format(target)
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {0} is not being held.".format(target)
+            ret[target]["comment"] = "Package {} is not being held.".format(target)
     return ret
 
 
@@ -2077,7 +2059,7 @@ def list_locked(**kwargs):
 
     """
     return [
-        "{0}-{1}".format(pkgname, version(pkgname, **kwargs))
+        "{}-{}".format(pkgname, version(pkgname, **kwargs))
         for pkgname in _lockcmd("lock", name=None, **kwargs)
     ]
 
@@ -2253,7 +2235,7 @@ def _lockcmd(subcmd, pkgname=None, **kwargs):
 
     if out["retcode"] != 0:
         raise CommandExecutionError(
-            "Problem encountered {0}ing packages".format(subcmd), info={"result": out}
+            "Problem encountered {}ing packages".format(subcmd), info={"result": out}
         )
 
     for line in salt.utils.itertools.split(out["stdout"], "\n"):
@@ -2330,7 +2312,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     return {
         pkgname: pkgstat["version"]["new"]
-        for pkgname, pkgstat in six.iteritems(_parse_upgrade(out)["upgrade"])
+        for pkgname, pkgstat in _parse_upgrade(out)["upgrade"].items()
     }
 
 

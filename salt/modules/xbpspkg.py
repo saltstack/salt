@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for XBPS package manager (used by VoidLinux)
 
@@ -9,7 +8,6 @@ Package support for XBPS package manager (used by VoidLinux)
 # new repo?
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import logging
@@ -35,9 +33,9 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is Void and xbps-install found
     """
-    if __grains__["os"] in ("Void") and _check_xbps():
+    if __grains__.get("os") in ("Void") and _check_xbps():
         return __virtualname__
-    return (False, "Missing dependency: xbps-install")
+    return False, "Missing dependency: xbps-install"
 
 
 @decorators.memoize
@@ -323,7 +321,7 @@ def upgrade(refresh=True, **kwargs):
 
     old = list_pkgs()
 
-    cmd = ["xbps-install", "-{0}yu".format("S" if refresh else "")]
+    cmd = ["xbps-install", "-{}yu".format("S" if refresh else "")]
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
@@ -408,7 +406,7 @@ def install(name=None, refresh=False, fromrepo=None, pkgs=None, sources=None, **
     if refresh:
         cmd.append("-S")  # update repo db
     if fromrepo:
-        cmd.append("--repository={0}".format(fromrepo))
+        cmd.append("--repository={}".format(fromrepo))
     cmd.append("-y")  # assume yes when asked
     cmd.extend(pkg_params)
 
@@ -586,9 +584,9 @@ def add_repo(repo, conffile="/usr/share/xbps.d/15-saltstack.conf"):
         try:
             with salt.utils.files.fopen(conffile, "a+") as conf_file:
                 conf_file.write(
-                    salt.utils.stringutils.to_str("repository={0}\n".format(repo))
+                    salt.utils.stringutils.to_str("repository={}\n".format(repo))
                 )
-        except IOError:
+        except OSError:
             return False
 
     return True
@@ -610,7 +608,7 @@ def del_repo(repo, **kwargs):
 
     try:
         _locate_repo_files(repo, rewrite=True)
-    except IOError:
+    except OSError:
         return False
     else:
         return True

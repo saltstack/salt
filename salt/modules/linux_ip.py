@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 The networking module for Non-RH/Deb Linux distros
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.files
@@ -20,13 +18,13 @@ def __virtual__():
     Confine this module to Non-RH/Deb Linux distros
     """
     if salt.utils.platform.is_windows():
-        return (False, "Module linux_ip: Windows systems are not supported.")
-    if __grains__["os_family"] == "RedHat":
-        return (False, "Module linux_ip: RedHat systems are not supported.")
-    if __grains__["os_family"] == "Debian":
-        return (False, "Module linux_ip: Debian systems are not supported.")
-    if __grains__["os_family"] == "NILinuxRT":
-        return (False, "Module linux_ip: NILinuxRT systems are not supported.")
+        return False, "Module linux_ip: Windows systems are not supported."
+    if __grains__.get("os_family") == "RedHat":
+        return False, "Module linux_ip: RedHat systems are not supported."
+    if __grains__.get("os_family") == "Debian":
+        return False, "Module linux_ip: Debian systems are not supported."
+    if __grains__.get("os_family") == "NILinuxRT":
+        return False, "Module linux_ip: NILinuxRT systems are not supported."
     if not salt.utils.path.which("ip"):
         return (
             False,
@@ -48,7 +46,7 @@ def down(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} down".format(iface))
+        return __salt__["cmd.run"]("ip link set {} down".format(iface))
     return None
 
 
@@ -95,7 +93,7 @@ def _ip_ifaces():
                 at_ = comps[0]
                 if len(comps) % 2 != 0:
                     last = comps.pop()
-                    comps[-1] += " {0}".format(last)
+                    comps[-1] += " {}".format(last)
                 ifi = iter(comps)
                 ret[if_][at_] = dict(list(zip(ifi, ifi)))
             else:
@@ -117,7 +115,7 @@ def up(iface, iface_type=None):
     """
     # Slave devices are controlled by the master.
     if iface_type not in ["slave"]:
-        return __salt__["cmd.run"]("ip link set {0} up".format(iface))
+        return __salt__["cmd.run"]("ip link set {} up".format(iface))
     return None
 
 
@@ -174,7 +172,7 @@ def _hex_to_octets(addr):
     """
     Convert hex fields from /proc/net/route to octects
     """
-    return "{0}:{1}:{2}:{3}".format(
+    return "{}:{}:{}:{}".format(
         int(addr[6:8], 16), int(addr[4:6], 16), int(addr[2:4], 16), int(addr[0:2], 16),
     )
 

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Support for Layman
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.exceptions
 import salt.utils.path
@@ -12,7 +10,7 @@ def __virtual__():
     """
     Only work on Gentoo systems with layman installed
     """
-    if __grains__["os"] == "Gentoo" and salt.utils.path.which("layman"):
+    if __grains__.get("os") == "Gentoo" and salt.utils.path.which("layman"):
         return "layman"
     return (
         False,
@@ -49,7 +47,7 @@ def add(overlay):
     """
     ret = list()
     old_overlays = list_local()
-    cmd = "layman --quietness=0 --add {0}".format(overlay)
+    cmd = "layman --quietness=0 --add {}".format(overlay)
     add_attempt = __salt__["cmd.run_all"](cmd, python_shell=False, stdin="y")
     if add_attempt["retcode"] != 0:
         raise salt.exceptions.CommandExecutionError(add_attempt["stdout"])
@@ -83,7 +81,7 @@ def delete(overlay):
     """
     ret = list()
     old_overlays = list_local()
-    cmd = "layman --quietness=0 --delete {0}".format(overlay)
+    cmd = "layman --quietness=0 --delete {}".format(overlay)
     delete_attempt = __salt__["cmd.run_all"](cmd, python_shell=False)
     if delete_attempt["retcode"] != 0:
         raise salt.exceptions.CommandExecutionError(delete_attempt["stdout"])
@@ -115,7 +113,7 @@ def sync(overlay="ALL"):
 
         salt '*' layman.sync
     """
-    cmd = "layman --quietness=0 --sync {0}".format(overlay)
+    cmd = "layman --quietness=0 --sync {}".format(overlay)
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 

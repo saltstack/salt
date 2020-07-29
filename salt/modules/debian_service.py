@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Service support for Debian systems (uses update-rc.d and /sbin/service)
 
@@ -8,7 +7,6 @@ Service support for Debian systems (uses update-rc.d and /sbin/service)
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import glob
@@ -42,7 +40,7 @@ def __virtual__():
     """
     Only work on Debian and when systemd isn't running
     """
-    if __grains__["os"] in (
+    if __grains__.get("os") in (
         "Debian",
         "Raspbian",
         "Devuan",
@@ -60,9 +58,9 @@ def __virtual__():
 def _service_cmd(*args):
     osmajor = _osrel()[0]
     if osmajor < "6":
-        cmd = "/etc/init.d/{0} {1}".format(args[0], " ".join(args[1:]))
+        cmd = "/etc/init.d/{} {}".format(args[0], " ".join(args[1:]))
     else:
-        cmd = "service {0} {1}".format(args[0], " ".join(args[1:]))
+        cmd = "service {} {}".format(args[0], " ".join(args[1:]))
     return cmd
 
 
@@ -92,9 +90,9 @@ def get_enabled():
 
         salt '*' service.get_enabled
     """
-    prefix = "/etc/rc[S{0}].d/S".format(_get_runlevel())
+    prefix = "/etc/rc[S{}].d/S".format(_get_runlevel())
     ret = set()
-    lines = glob.glob("{0}*".format(prefix))
+    lines = glob.glob("{}*".format(prefix))
     for line in lines:
         ret.add(re.split(prefix + r"\d+", line)[1])
     return sorted(ret)
@@ -291,16 +289,16 @@ def enable(name, **kwargs):
     """
     osmajor = _osrel()[0]
     if osmajor < "6":
-        cmd = "update-rc.d -f {0} defaults 99".format(_cmd_quote(name))
+        cmd = "update-rc.d -f {} defaults 99".format(_cmd_quote(name))
     else:
-        cmd = "update-rc.d {0} enable".format(_cmd_quote(name))
+        cmd = "update-rc.d {} enable".format(_cmd_quote(name))
     try:
         if int(osmajor) >= 6:
-            cmd = "insserv {0} && ".format(_cmd_quote(name)) + cmd
+            cmd = "insserv {} && ".format(_cmd_quote(name)) + cmd
     except ValueError:
         osrel = _osrel()
         if osrel == "testing/unstable" or osrel == "unstable" or osrel.endswith("/sid"):
-            cmd = "insserv {0} && ".format(_cmd_quote(name)) + cmd
+            cmd = "insserv {} && ".format(_cmd_quote(name)) + cmd
     return not __salt__["cmd.retcode"](cmd, python_shell=True)
 
 
@@ -316,9 +314,9 @@ def disable(name, **kwargs):
     """
     osmajor = _osrel()[0]
     if osmajor < "6":
-        cmd = "update-rc.d -f {0} remove".format(name)
+        cmd = "update-rc.d -f {} remove".format(name)
     else:
-        cmd = "update-rc.d {0} disable".format(name)
+        cmd = "update-rc.d {} disable".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 

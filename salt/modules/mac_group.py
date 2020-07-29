@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Manage groups on Mac OS 10.7+
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.utils.functools
 import salt.utils.itertools
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.modules.mac_user import _dscl, _flush_dscl_cache
 
 try:
     import grp
@@ -25,13 +21,18 @@ __virtualname__ = "group"
 
 
 def __virtual__():
-    global _dscl, _flush_dscl_cache
-    if __grains__.get("kernel") != "Darwin" or __grains__["osrelease_info"] < (10, 7):
+    global _dscl, _flush_dscl_cache  # pylint: disable=W0601
+    if __grains__.get("kernel") != "Darwin" or __grains__.get("osrelease_info") < (
+        10,
+        7,
+    ):
         return (
             False,
             "The mac_group execution module cannot be loaded: only available on Darwin-based systems >= 10.7",
         )
+    # pylint: disable=E0601
     _dscl = salt.utils.functools.namespaced_function(_dscl, globals())
+    # pylint: disable=E0601
     _flush_dscl_cache = salt.utils.functools.namespaced_function(
         _flush_dscl_cache, globals()
     )
@@ -51,7 +52,7 @@ def add(name, gid=None, **kwargs):
     ### NOTE: **kwargs isn't used here but needs to be included in this
     ### function for compatibility with the group.present state
     if info(name):
-        raise CommandExecutionError("Group '{0}' already exists".format(name))
+        raise CommandExecutionError("Group '{}' already exists".format(name))
     if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError("Group name cannot contain whitespace")
     if name.startswith("_"):
@@ -62,8 +63,8 @@ def add(name, gid=None, **kwargs):
         raise SaltInvocationError("gid must be an integer")
     # check if gid is already in use
     gid_list = _list_gids()
-    if six.text_type(gid) in gid_list:
-        raise CommandExecutionError("gid '{0}' already exists".format(gid))
+    if str(gid) in gid_list:
+        raise CommandExecutionError("gid '{}' already exists".format(gid))
 
     cmd = ["dseditgroup", "-o", "create"]
     if gid:
@@ -121,7 +122,7 @@ def adduser(group, name):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     """
-    cmd = "dscl . -merge /Groups/{0} GroupMembership {1}".format(group, name)
+    cmd = "dscl . -merge /Groups/{} GroupMembership {}".format(group, name)
     return __salt__["cmd.retcode"](cmd) == 0
 
 
@@ -140,7 +141,7 @@ def deluser(group, name):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     """
-    cmd = "dscl . -delete /Groups/{0} GroupMembership {1}".format(group, name)
+    cmd = "dscl . -delete /Groups/{} GroupMembership {}".format(group, name)
     return __salt__["cmd.retcode"](cmd) == 0
 
 
@@ -159,10 +160,10 @@ def members(name, members_list):
     retcode = 1
     grp_info = __salt__["group.info"](name)
     if grp_info and name in grp_info["name"]:
-        cmd = "/usr/bin/dscl . -delete /Groups/{0} GroupMembership".format(name)
+        cmd = "/usr/bin/dscl . -delete /Groups/{} GroupMembership".format(name)
         retcode = __salt__["cmd.retcode"](cmd) == 0
         for user in members_list.split(","):
-            cmd = "/usr/bin/dscl . -merge /Groups/{0} GroupMembership {1}".format(
+            cmd = "/usr/bin/dscl . -merge /Groups/{} GroupMembership {}".format(
                 name, user
             )
             retcode = __salt__["cmd.retcode"](cmd)
@@ -244,7 +245,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("Group '{0}' does not exist".format(name))
+        raise CommandExecutionError("Group '{}' does not exist".format(name))
     if gid == pre_info["gid"]:
         return True
     cmd = ["dseditgroup", "-o", "edit", "-i", gid, name]

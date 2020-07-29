@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for AIX
 
@@ -9,7 +8,6 @@ Package support for AIX
     <module-provider-override>`.
 """
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -32,9 +30,9 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is AIX
     """
-    if __grains__["os_family"] == "AIX":
+    if __grains__.get("os_family") == "AIX":
         return __virtualname__
-    return (False, "Did not load AIX module on non-AIX OS.")
+    return False, "Did not load AIX module on non-AIX OS."
 
 
 def _check_pkg(target):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage groups on Solaris
 
@@ -8,7 +7,6 @@ Manage groups on Solaris
     *'group.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -32,7 +30,7 @@ def __virtual__():
     """
     Set the group module if the kernel is SunOS
     """
-    if __grains__["kernel"] == "SunOS":
+    if __grains__.get("kernel") == "SunOS":
         return __virtualname__
     return (
         False,
@@ -58,7 +56,7 @@ def add(name, gid=None, **kwargs):
 
     cmd = "groupadd "
     if gid:
-        cmd += "-g {0} ".format(gid)
+        cmd += "-g {} ".format(gid)
     cmd += name
 
     ret = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -76,7 +74,7 @@ def delete(name):
 
         salt '*' group.delete foo
     """
-    ret = __salt__["cmd.run_all"]("groupdel {0}".format(name), python_shell=False)
+    ret = __salt__["cmd.run_all"]("groupdel {}".format(name), python_shell=False)
 
     return not ret["retcode"]
 
@@ -138,7 +136,7 @@ def chgid(name, gid):
     pre_gid = __salt__["file.group_to_gid"](name)
     if gid == pre_gid:
         return True
-    cmd = "groupmod -g {0} {1}".format(gid, name)
+    cmd = "groupmod -g {} {}".format(gid, name)
     __salt__["cmd.run"](cmd, python_shell=False)
     post_gid = __salt__["file.group_to_gid"](name)
     if post_gid != pre_gid:

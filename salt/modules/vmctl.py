@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
 
@@ -12,7 +11,6 @@ Manage vms running on the OpenBSD VMM hypervisor using vmctl(8).
     target machine.
 """
 
-from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -30,7 +28,7 @@ def __virtual__():
     """
     Only works on OpenBSD with vmctl(8) present.
     """
-    if __grains__["os"] == "OpenBSD" and salt.utils.path.which("vmctl"):
+    if __grains__.get("os") == "OpenBSD" and salt.utils.path.which("vmctl"):
         return True
 
     return (
@@ -64,7 +62,7 @@ def create_disk(name, size):
         salt '*' vmctl.create_disk /path/to/disk.img size=10G
     """
     ret = False
-    cmd = "vmctl create {0} -s {1}".format(name, size)
+    cmd = "vmctl create {} -s {}".format(name, size)
 
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
@@ -93,7 +91,7 @@ def load(path):
         salt '*' vmctl.load path=/etc/vm.switches.conf
     """
     ret = False
-    cmd = "vmctl load {0}".format(path)
+    cmd = "vmctl load {}".format(path)
     result = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
     if result["retcode"] == 0:
         ret = True
@@ -232,7 +230,7 @@ def start(
         name = _id_to_name(id)
 
     if nics > 0:
-        cmd.append("-i {0}".format(nics))
+        cmd.append("-i {}".format(nics))
 
     # Paths cannot be appended as otherwise the inserted whitespace is treated by
     # vmctl as being part of the path.
@@ -240,10 +238,10 @@ def start(
         cmd.extend(["-b", bootpath])
 
     if memory:
-        cmd.append("-m {0}".format(memory))
+        cmd.append("-m {}".format(memory))
 
     if switch:
-        cmd.append("-n {0}".format(switch))
+        cmd.append("-n {}".format(switch))
 
     if local_iface:
         cmd.append("-L")

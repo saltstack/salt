@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for OpenBSD
 
@@ -22,7 +21,6 @@ Package support for OpenBSD
       - ruby%2.3
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -48,7 +46,7 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is OpenBSD
     """
-    if __grains__["os"] == "OpenBSD":
+    if __grains__.get("os") == "OpenBSD":
         return __virtualname__
     return (
         False,
@@ -92,7 +90,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
         except AttributeError:
             continue
-        pkgname += "--{0}".format(flavor) if flavor else ""
+        pkgname += "--{}".format(flavor) if flavor else ""
         __salt__["pkg_resource.add_pkg"](ret, pkgname, pkgver)
 
     __salt__["pkg_resource.sort_pkglist"](ret)
@@ -126,7 +124,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ""
 
         # Query the repository for the package name
-        cmd = "pkg_info -Q {0}".format(name)
+        cmd = "pkg_info -Q {}".format(name)
         out = __salt__["cmd.run_stdout"](
             cmd, python_shell=False, output_loglevel="trace"
         )
@@ -150,8 +148,8 @@ def latest_version(*names, **kwargs):
 
             # First check if we need to look for flavors before
             # looking at unflavored packages.
-            if "{0}--{1}".format(pkgname, flavor) == name:
-                pkgname += "--{0}".format(flavor)
+            if "{}--{}".format(pkgname, flavor) == name:
+                pkgname += "--{}".format(flavor)
             elif pkgname == name:
                 pass
             else:
@@ -230,8 +228,8 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         if pkg_type == "repository":
             stem, branch = (pkg.split("%") + [""])[:2]
             base, flavor = (stem.split("--") + [""])[:2]
-            pkg = "{0}--{1}%{2}".format(base, flavor, branch)
-        cmd = "pkg_add -x -I {0}".format(pkg)
+            pkg = "{}--{}%{}".format(base, flavor, branch)
+        cmd = "pkg_add -x -I {}".format(pkg)
         out = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")
         if out["retcode"] != 0 and out["stderr"]:
             errors.append(out["stderr"])

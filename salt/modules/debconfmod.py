@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Support for Debconf
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -29,7 +27,7 @@ def __virtual__():
     Confirm this module is on a Debian based system and that debconf-utils
     is installed.
     """
-    if __grains__["os_family"] != "Debian":
+    if __grains__.get("os_family") != "Debian":
         return (
             False,
             "The debconfmod module could not be loaded: unsupported OS family",
@@ -111,7 +109,7 @@ def _set_file(path):
     """
     Execute the set selections command for debconf
     """
-    cmd = "debconf-set-selections {0}".format(path)
+    cmd = "debconf-set-selections {}".format(path)
 
     __salt__["cmd.run_stdout"](cmd, python_shell=False)
 
@@ -132,7 +130,7 @@ def set_(package, question, type, value, *extra):
 
     fd_, fname = salt.utils.files.mkstemp(prefix="salt-", close_fd=False)
 
-    line = "{0} {1} {2} {3}".format(package, question, type, value)
+    line = "{} {} {} {}".format(package, question, type, value)
     os.write(fd_, salt.utils.stringutils.to_bytes(line))
     os.close(fd_)
 

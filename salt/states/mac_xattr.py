@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Allows you to manage extended attributes on files or directories
 ================================================================
@@ -13,7 +12,6 @@ Install, enable and disable assistive access on macOS minions
             - com.file.attr=test
             - com.apple.quarantine=0x00001111
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -27,9 +25,9 @@ def __virtual__():
     """
     Only work on Mac OS
     """
-    if __grains__["os"] in ["MacOS", "Darwin"]:
+    if __grains__.get("os") in ["MacOS", "Darwin"]:
         return __virtualname__
-    return (False, "Only supported on Mac OS")
+    return False, "Only supported on Mac OS"
 
 
 def exists(name, attributes):

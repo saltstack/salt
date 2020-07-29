@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Support for Eix
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.utils.path
@@ -12,7 +10,7 @@ def __virtual__():
     """
     Only works on Gentoo systems with eix installed
     """
-    if __grains__["os"] == "Gentoo" and salt.utils.path.which("eix"):
+    if __grains__.get("os") == "Gentoo" and salt.utils.path.which("eix"):
         return "eix"
     return (
         False,

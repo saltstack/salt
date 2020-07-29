@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
@@ -11,7 +10,6 @@ to the correct service manager
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
@@ -36,9 +34,9 @@ def __virtual__():
     """
     Only work on systems which default to OpenRC
     """
-    if __grains__["os"] == "Gentoo" and not salt.utils.systemd.booted(__context__):
+    if __grains__.get("os") == "Gentoo" and not salt.utils.systemd.booted(__context__):
         return __virtualname__
-    if __grains__["os"] == "Alpine":
+    if __grains__.get("os") == "Alpine":
         return __virtualname__
     return (
         False,
@@ -93,11 +91,11 @@ def _disable_delta(name, requested_runlevels):
 
 
 def _service_cmd(*args):
-    return "/etc/init.d/{0} {1}".format(args[0], " ".join(args[1:]))
+    return "/etc/init.d/{} {}".format(args[0], " ".join(args[1:]))
 
 
 def _enable_disable_cmd(name, command, runlevels=()):
-    return "rc-update {0} {1} {2}".format(
+    return "rc-update {} {} {}".format(
         command, name, " ".join(sorted(runlevels))
     ).strip()
 
@@ -177,7 +175,7 @@ def get_all():
     (enabled_services, disabled_services) = _get_service_list(
         include_enabled=True, include_disabled=True
     )
-    enabled_services.update(dict([(s, []) for s in disabled_services]))
+    enabled_services.update({s: [] for s in disabled_services})
     return odict.OrderedDict(enabled_services)
 
 

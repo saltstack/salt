@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for Solaris
 
@@ -8,7 +7,6 @@ Package support for Solaris
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -33,7 +31,7 @@ def __virtual__():
     Set the virtual pkg module if the os is Solaris
     """
     if (
-        __grains__["os_family"] == "Solaris"
+        __grains__.get("os_family") == "Solaris"
         and float(__grains__["kernelrelease"]) <= 5.10
     ):
         return __virtualname__
@@ -69,17 +67,17 @@ def _write_adminfile(kwargs):
         fp_.write(salt.utils.stringutils.to_str(line))
 
     with salt.utils.files.fopen(adminfile, "w") as fp_:
-        _write_line(fp_, "email={0}\n".format(email))
-        _write_line(fp_, "instance={0}\n".format(instance))
-        _write_line(fp_, "partial={0}\n".format(partial))
-        _write_line(fp_, "runlevel={0}\n".format(runlevel))
-        _write_line(fp_, "idepend={0}\n".format(idepend))
-        _write_line(fp_, "rdepend={0}\n".format(rdepend))
-        _write_line(fp_, "space={0}\n".format(space))
-        _write_line(fp_, "setuid={0}\n".format(setuid))
-        _write_line(fp_, "conflict={0}\n".format(conflict))
-        _write_line(fp_, "action={0}\n".format(action))
-        _write_line(fp_, "basedir={0}\n".format(basedir))
+        _write_line(fp_, "email={}\n".format(email))
+        _write_line(fp_, "instance={}\n".format(instance))
+        _write_line(fp_, "partial={}\n".format(partial))
+        _write_line(fp_, "runlevel={}\n".format(runlevel))
+        _write_line(fp_, "idepend={}\n".format(idepend))
+        _write_line(fp_, "rdepend={}\n".format(rdepend))
+        _write_line(fp_, "space={}\n".format(space))
+        _write_line(fp_, "setuid={}\n".format(setuid))
+        _write_line(fp_, "conflict={}\n".format(conflict))
+        _write_line(fp_, "action={}\n".format(action))
+        _write_line(fp_, "basedir={}\n".format(basedir))
 
     return adminfile
 

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Support for Gentoolkit
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -25,7 +23,7 @@ def __virtual__():
     """
     Only work on Gentoo systems with gentoolkit installed
     """
-    if __grains__["os"] == "Gentoo" and HAS_GENTOOLKIT:
+    if __grains__.get("os") == "Gentoo" and HAS_GENTOOLKIT:
         return __virtualname__
     return (
         False,
@@ -51,7 +49,7 @@ def revdep_rebuild(lib=None):
     """
     cmd = "revdep-rebuild -i --quiet --no-progress"
     if lib is not None:
-        cmd += " --library={0}".format(lib)
+        cmd += " --library={}".format(lib)
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
 
 
@@ -63,7 +61,7 @@ def _pretty_size(size):
     while units and size >= 1000:
         size = size / 1024.0
         units.pop()
-    return "{0}{1}".format(round(size, 1), units[-1])
+    return "{}{}".format(round(size, 1), units[-1])
 
 
 def _parse_exclude(exclude_file):
@@ -138,7 +136,7 @@ def eclean_dist(
         try:
             exclude = _parse_exclude(exclude_file)
         except excludemod.ParseExcludeFileException as e:
-            ret = {e: "Invalid exclusion file: {0}".format(exclude_file)}
+            ret = {e: "Invalid exclusion file: {}".format(exclude_file)}
             return ret
 
     if time_limit != 0:
@@ -222,7 +220,7 @@ def eclean_pkg(
         try:
             exclude = _parse_exclude(exclude_file)
         except excludemod.ParseExcludeFileException as e:
-            ret = {e: "Invalid exclusion file: {0}".format(exclude_file)}
+            ret = {e: "Invalid exclusion file: {}".format(exclude_file)}
             return ret
 
     if time_limit != 0:

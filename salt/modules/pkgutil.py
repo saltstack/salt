@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pkgutil support for Solaris
 
@@ -8,7 +7,6 @@ Pkgutil support for Solaris
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -19,7 +17,6 @@ import salt.utils.functools
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "pkgutil"
@@ -29,7 +26,7 @@ def __virtual__():
     """
     Set the virtual pkg module if the os is Solaris
     """
-    if __grains__["os_family"] == "Solaris":
+    if __grains__.get("os_family") == "Solaris":
         return __virtualname__
     return (
         False,
@@ -64,7 +61,7 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     """
     version_num = None
-    cmd = "/opt/csw/bin/pkgutil -c --parse --single {0}".format(name)
+    cmd = "/opt/csw/bin/pkgutil -c --parse --single {}".format(name)
     out = __salt__["cmd.run_stdout"](cmd)
     if out:
         version_num = out.split()[2].strip()
@@ -219,7 +216,7 @@ def latest_version(*names, **kwargs):
         refresh_db()
 
     pkgs = list_pkgs()
-    cmd = "/opt/csw/bin/pkgutil -a --parse {0}".format(" ".join(names))
+    cmd = "/opt/csw/bin/pkgutil -a --parse {}".format(" ".join(names))
     output = __salt__["cmd.run_all"](cmd).get("stdout", "").splitlines()
     for line in output:
         try:
@@ -292,13 +289,13 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     if pkgs is None and version and len(pkg_params) == 1:
         pkg_params = {name: version}
     targets = []
-    for param, pkgver in six.iteritems(pkg_params):
+    for param, pkgver in pkg_params.items():
         if pkgver is None:
             targets.append(param)
         else:
-            targets.append("{0}-{1}".format(param, pkgver))
+            targets.append("{}-{}".format(param, pkgver))
 
-    cmd = "/opt/csw/bin/pkgutil -yu {0}".format(" ".join(targets))
+    cmd = "/opt/csw/bin/pkgutil -yu {}".format(" ".join(targets))
     old = list_pkgs()
     __salt__["cmd.run_all"](cmd)
     __context__.pop("pkg.list_pkgs", None)
@@ -343,7 +340,7 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = "/opt/csw/bin/pkgutil -yr {0}".format(" ".join(targets))
+    cmd = "/opt/csw/bin/pkgutil -yr {}".format(" ".join(targets))
     __salt__["cmd.run_all"](cmd)
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
