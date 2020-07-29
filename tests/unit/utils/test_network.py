@@ -139,9 +139,16 @@ IPV6_SUBNETS = {
 
 
 class NetworkTestCase(TestCase):
-    def test_sanitize_host(self):
+    def test_sanitize_host_ip(self):
         ret = network.sanitize_host("10.1./2.$3")
         self.assertEqual(ret, "10.1.2.3")
+
+    def test_sanitize_host_name(self):
+        """
+        Should not remove the underscore
+        """
+        ret = network.sanitize_host("foo_bar")
+        self.assertEqual(ret, "foo_bar")
 
     def test_host_to_ips(self):
         """
