@@ -1773,6 +1773,11 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        if salt.utils.platform.is_windows():
+            ioloop = salt.ext.tornado.ioloop.IOLoop()
+            for key in list(ioloop._ioloop_for_asyncio):
+                ioloop._ioloop_for_asyncio.pop(key)
+
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 

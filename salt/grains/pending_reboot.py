@@ -18,14 +18,25 @@ log = logging.getLogger(__name__)
 __virtualname__ = "pending_reboot"
 
 
+HAS_API = True
+
+
 def __virtual__():
+    global HAS_API
     if not salt.utils.platform.is_windows():
         return False, "'pending_reboot' grain only available on Windows"
+    if not HAS_API:
+        return False, "'pending_reboot' grain not available"
+    try:
+        salt.utils.win_system.get_pending_reboot()
+    except Exception:
+        HAS_API = False
+
     return __virtualname__
 
 
-def pending_reboot():
-    """
-    A grain that indicates that the system is pending a reboot.
-    """
-    return {"pending_reboot": salt.utils.win_system.get_pending_reboot()}
+#def pending_reboot():
+#    """
+#    A grain that indicates that the system is pending a reboot.
+#    """
+#    return {"pending_reboot": salt.utils.win_system.get_pending_reboot()}
