@@ -12,7 +12,11 @@ import logging
 from salt.utils.versions import LooseVersion
 
 # Import Salt Testing Libs
-from tests.integration.cloud.helpers.cloud_test_base import CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import (
+    CloudTest,
+    OverrideCloudConfig,
+    requires_provider_config,
+)
 from tests.support.unit import skipIf
 
 try:
@@ -27,7 +31,6 @@ if HAS_AZURE and not hasattr(azure, "__version__"):
 
 log = logging.getLogger(__name__)
 
-TIMEOUT = 1000
 REQUIRED_AZURE = "1.1.0"
 
 
@@ -45,6 +48,7 @@ def __has_required_azure():
     return False
 
 
+@requires_provider_config("subscription_id")
 @skipIf(not HAS_AZURE, "These tests require the Azure Python SDK to be installed.")
 @skipIf(
     not __has_required_azure(),
@@ -56,15 +60,19 @@ class AzureTest(CloudTest):
     """
 
     PROVIDER = "azurearm"
+    PROFILE_CONFIG_NAME = "azure-test"
+    PROFILE_CONFIG_FILE = "azure.conf"
+    TEST_TIMEOUT = 1000
+
+    PROVIDER = "azurearm"
     REQUIRED_PROVIDER_CONFIG_ITEMS = ("subscription_id",)
 
     def test_instance(self):
         """
         Test creating an instance on Azure
         """
-        # check if instance with salt installed returned
-        ret_val = self.run_cloud(
-            "-p azure-test {0}".format(self.instance_name), timeout=TIMEOUT
-        )
-        self.assertInstanceExists(ret_val)
-        self.assertDestroyInstance(timeout=TIMEOUT)
+        with OverrideCloudConfig(
+            self.profile_config_path, self.profile_config_name, size="Standard_D2"
+        ):
+            self.assertCreateInstance()
+            self.assertDestroyInstance()
