@@ -2,16 +2,14 @@
 """
 salt-ssh testing
 """
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 
-# Import salt testing libs
 from tests.support.case import SSHCase
+from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 class SSHTest(SSHCase):
@@ -19,7 +17,7 @@ class SSHTest(SSHCase):
     Test general salt-ssh functionality
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ping(self):
         """
         Test a simple ping
@@ -27,7 +25,7 @@ class SSHTest(SSHCase):
         ret = self.run_function("test.ping")
         self.assertTrue(ret, "Ping did not return true")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_thin_dir(self):
         """
         test to make sure thin_dir is created

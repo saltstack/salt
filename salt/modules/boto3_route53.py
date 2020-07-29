@@ -854,7 +854,7 @@ def delete_hosted_zone_by_domain(
 
 def aws_encode(x):
     """
-    An implementation of the encoding required to suport AWS's domain name
+    An implementation of the encoding required to support AWS's domain name
     rules defined here__:
 
     .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
@@ -920,7 +920,7 @@ def _aws_encode_changebatch(o):
 
 def _aws_decode(x):
     """
-    An implementation of the decoding required to suport AWS's domain name
+    An implementation of the decoding required to support AWS's domain name
     rules defined here__:
 
     .. __: http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DomainNameFormat.html
@@ -935,7 +935,7 @@ def _aws_decode(x):
 
         For a list of ASCII characters the corresponding octal codes, do an internet search on "ascii table".
 
-    We look for the existance of any escape codes which give us a clue that
+    We look for the existence of any escape codes which give us a clue that
     we're received an escaped unicode string; or we assume it's idna encoded
     and then decode as necessary.
     """

@@ -10,7 +10,6 @@
     :license: Apache 2.0, see LICENSE for more details.
 """
 # pylint: disable=repr-flag-used-in-string
-
 from __future__ import absolute_import, print_function
 
 import fnmatch
@@ -217,6 +216,9 @@ class SaltTestingParser(optparse.OptionParser):
                     "destroying cloud instances on a cloud provider."
                 ),
             )
+        self.test_selection_group.add_option(
+            "--run-slow", action="store_true", default=False, help=("Run slow tests."),
+        )
 
         self.test_selection_group.add_option(
             "-n",
@@ -461,8 +463,9 @@ class SaltTestingParser(optparse.OptionParser):
                 # Find matches for a source file
                 if match.group(1) == "salt/":
                     if comps[-1] == "__init__.py":
-                        comps.pop(-1)
-                        comps[-1] = "test_" + comps[-1]
+                        if len(comps) > 1:
+                            comps.pop(-1)
+                            comps[-1] = "test_" + comps[-1]
                     else:
                         comps[-1] = "test_{0}".format(comps[-1][:-3])
 
@@ -634,6 +637,9 @@ class SaltTestingParser(optparse.OptionParser):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ["EXPENSIVE_TESTS"] = str(self.options.run_expensive)
+
+        if not os.environ.get("SLOW_TESTS", None):
+            os.environ["SLOW_TESTS"] = str(self.options.run_slow)
 
     def validate_options(self):
         """

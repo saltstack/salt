@@ -4,12 +4,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
+import plistlib
 import pprint
 import shutil
 from datetime import datetime
 
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
@@ -20,7 +22,7 @@ import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -49,6 +51,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "yaml.serialize": yamlserializer.serialize,
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
+                    "plist.serialize": plistserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -84,6 +87,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
+
+            filestate.serialize("/tmp", dataset, formatter="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
 
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
@@ -2517,7 +2523,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.
@@ -2788,7 +2794,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "file3"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 3 files or directories from directory {0}".format(name),
         }
@@ -2820,7 +2825,6 @@ class TestFileTidied(TestCase):
                     os.path.join("test", "test2"),
                 ]
             },
-            "pchanges": {},
             "result": True,
             "comment": "Removed 6 files or directories from directory {0}".format(name),
         }
@@ -2831,7 +2835,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "test/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "Specified file test/ is not an absolute path",
         }
@@ -2839,7 +2842,6 @@ class TestFileTidied(TestCase):
         exp = {
             "name": "/bad-directory-name/",
             "changes": {},
-            "pchanges": {},
             "result": False,
             "comment": "/bad-directory-name/ does not exist or is not a directory.",
         }
@@ -2911,3 +2913,49 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         finally:
             # Cleanup
             shutil.rmtree(root_tmp_dir)
+
+
+@skipIf(not salt.utils.platform.is_linux(), "Selinux only supported on linux")
+class TestSelinux(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filestate: {
+                "__env__": "base",
+                "__salt__": {"file.manage_file": False},
+                "__opts__": {"test": False, "cachedir": ""},
+                "__instance_id__": "",
+                "__low__": {},
+                "__utils__": {},
+            }
+        }
+
+    def test_selinux_change(self):
+        file_name = "/tmp/some-test-file"
+        check_perms_result = [
+            {
+                "comment": "The file {0} is set to be changed".format(file_name),
+                "changes": {
+                    "selinux": {
+                        "New": "User: unconfined_u Type: lost_found_t",
+                        "Old": "User: system_u Type: user_tmp_t",
+                    }
+                },
+                "name": file_name,
+                "result": True,
+            },
+            {"luser": "root", "lmode": "0644", "lgroup": "root"},
+        ]
+
+        with patch.object(os.path, "exists", MagicMock(return_value=True)):
+            with patch.dict(
+                filestate.__salt__,
+                {
+                    "file.source_list": MagicMock(return_value=[file_name, None]),
+                    "file.check_perms": MagicMock(return_value=check_perms_result),
+                },
+            ):
+                ret = filestate.managed(
+                    file_name,
+                    selinux={"seuser": "unconfined_u", "setype": "user_tmp_t"},
+                )
+                self.assertEqual(True, ret["result"])

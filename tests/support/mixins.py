@@ -8,9 +8,6 @@
 
     Some reusable class Mixins
 """
-# pylint: disable=repr-flag-used-in-string
-
-# Import python libs
 from __future__ import absolute_import, print_function
 
 import atexit
@@ -21,13 +18,9 @@ import multiprocessing
 import os
 import pprint
 import subprocess
-import sys
 import tempfile
 import time
-import types
-from collections import OrderedDict
 
-# Import salt libs
 import salt.config
 import salt.exceptions
 import salt.utils.event
@@ -39,27 +32,26 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 from salt._compat import ElementTree as etree
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.queue import (  # pylint: disable=import-error,no-name-in-module
-    Empty,
-)
+from salt.ext.six.moves import zip
+from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-
-# Import Salt Testing Libs
-from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
+from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
 
 class CheckShellBinaryNameAndVersionMixin(object):
     """
-    Simple class mix-in to subclass in companion to :class:`ShellTestCase<tests.support.case.ShellTestCase>` which
+    Simple class mix-in to subclass in companion to :class:`ShellCase<tests.support.case.ShellCase>` which
     adds a test case to verify proper version report from Salt's CLI tools.
     """
 
@@ -210,6 +202,10 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_config_file_path(filename):
+        if filename == "master":
+            return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+        if filename == "minion":
+            return os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, filename)
         if filename == "syndic_master":
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
         if filename == "syndic":
@@ -221,9 +217,9 @@ class AdaptedConfigurationTestCaseMixin(object):
         if filename == "mm_sub_master":
             return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "master")
         if filename == "mm_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR, "minion")
         if filename == "mm_sub_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR, "minion")
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property
@@ -467,122 +463,9 @@ class LoaderModuleMockMixin(
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            salt_dunders = (
-                "__opts__",
-                "__salt__",
-                "__runner__",
-                "__context__",
-                "__utils__",
-                "__ext_pillar__",
-                "__thorium__",
-                "__states__",
-                "__serializers__",
-                "__ret__",
-                "__grains__",
-                "__pillar__",
-                "__sdb__",
-                # Proxy is commented out on purpose since some code in salt expects a NameError
-                # and is most of the time not a required dunder
-                # '__proxy__'
-            )
-
-            for module, module_globals in six.iteritems(loader_modules_configs):
-                if not isinstance(module, types.ModuleType):
-                    raise RuntimeError(
-                        "The dictionary keys returned by {}.setup_loader_modules() "
-                        "must be an imported module, not {}".format(
-                            self.__class__.__name__, type(module)
-                        )
-                    )
-                if not isinstance(module_globals, dict):
-                    raise RuntimeError(
-                        "The dictionary values returned by {}.setup_loader_modules() "
-                        "must be a dictionary, not {}".format(
-                            self.__class__.__name__, type(module_globals)
-                        )
-                    )
-
-                module_blacklisted_dunders = module_globals.pop(
-                    "blacklisted_dunders", ()
-                )
-
-                minion_funcs = {}
-                if (
-                    "__salt__" in module_globals
-                    and module_globals["__salt__"] == "autoload"
-                ):
-                    if "__opts__" not in module_globals:
-                        raise RuntimeError(
-                            "You must provide '__opts__' on the {} module globals dictionary "
-                            "to auto load the minion functions".format(module.__name__)
-                        )
-                    import salt.loader
-
-                    ctx = {}
-                    if "__utils__" not in module_globals:
-                        utils = salt.loader.utils(
-                            module_globals["__opts__"],
-                            context=module_globals.get("__context__") or ctx,
-                        )
-                        module_globals["__utils__"] = utils
-                    minion_funcs = salt.loader.minion_mods(
-                        module_globals["__opts__"],
-                        context=module_globals.get("__context__") or ctx,
-                        utils=module_globals.get("__utils__"),
-                    )
-                    module_globals["__salt__"] = minion_funcs
-
-                for dunder_name in salt_dunders:
-                    if dunder_name not in module_globals:
-                        if dunder_name in module_blacklisted_dunders:
-                            continue
-                        module_globals[dunder_name] = {}
-
-                sys_modules = module_globals.pop("sys.modules", None)
-                if sys_modules is not None:
-                    if not isinstance(sys_modules, dict):
-                        raise RuntimeError(
-                            "'sys.modules' must be a dictionary not: {}".format(
-                                type(sys_modules)
-                            )
-                        )
-                    patcher = patch.dict(sys.modules, sys_modules)
-                    patcher.start()
-
-                    def cleanup_sys_modules(patcher, sys_modules):
-                        patcher.stop()
-                        del patcher
-                        del sys_modules
-
-                    self.addCleanup(cleanup_sys_modules, patcher, sys_modules)
-
-                for key in module_globals:
-                    if not hasattr(module, key):
-                        if key in salt_dunders:
-                            setattr(module, key, {})
-                        else:
-                            setattr(module, key, None)
-
-                if module_globals:
-                    patcher = patch.multiple(module, **module_globals)
-                    patcher.start()
-
-                    def cleanup_module_globals(patcher, module_globals):
-                        patcher.stop()
-                        del patcher
-                        del module_globals
-
-                    self.addCleanup(cleanup_module_globals, patcher, module_globals)
-
-                if minion_funcs:
-                    # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
-                    # used to patch above
-                    import salt.utils
-
-                    for func in minion_funcs:
-                        minion_funcs[func] = salt.utils.functools.namespaced_function(
-                            minion_funcs[func], module_globals, preserve_context=True
-                        )
+            mocker = LoaderModuleMock(self, loader_modules_configs)
+            mocker.__enter__()
+            self.addCleanup(mocker.__exit__)
             return setup_func(self)
 
         return wrapper

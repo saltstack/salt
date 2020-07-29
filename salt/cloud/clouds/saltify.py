@@ -14,7 +14,7 @@ are already installed, but not Salted.
 
 Use of this module requires some configuration in cloud profile and provider
 files as described in the
-:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
+:ref:`Getting Started with Saltify <getting-started-with-saltify>` documentation.
 """
 
 # Import python libs
@@ -95,7 +95,7 @@ def avail_images(call=None):
 
     returns a list of available profiles.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     vm_ = get_configured_provider()
@@ -125,7 +125,7 @@ def list_nodes(call=None):
 
     returns a list of dictionaries of defined standard fields.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     """
     nodes = _list_nodes_full(call)
@@ -171,7 +171,7 @@ def list_nodes_full(call=None):
 
     for 'saltify' minions, returns dict of grains (enhanced).
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
     """
 
     ret = _list_nodes_full(call)
@@ -267,6 +267,10 @@ def create(vm_):
     deploy_config = config.get_cloud_config_value(
         "deploy", vm_, __opts__, default=False
     )
+
+    # If ssh_host is not set, default to the minion name
+    if not config.get_cloud_config_value("ssh_host", vm_, __opts__, default=""):
+        vm_["ssh_host"] = vm_["name"]
 
     if deploy_config:
         wol_mac = config.get_cloud_config_value(
@@ -514,7 +518,7 @@ def reboot(name, call=None):
     """
     Reboot a saltify minion.
 
-    ..versionadded:: 2018.3.0
+    .. versionadded:: 2018.3.0
 
     name
         The name of the VM to reboot.

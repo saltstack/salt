@@ -516,11 +516,23 @@ def _grant_to_tokens(grant):
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ""
     phrase = "grants"
+    column = False
+    current_grant = ""
 
     for token in exploded_grant[position_tracker:]:
 
         if token == "," and phrase == "grants":
             position_tracker += 1
+            continue
+
+        if token == "(" and phrase == "grants":
+            position_tracker += 1
+            column = True
+            continue
+
+        if token == ")" and phrase == "grants":
+            position_tracker += 1
+            column = False
             continue
 
         if token == "ON" and phrase == "grants":
@@ -543,6 +555,7 @@ def _grant_to_tokens(grant):
             if (
                 exploded_grant[position_tracker + 1] == ","
                 or exploded_grant[position_tracker + 1] == "ON"
+                or exploded_grant[position_tracker + 1] in ["(", ")"]
             ):
                 # End of token detected
                 if multiword_statement:
@@ -550,6 +563,10 @@ def _grant_to_tokens(grant):
                     grant_tokens.append(" ".join(multiword_statement))
                     multiword_statement = []
                 else:
+                    if not column:
+                        current_grant = token
+                    else:
+                        token = "{0}.{1}".format(current_grant, token)
                     grant_tokens.append(token)
             else:  # This is a multi-word, ala LOCK TABLES
                 multiword_statement.append(token)
@@ -648,7 +665,7 @@ def _execute(cur, qry, args=None):
 
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
-    # Regex should remove any text begining with # (or --) not inside of ' or "
+    # Regex should remove any text beginning with # (or --) not inside of ' or "
     content = re.sub(
         r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""",
         lambda m: m.group(1) or "",
@@ -2174,16 +2191,21 @@ def db_optimize(name, table=None, **connection_args):
 def __grant_normalize(grant):
     # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
     # grant_exists and grant_add ALL work correctly
-    if grant == "ALL":
+    if grant.strip().upper() == "ALL":
         grant = "ALL PRIVILEGES"
 
     # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
+    exploded_grants = __grant_split(grant)
+    for chkgrant, _ in exploded_grants:
         if chkgrant.strip().upper() not in __grants__:
             raise Exception("Invalid grant : '{0}'".format(chkgrant))
 
     return grant
+
+
+def __grant_split(grant):
+    pattern = re.compile(r"([\w\s]+)(\([^)(]*\))?\s*,?")
+    return pattern.findall(grant)
 
 
 def __ssl_option_sanitize(ssl_option):
@@ -2248,7 +2270,7 @@ def __grant_generate(
     args = {}
     args["user"] = user
     args["host"] = host
-    if isinstance(ssl_option, list) and ssl_option:
+    if ssl_option and isinstance(ssl_option, list):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.data.is_true(grant_option):
         qry += " WITH GRANT OPTION"
@@ -2664,7 +2686,7 @@ def get_master_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a master
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2734,7 +2756,7 @@ def get_slave_status(**connection_args):
     conn.close()
 
     # check for if this minion is not a slave
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2762,7 +2784,7 @@ def showvariables(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))
@@ -2790,7 +2812,7 @@ def showglobal(**connection_args):
         return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
-    if len(rtnv) == 0:
+    if not rtnv:
         rtnv.append([])
 
     log.debug("%s-->%s", mod, len(rtnv[0]))

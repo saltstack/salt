@@ -200,7 +200,7 @@ def ext_pillar(
             # we have an untrusted grain_instance_id, use it to narrow the search
             # even more. Combination will be unique even if uqdn is set.
             find_filter.update({"instance-id": grain_instance_id})
-        # Add this if running state is not dependant on EC2Config
+        # Add this if running state is not dependent on EC2Config
         # find_filter.update('instance-state-name': 'running')
 
     # no minion-id is instance-id and no suitable filter, try use_grain if enabled

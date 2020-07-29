@@ -2,19 +2,13 @@
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.config
 import salt.loader
 import salt.states.service as service
-
-# Import Salt Libs
 import salt.utils.platform
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -34,6 +28,56 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {service: {}}
+
+    def test_get_systemd_only(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        with patch.object(service._get_systemd_only, "HAS_SYSTEMD", True):
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+            )
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {"no_block": 2})
+
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "unmask": 3}
+            )
+
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {})
+
+    def test_get_systemd_only_platform(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        with patch.object(service._get_systemd_only, "HAS_SYSTEMD", False):
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+            )
+
+            self.assertEqual(
+                warnings, ["The 'no_block' argument is not supported by this platform"]
+            )
+            self.assertEqual(ret, {})
+
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "unmask": 3}
+            )
+
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {})
+
+    def test_get_systemd_only_no_mock(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        ret, warnings = service._get_systemd_only(
+            test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+        )
+
+        self.assertIsInstance(ret, dict)
+        self.assertIsInstance(warnings, list)
 
     def test_running(self):
         """
@@ -82,9 +126,12 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": "Started Service salt\nService masking not available on this minion",
                 "name": "salt",
                 "result": True,
-                "warnings": [
-                    "The 'unmask' argument is not supported by this platform/action"
-                ],
+            },
+            {
+                "changes": "saltstack",
+                "comment": "Started Service salt\nService masking not available on this minion",
+                "name": "salt",
+                "result": True,
             },
         ]
 
@@ -438,7 +485,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
         if self.post_srv_disable:
             self.modules["service.disable"](self.service_name)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_running_with_reload(self):
         with patch.dict(service.__opts__, {"test": False}):
             service.dead(self.service_name, enable=False)

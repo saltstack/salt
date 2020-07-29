@@ -9,9 +9,28 @@ import textwrap
 import salt.modules.pkgng as pkgng
 
 # Import Salt Testing Libs
+from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
+
+
+class ListPackages(object):
+    def __init__(self):
+        self._iteration = 0
+
+    def __call__(self, jail=None, chroot=None, root=None):
+        pkg_lists = [
+            {"openvpn": "2.4.8_2"},
+            {
+                "gettext-runtime": "0.20.1",
+                "openvpn": "2.4.8_2",
+                "p5-Mojolicious": "8.40",
+            },
+        ]
+        pkgs = pkg_lists[self._iteration]
+        self._iteration += 1
+        return pkgs
 
 
 class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
@@ -174,3 +193,349 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
                 ignore_retcode=True,
             )
+
+    def test_upgrade_without_fromrepo(self):
+        """
+        Test pkg upgrade to upgrade all available packages
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade()
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-y"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
+    def test_upgrade_with_fromrepo(self):
+        """
+        Test pkg upgrade to upgrade all available packages
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(fromrepo="FreeBSD")
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-y", "--repository", "FreeBSD"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
+    def test_upgrade_with_fetchonly(self):
+        """
+        Test pkg upgrade to fetch packages only
+        """
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+
+        with patch.dict(pkgng.__salt__, {"cmd.run_all": pkg_cmd}):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                result = pkgng.upgrade(fetchonly=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(result, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "upgrade", "-Fy"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                )
+
+    def test_stats_with_local(self):
+        """
+        Test pkg.stats for local packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(local=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-l"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_stats_with_remote(self):
+        """
+        Test pkg.stats for remote packages
+        """
+        pkg_cmd = MagicMock(return_value="")
+
+        with patch.dict(pkgng.__salt__, {"cmd.run": pkg_cmd}):
+            result = pkgng.stats(remote=True)
+            self.assertEqual(result, [])
+            pkg_cmd.assert_called_with(
+                ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
+            )
+
+    def test_install_without_args(self):
+        """
+        Test pkg.install to install a package without arguments
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install()
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-y", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_local(self):
+        """
+        Test pkg.install to install a package with local=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(local=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yU", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_fromrepo(self):
+        """
+        Test pkg.install to install a package with fromrepo=FreeBSD argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(fromrepo="FreeBSD")
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    [
+                        "pkg",
+                        "install",
+                        "-r",
+                        "FreeBSD",
+                        "-y",
+                        "gettext-runtime",
+                        "p5-Mojolicious",
+                    ],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_glob(self):
+        """
+        Test pkg.install to install a package with glob=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(glob=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yg", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_reinstall_requires(self):
+        """
+        Test pkg.install to install a package with reinstall_requires=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(reinstall_requires=True, force=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yfR", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_regex(self):
+        """
+        Test pkg.install to install a package with regex=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(regex=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yx", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_batch(self):
+        """
+        Test pkg.install to install a package with batch=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(batch=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-y", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={"BATCH": "true", "ASSUME_ALWAYS_YES": "YES"},
+                )
+
+    def test_install_with_pcre(self):
+        """
+        Test pkg.install to install a package with pcre=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(pcre=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yX", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )
+
+    def test_install_with_orphan(self):
+        """
+        Test pkg.install to install a package with orphan=True argument
+        """
+        parsed_targets = (
+            OrderedDict((("gettext-runtime", None), ("p5-Mojolicious", None))),
+            "repository",
+        )
+        pkg_cmd = MagicMock(return_value={"retcode": 0})
+        patches = {
+            "cmd.run_all": pkg_cmd,
+            "pkg_resource.parse_targets": MagicMock(return_value=parsed_targets),
+        }
+        with patch.dict(pkgng.__salt__, patches):
+            with patch("salt.modules.pkgng.list_pkgs", ListPackages()):
+                added = pkgng.install(orphan=True)
+                expected = {
+                    "gettext-runtime": {"new": "0.20.1", "old": ""},
+                    "p5-Mojolicious": {"new": "8.40", "old": ""},
+                }
+                self.assertDictEqual(added, expected)
+                pkg_cmd.assert_called_with(
+                    ["pkg", "install", "-yA", "gettext-runtime", "p5-Mojolicious"],
+                    output_loglevel="trace",
+                    python_shell=False,
+                    env={},
+                )

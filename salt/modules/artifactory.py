@@ -379,7 +379,10 @@ def _get_snapshot_url(
                 version=version,
                 headers=headers,
             )
-            if packaging not in snapshot_version_metadata["snapshot_versions"]:
+            if (
+                not has_classifier
+                and packaging not in snapshot_version_metadata["snapshot_versions"]
+            ):
                 error_message = """Cannot find requested packaging '{packaging}' in the snapshot version metadata.
                           artifactory_url: {artifactory_url}
                           repository: {repository}

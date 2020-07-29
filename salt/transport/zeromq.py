@@ -142,6 +142,16 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> channel}
     instance_map = weakref.WeakKeyDictionary()
+    async_methods = [
+        "crypted_transfer_decode_dictentry",
+        "_crypted_transfer",
+        "_do_transfer",
+        "_uncrypted_transfer",
+        "send",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     def __new__(cls, opts, **kwargs):
         """
@@ -442,6 +452,14 @@ class AsyncZeroMQPubChannel(
     publish commands to connected minions
     """
 
+    async_methods = [
+        "connect",
+        "_decode_messages",
+    ]
+    close_methods = [
+        "close",
+    ]
+
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = "zeromq"
@@ -539,17 +557,6 @@ class AsyncZeroMQPubChannel(
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
-
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -676,6 +683,13 @@ class ZeroMQReqServerChannel(
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = self.context.socket(zmq.DEALER)
+
+        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting mworker_queue niceness to %d",
+                self.opts["mworker_queue_niceness"],
+            )
+            os.nice(self.opts["mworker_queue_niceness"])
 
         if self.opts.get("ipc_mode", "") == "tcp":
             self.w_uri = "tcp://127.0.0.1:{0}".format(
@@ -934,6 +948,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         Bind to the interface specified in the configuration file
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+
         if log_queue:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
             salt.log.setup.setup_multiprocessing_logging(log_queue)
@@ -1173,17 +1195,6 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         message_clients = sorted(self.message_clients, key=lambda x: len(x.send_queue))
         return message_clients[0].send(*args, **kwargs)
 
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
-
     # pylint: disable=W1701
     def __del__(self):
         self.close()
@@ -1234,36 +1245,30 @@ class AsyncReqMessageClient(object):
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
-        if self._closing:
+        try:
+            if self._closing:
+                return
+        except AttributeError:
+            # We must have been called from __del__
+            # The python interpreter has nuked most attributes already
             return
-
-        self._closing = True
-        if hasattr(self, "stream") and self.stream is not None:
-            if ZMQ_VERSION_INFO < (14, 3, 0):
-                # stream.close() doesn't work properly on pyzmq < 14.3.0
-                if self.stream.socket:
-                    self.stream.socket.close()
-                self.stream.io_loop.remove_handler(self.stream.socket)
-                # set this to None, more hacks for messed up pyzmq
-                self.stream.socket = None
-                self.socket.close()
-            else:
-                self.stream.close()
-                self.socket = None
-            self.stream = None
-        if self.context.closed is False:
-            self.context.term()
-
-    def destroy(self):
-        # Bacwards compat
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Calling {0}.destroy() is deprecated. Please call {0}.close() instead.".format(
-                self.__class__.__name__
-            ),
-            stacklevel=3,
-        )
-        self.close()
+        else:
+            self._closing = True
+            if hasattr(self, "stream") and self.stream is not None:
+                if ZMQ_VERSION_INFO < (14, 3, 0):
+                    # stream.close() doesn't work properly on pyzmq < 14.3.0
+                    if self.stream.socket:
+                        self.stream.socket.close()
+                    self.stream.io_loop.remove_handler(self.stream.socket)
+                    # set this to None, more hacks for messed up pyzmq
+                    self.stream.socket = None
+                    self.socket.close()
+                else:
+                    self.stream.close()
+                    self.socket = None
+                self.stream = None
+            if self.context.closed is False:
+                self.context.term()
 
     # pylint: disable=W1701
     def __del__(self):

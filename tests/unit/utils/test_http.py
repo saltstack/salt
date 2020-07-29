@@ -2,19 +2,14 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import socket
 from contextlib import closing
 
-# Import Salt Libs
 import salt.utils.http as http
-from tests.support.helpers import MirrorPostHandler, Webserver
-
-# Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
+from tests.support.unit import TestCase
 
 
 class HTTPTestCase(TestCase):
@@ -112,7 +107,7 @@ class HTTPTestCase(TestCase):
         ret = http._sanitize_url_components(mock_component_list, "foo")
         self.assertEqual(ret, mock_ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_query_null_response(self):
         """
         This tests that we get a null response when raise_error=False and the
@@ -128,6 +123,32 @@ class HTTPTestCase(TestCase):
         url = "http://{host}:{port}/".format(host=host, port=port)
         result = http.query(url, raise_error=False)
         assert result == {"body": None}, result
+
+    def test_query_error_handling(self):
+        ret = http.query("http://127.0.0.1:0")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
+        ret = http.query("http://myfoobardomainthatnotexist")
+        self.assertTrue(isinstance(ret, dict))
+        self.assertTrue(isinstance(ret.get("error", None), str))
+
+
+class HTTPPostTestCase(TestCase):
+    """
+    Unit TestCase for the salt.utils.http module when
+    using POST method
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.post_webserver = Webserver(handler=MirrorPostHandler)
+        cls.post_webserver.start()
+        cls.post_web_root = cls.post_webserver.web_root
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.post_webserver.stop()
+        del cls.post_webserver
 
     def test_requests_multipart_formdata_post(self):
         """
@@ -145,3 +166,46 @@ class HTTPTestCase(TestCase):
         body = ret.get("body", "")
         boundary = body[: body.find("\r")]
         self.assertEqual(body, match_this.format(boundary))
+
+
+class HTTPGetTestCase(TestCase):
+    """
+    Unit TestCase for the salt.utils.http module when
+    using Get method
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.get_webserver = Webserver()
+        cls.get_webserver.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.get_webserver.stop()
+        del cls.get_webserver
+
+    def test_backends_decode_body_false(self):
+        """
+        test all backends when using
+        decode_body=False that it returns
+        bytes and does not try to decode
+        """
+        for backend in ["tornado", "requests", "urllib2"]:
+            ret = http.query(
+                self.get_webserver.url("custom.tar.gz"),
+                backend=backend,
+                decode_body=False,
+            )
+            body = ret.get("body", "")
+            assert isinstance(body, bytes)
+
+    def test_backends_decode_body_true(self):
+        """
+        test all backends when using
+        decode_body=True that it returns
+        string and decodes it.
+        """
+        for backend in ["tornado", "requests", "urllib2"]:
+            ret = http.query(self.get_webserver.url("core.sls"), backend=backend,)
+            body = ret.get("body", "")
+            assert isinstance(body, str)

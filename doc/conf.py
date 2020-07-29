@@ -21,7 +21,7 @@ class Mock(object):
 
     This Mock class can be configured to return a specific values at specific names, if required.
 
-    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     """
 
     def __init__(
@@ -94,6 +94,7 @@ MOCK_MODULES = [
     "Crypto.Random",
     "Crypto.Signature",
     "Crypto.Signature.PKCS1_v1_5",
+    "distro",
     "M2Crypto",
     "msgpack",
     "yaml",
@@ -161,6 +162,8 @@ MOCK_MODULES = [
     "jnpr.junos.utils.config",
     "jnpr.junos.utils.sw",
     "keyring",
+    "kubernetes",
+    "kubernetes.config",
     "libvirt",
     "lxml",
     "lxml.etree",
@@ -340,6 +343,7 @@ else:
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
+autosummary_generate_overwrite = False
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
@@ -502,8 +506,8 @@ linkcheck_ignore = [
     r"http://123.456.789.012:\d+",
     r"http://localhost",
     r"https://groups.google.com/forum/#!forum/salt-users",
-    r"http://logstash.net/docs/latest/inputs/udp",
-    r"http://logstash.net/docs/latest/inputs/zeromq",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/udp",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/zeromq",
     r"http://www.youtube.com/saltstack",
     r"https://raven.readthedocs.io",
     r"https://getsentry.com",

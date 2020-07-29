@@ -942,7 +942,7 @@ def get_tags(instance_id=None, keyid=None, key=None, profile=None, region=None):
     tags = []
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
     result = client.get_all_tags(filters={"resource-id": instance_id})
-    if len(result) > 0:
+    if result:
         for tag in result:
             tags.append({tag.name: tag.value})
     else:
@@ -1538,7 +1538,7 @@ def get_attribute(
             if len(instances) > 1:
                 log.error("Found more than one EC2 instance matching the criteria.")
                 return False
-            elif len(instances) < 1:
+            elif not instances:
                 log.error("Found no EC2 instance matching the criteria.")
                 return False
             instance_id = instances[0]

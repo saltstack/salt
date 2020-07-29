@@ -36,6 +36,7 @@ except ImportError:
 
 try:
     import pyiface
+    from pyiface.ifreqioctls import IFF_LOOPBACK, IFF_RUNNING
 except ImportError:
     pyiface = None
 
@@ -54,8 +55,6 @@ INTERFACES_CONFIG = "/var/lib/connman/interfaces.config"
 NIRTCFG_PATH = "/usr/local/natinst/bin/nirtcfg"
 INI_FILE = "/etc/natinst/share/ni-rt.ini"
 _CONFIG_TRUE = ["yes", "on", "true", "1", True]
-IFF_LOOPBACK = 0x8
-IFF_RUNNING = 0x40
 NIRTCFG_ETHERCAT = "EtherCAT"
 
 
@@ -145,16 +144,16 @@ def _space_delimited_list(value):
     """
     validate that a value contains one or more space-delimited values
     """
-    if isinstance(value, str):
+    if isinstance(value, six.string_types):
         items = value.split(" ")
         valid = items and all(items)
     else:
         valid = hasattr(value, "__iter__") and (value != [])
 
     if valid:
-        return (True, "space-delimited string")
+        return True, "space-delimited string"
     else:
-        return (False, "{0} is not a valid list.\n".format(value))
+        return False, "{0} is not a valid list.\n".format(value)
 
 
 def _validate_ipv4(value):
@@ -175,7 +174,7 @@ def _validate_ipv4(value):
 
 def _interface_to_service(iface):
     """
-    returns the coresponding service to given interface if exists, otherwise return None
+    returns the corresponding service to given interface if exists, otherwise return None
     """
     for _service in _get_services():
         service_info = pyconnman.ConnService(os.path.join(SERVICE_PATH, _service))
@@ -398,9 +397,9 @@ def _get_static_info(interface):
     return data
 
 
-def _get_interface_info(interface):
+def _get_base_interface_info(interface):
     """
-    return details about given interface
+    return base details about given interface
     """
     blacklist = {
         "tcpip": {"name": [], "type": [], "additional_protocol": False},
@@ -416,14 +415,14 @@ def _get_interface_info(interface):
         },
         "_": {"usb": "sys", "gadget": "uevent", "wlan": "uevent"},
     }
-    data = {
+    return {
         "label": interface.name,
         "connectionid": interface.name,
         "supported_adapter_modes": _get_possible_adapter_modes(
             interface.name, blacklist
         ),
         "adapter_mode": _get_adapter_mode_info(interface.name),
-        "up": False,
+        "up": interface.flags & IFF_RUNNING != 0,
         "ipv4": {
             "supportedrequestmodes": [
                 "dhcp_linklocal",
@@ -435,38 +434,63 @@ def _get_interface_info(interface):
         },
         "hwaddr": interface.hwaddr[:-1],
     }
-    needed_settings = []
-    if data["ipv4"]["requestmode"] == "static":
-        needed_settings += ["IP_Address", "Subnet_Mask", "Gateway", "DNS_Address"]
-    if data["adapter_mode"] == "ethercat":
-        needed_settings += ["MasterID"]
-    settings = _load_config(interface.name, needed_settings)
-    if interface.flags & IFF_RUNNING != 0:
-        data["up"] = True
-        data["ipv4"]["address"] = interface.sockaddrToStr(interface.addr)
-        data["ipv4"]["netmask"] = interface.sockaddrToStr(interface.netmask)
-        data["ipv4"]["gateway"] = "0.0.0.0"
-        data["ipv4"]["dns"] = _get_dns_info()
-    elif data["ipv4"]["requestmode"] == "static":
-        data["ipv4"]["address"] = settings["IP_Address"]
-        data["ipv4"]["netmask"] = settings["Subnet_Mask"]
-        data["ipv4"]["gateway"] = settings["Gateway"]
-        data["ipv4"]["dns"] = [settings["DNS_Address"]]
 
-    with salt.utils.files.fopen("/proc/net/route", "r") as route_file:
-        pattern = re.compile(
-            r"^{interface}\t[0]{{8}}\t([0-9A-Z]{{8}})".format(interface=interface.name),
-            re.MULTILINE,
+
+def _get_ethercat_interface_info(interface):
+    """
+    return details about given ethercat interface
+    """
+    base_information = _get_base_interface_info(interface)
+    base_information["ethercat"] = {
+        "masterid": _load_config(interface.name, ["MasterID"])["MasterID"]
+    }
+    return base_information
+
+
+def _get_tcpip_interface_info(interface):
+    """
+    return details about given tcpip interface
+    """
+    base_information = _get_base_interface_info(interface)
+    if base_information["ipv4"]["requestmode"] == "static":
+        settings = _load_config(
+            interface.name, ["IP_Address", "Subnet_Mask", "Gateway", "DNS_Address"]
         )
-        match = pattern.search(route_file.read())
-        iface_gateway_hex = None if not match else match.group(1)
-    if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
-        data["ipv4"]["gateway"] = ".".join(
-            [str(int(iface_gateway_hex[i : i + 2], 16)) for i in range(6, -1, -2)]
-        )
-    if data["adapter_mode"] == "ethercat":
-        data["ethercat"] = {"masterid": settings["MasterID"]}
-    return data
+        base_information["ipv4"]["address"] = settings["IP_Address"]
+        base_information["ipv4"]["netmask"] = settings["Subnet_Mask"]
+        base_information["ipv4"]["gateway"] = settings["Gateway"]
+        base_information["ipv4"]["dns"] = [settings["DNS_Address"]]
+    elif base_information["up"]:
+        base_information["ipv4"]["address"] = interface.sockaddrToStr(interface.addr)
+        base_information["ipv4"]["netmask"] = interface.sockaddrToStr(interface.netmask)
+        base_information["ipv4"]["gateway"] = "0.0.0.0"
+        base_information["ipv4"]["dns"] = _get_dns_info()
+        with salt.utils.files.fopen("/proc/net/route", "r") as route_file:
+            pattern = re.compile(
+                r"^{interface}\t[0]{{8}}\t([0-9A-Z]{{8}})".format(
+                    interface=interface.name
+                ),
+                re.MULTILINE,
+            )
+            match = pattern.search(route_file.read())
+            iface_gateway_hex = None if not match else match.group(1)
+        if iface_gateway_hex is not None and len(iface_gateway_hex) == 8:
+            base_information["ipv4"]["gateway"] = ".".join(
+                [str(int(iface_gateway_hex[i : i + 2], 16)) for i in range(6, -1, -2)]
+            )
+    return base_information
+
+
+def _get_interface_info(interface):
+    """
+    return details about given interface
+    """
+    adapter_mode = _get_adapter_mode_info(interface.name)
+    if adapter_mode == "disabled":
+        return _get_base_interface_info(interface)
+    elif adapter_mode == "ethercat":
+        return _get_ethercat_interface_info(interface)
+    return _get_tcpip_interface_info(interface)
 
 
 def _dict_to_string(dictionary):
@@ -534,7 +558,7 @@ def _change_state(interface, new_state):
     """
     if __grains__["lsb_distrib_id"] == "nilrt":
         initial_mode = _get_adapter_mode_info(interface)
-        _save_config(interface, "Mode", "TCPIP")
+        _save_config(interface, "Mode", "TCPIP" if new_state == "up" else "Disabled")
         if initial_mode == "ethercat":
             __salt__["system.set_reboot_required_witnessed"]()
         else:

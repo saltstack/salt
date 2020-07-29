@@ -10,6 +10,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+import logging
 import textwrap
 
 import salt.modules.aptpkg as aptpkg
@@ -20,13 +21,15 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
     import pytest
 except ImportError:
     pytest = None
+
+log = logging.getLogger(__name__)
 
 
 APT_KEY_LIST = r"""
@@ -151,6 +154,18 @@ Reading state information...
 """
 
 UNINSTALL = {"tmux": {"new": six.text_type(), "old": "1.8-5"}}
+INSTALL = {"tmux": {"new": "1.8-5", "old": six.text_type()}}
+
+
+class MockSourceEntry(object):
+    def __init__(self, uri, source_type, line, invalid):
+        self.uri = uri
+        self.type = source_type
+        self.line = line
+        self.invalid = invalid
+
+    def mysplit(self, line):
+        return line.split()
 
 
 class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
@@ -159,7 +174,7 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {aptpkg: {}}
+        return {aptpkg: {"__grains__": {}}}
 
     def test_version(self):
         """
@@ -319,6 +334,15 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 assert aptpkg.autoremove(list_only=True) == []
                 assert aptpkg.autoremove(list_only=True, purge=True) == []
 
+    def test_install(self):
+        """
+        Test - Install packages.
+        """
+        with patch("salt.modules.aptpkg.install", MagicMock(return_value=INSTALL)):
+            self.assertEqual(aptpkg.install(name="tmux"), INSTALL)
+            kwargs = {"force_conf_new": True}
+            self.assertEqual(aptpkg.install(name="tmux", **kwargs), INSTALL)
+
     def test_remove(self):
         """
         Test - Remove packages.
@@ -350,6 +374,8 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
+                    kwargs = {"force_conf_new": True}
+                    self.assertEqual(aptpkg.upgrade(**kwargs), dict())
 
     def test_upgrade_downloadonly(self):
         """
@@ -595,6 +621,55 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(len(list_downloaded), 1)
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
+    def test__skip_source(self):
+        """
+        Test __skip_source.
+        :return:
+        """
+        # Valid source
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian stretch main\n"
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertFalse(ret)
+
+        # Invalid source type
+        source_type = "ded"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian stretch main\n"
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertTrue(ret)
+
+        # Invalid source type , not skipped
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian"
+        source_line = "deb [http://cdn-aws.deb.debian.org/debian] stretch main\n"
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertFalse(ret)
+
+    def test_normalize_name(self):
+        """
+        Test that package is normalized only when it should be
+        """
+        with patch.dict(aptpkg.__grains__, {"osarch": "amd64"}):
+            result = aptpkg.normalize_name("foo")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:amd64")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:any")
+            assert result == "foo", result
+            result = aptpkg.normalize_name("foo:i386")
+            assert result == "foo:i386", result
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
@@ -672,3 +747,49 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=True,
                 username="Darth Vader",
             )
+
+    def test_call_apt_dpkg_lock(self):
+        """
+        Call apt and ensure the dpkg locking is handled
+        :return:
+        """
+        cmd_side_effect = [
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "", "stdout": ""},
+        ]
+
+        cmd_mock = MagicMock(side_effect=cmd_side_effect)
+        cmd_call = (
+            call(
+                ["dpkg", "-l", "python"],
+                env={},
+                ignore_retcode=False,
+                output_loglevel="quiet",
+                python_shell=True,
+                username="Darth Vader",
+            ),
+        )
+        expected_calls = [cmd_call * 5]
+
+        with patch.dict(
+            aptpkg.__salt__,
+            {"cmd.run_all": cmd_mock, "config.get": MagicMock(return_value=False)},
+        ):
+            with patch("time.sleep", MagicMock()) as sleep_mock:
+                aptpkg._call_apt(
+                    ["dpkg", "-l", "python"],
+                    python_shell=True,
+                    output_loglevel="quiet",
+                    ignore_retcode=False,
+                    username="Darth Vader",
+                )  # pylint: disable=W0106
+
+                # We should sleep 4 times
+                self.assertEqual(sleep_mock.call_count, 4)
+
+                # We should attempt to call the cmd 5 times
+                self.assertEqual(cmd_mock.call_count, 5)
+                cmd_mock.has_calls(expected_calls)

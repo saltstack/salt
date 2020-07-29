@@ -3,44 +3,30 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import random
-import string
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-from tests.support.unit import skipIf
-
-
-def __random_string(size=6):
-    """
-    Generates a random username
-    """
-    return "RS-" + "".join(
-        random.choice(string.ascii_uppercase + string.digits) for x in range(size)
-    )
-
+from tests.support.helpers import (
+    destructiveTest,
+    random_string,
+    runs_on,
+    skip_if_not_root,
+    slowTest,
+)
 
 # Create group name strings for tests
-ADD_GROUP = __random_string()
-DEL_GROUP = __random_string()
-CHANGE_GROUP = __random_string()
-ADD_USER = __random_string()
-REP_USER_GROUP = __random_string()
+ADD_GROUP = random_string("RS-", lowercase=False)
+DEL_GROUP = random_string("RS-", lowercase=False)
+CHANGE_GROUP = random_string("RS-", lowercase=False)
+ADD_USER = random_string("RS-", lowercase=False)
+REP_USER_GROUP = random_string("RS-", lowercase=False)
 
 
 @destructiveTest
 @skip_if_not_root
+@runs_on(kernel="Darwin")
 class MacGroupModuleTest(ModuleCase):
     """
     Integration tests for the mac_group module
@@ -54,7 +40,7 @@ class MacGroupModuleTest(ModuleCase):
         if os_grain["kernel"] not in "Darwin":
             self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_group_add(self):
         """
         Tests the add group function
@@ -67,7 +53,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_group_delete(self):
         """
         Tests the delete group function
@@ -81,7 +67,7 @@ class MacGroupModuleTest(ModuleCase):
         ret = self.run_function("group.delete", [DEL_GROUP])
         self.assertTrue(ret)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_group_chgid(self):
         """
         Tests changing the group id
@@ -99,7 +85,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [CHANGE_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_adduser(self):
         """
         Tests adding user to the group
@@ -117,7 +103,7 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function("group.delete", [ADD_GROUP])
             raise
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_deluser(self):
         """
         Test deleting user from a group
@@ -136,7 +122,7 @@ class MacGroupModuleTest(ModuleCase):
         group_info = self.run_function("group.info", [ADD_GROUP])
         self.assertNotIn(ADD_USER, "".join(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_members(self):
         """
         Test replacing members of a group
@@ -159,7 +145,7 @@ class MacGroupModuleTest(ModuleCase):
         self.assertIn(REP_USER_GROUP, six.text_type(group_info["members"]))
         self.assertNotIn(ADD_USER, six.text_type(group_info["members"]))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_mac_getent(self):
         """
         Test returning info on all groups

@@ -105,10 +105,7 @@ def attach_(dev=None):
             if "cache" in data:
                 res[dev] = attach_(dev)
 
-        if res:
-            return res
-        else:
-            return None
+        return res if res else None
 
     bcache = uuid(dev)
     if bcache:
@@ -158,10 +155,7 @@ def detach(dev=None):
             if "cache" in data:
                 res[dev] = detach(dev)
 
-        if res:
-            return res
-        else:
-            return None
+        return res if res else None
 
     log.debug("Detaching %s", dev)
     if not _bcsys(dev, "detach", "goaway", "error", "Error detaching {0}".format(dev)):
@@ -737,7 +731,7 @@ def _bdev(dev=None):
     if not dev:
         return False
     else:
-        return _devbase(os.path.realpath(os.path.join(dev, "../")))
+        return _devbase(os.path.dirname(dev))
 
 
 def _bcpath(dev):
