@@ -4,7 +4,6 @@ Proxy Minion interface module for managing Blue Coat SSL Decryption devices
 
 :codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
 :maturity:   new
-:depends:    none
 :platform:   unix
 This proxy minion enables Blue Coat SSL Visibility devices (hereafter referred to
 as simply 'bluecoat_sslv') to be treated individually like a Salt Minion.
