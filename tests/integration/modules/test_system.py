@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import os
@@ -15,7 +11,6 @@ import salt.states.file
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -51,7 +46,7 @@ class SystemModuleTest(ModuleCase):
             delattr(cls, name)
 
     def setUp(self):
-        super(SystemModuleTest, self).setUp()
+        super().setUp()
         if self._systemd_timesyncd_available_ is None:
             SystemModuleTest._systemd_timesyncd_available_ = self.run_function(
                 "service.available", ["systemd-timesyncd"]
@@ -78,7 +73,7 @@ class SystemModuleTest(ModuleCase):
         return self.run_function("system.set_system_date_time", t)
 
     def _restore_time(self):
-        result = self._set_time(self._orig_time, "+0000")
+        result = self._set_time(self._orig_time, "'+0000'")
         self.assertTrue(result, msg="Unable to restore time properly")
 
     def _same_times(self, t1, t2, seconds_diff=30):
@@ -151,10 +146,7 @@ class SystemModuleTest(ModuleCase):
 
                             self.assertTrue(
                                 diff <= 2.0,
-                                msg=(
-                                    "hwclock difference too big: "
-                                    + six.text_type(timeCompStr)
-                                ),
+                                msg=("hwclock difference too big: " + str(timeCompStr)),
                             )
                             break
             except CompareTimeout:
@@ -187,7 +179,7 @@ class SystemModuleTest(ModuleCase):
         t1 = datetime.datetime.now()
         res = self.run_function("system.get_system_date_time")
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(t1, t2)
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @slowTest
@@ -196,9 +188,9 @@ class SystemModuleTest(ModuleCase):
         Test we are able to get the correct time with utc
         """
         t1 = datetime.datetime.utcnow()
-        res = self.run_function("system.get_system_date_time", utc_offset="+0000")
+        res = self.run_function("system.get_system_date_time", utc_offset="'+0000'")
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(t1, t2)
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @destructiveTest
@@ -214,7 +206,7 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(cmp_time)
         time_now = datetime.datetime.now()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result and self._same_times(time_now, cmp_time), msg=msg)
@@ -230,10 +222,10 @@ class SystemModuleTest(ModuleCase):
         """
         self._save_time()
         cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
-        result = self._set_time(cmp_time, offset="+0000")
+        result = self._set_time(cmp_time, offset="'+0000'")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
@@ -255,7 +247,7 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(time_to_set, offset="-0700")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
@@ -274,10 +266,10 @@ class SystemModuleTest(ModuleCase):
         cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
         # 7200 seconds = 2 hours
         time_to_set = cmp_time + datetime.timedelta(seconds=7200)
-        result = self._set_time(time_to_set, offset="+0200")
+        result = self._set_time(time_to_set, offset="'+0200'")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
@@ -298,7 +290,7 @@ class SystemModuleTest(ModuleCase):
         result = self.run_function("system.set_system_time", ["10:05:00"])
 
         time_now = datetime.datetime.now()
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
 
@@ -321,7 +313,7 @@ class SystemModuleTest(ModuleCase):
         )
 
         time_now = datetime.datetime.now()
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
 
@@ -414,7 +406,7 @@ class WinSystemModuleTest(ModuleCase):
         """
         ret = self.run_function("system.get_computer_name")
 
-        self.assertTrue(isinstance(ret, six.text_type))
+        self.assertTrue(isinstance(ret, str))
         import socket
 
         name = socket.gethostname()
