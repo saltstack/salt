@@ -539,7 +539,7 @@ def master(master=None, connected=True):
         remotes = set()
         try:
             data = subprocess.check_output(
-                ["netstat", "-n", "-p", "TCP"]
+                ["netstat", "-n"]
             )  # pylint: disable=minimum-python-version
         except subprocess.CalledProcessError:
             log.error("Failed netstat")
@@ -547,13 +547,13 @@ def master(master=None, connected=True):
 
         lines = salt.utils.stringutils.to_unicode(data).split("\n")
         for line in lines:
-            if "ESTABLISHED" not in line:
+            if "ESTABLISHED" not in line or "TCP" not in line:
                 continue
             chunks = line.split()
             remote_host, remote_port = chunks[2].rsplit(":", 1)
             if int(remote_port) != port:
                 continue
-            remotes.add(remote_host)
+            remotes.add(remote_host.replace('[','').replace(']',''))
         return remotes
 
     # the default publishing port
