@@ -25,6 +25,12 @@ include:
 #     - pip3 install pre-commit
 #     - pre-commit run -a -v --color always
 
+test-test-test:
+  stage: test
+  image: python:3.7-buster
+  script:
+    - echo "test test test"
+
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
