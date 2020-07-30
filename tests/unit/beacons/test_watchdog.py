@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import tempfile
@@ -66,6 +63,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = watchdog.beacon(config)
         self.assertEqual(ret, [])
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_file_create(self):
         path = os.path.join(self.tmpdir, "tmpfile")
 
@@ -125,6 +123,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "deleted")
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_file_moved(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         create(path)
@@ -140,6 +139,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "moved")
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_file_create_in_directory(self):
         config = [{"directories": {self.tmpdir: {"mask": ["create"]}}}]
         self.assertValid(config)
