@@ -111,6 +111,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = inotify.beacon(config)
         self.assertEqual(ret, [])
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_dir_auto_add(self):
         config = [
             {"files": {self.tmpdir: {"mask": ["create", "open"], "auto_add": True}}}
@@ -136,6 +137,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], fp)
         self.assertEqual(ret[0]["change"], "IN_OPEN")
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_dir_recurse(self):
         dp1 = os.path.join(self.tmpdir, "subdir1")
         os.mkdir(dp1)

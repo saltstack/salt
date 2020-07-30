@@ -5,7 +5,6 @@ clustershell
 croniter>=0.3.0,!=0.3.22
 dnspython
 docker
-futures>=2.0; python_version < '3.0'
 jmespath
 jsonschema
 junos-eznc==2.4.0
@@ -24,7 +23,6 @@ pyvmomi
 rfc3987
 salttesting==2017.6.1
 strict_rfc3339
-supervisor==3.3.5; python_version < '3'
 toml
 virtualenv>=20.0.20
 watchdog
@@ -35,7 +33,6 @@ vcert~=0.7.0
 Genshi
 Cheetah3==3.1.0
 Mako
-wempy; python_version <'3'
 
 # cassandra
 cassandra-driver>=2.0

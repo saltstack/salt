@@ -1110,7 +1110,7 @@ See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
 ``req_server_niceness``
 -----------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1126,7 +1126,7 @@ Supported on POSIX platforms only.
 ``pub_server_niceness``
 -----------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1142,7 +1142,7 @@ Supported on POSIX platforms only.
 ``fileserver_update_niceness``
 ------------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1158,7 +1158,7 @@ Supported on POSIX platforms only.
 ``maintenance_niceness``
 ------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1174,7 +1174,7 @@ Supported on POSIX platforms only.
 ``mworker_niceness``
 --------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1190,7 +1190,7 @@ Supported on POSIX platforms only.
 ``mworker_queue_niceness``
 --------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -1206,7 +1206,7 @@ supported on POSIX platforms only.
 ``event_return_niceness``
 -------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -1223,7 +1223,7 @@ supported on POSIX platforms only.
 ``event_publisher_niceness``
 ----------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``none``
 
@@ -1239,7 +1239,7 @@ supported on POSIX platforms only.
 ``reactor_niceness``
 --------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -5814,7 +5814,7 @@ authenticate is protected by a passphrase.
 .. conf_master:: winrepo_refspecs
 
 ``winrepo_refspecs``
-~~~~~~~~~~~~~~~~~~~~
+********************
 
 .. versionadded:: 2017.7.0
 
