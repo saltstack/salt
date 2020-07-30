@@ -187,7 +187,7 @@ for more information.
 Notable Changes
 ---------------
 
-**The move general from label references to ID references.** The profile configuration parameters ``location``,
+**Move from label references to ID references.** The profile configuration parameters ``location``,
 ``size``, and ``image`` have moved from accepting label based references to IDs. See the
 `profile configuration <#profile-configuration>`_ section for more details.
 
