@@ -149,7 +149,7 @@ markupsafe==1.1.1
 mock==3.0.5
 more-itertools==5.0.0
 moto==1.3.7
-msgpack==0.5.6
+msgpack==1.0.0
 msrest==0.6.14            # via azure-applicationinsights, azure-eventgrid, azure-keyvault, azure-loganalytics, azure-mgmt-cdn, azure-mgmt-compute, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-dns, azure-mgmt-eventhub, azure-mgmt-keyvault, azure-mgmt-media, azure-mgmt-network, azure-mgmt-rdbms, azure-mgmt-resource, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-servicefabric, msrestazure
 msrestazure==0.6.3        # via azure-batch, azure-eventgrid, azure-graphrbac, azure-keyvault, azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cdn, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-compute, azure-mgmt-consumption, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-analytics, azure-mgmt-datalake-store, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-eventhub, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-media, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-rdbms, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-resource, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
 ncclient==0.6.4           # via junos-eznc
@@ -164,7 +164,7 @@ pathlib2==2.3.3           # via pytest
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
-psutil==5.6.6
+psutil==5.6.7
 py==1.8.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
@@ -180,7 +180,7 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.10.6
+pytest-salt-factories==0.10.7
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
 pytest==5.4.2 ; sys_platform != "win32"
@@ -190,7 +190,7 @@ python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
-pyyaml==5.1.2
+pyyaml==5.3.1
 pyzmq==18.0.1
 requests-oauthlib==1.3.0  # via msrest
 requests==2.21.0
