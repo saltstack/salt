@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
-
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.modules.postgres as postgresmod
 import salt.states.postgres_database as postgres_database
 import salt.states.postgres_extension as postgres_extension
 import salt.states.postgres_group as postgres_group
 import salt.states.postgres_schema as postgres_schema
 import salt.states.postgres_user as postgres_user
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -22,13 +17,6 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", Mock(return_value="/usr/bin/pgsql"))
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.salt_stub = {
-            "config.option": Mock(),
-            "cmd.run_all": Mock(),
-            "file.chown": Mock(),
-            "file.remove": Mock(),
-        }
-        self.addCleanup(delattr, self, "salt_stub")
         return {
             postgres_database: {},
             postgres_group: {},
@@ -36,7 +24,12 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
             postgres_schema: {},
             postgres_user: {
                 "__grains__": {"os_family": "Linux"},
-                "__salt__": self.salt_stub,
+                "__salt__": {
+                    "config.option": Mock(),
+                    "cmd.run_all": Mock(),
+                    "file.chown": Mock(),
+                    "file.remove": Mock(),
+                },
                 "__opts__": {"test": False},
             },
         }
@@ -61,7 +54,9 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                         "result": None,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.user_create"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.user_create"].call_count, 0
+                )
 
             # test=False
             ret = postgres_user.present("foo")
@@ -74,7 +69,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.salt_stub["postgres.user_create"].assert_called_once_with(
+            postgres_user.__salt__["postgres.user_create"].assert_called_once_with(
                 username="foo",
                 superuser=None,
                 encrypted=True,
@@ -127,7 +122,9 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                         "result": None,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.user_update"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.user_update"].call_count, 0
+                )
 
             # test=False
             ret = postgres_user.present("foo", login=True, replication=False)
@@ -140,7 +137,7 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.salt_stub["postgres.user_update"].assert_called_once_with(
+            postgres_user.__salt__["postgres.user_update"].assert_called_once_with(
                 username="foo",
                 superuser=None,
                 encrypted=True,
@@ -193,7 +190,9 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                         "result": True,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.user_update"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.user_update"].call_count, 0
+                )
 
             # test=False
             ret = postgres_user.present("foo", login=False, replication=False)
@@ -206,7 +205,9 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.user_update"].call_count, 0)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.user_update"].call_count, 0
+            )
 
 
 class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
@@ -214,13 +215,6 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", Mock(return_value="/usr/bin/pgsql"))
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.salt_stub = {
-            "config.option": Mock(),
-            "cmd.run_all": Mock(),
-            "file.chown": Mock(),
-            "file.remove": Mock(),
-        }
-        self.addCleanup(delattr, self, "salt_stub")
         return {
             postgres_database: {},
             postgres_user: {},
@@ -228,7 +222,12 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
             postgres_schema: {},
             postgres_group: {
                 "__grains__": {"os_family": "Linux"},
-                "__salt__": self.salt_stub,
+                "__salt__": {
+                    "config.option": Mock(),
+                    "cmd.run_all": Mock(),
+                    "file.chown": Mock(),
+                    "file.remove": Mock(),
+                },
                 "__opts__": {"test": False},
             },
         }
@@ -253,7 +252,9 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                         "result": None,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.group_create"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.group_create"].call_count, 0
+                )
 
             # test=False
             ret = postgres_group.present("foo")
@@ -266,7 +267,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.salt_stub["postgres.group_create"].assert_called_once_with(
+            postgres_user.__salt__["postgres.group_create"].assert_called_once_with(
                 superuser=None,
                 replication=None,
                 encrypted=True,
@@ -318,7 +319,9 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                         "result": None,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.group_update"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.group_update"].call_count, 0
+                )
 
             # test=False
             ret = postgres_group.present("foo", login=True, replication=False)
@@ -331,7 +334,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.salt_stub["postgres.group_update"].assert_called_once_with(
+            postgres_user.__salt__["postgres.group_update"].assert_called_once_with(
                 superuser=None,
                 replication=False,
                 encrypted=True,
@@ -383,7 +386,9 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                         "result": True,
                     },
                 )
-                self.assertEqual(self.salt_stub["postgres.group_update"].call_count, 0)
+                self.assertEqual(
+                    postgres_user.__salt__["postgres.group_update"].call_count, 0
+                )
 
             # test=False
             ret = postgres_group.present("foo", login=False, replication=False)
@@ -396,7 +401,9 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.group_update"].call_count, 0)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.group_update"].call_count, 0
+            )
 
 
 class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
@@ -404,13 +411,6 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", Mock(return_value="/usr/bin/pgsql"))
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.salt_stub = {
-            "config.option": Mock(),
-            "cmd.run_all": Mock(),
-            "file.chown": Mock(),
-            "file.remove": Mock(),
-        }
-        self.addCleanup(delattr, self, "salt_stub")
         return {
             postgres_database: {},
             postgres_user: {},
@@ -418,7 +418,12 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
             postgres_schema: {},
             postgres_extension: {
                 "__grains__": {"os_family": "Linux"},
-                "__salt__": self.salt_stub,
+                "__salt__": {
+                    "config.option": Mock(),
+                    "cmd.run_all": Mock(),
+                    "file.chown": Mock(),
+                    "file.remove": Mock(),
+                },
                 "__opts__": {"test": False},
             },
         }
@@ -654,13 +659,6 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", Mock(return_value="/usr/bin/pgsql"))
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.salt_stub = {
-            "config.option": Mock(),
-            "cmd.run_all": Mock(),
-            "file.chown": Mock(),
-            "file.remove": Mock(),
-        }
-        self.addCleanup(delattr, self, "salt_stub")
         return {
             postgres_database: {},
             postgres_user: {},
@@ -668,7 +666,12 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
             postgres_group: {},
             postgres_schema: {
                 "__grains__": {"os_family": "Linux"},
-                "__salt__": self.salt_stub,
+                "__salt__": {
+                    "config.option": Mock(),
+                    "cmd.run_all": Mock(),
+                    "file.chown": Mock(),
+                    "file.remove": Mock(),
+                },
                 "__opts__": {"test": False},
             },
         }
@@ -692,7 +695,9 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.schema_create"].call_count, 1)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.schema_create"].call_count, 1
+            )
 
     def test_present_nocreation(self):
         with patch.dict(
@@ -715,7 +720,9 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.schema_create"].call_count, 0)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.schema_create"].call_count, 0
+            )
 
     def test_absent_remove(self):
         with patch.dict(
@@ -736,7 +743,9 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.schema_remove"].call_count, 1)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.schema_remove"].call_count, 1
+            )
 
     def test_absent_noremove(self):
         with patch.dict(
@@ -758,4 +767,6 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            self.assertEqual(self.salt_stub["postgres.schema_remove"].call_count, 0)
+            self.assertEqual(
+                postgres_user.__salt__["postgres.schema_remove"].call_count, 0
+            )
