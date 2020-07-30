@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -19,7 +17,7 @@ from tests.support.unit import TestCase
 log = logging.getLogger(__name__)
 
 
-class MockNetwork(object):
+class MockNetwork:
     """
         Mock network class
     """
@@ -39,7 +37,7 @@ class MockNetwork(object):
         return ifaces
 
 
-class MockGrains(object):
+class MockGrains:
     """
         Mock Grains class
     """
@@ -152,7 +150,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                 }
                             )
                             self.assertDictEqual(
-                                network.managed("lo:alias1", "eth", False), ret
+                                network.managed("lo:alias1", type="eth", enabled=False),
+                                ret,
                             )
 
     def test_routes(self):
