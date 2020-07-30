@@ -3,11 +3,13 @@ from __future__ import absolute_import, unicode_literals
 
 import datetime
 import hashlib
+import logging
 import os
+import pprint
 import textwrap
 
+import pytest
 import salt.utils.files
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest, with_tempfile
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -21,7 +23,10 @@ try:
 except ImportError:
     HAS_M2CRYPTO = False
 
+log = logging.getLogger(__name__)
 
+
+@pytest.mark.usefixtures("salt_sub_minion")
 @skipIf(not HAS_M2CRYPTO, "Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
@@ -130,7 +135,7 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
             pillar={"keyfile": keyfile, "crtfile": crtfile},
         )
         assert isinstance(ret, dict), ret
-        for state_result in six.itervalues(ret):
+        for state_result in ret.values():
             assert state_result["result"] is True, state_result
         assert os.path.exists(keyfile)
         assert os.path.exists(crtfile)
@@ -478,3 +483,227 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         )
         key = "x509_|-{0}_|-{0}_|-certificate_managed".format(crtfile)
         self.assertEqual(True, ret[key]["result"])
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_file_properties_are_updated(self, keyfile, crtfile):
+        """
+        Self-signed certificate, no CA.
+        First create a cert, then run the state again with different
+        file mode. The cert should not be recreated, but the file
+        should be updated.
+        Finally, run once more with the same file mode as the second
+        run. Nothing should change.
+        """
+        first_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar={"keyfile": keyfile, "crtfile": crtfile, "fileMode": "0755"},
+        )
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(crtfile)
+        self.assertEqual(
+            "Certificate is valid and up to date",
+            first_run[key]["changes"]["Status"]["New"],
+        )
+        self.assertTrue(os.path.exists(crtfile), "Certificate was not created.")
+        self.assertEqual("0755", oct(os.stat(crtfile).st_mode)[-4:])
+
+        second_run_pillar = {
+            "keyfile": keyfile,
+            "crtfile": crtfile,
+            "mode": "0600",
+        }
+        second_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual("0600", oct(os.stat(crtfile).st_mode)[-4:])
+
+        third_run = self.run_function(
+            "state.apply",
+            ["x509.self_signed_different_properties"],
+            pillar=second_run_pillar,
+        )
+        self.assertEqual({}, third_run[key]["changes"])
+        self.assertEqual("0600", oct(os.stat(crtfile).st_mode)[-4:])
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_file_managed_failure(self, keyfile, crtfile):
+        """
+        Test that a failure in the file.managed call marks the state
+        call as failed.
+        """
+        crtfile_pieces = os.path.split(crtfile)
+        bad_crtfile = os.path.join(
+            crtfile_pieces[0], "deeply/nested", crtfile_pieces[1]
+        )
+        ret = self.run_function(
+            "state.apply",
+            ["x509.self_signed_file_error"],
+            pillar={"keyfile": keyfile, "crtfile": bad_crtfile},
+        )
+
+        key = "x509_|-self_signed_cert_|-{0}_|-certificate_managed".format(bad_crtfile)
+        self.assertFalse(ret[key]["result"], "State should have failed.")
+        self.assertEqual({}, ret[key]["changes"])
+        self.assertFalse(
+            os.path.exists(crtfile), "Certificate should not have been created."
+        )
+
+    @with_tempfile(suffix=".crt", create=False)
+    @with_tempfile(suffix=".key", create=False)
+    def test_py2_generated_cert_is_not_recreated(self, keyfile, crtfile):
+        keyfile_contents = textwrap.dedent(
+            """\
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEpAIBAAKCAQEAp5PQyx5NlYrfzd7vU/Xb2YR5qbWWtpWWoKmJC1gML5v5DBI7
+        +p/kAHNNmK8uqHXTaI4N/zgarfjrg4zceq2Du7pP0xiCAYolhFqF78ibxNrN4OkT
+        UPm2kM88iJ8Z14Yph8ueSxLIlujCGaEFhr6wRzTj4T9b+0Bb/PZHI2t5YwtIooVM
+        EFCBFkt4bb004tO0D9q0CPPVT2AsGmxnY43Aj3Epy++kqmaWj1hIucSprkDrAXFS
+        WacBQPFQ8XctnL2Z1Q6CJ5WUNrW8ohAJ9RJkwjiqbZTwYIPSSrl+FO3XqDY70SxU
+        3xDeqhU4zvyjxJ8w9SPqTUu/C3BZtRBT9dCBEQIDAQABAoIBAQCZvS23u1RYVrEe
+        sWGF+LA67aOkg9kCJ1iqiv8UrjF32DNy1KO8OcY2d5H/+u/mUzqh2HmU5QbtBsoi
+        xS9dSSTrLHGhbAGRogjrVRU9uCDYSBjLN2mmR4IrdkTF3pkZtpcRY0gU/eWTNXUl
+        iCmGxhj5KtfJxZQAfLon6FW5dBdIOgxSCJhvRq0zFpWJZFGWWkBExDfeNg//0fCU
+        UbjRjGacP/+R6FSJa6tevzgR7tIIapm1dY/ofPXIXsZGo1R87fRgLI1D+e84Jdds
+        /U0bKzPOgAjcC1b262lJ8058pjG/nqWC0YUfpIJUVv2ciJpH3Ha+90526InLAUXA
+        RWe1Z2YxAoGBANqACEKvUbxENu+XxQj0SI1co4SRTOvgbrSQGL61rDY6PvY/bOqC
+        JeR0KC3MN6e7fx52tsl/eqP9iyExUpO9b0BCnGg967MivJXWUxhUdOL/r2ceQBqD
+        DiPVZCFsjeNdSNihnNctAig9Po3GEUWE0ikHr3NcD+wXTnhnIEjJ/fltAoGBAMRW
+        dIcOiuDLm/oDLNCpwEO4m63ymbUgeOj2cZhKMTqFmspnKnuCU1U/A8cuQcs1gydL
+        7MzxVP7MZDIEqT5gGj3eyuVMAmKbvLFR2NctDIDjaUs6oz0J9NGByPNjXaYr4uMd
+        EZrxD8gLZ/G+/7eKsCgBA9ksSydDo00Vf/qAsmO1AoGBANWqc+l59eyrrCj5egU6
+        lKQf3gsp51WV/8v0SS5dC41vwdgdx80+/fz8FbpLRHVypWlN34sFbRFmQ6Juz/iH
+        O35UZQyO2KkxI8dGcbWOCUtditHExBzo4W/rIWKJ++pFc5Hb4DqO2dgto7kR4hvg
+        OX9D869UbIGLfQHCntBvLju1AoGAHpcl0sEmTD4NEFgcTGqWZTbHMsQAxOLJU+rJ
+        6iNtJiQY6P5H9TRqDXci/I6te57bz2yZ+ZiEWKq51b06LVjF3evviuhb2sdPEAWj
+        lmsTbqWAC1OYiXMarOXezGUn+zMNR7uIua5jehSk3lqW9x7psWHvGpA3KWf1cpYt
+        +XbB1J0CgYBCSjALTv4dcn+CtS3kqb806z8H9MSZznUwSmcgvwCR5sqwLAUk1xRn
+        hEqXbC1RGee3Xqv9mXPDK2LirpdRYi9Jr9ApZkrSkeaXSd2d4cy2ujUT0c7P8JrD
+        i6QXb+HaFeBuS5ulYDmo4mIbCysuTsgrLzplViUy3xUQv23M/Eh1gw==
+        -----END RSA PRIVATE KEY-----
+        """
+        )
+        crtfile_contents = textwrap.dedent(
+            """\
+        -----BEGIN CERTIFICATE-----
+        MIIEhTCCA22gAwIBAgIIUijHgif6VJUwDQYJKoZIhvcNAQELBQAwgYIxCzAJBgNV
+        BAYTAkJFMRgwFgYDVQQDDA9FeGFtcGxlIFJvb3QgQ0ExETAPBgNVBAcMCEthcGVs
+        bGVuMRAwDgYDVQQIDAdBbnR3ZXJwMRAwDgYDVQQKDAdFeGFtcGxlMSIwIAYJKoZI
+        hvcNAQkBFhNjZXJ0YWRtQGV4YW1wbGUub3JnMB4XDTIwMDYxNjA3Mzk1OVoXDTMw
+        MDYxNDA3Mzk1OVowgYIxCzAJBgNVBAYTAkJFMRgwFgYDVQQDDA9FeGFtcGxlIFJv
+        b3QgQ0ExETAPBgNVBAcMCEthcGVsbGVuMRAwDgYDVQQIDAdBbnR3ZXJwMRAwDgYD
+        VQQKDAdFeGFtcGxlMSIwIAYJKoZIhvcNAQkBFhNjZXJ0YWRtQGV4YW1wbGUub3Jn
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp5PQyx5NlYrfzd7vU/Xb
+        2YR5qbWWtpWWoKmJC1gML5v5DBI7+p/kAHNNmK8uqHXTaI4N/zgarfjrg4zceq2D
+        u7pP0xiCAYolhFqF78ibxNrN4OkTUPm2kM88iJ8Z14Yph8ueSxLIlujCGaEFhr6w
+        RzTj4T9b+0Bb/PZHI2t5YwtIooVMEFCBFkt4bb004tO0D9q0CPPVT2AsGmxnY43A
+        j3Epy++kqmaWj1hIucSprkDrAXFSWacBQPFQ8XctnL2Z1Q6CJ5WUNrW8ohAJ9RJk
+        wjiqbZTwYIPSSrl+FO3XqDY70SxU3xDeqhU4zvyjxJ8w9SPqTUu/C3BZtRBT9dCB
+        EQIDAQABo4H8MIH5MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgEGMB0G
+        A1UdDgQWBBTmNsYLuQTxpANgTuw7LRn1qHJsjzCBtgYDVR0jBIGuMIGrgBTmNsYL
+        uQTxpANgTuw7LRn1qHJsj6GBiKSBhTCBgjELMAkGA1UEBhMCQkUxGDAWBgNVBAMM
+        D0V4YW1wbGUgUm9vdCBDQTERMA8GA1UEBwwIS2FwZWxsZW4xEDAOBgNVBAgMB0Fu
+        dHdlcnAxEDAOBgNVBAoMB0V4YW1wbGUxIjAgBgkqhkiG9w0BCQEWE2NlcnRhZG1A
+        ZXhhbXBsZS5vcmeCCFIox4In+lSVMA0GCSqGSIb3DQEBCwUAA4IBAQBnC1/kK+xr
+        Vjr5Y2YRjyjm4e8I/nTU+RX2p5K+Yth3CqWO3JuDiV/31UMtPl832n2GWSgXG2pP
+        B52oeuCP4Re76jqhOmJWY3CKPji+Rs16wj199i9AAcwhSF0rpi5+Fi84HtP3q6pH
+        cuzZfIPW44aJ5l4k+QvTLoWzr0XujMFcYzI45i3SJqTMs8xdIP5YLN8JXtQSPw9Z
+        8/nBKbPj7WTUC9cj9Cw2bz+wTpdRF4XCsUF3Vpl9fP7SK8yvv0I85LZnWQx1eQlv
+        COAM5HWxUT9bWgv18zXdYkc6VLw6ufQSxxuhLMjJxuK27Ny/F18/xYLRTVnse36d
+        tPJrseUPmvIK
+        -----END CERTIFICATE-----
+        """
+        )
+        slsfile = textwrap.dedent(
+            """\
+        {%- set ca_key_path = '"""
+            + keyfile
+            + """' %}
+        {%- set ca_crt_path = '"""
+            + crtfile
+            + """' %}
+
+        certificate.authority::private-key:
+          x509.private_key_managed:
+            - name: {{ ca_key_path }}
+            - backup: True
+
+        certificate.authority::certificate:
+          x509.certificate_managed:
+            - name: {{ ca_crt_path }}
+            - signing_private_key: {{ ca_key_path }}
+            - CN: Example Root CA
+            - O: Example
+            - C: BE
+            - ST: Antwerp
+            - L: Kapellen
+            - Email: certadm@example.org
+            - basicConstraints: "critical CA:true"
+            - keyUsage: "critical cRLSign, keyCertSign"
+            - subjectKeyIdentifier: hash
+            - authorityKeyIdentifier: keyid,issuer:always
+            - days_valid: 3650
+            - days_remaining: 0
+            - backup: True
+            - require:
+              - x509: certificate.authority::private-key
+        """
+        )
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "cert.sls"), "w"
+        ) as wfh:
+            wfh.write(slsfile)
+
+        # Generate the certificate twice.
+        # On the first run, no key nor cert exist.
+        ret = self.run_function("state.sls", ["cert"])
+        log.debug(
+            "First state run ret dictionary:\n%s", pprint.pformat(list(ret.values()))
+        )
+        for state_run_id, state_run_details in ret.items():
+            if state_run_id.endswith("private_key_managed"):
+                assert state_run_details["result"]
+                assert "new" in state_run_details["changes"]
+            if state_run_id.endswith("certificate_managed"):
+                assert state_run_details["result"]
+                assert "Certificate" in state_run_details["changes"]
+                assert "New" in state_run_details["changes"]["Certificate"]
+                assert "Status" in state_run_details["changes"]
+                assert "New" in state_run_details["changes"]["Status"]
+        # On the second run, they exist and should not trigger any modification
+        ret = self.run_function("state.sls", ["cert"])
+        log.debug(
+            "Second state run ret dictionary:\n%s", pprint.pformat(list(ret.values()))
+        )
+        for state_run_id, state_run_details in ret.items():
+            if state_run_id.endswith("private_key_managed"):
+                assert state_run_details["result"]
+                assert state_run_details["changes"] == {}
+            if state_run_id.endswith("certificate_managed"):
+                assert state_run_details["result"]
+                assert state_run_details["changes"] == {}
+        # Now we repleace they key and cert contents with the contents of the above
+        # call, but under Py2
+        with salt.utils.files.fopen(keyfile, "w") as wfh:
+            wfh.write(keyfile_contents)
+        with salt.utils.files.fopen(keyfile) as rfh:
+            log.debug("Written keyfile, %r, contents:\n%s", keyfile, rfh.read())
+        with salt.utils.files.fopen(crtfile, "w") as wfh:
+            wfh.write(crtfile_contents)
+        with salt.utils.files.fopen(crtfile) as rfh:
+            log.debug("Written crtfile, %r, contents:\n%s", crtfile, rfh.read())
+        # We should not trigger any modification
+        ret = self.run_function("state.sls", ["cert"])
+        log.debug(
+            "Third state run ret dictionary:\n%s", pprint.pformat(list(ret.values()))
+        )
+        for state_run_id, state_run_details in ret.items():
+            if state_run_id.endswith("private_key_managed"):
+                assert state_run_details["result"]
+                assert state_run_details["changes"] == {}
+            if state_run_id.endswith("certificate_managed"):
+                assert state_run_details["result"]
+                assert state_run_details["changes"] == {}
