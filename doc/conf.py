@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=C0103,W0622
 """
 Sphinx documentation for Salt
@@ -12,7 +11,7 @@ import types
 from sphinx.directives.other import TocTree
 
 
-class Mock(object):
+class Mock:
     """
     Mock out specified imports.
 
@@ -397,7 +396,7 @@ gettext_compact = False
 # set 'HTML_THEME=saltstack' to use previous theme
 html_theme = os.environ.get("HTML_THEME", "saltstack2")
 html_theme_path = ["_themes"]
-html_title = u""
+html_title = ""
 html_short_title = "Salt"
 
 html_static_path = ["_static"]
@@ -573,7 +572,7 @@ class ReleasesTree(TocTree):
     option_spec = dict(TocTree.option_spec)
 
     def run(self):
-        rst = super(ReleasesTree, self).run()
+        rst = super().run()
         entries = rst[0][0]["entries"][:]
         entries.sort(key=_normalize_version, reverse=True)
         rst[0][0]["entries"][:] = entries
