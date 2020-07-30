@@ -553,7 +553,7 @@ def master(master=None, connected=True):
             remote_host, remote_port = chunks[2].rsplit(":", 1)
             if int(remote_port) != port:
                 continue
-            remotes.add(remote_host.replace('[','').replace(']',''))
+            remotes.add(remote_host.replace('[', '').replace(']', ''))
         return remotes
 
     # the default publishing port
