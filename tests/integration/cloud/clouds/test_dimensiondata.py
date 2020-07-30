@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the Dimension Data cloud provider
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
@@ -29,7 +27,7 @@ class DimensionDataTest(CloudTest):
         Tests the return of running the --list-images command for the dimensiondata cloud provider
         """
         image_list = self.run_cloud(
-            "--list-images {0}".format(self.provider_config_name),
+            "--list-images {}".format(self.provider_config_name),
             timeout=self.TEST_TIMEOUT,
         )
         self.assertIn("Ubuntu 14.04 2 CPU", [i.strip() for i in image_list])
@@ -39,7 +37,7 @@ class DimensionDataTest(CloudTest):
         Tests the return of running the --list-locations command for the dimensiondata cloud provider
         """
         _list_locations = self.run_cloud(
-            "--list-locations {0}".format(self.provider_config_name),
+            "--list-locations {}".format(self.provider_config_name),
             timeout=self.TEST_TIMEOUT,
         )
         self.assertIn(
@@ -51,7 +49,7 @@ class DimensionDataTest(CloudTest):
         Tests the return of running the --list-sizes command for the dimensiondata cloud provider
         """
         _list_sizes = self.run_cloud(
-            "--list-sizes {0}".format(self.provider_config_name),
+            "--list-sizes {}".format(self.provider_config_name),
             timeout=self.TEST_TIMEOUT,
         )
         self.assertIn("default", [i.strip() for i in _list_sizes])

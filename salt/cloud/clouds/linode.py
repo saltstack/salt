@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Linode Cloud Module using Linode's REST API
 ===========================================
@@ -26,7 +25,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
@@ -42,8 +40,6 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
-from salt.ext import six
-from salt.ext.six.moves import range
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -318,7 +314,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -355,7 +351,7 @@ def create(vm_):
 
         kwargs = {
             "clonefrom": clonefrom_name,
-            "image": "Clone of {0}".format(clonefrom_name),
+            "image": "Clone of {}".format(clonefrom_name),
         }
 
         if size is None:
@@ -419,7 +415,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(name),
+        "salt/cloud/{}/requesting".format(name),
         args=__utils__["cloud.filter_event"](
             "requesting", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -504,7 +500,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "waiting for ssh",
-        "salt/cloud/{0}/waiting_for_ssh".format(name),
+        "salt/cloud/{}/waiting_for_ssh".format(name),
         sock_dir=__opts__["sock_dir"],
         args={"ip_address": vm_["ssh_host"]},
         transport=__opts__["transport"],
@@ -521,7 +517,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -583,9 +579,9 @@ def create_config(kwargs=None, call=None):
                 "'root_disk_id', and 'swap_disk_id'."
             )
 
-    disklist = "{0},{1}".format(root_disk_id, swap_disk_id)
+    disklist = "{},{}".format(root_disk_id, swap_disk_id)
     if data_disk_id is not None:
-        disklist = "{0},{1},{2}".format(root_disk_id, swap_disk_id, data_disk_id)
+        disklist = "{},{},{}".format(root_disk_id, swap_disk_id, data_disk_id)
 
     config_args = {
         "LinodeID": linode_id,
@@ -734,7 +730,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -749,7 +745,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -864,9 +860,9 @@ def get_distribution_id(vm_):
 
     if not distro_id:
         raise SaltCloudNotFound(
-            "The DistributionID for the '{0}' profile could not be found.\n"
-            "The '{1}' instance could not be provisioned. The following distributions "
-            "are available:\n{2}".format(
+            "The DistributionID for the '{}' profile could not be found.\n"
+            "The '{}' instance could not be provisioned. The following distributions "
+            "are available:\n{}".format(
                 vm_image_name,
                 vm_["name"],
                 pprint.pprint(
@@ -897,7 +893,7 @@ def get_ips(linode_id=None):
     ret = {}
 
     for item in ips:
-        node_id = six.text_type(item["LINODEID"])
+        node_id = str(item["LINODEID"])
         if item["ISPUBLIC"] == 1:
             key = "public_ips"
         else:
@@ -911,7 +907,7 @@ def get_ips(linode_id=None):
     # dictionary based on the linode ID as a key.
     if linode_id:
         _all_ips = {"public_ips": [], "private_ips": []}
-        matching_id = ret.get(six.text_type(linode_id))
+        matching_id = ret.get(str(linode_id))
         if matching_id:
             _all_ips["private_ips"] = matching_id["private_ips"]
             _all_ips["public_ips"] = matching_id["public_ips"]
@@ -981,7 +977,7 @@ def get_linode_id_from_name(name):
 
     if not linode_id:
         raise SaltCloudNotFound(
-            "The specified name, {0}, could not be found.".format(name)
+            "The specified name, {}, could not be found.".format(name)
         )
 
 
@@ -1157,7 +1153,7 @@ def get_vm_size(vm_):
         return ram
     else:
         raise SaltCloudNotFound(
-            "The specified size, {0}, could not be found.".format(vm_size)
+            "The specified size, {}, could not be found.".format(vm_size)
         )
 
 
@@ -1237,7 +1233,7 @@ def list_nodes_min(call=None):
     for node in nodes:
         name = node["LABEL"]
         this_node = {
-            "id": six.text_type(node["LINODEID"]),
+            "id": str(node["LINODEID"]),
             "state": _get_status_descr_by_id(int(node["STATUS"])),
         }
 
@@ -1482,7 +1478,7 @@ def _list_linodes(full=False):
     ret = {}
     for node in nodes:
         this_node = {}
-        linode_id = six.text_type(node["LINODEID"])
+        linode_id = str(node["LINODEID"])
 
         this_node["id"] = linode_id
         this_node["image"] = node["DISTRIBUTIONVENDOR"]
@@ -1492,7 +1488,7 @@ def _list_linodes(full=False):
         state = int(node["STATUS"])
         this_node["state"] = _get_status_descr_by_id(state)
 
-        for key, val in six.iteritems(ips):
+        for key, val in ips.items():
             if key == linode_id:
                 this_node["private_ips"] = val["private_ips"]
                 this_node["public_ips"] = val["public_ips"]
@@ -1532,7 +1528,7 @@ def _query(
         args["api_key"] = apikey
 
     if action and "api_action" not in args.keys():
-        args["api_action"] = "{0}.{1}".format(action, command)
+        args["api_action"] = "{}.{}".format(action, command)
 
     if header_dict is None:
         header_dict = {}
@@ -1668,7 +1664,7 @@ def _get_status_descr_by_id(status_id):
     status_id
         linode VM status ID
     """
-    for status_name, status_data in six.iteritems(LINODE_STATUS):
+    for status_name, status_data in LINODE_STATUS.items():
         if status_data["code"] == int(status_id):
             return status_data["descr"]
     return LINODE_STATUS.get(status_id, None)
@@ -1693,7 +1689,7 @@ def _validate_name(name):
     name
         The VM name to validate
     """
-    name = six.text_type(name)
+    name = str(name)
     name_length = len(name)
     regex = re.compile(r"^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$")
 

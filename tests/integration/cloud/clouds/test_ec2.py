@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -13,9 +11,6 @@ import salt.utils.cloud
 import salt.utils.files
 import salt.utils.path
 import salt.utils.yaml
-
-# Import Salt Libs
-from salt.ext.six.moves import range
 
 # Create the cloud instance name to be used throughout the tests
 # Create the cloud instance name to be used throughout the tests
@@ -115,7 +110,7 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + "-changed"
 
         self.run_cloud(
-            "-a rename {0} newname={1} --assume-yes".format(
+            "-a rename {} newname={} --assume-yes".format(
                 self.instance_name, changed_name
             ),
             timeout=self.TEST_TIMEOUT,

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for Vultr
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import time
 
@@ -37,7 +35,7 @@ class VultrTest(CloudTest):
         Tests the return of running the --list-images command for Vultr
         """
         image_list = self.run_cloud(
-            "--list-images {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-images {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
 
         self.assertIn("Debian 10 x64 (buster)", [i.strip(": ") for i in image_list])
@@ -49,7 +47,7 @@ class VultrTest(CloudTest):
         locations = {
             l.strip(":- ")
             for l in self.run_cloud(
-                "--list-locations {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+                "--list-locations {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
             )
             if l.strip(":- ")
         }
@@ -81,7 +79,7 @@ class VultrTest(CloudTest):
         Tests the return of running the --list-sizes command for Vultr
         """
         size_list = self.run_cloud(
-            "--list-sizes {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-sizes {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn(
             "2048 MB RAM,64 GB SSD,2.00 TB BW", [i.strip() for i in size_list]
@@ -99,7 +97,7 @@ class VultrTest(CloudTest):
         finger_print = "3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa"
 
         _key = self.run_cloud(
-            '-f create_key {0} name="MyPubKey" public_key="{1}"'.format(
+            '-f create_key {} name="MyPubKey" public_key="{}"'.format(
                 self.PROVIDER, pub
             ),
             timeout=self.TEST_TIMEOUT,
@@ -111,14 +109,14 @@ class VultrTest(CloudTest):
         try:
             # List all keys
             list_keypairs = self.run_cloud(
-                "-f list_keypairs {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+                "-f list_keypairs {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
             )
 
             self.assertIn(finger_print, [i.strip() for i in list_keypairs])
 
             # List key
             show_keypair = self.run_cloud(
-                "-f show_keypair {0} keyname={1}".format(self.PROVIDER, "MyPubKey"),
+                "-f show_keypair {} keyname={}".format(self.PROVIDER, "MyPubKey"),
                 timeout=self.TEST_TIMEOUT,
             )
 
@@ -126,14 +124,14 @@ class VultrTest(CloudTest):
         except AssertionError:
             # Delete the public key if the above assertions fail
             self.run_cloud(
-                "-f remove_key {0} id={1}".format(self.PROVIDER, finger_print),
+                "-f remove_key {} id={}".format(self.PROVIDER, finger_print),
                 timeout=self.TEST_TIMEOUT,
             )
             raise
 
         # Delete public key
         deletion_ret = self.run_cloud(
-            "-f remove_key {0} id={1}".format(self.PROVIDER, finger_print),
+            "-f remove_key {} id={}".format(self.PROVIDER, finger_print),
             timeout=self.TEST_TIMEOUT,
         )
         self.assertTrue(deletion_ret)

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Openstack Cloud Provider
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -240,7 +238,7 @@ class RackspaceTest(CloudTest):
         ):
             self.skipTest("auth or cloud missing from {} config".format(self.PROVIDER))
 
-        super(RackspaceTest, self).setUp()
+        super().setUp()
 
     def test_instance(self):
         """
@@ -270,7 +268,7 @@ class OpenstackCloudTest(CloudTest):
         ):
             self.skipTest("auth or cloud missing from {} config".format(self.PROVIDER))
 
-        super(OpenstackCloudTest, self).setUp()
+        super().setUp()
 
     def test_instance(self):
         """

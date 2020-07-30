@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Ethan Devenport <ethand@stackpointcloud.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Third-Party Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
@@ -37,7 +35,7 @@ class ProfitBricksTest(CloudTest):
     REQUIRED_PROVIDER_CONFIG_ITEMS = ("username", "password", "datacenter_id")
 
     def setUp(self):
-        super(ProfitBricksTest, self).setUp()
+        super().setUp()
         username = self.provider_config.get("username")
         password = self.provider_config.get("password")
 
@@ -46,7 +44,7 @@ class ProfitBricksTest(CloudTest):
         if username == "foo" or password == "bar":
             self.skipTest(
                 "Conf items are missing that must be provided to run these tests:  username, password"
-                "\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                "\nCheck tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                     self.PROVIDER
                 )
             )
@@ -56,7 +54,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the --list-images command for ProfitBricks
         """
         list_images = self.run_cloud(
-            "--list-images {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-images {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn(
             "Ubuntu-16.04-LTS-server-2017-10-01", [i.strip() for i in list_images]
@@ -67,7 +65,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_images
         command for ProfitBricks
         """
-        cmd = "-f list_images {0}".format(self.PROVIDER)
+        cmd = "-f list_images {}".format(self.PROVIDER)
         list_images = self.run_cloud(cmd, timeout=self.TEST_TIMEOUT)
         self.assertIn("- ubuntu:latest", [i.strip() for i in list_images])
 
@@ -76,7 +74,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the --list_sizes command for ProfitBricks
         """
         list_sizes = self.run_cloud(
-            "--list-sizes {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-sizes {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("Micro Instance:", [i.strip() for i in list_sizes])
 
@@ -85,7 +83,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_datacenters
         command for ProfitBricks
         """
-        cmd = "-f list_datacenters {0}".format(self.PROVIDER)
+        cmd = "-f list_datacenters {}".format(self.PROVIDER)
         list_datacenters = self.run_cloud(cmd, timeout=self.TEST_TIMEOUT)
         self.assertIn(
             self.provider_config["datacenter_id"], [i.strip() for i in list_datacenters]
@@ -96,7 +94,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_nodes command for ProfitBricks
         """
         list_nodes = self.run_cloud(
-            "-f list_nodes {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "-f list_nodes {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("state", [i.strip(": ") for i in list_nodes])
 
@@ -107,7 +105,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_nodes_full
         command for ProfitBricks
         """
-        cmd = "-f list_nodes_full {0}".format(self.PROVIDER)
+        cmd = "-f list_nodes_full {}".format(self.PROVIDER)
         list_nodes = self.run_cloud(cmd, timeout=self.TEST_TIMEOUT)
         self.assertIn("state", [i.strip(": ") for i in list_nodes])
 
@@ -118,7 +116,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the --list-locations
         command for ProfitBricks
         """
-        cmd = "--list-locations {0}".format(self.PROVIDER)
+        cmd = "--list-locations {}".format(self.PROVIDER)
         list_locations = self.run_cloud(cmd)
 
         self.assertIn("de/fkb", [i.strip() for i in list_locations])

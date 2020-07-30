@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for DigitalOcean APIv2
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import hashlib
@@ -13,11 +11,7 @@ import time
 import salt.cloud
 import salt.config
 import salt.crypt
-import salt.ext.six as six
 import salt.utils.stringutils
-
-# Import Salt Libs
-from salt.ext.six.moves import range
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
@@ -46,7 +40,7 @@ class DigitalOceanTest(CloudTest):
         Tests the return of running the --list-images command for digitalocean
         """
         image_list = self.run_cloud(
-            "--list-images {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-images {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("ubuntu-18-04-x64", [i.strip() for i in image_list])
 
@@ -55,7 +49,7 @@ class DigitalOceanTest(CloudTest):
         Tests the return of running the --list-locations command for digitalocean
         """
         _list_locations = self.run_cloud(
-            "--list-locations {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-locations {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("San Francisco 2", [i.strip() for i in _list_locations])
 
@@ -64,7 +58,7 @@ class DigitalOceanTest(CloudTest):
         Tests the return of running the --list-sizes command for digitalocean
         """
         _list_sizes = self.run_cloud(
-            "--list-sizes {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+            "--list-sizes {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("16gb", [i.strip() for i in _list_sizes])
 
@@ -77,13 +71,11 @@ class DigitalOceanTest(CloudTest):
         # generate key and fingerprint
         if salt.crypt.HAS_M2:
             rsa_key = salt.crypt.RSA.gen_key(4096, 65537, lambda: None)
-            pub = six.b(
-                "ssh-rsa {}".format(
-                    base64.b64encode(
-                        six.b("\x00\x00\x00\x07ssh-rsa{}{}".format(*rsa_key.pub()))
-                    )
+            pub = "ssh-rsa {}".format(
+                base64.b64encode(
+                    "\x00\x00\x00\x07ssh-rsa{}{}".format(*rsa_key.pub()).encode()
                 )
-            )
+            ).encode()
         else:
             ssh_key = salt.crypt.RSA.generate(4096)
             pub = ssh_key.publickey().exportKey("OpenSSH")
@@ -95,7 +87,7 @@ class DigitalOceanTest(CloudTest):
 
         try:
             _key = self.run_cloud(
-                '-f create_key {0} name="{1}" public_key="{2}"'.format(
+                '-f create_key {} name="{}" public_key="{}"'.format(
                     self.PROVIDER, do_key_name, pub
                 ),
                 timeout=self.TEST_TIMEOUT,
@@ -106,14 +98,14 @@ class DigitalOceanTest(CloudTest):
 
             # List all keys
             list_keypairs = self.run_cloud(
-                "-f list_keypairs {0}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
+                "-f list_keypairs {}".format(self.PROVIDER), timeout=self.TEST_TIMEOUT
             )
 
             self.assertIn(finger_print, [i.strip() for i in list_keypairs])
 
             # List key
             show_keypair = self.run_cloud(
-                "-f show_keypair {0} keyname={1}".format(self.PROVIDER, do_key_name),
+                "-f show_keypair {} keyname={}".format(self.PROVIDER, do_key_name),
                 timeout=self.TEST_TIMEOUT,
             )
             self.assertIn(finger_print, [i.strip() for i in show_keypair])
@@ -121,14 +113,14 @@ class DigitalOceanTest(CloudTest):
         except AssertionError:
             # Delete the public key if the above assertions fail
             self.run_cloud(
-                "-f remove_key {0} id={1}".format(self.PROVIDER, finger_print),
+                "-f remove_key {} id={}".format(self.PROVIDER, finger_print),
                 timeout=self.TEST_TIMEOUT,
             )
             raise
         finally:
             # Delete public key
             deletion_ret = self.run_cloud(
-                "-f remove_key {0} id={1}".format(self.PROVIDER, finger_print),
+                "-f remove_key {} id={}".format(self.PROVIDER, finger_print),
                 timeout=self.TEST_TIMEOUT,
             )
             self.assertTrue(deletion_ret)

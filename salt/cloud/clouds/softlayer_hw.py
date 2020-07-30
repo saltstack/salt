@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SoftLayer HW Cloud Module
 =========================
@@ -26,7 +25,6 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import decimal
 import logging
@@ -240,7 +238,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(name),
+        "salt/cloud/{}/creating".format(name),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -310,7 +308,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(name),
+        "salt/cloud/{}/requesting".format(name),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", kwargs, list(kwargs)
@@ -405,7 +403,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(name),
+        "salt/cloud/{}/created".format(name),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -454,7 +452,7 @@ def list_nodes(call=None):
     nodes = list_nodes_full()
     if "error" in nodes:
         raise SaltCloudSystemExit(
-            "An error occurred while listing nodes: {0}".format(
+            "An error occurred while listing nodes: {}".format(
                 nodes["error"]["Errors"]["Error"]["Message"]
             )
         )
@@ -512,7 +510,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -533,7 +531,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],

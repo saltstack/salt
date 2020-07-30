@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Openstack Cloud Driver
 ======================
@@ -210,7 +209,6 @@ Anything else from the create_server_ docs can be passed through here.
 .. _vendor: https://docs.openstack.org/os-client-config/latest/user/vendor-support.html
 .. _os-client-config: https://docs.openstack.org/os-client-config/latest/user/configuration.html#config-files
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python Libs
 import copy
@@ -229,7 +227,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-from salt.ext import six
 
 # Import 3rd-Party Libs
 try:
@@ -444,7 +441,7 @@ def list_nodes_full(conn=None, call=None):
         ret[node.name]["public_ips"] = _get_ips(node, "public")
         ret[node.name]["floating_ips"] = _get_ips(node, "floating")
         ret[node.name]["fixed_ips"] = _get_ips(node, "fixed")
-        if isinstance(node.image, six.string_types):
+        if isinstance(node.image, str):
             ret[node.name]["image"] = node.image
         else:
             ret[node.name]["image"] = getattr(
@@ -505,7 +502,7 @@ def show_instance(name, conn=None, call=None):
     ret["public_ips"] = _get_ips(node, "public")
     ret["floating_ips"] = _get_ips(node, "floating")
     ret["fixed_ips"] = _get_ips(node, "fixed")
-    if isinstance(node.image, six.string_types):
+    if isinstance(node.image, str):
         ret["image"] = node.image
     else:
         ret["image"] = getattr(conn.get_image(node.image.id), "name", node.image.id)
@@ -604,41 +601,41 @@ def _clean_create_kwargs(**kwargs):
     Sanatize kwargs to be sent to create_server
     """
     VALID_OPTS = {
-        "name": six.string_types,
-        "image": six.string_types,
-        "flavor": six.string_types,
+        "name": (str,),
+        "image": (str,),
+        "flavor": (str,),
         "auto_ip": bool,
         "ips": list,
-        "ip_pool": six.string_types,
-        "root_volume": six.string_types,
-        "boot_volume": six.string_types,
+        "ip_pool": (str,),
+        "root_volume": (str,),
+        "boot_volume": (str,),
         "terminate_volume": bool,
         "volumes": list,
         "meta": dict,
         "files": dict,
-        "reservation_id": six.string_types,
+        "reservation_id": (str,),
         "security_groups": list,
-        "key_name": six.string_types,
-        "availability_zone": six.string_types,
+        "key_name": (str,),
+        "availability_zone": (str,),
         "block_device_mapping": dict,
         "block_device_mapping_v2": dict,
         "nics": list,
         "scheduler_hints": dict,
         "config_drive": bool,
-        "disk_config": six.string_types,  # AUTO or MANUAL
-        "admin_pass": six.string_types,
+        "disk_config": (str,),  # AUTO or MANUAL
+        "admin_pass": (str,),
         "wait": bool,
         "timeout": int,
         "reuse_ips": bool,
         "network": (dict, list),
         "boot_from_volume": bool,
         "volume_size": int,
-        "nat_destination": six.string_types,
-        "group": six.string_types,
-        "userdata": six.string_types,
+        "nat_destination": (str,),
+        "group": (str,),
+        "userdata": (str,),
     }
     extra = kwargs.pop("extra", {})
-    for key, value in six.iteritems(kwargs.copy()):
+    for key, value in kwargs.copy().items():
         if key in VALID_OPTS:
             if isinstance(value, VALID_OPTS[key]):
                 continue
@@ -684,7 +681,7 @@ def request_instance(vm_, conn=None, call=None):
     except shade.exc.OpenStackCloudException as exc:
         log.error("Error creating server %s: %s", vm_["name"], exc)
         destroy(vm_["name"], conn=conn, call="action")
-        raise SaltCloudSystemExit(six.text_type(exc))
+        raise SaltCloudSystemExit(str(exc))
 
     return show_instance(vm_["name"], conn=conn, call="action")
 
@@ -699,7 +696,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            "The defined ssh_key_file '{0}' does not exist".format(key_filename)
+            "The defined ssh_key_file '{}' does not exist".format(key_filename)
         )
 
     vm_["key_filename"] = key_filename
@@ -707,7 +704,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -734,7 +731,7 @@ def create(vm_):
     def __query_node(vm_):
         data = show_instance(vm_["name"], conn=conn, call="action")
         if "wait_for_metadata" in vm_:
-            for key, value in six.iteritems(vm_.get("wait_for_metadata", {})):
+            for key, value in vm_.get("wait_for_metadata", {}).items():
                 log.debug("Waiting for metadata: %s=%s", key, value)
                 if data["metadata"].get(key, None) != value:
                     log.debug(
@@ -752,7 +749,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(six.text_type(exc))
+            raise SaltCloudSystemExit(str(exc))
     log.debug("Using IP address %s", ip_address)
 
     salt_interface = __utils__["cloud.get_salt_interface"](vm_, __opts__)
@@ -785,7 +782,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"]("created", event_data, list(event_data)),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -808,7 +805,7 @@ def destroy(name, conn=None, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -825,7 +822,7 @@ def destroy(name, conn=None, call=None):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{0}/destroyed".format(name),
+            "salt/cloud/{}/destroyed".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -881,4 +878,4 @@ def call(conn=None, call=None, kwargs=None):
         return getattr(conn, func)(**kwargs)
     except shade.exc.OpenStackCloudException as exc:
         log.error("Error running %s: %s", func, exc)
-        raise SaltCloudSystemExit(six.text_type(exc))
+        raise SaltCloudSystemExit(str(exc))

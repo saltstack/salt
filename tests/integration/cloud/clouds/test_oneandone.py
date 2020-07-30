@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Amel Ajdinovic <amel@stackpointcloud.com>`
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import (
@@ -39,7 +37,7 @@ class OneAndOneTest(CloudTest):
         Tests the return of running the --list-images command for 1and1
         """
         image_list = self.run_cloud(
-            "--list-images {0}".format(self.PROVIDER_NAME), timeout=self.TEST_TIMEOUT
+            "--list-images {}".format(self.PROVIDER_NAME), timeout=self.TEST_TIMEOUT
         )
         self.assertIn("coreOSimage", [i.strip() for i in image_list])
 

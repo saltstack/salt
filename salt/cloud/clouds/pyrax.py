@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pyrax Cloud Module
 ==================
@@ -10,7 +9,6 @@ module instead.
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.config as config
 

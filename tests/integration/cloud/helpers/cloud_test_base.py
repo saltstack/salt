@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     Tests for the Openstack Cloud Provider
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import inspect
@@ -23,7 +21,6 @@ from salt.config import (
     is_profile_configured,
     is_provider_configured,
 )
-from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, generate_random_name
@@ -82,7 +79,7 @@ def requires_provider_config(*names, **any_groups):
             old_setup = getattr(caller, "setUp", None)
 
             def setUp(self, *args, **kwargs):
-                src = "tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                src = "tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                     self.PROVIDER
                 )
 
@@ -127,7 +124,7 @@ def requires_provider_config(*names, **any_groups):
         @functools.wraps(caller)
         def wrapper(cls):
             assert isinstance(cls, CloudTest)
-            src = "tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+            src = "tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                 cls.PROVIDER
             )
 
@@ -232,11 +229,11 @@ class CloudTest(ShellCase):
         """
         Standardize the data returned from a salt-cloud --query
         """
-        return set(
+        return {
             x.strip(": ")
             for x in self.run_cloud("--query", timeout=self.TEST_TIMEOUT)
             if x.lstrip().lower().startswith("cloud-test-")
-        )
+        }
 
     def _instance_exists(self, instance_name=None, query=None):
         """
@@ -265,7 +262,7 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
 
         stdout, stderr = self.run_cloud(
-            "-p {0} {1} {2}".format(profile_config_name, instance_name, " ".join(args)),
+            "-p {} {} {}".format(profile_config_name, instance_name, " ".join(args)),
             timeout=self.TEST_TIMEOUT,
             catch_stderr=True,
         )
@@ -337,7 +334,7 @@ class CloudTest(ShellCase):
         if not deletion_ret:
             log.debug('Deleting instance "{}"'.format(instance_name))
             deletion_ret = self.run_cloud(
-                "-d {0} --assume-yes --out=yaml".format(instance_name),
+                "-d {} --assume-yes --out=yaml".format(instance_name),
                 timeout=self.TEST_TIMEOUT,
             )
         if deletion_ret:
@@ -466,12 +463,12 @@ class CloudTest(ShellCase):
         """
         Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail
         """
-        super(CloudTest, self).setUp()
+        super().setUp()
 
         # check if appropriate cloud provider and profile files are present
         if self.provider_config_name not in self.providers:
             self.skipTest(
-                'Provider "{0}" was not found in "{1}". Check conf files '
+                'Provider "{}" was not found in "{}". Check conf files '
                 "in tests/integration/files/conf/cloud.providers.d/ to run these tests.".format(
                     self.PROVIDER, self.providers
                 )
@@ -602,7 +599,7 @@ class CloudTest(ShellCase):
 
     @classmethod
     def setUpClass(cls):
-        super(CloudTest, cls).setUpClass()
+        super().setUpClass()
 
         if not cls.PROVIDER:
             raise ValueError(

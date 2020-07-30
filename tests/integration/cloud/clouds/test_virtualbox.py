@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 # This code assumes vboxapi.py from VirtualBox distribution
 # being in PYTHONPATH, or installed system-wide
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 
 # Import Salt Libs
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.utils.virtualbox import (
     HAS_LIBS,
     XPCOM_ATTRIBUTES,
@@ -82,11 +78,8 @@ class VirtualboxProviderTest(CloudTest):
         expected_attributes = MINIMAL_MACHINE_ATTRIBUTES
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
-            if six.PY3:
-                self.assertCountEqual(expected_attributes, machine.keys())
-            else:
-                self.assertItemsEqual(expected_attributes, machine.keys())
+        for name, machine in machines.items():
+            self.assertCountEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 
@@ -99,7 +92,7 @@ class VirtualboxProviderTest(CloudTest):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
+        for name, machine in machines.items():
             self.assertGreaterEqual(
                 len(machine.keys()), expected_minimal_attribute_count
             )
@@ -116,11 +109,8 @@ class VirtualboxProviderTest(CloudTest):
 
         names = machines.keys()
         self.assertGreaterEqual(len(names), 1, "No machines found")
-        for name, machine in six.iteritems(machines):
-            if six.PY3:
-                self.assertCountEqual(expected_attributes, machine.keys())
-            else:
-                self.assertItemsEqual(expected_attributes, machine.keys())
+        for name, machine in machines.items():
+            self.assertCountEqual(expected_attributes, machine.keys())
 
         self.assertIn(BASE_BOX_NAME, names)
 
@@ -140,7 +130,7 @@ class VirtualboxProviderTest(CloudTest):
             vb_destroy_machine(self.instance_name)
             self.fail("Cleanup should happen in the test, not the TearDown")
 
-        super(VirtualboxProviderTest, self).tearDown()
+        super().tearDown()
 
 
 @requires_provider_config("personal_access_token", "ssh_key_file", "ssh_key_names")
@@ -167,7 +157,7 @@ class VirtualboxProviderHeavyTests(CloudTest):
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
             except Exception:  # pylint: disable=broad-except
-                self.fail("{0} is not a valid IP address".format(ip_str))
+                self.fail("{} is not a valid IP address".format(ip_str))
 
     def assertDestroyMachine(self):
         try:
@@ -182,7 +172,7 @@ class VirtualboxProviderHeavyTests(CloudTest):
 
     def test_instance(self):
         ret_val = self.run_cloud(
-            "-p {0} {1} --log-level=debug".format(
+            "-p {} {} --log-level=debug".format(
                 self.DEPLOY_PROFILE, self.instance_name
             ),
             timeout=self.TEST_TIMEOUT,
@@ -313,16 +303,16 @@ class VirtualboxTests(CloudTest):
 class XpcomConversionTests(TestCase):
     @classmethod
     def _mock_xpcom_object(cls, interface_name=None, attributes=None):
-        class XPCOM(object):
+        class XPCOM:
             def __str__(self):
-                return "<XPCOM component '<unknown>' (implementing {0})>".format(
+                return "<XPCOM component '<unknown>' (implementing {})>".format(
                     interface_name
                 )
 
         o = XPCOM()
 
         if attributes and isinstance(attributes, dict):
-            for key, value in six.iteritems(attributes):
+            for key, value in attributes.items():
                 setattr(o, key, value)
         return o
 
@@ -360,9 +350,9 @@ class XpcomConversionTests(TestCase):
         expected_extras = {
             "extra": "extra",
         }
-        expected_machine = dict(
-            [(attribute, attribute) for attribute in XPCOM_ATTRIBUTES[interface]]
-        )
+        expected_machine = {
+            attribute: attribute for attribute in XPCOM_ATTRIBUTES[interface]
+        }
         expected_machine.update(expected_extras)
 
         imachine = XpcomConversionTests._mock_xpcom_object(
