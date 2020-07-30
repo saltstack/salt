@@ -13,6 +13,42 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
+STUB_LVDISPLAY_LV01 = {
+    "/dev/testvg01/testlv01": {
+        "Logical Volume Name": "/dev/testvg01/testlv01",
+        "Volume Group Name": "testvg01",
+        "Logical Volume Access": "3",
+        "Logical Volume Status": "1",
+        "Internal Logical Volume Number": "-1",
+        "Open Logical Volumes": "0",
+        "Logical Volume Size": "4194304",
+        "Current Logical Extents Associated": "512",
+        "Allocated Logical Extents": "-1",
+        "Allocation Policy": "0",
+        "Read Ahead Sectors": "-1",
+        "Major Device Number": "253",
+        "Minor Device Number": "9",
+    }
+}
+
+STUB_LVDISPLAY_LV02 = {
+    "/dev/testvg01/testlv02": {
+        "Logical Volume Name": "/dev/testvg01/testlv02",
+        "Volume Group Name": "testvg01",
+        "Logical Volume Access": "3",
+        "Logical Volume Status": "1",
+        "Internal Logical Volume Number": "-1",
+        "Open Logical Volumes": "0",
+        "Logical Volume Size": "4194304",
+        "Current Logical Extents Associated": "512",
+        "Allocated Logical Extents": "-1",
+        "Allocation Policy": "0",
+        "Read Ahead Sectors": "-1",
+        "Major Device Number": "253",
+        "Minor Device Number": "9",
+    }
+}
+
 
 class LvmTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -70,7 +106,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test to create an LVM volume group
         """
-        name = "/dev/sda5"
+        name = "testvg00"
 
         comt = "Failed to create Volume Group {0}".format(name)
 
@@ -92,7 +128,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test to remove an LVM volume group
         """
-        name = "/dev/sda5"
+        name = "testvg00"
 
         comt = "Volume Group {0} already absent".format(name)
 
@@ -107,45 +143,91 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(lvm.__opts__, {"test": True}):
                 self.assertDictEqual(lvm.vg_absent(name), ret)
 
-    # 'lv_present' function tests: 1
+    # 'lv_present' function tests: 5
 
     def test_lv_present(self):
         """
         Test to create a new logical volume
         """
-        name = "/dev/sda5"
-
+        name = "testlv01"
+        vgname = "testvg01"
         comt = "Logical Volume {0} already present".format(name)
-
         ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
-        mock = MagicMock(side_effect=[True, False])
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
         with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-            self.assertDictEqual(lvm.lv_present(name), ret)
+            self.assertDictEqual(lvm.lv_present(name, vgname=vgname), ret)
 
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV02)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
             comt = "Logical Volume {0} is set to be created".format(name)
             ret.update({"comment": comt, "result": None})
             with patch.dict(lvm.__opts__, {"test": True}):
-                self.assertDictEqual(lvm.lv_present(name), ret)
+                self.assertDictEqual(lvm.lv_present(name, vgname=vgname), ret)
 
     def test_lv_present_with_force(self):
         """
         Test to create a new logical volume with force=True
         """
-        name = "/dev/sda5"
-
+        name = "testlv01"
+        vgname = "testvg01"
         comt = "Logical Volume {0} already present".format(name)
-
         ret = {"name": name, "changes": {}, "result": True, "comment": comt}
 
-        mock = MagicMock(side_effect=[True, False])
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
         with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
-            self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+            self.assertDictEqual(lvm.lv_present(name, vgname=vgname, force=True), ret)
 
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV02)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
             comt = "Logical Volume {0} is set to be created".format(name)
             ret.update({"comment": comt, "result": None})
             with patch.dict(lvm.__opts__, {"test": True}):
-                self.assertDictEqual(lvm.lv_present(name, force=True), ret)
+                self.assertDictEqual(
+                    lvm.lv_present(name, vgname=vgname, force=True), ret
+                )
+
+    def test_lv_present_with_same_size(self):
+        """
+        Test to specify the same volume size as parameter
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        comt = "Logical Volume {0} already present".format(name)
+        ret = {"name": name, "changes": {}, "result": True, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            self.assertDictEqual(lvm.lv_present(name, vgname=vgname, size="2G"), ret)
+
+    def test_lv_present_with_increase(self):
+        """
+        Test to increase a logical volume
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        comt = "Logical Volume {0} is set to be resized".format(name)
+        ret = {"name": name, "changes": {}, "result": None, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            with patch.dict(lvm.__opts__, {"test": True}):
+                self.assertDictEqual(
+                    lvm.lv_present(name, vgname=vgname, size="10G"), ret
+                )
+
+    def test_lv_present_with_reduce(self):
+        """
+        Test to reduce a logical volume
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        comt = "Reducing a LV is not supported by now"
+        ret = {"name": name, "changes": {}, "result": False, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            self.assertDictEqual(lvm.lv_present(name, vgname=vgname, size="1G"), ret)
 
     # 'lv_absent' function tests: 1
 
@@ -154,7 +236,7 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
         Test to remove a given existing logical volume
         from a named existing volume group
         """
-        name = "/dev/sda5"
+        name = "testlv00"
 
         comt = "Logical Volume {0} already absent".format(name)
 

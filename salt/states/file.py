@@ -754,9 +754,19 @@ def _check_directory(
                         fchange["user"] = user
                     if group is not None and group != stats.get("group"):
                         fchange["group"] = group
-                    if file_mode is not None and salt.utils.files.normalize_mode(
-                        file_mode
-                    ) != salt.utils.files.normalize_mode(stats.get("mode")):
+                    smode = salt.utils.files.normalize_mode(stats.get("mode"))
+                    file_mode = salt.utils.files.normalize_mode(file_mode)
+                    if (
+                        file_mode is not None
+                        and file_mode != smode
+                        and (
+                            # Ignore mode for symlinks on linux based systems where we can not
+                            # change symlink file permissions
+                            follow_symlinks
+                            or stats.get("type") != "link"
+                            or not salt.utils.platform.is_linux()
+                        )
+                    ):
                         fchange["mode"] = file_mode
                     if fchange:
                         changes[path] = fchange
@@ -988,7 +998,17 @@ def _check_dir_meta(name, user, group, mode, follow_symlinks=False):
     # Normalize the dir mode
     smode = salt.utils.files.normalize_mode(stats["mode"])
     mode = salt.utils.files.normalize_mode(mode)
-    if mode is not None and mode != smode:
+    if (
+        mode is not None
+        and mode != smode
+        and (
+            # Ignore mode for symlinks on linux based systems where we can not
+            # change symlink file permissions
+            follow_symlinks
+            or stats.get("type") != "link"
+            or not salt.utils.platform.is_linux()
+        )
+    ):
         changes["mode"] = mode
     return changes
 
@@ -3511,6 +3531,11 @@ def directory(
 
         .. versionadded:: 2014.1.4
 
+        .. versionchanged:: 3001.1
+            If set to False symlinks permissions are ignored on Linux systems
+            because it does not support permissions modification. Symlinks
+            permissions are always 0o777 on Linux.
+
     force
         If the name of the directory exists and is not a directory and
         force is set to False, the state will fail. If force is set to
@@ -5574,6 +5599,8 @@ def blockreplace(
     backup=".bak",
     show_changes=True,
     append_newline=None,
+    insert_before_match=None,
+    insert_after_match=None,
 ):
     """
     Maintain an edit in a file in a zone delimited by two line markers
@@ -5699,6 +5726,18 @@ def blockreplace(
     prepend_if_not_found : False
         If markers are not found and this option is set to ``True``, the
         content block will be prepended to the file.
+
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Sodium
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Sodium
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -5830,6 +5869,8 @@ def blockreplace(
             content=content,
             append_if_not_found=append_if_not_found,
             prepend_if_not_found=prepend_if_not_found,
+            insert_before_match=insert_before_match,
+            insert_after_match=insert_after_match,
             backup=backup,
             dry_run=__opts__["test"],
             show_changes=show_changes,

@@ -73,7 +73,7 @@ def get_stored_cert_serials(store):
     return matches
 
 
-def add_store(source, store, saltenv="base"):
+def add_store(source, store, retcode=False, saltenv="base"):
     """
     Add the given cert into the given Certificate Store
 
@@ -83,6 +83,9 @@ def add_store(source, store, saltenv="base"):
 
     store
         The certificate store to add the certificate to
+
+    retcode
+        If true, return the retcode instead of stdout. Default is ``False``
 
     saltenv
         The salt environment to use this is ignored if the path
@@ -96,10 +99,13 @@ def add_store(source, store, saltenv="base"):
     """
     cert_file = __salt__["cp.cache_file"](source, saltenv)
     cmd = "certutil.exe -addstore {0} {1}".format(store, cert_file)
-    return __salt__["cmd.run"](cmd)
+    if retcode:
+        return __salt__["cmd.retcode"](cmd)
+    else:
+        return __salt__["cmd.run"](cmd)
 
 
-def del_store(source, store, saltenv="base"):
+def del_store(source, store, retcode=False, saltenv="base"):
     """
     Delete the given cert into the given Certificate Store
 
@@ -109,6 +115,9 @@ def del_store(source, store, saltenv="base"):
 
     store
         The certificate store to delete the certificate from
+
+    retcode
+        If true, return the retcode instead of stdout. Default is ``False``
 
     saltenv
         The salt environment to use this is ignored if the path
@@ -123,4 +132,7 @@ def del_store(source, store, saltenv="base"):
     cert_file = __salt__["cp.cache_file"](source, saltenv)
     serial = get_cert_serial(cert_file)
     cmd = "certutil.exe -delstore {0} {1}".format(store, serial)
-    return __salt__["cmd.run"](cmd)
+    if retcode:
+        return __salt__["cmd.retcode"](cmd)
+    else:
+        return __salt__["cmd.run"](cmd)
