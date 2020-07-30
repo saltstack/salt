@@ -289,6 +289,18 @@ def _install_requirements(session, transport, *extra_requirements):
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
+    session.run(
+        "pip",
+        "uninstall",
+        "-y",
+        "pytest-salt-factories",
+        # silent=True,
+    )
+    session.install(
+        "/home/vampas/projects/SaltStack/pytest/salt-factories/branches/master",
+        silent=False,
+    )
+
 
 def _run_with_coverage(session, *test_cmd):
     if SKIP_REQUIREMENTS_INSTALL is False:

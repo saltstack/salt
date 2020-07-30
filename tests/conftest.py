@@ -574,19 +574,21 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
-def salt_factories_config():
+def salt_factories_config(salt_factories_config):
     """
     Return a dictionary with the keyworkd arguments for SaltFactoriesManager
     """
-    return {
-        "executable": sys.executable,
-        "code_dir": str(CODE_DIR),
-        "inject_coverage": MAYBE_RUN_COVERAGE,
-        "inject_sitecustomize": MAYBE_RUN_COVERAGE,
-        "start_timeout": 120
-        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
-        else 60,
-    }
+    salt_factories_config.update(
+        {
+            "code_dir": str(CODE_DIR),
+            "inject_coverage": MAYBE_RUN_COVERAGE,
+            "inject_sitecustomize": MAYBE_RUN_COVERAGE,
+            "start_timeout": 120
+            if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
+            else 60,
+        }
+    )
+    return salt_factories_config
 
 
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------

@@ -47,57 +47,57 @@ def host_docker_network_ip_address(docker_client):
         sminion.states.docker_network.absent(network_name)
 
 
-@pytest.fixture(scope="package")
-def log_server_host(host_docker_network_ip_address):
-    return host_docker_network_ip_address
+# @pytest.fixture(scope="package")
+# def log_server_host(host_docker_network_ip_address):
+#    return host_docker_network_ip_address
 
 
-@pytest.fixture(scope="package")
-def log_server_port():
-    return get_unused_localhost_port()
+# @pytest.fixture(scope="package")
+# def log_server_port():
+#    return get_unused_localhost_port()
 
 
-@pytest.fixture(scope="package")
-def log_server(log_server_host, log_server_port):
-    log.info("Starting log server")
-    with log_server_listener(log_server_host, log_server_port):
-        log.info("Log Server Started")
-        # Run tests
-        yield
+# @pytest.fixture(scope="package")
+# def log_server(log_server_host, log_server_port):
+#    log.info("Starting log server")
+#    with log_server_listener("0.0.0.0", log_server_port):
+#        log.info("Log Server Started")
+#        # Run tests
+#        yield
 
 
-@pytest.fixture(scope="package")
-def salt_factories_config(log_server_host, log_server_port, log_server_level):
-    """
-    Return a dictionary with the keyworkd arguments for SaltFactoriesManager
-    """
-    return {
-        "code_dir": RUNTIME_VARS.CODE_DIR,
-        "inject_coverage": True,
-        "inject_sitecustomize": True,
-        "log_server_host": log_server_host,
-        "log_server_port": log_server_port,
-        "log_server_level": log_server_level,
-        "start_timeout": 120,
-    }
+# @pytest.fixture(scope="package")
+# def salt_factories_config(log_server_host, log_server_port, log_server_level):
+#    """
+#    Return a dictionary with the keyworkd arguments for SaltFactoriesManager
+#    """
+#    return {
+#        "code_dir": RUNTIME_VARS.CODE_DIR,
+#        "inject_coverage": True,
+#        "inject_sitecustomize": True,
+#        "log_server_host": log_server_host,
+#        "log_server_port": log_server_port,
+#        "log_server_level": log_server_level,
+#        "start_timeout": 120,
+#    }
 
 
-@pytest.fixture(scope="package")
-def salt_factories(
-    request, pytestconfig, tempdir, log_server, salt_factories_config,
-):
-    if not isinstance(salt_factories_config, dict):
-        raise RuntimeError(
-            "The 'salt_factories_config' fixture MUST return a dictionary"
-        )
-    _manager = SaltFactoriesManager(
-        pytestconfig,
-        tempdir,
-        stats_processes=request.session.stats_processes,
-        **salt_factories_config
-    )
-    yield _manager
-    _manager.event_listener.stop()
+# @pytest.fixture(scope="package")
+# def salt_factories(
+#    request, pytestconfig, tempdir, log_server, salt_factories_config,
+# ):
+#    if not isinstance(salt_factories_config, dict):
+#        raise RuntimeError(
+#            "The 'salt_factories_config' fixture MUST return a dictionary"
+#        )
+#    _manager = SaltFactoriesManager(
+#        pytestconfig,
+#        tempdir,
+#        stats_processes=request.session.stats_processes,
+#        **salt_factories_config
+#    )
+#    yield _manager
+#    _manager.event_listener.stop()
 
 
 @pytest.fixture(scope="package")
