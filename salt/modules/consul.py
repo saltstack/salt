@@ -5,7 +5,6 @@ https://www.consul.io
 
 """
 
-
 import base64
 import http.client
 import logging
