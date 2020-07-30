@@ -21,7 +21,7 @@ from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, Mock, patch
+from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -157,15 +157,33 @@ UNINSTALL = {"tmux": {"new": six.text_type(), "old": "1.8-5"}}
 INSTALL = {"tmux": {"new": "1.8-5", "old": six.text_type()}}
 
 
+def _get_uri(repo):
+    """
+    Get the URI portion of the a string
+    """
+    splits = repo.split()
+    for val in splits:
+        if any(val.startswith(x) for x in ("http://", "https://", "ftp://")):
+            return val
+
+
 class MockSourceEntry(object):
-    def __init__(self, uri, source_type, line, invalid):
+    def __init__(self, uri, source_type, line, invalid, file=None):
         self.uri = uri
         self.type = source_type
         self.line = line
         self.invalid = invalid
+        self.file = file
+        self.disabled = False
+        self.dist = ""
 
     def mysplit(self, line):
         return line.split()
+
+
+class MockSourceList(object):
+    def __init__(self):
+        self.list = []
 
 
 class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
@@ -670,6 +688,71 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             result = aptpkg.normalize_name("foo:i386")
             assert result == "foo:i386", result
 
+    def test_list_repos(self):
+        """
+        Checks results from list_repos
+        """
+        # Valid source
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian/"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
+        mock_source_list = MockSourceList()
+        mock_source_list.list = [mock_source]
+
+        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
+            with patch("salt.modules.aptpkg.sourceslist", MagicMock(), create=True):
+                with patch(
+                    "salt.modules.aptpkg.sourceslist.SourcesList",
+                    MagicMock(return_value=mock_source_list),
+                    create=True,
+                ):
+                    repos = aptpkg.list_repos()
+                    self.assertIn(source_uri, repos)
+
+                    assert isinstance(repos[source_uri], list)
+                    assert len(repos[source_uri]) == 1
+
+                    # Make sure last character in of the URI in line is still a /
+                    self.assertIn("line", repos[source_uri][0])
+                    _uri = _get_uri(repos[source_uri][0]["line"])
+                    self.assertEqual(_uri[-1], "/")
+
+                    # Make sure last character in URI is still a /
+                    self.assertIn("uri", repos[source_uri][0])
+                    self.assertEqual(repos[source_uri][0]["uri"][-1], "/")
+
+    def test_expand_repo_def(self):
+        """
+        Checks results from expand_repo_def
+        """
+        source_type = "deb"
+        source_uri = "http://cdn-aws.deb.debian.org/debian/"
+        source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+        source_file = "/etc/apt/sources.list"
+
+        mock_source = MockSourceEntry(
+            source_uri, source_type, source_line, False, file=source_file
+        )
+
+        # Valid source
+        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
+            with patch("salt.modules.aptpkg.sourceslist", MagicMock(), create=True):
+                with patch(
+                    "salt.modules.aptpkg.sourceslist.SourceEntry",
+                    MagicMock(return_value=mock_source),
+                    create=True,
+                ):
+                    repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+                    sanitized = aptpkg.expand_repo_def(repo=repo, file=source_file)
+
+                    assert isinstance(sanitized, dict)
+                    self.assertIn("uri", sanitized)
+
+                    # Make sure last character in of the URI is still a /
+                    self.assertEqual(sanitized["uri"][-1], "/")
+
 
 @skipIf(pytest is None, "PyTest is missing")
 class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
@@ -747,3 +830,49 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=True,
                 username="Darth Vader",
             )
+
+    def test_call_apt_dpkg_lock(self):
+        """
+        Call apt and ensure the dpkg locking is handled
+        :return:
+        """
+        cmd_side_effect = [
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "Could not get lock"},
+            {"stderr": "", "stdout": ""},
+        ]
+
+        cmd_mock = MagicMock(side_effect=cmd_side_effect)
+        cmd_call = (
+            call(
+                ["dpkg", "-l", "python"],
+                env={},
+                ignore_retcode=False,
+                output_loglevel="quiet",
+                python_shell=True,
+                username="Darth Vader",
+            ),
+        )
+        expected_calls = [cmd_call * 5]
+
+        with patch.dict(
+            aptpkg.__salt__,
+            {"cmd.run_all": cmd_mock, "config.get": MagicMock(return_value=False)},
+        ):
+            with patch("time.sleep", MagicMock()) as sleep_mock:
+                aptpkg._call_apt(
+                    ["dpkg", "-l", "python"],
+                    python_shell=True,
+                    output_loglevel="quiet",
+                    ignore_retcode=False,
+                    username="Darth Vader",
+                )  # pylint: disable=W0106
+
+                # We should sleep 4 times
+                self.assertEqual(sleep_mock.call_count, 4)
+
+                # We should attempt to call the cmd 5 times
+                self.assertEqual(cmd_mock.call_count, 5)
+                cmd_mock.has_calls(expected_calls)
