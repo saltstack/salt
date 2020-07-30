@@ -39,7 +39,7 @@ class LinodeTest(CloudTest):
 
         # create the instance
         args = ["-p", profile, self.instance_name]
-        ret_str = self.run_cloud(" ".join(args))
+        ret_str = self.run_cloud(" ".join(args), timeout=TIMEOUT)
 
         self.assertInstanceExists(ret_str)
         self.assertDestroyInstance()
