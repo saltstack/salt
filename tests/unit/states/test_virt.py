@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shutil
 import tempfile
@@ -14,7 +12,6 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -37,7 +34,7 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
             """
             Fake function return error message
             """
-            return six.text_type(self)
+            return str(self)
 
 
 class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
