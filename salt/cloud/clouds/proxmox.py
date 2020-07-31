@@ -1229,7 +1229,7 @@ def create_node(vm_, newid):
                 vmhost = vm_["clone_from"].split(":")[0]
                 vm_["clone_from"] = vm_["clone_from"].split(":")[1]
 
-        if ":" in vm_["clone_from"]:
+        if ":" in str(vm_["clone_from"]):
             vmhost = vm_["clone_from"].split(":")[0]
             vm_["clone_from"] = vm_["clone_from"].split(":")[1]
 
