@@ -3,10 +3,10 @@ import os
 
 # Import module
 import salt.modules.baredoc as baredoc
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
