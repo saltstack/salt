@@ -9,8 +9,10 @@ import pprint
 import shutil
 from datetime import datetime
 
+import msgpack
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
@@ -52,6 +54,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
                     "plist.serialize": plistserializer.serialize,
+                    "msgpack.serialize": msgpackserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -79,25 +82,62 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             dataset = {"foo": True, "bar": 42, "baz": [1, 2, 3], "qux": 2.0}
 
+            # If no serializer passed, result should be serialized as YAML
             filestate.serialize("/tmp", dataset)
             self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
+            # If serializer and formatter passed, state should not proceed.
+            ret = filestate.serialize(
+                "/tmp", dataset, serializer="yaml", formatter="json"
+            )
+            assert ret["result"] is False
+            assert (
+                ret["comment"] == "Only one of serializer and formatter are allowed"
+            ), ret
+
+            # YAML
+            filestate.serialize("/tmp", dataset, serializer="yaml")
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="yaml")
             self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
+            # JSON
+            filestate.serialize("/tmp", dataset, serializer="json")
+            self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
 
+            # plist
+            filestate.serialize("/tmp", dataset, serializer="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="plist")
             self.assertEqual(plistlib.loads(returner.returned), dataset)
 
+            # Python
+            filestate.serialize("/tmp", dataset, serializer="python")
+            self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
+
+            # msgpack
+            filestate.serialize("/tmp", dataset, serializer="msgpack")
+            self.assertEqual(returner.returned, msgpack.packb(dataset))
+            filestate.serialize("/tmp", dataset, formatter="msgpack")
+            self.assertEqual(returner.returned, msgpack.packb(dataset))
 
             mock_serializer = Mock(return_value="")
             with patch.dict(
                 filestate.__serializers__, {"json.serialize": mock_serializer}
             ):
+                # Test with "serializer" arg
+                filestate.serialize(
+                    "/tmp", dataset, formatter="json", serializer_opts=[{"indent": 8}]
+                )
+                mock_serializer.assert_called_with(
+                    dataset, indent=8, separators=(",", ": "), sort_keys=True
+                )
+                # Test with "formatter" arg
+                mock_serializer.reset_mock()
                 filestate.serialize(
                     "/tmp", dataset, formatter="json", serializer_opts=[{"indent": 8}]
                 )
