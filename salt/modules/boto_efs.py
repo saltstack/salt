@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon EFS
 
@@ -50,15 +49,10 @@ Connection module for Amazon EFS
 
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 # Import salt libs
 import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import boto3
@@ -85,7 +79,7 @@ def _get_conn(key=None, keyid=None, profile=None, region=None, **kwargs):
     """
     client = None
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             if profile in __pillar__:
                 profile = __pillar__[profile]
             elif profile in __opts__:
@@ -267,7 +261,7 @@ def create_tags(
     client = _get_conn(key=key, keyid=keyid, profile=profile, region=region)
 
     new_tags = []
-    for k, v in six.iteritems(tags):
+    for k, v in tags.items():
         new_tags.append({"Key": k, "Value": v})
 
     client.create_tags(FileSystemId=filesystemid, Tags=new_tags)
