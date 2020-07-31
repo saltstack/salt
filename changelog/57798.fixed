@@ -1,1 +1,0 @@
-Fixes UnpackValueError when using GPG cache by using atomic open.
