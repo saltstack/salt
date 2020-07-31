@@ -167,9 +167,10 @@ class TestConsulModule(LoaderModuleMockMixin, TestCase):
         _expected = {
             "res": False,
             "data": "Unable to add key web/key1 with value Hello world.",
-            "error": "[Errno 111] Connection refused",
+            "error": "Connection refused",
         }
-        self.assertEqual(ret, _expected)
+        self.assertEqual(ret["data"], _expected["data"])
+        self.assertIn(_expected["error"], ret["error"])
 
         #
         # Working as expected
@@ -225,9 +226,10 @@ class TestConsulModule(LoaderModuleMockMixin, TestCase):
         _expected = {
             "res": False,
             "message": "Unable to delete key web/key1.",
-            "error": "[Errno 111] Connection refused",
+            "error": "Connection refused",
         }
-        self.assertEqual(ret, _expected)
+        self.assertEqual(ret["message"], _expected["message"])
+        self.assertIn(_expected["error"], ret["error"])
 
         #
         # Working as expected
