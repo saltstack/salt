@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 import logging
@@ -14,7 +11,6 @@ import re
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip
 
 ADMIN_CFG = "/etc/kubernetes/admin.conf"
 
