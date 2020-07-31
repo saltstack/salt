@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 An engine that listens for libvirt events and resends them to the salt event bus.
 
@@ -65,7 +63,6 @@ A polkit rule like the following one will allow `salt` user to connect to libvir
 .. versionadded:: 2019.2.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -192,7 +189,7 @@ def _get_domain_event_detail(event, detail):
     if event_name == "unknown":
         return event_name, "unknown"
 
-    prefix = "VIR_DOMAIN_EVENT_{0}_".format(event_name.upper())
+    prefix = "VIR_DOMAIN_EVENT_{}_".format(event_name.upper())
     detail_name = _get_libvirt_enum_string(prefix, detail)
 
     return event_name, detail_name
@@ -337,7 +334,7 @@ def _domain_event_graphics_cb(
         """
         return {
             "family": _get_libvirt_enum_string(
-                "{0}_ADDRESS_".format(prefix), addr["family"]
+                "{}_ADDRESS_".format(prefix), addr["family"]
             ),
             "node": addr["node"],
             "service": addr["service"],
@@ -683,14 +680,14 @@ def _register_callback(cnx, tag_prefix, obj, event, real_id):
     """
     libvirt_name = real_id
     if real_id is None:
-        libvirt_name = "VIR_{0}_EVENT_ID_{1}".format(obj, event).upper()
+        libvirt_name = "VIR_{}_EVENT_ID_{}".format(obj, event).upper()
 
     if not hasattr(libvirt, libvirt_name):
         log.warning('Skipping "%s/%s" events: libvirt too old', obj, event)
         return None
 
     libvirt_id = getattr(libvirt, libvirt_name)
-    callback_name = "_{0}_event_{1}_cb".format(obj, event)
+    callback_name = "_{}_event_{}_cb".format(obj, event)
     callback = globals().get(callback_name, None)
     if callback is None:
         log.error("Missing function %s in engine", callback_name)

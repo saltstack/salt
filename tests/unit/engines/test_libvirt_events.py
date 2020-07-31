@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the libvirt_events engine
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.engines.libvirt_events as libvirt_events
