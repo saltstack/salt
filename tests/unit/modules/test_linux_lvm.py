@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 
 # Import Salt Libs
 import salt.modules.linux_lvm as linux_lvm
-from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -200,7 +197,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
             linux_lvm.pvcreate(""), "Error: at least one device is required"
         )
 
-        self.assertRaises(CommandExecutionError, linux_lvm.pvcreate, "A")
+        self.assertEqual(linux_lvm.pvcreate("A"), "A does not exist")
 
         # pvdisplay() would be called by pvcreate() twice: firstly to check
         # whether a device is already initialized for use by LVM and then to
@@ -236,16 +233,24 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(linux_lvm.pvcreate("A", metadatasize=1000), True)
                     self.assertTrue(cmd_mock.call_count == 0)
 
+    def test_pvremove_not_pv(self):
+        """
+        Tests for remove a physical device not being used as an LVM physical volume
+        """
+        pvdisplay = MagicMock(return_value=False)
+        with patch("salt.modules.linux_lvm.pvdisplay", pvdisplay):
+            self.assertEqual(
+                linux_lvm.pvremove("A", override=False), "A is not a physical volume"
+            )
+
+        pvdisplay = MagicMock(return_value=False)
+        with patch("salt.modules.linux_lvm.pvdisplay", pvdisplay):
+            self.assertEqual(linux_lvm.pvremove("A"), True)
+
     def test_pvremove(self):
         """
         Tests for remove a physical device being used as an LVM physical volume
         """
-        pvdisplay = MagicMock(return_value=False)
-        with patch("salt.modules.linux_lvm.pvdisplay", pvdisplay):
-            self.assertRaises(
-                CommandExecutionError, linux_lvm.pvremove, "A", override=False
-            )
-
         pvdisplay = MagicMock(return_value=False)
         with patch("salt.modules.linux_lvm.pvdisplay", pvdisplay):
             mock = MagicMock(return_value=True)
