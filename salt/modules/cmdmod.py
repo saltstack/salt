@@ -27,6 +27,7 @@ import salt.grains.extra
 
 # Import salt libs
 import salt.utils.args
+import salt.utils.chcp
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -41,7 +42,6 @@ import salt.utils.versions
 import salt.utils.vt
 import salt.utils.win_dacl
 import salt.utils.win_reg
-import salt.utils.chcp
 from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
@@ -53,14 +53,14 @@ from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
 try:
-    import pwd
     import grp
+    import pwd
 except ImportError:
     pass
 
 if salt.utils.platform.is_windows():
-    from salt.utils.win_runas import runas as win_runas
     from salt.utils.win_functions import escape_argument as _cmd_quote
+    from salt.utils.win_runas import runas as win_runas
 
     HAS_WIN_RUNAS = True
 else:
