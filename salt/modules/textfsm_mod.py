@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TextFSM
 =======
@@ -17,7 +16,6 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
     For Python 2/3 compatibility, it is more recommended to
     install the ``jtextfsm`` library: ``pip install jtextfsm``.
 """
-from __future__ import absolute_import
 
 import logging
 
