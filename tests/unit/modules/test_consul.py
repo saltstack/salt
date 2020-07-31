@@ -7,6 +7,7 @@ Test case for the consul execution module
 import logging
 
 import salt.modules.consul as consul
+import salt.utils.platform
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
@@ -164,13 +165,15 @@ class TestConsulModule(LoaderModuleMockMixin, TestCase):
                     key="web/key1",
                     value="Hello world",
                 )
-        _expected = {
-            "res": False,
-            "data": "Unable to add key web/key1 with value Hello world.",
-            "error": "Connection refused",
-        }
-        self.assertEqual(ret["data"], _expected["data"])
-        self.assertIn(_expected["error"], ret["error"])
+        expected_res = (False,)
+        expected_data = "Unable to add key web/key1 with value Hello world."
+        if salt.utils.platform.is_windows():
+            expected_error = "Unknown error"
+        else:
+            expected_error = "Connection refused"
+        self.assertFalse(ret["res"])
+        self.assertEqual(expected_data, ret["data"])
+        self.assertIn(expected_error, ret["error"])
 
         #
         # Working as expected
@@ -223,13 +226,15 @@ class TestConsulModule(LoaderModuleMockMixin, TestCase):
             key="web/key1",
             value="Hello world",
         )
-        _expected = {
-            "res": False,
-            "message": "Unable to delete key web/key1.",
-            "error": "Connection refused",
-        }
-        self.assertEqual(ret["message"], _expected["message"])
-        self.assertIn(_expected["error"], ret["error"])
+        expected_res = (False,)
+        expected_data = "Unable to delete key web/key1."
+        if salt.utils.platform.is_windows():
+            expected_error = "Unknown error"
+        else:
+            expected_error = "Connection refused"
+        self.assertFalse(ret["res"])
+        self.assertEqual(expected_data, ret["message"])
+        self.assertIn(expected_error, ret["error"])
 
         #
         # Working as expected
