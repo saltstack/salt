@@ -1,32 +1,21 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.test_virtualname
     ~~~~~~~~~~~~~~~~~~~~
 """
 
 # Import Python libs
-from __future__ import absolute_import
-
+import importlib.util
 import logging
 import os
-
-# Import Salt libs
-import salt.ext.six as six
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import importlib.util
-except ImportError:
-    import imp
-
-
 log = logging.getLogger(__name__)
 
 
-class FakeEntry(object):
+class FakeEntry:
     def __init__(self, name, path, is_file=True):
         self.name = name
         self.path = path
@@ -46,18 +35,9 @@ class VirtualNameTestCase(TestCase):
 
     @staticmethod
     def _import_module(testpath):
-        if six.PY3:
-            spec = importlib.util.spec_from_file_location("tmpmodule", testpath)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-        else:
-            fp, pathname, description = imp.find_module("tmpmodule", testpath)
-            try:
-                module = imp.load_module("tmpmodule", fp, pathname, description)
-            finally:
-                # Since we may exit via an exception, close fp explicitly.
-                if fp:
-                    fp.close()
+        spec = importlib.util.spec_from_file_location("tmpmodule", testpath)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         return module
 
     def _check_modules(self, path):
@@ -78,7 +58,7 @@ class VirtualNameTestCase(TestCase):
             if hasattr(module, "__virtualname__"):
                 if module.__virtualname__ not in name:
                     ret.append(
-                        'Virtual name "{0}" is not in the module filename "{1}": {2}'.format(
+                        'Virtual name "{}" is not in the module filename "{}": {}'.format(
                             module.__virtualname__, name, path
                         )
                     )
