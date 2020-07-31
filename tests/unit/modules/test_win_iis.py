@@ -656,8 +656,6 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "'system.webServer/security/authentication/anonymousAuthentication'",
             "-Name",
             "'enabled'",
-            "-Location",
-            "''",
             "-ErrorAction",
             "Stop",
             "|",
@@ -667,12 +665,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ps_cmd = [
             "$Settings = New-Object System.Collections.ArrayList;",
             "$Property = Get-WebConfigurationProperty -PSPath 'salt'",
-            "-Name 'enabled' -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Location '' -ErrorAction Stop;",
+            "-Name 'enabled' -Filter 'system.webServer/security/authentication/anonymousAuthentication' -ErrorAction Stop;",
             "if (([String]::IsNullOrEmpty($Property) -eq $False) -and",
             "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
             "$Property = $Property | Select-Object",
             "-ExpandProperty Value };",
-            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';location='';value=[String] $Property})| Out-Null;",
+            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';value=[String] $Property})| Out-Null;",
             "$Property = $Null;",
             "$Settings",
         ]
@@ -733,8 +731,6 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "'system.webServer/security/authentication/anonymousAuthentication'",
             "-Name",
             "'enabled'",
-            "-Location",
-            "''",
             "-Value",
             "'False';",
         ]
@@ -752,11 +748,11 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(get_webconfiguration_settings.call_count, 2)
                 self.assertEqual(
                     get_webconfiguration_settings.mock_calls[0],
-                    call(name="salt", settings=settings, location=""),
+                    call(name="salt", settings=settings),
                 )
                 self.assertEqual(
                     get_webconfiguration_settings.mock_calls[1],
-                    call(name="salt", settings=settings, location=""),
+                    call(name="salt", settings=settings),
                 )
 
                 _srvmgr.assert_called_once_with(ps_cmd)
@@ -796,8 +792,6 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             "'system.webServer/security/authentication/anonymousAuthentication'",
             "-Name",
             "'enabled'",
-            "-Location",
-            "''",
             "-Value",
             "'False';",
         ]
