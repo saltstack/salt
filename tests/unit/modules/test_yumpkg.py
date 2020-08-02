@@ -1,5 +1,7 @@
 import os
 
+import salt.utils.platform
+import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
@@ -999,6 +1001,44 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 yumpkg.install("foo", version=new)
                 call = cmd_mock.mock_calls[0][1][0]
                 assert call == expected, call
+
+    @skipIf(not salt.utils.platform.is_linux(), "Only run on Linux")
+    def test_install_error_reporting(self):
+        """
+        Tests that we properly report yum/dnf errors.
+        """
+        name = "foo"
+        old = "8:3.8.12-6.n.el7"
+        new = "9:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name: [old] if kwargs.get("versions_as_list", False) else old
+            }
+        )
+        salt_mock = {
+            "cmd.run_all": cmdmod.run_all,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: new}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, new[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock), patch.object(
+            yumpkg, "_yum", MagicMock(return_value="cat")
+        ):
+
+            expected = {
+                "changes": {},
+                "errors": [
+                    "cat: invalid option -- 'y'\n"
+                    "Try 'cat --help' for more information."
+                ],
+            }
+            with pytest.raises(CommandExecutionError) as exc_info:
+                yumpkg.install("foo", version=new)
+            assert exc_info.value.info == expected, exc_info.value.info
 
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
