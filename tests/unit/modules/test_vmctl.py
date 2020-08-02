@@ -1,5 +1,3 @@
-# Import Python libs
-
 # Import Salt Libs
 import salt.modules.vmctl as vmctl
 
