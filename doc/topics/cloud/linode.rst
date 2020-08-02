@@ -2,7 +2,7 @@
 Getting Started With Linode
 ===========================
 
-`Linode <https://linode.com>`_ is a public cloud host with a focus on Linux instances.
+``Linode <https://linode.com>``_ is a public cloud host with a focus on Linux instances.
 
 
 Dependencies
