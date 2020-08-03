@@ -63,7 +63,10 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = watchdog.beacon(config)
         self.assertEqual(ret, [])
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_file_create(self):
         path = os.path.join(self.tmpdir, "tmpfile")
 
@@ -123,7 +126,10 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "deleted")
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_file_moved(self):
         path = os.path.join(self.tmpdir, "tmpfile")
         create(path)
@@ -139,7 +145,10 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "moved")
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     def test_file_create_in_directory(self):
         config = [{"directories": {self.tmpdir: {"mask": ["create"]}}}]
         self.assertValid(config)
