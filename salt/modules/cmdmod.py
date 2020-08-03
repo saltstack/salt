@@ -287,7 +287,7 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
-    windows_codepage=437,
+    windows_codepage=65001,
     **kwargs
 ):
     """
