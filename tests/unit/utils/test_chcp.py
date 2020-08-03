@@ -16,24 +16,13 @@ class CHCPTest(TestCase):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self._chcp_code = None
-        try:
-            self._chcp_code = chcp.chcp()
-        except BaseException as exc:
-            self._chcp_code = exc
+        self._chcp_code = chcp.chcp()
 
     def setUp(self):
-        self._reset_code_page()
+        chcp.chcp(self._chcp_code)
 
     def tearDown(self):
-        self._reset_code_page()
-
-    def _reset_code_page(self):
-        if isinstance(self._chcp_code, Exception):
-            raise self._chcp_code
-
-        chcp.chcp(self._chcp_code, True)
+        chcp.chcp(self._chcp_code)
 
     def test_get_and_set_code_page(self):
         self.assertEqual(self._chcp_code, chcp.chcp())
