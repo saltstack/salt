@@ -726,7 +726,7 @@ def create_ca(
         ca_name='koji'
 
     the resulting CA, and corresponding key, would be written in the following
-    location::
+    location with appropriate permissions::
 
         /etc/pki/koji/koji_ca_cert.crt
         /etc/pki/koji/koji_ca_cert.key
@@ -845,6 +845,7 @@ def create_ca(
     if write_key:
         with salt.utils.files.fopen(ca_keyp, "wb") as ca_key:
             ca_key.write(salt.utils.stringutils.to_bytes(keycontent))
+            os.chmod(ca_keyp, 0o600)
 
     with salt.utils.files.fopen(certp, "wb") as ca_crt:
         ca_crt.write(
@@ -1067,7 +1068,7 @@ def create_csr(
         CN='test.egavas.org'
 
     the resulting CSR, and corresponding key, would be written in the
-    following location::
+    following location with appropriate permissions::
 
         /etc/pki/koji/certs/test.egavas.org.csr
         /etc/pki/koji/certs/test.egavas.org.key
@@ -1163,14 +1164,14 @@ def create_csr(
     req.sign(key, salt.utils.stringutils.to_str(digest))
 
     # Write private key and request
-    with salt.utils.files.fopen(
-        "{0}/{1}.key".format(csr_path, csr_filename), "wb+"
-    ) as priv_key:
+    priv_keyp = "{0}/{1}.key".format(csr_path, csr_filename)
+    with salt.utils.files.fopen(priv_keyp, "wb+") as priv_key:
         priv_key.write(
             salt.utils.stringutils.to_bytes(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
             )
         )
+        os.chmod(priv_keyp, 0o600)
 
     with salt.utils.files.fopen(csr_f, "wb+") as csr:
         csr.write(
@@ -1246,7 +1247,7 @@ def create_self_signed_cert(
         CN='test.egavas.org'
 
     the resulting CERT, and corresponding key, would be written in the
-    following location::
+    following location with appropriate permissions::
 
         /etc/pki/koji/certs/test.egavas.org.crt
         /etc/pki/koji/certs/test.egavas.org.key
@@ -1311,6 +1312,7 @@ def create_self_signed_cert(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
             )
         )
+        os.chmod(priv_key_path, 0o600)
 
     crt_path = "{0}/{1}/certs/{2}.crt".format(cert_base_path(), tls_dir, cert_filename)
     with salt.utils.files.fopen(crt_path, "wb+") as crt:
