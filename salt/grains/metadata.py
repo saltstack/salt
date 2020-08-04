@@ -48,12 +48,12 @@ def _search(prefix="latest/"):
     linedata = http.query(os.path.join(HOST, prefix), headers=True)
     if "body" not in linedata:
         return ret
-    body = salt.utils.stringutils.to_unicode(linedata["body"])
     if (
         linedata["headers"].get("Content-Type", "text/plain")
         == "application/octet-stream"
     ):
-        return body
+        return linedata["body"]
+    body = salt.utils.stringutils.to_unicode(linedata["body"])
     for line in body.split("\n"):
         if line.endswith("/"):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
@@ -80,7 +80,7 @@ def _search(prefix="latest/"):
                     ret[line] = salt.utils.stringutils.to_unicode(retdata)
             else:
                 ret[line] = retdata
-    return salt.utils.data.decode(ret)
+    return salt.utils.data.decode(ret, errors="ignore", keep=True)
 
 
 def metadata():
