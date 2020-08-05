@@ -284,7 +284,7 @@ def node_setup(name, master, ticket, master_host=None):
         return ret
 
     # Executing the command.
-    node_setup = __salt__["icinga2.node_setup"](name, master, master_host, ticket)
+    node_setup = __salt__["icinga2.node_setup"](name, master, ticket, master_host)
     if not node_setup["retcode"]:
         ret["comment"] = "Node setup executed."
         ret["changes"]["cert"] = "Node setup finished successfully."
