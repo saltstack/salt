@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
@@ -22,7 +20,7 @@ class LinodeTest(CloudTest):
         """
         Sets up the test requirements
         """
-        super(LinodeTest, self).setUp()
+        super().setUp()
 
         # check if the Linode APIv4 cloud provider
         if self.profile_str + "-v4:" not in self.providers:
