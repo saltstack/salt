@@ -2,7 +2,7 @@
 Getting Started With Linode
 ===========================
 
-``Linode <https://linode.com>``_ is a public cloud host with a focus on Linux instances.
+Linode is a public cloud host with a focus on Linux instances.
 
 
 Dependencies
@@ -119,6 +119,8 @@ Configuration Options
 
     ``swap``
         The amount of disk space to allocate for the swap partition. Defaults to ``256``.
+
+.. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper/#what-is-network-helper
 
 Example Configuration
 ---------------------

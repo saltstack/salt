@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
+r"""
 The Linode Cloud Module
 =======================
 
@@ -51,7 +50,7 @@ The following profile parameters are supported:
 - **size**: (required) The size of the VM. This should be a Linode instance type ID (i.e. ``g6-standard-2``). For APIv3, this would be a plan ID (i.e. ``Linode 2GB``). Run ``salt-cloud -f avail_sizes my-linode-provider`` for options.
 - **location**: (required) The location of the VM. This should be a Linode region (e.g. ``us-east``). For APIv3, this would be a datacenter location (i.e. ``Newark, NJ, USA``). Run ``salt-cloud -f avail_locations my-linode-provider`` for options.
 - **image**: (required) The image to deploy the boot disk from. This should be an image ID (e.g. ``linode/ubuntu16.04``); official images start with ``linode/``. For APIv3, this would be an image label (i.e. Ubuntu 16.04). Run ``salt-cloud -f avail_images my-linode-provider`` for more options.
-- **password**: (*required) The default password for the VM. Must be provided at the profile or provider level.
+- **password**: (\*required) The default password for the VM. Must be provided at the profile or provider level.
 - **assign_private_ip**: (optional) Whether or not to assign a private key to the VM. Defaults to ``False``.
 - **ssh_interface**: (optional) The interface with which to connect over SSH. Valid options are ``private_ips`` or ``public_ips``. Defaults to ``public_ips``.
 - **ssh_pubkey**: (optional) The public key to authorize for SSH with the VM.
@@ -105,29 +104,25 @@ There are a few changes to note:
 :depends: requests
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
+import abc
 import datetime
+import ipaddress
+import json
 import logging
 import pprint
 import re
 import time
-import abc
-import ipaddress
-import json
 from pathlib import Path
 
 # Import Salt Libs
 import salt.config as config
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudNotFound,
     SaltCloudSystemExit,
 )
+from salt.ext.six.moves import range
 
 try:
     import requests
@@ -194,7 +189,11 @@ def _get_api_version():
     Return the configured Linode API version.
     """
     return config.get_cloud_config_value(
-        'api_version', get_configured_provider(), __opts__, search_global=False, default='v3'
+        "api_version",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default="v3",
     )
 
 
@@ -216,7 +215,10 @@ def _get_api_key():
     Returned the configured Linode API key.
     """
     val = config.get_cloud_config_value(
-        "api_key", get_configured_provider(), __opts__, search_global=False,
+        "api_key",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
         default=config.get_cloud_config_value(
             "apikey", get_configured_provider(), __opts__, search_global=False
         ),
@@ -229,7 +231,11 @@ def _get_ratelimit_sleep():
     Return the configured time to wait before retrying after a ratelimit has been enforced.
     """
     return config.get_cloud_config_value(
-        "ratelimit_sleep", get_configured_provider(), __opts__, search_global=False, default=0,
+        "ratelimit_sleep",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=0,
     )
 
 
@@ -238,7 +244,11 @@ def _get_poll_interval():
     Return the configured interval in milliseconds to poll the Linode API for changes at.
     """
     return config.get_cloud_config_value(
-        "poll_interval", get_configured_provider(), __opts__, search_global=False, default=500
+        "poll_interval",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=500,
     )
 
 
@@ -322,9 +332,7 @@ def _get_ssh_keys(vm_):
     key_files = _get_ssh_key_files(vm_)
     for file in map(lambda file: Path(file).resolve(), key_files):
         if not (file.exists() or file.is_file()):
-            raise SaltCloudSystemExit(
-                "Invalid SSH key file: {}".format(str(file))
-            )
+            raise SaltCloudSystemExit("Invalid SSH key file: {}".format(str(file)))
         ssh_keys.add(file.read_text())
 
     return list(ssh_keys)
@@ -349,7 +357,7 @@ def _validate_name(name):
     name
         The VM name to validate
     """
-    name = six.text_type(name)
+    name = str(name)
     name_length = len(name)
     regex = re.compile(r"^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$")
 
@@ -382,7 +390,7 @@ def _warn_for_api_v3():
         HAS_WARNED_FOR_API_V3 = True
 
 
-class LinodeAPI():
+class LinodeAPI:
     @abc.abstractmethod
     def avail_images(self):
         """ avail_images implementation """
@@ -461,7 +469,9 @@ class LinodeAPI():
 
     def get_plan_id(self, kwargs=None):
         """ get_plan_id implementation """
-        raise SaltCloudSystemExit('The get_plan_id is not supported by this api_version.')
+        raise SaltCloudSystemExit(
+            "The get_plan_id is not supported by this api_version."
+        )
 
     def get_linode(self, kwargs=None):
         name = kwargs.get("name", None)
@@ -483,13 +493,7 @@ class LinodeAPI():
 
 
 class LinodeAPIv4(LinodeAPI):
-    def _query(
-        self,
-        path=None,
-        method='GET',
-        data=None,
-        headers=None
-    ):
+    def _query(self, path=None, method="GET", data=None, headers=None):
         """
         Make a call to the Linode API.
         """
@@ -499,12 +503,12 @@ class LinodeAPIv4(LinodeAPI):
 
         if headers is None:
             headers = {}
-        headers['Authorization'] = 'Bearer {}'.format(api_key)
-        headers['Content-Type'] = 'application/json'
+        headers["Authorization"] = "Bearer {}".format(api_key)
+        headers["Content-Type"] = "application/json"
 
-        url = 'https://api.linode.com/{}{}'.format(api_version, path)
+        url = "https://api.linode.com/{}{}".format(api_version, path)
 
-        decode = method != 'DELETE'
+        decode = method != "DELETE"
         result = None
 
         log.debug("Linode API request: %s %s", method, url)
@@ -515,9 +519,7 @@ class LinodeAPIv4(LinodeAPI):
         attempt = 0
         while True:
             try:
-                result = requests.request(
-                    method, url, json=data, headers=headers
-                )
+                result = requests.request(method, url, json=data, headers=headers)
 
                 log.debug("Linode API response status code: %d", result.status_code)
                 log.trace("Linode API response body: %s", result.text)
@@ -529,14 +531,18 @@ class LinodeAPIv4(LinodeAPI):
                 status_code = err_response.status_code
 
                 if status_code == 429:
-                    log.debug("recieved rate limit; retrying in %d seconds", ratelimit_sleep)
+                    log.debug(
+                        "recieved rate limit; retrying in %d seconds", ratelimit_sleep
+                    )
                     time.sleep(ratelimit_sleep)
                     continue
 
                 if err_data is not None:
                     # Build an error from the response JSON
                     if "error" in err_data:
-                        raise SaltCloudSystemExit("Linode API reported error: {}".format(err_data["error"]))
+                        raise SaltCloudSystemExit(
+                            "Linode API reported error: {}".format(err_data["error"])
+                        )
                     elif "errors" in err_data:
                         api_errors = err_data["errors"]
 
@@ -544,15 +550,23 @@ class LinodeAPIv4(LinodeAPI):
                         errors = []
                         for error in err_data["errors"]:
                             if "field" in error:
-                                errors.append("field '{}': {}".format(error.get("field"), error.get("reason")))
+                                errors.append(
+                                    "field '{}': {}".format(
+                                        error.get("field"), error.get("reason")
+                                    )
+                                )
                             else:
                                 errors.append(error.get("reason"))
 
-                        raise SaltCloudSystemExit("Linode API reported error(s): {}".format(", ".join(errors)))
+                        raise SaltCloudSystemExit(
+                            "Linode API reported error(s): {}".format(", ".join(errors))
+                        )
 
                 # If the response is not valid JSON or the error was not included, propagate the
                 # human readable status representation.
-                raise SaltCloudSystemExit("Linode API error occurred: {}".format(err_response.reason))
+                raise SaltCloudSystemExit(
+                    "Linode API error occurred: {}".format(err_response.reason)
+                )
         if decode:
             return self._get_response_json(result)
 
@@ -566,24 +580,23 @@ class LinodeAPIv4(LinodeAPI):
         return ret
 
     def avail_locations(self):
-        response = self._query(path='/regions')
+        response = self._query(path="/regions")
         ret = {}
-        for region in response['data']:
-            ret[region['id']] = region
+        for region in response["data"]:
+            ret[region["id"]] = region
         return ret
 
     def avail_sizes(self):
         response = self._query(path="/linode/types")
         ret = {}
-        for instance_type in response['data']:
-            ret[instance_type['id']] = instance_type
+        for instance_type in response["data"]:
+            ret[instance_type["id"]] = instance_type
         return ret
 
     def boot(self, name=None, kwargs=None):
-        instance = self.get_linode(kwargs={
-            "linode_id": kwargs.get("linode_id", None),
-            "name": name,
-        })
+        instance = self.get_linode(
+            kwargs={"linode_id": kwargs.get("linode_id", None), "name": name}
+        )
         config_id = kwargs.get("config_id", None)
         check_running = kwargs.get("check_running", True)
         linode_id = instance.get("id", None)
@@ -597,9 +610,10 @@ class LinodeAPIv4(LinodeAPI):
                 )
 
         response = self._query(
-            "/linode/instances/{0}/boot".format(linode_id),
+            "/linode/instances/{}/boot".format(linode_id),
             method="POST",
-            data={"config_id": config_id})
+            data={"config_id": config_id},
+        )
 
         self._wait_for_linode_status(linode_id, "running")
         return True
@@ -628,12 +642,11 @@ class LinodeAPIv4(LinodeAPI):
                     "and 'size' to be provided."
                 )
 
-        return self._query("/linode/instances/{}/clone".format(linode_id),
+        return self._query(
+            "/linode/instances/{}/clone".format(linode_id),
             method="POST",
-            data={
-                "region": location,
-                "type": size,
-            })
+            data={"region": location, "type": size},
+        )
 
     def create_config(self, kwargs=None):
         name = kwargs.get("name", None)
@@ -661,10 +674,11 @@ class LinodeAPIv4(LinodeAPI):
             "sdc": {"disk_id": int(swap_disk_id)},
         }
 
-        return self._query("/linode/instances/{}/configs".format(linode_id), method="POST", data={
-            "label": name,
-            "devices": devices,
-        })
+        return self._query(
+            "/linode/instances/{}/configs".format(linode_id),
+            method="POST",
+            data={"label": name, "devices": devices},
+        )
 
     def create(self, vm_):
         name = vm_["name"]
@@ -675,7 +689,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "starting create",
-            "salt/cloud/{0}/creating".format(name),
+            "salt/cloud/{}/creating".format(name),
             args=__utils__["cloud.filter_event"](
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -702,32 +716,38 @@ class LinodeAPIv4(LinodeAPI):
         if should_clone:
             # clone into new linode
             clone_linode = self.get_linode(kwargs={"name": clonefrom_name})
-            result = clone({
-                "linode_id": clone_linode["id"],
-                "location": clone_linode["region"],
-                "size": clone_linode["type"]
-            })
+            result = clone(
+                {
+                    "linode_id": clone_linode["id"],
+                    "location": clone_linode["region"],
+                    "size": clone_linode["type"],
+                }
+            )
 
             # create private IP if needed
             if assign_private_ip:
-                self._query("/networking/ips", method="POST", data={
-                    "type": "ipv4",
-                    "public": False,
-                    "linode_id": result["id"],
-                })
+                self._query(
+                    "/networking/ips",
+                    method="POST",
+                    data={"type": "ipv4", "public": False, "linode_id": result["id"]},
+                )
         else:
             # create new linode
-            result = self._query("/linode/instances", method="POST", data={
-                "label": name,
-                "type": instance_type,
-                "region": vm_.get("location", None),
-                "private_ip": assign_private_ip,
-                "booted": True,
-                "root_pass": password,
-                "authorized_keys": pub_ssh_keys,
-                "image": image,
-                "swap_size": swap_size
-            })
+            result = self._query(
+                "/linode/instances",
+                method="POST",
+                data={
+                    "label": name,
+                    "type": instance_type,
+                    "region": vm_.get("location", None),
+                    "private_ip": assign_private_ip,
+                    "booted": True,
+                    "root_pass": password,
+                    "authorized_keys": pub_ssh_keys,
+                    "image": image,
+                    "swap_size": swap_size,
+                },
+            )
 
         linode_id = result.get("id", None)
 
@@ -739,7 +759,7 @@ class LinodeAPIv4(LinodeAPI):
             self.boot(kwargs={"linode_id": linode_id})
 
         # wait for linode to finish booting
-        self._wait_for_linode_status(linode_id, 'running')
+        self._wait_for_linode_status(linode_id, "running")
 
         public_ips, private_ips = self._get_ips(linode_id)
 
@@ -762,7 +782,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "waiting for ssh",
-            "salt/cloud/{0}/waiting_for_ssh".format(name),
+            "salt/cloud/{}/waiting_for_ssh".format(name),
             sock_dir=__opts__["sock_dir"],
             args={"ip_address": vm_["ssh_host"]},
             transport=__opts__["transport"],
@@ -777,7 +797,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "created instance",
-            "salt/cloud/{0}/created".format(name),
+            "salt/cloud/{}/created".format(name),
             args=__utils__["cloud.filter_event"](
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -791,7 +811,7 @@ class LinodeAPIv4(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{0}/destroyed".format(name),
+            "salt/cloud/{}/destroyed".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -832,10 +852,7 @@ class LinodeAPIv4(LinodeAPI):
         ret = {}
         for instance in instances:
             name = instance["label"]
-            ret[name] = {
-                "id": instance["id"],
-                "state": instance["status"]
-            }
+            ret[name] = {"id": instance["id"], "state": instance["status"]}
 
         return ret
 
@@ -930,15 +947,10 @@ class LinodeAPIv4(LinodeAPI):
                 "msg": "Machine already stopped",
             }
 
-        self._query("/linode/instances/{}/shutdown".format(linode_id),
-            method="POST")
+        self._query("/linode/instances/{}/shutdown".format(linode_id), method="POST")
 
         self._wait_for_linode_status(linode_id, "offline")
-        return {
-            "success": True,
-            "state": "Stopped",
-            "action": "stop"
-        }
+        return {"success": True, "state": "Stopped", "action": "stop"}
 
     def _get_linode_by_id(self, linode_id):
         return self._query("/linode/instances/{}".format(linode_id))
@@ -952,30 +964,30 @@ class LinodeAPIv4(LinodeAPI):
                 return instance
 
         raise SaltCloudNotFound(
-            "The specified name, {0}, could not be found.".format(name)
+            "The specified name, {}, could not be found.".format(name)
         )
 
     def _list_linodes(self, full=False):
-        result = self._query('/linode/instances')
-        instances = result.get('data', [])
+        result = self._query("/linode/instances")
+        instances = result.get("data", [])
 
         ret = {}
         for instance in instances:
             node = {}
-            node['id'] = instance['id']
-            node['image'] = instance['image']
-            node['name'] = instance['label']
-            node['size'] = instance['type']
-            node['state'] = instance['status']
+            node["id"] = instance["id"]
+            node["image"] = instance["image"]
+            node["name"] = instance["label"]
+            node["size"] = instance["type"]
+            node["state"] = instance["status"]
 
             public_ips, private_ips = self._get_ips(node["id"])
             node["public_ips"] = public_ips
             node["private_ips"] = private_ips
 
             if full:
-                node['extra'] = instance
+                node["extra"] = instance
 
-            ret[instance['label']] = node
+            ret[instance["label"]] = node
 
         return ret
 
@@ -996,12 +1008,7 @@ class LinodeAPIv4(LinodeAPI):
         return (public, private)
 
     def _poll(
-        self,
-        description,
-        getter,
-        condition,
-        timeout=None,
-        poll_interval=None,
+        self, description, getter, condition, timeout=None, poll_interval=None,
     ):
         """
         Return true in handler to signal complete.
@@ -1029,18 +1036,13 @@ class LinodeAPIv4(LinodeAPI):
                 )
 
     def _wait_for_entity_status(
-        self,
-        getter,
-        status,
-        entity_name="item",
-        identifier="some",
-        timeout=None
+        self, getter, status, entity_name="item", identifier="some", timeout=None
     ):
         return self._poll(
             "{} (id={}) status to be '{}'".format(entity_name, identifier, status),
             getter,
             lambda item: item.get("status") == status,
-            timeout=timeout
+            timeout=timeout,
         )
 
     def _wait_for_linode_status(self, linode_id, status, timeout=None):
@@ -1049,7 +1051,8 @@ class LinodeAPIv4(LinodeAPI):
             status,
             entity_name="linode",
             identifier=linode_id,
-            timeout=timeout)
+            timeout=timeout,
+        )
 
     def _check_event_status(self, event, desired_status):
         status = event.get("status")
@@ -1057,18 +1060,13 @@ class LinodeAPIv4(LinodeAPI):
         entity = event.get("entity")
         if status == "failed":
             raise SaltCloudSystemExit(
-                "event {} for {} (id={}) failed".format(action, entity["type"], entity["id"])
+                "event {} for {} (id={}) failed".format(
+                    action, entity["type"], entity["id"]
+                )
             )
         return status == desired_status
 
-    def _wait_for_event(
-        self,
-        action,
-        entity,
-        entity_id,
-        status,
-        timeout=None
-    ):
+    def _wait_for_event(self, action, entity, entity_id, status, timeout=None):
         event_filter = {
             "+order_by": "created",
             "+order": "desc",
@@ -1097,8 +1095,11 @@ class LinodeAPIv4(LinodeAPI):
                 if not event_entity:
                     continue
 
-                if not (event_entity["type"] == entity and event_entity["id"] == entity_id
-                    and event.get("action") == action):
+                if not (
+                    event_entity["type"] == entity
+                    and event_entity["id"] == entity_id
+                    and event.get("action") == action
+                ):
                     continue
 
                 if condition(event):
@@ -1108,7 +1109,7 @@ class LinodeAPIv4(LinodeAPI):
                     "event {} to be '{}'".format(event_id, status),
                     lambda: self._query("/account/events/{}".format(event_id)),
                     condition,
-                    timeout=timeout
+                    timeout=timeout,
                 )
 
         return False
@@ -1149,7 +1150,7 @@ class LinodeAPIv3(LinodeAPI):
         if "api_key" not in args.keys():
             args["api_key"] = apikey
         if action and "api_action" not in args.keys():
-            args["api_action"] = "{0}.{1}".format(action, command)
+            args["api_action"] = "{}.{}".format(action, command)
         if header_dict is None:
             header_dict = {}
         if method != "POST":
@@ -1184,7 +1185,9 @@ class LinodeAPIv3(LinodeAPI):
                 for error in result["dict"]["ERRORARRAY"]:
                     msg = error["ERRORMESSAGE"]
                     if msg == "Authentication failed":
-                        raise SaltCloudSystemExit("Linode API Key is expired or invalid")
+                        raise SaltCloudSystemExit(
+                            "Linode API Key is expired or invalid"
+                        )
                     else:
                         error_list.append(msg)
                 raise SaltCloudException(
@@ -1242,8 +1245,8 @@ class LinodeAPIv3(LinodeAPI):
             status = get_linode(kwargs={"linode_id": linode_id})["STATUS"]
             if status == "1":
                 raise SaltCloudSystemExit(
-                    "Cannot boot Linode {0}. " +
-                    "Linode {0} is already running.".format(linode_item)
+                    "Cannot boot Linode {0}. "
+                    + "Linode {} is already running.".format(linode_item)
                 )
 
         # Boot the VM and get the JobID from Linode
@@ -1288,7 +1291,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "starting create",
-            "salt/cloud/{0}/creating".format(name),
+            "salt/cloud/{}/creating".format(name),
             args=__utils__["cloud.filter_event"](
                 "creating", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1325,7 +1328,7 @@ class LinodeAPIv3(LinodeAPI):
 
             kwargs = {
                 "clonefrom": clonefrom_name,
-                "image": "Clone of {0}".format(clonefrom_name),
+                "image": "Clone of {}".format(clonefrom_name),
             }
 
             if size is None:
@@ -1389,7 +1392,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "requesting instance",
-            "salt/cloud/{0}/requesting".format(name),
+            "salt/cloud/{}/requesting".format(name),
             args=__utils__["cloud.filter_event"](
                 "requesting", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1400,9 +1403,12 @@ class LinodeAPIv3(LinodeAPI):
         node_id = self._clean_data(result)["LinodeID"]
         data["id"] = node_id
 
-        if not self._wait_for_status(node_id, status=(self._get_status_id_by_name("brand_new"))):
+        if not self._wait_for_status(
+            node_id, status=(self._get_status_id_by_name("brand_new"))
+        ):
             log.error(
-                "Error creating %s on LINODE\n\n" "while waiting for initial ready status",
+                "Error creating %s on LINODE\n\n"
+                "while waiting for initial ready status",
                 name,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -1444,7 +1450,13 @@ class LinodeAPIv3(LinodeAPI):
             )["ConfigID"]
 
         # Boot the Linode
-        self.boot(kwargs={"linode_id": node_id, "config_id": config_id, "check_running": False})
+        self.boot(
+            kwargs={
+                "linode_id": node_id,
+                "config_id": config_id,
+                "check_running": False,
+            }
+        )
 
         node_data = get_linode(kwargs={"linode_id": node_id})
         ips = self._get_ips(node_id)
@@ -1474,7 +1486,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "waiting for ssh",
-            "salt/cloud/{0}/waiting_for_ssh".format(name),
+            "salt/cloud/{}/waiting_for_ssh".format(name),
             sock_dir=__opts__["sock_dir"],
             args={"ip_address": vm_["ssh_host"]},
             transport=__opts__["transport"],
@@ -1491,7 +1503,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "created instance",
-            "salt/cloud/{0}/created".format(name),
+            "salt/cloud/{}/created".format(name),
             args=__utils__["cloud.filter_event"](
                 "created", vm_, ["name", "profile", "provider", "driver"]
             ),
@@ -1529,9 +1541,9 @@ class LinodeAPIv3(LinodeAPI):
             instance = self._get_linode_by_name(name)
             linode_id = instance.get("id", None)
 
-        disklist = "{0},{1}".format(root_disk_id, swap_disk_id)
+        disklist = "{},{}".format(root_disk_id, swap_disk_id)
         if data_disk_id is not None:
-            disklist = "{0},{1},{2}".format(root_disk_id, swap_disk_id, data_disk_id)
+            disklist = "{},{},{}".format(root_disk_id, swap_disk_id, data_disk_id)
 
         config_args = {
             "LinodeID": int(linode_id),
@@ -1589,7 +1601,12 @@ class LinodeAPIv3(LinodeAPI):
             swap_size = _get_swap_size(vm_)
 
         kwargs.update(
-            {"LinodeID": linode_id, "Label": vm_["name"], "Type": "swap", "Size": swap_size}
+            {
+                "LinodeID": linode_id,
+                "Label": vm_["name"],
+                "Type": "swap",
+                "Size": swap_size,
+            }
         )
 
         result = self._query("linode", "disk.create", args=kwargs)
@@ -1627,7 +1644,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroying instance",
-            "salt/cloud/{0}/destroying".format(name),
+            "salt/cloud/{}/destroying".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1642,7 +1659,7 @@ class LinodeAPIv3(LinodeAPI):
         __utils__["cloud.fire_event"](
             "event",
             "destroyed instance",
-            "salt/cloud/{0}/destroyed".format(name),
+            "salt/cloud/{}/destroyed".format(name),
             args={"name": name},
             sock_dir=__opts__["sock_dir"],
             transport=__opts__["transport"],
@@ -1730,7 +1747,9 @@ class LinodeAPIv3(LinodeAPI):
         if linode_id is None:
             linode_id = self._get_linode_id_from_name(name)
 
-        response = self._query("linode", "config.list", args={"LinodeID": linode_id})["DATA"]
+        response = self._query("linode", "config.list", args={"LinodeID": linode_id})[
+            "DATA"
+        ]
         config_id = {"config_id": response[0]["ConfigID"]}
 
         return config_id
@@ -1775,9 +1794,9 @@ class LinodeAPIv3(LinodeAPI):
 
         if not distro_id:
             raise SaltCloudNotFound(
-                "The DistributionID for the '{0}' profile could not be found.\n"
-                "The '{1}' instance could not be provisioned. The following distributions "
-                "are available:\n{2}".format(
+                "The DistributionID for the '{}' profile could not be found.\n"
+                "The '{}' instance could not be provisioned. The following distributions "
+                "are available:\n{}".format(
                     vm_image_name,
                     vm_["name"],
                     pprint.pprint(
@@ -1813,7 +1832,7 @@ class LinodeAPIv3(LinodeAPI):
         ret = {}
 
         for item in ips:
-            node_id = six.text_type(item["LINODEID"])
+            node_id = str(item["LINODEID"])
             if item["ISPUBLIC"] == 1:
                 key = "public_ips"
             else:
@@ -1827,7 +1846,7 @@ class LinodeAPIv3(LinodeAPI):
         # dictionary based on the linode ID as a key.
         if linode_id:
             _all_ips = {"public_ips": [], "private_ips": []}
-            matching_id = ret.get(six.text_type(linode_id))
+            matching_id = ret.get(str(linode_id))
             if matching_id:
                 _all_ips["private_ips"] = matching_id["private_ips"]
                 _all_ips["public_ips"] = matching_id["public_ips"]
@@ -1856,8 +1875,13 @@ class LinodeAPIv3(LinodeAPI):
         iterations = int(timeout / interval)
 
         for i in range(0, iterations):
-            jobs_result = self._query("linode", "job.list", args={"LinodeID": linode_id})["DATA"]
-            if jobs_result[0]["JOBID"] == job_id and jobs_result[0]["HOST_SUCCESS"] == 1:
+            jobs_result = self._query(
+                "linode", "job.list", args={"LinodeID": linode_id}
+            )["DATA"]
+            if (
+                jobs_result[0]["JOBID"] == job_id
+                and jobs_result[0]["HOST_SUCCESS"] == 1
+            ):
                 return True
 
             time.sleep(interval)
@@ -1919,7 +1943,7 @@ class LinodeAPIv3(LinodeAPI):
         ret = {}
         for node in nodes:
             this_node = {}
-            linode_id = six.text_type(node["LINODEID"])
+            linode_id = str(node["LINODEID"])
 
             this_node["id"] = linode_id
             this_node["image"] = node["DISTRIBUTIONVENDOR"]
@@ -1929,7 +1953,7 @@ class LinodeAPIv3(LinodeAPI):
             state = int(node["STATUS"])
             this_node["state"] = self._get_status_descr_by_id(state)
 
-            for key, val in six.iteritems(ips):
+            for key, val in ips.items():
                 if key == linode_id:
                     this_node["private_ips"] = val["private_ips"]
                     this_node["public_ips"] = val["public_ips"]
@@ -1954,7 +1978,7 @@ class LinodeAPIv3(LinodeAPI):
         for node in nodes:
             name = node["LABEL"]
             ret[name] = {
-                "id": six.text_type(node["LINODEID"]),
+                "id": str(node["LINODEID"]),
                 "state": self._get_status_descr_by_id(int(node["STATUS"])),
             }
         return ret
@@ -1987,7 +2011,9 @@ class LinodeAPIv3(LinodeAPI):
             raise SaltCloudException("The requested profile does not belong to Linode.")
 
         plan_id = self.get_plan_id(kwargs={"label": profile["size"]})
-        response = self._query("avail", "linodeplans", args={"PlanID": plan_id})["DATA"][0]
+        response = self._query("avail", "linodeplans", args={"PlanID": plan_id})[
+            "DATA"
+        ][0]
 
         ret = {}
         ret["per_hour"] = response["HOURLY"]
@@ -2013,11 +2039,11 @@ class LinodeAPIv3(LinodeAPI):
                 return node
 
         raise SaltCloudNotFound(
-            "The specified name, {0}, could not be found.".format(name)
+            "The specified name, {}, could not be found.".format(name)
         )
 
     def _get_linode_by_id(self, linode_id):
-        result = self._query('linode', 'list', args={'LinodeID': linode_id})
+        result = self._query("linode", "list", args={"LinodeID": linode_id})
         return result["DATA"][0]
 
     def start(self, name):
@@ -2043,7 +2069,11 @@ class LinodeAPIv3(LinodeAPI):
         node = get_linode(kwargs={"linode_id": node_id})
 
         if node["STATUS"] == 2:
-            return {"success": True, "state": "Stopped", "msg": "Machine already stopped"}
+            return {
+                "success": True,
+                "state": "Stopped",
+                "msg": "Machine already stopped",
+            }
 
         response = self._query("linode", "shutdown", args={"LinodeID": node_id})["DATA"]
 
@@ -2086,7 +2116,7 @@ class LinodeAPIv3(LinodeAPI):
         status_id
             linode VM status ID
         """
-        for status_name, status_data in six.iteritems(LINODE_STATUS):
+        for status_name, status_data in LINODE_STATUS.items():
             if status_data["code"] == int(status_id):
                 return status_data["descr"]
         return LINODE_STATUS.get(status_id, None)
