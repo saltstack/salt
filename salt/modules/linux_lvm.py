@@ -370,9 +370,15 @@ def vgcreate(vgname, devices, force=False, **kwargs):
         if kwargs[var] and var in valid:
             cmd.append("--{}".format(var))
             cmd.append(kwargs[var])
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully created'.format(vgname)
+
     vgdata = vgdisplay(vgname)
-    vgdata["Output from vgcreate"] = out[0].strip()
+    vgdata["Output from vgcreate"] = out
     return vgdata
 
 
@@ -401,8 +407,14 @@ def vgextend(vgname, devices, force=False):
 
     for device in devices:
         cmd.append(device)
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    vgdata = {"Output from vgextend": out[0].strip()}
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully extended'.format(vgname)
+
+    vgdata = {"Output from vgextend": out}
     return vgdata
 
 
@@ -516,10 +528,15 @@ def lvcreate(
     else:
         cmd.append("-qq")
 
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" created.'.format(lvname)
+
     lvdev = "/dev/{}/{}".format(vgname, lvname)
     lvdata = lvdisplay(lvdev)
-    lvdata["Output from lvcreate"] = out[0].strip()
+    lvdata["Output from lvcreate"] = out
     return lvdata
 
 
@@ -541,8 +558,12 @@ def vgremove(vgname, force=True):
     else:
         cmd.append("-qq")
 
-    out = __salt__["cmd.run"](cmd, python_shell=False)
-    return out.strip()
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully removed'.format(vgname)
+    return out
 
 
 def lvremove(lvname, vgname, force=True):
@@ -562,8 +583,13 @@ def lvremove(lvname, vgname, force=True):
     else:
         cmd.append("-qq")
 
-    out = __salt__["cmd.run"](cmd, python_shell=False)
-    return out.strip()
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully removed'.format(lvname)
+
+    return out
 
 
 def lvresize(size=None, lvpath=None, extents=None, force=False, resizefs=False):
@@ -586,7 +612,7 @@ def lvresize(size=None, lvpath=None, extents=None, force=False, resizefs=False):
     cmd = ["lvresize"]
 
     if force:
-        cmd.append("--yes")
+        cmd.append("--force")
     else:
         cmd.append("-qq")
 
@@ -602,8 +628,14 @@ def lvresize(size=None, lvpath=None, extents=None, force=False, resizefs=False):
         return {}
 
     cmd.append(lvpath)
-    cmd_ret = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    return {"Output from lvresize": cmd_ret[0].strip()}
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully resized.'.format(lvpath)
+
+    return {"Output from lvresize": out}
 
 
 def lvextend(size=None, lvpath=None, extents=None, force=False, resizefs=False):
@@ -642,8 +674,14 @@ def lvextend(size=None, lvpath=None, extents=None, force=False, resizefs=False):
         return {}
 
     cmd.append(lvpath)
-    cmd_ret = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    return {"Output from lvextend": cmd_ret[0].strip()}
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully extended.'.format(lvpath)
+
+    return {"Output from lvextend": out}
 
 
 def pvresize(devices, override=True, force=True):
