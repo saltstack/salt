@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide icinga2 compatibility to salt.
 
@@ -8,7 +7,6 @@ Module to provide icinga2 compatibility to salt.
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -75,9 +73,9 @@ def generate_cert(domain):
             "--cn",
             domain,
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.crt".format(get_certs_path(), domain),
+            "{}{}.crt".format(get_certs_path(), domain),
         ],
         python_shell=False,
     )
@@ -104,11 +102,11 @@ def save_cert(domain, master):
             "pki",
             "save-cert",
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.cert".format(get_certs_path(), domain),
+            "{}{}.cert".format(get_certs_path(), domain),
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
             "--host",
             master,
         ],
@@ -144,34 +142,49 @@ def request_cert(domain, master, ticket, port):
             "--ticket",
             ticket,
             "--key",
-            "{0}{1}.key".format(get_certs_path(), domain),
+            "{}{}.key".format(get_certs_path(), domain),
             "--cert",
-            "{0}{1}.crt".format(get_certs_path(), domain),
+            "{}{}.crt".format(get_certs_path(), domain),
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
             "--ca",
-            "{0}ca.crt".format(get_certs_path()),
+            "{}ca.crt".format(get_certs_path()),
         ],
         python_shell=False,
     )
     return result
 
 
-def node_setup(domain, master, ticket):
+def node_setup(domain, master, ticket, master_host=None):
     """
-    Setup the icinga2 node.
+    Setup the icinga2 node
+
+    name
+        The domain name for which this certificate will be saved
+
+    master
+        Icinga2 master node FQDN for which this certificate will be saved
+
+    ticket
+        Authentication ticket generated on icinga2 master
+
+    master_host: None
+        IP or domain where master is reachable. Only necessary if the master is not reachable via its domain. Defaults to the ``master`` argument's value.
 
     Returns::
-        icinga2 node setup --ticket TICKET_ID --endpoint master.domain.tld --zone domain.tld --master_host master.domain.tld --trustedcert \
+        icinga2 node setup --ticket TICKET_ID --endpoint master.domain.tld --zone domain.tld --master_host master_host --trustedcert \
                 /etc/icinga2/pki/trusted-master.crt
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
+        salt '*' icinga2.node_setup domain.tld master.domain.tld master_host TICKET_ID
 
     """
+    if master_host is None:
+        master_host = master
+
     result = __salt__["cmd.run_all"](
         [
             "icinga2",
@@ -184,9 +197,9 @@ def node_setup(domain, master, ticket):
             "--zone",
             domain,
             "--master_host",
-            master,
+            master_host,
             "--trustedcert",
-            "{0}trusted-master.crt".format(get_certs_path()),
+            "{}trusted-master.crt".format(get_certs_path()),
         ],
         python_shell=False,
     )
