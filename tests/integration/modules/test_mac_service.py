@@ -25,23 +25,28 @@ class MacServiceModuleTest(ModuleCase):
     """
 
     SERVICE_NAME = "com.apple.apsd"
+    SERVICE_LOADED = False
     SERVICE_ENABLED = False
 
     def setUp(self):
         """
         Get current state of the test service
         """
+        self.SERVICE_LOADED = self.run_function("service.loaded", [self.SERVICE_NAME])
         self.SERVICE_ENABLED = self.run_function("service.enabled", [self.SERVICE_NAME])
 
     def tearDown(self):
         """
         Reset the test service to the original state
         """
-        if self.SERVICE_ENABLED:
+        if self.SERVICE_LOADED:
             self.run_function("service.start", [self.SERVICE_NAME])
-            self.run_function("service.enable", [self.SERVICE_NAME])
         else:
             self.run_function("service.stop", [self.SERVICE_NAME])
+
+        if self.SERVICE_ENABLED:
+            self.run_function("service.enable", [self.SERVICE_NAME])
+        else:
             self.run_function("service.disable", [self.SERVICE_NAME])
 
     @slowTest
