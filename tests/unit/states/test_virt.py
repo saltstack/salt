@@ -338,6 +338,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "myvm",
                         cpu=2,
                         mem=2048,
+                        boot_dev="cdrom hd",
                         os_type="linux",
                         arch="i686",
                         vm_type="qemu",
@@ -360,6 +361,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "myvm",
                     cpu=2,
                     mem=2048,
+                    boot_dev="cdrom hd",
                     os_type="linux",
                     arch="i686",
                     disk="prod",
@@ -468,10 +470,13 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated with live update(s) failures",
                     }
                 )
-                self.assertDictEqual(virt.defined("myvm", cpu=2), ret)
+                self.assertDictEqual(
+                    virt.defined("myvm", cpu=2, boot_dev="cdrom hd"), ret
+                )
                 update_mock.assert_called_with(
                     "myvm",
                     cpu=2,
+                    boot_dev="cdrom hd",
                     mem=None,
                     disk_profile=None,
                     disks=None,
@@ -595,6 +600,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
             # No changes case
@@ -629,6 +635,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
     def test_running(self):
@@ -705,6 +712,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     install=True,
                     pub_key=None,
                     priv_key=None,
+                    boot_dev=None,
                     connection=None,
                     username=None,
                     password=None,
@@ -766,6 +774,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         install=False,
                         pub_key="/path/to/key.pub",
                         priv_key="/path/to/key",
+                        boot_dev="network hd",
                         connection="someconnection",
                         username="libvirtuser",
                         password="supersecret",
@@ -790,6 +799,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     start=False,
                     pub_key="/path/to/key.pub",
                     priv_key="/path/to/key",
+                    boot_dev="network hd",
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
@@ -934,6 +944,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=False,
+                    boot_dev=None,
                 )
 
             # Failed definition update case
@@ -1052,6 +1063,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
                 start_mock.assert_not_called()
 
@@ -1088,6 +1100,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
     def test_stopped(self):
