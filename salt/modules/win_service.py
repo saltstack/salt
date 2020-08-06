@@ -22,7 +22,6 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
 try:
-    import win32security
     import win32service
     import win32serviceutil
     import pywintypes
