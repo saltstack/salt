@@ -119,9 +119,6 @@ salt/client/*:
 salt/cloud/*:
   - integration.shell.test_cloud
 
-salt/cloud/__init__.py:
-  - integration.cloud.test_cloud
-
 salt/grains/*:
   - integration.grains.test_custom
 
