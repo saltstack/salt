@@ -117,7 +117,7 @@ def info(name):
         )
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            "Failed to connect to the SCM: {0}".format(exc.strerror)
+            "Failed to connect to the SCM: {}".format(exc.strerror)
         )
 
     try:
@@ -131,7 +131,7 @@ def info(name):
         )
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            "Failed To Open {0}: {1}".format(name, exc.strerror)
+            "Failed To Open {}: {}".format(name, exc.strerror)
         )
 
     try:
@@ -154,7 +154,7 @@ def info(name):
 
     ret = dict()
     try:
-        sid = win32security.LookupAccountName("", "NT Service\\{0}".format(name))[0]
+        sid = win32security.LookupAccountName("", "NT Service\\{}".format(name))[0]
         ret["sid"] = win32security.ConvertSidToStringSid(sid)
     except pywintypes.error:
         ret["sid"] = "Failed to get SID"
