@@ -13,7 +13,7 @@ Changed
   to address some issues with slowness. (#56296, #57529)
 - Handle the UCRT libraries the same way they are handled in the Python 3
   installer (#57594)
-- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be 
+- Changes the 'SSDs' grain name to 'ssds' as all grains needs to be
   resolved in lowered case. (#57612)
 - Updated requirement to psutil 5.6.7 due to vulnerability in psutil 5.6.6. (#58018)
 - Updated requirement to PyYAML 5.3.1 due to vulnerability in PyYAML 5.2.1. (#58019)
