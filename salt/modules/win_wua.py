@@ -98,24 +98,37 @@ def __virtual__():
         return False, "WUA: Missing Libraries required by salt.utils.win_update"
 
     if salt.utils.win_service.info("wuauserv")["StartType"] == "Disabled":
-        return False, "WUA: The Windows Update service (wuauserv) must not " \
-                      "be disabled"
+        return (
+            False,
+            "WUA: The Windows Update service (wuauserv) must not be disabled",
+        )
 
     if salt.utils.win_service.info("msiserver")["StartType"] == "Disabled":
-        return False, "WUA: The Windows Installer service (msiserver) must " \
-                      "not be disabled"
+        return (
+            False,
+            "WUA: The Windows Installer service (msiserver) must not be disabled",
+        )
 
     if not salt.utils.win_service.info("BITS")["StartType"] == "Auto":
-        return False, "WUA: The Background Intelligent Transfer Service " \
-                      "(bits) must not be disabled"
+        return (
+            False,
+            "WUA: The Background Intelligent Transfer Service (bits) must not "
+            "be disabled",
+        )
 
     if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
-        return False, "WUA: The Cryptographic Services service (CryptSvc) " \
-                      "must not be disabled"
+        return (
+            False,
+            "WUA: The Cryptographic Services service (CryptSvc) must not be "
+            "disabled",
+        )
 
     if salt.utils.win_service.info("TrustedInstaller")["StartType"] == "Disabled":
-        return False, "WUA: The Windows Module Installer service " \
-                      "(TrustedInstaller) must not be disabled"
+        return (
+            False,
+            "WUA: The Windows Module Installer service (TrustedInstaller) must "
+            "not be disabled",
+        )
 
     return True
 
