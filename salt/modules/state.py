@@ -803,7 +803,7 @@ def apply_(mods=None, **kwargs):
 
 def test(*args, **kwargs):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Alias for `state.apply` with the kwarg `test` forced to `True`.
 

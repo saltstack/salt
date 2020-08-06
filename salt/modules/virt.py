@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Work with virtual machines managed by libvirt
 
-:depends: libvirt Python module
+:depends:
+    * libvirt Python module
+    * libvirt client
+    * qemu-img
+    * grep
 
 Connection
 ==========
@@ -73,7 +76,6 @@ The calls not using the libvirt connection setup are:
 # of his in the virt func module have been used
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import copy
@@ -106,7 +108,6 @@ import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.utils.virt import check_remote, download_remote
@@ -228,8 +229,8 @@ def __get_conn(**kwargs):
         )
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
-            "Sorry, {0} failed to open a connection to the hypervisor "
-            "software at {1}".format(__grains__["fqdn"], conn_str)
+            "Sorry, {} failed to open a connection to the hypervisor "
+            "software at {}".format(__grains__["fqdn"], conn_str)
         )
     return conn
 
@@ -406,7 +407,7 @@ def _get_nics(dom):
             # driver, source, and match can all have optional attributes
             if re.match("(driver|source|address)", v_node.tag):
                 temp = {}
-                for key, value in six.iteritems(v_node.attrib):
+                for key, value in v_node.attrib.items():
                     temp[key] = value
                 nic[v_node.tag] = temp
             # virtualport needs to be handled separately, to pick up the
@@ -414,7 +415,7 @@ def _get_nics(dom):
             if v_node.tag == "virtualport":
                 temp = {}
                 temp["type"] = v_node.get("type")
-                for key, value in six.iteritems(v_node.attrib):
+                for key, value in v_node.attrib.items():
                     temp[key] = value
                 nic["virtualport"] = temp
         if "mac" not in nic:
@@ -436,7 +437,7 @@ def _get_graphics(dom):
     }
     doc = ElementTree.fromstring(dom.XMLDesc(0))
     for g_node in doc.findall("devices/graphics"):
-        for key, value in six.iteritems(g_node.attrib):
+        for key, value in g_node.attrib.items():
             out[key] = value
     return out
 
@@ -449,7 +450,7 @@ def _get_loader(dom):
     doc = ElementTree.fromstring(dom.XMLDesc(0))
     for g_node in doc.findall("os/loader"):
         out["path"] = g_node.text
-        for key, value in six.iteritems(g_node.attrib):
+        for key, value in g_node.attrib.items():
             out[key] = value
     return out
 
@@ -504,7 +505,7 @@ def _get_disks(conn, dom):
                 qemu_target = source.get("protocol")
                 source_name = source.get("name")
                 if source_name:
-                    qemu_target = "{0}:{1}".format(qemu_target, source_name)
+                    qemu_target = "{}:{}".format(qemu_target, source_name)
 
                 # Reverse the magic for the rbd and gluster pools
                 if source.get("protocol") in ["rbd", "gluster"]:
@@ -634,7 +635,7 @@ def _get_target(target, ssh):
     proto = "qemu"
     if ssh:
         proto += "+ssh"
-    return " {0}://{1}/{2}".format(proto, target, "system")
+    return " {}://{}/{}".format(proto, target, "system")
 
 
 def _gen_xml(
@@ -649,6 +650,7 @@ def _gen_xml(
     arch,
     graphics=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -658,8 +660,8 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
-        "cpu": six.text_type(cpu),
-        "mem": six.text_type(mem),
+        "cpu": str(cpu),
+        "mem": str(mem),
     }
     if hypervisor in ["qemu", "kvm"]:
         context["controller_model"] = False
@@ -682,14 +684,16 @@ def _gen_xml(
             graphics = None
     context["graphics"] = graphics
 
-    if "boot_dev" in kwargs:
-        context["boot_dev"] = []
-        for dev in kwargs["boot_dev"].split():
-            context["boot_dev"].append(dev)
-    else:
-        context["boot_dev"] = ["hd"]
+    context["boot_dev"] = boot_dev.split() if boot_dev is not None else ["hd"]
 
     context["boot"] = boot if boot else {}
+
+    # if efi parameter is specified, prepare os_attrib
+    efi_value = context["boot"].get("efi", None) if boot else None
+    if efi_value is True:
+        context["boot"]["os_attrib"] = "firmware='efi'"
+    elif efi_value is not None and type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
 
     if os_type == "xen":
         # Compute the Xen PV boot method
@@ -713,15 +717,17 @@ def _gen_xml(
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
+    targets = []
     for i, disk in enumerate(diskp):
         prefix = disk_bus_map.get(disk["model"], "sd")
         disk_context = {
             "device": disk.get("device", "disk"),
-            "target_dev": "{0}{1}".format(prefix, string.ascii_lowercase[i]),
+            "target_dev": _get_disk_target(targets, len(diskp), prefix),
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
-            "index": six.text_type(i),
+            "index": str(i),
         }
+        targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
             url = urlparse(disk["source_file"])
             if not url.scheme or not url.hostname:
@@ -824,8 +830,8 @@ def _gen_vol_xml(
         "name": name,
         "target": {"permissions": permissions, "nocow": nocow},
         "format": format,
-        "size": six.text_type(size),
-        "allocation": six.text_type(int(allocation) * 1024),
+        "size": str(size),
+        "allocation": str(int(allocation) * 1024),
         "backingStore": backing_store,
     }
     fn_ = "libvirt_volume.jinja"
@@ -977,31 +983,29 @@ def _zfs_image_create(
     """
     if not disk_image_name and not disk_size:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " the disk image name or disk size argument".format(disk_name)
         )
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " the disk pool name".format(disk_name)
         )
 
-    destination_fs = os.path.join(pool, "{0}.{1}".format(vm_name, disk_name))
+    destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
     log.debug("Image destination will be %s", destination_fs)
 
     existing_disk = __salt__["zfs.list"](name=pool)
     if "error" in existing_disk:
         raise CommandExecutionError(
-            "Unable to create new disk {0}. {1}".format(
+            "Unable to create new disk {}. {}".format(
                 destination_fs, existing_disk["error"]
             )
         )
     elif destination_fs in existing_disk:
         log.info(
-            "ZFS filesystem {0} already exists. Skipping creation".format(
-                destination_fs
-            )
+            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
         )
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
@@ -1024,7 +1028,7 @@ def _zfs_image_create(
         )
 
     blockdevice_path = os.path.join(
-        "/dev/zvol", pool, "{0}.{1}".format(vm_name, disk_name)
+        "/dev/zvol", pool, "{}.{}".format(vm_name, disk_name)
     )
     log.debug("Image path will be %s", blockdevice_path)
     return blockdevice_path
@@ -1041,7 +1045,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
     if not disk_size and not disk_image:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " disk size and/or disk image argument".format(disk["filename"])
         )
 
@@ -1065,7 +1069,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if create_overlay and qcow2:
                 log.info("Cloning qcow2 image %s using copy on write", sfn)
                 __salt__["cmd.run"](
-                    'qemu-img create -f qcow2 -o backing_file="{0}" "{1}"'.format(
+                    'qemu-img create -f qcow2 -o backing_file="{}" "{}"'.format(
                         sfn, img_dest
                     ).split()
                 )
@@ -1078,16 +1082,16 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if disk_size and qcow2:
                 log.debug("Resize qcow2 image to %sM", disk_size)
                 __salt__["cmd.run"](
-                    'qemu-img resize "{0}" {1}M'.format(img_dest, disk_size)
+                    'qemu-img resize "{}" {}M'.format(img_dest, disk_size)
                 )
 
             log.debug("Apply umask and remove exec bit")
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as err:
+        except OSError as err:
             raise CommandExecutionError(
-                "Problem while copying image. {0} - {1}".format(disk_image, err)
+                "Problem while copying image. {} - {}".format(disk_image, err)
             )
 
     else:
@@ -1098,13 +1102,13 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if disk_size:
                 log.debug("Create empty image with size %sM", disk_size)
                 __salt__["cmd.run"](
-                    'qemu-img create -f {0} "{1}" {2}M'.format(
+                    'qemu-img create -f {} "{}" {}M'.format(
                         disk.get("format", "qcow2"), img_dest, disk_size
                     )
                 )
             else:
                 raise CommandExecutionError(
-                    "Unable to create new disk {0},"
+                    "Unable to create new disk {},"
                     " please specify <size> argument".format(img_dest)
                 )
 
@@ -1112,9 +1116,9 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as err:
+        except OSError as err:
             raise CommandExecutionError(
-                "Problem while creating volume {0} - {1}".format(img_dest, err)
+                "Problem while creating volume {} - {}".format(img_dest, err)
             )
 
     return img_dest
@@ -1273,7 +1277,7 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
             disk["model"] = "ide"
 
         # Add the missing properties that have defaults
-        for key, val in six.iteritems(overlay):
+        for key, val in overlay.items():
             if key not in disk:
                 disk[key] = val
 
@@ -1281,7 +1285,9 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
         if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
             if not disk.get("format"):
-                disk["format"] = "qcow2"
+                disk["format"] = (
+                    "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
+                )
         elif disk.get("device", "disk") == "disk":
             _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
@@ -1293,7 +1299,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
     Compute the disk file name and update it in the disk value.
     """
     # Compute the filename without extension since it may not make sense for some pool types
-    disk["filename"] = "{0}_{1}".format(vm_name, disk["name"])
+    disk["filename"] = "{}_{}".format(vm_name, disk["name"])
 
     # Compute the source file path
     base_dir = disk.get("pool", None)
@@ -1308,7 +1314,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
             # For path-based disks, keep the qcow2 default format
             if not disk.get("format"):
                 disk["format"] = "qcow2"
-            disk["filename"] = "{0}.{1}".format(disk["filename"], disk["format"])
+            disk["filename"] = "{}.{}".format(disk["filename"], disk["format"])
             disk["source_file"] = os.path.join(base_dir, disk["filename"])
         else:
             if "pool" not in disk:
@@ -1316,6 +1322,23 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
             pool_obj = conn.storagePoolLookupByName(base_dir)
             pool_xml = ElementTree.fromstring(pool_obj.XMLDesc())
             pool_type = pool_xml.get("type")
+
+            # Disk pools volume names are partition names, they need to be named based on the device name
+            if pool_type == "disk":
+                device = pool_xml.find("./source/device").get("path")
+                all_volumes = pool_obj.listVolumes()
+                if disk.get("source_file") not in all_volumes:
+                    indexes = [
+                        int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
+                    ] or [0]
+                    index = min(
+                        [
+                            idx
+                            for idx in range(1, max(indexes) + 2)
+                            if idx not in indexes
+                        ]
+                    )
+                    disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
             # Is the user wanting to reuse an existing volume?
             if disk.get("source_file"):
@@ -1344,20 +1367,8 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                 else:
                     disk["format"] = volume_options.get("default_format", None)
 
-            # Disk pools volume names are partition names, they need to be named based on the device name
-            if pool_type == "disk":
-                device = pool_xml.find("./source/device").get("path")
-                indexes = [
-                    int(re.sub("[a-z]+", "", vol_name))
-                    for vol_name in pool_obj.listVolumes()
-                ] or [0]
-                index = min(
-                    [idx for idx in range(1, max(indexes) + 2) if idx not in indexes]
-                )
-                disk["filename"] = "{}{}".format(os.path.basename(device), index)
-
     elif hypervisor == "bhyve" and vm_name:
-        disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
+        disk["filename"] = "{}.{}".format(vm_name, disk["name"])
         disk["source_file"] = os.path.join(
             "/dev/zvol", base_dir or "", disk["filename"]
         )
@@ -1365,8 +1376,8 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
     elif hypervisor in ["esxi", "vmware"]:
         if not base_dir:
             base_dir = __salt__["config.get"]("virt:storagepool", "[0] ")
-        disk["filename"] = "{0}.{1}".format(disk["filename"], disk["format"])
-        disk["source_file"] = "{0}{1}".format(base_dir, disk["filename"])
+        disk["filename"] = "{}.{}".format(disk["filename"], disk["format"])
+        disk["source_file"] = "{}{}".format(base_dir, disk["filename"])
 
 
 def _complete_nics(interfaces, hypervisor):
@@ -1414,7 +1425,7 @@ def _complete_nics(interfaces, hypervisor):
         """
         Apply the default overlay to attributes
         """
-        for key, value in six.iteritems(overlays[hypervisor]):
+        for key, value in overlays[hypervisor].items():
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
@@ -1441,7 +1452,7 @@ def _nic_profile(profile_name, hypervisor):
         """
         Append dictionary profile data to interfaces list
         """
-        for interface_name, attributes in six.iteritems(profile_dict):
+        for interface_name, attributes in profile_dict.items():
             attributes["name"] = interface_name
             interfaces.append(attributes)
 
@@ -1514,17 +1525,24 @@ def _handle_remote_boot_params(orig_boot):
     new_boot = orig_boot.copy()
     keys = orig_boot.keys()
     cases = [
+        {"efi"},
+        {"kernel", "initrd", "efi"},
+        {"kernel", "initrd", "cmdline", "efi"},
         {"loader", "nvram"},
         {"kernel", "initrd"},
         {"kernel", "initrd", "cmdline"},
-        {"loader", "nvram", "kernel", "initrd"},
-        {"loader", "nvram", "kernel", "initrd", "cmdline"},
+        {"kernel", "initrd", "loader", "nvram"},
+        {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
     try:
         if keys in cases:
             for key in keys:
-                if orig_boot.get(key) is not None and check_remote(orig_boot.get(key)):
+                if key == "efi" and type(orig_boot.get(key)) == bool:
+                    new_boot[key] = orig_boot.get(key)
+                elif orig_boot.get(key) is not None and check_remote(
+                    orig_boot.get(key)
+                ):
                     if saltinst_dir is None:
                         os.makedirs(CACHE_DIR)
                         saltinst_dir = CACHE_DIR
@@ -1532,10 +1550,39 @@ def _handle_remote_boot_params(orig_boot):
             return new_boot
         else:
             raise SaltInvocationError(
-                "Invalid boot parameters, (kernel, initrd) or/and (loader, nvram) must be both present"
+                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
             )
     except Exception as err:  # pylint: disable=broad-except
         raise err
+
+
+def _handle_efi_param(boot, desc):
+    """
+       Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
+       :param boot: The boot parameters passed to the init or update functions.
+       :param desc: The XML description of that domain.
+       :return: A boolean value.
+    """
+    efi_value = boot.get("efi", None) if boot else None
+    parent_tag = desc.find("os")
+    os_attrib = parent_tag.attrib
+
+    # newly defined vm without running, loader tag might not be filled yet
+    if efi_value is False and os_attrib != {}:
+        parent_tag.attrib.pop("firmware", None)
+        return True
+
+    # check the case that loader tag might be present. This happens after the vm ran
+    elif type(efi_value) == bool and os_attrib == {}:
+        if efi_value is True and parent_tag.find("loader") is None:
+            parent_tag.set("firmware", "efi")
+        if efi_value is False and parent_tag.find("loader") is not None:
+            parent_tag.remove(parent_tag.find("loader"))
+            parent_tag.remove(parent_tag.find("nvram"))
+        return True
+    elif type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
+    return False
 
 
 def init(
@@ -1558,6 +1605,7 @@ def init(
     os_type=None,
     arch=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -1627,7 +1675,8 @@ def init(
         This is an optional parameter, all of the keys are optional within the dictionary. The structure of
         the dictionary is documented in :ref:`init-boot-def`. If a remote path is provided to kernel or initrd,
         salt will handle the downloading of the specified remote file and modify the XML accordingly.
-        To boot VM with UEFI, specify loader and nvram path.
+        To boot VM with UEFI, specify loader and nvram path or specify 'efi': ``True`` if your libvirtd version
+        is >= 5.2.0 and QEMU >= 3.0.0.
 
         .. versionadded:: 3000
 
@@ -1640,6 +1689,12 @@ def init(
                 'loader': '/usr/share/OVMF/OVMF_CODE.fd',
                 'nvram': '/usr/share/OVMF/OVMF_VARS.ms.fd'
             }
+
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
 
     .. _init-boot-def:
 
@@ -1659,12 +1714,17 @@ def init(
     loader
         The path to the UEFI binary loader to use.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     nvram
         The path to the UEFI data template. The file will be copied when creating the virtual machine.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
+
+    efi
+       A boolean value.
+
+       .. versionadded:: sodium
 
     .. _init-nic-def:
 
@@ -1708,7 +1768,7 @@ def init(
         Path to the folder or name of the pool where disks should be created.
         (Default: depends on hypervisor and the virt:storagepool configuration)
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         If the value contains no '/', it is considered a pool name where to create a volume.
         Using volumes will be mandatory for some pools types like rdb, iscsi, etc.
@@ -1729,7 +1789,7 @@ def init(
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         This property is only valid on path-based disks, not on volumes. To create a volume with a
         backing store, set the ``backing_store_path`` and ``backing_store_format`` properties.
@@ -1738,20 +1798,20 @@ def init(
         Path to the backing store image to use. This can also be the name of a volume to use as
         backing store within the same pool.
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     backing_store_format
         Image format of the disk or volume to use as backing store. This property is mandatory when
         using ``backing_store_path`` to avoid `problems <https://libvirt.org/kbase/backing_chains.html#troubleshooting>`_
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
         parameter is useful to use disk images that are created outside of this module. Can also
         be ``None`` for devices that have no associated image like cdroms.
 
-        .. versionchanged:: sodium
+        .. versionchanged:: 3001
 
         For volume disks, this can be the name of a volume already existing in the storage pool.
 
@@ -1882,8 +1942,8 @@ def init(
                 else:
                     # assume libvirt manages disks for us
                     log.debug("Generating libvirt XML for %s", _disk)
-                    volume_name = "{0}/{1}".format(name, _disk["name"])
-                    filename = "{0}.{1}".format(volume_name, _disk["format"])
+                    volume_name = "{}/{}".format(name, _disk["name"])
+                    filename = "{}.{}".format(volume_name, _disk["format"])
                     vol_xml = _gen_vol_xml(
                         filename, _disk["size"], format=_disk["format"]
                     )
@@ -1931,7 +1991,7 @@ def init(
             else:
                 # Unknown hypervisor
                 raise SaltInvocationError(
-                    "Unsupported hypervisor when handling disk image: {0}".format(
+                    "Unsupported hypervisor when handling disk image: {}".format(
                         virt_hypervisor
                     )
                 )
@@ -1957,6 +2017,7 @@ def init(
             arch,
             graphics,
             boot,
+            boot_dev,
             **kwargs
         )
         conn.defineXML(vm_xml)
@@ -2114,6 +2175,21 @@ def _diff_lists(old, new, comparator):
     return diff
 
 
+def _get_disk_target(targets, disks_count, prefix):
+    """
+    Compute the disk target name for a given prefix.
+
+    :param targets: the list of already computed targets
+    :param disks: the number of disks
+    :param prefix: the prefix of the target name, i.e. "hd"
+    """
+    for i in range(disks_count):
+        ret = "{}{}".format(prefix, string.ascii_lowercase[i])
+        if ret not in targets:
+            return ret
+    return None
+
+
 def _diff_disk_lists(old, new):
     """
     Compare disk definitions to extract the changes and fix target devices
@@ -2130,11 +2206,7 @@ def _diff_disk_lists(old, new):
         target_node = disk.find("target")
         target = target_node.get("dev")
         prefix = [item for item in prefixes if target.startswith(item)][0]
-        new_target = [
-            "{0}{1}".format(prefix, string.ascii_lowercase[i])
-            for i in range(len(new))
-            if "{0}{1}".format(prefix, string.ascii_lowercase[i]) not in targets
-        ][0]
+        new_target = _get_disk_target(targets, len(new), prefix)
         target_node.set("dev", new_target)
         targets.append(new_target)
 
@@ -2173,6 +2245,7 @@ def update(
     live=True,
     boot=None,
     test=False,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -2215,14 +2288,31 @@ def update(
 
         Refer to :ref:`init-boot-def` for the complete boot parameter description.
 
-        To update any boot parameters, specify the new path for each. To remove any boot parameters,
-        pass a None object, for instance: 'kernel': ``None``.
+        To update any boot parameters, specify the new path for each. To remove any boot parameters, pass ``None`` object,
+        for instance: 'kernel': ``None``. To switch back to BIOS boot, specify ('loader': ``None`` and 'nvram': ``None``)
+        or 'efi': ``False``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
+
+        SLS file Example:
+
+        .. code-block:: yaml
+
+            - boot:
+                loader: null
+                nvram: null
 
         .. versionadded:: 3000
 
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
+
     :param test: run in dry-run mode if set to True
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     :return:
 
@@ -2267,6 +2357,8 @@ def update(
 
     if boot is not None:
         boot = _handle_remote_boot_params(boot)
+        if boot.get("efi", None) is not None:
+            need_update = _handle_efi_param(boot, desc)
 
     new_desc = ElementTree.fromstring(
         _gen_xml(
@@ -2288,15 +2380,14 @@ def update(
     # Update the cpu
     cpu_node = desc.find("vcpu")
     if cpu and int(cpu_node.text) != cpu:
-        cpu_node.text = six.text_type(cpu)
-        cpu_node.set("current", six.text_type(cpu))
+        cpu_node.text = str(cpu)
+        cpu_node.set("current", str(cpu))
         need_update = True
 
     # Update the kernel boot parameters
     boot_tags = ["kernel", "initrd", "cmdline", "loader", "nvram"]
     parent_tag = desc.find("os")
 
-    # We need to search for each possible subelement, and update it.
     for tag in boot_tags:
         # The Existing Tag...
         found_tag = parent_tag.find(tag)
@@ -2306,7 +2397,6 @@ def update(
 
         # Existing tag is found and values don't match
         if found_tag is not None and found_tag.text != boot_tag_value:
-
             # If the existing tag is found, but the new value is None
             # remove it. If the existing tag is found, and the new value
             # doesn't match update it. In either case, mark for update.
@@ -2351,11 +2441,23 @@ def update(
 
             need_update = True
 
+    # Check the os/boot tags
+    if boot_dev is not None:
+        boot_nodes = parent_tag.findall("boot")
+        old_boot_devs = [node.get("dev") for node in boot_nodes]
+        new_boot_devs = boot_dev.split()
+        if old_boot_devs != new_boot_devs:
+            for boot_node in boot_nodes:
+                parent_tag.remove(boot_node)
+            for dev in new_boot_devs:
+                ElementTree.SubElement(parent_tag, "boot", attrib={"dev": dev})
+            need_update = True
+
     # Update the memory, note that libvirt outputs all memory sizes in KiB
     for mem_node_name in ["memory", "currentMemory"]:
         mem_node = desc.find(mem_node_name)
         if mem and int(mem_node.text) != mem * 1024:
-            mem_node.text = six.text_type(mem)
+            mem_node.text = str(mem)
             mem_node.set("unit", "MiB")
             need_update = True
 
@@ -2376,8 +2478,8 @@ def update(
             if func_locals.get(param, None) is not None
         ]:
             old = devices_node.findall(dev_type)
-            new = new_desc.findall("devices/{0}".format(dev_type))
-            changes[dev_type] = globals()["_diff_{0}_lists".format(dev_type)](old, new)
+            new = new_desc.findall("devices/{}".format(dev_type))
+            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
             if changes[dev_type]["deleted"] or changes[dev_type]["new"]:
                 for item in old:
                     devices_node.remove(item)
@@ -2439,7 +2541,7 @@ def update(
             new_disks = []
             for new_disk in changes["disk"].get("new", []):
                 device = new_disk.get("device", "disk")
-                if new_disk.get("type") != "file" and device not in ["cdrom", "floppy"]:
+                if device not in ["cdrom", "floppy"]:
                     new_disks.append(new_disk)
                     continue
 
@@ -2447,8 +2549,7 @@ def update(
                 matching = [
                     old_disk
                     for old_disk in changes["disk"].get("deleted", [])
-                    if old_disk.get("type") == "file"
-                    and old_disk.get("device", "disk") == device
+                    if old_disk.get("device", "disk") == device
                     and old_disk.find("target").get("dev") == target_dev
                 ]
                 if not matching:
@@ -2466,15 +2567,13 @@ def update(
                         else None
                     )
 
+                    updated_disk.set("type", "file")
+                    # Detaching device
                     if source_node is not None:
-                        if not source_file:
-                            # Detaching device
-                            updated_disk.remove(source_node)
-                        else:
-                            # Changing device
-                            source_node.set("file", source_file)
-                    else:
-                        # Attaching device
+                        updated_disk.remove(source_node)
+
+                    # Attaching device
+                    if source_file:
                         ElementTree.SubElement(
                             updated_disk, "source", attrib={"file": source_file}
                         )
@@ -2538,7 +2637,7 @@ def update(
             except libvirt.libvirtError as err:
                 if "errors" not in status:
                     status["errors"] = []
-                status["errors"].append(six.text_type(err))
+                status["errors"].append(str(err))
 
     conn.close()
     return status
@@ -2752,7 +2851,7 @@ def _node_info(conn):
     info = {
         "cpucores": raw[6],
         "cpumhz": raw[3],
-        "cpumodel": six.text_type(raw[0]),
+        "cpumodel": str(raw[0]),
         "cpus": raw[2],
         "cputhreads": raw[7],
         "numanodes": raw[4],
@@ -3197,7 +3296,7 @@ def get_profiles(hypervisor=None, **kwargs):
         hypervisor = default_hypervisor
     virtconf = __salt__["config.get"]("virt", {})
     for typ in ["disk", "nic"]:
-        _func = getattr(sys.modules[__name__], "_{0}_profile".format(typ))
+        _func = getattr(sys.modules[__name__], "_{}_profile".format(typ))
         ret[typ] = {
             "default": _func(
                 "default", hypervisor if hypervisor else default_hypervisor
@@ -3490,7 +3589,7 @@ def create_xml_path(path, **kwargs):
             return create_xml_str(
                 salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
@@ -3548,7 +3647,7 @@ def define_xml_path(path, **kwargs):
             return define_xml_str(
                 salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
@@ -3560,7 +3659,7 @@ def _define_vol_xml_str(conn, xml, pool=None):  # pylint: disable=redefined-oute
     poolname = (
         pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
     )
-    pool = conn.storagePoolLookupByName(six.text_type(poolname))
+    pool = conn.storagePoolLookupByName(str(poolname))
     ret = pool.createXML(xml, 0) is not None
     return ret
 
@@ -3576,7 +3675,7 @@ def define_vol_xml_str(
         storage pool name to define the volume in.
         If defined, this parameter will override the configuration setting.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3621,7 +3720,7 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         storage pool name to define the volume in.
         If defined, this parameter will override the configuration setting.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3644,7 +3743,7 @@ def define_vol_xml_path(path, pool=None, **kwargs):
             return define_vol_xml_str(
                 salt.utils.stringutils.to_unicode(fp_.read()), pool=pool, **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
@@ -3761,7 +3860,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     """
-    for _, data in six.iteritems(disks):
+    for _, data in disks.items():
         fn_ = data["file"]
         form = data["file format"]
         size = data["virtual size"].split()[1][1:]
@@ -3905,7 +4004,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {0}".format(fs_name))
+            log.info("Destroying VM ZFS volume {}".format(fs_name))
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
@@ -3959,7 +4058,7 @@ def _is_kvm_hyper():
         with salt.utils.files.fopen("/proc/modules") as fp_:
             if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
-    except IOError:
+    except OSError:
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
@@ -3979,7 +4078,7 @@ def _is_xen_hyper():
         with salt.utils.files.fopen("/proc/modules") as fp_:
             if "xen_" not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
-    except (OSError, IOError):
+    except OSError:
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
@@ -4094,7 +4193,7 @@ def vm_cputime(vm_=None, **kwargs):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
             "cputime": int(raw[4]),
-            "cputime_percent": int("{0:.0f}".format(cputime_percent)),
+            "cputime_percent": int("{:.0f}".format(cputime_percent)),
         }
 
     info = {}
@@ -4164,7 +4263,7 @@ def vm_netstats(vm_=None, **kwargs):
             "tx_errs": 0,
             "tx_drop": 0,
         }
-        for attrs in six.itervalues(nics):
+        for attrs in nics.values():
             if "target" in attrs:
                 dev = attrs["target"]
                 stats = dom.interfaceStats(dev)
@@ -4492,7 +4591,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
         conn.close()
         raise CommandExecutionError(
             snapshot
-            and 'Snapshot "{0}" not found'.format(vm_snapshot)
+            and 'Snapshot "{}" not found'.format(vm_snapshot)
             or "No more previous snapshots available"
         )
     elif snap.isCurrent():
@@ -4967,7 +5066,7 @@ def all_capabilities(**kwargs):
     """
     Return the host and domain capabilities in a single call.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
@@ -5086,10 +5185,10 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             ]
 
             if not cpu_specs:
-                raise ValueError("Model {0} not found in CPU map".format(cpu_model))
+                raise ValueError("Model {} not found in CPU map".format(cpu_model))
             elif len(cpu_specs) > 1:
                 raise ValueError(
-                    "Multiple models {0} found in CPU map".format(cpu_model)
+                    "Multiple models {} found in CPU map".format(cpu_model)
                 )
 
             cpu_specs = cpu_specs[0]
@@ -5430,13 +5529,13 @@ def _parse_pools_caps(doc):
         for option_kind in ["pool", "vol"]:
             options = {}
             default_format_node = pool.find(
-                "{0}Options/defaultFormat".format(option_kind)
+                "{}Options/defaultFormat".format(option_kind)
             )
             if default_format_node is not None:
                 options["default_format"] = default_format_node.get("type")
             options_enums = {
                 enum.get("name"): [value.text for value in enum.findall("value")]
-                for enum in pool.findall("{0}Options/enum".format(option_kind))
+                for enum in pool.findall("{}Options/enum".format(option_kind))
             }
             if options_enums:
                 options.update(options_enums)
@@ -5831,15 +5930,19 @@ def _pool_set_secret(
         if secret_type:
             # Get the previously defined secret if any
             secret = None
-            if usage:
-                usage_type = (
-                    libvirt.VIR_SECRET_USAGE_TYPE_CEPH
-                    if secret_type == "ceph"
-                    else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
-                )
-                secret = conn.secretLookupByUsage(usage_type, usage)
-            elif uuid:
-                secret = conn.secretLookupByUUIDString(uuid)
+            try:
+                if usage:
+                    usage_type = (
+                        libvirt.VIR_SECRET_USAGE_TYPE_CEPH
+                        if secret_type == "ceph"
+                        else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                    )
+                    secret = conn.secretLookupByUsage(usage_type, usage)
+                elif uuid:
+                    secret = conn.secretLookupByUUIDString(uuid)
+            except libvirt.libvirtError as err:
+                # For some reason the secret has been removed. Don't fail since we'll recreate it
+                log.info("Secret not found: %s", err.get_error_message())
 
             # Create secret if needed
             if not secret:
@@ -6267,6 +6370,22 @@ def pool_undefine(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
+        desc = ElementTree.fromstring(pool.XMLDesc())
+
+        # Is there a secret that we generated and would need to be removed?
+        # Don't remove the other secrets
+        auth_node = desc.find("source/auth")
+        if auth_node is not None:
+            auth_types = {
+                "ceph": libvirt.VIR_SECRET_USAGE_TYPE_CEPH,
+                "iscsi": libvirt.VIR_SECRET_USAGE_TYPE_ISCSI,
+            }
+            secret_type = auth_types[auth_node.get("type")]
+            secret_usage = auth_node.find("secret").get("usage")
+            if secret_type and "pool_{}".format(name) == secret_usage:
+                secret = conn.secretLookupByUsage(secret_type, secret_usage)
+                secret.undefine()
+
         return not bool(pool.undefine())
     finally:
         conn.close()
@@ -6292,22 +6411,6 @@ def pool_delete(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
-        desc = ElementTree.fromstring(pool.XMLDesc())
-
-        # Is there a secret that we generated and would need to be removed?
-        # Don't remove the other secrets
-        auth_node = desc.find("source/auth")
-        if auth_node is not None:
-            auth_types = {
-                "ceph": libvirt.VIR_SECRET_USAGE_TYPE_CEPH,
-                "iscsi": libvirt.VIR_SECRET_USAGE_TYPE_ISCSI,
-            }
-            secret_type = auth_types[auth_node.get("type")]
-            secret_usage = auth_node.find("secret").get("usage")
-            if secret_type and "pool_{}".format(name) == secret_usage:
-                secret = conn.secretLookupByUsage(secret_type, secret_usage)
-                secret.undefine()
-
         return not bool(pool.delete(libvirt.VIR_STORAGE_POOL_DELETE_NORMAL))
     finally:
         conn.close()
@@ -6643,7 +6746,7 @@ def volume_define(
                             backing_store="{'path': '/path/to/base.img', 'format': 'raw'}" \
                             nocow=True
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     ret = False
     try:
@@ -6752,7 +6855,7 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
                     stream.abort()
                 if ret:
                     raise CommandExecutionError(
-                        "Failed to close file: {0}".format(err.strerror)
+                        "Failed to close file: {}".format(err.strerror)
                     )
         if stream:
             try:
@@ -6760,7 +6863,7 @@ def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
             except libvirt.libvirtError as err:
                 if ret:
                     raise CommandExecutionError(
-                        "Failed to finish stream: {0}".format(err.get_error_message())
+                        "Failed to finish stream: {}".format(err.get_error_message())
                     )
     return ret
 
@@ -6785,7 +6888,7 @@ def volume_upload(pool, volume, file, offset=0, length=0, sparse=False, **kwargs
 
         salt '*' virt.volume_upload default myvm.qcow2 /path/to/disk.qcow2
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     conn = __get_conn(**kwargs)
 

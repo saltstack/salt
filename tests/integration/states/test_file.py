@@ -19,6 +19,7 @@ import textwrap
 
 import pytest
 import salt.serializers.configparser
+import salt.serializers.plist
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -577,6 +578,34 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
 
+    def test_onchanges_any_recursive_error_issues_50811(self):
+        """
+        test that onchanges_any does not causes a recursive error
+        """
+        state_name = "onchanges_any_recursive_error"
+        state_filename = state_name + ".sls"
+        state_file = os.path.join(RUNTIME_VARS.BASE_FILES, state_filename)
+
+        try:
+            with salt.utils.files.fopen(state_file, "w") as fd_:
+                fd_.write(
+                    textwrap.dedent(
+                        """\
+                    command-test:
+                      cmd.run:
+                          - name: ls
+                          - onchanges_any:
+                            - file: /tmp/an-unfollowed-file
+                    """
+                    )
+                )
+
+            ret = self.run_function("state.sls", [state_name])
+            self.assertSaltFalseReturn(ret)
+        finally:
+            if os.path.exists(state_file):
+                os.remove(state_file)
+
     def test_prerequired_issues_55775(self):
         """
         Test that __prereqired__ is filter from file.replace
@@ -698,7 +727,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         """
         r_group = "root"
-        if salt.utils.platform.is_darwin():
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
             r_group = "wheel"
         try:
             ret = self.run_state(
@@ -1996,6 +2025,78 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         # and bar will then = baz
         assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
 
+    @with_tempfile(create=False)
+    def test_serializer_plist_binary_file_open(self, name):
+        """
+        Test the serialization and deserialization of plists which should include
+        the "rb" file open arguments change specifically for this formatter to handle
+        binary plists.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data1,
+            formatter="plist",
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+            serializer_opts=[{"fmt": "FMT_BINARY"}],
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
+
+    @with_tempfile(create=False)
+    def test_serializer_plist_file_open(self, name):
+        """
+        Test the serialization and deserialization of non binary plists with
+        the new line concatenation.
+        """
+        data1 = {"foo": {"bar": "%(x)s"}}
+        data2 = {"foo": {"abc": 123}}
+        merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
+
+        ret = self.run_state(
+            "file.serialize", name=name, dataset=data1, formatter="plist",
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        # Run with merge_if_exists so we test the deserializer.
+        ret = self.run_state(
+            "file.serialize",
+            name=name,
+            dataset=data2,
+            formatter="plist",
+            merge_if_exists=True,
+        )
+        ret = ret[next(iter(ret))]
+        assert ret["result"], ret
+
+        with salt.utils.files.fopen(name, "rb") as fp_:
+            serialized_data = salt.serializers.plist.deserialize(fp_)
+
+        # make sure our serialized data matches what we expect
+        assert serialized_data["foo"] == merged["foo"]
+
     @with_tempdir()
     def test_replace_issue_18841_omit_backup(self, base_dir):
         """
@@ -2621,6 +2722,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
     @with_tempdir()
+    @skipIf(salt.utils.platform.is_freebsd(), "Test is failing on FreeBSD")
     def test_issue_12209_follow_symlinks(self, tempdir, user, group):
         """
         Ensure that symlinks are properly chowned when recursing (following

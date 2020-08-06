@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage virt
 ===========
@@ -13,9 +12,9 @@ for the generation and signing of certificates for systems running libvirt:
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
+import logging
 import os
 
 # Import Salt libs
@@ -24,9 +23,6 @@ import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -37,6 +33,8 @@ except ImportError:
 
 
 __virtualname__ = "virt"
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -98,8 +96,8 @@ def keys(name, basepath="/etc/pki", **kwargs):
     # rename them to something hopefully unique to avoid
     # overriding anything existing
     pillar_kwargs = {}
-    for key, value in six.iteritems(kwargs):
-        pillar_kwargs["ext_pillar_virt.{0}".format(key)] = value
+    for key, value in kwargs.items():
+        pillar_kwargs["ext_pillar_virt.{}".format(key)] = value
 
     pillar = __salt__["pillar.ext"]({"libvirt": "_"}, pillar_kwargs)
     paths = {
@@ -111,7 +109,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
     }
 
     for key in paths:
-        p_key = "libvirt.{0}.pem".format(key)
+        p_key = "libvirt.{}.pem".format(key)
         if p_key not in pillar:
             continue
         if not os.path.exists(os.path.dirname(paths[key])):
@@ -133,7 +131,7 @@ def keys(name, basepath="/etc/pki", **kwargs):
         for key in ret["changes"]:
             with salt.utils.files.fopen(paths[key], "w+") as fp_:
                 fp_.write(
-                    salt.utils.stringutils.to_str(pillar["libvirt.{0}.pem".format(key)])
+                    salt.utils.stringutils.to_str(pillar["libvirt.{}.pem".format(key)])
                 )
 
         ret["comment"] = "Updated libvirt certs and keys"
@@ -175,7 +173,7 @@ def _virt_call(
                 domain_state = __salt__["virt.vm_state"](targeted_domain)
                 action_needed = domain_state.get(targeted_domain) != state
             if action_needed:
-                response = __salt__["virt.{0}".format(function)](
+                response = __salt__["virt.{}".format(function)](
                     targeted_domain,
                     connection=connection,
                     username=username,
@@ -188,9 +186,7 @@ def _virt_call(
             else:
                 noaction_domains.append(targeted_domain)
         except libvirt.libvirtError as err:
-            ignored_domains.append(
-                {"domain": targeted_domain, "issue": six.text_type(err)}
-            )
+            ignored_domains.append({"domain": targeted_domain, "issue": str(err)})
     if not changed_domains:
         ret["result"] = not ignored_domains and bool(targeted_domains)
         ret["comment"] = "No changes had happened"
@@ -291,11 +287,12 @@ def defined(
     arch=None,
     boot=None,
     update=True,
+    boot_dev=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     :param name: name of the virtual machine to run
     :param cpu: number of CPUs for the virtual machine to create
@@ -349,7 +346,15 @@ def defined(
 
     :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
 
-        .. deprecated:: sodium
+        .. deprecated:: 3001
+
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
 
     .. rubric:: Example States
 
@@ -361,6 +366,7 @@ def defined(
           virt.defined:
             - cpu: 2
             - mem: 2048
+            - boot_dev: network hd
             - disk_profile: prod
             - disks:
               - name: system
@@ -413,17 +419,18 @@ def defined(
                     password=password,
                     boot=boot,
                     test=__opts__["test"],
+                    boot_dev=boot_dev,
                 )
             ret["changes"][name] = status
             if not status.get("definition"):
-                ret["comment"] = "Domain {0} unchanged".format(name)
+                ret["comment"] = "Domain {} unchanged".format(name)
                 ret["result"] = True
             elif status.get("errors"):
                 ret[
                     "comment"
-                ] = "Domain {0} updated with live update(s) failures".format(name)
+                ] = "Domain {} updated with live update(s) failures".format(name)
             else:
-                ret["comment"] = "Domain {0} updated".format(name)
+                ret["comment"] = "Domain {} updated".format(name)
         else:
             if not __opts__["test"]:
                 __salt__["virt.init"](
@@ -447,12 +454,13 @@ def defined(
                     password=password,
                     boot=boot,
                     start=False,
+                    boot_dev=boot_dev,
                 )
             ret["changes"][name] = {"definition": True}
-            ret["comment"] = "Domain {0} defined".format(name)
+            ret["comment"] = "Domain {} defined".format(name)
     except libvirt.libvirtError as err:
         # Something bad happened when defining / updating the VM, report it
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
         ret["result"] = False
 
     return ret
@@ -479,6 +487,7 @@ def running(
     os_type=None,
     arch=None,
     boot=None,
+    boot_dev=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -540,7 +549,7 @@ def running(
     :param update: set to ``True`` to update a defined domain. (Default: ``False``)
 
         .. versionadded:: 2019.2.0
-        .. deprecated:: sodium
+        .. deprecated:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -573,6 +582,14 @@ def running(
 
         .. versionadded:: 3000
 
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
+
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -591,6 +608,7 @@ def running(
             - cpu: 2
             - mem: 2048
             - disk_profile: prod
+            - boot_dev: network hd
             - disks:
               - name: system
                 size: 8192
@@ -639,6 +657,7 @@ def running(
         arch=arch,
         boot=boot,
         update=update,
+        boot_dev=boot_dev,
         connection=connection,
         username=username,
         password=password,
@@ -663,11 +682,11 @@ def running(
                 ret["comment"] = comment
                 ret["changes"][name]["started"] = True
             elif not changed:
-                ret["comment"] = "Domain {0} exists and is running".format(name)
+                ret["comment"] = "Domain {} exists and is running".format(name)
 
         except libvirt.libvirtError as err:
             # Something bad happened when starting / updating the VM, report it
-            ret["comment"] = six.text_type(err)
+            ret["comment"] = str(err)
             ret["result"] = False
 
     return ret
@@ -812,7 +831,7 @@ def reverted(
     try:
         domains = fnmatch.filter(__salt__["virt.list_domains"](), name)
         if not domains:
-            ret["comment"] = 'No domains found for criteria "{0}"'.format(name)
+            ret["comment"] = 'No domains found for criteria "{}"'.format(name)
         else:
             ignored_domains = list()
             if len(domains) > 1:
@@ -830,9 +849,7 @@ def reverted(
                     }
                 except CommandExecutionError as err:
                     if len(domains) > 1:
-                        ignored_domains.append(
-                            {"domain": domain, "issue": six.text_type(err)}
-                        )
+                        ignored_domains.append({"domain": domain, "issue": str(err)})
                 if len(domains) > 1:
                     if result:
                         ret["changes"]["reverted"].append(result)
@@ -842,7 +859,7 @@ def reverted(
 
             ret["result"] = len(domains) != len(ignored_domains)
             if ret["result"]:
-                ret["comment"] = "Domain{0} has been reverted".format(
+                ret["comment"] = "Domain{} has been reverted".format(
                     len(domains) > 1 and "s" or ""
                 )
             if ignored_domains:
@@ -850,9 +867,9 @@ def reverted(
             if not ret["changes"]["reverted"]:
                 ret["changes"].pop("reverted")
     except libvirt.libvirtError as err:
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
     except CommandExecutionError as err:
-        ret["comment"] = six.text_type(err)
+        ret["comment"] = str(err)
 
     return ret
 
@@ -892,7 +909,7 @@ def network_defined(
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     .. code-block:: yaml
 
@@ -937,7 +954,7 @@ def network_defined(
             name, connection=connection, username=username, password=password
         )
         if info and info[name]:
-            ret["comment"] = "Network {0} exists".format(name)
+            ret["comment"] = "Network {} exists".format(name)
             ret["result"] = True
         else:
             if not __opts__["test"]:
@@ -956,7 +973,7 @@ def network_defined(
                     password=password,
                 )
             ret["changes"][name] = "Network defined"
-            ret["comment"] = "Network {0} defined".format(name)
+            ret["comment"] = "Network {} defined".format(name)
     except libvirt.libvirtError as err:
         ret["result"] = False
         ret["comment"] = err.get_error_message()
@@ -1090,6 +1107,10 @@ def network_running(
     return ret
 
 
+# Some of the libvirt storage drivers do not support the build action
+BUILDABLE_POOL_TYPES = {"disk", "fs", "netfs", "dir", "logical", "vstorage", "zfs"}
+
+
 def pool_defined(
     name,
     ptype=None,
@@ -1105,7 +1126,7 @@ def pool_defined(
     """
     Defines a new pool with specified arguments.
 
-    .. versionadded:: sodium
+    .. versionadded:: 3001
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
@@ -1204,25 +1225,35 @@ def pool_defined(
 
                 action = ""
                 if info[name]["state"] != "running":
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_build"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
-                    action = ", built"
+                    if ptype in BUILDABLE_POOL_TYPES:
+                        if not __opts__["test"]:
+                            # Storage pools build like disk or logical will fail if the disk or LV group
+                            # was already existing. Since we can't easily figure that out, just log the
+                            # possible libvirt error.
+                            try:
+                                __salt__["virt.pool_build"](
+                                    name,
+                                    connection=connection,
+                                    username=username,
+                                    password=password,
+                                )
+                            except libvirt.libvirtError as err:
+                                log.warning(
+                                    "Failed to build libvirt storage pool: %s",
+                                    err.get_error_message(),
+                                )
+                        action = ", built"
 
                 action = (
                     "{}, autostart flag changed".format(action)
                     if needs_autostart
                     else action
                 )
-                ret["changes"][name] = "Pool updated{0}".format(action)
-                ret["comment"] = "Pool {0} updated{1}".format(name, action)
+                ret["changes"][name] = "Pool updated{}".format(action)
+                ret["comment"] = "Pool {} updated{}".format(name, action)
 
             else:
-                ret["comment"] = "Pool {0} unchanged".format(name)
+                ret["comment"] = "Pool {} unchanged".format(name)
                 ret["result"] = True
         else:
             needs_autostart = autostart
@@ -1247,15 +1278,28 @@ def pool_defined(
                     password=password,
                 )
 
-                __salt__["virt.pool_build"](
-                    name, connection=connection, username=username, password=password
-                )
+                if ptype in BUILDABLE_POOL_TYPES:
+                    # Storage pools build like disk or logical will fail if the disk or LV group
+                    # was already existing. Since we can't easily figure that out, just log the
+                    # possible libvirt error.
+                    try:
+                        __salt__["virt.pool_build"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                    except libvirt.libvirtError as err:
+                        log.warning(
+                            "Failed to build libvirt storage pool: %s",
+                            err.get_error_message(),
+                        )
             if needs_autostart:
                 ret["changes"][name] = "Pool defined, marked for autostart"
-                ret["comment"] = "Pool {0} defined, marked for autostart".format(name)
+                ret["comment"] = "Pool {} defined, marked for autostart".format(name)
             else:
                 ret["changes"][name] = "Pool defined"
-                ret["comment"] = "Pool {0} defined".format(name)
+                ret["comment"] = "Pool {} defined".format(name)
 
         if needs_autostart:
             if not __opts__["test"]:
@@ -1358,7 +1402,7 @@ def pool_running(
             is_running = info.get(name, {}).get("state", "stopped") == "running"
             if is_running:
                 if updated:
-                    action = "built, restarted"
+                    action = "restarted"
                     if not __opts__["test"]:
                         __salt__["virt.pool_stop"](
                             name,
@@ -1366,13 +1410,16 @@ def pool_running(
                             username=username,
                             password=password,
                         )
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_build"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
+                    # if the disk or LV group is already existing build will fail (issue #56454)
+                    if ptype in BUILDABLE_POOL_TYPES - {"disk", "logical"}:
+                        if not __opts__["test"]:
+                            __salt__["virt.pool_build"](
+                                name,
+                                connection=connection,
+                                username=username,
+                                password=password,
+                            )
+                        action = "built, {}".format(action)
                 else:
                     action = "already running"
                     result = True
@@ -1386,16 +1433,16 @@ def pool_running(
                         password=password,
                     )
 
-            comment = "Pool {0}".format(name)
+            comment = "Pool {}".format(name)
             change = "Pool"
             if name in ret["changes"]:
-                comment = "{0},".format(ret["comment"])
-                change = "{0},".format(ret["changes"][name])
+                comment = "{},".format(ret["comment"])
+                change = "{},".format(ret["changes"][name])
 
             if action != "already running":
-                ret["changes"][name] = "{0} {1}".format(change, action)
+                ret["changes"][name] = "{} {}".format(change, action)
 
-            ret["comment"] = "{0} {1}".format(comment, action)
+            ret["comment"] = "{} {}".format(comment, action)
             ret["result"] = result
 
         except libvirt.libvirtError as err:
@@ -1523,15 +1570,13 @@ def pool_deleted(name, purge=False, connection=None, username=None, password=Non
                 ret["result"] = None
 
             if unsupported:
-                ret[
-                    "comment"
-                ] = 'Unsupported actions for pool of type "{0}": {1}'.format(
+                ret["comment"] = 'Unsupported actions for pool of type "{}": {}'.format(
                     info[name]["type"], ", ".join(unsupported)
                 )
         else:
-            ret["comment"] = "Storage pool could not be found: {0}".format(name)
+            ret["comment"] = "Storage pool could not be found: {}".format(name)
     except libvirt.libvirtError as err:
-        ret["comment"] = "Failed deleting pool: {0}".format(err.get_error_message())
+        ret["comment"] = "Failed deleting pool: {}".format(err.get_error_message())
         ret["result"] = False
 
     return ret
@@ -1609,7 +1654,7 @@ def volume_defined(
                 format: raw
             - nocow: True
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 

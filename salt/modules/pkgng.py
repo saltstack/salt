@@ -1198,6 +1198,16 @@ def upgrade(*names, **kwargs):
         .. code-block:: bash
 
             salt '*' pkg.upgrade <package name> fromrepo=repo
+
+    fetchonly
+        Do not perform installation of packages, merely fetch
+        packages that should be upgraded and detect possible conflicts.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade <package name> fetchonly=True
     """
     jail = kwargs.pop("jail", None)
     chroot = kwargs.pop("chroot", None)
@@ -1206,12 +1216,15 @@ def upgrade(*names, **kwargs):
     force = kwargs.pop("force", False)
     local = kwargs.pop("local", False)
     dryrun = kwargs.pop("dryrun", False)
+    fetchonly = kwargs.pop("fetchonly", False)
     pkgs = kwargs.pop("pkgs", [])
     opts = ""
     if force:
         opts += "f"
     if local:
         opts += "L"
+    if fetchonly:
+        opts += "F"
     if dryrun:
         opts += "n"
     if not dryrun:

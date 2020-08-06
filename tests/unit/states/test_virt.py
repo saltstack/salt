@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import shutil
 import tempfile
@@ -14,7 +12,6 @@ import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -37,7 +34,7 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
             """
             Fake function return error message
             """
-            return six.text_type(self)
+            return str(self)
 
 
 class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
@@ -341,6 +338,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "myvm",
                         cpu=2,
                         mem=2048,
+                        boot_dev="cdrom hd",
                         os_type="linux",
                         arch="i686",
                         vm_type="qemu",
@@ -363,6 +361,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "myvm",
                     cpu=2,
                     mem=2048,
+                    boot_dev="cdrom hd",
                     os_type="linux",
                     arch="i686",
                     disk="prod",
@@ -471,10 +470,13 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "comment": "Domain myvm updated with live update(s) failures",
                     }
                 )
-                self.assertDictEqual(virt.defined("myvm", cpu=2), ret)
+                self.assertDictEqual(
+                    virt.defined("myvm", cpu=2, boot_dev="cdrom hd"), ret
+                )
                 update_mock.assert_called_with(
                     "myvm",
                     cpu=2,
+                    boot_dev="cdrom hd",
                     mem=None,
                     disk_profile=None,
                     disks=None,
@@ -598,6 +600,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
             # No changes case
@@ -632,6 +635,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
     def test_running(self):
@@ -708,6 +712,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     install=True,
                     pub_key=None,
                     priv_key=None,
+                    boot_dev=None,
                     connection=None,
                     username=None,
                     password=None,
@@ -769,6 +774,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         install=False,
                         pub_key="/path/to/key.pub",
                         priv_key="/path/to/key",
+                        boot_dev="network hd",
                         connection="someconnection",
                         username="libvirtuser",
                         password="supersecret",
@@ -793,6 +799,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     start=False,
                     pub_key="/path/to/key.pub",
                     priv_key="/path/to/key",
+                    boot_dev="network hd",
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
@@ -937,6 +944,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=False,
+                    boot_dev=None,
                 )
 
             # Failed definition update case
@@ -1055,6 +1063,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
                 start_mock.assert_not_called()
 
@@ -1091,6 +1100,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                     boot=None,
                     test=True,
+                    boot_dev=None,
                 )
 
     def test_stopped(self):
@@ -1978,6 +1988,72 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password="secret",
                 )
 
+            # Define a pool that doesn't handle build
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        side_effect=[
+                            {},
+                            {"mypool": {"state": "stopped", "autostart": True}},
+                        ]
+                    ),
+                    "virt.pool_define": mocks["define"],
+                    "virt.pool_build": mocks["build"],
+                    "virt.pool_set_autostart": mocks["autostart"],
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mypool": "Pool defined, marked for autostart"},
+                        "comment": "Pool mypool defined, marked for autostart",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="rbd",
+                        source={
+                            "name": "libvirt-pool",
+                            "hosts": ["ses2.tf.local", "ses3.tf.local"],
+                            "auth": {
+                                "username": "libvirt",
+                                "password": "AQAz+PRdtquBBRAASMv7nlMZYfxIyLw3St65Xw==",
+                            },
+                        },
+                        autostart=True,
+                    ),
+                    ret,
+                )
+                mocks["define"].assert_called_with(
+                    "mypool",
+                    ptype="rbd",
+                    target=None,
+                    permissions=None,
+                    source_devices=None,
+                    source_dir=None,
+                    source_adapter=None,
+                    source_hosts=["ses2.tf.local", "ses3.tf.local"],
+                    source_auth={
+                        "username": "libvirt",
+                        "password": "AQAz+PRdtquBBRAASMv7nlMZYfxIyLw3St65Xw==",
+                    },
+                    source_name="libvirt-pool",
+                    source_format=None,
+                    source_initiator=None,
+                    start=False,
+                    transient=False,
+                    connection=None,
+                    username=None,
+                    password=None,
+                )
+                mocks["autostart"].assert_called_with(
+                    "mypool", state="on", connection=None, username=None, password=None,
+                )
+                mocks["build"].assert_not_called()
+
             mocks["update"] = MagicMock(return_value=False)
             for mock in mocks:
                 mocks[mock].reset_mock()
@@ -2027,6 +2103,9 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             for mock in mocks:
                 mocks[mock].reset_mock()
             mocks["update"] = MagicMock(return_value=True)
+            mocks["build"] = MagicMock(
+                side_effect=self.mock_libvirt.libvirtError("Existing VG")
+            )
             with patch.dict(
                 virt.__salt__,
                 {  # pylint: disable=no-member
@@ -2130,6 +2209,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     ),
                     ret,
                 )
+                mocks["build"].assert_not_called()
                 mocks["update"].assert_called_with(
                     "mypool",
                     ptype="logical",
@@ -2477,8 +2557,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {"mypool": "Pool updated, built, restarted"},
-                        "comment": "Pool mypool updated, built, restarted",
+                        "changes": {"mypool": "Pool updated, restarted"},
+                        "comment": "Pool mypool updated, restarted",
                         "result": True,
                     }
                 )
@@ -2504,9 +2584,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 mocks["start"].assert_called_with(
                     "mypool", connection=None, username=None, password=None
                 )
-                mocks["build"].assert_called_with(
-                    "mypool", connection=None, username=None, password=None
-                )
+                mocks["build"].assert_not_called()
                 mocks["update"].assert_called_with(
                     "mypool",
                     ptype="logical",
