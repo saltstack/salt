@@ -179,7 +179,7 @@ def node_setup(domain, master, ticket, master_host=None):
 
     .. code-block:: bash
 
-        salt '*' icinga2.node_setup domain.tld master.domain.tld master_host TICKET_ID
+        salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID master_host
 
     """
     if master_host is None:
