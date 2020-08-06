@@ -24,7 +24,7 @@ For remote signing, peers must be permitted to remotely call the
 
     peer:
       .*:
-        - sign_remote_certificate
+        - x509.sign_remote_certificate
 
 
 /srv/salt/top.sls
@@ -170,26 +170,23 @@ be considered valid.
         - backup: True
 
 """
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
+import logging
 import os
 import re
 
-# Import Salt Libs
 import salt.exceptions
 import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     from M2Crypto.RSA import RSAError
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -210,10 +207,10 @@ def _revoked_to_list(revs):
     list_ = []
 
     for rev in revs:
-        for rev_name, props in six.iteritems(rev):  # pylint: disable=unused-variable
+        for props in rev.values():
             dict_ = {}
             for prop in props:
-                for propname, val in six.iteritems(prop):
+                for propname, val in prop.items():
                     if isinstance(val, datetime.datetime):
                         val = val.strftime("%Y-%m-%d %H:%M:%S")
                     dict_[propname] = val
@@ -433,10 +430,43 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
             pass
 
     diff = []
-    for k, v in six.iteritems(required_cert_info):
+    for k, v in required_cert_info.items():
         try:
             if v != cert_info[k]:
-                diff.append(k)
+                if k == "Subject Hash":
+                    # If we failed the subject hash check but the subject matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Subject"] != cert_info["Subject"]:
+                        diff.append(k)
+                elif k == "Issuer Hash":
+                    # If we failed the issuer hash check but the issuer matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Issuer"] != cert_info["Issuer"]:
+                        diff.append(k)
+                elif k == "X509v3 Extensions":
+                    v_ext = v.copy()
+                    cert_info_ext = cert_info[k].copy()
+                    # DirName depends on ordering which was different on certificates created
+                    # under Python 2. Remove that from the comparisson
+                    try:
+                        v_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            v_ext["authorityKeyIdentifier"],
+                        )
+                        cert_info_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            cert_info_ext["authorityKeyIdentifier"],
+                        )
+                    except KeyError:
+                        pass
+                    if v_ext != cert_info_ext:
+                        diff.append(k)
+                else:
+                    diff.append(k)
         except KeyError:
             diff.append(k)
 
@@ -459,7 +489,8 @@ def _certificate_days_remaining(cert_info):
 
 def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
     """
-    Return True if the given certificate file exists, is a certificate, matches the given specification, and has the required days remaining.
+    Return True if the given certificate file exists, is a certificate, matches the given specification,
+    and has the required days remaining.
 
     If False, also provide a message explaining why.
     """
@@ -518,6 +549,25 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         return True, "", cert_info
     except salt.exceptions.SaltInvocationError as e:
         return False, "{0} is not a valid certificate: {1}".format(name, str(e)), {}
+
+
+def _certificate_file_managed(ret, file_args):
+    """
+    Run file.managed and merge the result with an existing return dict.
+    The overall True/False result will be the result of the file.managed call.
+    """
+    file_ret = __states__["file.managed"](**file_args)
+
+    ret["result"] = file_ret["result"]
+    if ret["result"]:
+        ret["comment"] = "Certificate {0} is valid and up to date".format(ret["name"])
+    else:
+        ret["comment"] = file_ret["comment"]
+
+    if file_ret["changes"]:
+        ret["changes"] = {"File": file_ret["changes"]}
+
+    return ret
 
 
 def certificate_managed(
@@ -609,7 +659,8 @@ def certificate_managed(
     if managed_private_key:
         salt.utils.versions.warn_until(
             "Aluminium",
-            "Passing 'managed_private_key' to x509.certificate_managed has no effect and will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
+            "Passing 'managed_private_key' to x509.certificate_managed has no effect and "
+            "will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
         )
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
@@ -619,11 +670,21 @@ def certificate_managed(
     )
 
     if is_valid:
-        ret["result"] = True
-        ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-        return ret
+        file_args, extra_args = _get_file_args(name, **kwargs)
+
+        return _certificate_file_managed(ret, file_args)
 
     if __opts__["test"]:
+        file_args, extra_args = _get_file_args(name, **kwargs)
+        # Use empty contents for file.managed in test mode.
+        # We don't want generate a new certificate, even in memory,
+        # for security reasons.
+        # Using an empty string instead of omitting it will at least
+        # show the old certificate in the diff.
+        file_args["contents"] = ""
+
+        ret = _certificate_file_managed(ret, file_args)
+
         ret["result"] = None
         ret["comment"] = "Certificate {0} will be created".format(name)
         ret["changes"]["Status"] = {
@@ -664,21 +725,18 @@ def certificate_managed(
 
     file_args, extra_args = _get_file_args(name, **kwargs)
     file_args["contents"] = contents
-    file_ret = __states__["file.managed"](**file_args)
 
-    if file_ret["changes"]:
-        ret["changes"] = {"File": file_ret["changes"]}
+    ret = _certificate_file_managed(ret, file_args)
 
-    ret["changes"]["Certificate"] = {
-        "Old": current_cert_info,
-        "New": __salt__["x509.read_certificate"](certificate=name),
-    }
-    ret["changes"]["Status"] = {
-        "Old": invalid_reason,
-        "New": "Certificate is valid and up to date",
-    }
-    ret["comment"] = "Certificate {0} is valid and up to date".format(name)
-    ret["result"] = True
+    if ret["result"]:
+        ret["changes"]["Certificate"] = {
+            "Old": current_cert_info,
+            "New": __salt__["x509.read_certificate"](certificate=name),
+        }
+        ret["changes"]["Status"] = {
+            "Old": invalid_reason,
+            "New": "Certificate is valid and up to date",
+        }
 
     return ret
 

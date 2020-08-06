@@ -1067,7 +1067,9 @@ to be released (after reaching ``socket.timeout``) when there is no fqdn for tha
 These calls to ``socket.gethostbyaddr`` are processed asynchronously, however, it still
 adds 5 seconds every time grains are generated if an IP does not resolve. In Windows
 grains are regenerated each time a new process is spawned. Therefore, the default for
-Windows is ``False``. All other OSes default to ``True``. This options was
+Windows is ``False``. In many cases this value does not make sense to include for proxy
+minions as it will be FQDN for the host running the proxy minion process, so the default
+for proxy minions is ``False```. All other OSes default to ``True``. This options was
 added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml
@@ -2713,6 +2715,34 @@ the ``extra_minion_data`` parameter will be
 
     {"opt1": "value1", "opt2": {"subopt1": "value2"}}
 
+``ssh_merge_pillar``
+--------------------
+
+.. versionadded:: 2018.3.2
+
+Default: ``True``
+
+Merges the compiled pillar data with the pillar data already available globally.
+This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
+data in a state file:
+
+.. code-block:: yaml
+
+    apply_showpillar:
+      module.run:
+        - name: state.apply
+        - mods:
+          - showpillar
+        - kwargs:
+              pillar:
+                  test: "foo bar"
+
+If set to ``True``, the ``showpillar`` state will have access to the
+global pillar data.
+
+If set to ``False``, only the overriding pillar data will be available
+to the ``showpillar`` state.
+
 Security Settings
 =================
 
@@ -3413,6 +3443,14 @@ have other services that need to go with it.
 
     update_restart_services: ['salt-minion']
 
+.. _winrepo-minion-config-opts:
+
+Windows Software Repo Settings
+==============================
+
+These settings apply to all minions, whether running in masterless or
+master-minion mode.
+
 .. conf_minion:: winrepo_cache_expire_min
 
 ``winrepo_cache_expire_min``
@@ -3449,16 +3487,6 @@ the metadata will be refreshed.
 
     winrepo_cache_expire_max: 86400
 
-.. _winrepo-minion-config-opts:
-
-Minion Windows Software Repo Settings
-=====================================
-
-.. important::
-    To use these config options, the minion can be running in master-minion or
-    masterless mode.
-
-
 .. conf_minion:: winrepo_source_dir
 
 ``winrepo_source_dir``
@@ -3475,9 +3503,13 @@ The source location for the winrepo sls files.
 Standalone Minion Windows Software Repo Settings
 ================================================
 
+The following settings are for configuring the Windows Software Repository
+(winrepo) on a masterless minion. To run in masterless minion mode, set the
+:conf_minion:`file_client` to ``local`` or run ``salt-call`` with the
+``--local`` option
+
 .. important::
-    To use these config options, the minion must be running in masterless mode
-    (set :conf_minion:`file_client` to ``local``).
+    These config options are only valid for minions running in masterless mode
 
 .. conf_minion:: winrepo_dir
 .. conf_minion:: win_repo
@@ -3486,13 +3518,14 @@ Standalone Minion Windows Software Repo Settings
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
-    have a default value until this version.
+    Renamed from ``win_repo`` to ``winrepo_dir``. This option did not have a
+    default value until this version.
 
 Default: ``C:\salt\srv\salt\win\repo``
 
-Location on the minion where the :conf_minion:`winrepo_remotes` are checked
-out.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept.
+This is also where the :conf_minion:`winrepo_remotes` are cloned to by
+:mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3506,10 +3539,11 @@ out.
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.
 
-Default: ``/srv/salt/win/repo-ng``
+Default: ``C:\salt\srv\salt\win\repo-ng``
 
-Location on the minion where the :conf_minion:`winrepo_remotes_ng` are checked
-out for 2015.8.0 and later minions.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept
+for 2018.8.0 and later minions. This is also where the
+:conf_minion:`winrepo_remotes` are cloned to by :mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3527,8 +3561,8 @@ out for 2015.8.0 and later minions.
 
 Default: ``winrepo.p``
 
-Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
-created.
+The name of the winrepo cache file. The file will be created at root of
+the directory specified by :conf_minion:`winrepo_dir_ng`.
 
 .. code-block:: yaml
 
@@ -3597,31 +3631,3 @@ URL of the repository:
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the
 event that an error is introduced in the latest revision of the repo.
-
-``ssh_merge_pillar``
---------------------
-
-.. versionadded:: 2018.3.2
-
-Default: ``True``
-
-Merges the compiled pillar data with the pillar data already available globally.
-This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
-data in a state file:
-
-.. code-block:: yaml
-
-    apply_showpillar:
-      module.run:
-        - name: state.apply
-        - mods:
-          - showpillar
-        - kwargs:
-              pillar:
-                  test: "foo bar"
-
-If set to ``True`` the ``showpillar`` state will have access to the
-global pillar data.
-
-If set to ``False`` only the overriding pillar data will be available
-to the ``showpillar`` state.
