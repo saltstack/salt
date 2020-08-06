@@ -26,10 +26,6 @@ from salt.exceptions import (
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.ext import six
-
-# Import Third Party Libs
-from salt.ext.six.moves import range
 
 try:
     import pwd
