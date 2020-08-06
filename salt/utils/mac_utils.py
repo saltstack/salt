@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import logging
@@ -80,8 +78,8 @@ def _run_all(cmd):
         cmd = salt.utils.args.shlex_split(cmd, posix=False)
 
     for idx, item in enumerate(cmd):
-        if not isinstance(cmd[idx], six.string_types):
-            cmd[idx] = six.text_type(cmd[idx])
+        if not isinstance(cmd[idx], str):
+            cmd[idx] = str(cmd[idx])
 
     cmd = " ".join(cmd)
 
@@ -102,10 +100,10 @@ def _run_all(cmd):
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
 
-    except (OSError, IOError) as exc:
+    except OSError as exc:
         raise CommandExecutionError(
-            "Unable to run command '{0}' with the context '{1}', "
-            "reason: {2}".format(cmd, kwargs, exc)
+            "Unable to run command '{}' with the context '{}', "
+            "reason: {}".format(cmd, kwargs, exc)
         )
 
     ret = {}
@@ -113,7 +111,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret["stdout"] = six.text_type(exc)
+        ret["stdout"] = str(exc)
         ret["stderr"] = ""
         ret["retcode"] = 1
         ret["pid"] = proc.process.pid
@@ -162,10 +160,10 @@ def execute_return_success(cmd):
     log.debug("Execute return success %s: %r", cmd, ret)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {0}\n".format(cmd)
-        msg += "Return Code: {0}\n".format(ret["retcode"])
-        msg += "Output: {0}\n".format(ret["stdout"])
-        msg += "Error: {0}\n".format(ret["stderr"])
+        msg = "Command Failed: {}\n".format(cmd)
+        msg += "Return Code: {}\n".format(ret["retcode"])
+        msg += "Output: {}\n".format(ret["stdout"])
+        msg += "Error: {}\n".format(ret["stderr"])
         raise CommandExecutionError(msg)
 
     return True
@@ -186,10 +184,10 @@ def execute_return_result(cmd):
     ret = _run_all(cmd)
 
     if ret["retcode"] != 0 or "not supported" in ret["stdout"].lower():
-        msg = "Command Failed: {0}\n".format(cmd)
-        msg += "Return Code: {0}\n".format(ret["retcode"])
-        msg += "Output: {0}\n".format(ret["stdout"])
-        msg += "Error: {0}\n".format(ret["stderr"])
+        msg = "Command Failed: {}\n".format(cmd)
+        msg += "Return Code: {}\n".format(ret["retcode"])
+        msg += "Output: {}\n".format(ret["stdout"])
+        msg += "Error: {}\n".format(ret["stderr"])
         raise CommandExecutionError(msg)
 
     return ret["stdout"]
@@ -230,12 +228,12 @@ def validate_enabled(enabled):
     :return: "on" or "off" or errors
     :rtype: str
     """
-    if isinstance(enabled, six.string_types):
+    if isinstance(enabled, str):
         if enabled.lower() not in ["on", "off", "yes", "no"]:
             msg = (
                 "\nMac Power: Invalid String Value for Enabled.\n"
                 "String values must be 'on' or 'off'/'yes' or 'no'.\n"
-                "Passed: {0}".format(enabled)
+                "Passed: {}".format(enabled)
             )
             raise SaltInvocationError(msg)
 
@@ -321,10 +319,10 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     # Raise an error or return successful result
     if ret["retcode"] or error:
-        out = "Failed to {0} service:\n".format(sub_cmd)
-        out += "stdout: {0}\n".format(ret["stdout"])
-        out += "stderr: {0}\n".format(ret["stderr"])
-        out += "retcode: {0}".format(ret["retcode"])
+        out = "Failed to {} service:\n".format(sub_cmd)
+        out += "stdout: {}\n".format(ret["stdout"])
+        out += "stderr: {}\n".format(ret["stderr"])
+        out += "retcode: {}".format(ret["retcode"])
         raise CommandExecutionError(out)
     else:
         return ret["stdout"] if return_stdout else True
