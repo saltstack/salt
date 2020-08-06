@@ -1,16 +1,11 @@
-# coding: utf-8
-
 # Import Python libs
-from __future__ import absolute_import
+
+# Import 3rd-party libs
+from urllib.parse import urlencode
 
 # Import Salt libs
 import salt.utils.json
 import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module,import-error
-    urlencode,
-)
 
 # Import Salt libs
 from tests.support.cherrypy_testclasses import BaseToolsTest
