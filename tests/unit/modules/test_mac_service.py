@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Megan Wilhite<mwilhite@saltstack.com>
 """
 
-from __future__ import absolute_import
 
 # Import Python libs
 import pytest
@@ -301,9 +299,9 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test service status on dameon with PID.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 0;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t\t"--disable-keepalive";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 0;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
+            "service.list": MagicMock(return_value=mock_service_list),
         }
         with patch.dict(mac_service.__salt__, salt_dict):
             assert mac_service.status("com.salt") is True
@@ -315,9 +313,9 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test service status on LaunchAgent with PID.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"PID" = 218;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
+            "service.list": MagicMock(return_value=mock_service_list),
         }
         utils_dict = {
             "mac_utils.console_user": MagicMock(return_value="spongebob"),
@@ -333,9 +331,9 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test service status on LaunchAgent with No PID and should be running.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "Aqua";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt";\n\t"ProgramArguments" = (\n\t\t"/opt/salt";\n\t\t"--syslog";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
+            "service.list": MagicMock(return_value=mock_service_list),
         }
         utils_dict = {
             "mac_utils.console_user": MagicMock(return_value="spongebob"),
@@ -352,9 +350,9 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         Test service status on LaunchDaemon with no PID and an
         always running service that is loaded.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
+            "service.list": MagicMock(return_value=mock_service_list),
         }
         with patch.dict(mac_service.__salt__, salt_dict):
             assert mac_service.status("com.salt") is False
@@ -367,9 +365,9 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         Test service status on LaunchDaemon with no PID and not an always
         running service.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
-            "service.list": MagicMock(return_value=mock_servie_list),
+            "service.list": MagicMock(return_value=mock_service_list),
         }
         with patch.dict(mac_service.__salt__, salt_dict):
             assert mac_service.status("com.salt") is True
@@ -382,7 +380,7 @@ class MacServiceTestCase(TestCase, LoaderModuleMockMixin):
         Test service status on LaunchDaemon with no PID on an
         always running service that is loaded.
         """
-        mock_servie_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
+        mock_service_list = '{\n\t"LimitLoadToSessionType" = "System";\n\t"Label" = "com.salt";\n\t"OnDemand" = false;\n\t"LastExitStatus" = 19968;\n\t"Program" = "/opt/salt.sh";\n\t"ProgramArguments" = (\n\t\t"/opt/salt.sh";\n\t\t"--disable-keepalive";\n\t);\n};'
         salt_dict = {
             "service.list": MagicMock(side_effect=CommandExecutionError),
         }
