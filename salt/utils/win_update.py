@@ -149,13 +149,17 @@ class Updates:
             try:
                 user_input = bool(update.InstallationBehavior.CanRequestUserInput)
             except AttributeError:
-                log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
                 user_input = False
 
             try:
                 requires_reboot = update.InstallationBehavior.RebootBehavior
             except AttributeError:
-                log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
                 requires_reboot = 2
 
             results[update.Identity.UpdateID] = {
@@ -536,9 +540,13 @@ class WindowsUpdateAgent:
             # https://github.com/saltstack/salt/issues/57762 for more details.
             # The following try/except block will default to True
             try:
-                requires_reboot = salt.utils.data.is_true(update.InstallationBehavior.RebootBehavior)
+                requires_reboot = salt.utils.data.is_true(
+                    update.InstallationBehavior.RebootBehavior
+                )
             except AttributeError:
-                log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                log.debug(
+                    "Windows Update: Error reading InstallationBehavior COM Object"
+                )
                 requires_reboot = True
 
             if requires_reboot and skip_reboot:
@@ -855,9 +863,13 @@ class WindowsUpdateAgent:
                 # https://github.com/saltstack/salt/issues/57762 for more details.
                 # The following try/except block will default to 2
                 try:
-                    reboot_behavior = install_list.Item(i).InstallationBehavior.RebootBehavior
+                    reboot_behavior = install_list.Item(
+                        i
+                    ).InstallationBehavior.RebootBehavior
                 except AttributeError:
-                    log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                    log.debug(
+                        "Windows Update: Error reading InstallationBehavior COM Object"
+                    )
                     reboot_behavior = 2
                 ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[reboot_behavior]
 
@@ -1023,11 +1035,17 @@ class WindowsUpdateAgent:
                                 # https://github.com/saltstack/salt/issues/57762 for more details.
                                 # The following try/except block will default to 2
                                 try:
-                                    requires_reboot = update.InstallationBehavior.RebootBehavior
+                                    requires_reboot = (
+                                        update.InstallationBehavior.RebootBehavior
+                                    )
                                 except AttributeError:
-                                    log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                                    log.debug(
+                                        "Windows Update: Error reading InstallationBehavior COM Object"
+                                    )
                                     requires_reboot = 2
-                                ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[requires_reboot]
+                                ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[
+                                    requires_reboot
+                                ]
 
                     return ret
 
@@ -1067,9 +1085,13 @@ class WindowsUpdateAgent:
                 # https://github.com/saltstack/salt/issues/57762 for more details.
                 # The following try/except block will default to 2
                 try:
-                    reboot_behavior = uninstall_list.Item(i).InstallationBehavior.RebootBehavior
+                    reboot_behavior = uninstall_list.Item(
+                        i
+                    ).InstallationBehavior.RebootBehavior
                 except AttributeError:
-                    log.debug("Windows Update: Error reading InstallationBehavior COM Object")
+                    log.debug(
+                        "Windows Update: Error reading InstallationBehavior COM Object"
+                    )
                     reboot_behavior = 2
                 ret["Updates"][uid]["RebootBehavior"] = REBOOT_BEHAVIOR[reboot_behavior]
 

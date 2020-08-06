@@ -7,6 +7,7 @@ try:
     import pywintypes
     import win32security
     import win32service
+
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
@@ -127,7 +128,7 @@ def info(name):
             | win32service.SERVICE_INTERROGATE
             | win32service.SERVICE_QUERY_CONFIG
             | win32service.SERVICE_QUERY_STATUS,
-            )
+        )
     except pywintypes.error as exc:
         raise CommandExecutionError(
             "Failed To Open {0}: {1}".format(name, exc.strerror)
