@@ -7,7 +7,8 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3001.1 (2020-07-15)
+
+Salt 3001.1 (2020-07-27)
 ========================
 
 Changed
@@ -19,6 +20,8 @@ Changed
   installer (#57594)
 - Changes the 'SSDs' grain name to 'ssds' as all grains needs to be 
   resolved in lowered case. (#57612)
+- Updated requirement to psutil 5.6.7 due to vulnerability in psutil 5.6.6. (#58018)
+- Updated requirement to PyYAML 5.3.1 due to vulnerability in PyYAML 5.2.1. (#58019)
 
 
 Fixed
@@ -57,6 +60,9 @@ Fixed
   version 3001, with no deprecation path. It has been restored and put on a
   proper deprecation path. (#57843)
 - Fixes dictionary being changed during iteration. (#57845)
+- Fixed bug with distro version breaking osrelease on Centos 7. (#57781)
+- Fixed macOS build scripts. (#57973)
+- Fixed Salt-API startup failure. (#57975)
 
 
 Added

@@ -50,6 +50,9 @@ quit_on_error() {
 ############################################################################
 echo -n -e "\033]0;Build_Env: Variables\007"
 
+MACOSX_DEPLOYMENT_TARGET=10.13
+export MACOSX_DEPLOYMENT_TARGET
+
 # This is needed to allow the some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
 SET_ULIMIT=200000
