@@ -650,6 +650,7 @@ def _gen_xml(
     arch,
     graphics=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -683,12 +684,7 @@ def _gen_xml(
             graphics = None
     context["graphics"] = graphics
 
-    if "boot_dev" in kwargs:
-        context["boot_dev"] = []
-        for dev in kwargs["boot_dev"].split():
-            context["boot_dev"].append(dev)
-    else:
-        context["boot_dev"] = ["hd"]
+    context["boot_dev"] = boot_dev.split() if boot_dev is not None else ["hd"]
 
     context["boot"] = boot if boot else {}
 
@@ -721,15 +717,17 @@ def _gen_xml(
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
+    targets = []
     for i, disk in enumerate(diskp):
         prefix = disk_bus_map.get(disk["model"], "sd")
         disk_context = {
             "device": disk.get("device", "disk"),
-            "target_dev": "{}{}".format(prefix, string.ascii_lowercase[i]),
+            "target_dev": _get_disk_target(targets, len(diskp), prefix),
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
         }
+        targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
             url = urlparse(disk["source_file"])
             if not url.scheme or not url.hostname:
@@ -1287,7 +1285,9 @@ def _disk_profile(conn, profile, hypervisor, disks, vm_name):
         if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
             if not disk.get("format"):
-                disk["format"] = "qcow2"
+                disk["format"] = (
+                    "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
+                )
         elif disk.get("device", "disk") == "disk":
             _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
@@ -1323,6 +1323,23 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
             pool_xml = ElementTree.fromstring(pool_obj.XMLDesc())
             pool_type = pool_xml.get("type")
 
+            # Disk pools volume names are partition names, they need to be named based on the device name
+            if pool_type == "disk":
+                device = pool_xml.find("./source/device").get("path")
+                all_volumes = pool_obj.listVolumes()
+                if disk.get("source_file") not in all_volumes:
+                    indexes = [
+                        int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
+                    ] or [0]
+                    index = min(
+                        [
+                            idx
+                            for idx in range(1, max(indexes) + 2)
+                            if idx not in indexes
+                        ]
+                    )
+                    disk["filename"] = "{}{}".format(os.path.basename(device), index)
+
             # Is the user wanting to reuse an existing volume?
             if disk.get("source_file"):
                 if not disk.get("source_file") in pool_obj.listVolumes():
@@ -1349,18 +1366,6 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                     disk["format"] = "qcow2"
                 else:
                     disk["format"] = volume_options.get("default_format", None)
-
-            # Disk pools volume names are partition names, they need to be named based on the device name
-            if pool_type == "disk":
-                device = pool_xml.find("./source/device").get("path")
-                indexes = [
-                    int(re.sub("[a-z]+", "", vol_name))
-                    for vol_name in pool_obj.listVolumes()
-                ] or [0]
-                index = min(
-                    [idx for idx in range(1, max(indexes) + 2) if idx not in indexes]
-                )
-                disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
     elif hypervisor == "bhyve" and vm_name:
         disk["filename"] = "{}.{}".format(vm_name, disk["name"])
@@ -1600,6 +1605,7 @@ def init(
     os_type=None,
     arch=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -1683,6 +1689,12 @@ def init(
                 'loader': '/usr/share/OVMF/OVMF_CODE.fd',
                 'nvram': '/usr/share/OVMF/OVMF_VARS.ms.fd'
             }
+
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
 
     .. _init-boot-def:
 
@@ -2005,6 +2017,7 @@ def init(
             arch,
             graphics,
             boot,
+            boot_dev,
             **kwargs
         )
         conn.defineXML(vm_xml)
@@ -2162,6 +2175,21 @@ def _diff_lists(old, new, comparator):
     return diff
 
 
+def _get_disk_target(targets, disks_count, prefix):
+    """
+    Compute the disk target name for a given prefix.
+
+    :param targets: the list of already computed targets
+    :param disks: the number of disks
+    :param prefix: the prefix of the target name, i.e. "hd"
+    """
+    for i in range(disks_count):
+        ret = "{}{}".format(prefix, string.ascii_lowercase[i])
+        if ret not in targets:
+            return ret
+    return None
+
+
 def _diff_disk_lists(old, new):
     """
     Compare disk definitions to extract the changes and fix target devices
@@ -2178,11 +2206,7 @@ def _diff_disk_lists(old, new):
         target_node = disk.find("target")
         target = target_node.get("dev")
         prefix = [item for item in prefixes if target.startswith(item)][0]
-        new_target = [
-            "{}{}".format(prefix, string.ascii_lowercase[i])
-            for i in range(len(new))
-            if "{}{}".format(prefix, string.ascii_lowercase[i]) not in targets
-        ][0]
+        new_target = _get_disk_target(targets, len(new), prefix)
         target_node.set("dev", new_target)
         targets.append(new_target)
 
@@ -2221,6 +2245,7 @@ def update(
     live=True,
     boot=None,
     test=False,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -2276,6 +2301,14 @@ def update(
                 nvram: null
 
         .. versionadded:: 3000
+
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
 
     :param test: run in dry-run mode if set to True
 
@@ -2408,6 +2441,18 @@ def update(
 
             need_update = True
 
+    # Check the os/boot tags
+    if boot_dev is not None:
+        boot_nodes = parent_tag.findall("boot")
+        old_boot_devs = [node.get("dev") for node in boot_nodes]
+        new_boot_devs = boot_dev.split()
+        if old_boot_devs != new_boot_devs:
+            for boot_node in boot_nodes:
+                parent_tag.remove(boot_node)
+            for dev in new_boot_devs:
+                ElementTree.SubElement(parent_tag, "boot", attrib={"dev": dev})
+            need_update = True
+
     # Update the memory, note that libvirt outputs all memory sizes in KiB
     for mem_node_name in ["memory", "currentMemory"]:
         mem_node = desc.find(mem_node_name)
@@ -2496,7 +2541,7 @@ def update(
             new_disks = []
             for new_disk in changes["disk"].get("new", []):
                 device = new_disk.get("device", "disk")
-                if new_disk.get("type") != "file" and device not in ["cdrom", "floppy"]:
+                if device not in ["cdrom", "floppy"]:
                     new_disks.append(new_disk)
                     continue
 
@@ -2504,8 +2549,7 @@ def update(
                 matching = [
                     old_disk
                     for old_disk in changes["disk"].get("deleted", [])
-                    if old_disk.get("type") == "file"
-                    and old_disk.get("device", "disk") == device
+                    if old_disk.get("device", "disk") == device
                     and old_disk.find("target").get("dev") == target_dev
                 ]
                 if not matching:
@@ -2523,15 +2567,13 @@ def update(
                         else None
                     )
 
+                    updated_disk.set("type", "file")
+                    # Detaching device
                     if source_node is not None:
-                        if not source_file:
-                            # Detaching device
-                            updated_disk.remove(source_node)
-                        else:
-                            # Changing device
-                            source_node.set("file", source_file)
-                    else:
-                        # Attaching device
+                        updated_disk.remove(source_node)
+
+                    # Attaching device
+                    if source_file:
                         ElementTree.SubElement(
                             updated_disk, "source", attrib={"file": source_file}
                         )

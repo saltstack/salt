@@ -799,7 +799,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(root.find("vcpu").text, "1")
             self.assertEqual(root.find("memory").text, str(512 * 1024))
             self.assertEqual(root.find("memory").attrib["unit"], "KiB")
-            self.assertTrue(len(root.findall(".//disk")) == 2)
+            disks = root.findall(".//disk")
+            self.assertTrue(len(disks) == 2)
+            self.assertEqual(disks[0].find("target").get("dev"), "vda")
+            self.assertEqual(disks[1].find("target").get("dev"), "vdb")
             self.assertTrue(len(root.findall(".//interface")) == 2)
 
     def test_disk_profile_kvm_disk_pool(self):
@@ -864,12 +867,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.mock_conn,
                 None,
                 "kvm",
-                [{"name": "mydisk", "device": "cdrom"}],
+                [
+                    {
+                        "name": "mydisk",
+                        "device": "cdrom",
+                        "source_file": "/path/to/my.iso",
+                    }
+                ],
                 "hello",
             )
 
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["model"], "ide")
+            self.assertEqual(diskp[0]["format"], "raw")
 
     def test_disk_profile_pool_disk_type(self):
         """
@@ -928,6 +938,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "hello",
         )
         self.assertEqual(diskp[0]["filename"], ("vdb2"))
+
+        # Reuse existing volume case
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb", "source_file": "vdb1"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb1"))
 
     def test_gen_xml_volume(self):
         """
@@ -1126,11 +1146,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
         """
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
         diskp = virt._disk_profile(
             self.mock_conn,
             None,
             "kvm",
             [
+                {"name": "system", "pool": "default"},
                 {
                     "name": "tested",
                     "device": "cdrom",
@@ -1151,12 +1175,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
         )
         root = ET.fromstring(xml_data)
-        disk = root.findall(".//disk")[0]
+        disk = root.findall(".//disk")[1]
         self.assertEqual(disk.get("type"), "file")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertIsNone(disk.find("source"))
+        self.assertEqual(disk.find("target").get("dev"), "hda")
 
-        disk = root.findall(".//disk")[1]
+        disk = root.findall(".//disk")[2]
         self.assertEqual(disk.get("type"), "network")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertEqual(
@@ -1700,6 +1725,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <vcpu placement='auto'>1</vcpu>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                <boot dev="hd"/>
               </os>
               <devices>
                 <disk type='file' device='disk'>
@@ -1831,7 +1857,36 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "initrd": "/root/f8-i386-initrd",
         }
 
+        # Update boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="cdrom network hd"),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            ["cdrom", "network", "hd"],
+            [node.get("dev") for node in setxml.findall("os/boot")],
+        )
+
+        # Update unchanged boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="hd"),
+        )
+        define_mock.assert_not_called()
+
         # Update with boot parameter case
+        define_mock.reset_mock()
         self.assertEqual(
             {
                 "definition": True,
@@ -2202,9 +2257,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
               <devices>
-                <disk type='file' device='cdrom'>
+                <disk type='network' device='cdrom'>
                   <driver name='qemu' type='raw' cache='none' io='native'/>
-                  <source file='/srv/dvd-image-1.iso'/>
+                  <source protocol='https' name='/dvd-image-1.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
                   <backingStore/>
                   <target dev='hda' bus='ide'/>
                   <readonly/>
@@ -2235,6 +2292,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <readonly/>
                   <alias name='ide0-0-3'/>
                   <address type='drive' controller='0' bus='0' target='0' unit='3'/>
+                </disk>
+                <disk type='network' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source protocol='https' name='/dvd-image-6.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
+                  <backingStore/>
+                  <target dev='hde' bus='ide'/>
+                  <readonly/>
                 </disk>
               </devices>
             </domain>
@@ -2270,6 +2336,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "name": "dvd4",
                     "device": "cdrom",
                     "source_file": "/srv/dvd-image-5.iso",
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd5",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-6.iso",
                     "model": "ide",
                 },
             ],
@@ -2343,6 +2415,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "unit": "3",
                     },
                     "source": {"file": "/srv/dvd-image-5.iso"},
+                },
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "backingStore": None,
+                    "target": {"dev": "hde", "bus": "ide"},
+                    "readonly": None,
+                    "source": {"file": "/srv/dvd-image-6.iso"},
                 },
             ],
             [
