@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Windows Service module.
 
@@ -6,8 +5,6 @@ Windows Service module.
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import fnmatch
 import logging
 import re
@@ -118,7 +115,7 @@ def _cmd_quote(cmd):
         cmd = cmd.strip('"').strip("'")
     # Ensure the path to the binary is wrapped in double quotes to account for
     # spaces in the path
-    cmd = '"{0}"'.format(cmd)
+    cmd = '"{}"'.format(cmd)
     return cmd
 
 
@@ -346,9 +343,9 @@ def start(name, timeout=90):
     except pywintypes.error as exc:
         if exc.winerror != 1056:
             raise CommandExecutionError(
-                "Failed To Start {0}: {1}".format(name, exc.strerror)
+                "Failed To Start {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is running'.format(name))
+        log.debug('Service "{}" is running'.format(name))
 
     srv_status = _status_wait(
         service_name=name,
@@ -387,9 +384,9 @@ def stop(name, timeout=90):
     except pywintypes.error as exc:
         if exc.winerror != 1062:
             raise CommandExecutionError(
-                "Failed To Stop {0}: {1}".format(name, exc.strerror)
+                "Failed To Stop {}: {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is not running'.format(name))
+        log.debug('Service "{}" is not running'.format(name))
 
     srv_status = _status_wait(
         service_name=name,
@@ -633,7 +630,7 @@ def modify(
             - NT Authority\\LocalService
             - NT Authority\\NetworkService
             - NT Authority\\LocalSystem
-            - .\LocalSystem
+            - .\\LocalSystem
 
         account_password (str):
             The password for the account name specified in ``account_name``. For
@@ -667,9 +664,7 @@ def modify(
             win32service.SERVICE_CHANGE_CONFIG | win32service.SERVICE_QUERY_CONFIG,
         )
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed To Open {0}: {1}".format(name, exc.strerror)
-        )
+        raise CommandExecutionError("Failed To Open {}: {}".format(name, exc.strerror))
 
     config_info = win32service.QueryServiceConfig(handle_svc)
 
@@ -680,7 +675,7 @@ def modify(
         # shlex.quote the path to the binary
         bin_path = _cmd_quote(bin_path)
         if exe_args is not None:
-            bin_path = "{0} {1}".format(bin_path, exe_args)
+            bin_path = "{} {}".format(bin_path, exe_args)
         changes["BinaryPath"] = bin_path
 
     if service_type is not None:
@@ -689,9 +684,7 @@ def modify(
             if run_interactive:
                 service_type = service_type | win32service.SERVICE_INTERACTIVE_PROCESS
         else:
-            raise CommandExecutionError(
-                "Invalid Service Type: {0}".format(service_type)
-            )
+            raise CommandExecutionError("Invalid Service Type: {}".format(service_type))
     else:
         if run_interactive is True:
             service_type = config_info[0] | win32service.SERVICE_INTERACTIVE_PROCESS
@@ -712,7 +705,7 @@ def modify(
         if start_type.lower() in SERVICE_START_TYPE:
             start_type = SERVICE_START_TYPE[start_type.lower()]
         else:
-            raise CommandExecutionError("Invalid Start Type: {0}".format(start_type))
+            raise CommandExecutionError("Invalid Start Type: {}".format(start_type))
         changes["StartType"] = SERVICE_START_TYPE[start_type]
     else:
         start_type = win32service.SERVICE_NO_CHANGE
@@ -722,7 +715,7 @@ def modify(
             error_control = SERVICE_ERROR_CONTROL[error_control.lower()]
         else:
             raise CommandExecutionError(
-                "Invalid Error Control: {0}".format(error_control)
+                "Invalid Error Control: {}".format(error_control)
             )
         changes["ErrorControl"] = SERVICE_ERROR_CONTROL[error_control]
     else:
@@ -1006,29 +999,29 @@ def create(
 
     # Test if the service already exists
     if name in get_all():
-        raise CommandExecutionError("Service Already Exists: {0}".format(name))
+        raise CommandExecutionError("Service Already Exists: {}".format(name))
 
     # shlex.quote the path to the binary
     bin_path = _cmd_quote(bin_path)
     if exe_args is not None:
-        bin_path = "{0} {1}".format(bin_path, exe_args)
+        bin_path = "{} {}".format(bin_path, exe_args)
 
     if service_type.lower() in SERVICE_TYPE:
         service_type = SERVICE_TYPE[service_type.lower()]
         if run_interactive:
             service_type = service_type | win32service.SERVICE_INTERACTIVE_PROCESS
     else:
-        raise CommandExecutionError("Invalid Service Type: {0}".format(service_type))
+        raise CommandExecutionError("Invalid Service Type: {}".format(service_type))
 
     if start_type.lower() in SERVICE_START_TYPE:
         start_type = SERVICE_START_TYPE[start_type.lower()]
     else:
-        raise CommandExecutionError("Invalid Start Type: {0}".format(start_type))
+        raise CommandExecutionError("Invalid Start Type: {}".format(start_type))
 
     if error_control.lower() in SERVICE_ERROR_CONTROL:
         error_control = SERVICE_ERROR_CONTROL[error_control.lower()]
     else:
-        raise CommandExecutionError("Invalid Error Control: {0}".format(error_control))
+        raise CommandExecutionError("Invalid Error Control: {}".format(error_control))
 
     if start_delayed:
         if start_type != 2:
@@ -1124,16 +1117,16 @@ def delete(name, timeout=90):
         win32service.CloseServiceHandle(handle_scm)
         if exc.winerror != 1060:
             raise CommandExecutionError(
-                "Failed to open {0}. {1}".format(name, exc.strerror)
+                "Failed to open {}. {}".format(name, exc.strerror)
             )
-        log.debug('Service "{0}" is not present'.format(name))
+        log.debug('Service "{}" is not present'.format(name))
         return True
 
     try:
         win32service.DeleteService(handle_svc)
     except pywintypes.error as exc:
         raise CommandExecutionError(
-            "Failed to delete {0}. {1}".format(name, exc.strerror)
+            "Failed to delete {}. {}".format(name, exc.strerror)
         )
     finally:
         log.debug("Cleaning up")
