@@ -343,7 +343,6 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
         """
         test available_services excludes invalid files.
-
         The py3 plistlib raises an InvalidFileException when a plist
         file cannot be parsed.
         """
