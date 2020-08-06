@@ -112,7 +112,7 @@ def _prepare_xml(options=None, state=None):
     xml = "<?xml version='1.0'?>\n<checkresults>\n"
 
     # No service defined then we set the status of the hostname
-    if "service" in options and options["service"] != "":
+    if options.get("service"):
         xml += (
             "<checkresult type='service' checktype='" + str(options["checktype"]) + "'>"
         )
@@ -124,7 +124,7 @@ def _prepare_xml(options=None, state=None):
 
     xml += "<state>" + _state + "</state>"
 
-    if "output" in options:
+    if options.get("output"):
         xml += "<output>" + html.escape(options["output"]) + "</output>"
 
     xml += "</checkresult>"
