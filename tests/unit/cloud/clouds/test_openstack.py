@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: `Tyler Johnson <tjohnson@saltstack.com>`
 
@@ -6,7 +5,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.cloud.clouds import openstack
 from salt.utils import dictupdate
@@ -17,12 +15,12 @@ from tests.support.unit import TestCase
 # pylint: disable=confusing-with-statement
 
 
-class MockImage(object):
+class MockImage:
     name = "image name"
     id = "image id"
 
 
-class MockNode(object):
+class MockNode:
     name = "node name"
     id = "node id"
     flavor = MockImage()
@@ -35,7 +33,7 @@ class MockNode(object):
         return iter(())
 
 
-class MockConn(object):
+class MockConn:
     def __init__(self, image):
         self.node = MockNode(image)
 
