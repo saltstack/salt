@@ -52,13 +52,6 @@ __salt__ = {
     "cmd.run": salt.modules.cmdmod._run_quiet,
 }
 
-if six.PY2:
-
-    class InvalidFileException(Exception):
-        pass
-
-    plistlib.InvalidFileException = InvalidFileException
-
 
 def __virtual__():
     """
@@ -357,13 +350,8 @@ def _read_plist_file(root, file_name):
         return {}
 
     try:
-        if six.PY2:
-            # py2 plistlib can't read binary plists, and
-            # uses a different API than py3.
-            plist = plistlib.readPlist(file_path)
-        else:
-            with salt.utils.files.fopen(file_path, "rb") as handle:
-                plist = plistlib.load(handle)
+        with salt.utils.files.fopen(file_path, "rb") as handle:
+            plist = plistlib.load(handle)
 
     except plistlib.InvalidFileException:
         # Raised in python3 if the file is not XML.
@@ -375,32 +363,24 @@ def _read_plist_file(root, file_name):
         )
         return {}
 
-    except xml.parsers.expat.ExpatError:
-        # Raised by py2 for all errors.
-        # Raised by py3 if the file is XML, but with errors.
-        if six.PY3:
-            # There's an error in the XML, so move on.
-            log.warning(
-                'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
-                    file_path
-                )
+    except ValueError as err:
+        # fixes https://github.com/saltstack/salt/issues/58143
+        # choosing not to log a Warning as this would happen on BigSur+ machines.
+        log.debug(
+            "Caught ValueError: '{}', while trying to parse '{}'.".format(
+                err, file_path
             )
-            return {}
+        )
+        return {}
 
-        # Use the system provided plutil program to attempt
-        # conversion from binary.
-        cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(file_path)
-        try:
-            plist_xml = __salt__["cmd.run"](cmd)
-            plist = plistlib.readPlistFromString(plist_xml)
-        except xml.parsers.expat.ExpatError:
-            # There's still an error in the XML, so move on.
-            log.warning(
-                'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
-                    file_path
-                )
+    except xml.parsers.expat.ExpatError:
+        # Raised by py3 if the file is XML, but with errors.
+        log.warning(
+            'read_plist: Unable to parse "{}" as it is invalid XML: xml.parsers.expat.ExpatError.'.format(
+                file_path
             )
-            return {}
+        )
+        return {}
 
     if "Label" not in plist:
         # not all launchd plists contain a Label key
