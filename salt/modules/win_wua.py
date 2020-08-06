@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing Windows Updates using the Windows Update Agent.
 
@@ -56,8 +55,6 @@ Group Policy using the ``lgpo`` module.
 :depends: salt.utils.win_update
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 # Import Salt libs
@@ -68,8 +65,6 @@ import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-from salt.ext import six
-
 try:
     import win32com.client
 
@@ -664,11 +659,11 @@ def download(names):
         raise CommandExecutionError("No updates found")
 
     # Make sure it's a list so count comparison is correct
-    if isinstance(names, six.string_types):
+    if isinstance(names, str):
         names = [names]
 
-    if isinstance(names, six.integer_types):
-        names = [six.text_type(names)]
+    if isinstance(names, int):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError(
@@ -718,11 +713,11 @@ def install(names):
         raise CommandExecutionError("No updates found")
 
     # Make sure it's a list so count comparison is correct
-    if isinstance(names, six.string_types):
+    if isinstance(names, str):
         names = [names]
 
-    if isinstance(names, six.integer_types):
-        names = [six.text_type(names)]
+    if isinstance(names, int):
+        names = [str(names)]
 
     if updates.count() > len(names):
         raise CommandExecutionError(
@@ -954,17 +949,17 @@ def set_wu_settings(
     if time is not None:
         # Check for time as a string: if the time is not quoted, yaml will
         # treat it as an integer
-        if not isinstance(time, six.string_types):
+        if not isinstance(time, str):
             ret["Comment"] = (
                 "Time argument needs to be a string; it may need to "
-                "be quoted. Passed {0}. Time not set.".format(time)
+                "be quoted. Passed {}. Time not set.".format(time)
             )
             ret["Success"] = False
         # Check for colon in the time
         elif ":" not in time:
             ret["Comment"] = (
                 "Time argument needs to be in 00:00 format. "
-                "Passed {0}. Time not set.".format(time)
+                "Passed {}. Time not set.".format(time)
             )
             ret["Success"] = False
         else:
@@ -998,7 +993,7 @@ def set_wu_settings(
                     (hr, msg, exc, arg,) = error.args
                     # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     # Consider checking for -2147024891 (0x80070005) Access Denied
-                    ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
+                    ret["Comment"] = "Failed with failure code: {}".format(exc[5])
                     ret["Success"] = False
             else:
                 # msupdate is false, so remove it from the services
@@ -1017,7 +1012,7 @@ def set_wu_settings(
                         # -2147024891 (0x80070005) Access Denied
                         # -2145091564 (0x80248014) Service Not Found (shouldn't get
                         # this with the check for _get_msupdate_status above
-                        ret["Comment"] = "Failed with failure code: {0}".format(exc[5])
+                        ret["Comment"] = "Failed with failure code: {}".format(exc[5])
                         ret["Success"] = False
                 else:
                     ret["msupdate"] = msupdate
@@ -1121,11 +1116,11 @@ def get_wu_settings():
         # Scheduled Installation Time requires special handling to return the time
         # in the right format
         if obj_au_settings.ScheduledInstallationTime < 10:
-            ret["Scheduled Time"] = "0{0}:00".format(
+            ret["Scheduled Time"] = "0{}:00".format(
                 obj_au_settings.ScheduledInstallationTime
             )
         else:
-            ret["Scheduled Time"] = "{0}:00".format(
+            ret["Scheduled Time"] = "{}:00".format(
                 obj_au_settings.ScheduledInstallationTime
             )
 

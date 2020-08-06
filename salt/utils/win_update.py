@@ -1,7 +1,6 @@
 """
 Classes for working with Windows Update Agent
 """
-
 import logging
 import subprocess
 
@@ -172,7 +171,7 @@ class Updates:
                 "Mandatory": bool(update.IsMandatory),
                 "EULAAccepted": bool(update.EulaAccepted),
                 "NeedsReboot": bool(update.RebootRequired),
-                "Severity": six.text_type(update.MsrcSeverity),
+                "Severity": str(update.MsrcSeverity),
                 "UserInput": user_input,
                 "RebootBehavior": REBOOT_BEHAVIOR[requires_reboot],
                 "KBs": ["KB" + item for item in update.KBArticleIDs],
