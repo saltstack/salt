@@ -36,7 +36,7 @@ class MacServiceModuleTest(ModuleCase):
             "ProgramArguments": ["/bin/sleep", "1000"],
             "RunAtLoad": True,
         }
-        with salt.utils.files.fopen(self.SERVICE_PATH, "rb") as fp:
+        with salt.utils.files.fopen(self.SERVICE_PATH, "wb") as fp:
             plistlib.dump(service_data, fp)
         self.run_function("service.enable", [self.SERVICE_NAME])
         self.run_function("service.start", [self.SERVICE_NAME])
