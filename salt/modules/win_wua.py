@@ -84,7 +84,7 @@ def __virtual__():
     Only works on Windows systems with PyWin32
     """
     if not salt.utils.platform.is_windows():
-        return False, "WUA: Only available on Window systems"
+        return False, "WUA: Only available on Windows systems"
 
     if not HAS_PYWIN32:
         return False, "WUA: Requires PyWin32 libraries"
@@ -107,7 +107,7 @@ def __virtual__():
     if not salt.utils.win_service.info("BITS")["StartType"] == "Auto":
         return (
             False,
-            "WUA: The Background Intelligent Transfer Service (bits) must not "
+            "WUA: The Background Intelligent Transfer service (bits) must not "
             "be disabled",
         )
 
