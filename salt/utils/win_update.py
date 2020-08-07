@@ -161,6 +161,8 @@ class Updates:
                 )
                 requires_reboot = 2
 
+            # IUpdate Properties
+            # https://docs.microsoft.com/en-us/windows/win32/wua_sdk/iupdate-properties
             results[update.Identity.UpdateID] = {
                 "guid": update.Identity.UpdateID,
                 "Title": str(update.Title),
