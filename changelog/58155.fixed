@@ -1,0 +1,1 @@
+Unbreak swap handling on OpenBSD for systems without swap. For systems with swap perform the correct calculation.
