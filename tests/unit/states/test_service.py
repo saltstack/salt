@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.config
 import salt.loader
@@ -440,7 +438,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 ret,
                 {
                     "changes": {},
-                    "comment": "The named service {0} is not available".format(name),
+                    "comment": "The named service {} is not available".format(name),
                     "result": True,
                     "name": name,
                 },
@@ -541,7 +539,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
             self.service_name = "Spooler"
 
         if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-            self.skipTest("{0} is not installed".format(cmd_name))
+            self.skipTest("{} is not installed".format(cmd_name))
 
         return {
             service: {
@@ -575,7 +573,7 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
 
         expected = {
             "changes": {self.service_name: True},
-            "comment": "Service {0} has been enabled, and is "
+            "comment": "Service {} has been enabled, and is "
             "running".format(self.service_name),
             "name": self.service_name,
             "result": True,
