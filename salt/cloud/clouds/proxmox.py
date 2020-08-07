@@ -46,10 +46,6 @@ from salt.exceptions import (
     SaltCloudSystemExit,
 )
 
-# Import 3rd-party Libs
-from salt.ext import six
-from salt.ext.six.moves import range
-
 try:
     import requests
 
@@ -137,7 +133,7 @@ def _authenticate():
     returned_data = requests.post(full_url, verify=verify_ssl, data=connect_data).json()
 
     ticket = {"PVEAuthCookie": returned_data["data"]["ticket"]}
-    csrf = six.text_type(returned_data["data"]["CSRFPreventionToken"])
+    csrf = str(returned_data["data"]["CSRFPreventionToken"])
 
 
 def query(conn_type, option, post_data=None):
@@ -217,10 +213,8 @@ def _get_vm_by_id(vmid, allDetails=False):
     """
     Retrieve a VM based on the ID.
     """
-    for vm_name, vm_details in six.iteritems(
-        get_resources_vms(includeConfig=allDetails)
-    ):
-        if six.text_type(vm_details["vmid"]) == six.text_type(vmid):
+    for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
+        if str(vm_details["vmid"]) == str(vmid):
             return vm_details
 
     log.info('VM with ID "%s" could not be found.', vmid)
@@ -241,7 +235,7 @@ def _check_ip_available(ip_addr):
     This function can be used to prevent VMs being created with duplicate
     IP's or to generate a warning.
     """
-    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
+    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
         vm_config = vm_details["config"]
         if ip_addr in vm_config["ip_address"] or vm_config["ip_address"] == ip_addr:
             log.debug('IP "%s" is already defined', ip_addr)
@@ -262,18 +256,18 @@ def _parse_proxmox_upid(node, vm_=None):
     # Parse node response
     node = node.split(":")
     if node[0] == "UPID":
-        ret["node"] = six.text_type(node[1])
-        ret["pid"] = six.text_type(node[2])
-        ret["pstart"] = six.text_type(node[3])
-        ret["starttime"] = six.text_type(node[4])
-        ret["type"] = six.text_type(node[5])
-        ret["vmid"] = six.text_type(node[6])
-        ret["user"] = six.text_type(node[7])
+        ret["node"] = str(node[1])
+        ret["pid"] = str(node[2])
+        ret["pstart"] = str(node[3])
+        ret["starttime"] = str(node[4])
+        ret["type"] = str(node[5])
+        ret["vmid"] = str(node[6])
+        ret["user"] = str(node[7])
         # include the upid again in case we'll need it again
-        ret["upid"] = six.text_type(upid)
+        ret["upid"] = str(upid)
 
         if vm_ is not None and "technology" in vm_:
-            ret["technology"] = six.text_type(vm_["technology"])
+            ret["technology"] = str(vm_["technology"])
 
     return ret
 
@@ -435,7 +429,7 @@ def avail_images(call=None, location="local"):
         )
 
     ret = {}
-    for host_name, host_details in six.iteritems(avail_locations()):
+    for host_name, host_details in avail_locations().items():
         for item in query(
             "get", "nodes/{0}/storage/{1}/content".format(host_name, location)
         ):
@@ -459,16 +453,16 @@ def list_nodes(call=None):
         )
 
     ret = {}
-    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
+    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
         log.debug("VM_Name: %s", vm_name)
         log.debug("vm_details: %s", vm_details)
 
         # Limit resultset on what Salt-cloud demands:
         ret[vm_name] = {}
-        ret[vm_name]["id"] = six.text_type(vm_details["vmid"])
-        ret[vm_name]["image"] = six.text_type(vm_details["vmid"])
-        ret[vm_name]["size"] = six.text_type(vm_details["disk"])
-        ret[vm_name]["state"] = six.text_type(vm_details["status"])
+        ret[vm_name]["id"] = str(vm_details["vmid"])
+        ret[vm_name]["image"] = str(vm_details["vmid"])
+        ret[vm_name]["size"] = str(vm_details["disk"])
+        ret[vm_name]["state"] = str(vm_details["status"])
 
         # Figure out which is which to put it in the right column
         private_ips = []
@@ -481,9 +475,9 @@ def list_nodes(call=None):
             ips = vm_details["config"]["ip_address"].split(" ")
             for ip_ in ips:
                 if IP(ip_).iptype() == "PRIVATE":
-                    private_ips.append(six.text_type(ip_))
+                    private_ips.append(str(ip_))
                 else:
-                    public_ips.append(six.text_type(ip_))
+                    public_ips.append(str(ip_))
 
         ret[vm_name]["private_ips"] = private_ips
         ret[vm_name]["public_ips"] = public_ips
@@ -641,11 +635,11 @@ def create(vm_):
             from socket import gethostbyname, gaierror
 
             try:
-                ip_address = gethostbyname(six.text_type(vm_["name"]))
+                ip_address = gethostbyname(str(vm_["name"]))
             except gaierror:
                 log.debug("Resolving of %s failed", vm_["name"])
             else:
-                vm_["ip_address"] = six.text_type(ip_address)
+                vm_["ip_address"] = str(ip_address)
 
     try:
         newid = _get_next_vmid()
@@ -674,11 +668,11 @@ def create(vm_):
     if "agent_get_ip" not in vm_ or vm_["agent_get_ip"] == 0:
         # Determine which IP to use in order of preference:
         if "ip_address" in vm_:
-            ip_address = six.text_type(vm_["ip_address"])
+            ip_address = str(vm_["ip_address"])
         elif "public_ips" in data:
-            ip_address = six.text_type(data["public_ips"][0])  # first IP
+            ip_address = str(data["public_ips"][0])  # first IP
         elif "private_ips" in data:
-            ip_address = six.text_type(data["private_ips"][0])  # first IP
+            ip_address = str(data["private_ips"][0])  # first IP
         else:
             raise SaltCloudExecutionFailure  # err.. not a good idea i reckon
 
@@ -721,7 +715,7 @@ def create(vm_):
                                 if_addr["ip-address-type"] == "ipv4"
                                 and ip_addr is not None
                             ):
-                                return six.text_type(ip_addr)
+                                return str(ip_addr)
             raise SaltCloudExecutionFailure
 
         # We have to wait for a bit for qemu-agent to start
@@ -734,7 +728,7 @@ def create(vm_):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(six.text_type(exc))
+                raise SaltCloudSystemExit(str(exc))
 
     log.debug("Using IP address %s", ip_address)
 
@@ -814,7 +808,7 @@ def _get_properties(path="", method="GET", forced_params=None):
         # "prop[n]"
         if numerical:
             for i in range(10):
-                parameters.add(numerical.group(1) + six.text_type(i))
+                parameters.add(numerical.group(1) + str(i))
         else:
             parameters.add(prop)
     return parameters
@@ -999,7 +993,7 @@ def get_vmconfig(vmid, node=None, node_type="openvz"):
     """
     if node is None:
         # We need to figure out which node this VM is on.
-        for host_name, host_details in six.iteritems(avail_locations()):
+        for host_name, host_details in avail_locations().items():
             for item in query("get", "nodes/{0}/{1}".format(host_name, node_type)):
                 if item["vmid"] == vmid:
                     node = host_name
