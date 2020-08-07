@@ -244,7 +244,6 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                             "service.start": tmock,
                         },
                     ):
-                        breakpoint()
                         self.assertDictEqual(service.running("salt", None), ret[9])
                         self.assertEqual(
                             service.__context__, {"service.state": "running"}
