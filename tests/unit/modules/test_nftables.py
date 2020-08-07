@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import json
 
@@ -648,14 +646,14 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             MagicMock(return_value={"result": True, "comment": ""}),
         ):
             _expected = {
-                "comment": 'Failed to add rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
                 "result": False,
             }
             self.assertEqual(nftables.append(chain="input", rule=_ru), _expected)
             _expected = {
-                "comment": 'Added rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
                 "result": True,
@@ -722,14 +720,14 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             _expected = {
                 "result": False,
-                "comment": 'Failed to add rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
             }
             self.assertEqual(nftables.insert(chain="input", rule=_ru), _expected)
             _expected = {
                 "result": True,
-                "comment": 'Added rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
             }
