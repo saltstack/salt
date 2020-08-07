@@ -130,9 +130,7 @@ def info(name):
             | win32service.SERVICE_QUERY_STATUS,
         )
     except pywintypes.error as exc:
-        raise CommandExecutionError(
-            "Failed To Open {}: {}".format(name, exc.strerror)
-        )
+        raise CommandExecutionError("Failed To Open {}: {}".format(name, exc.strerror))
 
     try:
         config_info = win32service.QueryServiceConfig(handle_svc)
