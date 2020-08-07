@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 A REST API for Salt
 ===================
@@ -576,7 +575,6 @@ rest_cherrypy will remain the officially recommended REST API.
 .. |406| replace:: requested Content-Type not available
 
 """
-from __future__ import absolute_import
 
 import functools
 import io
@@ -587,6 +585,7 @@ import signal
 import tarfile
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
+from urllib.parse import parse_qsl
 
 import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
 import salt
@@ -755,11 +754,11 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get("authorized_ips", None)
             if auth_ip_list:
-                logger.debug("Found IP list: {0}".format(auth_ip_list))
+                logger.debug("Found IP list: {}".format(auth_ip_list))
                 rem_ip = cherrypy.request.headers.get("Remote-Addr", None)
-                logger.debug("Request from IP: {0}".format(rem_ip))
+                logger.debug("Request from IP: {}".format(rem_ip))
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {0}".format(rem_ip))
+                    logger.error("Blocked IP: {}".format(rem_ip))
                     raise cherrypy.HTTPError(403, "Bad IP")
 
 
@@ -887,7 +886,7 @@ def hypermedia_handler(*args, **kwargs):
 
         ret = {
             "status": cherrypy.response.status,
-            "return": "{0}".format(traceback.format_exc(exc))
+            "return": "{}".format(traceback.format_exc(exc))
             if cherrypy.config["debug"]
             else "An unexpected error occurred",
         }
@@ -937,8 +936,8 @@ def process_request_body(fn):
 
 def urlencoded_processor(entity):
     """
-    Accept x-www-form-urlencoded data (run through CherryPy's formatter)
-    and reformat it into a Low State data structure.
+    Accept x-www-form-urlencoded data and reformat it into a Low State
+    data structure.
 
     Since we can't easily represent complicated data structures with
     key-value pairs, any more complicated requirements (e.g. compound
@@ -953,11 +952,15 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     """
-    # First call out to CherryPy's default processor
-    cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy.serving.request.unserialized_data = entity.params
-    cherrypy.serving.request.raw_body = ""
+    # cherrypy._cpreqbody.process_urlencoded doesn't preserve the raw
+    # "body", so we have to handle parsing the tokens using parse_qsl
+    urlencoded = entity.read()
+    try:
+        urlencoded = urlencoded.decode("utf-8")
+    except (UnicodeDecodeError, AttributeError):
+        pass
+    cherrypy.serving.request.raw_body = urlencoded
+    cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
 
 
 @process_request_body
@@ -1115,7 +1118,7 @@ for hook, tool_list in tools_config.items():
 ###############################################################################
 
 
-class LowDataAdapter(object):
+class LowDataAdapter:
     """
     The primary entry point to Salt's REST API
 
@@ -1189,8 +1192,7 @@ class LowDataAdapter(object):
 
             # Sometimes Salt gives us a return and sometimes an iterator
             if isinstance(ret, Iterator):
-                for i in ret:
-                    yield i
+                yield from ret
             else:
                 yield ret
 
@@ -1409,7 +1411,7 @@ class Minions(LowDataAdapter):
         return {
             "return": job_data,
             "_links": {
-                "jobs": [{"href": "/jobs/{0}".format(i["jid"])} for i in job_data if i],
+                "jobs": [{"href": "/jobs/{}".format(i["jid"])} for i in job_data if i],
             },
         }
 
@@ -1516,8 +1518,8 @@ class Jobs(LowDataAdapter):
             minion_ret = {}
             returns = job_ret_info[0].get("Result")
             for minion in returns:
-                if u"return" in returns[minion]:
-                    minion_ret[minion] = returns[minion].get(u"return")
+                if "return" in returns[minion]:
+                    minion_ret[minion] = returns[minion].get("return")
                 else:
                     minion_ret[minion] = returns[minion].get("return")
             ret["return"] = [minion_ret]
@@ -1713,7 +1715,7 @@ class Keys(LowDataAdapter):
         headers = cherrypy.response.headers
         headers[
             "Content-Disposition"
-        ] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]["id_"])
+        ] = 'attachment; filename="saltkeys-{}.tar"'.format(lowstate[0]["id_"])
         headers["Content-Type"] = "application/x-tar"
         headers["Content-Length"] = len(fileobj.getvalue())
         headers["Cache-Control"] = "no-cache"
@@ -1730,7 +1732,7 @@ class Login(LowDataAdapter):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Login, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.auth = salt.auth.Resolver(self.opts)
 
@@ -1877,19 +1879,19 @@ class Login(LowDataAdapter):
 
                 if "groups" in token and token["groups"]:
                     user_groups = set(token["groups"])
-                    eauth_groups = set(
-                        [i.rstrip("%") for i in eauth.keys() if i.endswith("%")]
-                    )
+                    eauth_groups = {
+                        i.rstrip("%") for i in eauth.keys() if i.endswith("%")
+                    }
 
                     for group in user_groups & eauth_groups:
-                        perms.extend(eauth["{0}%".format(group)])
+                        perms.extend(eauth["{}%".format(group)])
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
         except Exception:  # pylint: disable=broad-except
             logger.debug(
                 "Configuration for external_auth malformed for "
-                "eauth '{0}', and user '{1}'.".format(
+                "eauth '{}', and user '{}'.".format(
                     token.get("eauth"), token.get("name")
                 ),
                 exc_info=True,
@@ -2140,7 +2142,7 @@ class Run(LowDataAdapter):
         }
 
 
-class Events(object):
+class Events:
     """
     Expose the Salt event bus
 
@@ -2357,21 +2359,21 @@ class Events(object):
             )
             stream = event.iter_events(full=True, auto_reconnect=True)
 
-            yield str("retry: 400\n")  # future lint: disable=blacklisted-function
+            yield "retry: 400\n"  # future lint: disable=blacklisted-function
 
             while True:
                 data = next(stream)
-                yield str("tag: {0}\n").format(
+                yield "tag: {}\n".format(
                     data.get("tag", "")
                 )  # future lint: disable=blacklisted-function
-                yield str("data: {0}\n\n").format(
+                yield "data: {}\n\n".format(
                     salt.utils.json.dumps(data)
                 )  # future lint: disable=blacklisted-function
 
         return listen()
 
 
-class WebsocketEndpoint(object):
+class WebsocketEndpoint:
     """
     Open a WebSocket connection to Salt's event bus
 
@@ -2551,14 +2553,14 @@ class WebsocketEndpoint(object):
                             SaltInfo.process(data, salt_token, self.opts)
                         else:
                             handler.send(
-                                str("data: {0}\n\n").format(
+                                "data: {}\n\n".format(
                                     salt.utils.json.dumps(data)
                                 ),  # future lint: disable=blacklisted-function
                                 False,
                             )
                     except UnicodeDecodeError:
                         logger.error(
-                            "Error: Salt event has non UTF-8 data:\n{0}".format(data)
+                            "Error: Salt event has non UTF-8 data:\n{}".format(data)
                         )
 
         parent_pipe, child_pipe = Pipe()
@@ -2570,7 +2572,7 @@ class WebsocketEndpoint(object):
         proc.start()
 
 
-class Webhook(object):
+class Webhook:
     """
     A generic web hook entry point that fires an event on Salt's event bus
 
@@ -2738,7 +2740,7 @@ class Webhook(object):
         return {"success": ret}
 
 
-class Stats(object):
+class Stats:
     """
     Expose statistics on the running CherryPy server
     """
@@ -2772,7 +2774,7 @@ class Stats(object):
         return {}
 
 
-class App(object):
+class App:
     """
     Class to serve HTML5 apps
     """
@@ -2802,7 +2804,7 @@ class App(object):
         return cherrypy.lib.static.serve_file(apiopts.get("app", default_index))
 
 
-class API(object):
+class API:
     """
     Collect configuration and URL map for building the CherryPy app
     """
