@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Detect LVM Volumes
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -30,20 +28,20 @@ def lvm():
     elif salt.utils.platform.is_aix():
         return _aix_lvm()
     else:
-        log.trace("LVM grain does not support OS")
+        log.trace("LVM grain does not support this OS")
 
 
 def _linux_lvm():
     ret = {}
     cmd = salt.utils.path.which("lvm")
     if cmd:
-        vgs = __salt__["cmd.run"]("{0} vgs -o vg_name --noheadings".format(cmd))
+        vgs = __salt__["cmd.run"]("{} vgs -o vg_name --noheadings".format(cmd))
 
         for vg in vgs.splitlines():
             vg = vg.strip()
             ret[vg] = []
             lvs = __salt__["cmd.run"](
-                "{0} lvs -o lv_name --noheadings {1}".format(cmd, vg)
+                "{} lvs -o lv_name --noheadings {}".format(cmd, vg)
             )
             for lv in lvs.splitlines():
                 ret[vg].append(lv.strip())
@@ -56,11 +54,11 @@ def _linux_lvm():
 def _aix_lvm():
     ret = {}
     cmd = salt.utils.path.which("lsvg")
-    vgs = __salt__["cmd.run"]("{0}".format(cmd))
+    vgs = __salt__["cmd.run"]("{}".format(cmd))
 
     for vg in vgs.splitlines():
         ret[vg] = []
-        lvs = __salt__["cmd.run"]("{0} -l {1}".format(cmd, vg))
+        lvs = __salt__["cmd.run"]("{} -l {}".format(cmd, vg))
         for lvline in lvs.splitlines()[2:]:
             lv = lvline.split(" ", 1)[0]
             ret[vg].append(lv)
