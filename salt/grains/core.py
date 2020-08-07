@@ -529,15 +529,18 @@ def _bsd_memdata(osdata):
         grains["mem_total"] = int(mem) // 1024 // 1024
 
         if osdata["kernel"] in ["OpenBSD", "NetBSD"]:
-            swapctl = salt.utils.path.which("swapctl")
-            swap_data = __salt__["cmd.run"]("{} -sk".format(swapctl))
+            swap_data = __salt__["cmd.run"]("/sbin/swapctl -sk")
             if re.match(r"(swapctl: )?no swap devices configured", swap_data):
                 swap_total = 0
             else:
                 swap_total = swap_data.split(" ")[1]
         else:
             swap_total = __salt__["cmd.run"]("{} -n vm.swap_total".format(sysctl))
-        grains["swap_total"] = int(swap_total) // 1024 // 1024
+        # swap_total is returned in 1K blocks on OpenBSD, so no need to divide it further
+        grains["swap_total"] = int(swap_total) // 1024
+        if osdata["kernel"] != "OpenBSD":
+            grains["swap_total"] //= 1024
+
     return grains
 
 
