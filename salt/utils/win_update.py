@@ -176,6 +176,7 @@ class Updates:
                 "RebootBehavior": REBOOT_BEHAVIOR[requires_reboot],
                 "KBs": ["KB" + item for item in update.KBArticleIDs],
                 "Categories": [item.Name for item in update.Categories],
+                "SupportUrl": update.SupportUrl,
             }
 
         return results
