@@ -234,21 +234,21 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(service.running("salt", True), ret[6])
                 # test some unique cases simulating Windows
                 with patch.object(salt.utils.platform, "is_windows", tmock):
-                    with patch.object(salt.utils.platform, "is_darwin", fmock):
-                        # We should fail if a service is disabled on Windows and enable
-                        # isn't set.
-                        with patch.dict(
-                            service.__salt__,
-                            {
-                                "service.status": fmock,
-                                "service.enabled": fmock,
-                                "service.start": tmock,
-                            },
-                        ):
-                            self.assertDictEqual(service.running("salt", None), ret[8])
-                            self.assertEqual(
-                                service.__context__, {"service.state": "running"}
-                            )
+                    # We should fail if a service is disabled on Windows and enable
+                    # isn't set.
+                    with patch.dict(
+                        service.__salt__,
+                        {
+                            "service.status": fmock,
+                            "service.enabled": fmock,
+                            "service.start": tmock,
+                        },
+                    ):
+                        breakpoint()
+                        self.assertDictEqual(service.running("salt", None), ret[9])
+                        self.assertEqual(
+                            service.__context__, {"service.state": "running"}
+                        )
                 # test some unique cases simulating macOS
                 with patch.object(salt.utils.platform, "is_darwin", tmock):
                     # We should fail if a service is disabled on macOS and enable
@@ -261,7 +261,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                             "service.start": tmock,
                         },
                     ):
-                        self.assertDictEqual(service.running("salt", None), ret[8])
+                        self.assertDictEqual(service.running("salt", None), ret[9])
                         self.assertEqual(
                             service.__context__, {"service.state": "running"}
                         )
