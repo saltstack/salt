@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The service module for macOS
 
@@ -22,12 +21,10 @@ This module has support for services in the following locations.
     be used to properly interact with the service.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
 import os
-import re
 
 # Import salt libs
 import salt.utils.files
@@ -37,7 +34,6 @@ import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Define the module's virtual name
@@ -101,7 +97,7 @@ def _name_in_services(name, services):
         # Match on label
         return services[name]
 
-    for service in six.itervalues(services):
+    for service in services.values():
         if service["file_path"].lower() == name:
             # Match on full path
             return service
@@ -137,7 +133,7 @@ def _get_service(name):
     # so we need to raise that the service could not be found.
     try:
         if not __context__["using_cached_services"]:
-            raise CommandExecutionError("Service not found: {0}".format(name))
+            raise CommandExecutionError("Service not found: {}".format(name))
     except KeyError:
         pass
 
@@ -145,7 +141,7 @@ def _get_service(name):
     # state then there is no reason to check again.
     # fixes https://github.com/saltstack/salt/issues/57907
     if __context__.get("service.state") == "dead":
-        raise CommandExecutionError("Service not found: {0}".format(name))
+        raise CommandExecutionError("Service not found: {}".format(name))
 
     # we used a cached version to check, a service could have been made
     # between now and then, we should refresh our available services.
@@ -156,7 +152,7 @@ def _get_service(name):
 
     if not service:
         # Could not find the service after refresh raise.
-        raise CommandExecutionError("Service not found: {0}".format(name))
+        raise CommandExecutionError("Service not found: {}".format(name))
 
     # found it :)
     return service
@@ -190,7 +186,7 @@ def _always_running_service(name):
 
     if isinstance(keep_alive, dict):
         # check for pathstate
-        for _file, value in six.iteritems(keep_alive.get("PathState", {})):
+        for _file, value in keep_alive.get("PathState", {}).items():
             if value is True and os.path.exists(_file):
                 return True
             elif value is False and not os.path.exists(_file):
