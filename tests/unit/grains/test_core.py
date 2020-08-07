@@ -910,7 +910,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(salt.utils.platform.is_windows(), "System is Windows")
     def test_bsd_memdata(self):
         """
-        Test to memdata on *BSD systems
+        Test to memdata on FreeBSD systems
         """
         _path_exists_map = {}
         _path_isfile_map = {}
