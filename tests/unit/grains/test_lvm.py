@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.grains.lvm as lvm
@@ -70,7 +68,7 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def test__linux_lvm_no_logical_volumes(self):
         """
-        Test grains._linux_lvm, lvm installed but no volumes
+        Test grains._linux_lvm, lvm is installed but no volumes
         Should return a dictionary only with the header
         """
 
