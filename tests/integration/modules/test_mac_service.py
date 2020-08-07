@@ -202,13 +202,12 @@ class MacServiceModuleTest(ModuleCase):
         """
         Test service.disabled
         """
-        SERVICE_NAME = "com.apple.nfsd"
-        self.assertTrue(self.run_function("service.start", [SERVICE_NAME]))
-        self.assertFalse(self.run_function("service.disabled", [SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
+        self.assertFalse(self.run_function("service.disabled", [self.SERVICE_NAME]))
 
-        self.assertTrue(self.run_function("service.disable", [SERVICE_NAME]))
-        self.assertTrue(self.run_function("service.disabled", [SERVICE_NAME]))
-        self.assertTrue(self.run_function("service.enable", [SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.disable", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.disabled", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.enable", [self.SERVICE_NAME]))
         self.assertIn(
             "Service not found", self.run_function("service.stop", ["spongebob"])
         )
@@ -229,4 +228,11 @@ class MacServiceModuleTest(ModuleCase):
         """
         services = self.run_function("service.get_enabled")
         self.assertIsInstance(services, list)
-        self.assertIn("com.apple.coreservicesd", services)
+        self.assertIn(self.SERVICE_NAME, services)
+
+    @slowTest
+    def test_service_laoded(self):
+        """
+        Test service.get_enabled
+        """
+        self.assertTrue(self.run_function("service.loaded", [self.SERVICE_NAME]))
