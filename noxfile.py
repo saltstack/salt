@@ -1143,9 +1143,10 @@ def lint_tests_pre_commit(session):
 
 
 @nox.session(python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("update", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs(session, compress, update):
+def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
@@ -1156,13 +1157,15 @@ def docs(session, compress, update):
             "docs-man-{}".format(session.python),
             compress=compress,
             update=update,
+            clean=clean,
         )
     )
 
 
 @nox.session(name="docs-html", python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs_html(session, compress):
+def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
@@ -1173,7 +1176,8 @@ def docs_html(session, compress):
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
-    session.run("make", "clean", external=True)
+    if clean:
+        session.run("make", "clean", external=True)
     session.run("make", "html", "SPHINXOPTS=-W", external=True)
     if compress:
         session.run("tar", "-cJvf", "html-archive.tar.xz", "_build/html", external=True)
@@ -1181,9 +1185,10 @@ def docs_html(session, compress):
 
 
 @nox.session(name="docs-man", python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("update", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs_man(session, compress, update):
+def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
@@ -1194,7 +1199,8 @@ def docs_man(session, compress, update):
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
-    session.run("make", "clean", external=True)
+    if clean:
+        session.run("make", "clean", external=True)
     session.run("make", "man", "SPHINXOPTS=-W", external=True)
     if update:
         session.run("rm", "-rf", "man/", external=True)
