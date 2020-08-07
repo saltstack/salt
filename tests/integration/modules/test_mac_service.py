@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_service
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import plistlib
 
-from salt.exceptions import CommandExecutionError
+import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -24,30 +23,31 @@ class MacServiceModuleTest(ModuleCase):
     Validate the mac_service module
     """
 
-    SERVICE_NAME = "com.apple.apsd"
-    SERVICE_LOADED = False
-    SERVICE_ENABLED = False
+    SERVICE_NAME = "com.salt.integration.test"
+    SERVICE_PATH = "/Library/LaunchDaemons/com.salt.integration.test.plist"
 
     def setUp(self):
         """
-        Get current state of the test service
+        setup our test launch service.
         """
-        self.SERVICE_LOADED = self.run_function("service.loaded", [self.SERVICE_NAME])
-        self.SERVICE_ENABLED = self.run_function("service.enabled", [self.SERVICE_NAME])
+        path = "/Library/LaunchDaemons/com.salt.integration.test.plist"
+        service_data = {
+            "KeepAlive": True,
+            "Label": self.SERVICE_NAME,
+            "ProgramArguments": ["/bin/sleep", "1000"],
+            "RunAtLoad": True,
+        }
+        with salt.utils.files.fopen(path, "rb") as fp:
+            plistlib.dump(service_data, fp)
+        self.run_function("service.enable", [self.SERVICE_NAME])
+        self.run_function("service.start", [self.SERVICE_NAME])
 
     def tearDown(self):
         """
-        Reset the test service to the original state
+        stop and remove our test service.
         """
-        if self.SERVICE_LOADED:
-            self.run_function("service.start", [self.SERVICE_NAME])
-        else:
-            self.run_function("service.stop", [self.SERVICE_NAME])
-
-        if self.SERVICE_ENABLED:
-            self.run_function("service.enable", [self.SERVICE_NAME])
-        else:
-            self.run_function("service.disable", [self.SERVICE_NAME])
+        self.run_function("service.stop", [self.SERVICE_NAME])
+        salt.utils.files.safe_rm(self.SERVICE_PATH)
 
     @slowTest
     def test_show(self):
@@ -93,9 +93,7 @@ class MacServiceModuleTest(ModuleCase):
         """
         # Expected Functionality
         self.assertIn("PID", self.run_function("service.list"))
-        self.assertIn(
-            "{", self.run_function("service.list", ["com.apple.coreservicesd"])
-        )
+        self.assertIn("{", self.run_function("service.list", [self.SERVICE_NAME]))
 
         # Service not found
         self.assertIn(
@@ -191,11 +189,11 @@ class MacServiceModuleTest(ModuleCase):
         """
         Test service.enabled
         """
-        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
         self.assertTrue(self.run_function("service.enabled", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
 
+        self.assertTrue(self.run_function("service.enabled", [self.SERVICE_NAME]))
         self.assertTrue(self.run_function("service.stop", [self.SERVICE_NAME]))
-        self.assertFalse(self.run_function("service.enabled", [self.SERVICE_NAME]))
 
         self.assertTrue(self.run_function("service.enabled", ["spongebob"]))
 
