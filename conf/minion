@@ -42,7 +42,7 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
-# Setting master_type to 'disable' let's you have a running minion (with engines and
+# Setting master_type to 'disable' lets you have a running minion (with engines and
 # beacons) without a master connection
 # master_type: str
 

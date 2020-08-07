@@ -29,6 +29,56 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {service: {}}
 
+    def test_get_systemd_only(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        with patch.object(service._get_systemd_only, "HAS_SYSTEMD", True):
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+            )
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {"no_block": 2})
+
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "unmask": 3}
+            )
+
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {})
+
+    def test_get_systemd_only_platform(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        with patch.object(service._get_systemd_only, "HAS_SYSTEMD", False):
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+            )
+
+            self.assertEqual(
+                warnings, ["The 'no_block' argument is not supported by this platform"]
+            )
+            self.assertEqual(ret, {})
+
+            ret, warnings = service._get_systemd_only(
+                test_func, {"cats": 1, "unmask": 3}
+            )
+
+            self.assertEqual(len(warnings), 0)
+            self.assertEqual(ret, {})
+
+    def test_get_systemd_only_no_mock(self):
+        def test_func(cats, dogs, no_block):
+            pass
+
+        ret, warnings = service._get_systemd_only(
+            test_func, {"cats": 1, "no_block": 2, "unmask": 3}
+        )
+
+        self.assertIsInstance(ret, dict)
+        self.assertIsInstance(warnings, list)
+
     def test_running(self):
         """
             Test to verify that the service is running
@@ -76,9 +126,12 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": "Started Service salt\nService masking not available on this minion",
                 "name": "salt",
                 "result": True,
-                "warnings": [
-                    "The 'unmask' argument is not supported by this platform/action"
-                ],
+            },
+            {
+                "changes": "saltstack",
+                "comment": "Started Service salt\nService masking not available on this minion",
+                "name": "salt",
+                "result": True,
             },
         ]
 

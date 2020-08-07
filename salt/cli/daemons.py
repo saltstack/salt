@@ -19,14 +19,16 @@ from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
 from salt.utils import migrations
+from salt.utils.process import HAS_PSUTIL
 from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     "once",  # Show once
-    "",  # No deprecation message match
+    "",  # No deprecation message matchHAS_PSUTIL
     DeprecationWarning,  # This filter is for DeprecationWarnings
     r"^(salt|salt\.(.*))$",  # Match module(s) 'salt' and 'salt.<whatever>'
+    append=True,
 )
 
 # While we are supporting Python2.6, hide nested with-statements warnings
@@ -34,6 +36,7 @@ warnings.filterwarnings(
     "ignore",
     "With-statements now directly support multiple context managers",
     DeprecationWarning,
+    append=True,
 )
 
 # Filter the backports package UserWarning about being re-imported
@@ -41,6 +44,7 @@ warnings.filterwarnings(
     "ignore",
     "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
     UserWarning,
+    append=True,
 )
 
 
@@ -293,7 +297,9 @@ class Minion(
         migrations.migrate_paths(self.config)
 
         # Bail out if we find a process running and it matches out pidfile
-        if self.check_running():
+        if (HAS_PSUTIL and not self.claim_process_responsibility()) or (
+            not HAS_PSUTIL and self.check_running()
+        ):
             self.action_log_info("An instance is already running. Exiting")
             self.shutdown(1)
 

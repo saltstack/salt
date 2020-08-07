@@ -4,7 +4,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
-import os
 
 # Import Salt libs
 import salt.utils.systemd as _systemd
@@ -16,13 +15,12 @@ from tests.support.unit import TestCase
 
 
 def _booted_effect(path):
-    return True if path == "/run/systemd/system" else os.stat(path)
+    return path == "/run/systemd/system"
 
 
 def _not_booted_effect(path):
     if path == "/run/systemd/system":
         raise OSError(errno.ENOENT, "No such file or directory", path)
-    return os.stat(path)
 
 
 class SystemdTestCase(TestCase):

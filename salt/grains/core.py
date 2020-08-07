@@ -24,6 +24,7 @@ import time
 import uuid
 from errno import EACCES, EPERM
 
+import distro
 import salt.exceptions
 import salt.log
 
@@ -40,10 +41,19 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from distro import linux_distribution
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.utils.network import _get_interfaces
+
+
+# rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
+def _linux_distribution():
+    return (
+        distro.id(),
+        distro.version(best=True),
+        distro.codename(),
+    )
+
 
 try:
     import dateutil.tz  # pylint: disable=import-error
@@ -208,7 +218,7 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller")
+    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
 
     devs = []
     try:
@@ -836,22 +846,19 @@ def _virtual(osdata):
                 grains["virtual"] = "LXC"
                 break
         elif command == "virt-what":
-            try:
-                output = output.splitlines()[-1]
-            except IndexError:
-                pass
-            if output in ("kvm", "qemu", "uml", "xen", "lxc"):
-                grains["virtual"] = output
-                break
-            elif "vmware" in output:
-                grains["virtual"] = "VMware"
-                break
-            elif "parallels" in output:
-                grains["virtual"] = "Parallels"
-                break
-            elif "hyperv" in output:
-                grains["virtual"] = "HyperV"
-                break
+            for line in output.splitlines():
+                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                    grains["virtual"] = line
+                    break
+                elif "vmware" in line:
+                    grains["virtual"] = "VMware"
+                    break
+                elif "parallels" in line:
+                    grains["virtual"] = "Parallels"
+                    break
+                elif "hyperv" in line:
+                    grains["virtual"] = "HyperV"
+                    break
         elif command == "dmidecode":
             # Product Name: VirtualBox
             if "Vendor: QEMU" in output:
@@ -919,16 +926,6 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             elif "joyent smartdc hvm" in model:
                 grains["virtual"] = "kvm"
-            else:
-                # Check if it's a "regular" zone
-                zonename = salt.utils.path.which("zonename")
-                if zonename:
-                    zone = __salt__["cmd.run"]("{0}".format(zonename))
-                    if zone != "global":
-                        grains["virtual"] = "zone"
-                # Check if it's a branded zone
-                elif os.path.isdir("/.SUNWnative"):
-                    grains["virtual"] = "zone"
             break
         elif command == "virtinfo":
             if output == "logical-domain":
@@ -1121,6 +1118,18 @@ def _virtual(osdata):
             ):
                 if os.path.isfile("/var/run/xenconsoled.pid"):
                     grains["virtual_subtype"] = "Xen Dom0"
+    elif osdata["kernel"] == "SunOS":
+        # we did not get any data from virtinfo or prtdiag
+        # check the zonename here as fallback
+        zonename = salt.utils.path.which("zonename")
+        if zonename:
+            zone = __salt__["cmd.run"]("{0}".format(zonename))
+            if zone != "global":
+                grains["virtual"] = "zone"
+
+        # last ditch efford to check the brand identifier
+        elif os.path.isdir("/.SUNWnative"):
+            grains["virtual"] = "zone"
 
     # If we have a virtual_subtype, we're virtual, but maybe we couldn't
     # figure out what specific virtual type we were?
@@ -2025,14 +2034,11 @@ def os_data():
                                 **synoinfo
                             )
 
-        # Use the already intelligent platform module to get distro info
-        # (though apparently it's not intelligent enough to strip quotes)
         log.trace(
-            "Getting OS name, release, and codename from "
-            "platform.linux_distribution()"
+            "Getting OS name, release, and codename from distro id, version, codename"
         )
         (osname, osrelease, oscodename) = [
-            x.strip('"').strip("'") for x in linux_distribution()
+            x.strip('"').strip("'") for x in _linux_distribution()
         ]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
@@ -2051,7 +2057,11 @@ def os_data():
             # /etc/os-release contains no minor distro release number so we fall back to parse
             # /etc/centos-release file instead.
             # Commit introducing this comment should be reverted after the upstream bug is released.
-            if "CentOS Linux 7" in grains.get("lsb_distrib_codename", ""):
+            # This also affects Centos 8
+            if any(
+                os in grains.get("lsb_distrib_codename", "")
+                for os in ["CentOS Linux 7", "CentOS Linux 8"]
+            ):
                 grains.pop("lsb_distrib_release", None)
             grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
         grains["oscodename"] = (
@@ -2353,7 +2363,10 @@ def fqdns():
     # fqdns
     opt = {"fqdns": []}
     if __opts__.get(
-        "enable_fqdns_grains", False if salt.utils.platform.is_windows() else True
+        "enable_fqdns_grains",
+        False
+        if salt.utils.platform.is_windows() or salt.utils.platform.is_proxy()
+        else True,
     ):
         opt = __salt__["network.fqdns"]()
     return opt

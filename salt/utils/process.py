@@ -11,6 +11,7 @@ import copy
 import errno
 import functools
 import io
+import json
 import logging
 import multiprocessing
 import multiprocessing.util
@@ -193,6 +194,125 @@ def notify_systemd():
         except SystemError:
             # Daemon was not started by systemd
             pass
+
+
+def get_process_info(pid=None):
+    """
+    Gets basic info about a process.
+    pid: None, or int: None will get the current process pid
+    Return: None or Dict
+    """
+    if pid is None:
+        pid = os.getpid()
+    elif not psutil.pid_exists(pid):
+        return
+
+    raw_process_info = psutil.Process(pid)
+
+    # pid_exists can have false positives
+    # for example Windows reserves PID 5 in a hack way
+    # another reasons is the the process requires kernel permissions
+    try:
+        raw_process_info.status()
+    except psutil.NoSuchProcess:
+        return None
+
+    return {
+        "pid": raw_process_info.pid,
+        "name": raw_process_info.name(),
+        "start_time": raw_process_info.create_time(),
+    }
+
+
+def claim_mantle_of_responsibility(file_name):
+    """
+    Checks that no other live processes has this responsibility.
+    If claiming the mantle of responsibility was successful True will be returned.
+    file_name: str
+    Return: bool
+    """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
+                file_name
+            )
+        )
+        return True
+
+    # add file directory if missing
+    file_directory_name = os.path.dirname(file_name)
+    if not os.path.isdir(file_directory_name) and file_directory_name:
+        os.makedirs(file_directory_name)
+
+    # get process info from file
+    file_process_info = None
+    try:
+        with salt.utils.files.fopen(file_name, "r") as file:
+            file_process_info = json.load(file)
+    except json.decoder.JSONDecodeError:
+        log.error("pidfile: {} is corrupted".format(file_name))
+    except FileNotFoundError:
+        log.info("pidfile: {} not found".format(file_name))
+
+    this_process_info = get_process_info()
+
+    # check if this process all ready has the responsibility
+    if file_process_info == this_process_info:
+        return True
+
+    if not isinstance(file_process_info, dict) or not isinstance(
+        file_process_info.get("pid"), int
+    ):
+        file_process_info = None
+
+    # check if process is still alive
+    if isinstance(file_process_info, dict) and file_process_info == get_process_info(
+        file_process_info.get("pid")
+    ):
+        return False
+
+    # process can take the mantle of responsibility
+    with salt.utils.files.fopen(file_name, "w") as file:
+        json.dump(this_process_info, file)
+    return True
+
+
+def check_mantle_of_responsibility(file_name):
+    """
+    Sees who has the mantle of responsibility
+    file_name: str
+    Return: None or int
+    """
+
+    # all OSs supported by salt has psutil
+    if not HAS_PSUTIL:
+        log.critical(
+            "Assuming no other Process has this responsibility! pidfile: {}".format(
+                file_name
+            )
+        )
+        return
+
+    # get process info from file
+    try:
+        with salt.utils.files.fopen(file_name, "r") as file:
+            file_process_info = json.load(file)
+    except json.decoder.JSONDecodeError:
+        log.error("pidfile: {} is corrupted".format(file_name))
+        return
+    except FileNotFoundError:
+        log.info("pidfile: {} not found".format(file_name))
+        return
+
+    if not isinstance(file_process_info, dict) or not isinstance(
+        file_process_info.get("pid"), int
+    ):
+        return
+
+    if file_process_info == get_process_info(file_process_info["pid"]):
+        return file_process_info["pid"]
 
 
 def set_pidfile(pidfile, user):
