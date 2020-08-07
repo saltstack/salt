@@ -531,7 +531,7 @@ def _bsd_memdata(osdata):
         if osdata["kernel"] in ["OpenBSD", "NetBSD"]:
             swapctl = salt.utils.path.which("swapctl")
             swap_data = __salt__["cmd.run"]("{} -sk".format(swapctl))
-            if swap_data == "no swap devices configured":
+            if re.match(r"(swapctl: )?no swap devices configured", swap_data):
                 swap_total = 0
             else:
                 swap_total = swap_data.split(" ")[1]
