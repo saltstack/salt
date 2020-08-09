@@ -1817,7 +1817,7 @@ def _openbsd_remotes_on(port, which_end):
         log.error("Failed netstat")
         raise
 
-    lines = data.split("\n")
+    lines = salt.utils.stringutils.to_str(data).split("\n")
     for line in lines:
         if "ESTABLISHED" not in line:
             continue

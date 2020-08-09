@@ -117,6 +117,12 @@ ESTAB      0      0                    127.0.0.1:56726                    127.0.
 ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
 """
 
+OPENBSD_NETSTAT = """\
+Active Internet connections
+Proto   Recv-Q Send-Q  Local Address          Foreign Address        (state)
+tcp          0      0  127.0.0.1.4506         127.0.0.1.45329         ESTABLISHED
+"""
+
 LINUX_NETLINK_SS_OUTPUT = """\
 State       Recv-Q Send-Q                                                            Local Address:Port                                                                           Peer Address:Port
 TIME-WAIT   0      0                                                                         [::1]:8009                                                                                  [::1]:40368
@@ -616,6 +622,13 @@ class NetworkTestCase(TestCase):
                     return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID,
                 ):
                     remotes = network._freebsd_remotes_on("4506", "remote")
+                    self.assertEqual(remotes, {"127.0.0.1"})
+
+    def test_openbsd_remotes_on(self):
+        with patch("salt.utils.platform.is_sunos", lambda: False):
+            with patch("salt.utils.platform.is_openbsd", lambda: True):
+                with patch("subprocess.check_output", return_value=OPENBSD_NETSTAT):
+                    remotes = network._openbsd_remotes_on("4506", "remote")
                     self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_netlink_tool_remote_on_a(self):

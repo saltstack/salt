@@ -1,0 +1,1 @@
+Fix occasional crash on OpenBSD due to buglet in network._openbsd_remotes_on.
