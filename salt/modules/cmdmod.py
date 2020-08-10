@@ -27,7 +27,7 @@ import salt.grains.extra
 
 # Import salt libs
 import salt.utils.args
-import salt.utils.chcp
+import salt.utils.win_chcp
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -342,7 +342,7 @@ def _run(
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
     elif windows_codepage is not None:
-        salt.utils.chcp.chcp(windows_codepage)
+        salt.utils.win_chcp.chcp(windows_codepage)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
