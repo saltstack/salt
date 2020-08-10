@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Daniel Wallace <dwallace@saltstack.com`
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -22,15 +20,6 @@ from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-ROSTER = """
-localhost:
-  host: 127.0.0.1
-  port: 2827
-self:
-  host: 0.0.0.0
-  port: 42
-"""
 
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
@@ -76,6 +65,16 @@ class SSHPasswordTests(ShellCase):
 
 
 class SSHRosterDefaults(TestCase):
+    def setUp(self):
+        self.roster = """
+            localhost:
+              host: 127.0.0.1
+              port: 2827
+            self:
+              host: 0.0.0.0
+              port: 42
+            """
+
     def test_roster_defaults_flat(self):
         """
         Test Roster Defaults on the flat roster
@@ -97,10 +96,12 @@ class SSHRosterDefaults(TestCase):
                     """
                 )
             opts = salt.config.master_config(fpath)
-            with patch("salt.roster.get_roster_file", MagicMock(return_value=ROSTER)):
+            with patch(
+                "salt.roster.get_roster_file", MagicMock(return_value=self.roster)
+            ):
                 with patch(
                     "salt.template.compile_template",
-                    MagicMock(return_value=salt.utils.yaml.safe_load(ROSTER)),
+                    MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
                 ):
                     roster = salt.roster.Roster(opts=opts)
                     self.assertEqual(roster.targets("*", "glob"), expected)
@@ -322,8 +323,8 @@ class SSHSingleTests(TestCase):
             assert ret == exp_ret
             assert mock_cmd.call_count == 2
             assert [
-                call("/bin/sh '{0}'".format(script)),
-                call("rm '{0}'".format(script)),
+                call("/bin/sh '{}'".format(script)),
+                call("rm '{}'".format(script)),
             ] == mock_cmd.call_args_list
 
     def test_shim_cmd(self):
@@ -388,8 +389,8 @@ class SSHSingleTests(TestCase):
             ret = single.run_ssh_pre_flight()
             assert ret == exp_ret
             assert [
-                call("/bin/sh '{0}'".format(exp_tmp)),
-                call("rm '{0}'".format(exp_tmp)),
+                call("/bin/sh '{}'".format(exp_tmp)),
+                call("rm '{}'".format(exp_tmp)),
             ] == mock_cmd.call_args_list
 
     @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
@@ -432,3 +433,198 @@ class SSHSingleTests(TestCase):
 
         ret = single._cmd_str()
         assert re.search('SET_PATH=""', ret)
+
+
+class SSHTests(ShellCase):
+    def setUp(self):
+        self.roster = """
+            localhost:
+              host: 127.0.0.1
+              port: 2827
+            """
+        self.opts = salt.config.client_config(self.get_config_file_path("master"))
+        self.opts["selected_target_option"] = "glob"
+
+    def test_expand_target_ip_address(self):
+        """
+        test expand_target when target is root@<ip address>
+        """
+        host = "127.0.0.1"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch(
+            "salt.roster.get_roster_file", MagicMock(return_value="/etc/salt/roster")
+        ), patch(
+            "salt.client.ssh.compile_template",
+            MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
+        ):
+            client._expand_target()
+        assert opts["tgt"] == host
+
+    def test_expand_target_dns(self):
+        """
+        test expand_target when target is root@<dns>
+        """
+        host = "localhost"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch(
+            "salt.roster.get_roster_file", MagicMock(return_value="/etc/salt/roster")
+        ), patch(
+            "salt.client.ssh.compile_template",
+            MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
+        ):
+            client._expand_target()
+        assert opts["tgt"] == host
+
+    def test_expand_target_no_user(self):
+        """
+        test expand_target when no user defined
+        """
+        host = "127.0.0.1"
+        opts = self.opts
+        opts["tgt"] = host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == host
+
+        with patch(
+            "salt.roster.get_roster_file", MagicMock(return_value="/etc/salt/roster")
+        ), patch(
+            "salt.client.ssh.compile_template",
+            MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
+        ):
+            client._expand_target()
+        assert opts["tgt"] == host
+
+    def test_update_targets_ip_address(self):
+        """
+        test update_targets when host is ip address
+        """
+        host = "127.0.0.1"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        client._update_targets()
+        assert opts["tgt"] == host
+        assert client.targets[host]["user"] == user.split("@")[0]
+
+    def test_update_targets_dns(self):
+        """
+        test update_targets when host is dns
+        """
+        host = "localhost"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        client._update_targets()
+        assert opts["tgt"] == host
+        assert client.targets[host]["user"] == user.split("@")[0]
+
+    def test_update_targets_no_user(self):
+        """
+        test update_targets when no user defined
+        """
+        host = "127.0.0.1"
+        opts = self.opts
+        opts["tgt"] = host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == host
+        client._update_targets()
+        assert opts["tgt"] == host
+
+    def test_update_expand_target_dns(self):
+        """
+        test update_targets and expand_target when host is dns
+        """
+        host = "localhost"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch(
+            "salt.roster.get_roster_file", MagicMock(return_value="/etc/salt/roster")
+        ), patch(
+            "salt.client.ssh.compile_template",
+            MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
+        ):
+            client._expand_target()
+        client._update_targets()
+        assert opts["tgt"] == host
+        assert client.targets[host]["user"] == user.split("@")[0]
+
+    def test_parse_tgt(self):
+        """
+        test parse_tgt when user and host set on
+        the ssh cli tgt
+        """
+        host = "localhost"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            assert not self.opts.get("ssh_cli_tgt")
+            client = ssh.SSH(opts)
+            assert client.parse_tgt["hostname"] == host
+            assert client.parse_tgt["user"] == user.split("@")[0]
+            assert self.opts.get("ssh_cli_tgt") == user + host
+
+    def test_parse_tgt_no_user(self):
+        """
+        test parse_tgt when only the host set on
+        the ssh cli tgt
+        """
+        host = "localhost"
+        opts = self.opts
+        opts["ssh_user"] = "ssh-usr"
+        opts["tgt"] = host
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            assert not self.opts.get("ssh_cli_tgt")
+            client = ssh.SSH(opts)
+            assert client.parse_tgt["hostname"] == host
+            assert client.parse_tgt["user"] == opts["ssh_user"]
+            assert self.opts.get("ssh_cli_tgt") == host
