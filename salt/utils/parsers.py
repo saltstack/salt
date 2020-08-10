@@ -997,6 +997,52 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             help="Specify the location of the pidfile. Default: '%default'.",
         )
 
+    def _mixin_before_exit(self):
+        if hasattr(self, "config") and self.config.get("pidfile"):
+            # We've loaded and merged options into the configuration, it's safe
+            # to query about the pidfile
+            if self.check_pidfile():
+                try:
+                    os.unlink(self.config["pidfile"])
+                except OSError as err:
+                    # Log error only when running salt-master as a root user.
+                    # Otherwise this can be ignored, since salt-master is able to
+                    # overwrite the PIDfile on the next start.
+                    err_msg = (
+                        "PIDfile could not be deleted: %s",
+                        six.text_type(self.config["pidfile"]),
+                    )
+                    if salt.utils.platform.is_windows():
+                        user = salt.utils.win_functions.get_current_user()
+                        if salt.utils.win_functions.is_admin(user):
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
+                    else:
+                        if not os.getuid():
+                            logger.info(*err_msg)
+                            logger.debug(six.text_type(err))
+
+    def set_pidfile(self):
+        from salt.utils.process import set_pidfile
+
+        set_pidfile(self.config["pidfile"], self.config["user"])
+
+    def check_pidfile(self):
+        """
+        Report whether a pidfile exists
+        """
+        from salt.utils.process import check_pidfile
+
+        return check_pidfile(self.config["pidfile"])
+
+    def get_pidfile(self):
+        """
+        Return a pid contained in a pidfile
+        """
+        from salt.utils.process import get_pidfile
+
+        return get_pidfile(self.config["pidfile"])
+
     def daemonize_if_required(self):
         if self.options.daemon:
             if self._setup_mp_logging_listener_ is True:
@@ -1010,11 +1056,40 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
 
-    def claim_pid_file(self):
+    def check_running(self):
         """
-        Try's to claim the pidfile
+        Check if a pid file exists and if it is associated with
+        a running process.
         """
-        return salt.utils.process.claim_mantle_of_responsibility(self.config["pidfile"])
+
+        if self.check_pidfile():
+            pid = self.get_pidfile()
+            if not salt.utils.platform.is_windows():
+                if (
+                    self.check_pidfile()
+                    and self.is_daemonized(pid)
+                    and os.getppid() != pid
+                ):
+                    return True
+            else:
+                # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
+                if (
+                    self.check_pidfile()
+                    and self.is_daemonized(pid)
+                    and salt.utils.win_functions.get_parent_pid() != pid
+                ):
+                    return True
+        return False
+
+    def claim_process_responsibility(self):
+        """
+        This will stop from more than on prcoess from doing the same task
+        """
+        responsibility_file = os.path.split(self.config["pidfile"])
+        responsibility_file = os.path.join(
+            responsibility_file[0], "process_responsibility_" + responsibility_file[1]
+        )
+        return salt.utils.process.claim_mantle_of_responsibility(responsibility_file)
 
     def is_daemonized(self, pid):
         from salt.utils.process import os_is_running
