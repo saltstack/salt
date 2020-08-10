@@ -1809,16 +1809,15 @@ class State(object):
                                         for _id in iter(high):
                                             for state in iter(high[_id]):
                                                 # When a requisite is tied to an excluded id, state is an ordered dict.
-                                                if hasattr(state, "startswith"):
-                                                    if not state.startswith("__"):
-                                                        for j in iter(high[_id][state]):
-                                                            if (
-                                                                isinstance(j, dict)
-                                                                and "name" in j
-                                                            ):
-                                                                if j["name"] == ind:
-                                                                    ind = {state: _id}
-                                                                    found = True
+                                                if hasattr(state, "startswith") and not state.startswith("__"):
+                                                    for j in iter(high[_id][state]):
+                                                        if (
+                                                            isinstance(j, dict)
+                                                            and "name" in j
+                                                        ):
+                                                            if j["name"] == ind:
+                                                                ind = {state: _id}
+                                                                found = True
 
                                         if not found:
                                             continue
