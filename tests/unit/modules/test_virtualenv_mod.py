@@ -391,3 +391,23 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
                     ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
                     assert ret == expt
+
+    def test_issue_57734_debian_package(self):
+        virtualenv_mock = MagicMock()
+        virtualenv_mock.__version__ = "20.0.23+ds"
+        with patch.dict("sys.modules", {"virtualenv": virtualenv_mock}):
+            ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+        self.assertEqual(ret, (20, 0, 23))
+
+    def test_issue_57734_debian_package_importerror(self):
+        with ForceImportErrorOn("virtualenv"):
+            mock_ver = MagicMock(
+                return_value={
+                    "retcode": 0,
+                    "stdout": "virtualenv 20.0.23+ds from "
+                    "/usr/lib/python3/dist-packages/virtualenv/__init__.py",
+                }
+            )
+            with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
+                ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+        self.assertEqual(ret, (20, 0, 23))
