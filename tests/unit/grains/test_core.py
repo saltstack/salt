@@ -1348,6 +1348,18 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             else:
                 assert core.fqdns() == "my.fake.domain"
 
+    def test_enable_fqdns_false_is_proxy(self):
+        """
+        testing fqdns grains is disabled by default for proxy minions
+        """
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(
+                "salt.grains.core.__salt__",
+                {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+            ):
+                # fqdns is disabled by default on proxy minions
+                assert core.fqdns() == {"fqdns": []}
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
@@ -1435,6 +1447,25 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 "retcode": 0,
                                 "stderr": "",
                                 "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    osdata = {
+                        "kernel": "test",
+                    }
+                    ret = core._virtual(osdata)
+                    self.assertEqual(ret["virtual"], virt)
+
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": "\n\n{0}".format(virt),
                             }
                         )
                     },
@@ -2129,6 +2160,12 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 "GeForce GTX 950M",
                 "nvidia",
             ],  # 3D controller
+            [
+                "Display controller",
+                "Intel Corporation",
+                "HD Graphics P630",
+                "intel",
+            ],  # Display controller
         ]
         with patch.dict(
             core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
