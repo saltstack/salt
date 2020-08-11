@@ -96,7 +96,7 @@ python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
-pyyaml==5.1.2
+pyyaml==5.3.1
 pyzmq==19.0.0
 requests==2.21.0
 responses==0.10.6         # via moto

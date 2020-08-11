@@ -629,7 +629,8 @@ def install(
             .. versionadded:: 2017.7.0
 
         execution_timeout (str):
-        Chocolatey execution timeout value you want to pass to the installation process. Default is None.
+            Chocolatey execution timeout value you want to pass to the
+            installation process. Default is None.
 
             .. versionadded:: 2018.3.0
 
