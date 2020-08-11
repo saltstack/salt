@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 checkrestart functionality for Debian and Red Hat Based systems
 
@@ -10,7 +9,6 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
@@ -24,9 +22,6 @@ import salt.exceptions
 import salt.utils.args
 import salt.utils.files
 import salt.utils.path
-
-# Import 3rd partylibs
-from salt.ext import six
 
 NILRT_FAMILY_NAME = "NILinuxRT"
 
@@ -131,12 +126,12 @@ def _deleted_files():
             pinfo = proc.as_dict(attrs=["pid", "name"])
             try:
                 with salt.utils.files.fopen(
-                    "/proc/{0}/maps".format(pinfo["pid"])
+                    "/proc/{}/maps".format(pinfo["pid"])
                 ) as maps:  # pylint: disable=resource-leakage
-                    dirpath = "/proc/" + six.text_type(pinfo["pid"]) + "/fd/"
+                    dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
                     listdir = os.listdir(dirpath)
                     maplines = maps.readlines()
-            except (OSError, IOError):
+            except OSError:
                 yield False
 
             # /proc/PID/maps
@@ -228,14 +223,14 @@ def _format_output(
             ret = "System restart required.\n\n"
 
         if packages:
-            ret += "Found {0} processes using old versions of upgraded files.\n".format(
+            ret += "Found {} processes using old versions of upgraded files.\n".format(
                 len(packages)
             )
             ret += "These are the packages:\n"
 
         if restartable:
             ret += (
-                "Of these, {0} seem to contain systemd service definitions or init scripts "
+                "Of these, {} seem to contain systemd service definitions or init scripts "
                 "which can be used to restart them:\n".format(len(restartable))
             )
             for package in restartable:
@@ -253,7 +248,7 @@ def _format_output(
 
         if nonrestartable:
             ret += (
-                "\n\nThese processes {0} do not seem to have an associated init script "
+                "\n\nThese processes {} do not seem to have an associated init script "
                 "to restart them:\n".format(len(nonrestartable))
             )
             for package in nonrestartable:
@@ -337,7 +332,7 @@ def _kernel_versions_nilrt():
         Get kernel version from a binary image or None if detection fails
         """
         kvregex = r"[0-9]+\.[0-9]+\.[0-9]+-rt\S+"
-        kernel_strings = __salt__["cmd.run"]("strings {0}".format(kbin))
+        kernel_strings = __salt__["cmd.run"]("strings {}".format(kbin))
         re_result = re.search(kvregex, kernel_strings)
         return None if re_result is None else re_result.group(0)
 
@@ -350,11 +345,11 @@ def _kernel_versions_nilrt():
             compressed_kernel = "/var/volatile/tmp/uImage.gz"
             uncompressed_kernel = "/var/volatile/tmp/uImage"
             __salt__["cmd.run"](
-                "dumpimage -i {0} -T flat_dt -p0 kernel -o {1}".format(
+                "dumpimage -i {} -T flat_dt -p0 kernel -o {}".format(
                     itb_path, compressed_kernel
                 )
             )
-            __salt__["cmd.run"]("gunzip -f {0}".format(compressed_kernel))
+            __salt__["cmd.run"]("gunzip -f {}".format(compressed_kernel))
             kver = _get_kver_from_bin(uncompressed_kernel)
         else:
             # the kernel bzImage is copied to rootfs without package management or
@@ -395,11 +390,11 @@ def _file_changed_nilrt(full_filepath):
     """
     rs_state_dir = "/var/lib/salt/restartcheck_state"
     base_filename = os.path.basename(full_filepath)
-    timestamp_file = os.path.join(rs_state_dir, "{0}.timestamp".format(base_filename))
-    md5sum_file = os.path.join(rs_state_dir, "{0}.md5sum".format(base_filename))
+    timestamp_file = os.path.join(rs_state_dir, "{}.timestamp".format(base_filename))
+    md5sum_file = os.path.join(rs_state_dir, "{}.md5sum".format(base_filename))
 
     if not os.path.exists(timestamp_file) or not os.path.exists(md5sum_file):
-        return False
+        return True
 
     prev_timestamp = __salt__["file.read"](timestamp_file).rstrip()
     # Need timestamp in seconds so floor it using int()
@@ -410,7 +405,7 @@ def _file_changed_nilrt(full_filepath):
 
     return bool(
         __salt__["cmd.retcode"](
-            "md5sum -cs {0}".format(md5sum_file), output_loglevel="quiet"
+            "md5sum -cs {}".format(md5sum_file), output_loglevel="quiet"
         )
     )
 
@@ -426,7 +421,7 @@ def _kernel_modules_changed_nilrt(kernelversion):
              - True if modules.dep was modified/touched, False otherwise.
     """
     if kernelversion is not None:
-        return _file_changed_nilrt("/lib/modules/{0}/modules.dep".format(kernelversion))
+        return _file_changed_nilrt("/lib/modules/{}/modules.dep".format(kernelversion))
     return False
 
 
@@ -527,9 +522,11 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if kernel in kernel_current:
             if __grains__.get("os_family") == "NILinuxRT":
                 # Check kernel modules and hardware API's for version changes
+                # If a restartcheck=True event was previously witnessed, propagate it
                 if (
                     not _kernel_modules_changed_nilrt(kernel)
                     and not _sysapi_changed_nilrt()
+                    and not __salt__["system.get_reboot_required_witnessed"]()
                 ):
                     kernel_restart = False
                     break
@@ -579,7 +576,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if path in blacklist or pid in excludepid:
             continue
         try:
-            readlink = os.readlink("/proc/{0}/exe".format(pid))
+            readlink = os.readlink("/proc/{}/exe".format(pid))
         except OSError:
             excludepid.append(pid)
             continue
@@ -600,15 +597,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
                     restart_services.append(running_service)
                     name = running_service
         if packagename and packagename not in ignorelist:
-            program = (
-                "\t"
-                + six.text_type(pid)
-                + " "
-                + readlink
-                + " (file: "
-                + six.text_type(path)
-                + ")"
-            )
+            program = "\t" + str(pid) + " " + readlink + " (file: " + str(path) + ")"
             if packagename not in packages:
                 packages[packagename] = {
                     "initscripts": [],
@@ -648,7 +637,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
                     # pylint: disable=resource-leakage
                     servicefile = salt.utils.files.fopen(pth)
                     # pylint: enable=resource-leakage
-                except IOError:
+                except OSError:
                     continue
                 sysfold_len = len(systemd_folder)
 
