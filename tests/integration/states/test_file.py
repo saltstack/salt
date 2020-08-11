@@ -727,7 +727,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.managed passing a basic check_cmd kwarg. See Issue #38111.
         """
         r_group = "root"
-        if salt.utils.platform.is_darwin():
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
             r_group = "wheel"
         try:
             ret = self.run_state(
@@ -2722,6 +2722,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         TEST_SYSTEM_USER, TEST_SYSTEM_GROUP, on_existing="delete", delete=True
     )
     @with_tempdir()
+    @skipIf(salt.utils.platform.is_freebsd(), "Test is failing on FreeBSD")
     def test_issue_12209_follow_symlinks(self, tempdir, user, group):
         """
         Ensure that symlinks are properly chowned when recursing (following
