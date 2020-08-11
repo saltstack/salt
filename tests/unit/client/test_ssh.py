@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Daniel Wallace <dwallace@saltstack.com`
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -360,8 +358,8 @@ class SSHSingleTests(TestCase):
             assert ret == exp_ret
             assert mock_cmd.call_count == 2
             assert [
-                call("/bin/sh '{0}'".format(script)),
-                call("rm '{0}'".format(script)),
+                call("/bin/sh '{}'".format(script)),
+                call("rm '{}'".format(script)),
             ] == mock_cmd.call_args_list
 
     def test_shim_cmd(self):
@@ -426,8 +424,8 @@ class SSHSingleTests(TestCase):
             ret = single.run_ssh_pre_flight()
             assert ret == exp_ret
             assert [
-                call("/bin/sh '{0}'".format(exp_tmp)),
-                call("rm '{0}'".format(exp_tmp)),
+                call("/bin/sh '{}'".format(exp_tmp)),
+                call("rm '{}'".format(exp_tmp)),
             ] == mock_cmd.call_args_list
 
     @skipIf(salt.utils.platform.is_windows(), "SSH_PY_SHIM not set on windows")
