@@ -102,7 +102,7 @@ def _valid_deleted_file(path):
         True if file is desired deleted file, else False.
 
     Args:
-        path: A string - path to file
+        path: A string - path to file.
     """
     ret = False
     if path.endswith(" (deleted)"):
@@ -208,13 +208,13 @@ def _format_output(
         String - formatted output.
 
     Args:
-        kernel_restart: indicates that newer kernel is instaled
-        packages: list of packages that should be restarted
-        verbose: enables extensive output
-        restartable: list of restartable packages
-        nonrestartable: list of non-restartable packages
-        restartservicecommands: list of commands to restart services
-        restartinitcommands: list of commands to restart init.d scripts
+        kernel_restart: indicates that newer kernel is instaled.
+        packages: list of packages that should be restarted.
+        verbose: enables extensive output.
+        restartable: list of restartable packages.
+        nonrestartable: list of non-restartable packages.
+        restartservicecommands: list of commands to restart services.
+        restartinitcommands: list of commands to restart init.d scripts.
 
     """
     if not verbose:
@@ -389,8 +389,9 @@ def _file_changed_nilrt(full_filepath):
     files from a state directory.
 
     Returns:
-             - False if md5sum/timestamp state files don't exist
-             - True/False depending if ``base_filename`` got modified/touched
+             - True if either md5sum/timestamp state files do not exist, or
+               the file at ``full_filepath`` was touched or modified.
+             - False otherwise.
     """
     rs_state_dir = "/var/lib/salt/restartcheck_state"
     base_filename = os.path.basename(full_filepath)
@@ -422,7 +423,7 @@ def _kernel_modules_changed_nilrt(kernelversion):
     testing if depmod was run.
 
     Returns:
-             - True/False depending if modules.dep got modified/touched
+             - True if modules.dep was modified/touched, False otherwise.
     """
     if kernelversion is not None:
         return _file_changed_nilrt("/lib/modules/{0}/modules.dep".format(kernelversion))
@@ -438,12 +439,35 @@ def _sysapi_changed_nilrt():
     daemons restarted, etc.
 
     Returns:
-             - True/False depending on if nisysapi.ini got modified/touched
-             - False if nisysapi.ini does not exist to avoid triggering unnecessary reboots
+             - True if nisysapi .ini files were modified/touched.
+             - False if no nisysapi .ini files exist.
     """
     nisysapi_path = "/usr/local/natinst/share/nisysapi.ini"
-    if os.path.exists(nisysapi_path):
-        return _file_changed_nilrt(nisysapi_path)
+    if os.path.exists(nisysapi_path) and _file_changed_nilrt(nisysapi_path):
+        return True
+
+    restartcheck_state_dir = "/var/lib/salt/restartcheck_state"
+    nisysapi_conf_d_path = "/usr/lib/{}/nisysapi/conf.d/experts/".format(
+        "arm-linux-gnueabi"
+        if "arm" in __grains__.get("cpuarch")
+        else "x86_64-linux-gnu"
+    )
+
+    if os.path.exists(nisysapi_conf_d_path):
+        rs_count_file = "{}/sysapi.conf.d.count".format(restartcheck_state_dir)
+        if not os.path.exists(rs_count_file):
+            return True
+
+        with salt.utils.files.fopen(rs_count_file, "r") as fcount:
+            current_nb_files = len(os.listdir(nisysapi_conf_d_path))
+            rs_stored_nb_files = int(fcount.read())
+            if current_nb_files != rs_stored_nb_files:
+                return True
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            if _file_changed_nilrt("{}/{}".format(nisysapi_conf_d_path, fexpert)):
+                return True
+
     return False
 
 
@@ -453,14 +477,14 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     Analyzes files openeded by running processes and seeks for packages which need to be restarted.
 
     Args:
-        ignorelist: string or list of packages to be ignored
-        blacklist: string or list of file paths to be ignored
-        excludepid: string or list of process IDs to be ignored
-        verbose: boolean, enables extensive output
-        timeout: int, timeout in minute
+        ignorelist: string or list of packages to be ignored.
+        blacklist: string or list of file paths to be ignored.
+        excludepid: string or list of process IDs to be ignored.
+        verbose: boolean, enables extensive output.
+        timeout: int, timeout in minute.
 
     Returns:
-        Dict on error: { 'result': False, 'comment': '<reason>' }
+        Dict on error: ``{ 'result': False, 'comment': '<reason>' }``.
         String with checkrestart output if some package seems to need to be restarted or
         if no packages need restarting.
 
