@@ -94,6 +94,7 @@ MOCK_MODULES = [
     "Crypto.Random",
     "Crypto.Signature",
     "Crypto.Signature.PKCS1_v1_5",
+    "distro",
     "M2Crypto",
     "msgpack",
     "yaml",
@@ -342,6 +343,7 @@ else:
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
+autosummary_generate_overwrite = False
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)

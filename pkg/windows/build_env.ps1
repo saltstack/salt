@@ -143,6 +143,62 @@ If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
 }
 
 #------------------------------------------------------------------------------
+# Check for installation of NSIS NxS Unzip Plug-in
+#------------------------------------------------------------------------------
+Write-Output " - Checking for NSIS NxS Unzip (ansi) Plug-in installation . . ."
+If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirA'] )\nsisunz.dll") {
+    # Found NSIS NxS Unzip Plug-in, do nothing
+    Write-Output " - NSIS NxS Unzip Plugin (ansi) Found . . ."
+} Else
+{
+    # NSIS NxS Unzip Plug-in (ansi) not found, install
+    Write-Output " - NSIS NxS Unzip Plugin (ansi) Not Found . . ."
+    # Ansi Plugin
+    Write-Output " - Downloading $( $ini['Prerequisites']['NSISPluginUnzipA'] ) . . ."
+    $file = "$( $ini['Prerequisites']['NSISPluginUnzipA'] )"
+    $url  = "$( $ini['Settings']['SaltRepo'] )/$file"
+    $file = "$( $ini['Settings']['DownloadDir'] )\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Ansi Zip file
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file $ini['Settings']['DownloadDir']
+
+    # Copy dll to plugins directory
+    Write-Output " - Copying dll to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\nsisunz\Release\nsisunz.dll" "$( $ini[$bitPaths]['NSISPluginsDirA'] )\nsisunz.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\nsisunz" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+Write-Output " - Checking for NSIS NxS Unzip (unicode) Plug-in installation . . ."
+If (Test-Path "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll") {
+    # Found NSIS NxS Unzip Plug-in (unicode), do nothing
+    Write-Output " - NSIS NxS Unzip Plugin (unicode) Found . . ."
+} Else {
+    # Unicode Plugin
+    Write-Output " - Downloading $( $ini['Prerequisites']['NSISPluginUnzipU'] ) . . ."
+    $file = "$( $ini['Prerequisites']['NSISPluginUnzipU'] )"
+    $url  = "$( $ini['Settings']['SaltRepo'] )/$file"
+    $file = "$( $ini['Settings']['DownloadDir'] )\$file"
+    DownloadFileWithProgress $url $file
+
+    # Extract Unicode Zip file
+    Write-Output " - Extracting . . ."
+    Expand-ZipFile $file $ini['Settings']['DownloadDir']
+
+    # Copy dll to plugins directory
+    Write-Output " - Copying dll to plugins directory . . ."
+    Move-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU\Plugin unicode\nsisunz.dll" "$( $ini[$bitPaths]['NSISPluginsDirU'] )\nsisunz.dll" -Force
+
+    # Remove temp files
+    Remove-Item "$( $ini['Settings']['DownloadDir'] )\NSISunzU" -Force -Recurse
+    Remove-Item "$file" -Force
+}
+
+#------------------------------------------------------------------------------
 # Check for installation of Microsoft Visual C++ Build Tools
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Microsoft Visual C++ Build Tools installation . . ."
@@ -180,6 +236,23 @@ If (Test-Path "$($ini['Settings']['Python3Dir'])\python.exe") {
 
     Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['Python3']) . . ."
     $p    = Start-Process $file -ArgumentList "/Quiet InstallAllUsers=1 TargetDir=`"$($ini['Settings']['Python3Dir'])`" Include_doc=0 Include_tcltk=0 Include_test=0 Include_launcher=1 PrependPath=1 Shortcuts=0" -Wait -NoNewWindow -PassThru
+}
+
+#------------------------------------------------------------------------------
+# Install VCRedist
+#------------------------------------------------------------------------------
+If (Test-Path "$($ini[$bitPrograms]['VCRedistReg'])") {
+    # Found VCRedist 2013, do nothing
+    Write-Output " - VCRedist 2013 Found . . ."
+} Else {
+    Write-Output " - Downloading $($ini[$bitPrograms]['VCRedist']) . . ."
+    $file = "$($ini[$bitPrograms]['VCRedist'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$bitFolder\$file"
+    DownloadFileWithProgress $url $file
+
+    Write-Output " - $script_name :: Installing $($ini[$bitPrograms]['VCRedist']) . . ."
+    $p    = Start-Process $file -ArgumentList "/install /quiet /norestart" -Wait -NoNewWindow -PassThru
 }
 
 #------------------------------------------------------------------------------

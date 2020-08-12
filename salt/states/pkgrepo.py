@@ -309,14 +309,6 @@ def managed(name, ppa=None, **kwargs):
        running of apt-get update prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
     """
-    if "refresh_db" in kwargs:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "The 'refresh_db' argument to 'pkg.mod_repo' has been "
-            "renamed to 'refresh'. Support for using 'refresh_db' will be "
-            "removed in the Sodium release of Salt.",
-        )
-        kwargs["refresh"] = kwargs.pop("refresh_db")
 
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 

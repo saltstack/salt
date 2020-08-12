@@ -315,7 +315,7 @@ It is recommended that one modify this command a bit by removing the ``-l quiet`
 
 Different Python Versions
 =========================
-The Sodium release removed python 2 support in Salt. Even though this python 2 support
+The 3001 release removed python 2 support in Salt. Even though this python 2 support
 is being dropped we have provided multiple ways to work around this with Salt-SSH. You
 can use the following options:
 

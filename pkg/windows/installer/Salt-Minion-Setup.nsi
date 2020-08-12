@@ -402,23 +402,22 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+
 Section -copy_prereqs
     # Copy prereqs to the Plugins Directory
-    # These files will be KB2999226 for Win8.1 and below
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
     File /r "..\prereqs\"
 SectionEnd
 
-# Check and install the Windows 10 Universal C Runtime (KB2999226)
-# ucrt is needed on Windows 8.1 and lower
-# They are installed as a Microsoft Update package (.msu)
-# ucrt for Windows 8.1 RT is only available via Windows Update
+# Check if the  Windows 10 Universal C Runtime (KB2999226) is installed
+# Python 3 needs the updated ucrt on Windows 8.1 / 2012R2 and lower
+# They are installed via KB2999226, but we're not going to patch the system here
+# Instead, we're going to copy the .dll files to the \salt\bin directory
 Section -install_ucrt
 
-    Var /GLOBAL MsuPrefix
-    Var /GLOBAL MsuFileName
+    Var /GLOBAL UcrtFileName
 
     # Get the Major.Minor version Number
     # Windows 10 introduced CurrentMajorVersionNumber
@@ -441,7 +440,7 @@ Section -install_ucrt
     ClearErrors
 
     # Use WMI to check if it's installed
-    detailPrint "Checking for existing KB2999226 installation"
+    detailPrint "Checking for existing UCRT (KB2999226) installation"
     nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
     # Clean up the stack
     Pop $R0 # Gets the ErrorCode
@@ -450,55 +449,113 @@ Section -install_ucrt
     # If it returned KB2999226 it's already installed
     StrCmp $R1 'KB2999226' lbl_done
 
-    detailPrint "KB2999226 not found"
-
-    # All lower versions of Windows
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentVersion
-
-    # Get the name of the .msu file based on the value of $R0
-    ${Switch} "$R0"
-        ${Case} "6.3"
-            StrCpy $MsuPrefix "Windows8.1"
-            ${break}
-        ${Case} "6.2"
-            StrCpy $MsuPrefix "Windows8-RT"
-            ${break}
-        ${Case} "6.1"
-            StrCpy $MsuPrefix "Windows6.1"
-            ${break}
-        ${Case} "6.0"
-            StrCpy $MsuPrefix "Windows6.0"
-            ${break}
-    ${EndSwitch}
+    detailPrint "UCRT (KB2999226) not found"
 
     # Use RunningX64 here to get the Architecture for the system running the installer
     # CPUARCH is defined when the installer is built and is based on the machine that
     # built the installer, not the target system as we need here.
     ${If} ${RunningX64}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
+        StrCpy $UcrtFileName "ucrt_x64.zip"
     ${Else}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
+        StrCpy $UcrtFileName "ucrt_x86.zip"
     ${EndIf}
 
     ClearErrors
 
-    detailPrint "Installing KB2999226 using file $MsuFileName"
-    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
+    CreateDirectory $INSTDIR\bin
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
+
     # Clean up the stack
     Pop $R0  # Get Error
-    Pop $R1  # Get stdout
-    ${IfNot} $R0 == 0
+
+    ${IfNot} $R0 == "success"
         detailPrint "error: $R0"
-        detailPrint "output: $R2"
         Sleep 3000
     ${Else}
-        detailPrint "KB2999226 installed successfully"
+        detailPrint "UCRT dll files copied successfully"
     ${EndIf}
 
     lbl_done:
 
 SectionEnd
+
+
+# Check and install Visual C++ redist 2013 packages
+# Hidden section (-) to install VCRedist
+Section -install_vcredist_2013
+
+    Var /GLOBAL VcRedistName
+    Var /GLOBAL VcRedistGuid
+    Var /GLOBAL NeedVcRedist
+
+    # GUIDs can be found by installing them and then running the following command:
+    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
+    !define VCREDIST_X86_NAME "vcredist_x86_2013"
+    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
+    !define VCREDIST_X64_NAME "vcredist_x64_2013"
+    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
+
+    # Only install 64bit VCRedist on 64bit machines
+    ${If} ${CPUARCH} == "AMD64"
+        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        Call InstallVCRedist
+    ${Else}
+        # Install 32bit VCRedist on all machines
+        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        Call InstallVCRedist
+    ${EndIf}
+
+SectionEnd
+
+
+Function InstallVCRedist
+    # Check to see if it's already installed
+    Call MsiQueryProductState
+    ${If} $NeedVcRedist == "True"
+        detailPrint "System requires $VcRedistName"
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "$VcRedistName is currently not installed. Would you like to install?" \
+            /SD IDYES IDNO endVCRedist
+
+        # If an output variable is specified ($0 in the case below),
+        # ExecWait sets the variable with the exit code (and only sets the
+        # error flag if an error occurs; if an error occurs, the contents
+        # of the user variable are undefined).
+        # http://nsis.sourceforge.net/Reference/ExecWait
+        ClearErrors
+        detailPrint "Installing $VcRedistName..."
+        ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+        IfErrors 0 CheckVcRedistErrorCode
+            MessageBox MB_OK \
+                "$VcRedistName failed to install. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+
+        CheckVcRedistErrorCode:
+        # Check for Reboot Error Code (3010)
+        ${If} $0 == 3010
+            MessageBox MB_OK \
+                "$VcRedistName installed but requires a restart to complete." \
+                /SD IDOK
+            detailPrint "Reboot and run Salt install again"
+
+        # Check for any other errors
+        ${ElseIfNot} $0 == 0
+            MessageBox MB_OK \
+                "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+            detailPrint "Error: $0"
+        ${EndIf}
+
+        endVCRedist:
+
+    ${EndIf}
+
+FunctionEnd
 
 
 Section "MainSection" SEC01
@@ -515,6 +572,7 @@ SectionEnd
 
 Function .onInit
 
+    InitPluginsDir
     Call parseCommandLineSwitches
 
     # Uninstall msi-installed salt
@@ -542,17 +600,17 @@ Function .onInit
     ${EndIf}
 
     customConfigExists:
-    # Check for existing installation
-    ReadRegStr $R0 HKLM \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
-        "UninstallString"
-    StrCmp $R0 "" checkOther
-    # Found existing installation, prompt to uninstall
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is already installed.$\n$\n\
-        Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK uninst
-    Abort
+        # Check for existing installation
+        ReadRegStr $R0 HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+            "UninstallString"
+        StrCmp $R0 "" checkOther
+        # Found existing installation, prompt to uninstall
+        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+            "${PRODUCT_NAME} is already installed.$\n$\n\
+            Click `OK` to remove the existing installation." \
+            /SD IDOK IDOK uninst
+        Abort
 
     checkOther:
         # Check for existing installation of full salt
@@ -807,6 +865,16 @@ FunctionEnd
 ###############################################################################
 # Helper Functions
 ###############################################################################
+Function MsiQueryProductState
+    # Used for detecting VCRedist Installation
+    !define INSTALLSTATE_DEFAULT "5"
+
+    StrCpy $NeedVcRedist "False"
+    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
+    StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+    StrCpy $NeedVcRedist "True"
+
+FunctionEnd
 
 #------------------------------------------------------------------------------
 # Trim Function

@@ -169,6 +169,16 @@ class PsTestCase(TestCase):
                 ps.pgrep(_get_proc_name(self.mocked_proc)),
             )
 
+    def test_pgrep_regex(self):
+        with patch(
+            "salt.utils.psutil_compat.process_iter",
+            MagicMock(return_value=[self.mocked_proc]),
+        ):
+            self.assertIn(
+                _get_proc_pid(self.mocked_proc),
+                ps.pgrep("t.st_[a-z]+_proc", pattern_is_regex=True),
+            )
+
     def test_cpu_percent(self):
         with patch("salt.utils.psutil_compat.cpu_percent", MagicMock(return_value=1)):
             self.assertEqual(ps.cpu_percent(), 1)
@@ -321,8 +331,27 @@ class PsTestCase(TestCase):
         result = ps.top(num_processes=1, interval=0)
         assert len(result) == 1
 
-        ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
-        # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
-        # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
-        # def test_get_users_utmp(self):
-        #     pass
+    def test_top_zombie_process(self):
+        # Get 3 pids that are currently running on the system
+        pids = psutil.pids()[:3]
+        # Get a process instance for each of the pids
+        processes = [psutil.Process(pid) for pid in pids]
+
+        # Patch the middle process to raise ZombieProcess when .cpu_times is called
+        def raise_exception():
+            raise psutil.ZombieProcess(processes[1].pid)
+
+        processes[1].cpu_times = raise_exception
+
+        # Make sure psutil.pids only returns the above 3 pids
+        with patch("salt.utils.psutil_compat.pids", return_value=pids):
+            # Make sure we use our process list from above
+            with patch("salt.utils.psutil_compat.Process", side_effect=processes):
+                result = ps.top(num_processes=1, interval=0)
+                assert len(result) == 1
+
+    ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
+    # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
+    # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
+    # def test_get_users_utmp(self):
+    #     pass
