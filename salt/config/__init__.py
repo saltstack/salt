@@ -71,6 +71,11 @@ if salt.utils.platform.is_windows():
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
+elif salt.utils.platform.is_proxy():
+    _DFLT_IPC_MODE = "ipc"
+    _DFLT_FQDNS_GRAINS = False
+    _MASTER_TRIES = 1
+    _MASTER_USER = salt.utils.user.get_user()
 else:
     _DFLT_IPC_MODE = "ipc"
     _DFLT_FQDNS_GRAINS = True
@@ -1173,7 +1178,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
             salt.syspaths.BASE_FILE_ROOTS_DIR, "win", "repo-ng"
         ),
         "winrepo_cachefile": "winrepo.p",
-        "winrepo_cache_expire_max": 21600,
+        "winrepo_cache_expire_max": 604800,
         "winrepo_cache_expire_min": 1800,
         "winrepo_remotes": ["https://github.com/saltstack/salt-winrepo.git"],
         "winrepo_remotes_ng": ["https://github.com/saltstack/salt-winrepo-ng.git"],

@@ -743,8 +743,9 @@ Section -Post
         Call updateMinionConfig
     ${EndIf}
 
-    Push "C:\salt"
-    Call AddToPath
+    # Add $INSTDIR in the Path
+    EnVar::SetHKLM
+    EnVar::AddValue Path "$INSTDIR"
 
 SectionEnd
 
@@ -788,9 +789,9 @@ Section Uninstall
 
     Call un.uninstallSalt
 
-    # Remove C:\salt from the Path
-    Push "C:\salt"
-    Call un.RemoveFromPath
+    # Remove $INSTDIR from the Path
+    EnVar::SetHKLM
+    EnVar::DeleteValue Path "$INSTDIR"
 
 SectionEnd
 
@@ -1012,236 +1013,6 @@ Function Explode
     Push $explArrCount
 FunctionEnd
 
-
-#------------------------------------------------------------------------------
-# StrStr Function
-# - find substring in a string
-#
-# Usage:
-#   Push "this is some string"
-#   Push "some"
-#   Call StrStr
-#   Pop $0 # "some string"
-#------------------------------------------------------------------------------
-!macro StrStr un
-Function ${un}StrStr
-
-    Exch $R1 # $R1=substring, stack=[old$R1,string,...]
-    Exch     #                stack=[string,old$R1,...]
-    Exch $R2 # $R2=string,    stack=[old$R2,old$R1,...]
-    Push $R3 # $R3=strlen(substring)
-    Push $R4 # $R4=count
-    Push $R5 # $R5=tmp
-    StrLen $R3 $R1 # Get the length of the Search String
-    StrCpy $R4 0 # Set the counter to 0
-
-    loop:
-        StrCpy $R5 $R2 $R3 $R4 # Create a moving window of the string that is
-                               # the size of the length of the search string
-        StrCmp $R5 $R1 done    # Is the contents of the window the same as
-                               # search string, then done
-        StrCmp $R5 "" done     # Is the window empty, then done
-        IntOp $R4 $R4 + 1      # Shift the windows one character
-        Goto loop              # Repeat
-
-    done:
-        StrCpy $R1 $R2 "" $R4
-        Pop $R5
-        Pop $R4
-        Pop $R3
-        Pop $R2
-        Exch $R1 # $R1=old$R1, stack=[result,...]
-
-FunctionEnd
-!macroend
-!insertmacro StrStr ""
-!insertmacro StrStr "un."
-
-
-#------------------------------------------------------------------------------
-# AddToPath Function
-# - Adds item to Path for All Users
-# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-#   Windows Commands
-#
-# Usage:
-#   Push "C:\path\to\add"
-#   Call AddToPath
-#------------------------------------------------------------------------------
-!define Environ 'HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"'
-Function AddToPath
-
-    Exch $0 # Path to add
-    Push $1 # Current Path
-    Push $2 # Results of StrStr / Length of Path + Path to Add
-    Push $3 # Handle to Reg / Length of Path
-    Push $4 # Result of Registry Call
-
-    # Open a handle to the key in the registry, handle in $3, Error in $4
-    System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    # Make sure registry handle opened successfully (returned 0)
-    IntCmp $4 0 0 done done
-
-    # Load the contents of path into $1, Error Code into $4, Path length into $2
-    System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
-
-    # Close the handle to the registry ($3)
-    System::Call "advapi32::RegCloseKey(i $3)"
-
-    # Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath Failed: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK \
-            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
-            /SD IDOK
-        Goto done
-
-    # If no error, continue
-    IntCmp $4 0 +5 # $4 != NO_ERROR
-        # Error 2 means the Key was not found
-        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
-            DetailPrint "AddToPath: unexpected error code $4"
-            Goto done
-        StrCpy $1 ""
-
-    # Check if already in PATH
-    Push "$1;"          # The string to search
-    Push "$0;"          # The string to find
-    Call StrStr
-    Pop $2              # The result of the search
-    StrCmp $2 "" 0 done # String not found, try again with ';' at the end
-                        # Otherwise, it's already in the path
-    Push "$1;"          # The string to search
-    Push "$0\;"         # The string to find
-    Call StrStr
-    Pop $2              # The result
-    StrCmp $2 "" 0 done # String not found, continue (add)
-                        # Otherwise, it's already in the path
-
-    # Prevent NSIS string overflow
-    StrLen $2 $0        # Length of path to add ($2)
-    StrLen $3 $1        # Length of current path ($3)
-    IntOp $2 $2 + $3    # Length of current path + path to add ($2)
-    IntOp $2 $2 + 2     # Account for the additional ';'
-                        # $2 = strlen(dir) + strlen(PATH) + sizeof(";")
-
-    # Make sure the new length isn't over the NSIS_MAX_STRLEN
-    IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
-        DetailPrint "AddToPath Failed: new length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK \
-            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
-            /SD IDOK
-        Goto done
-
-    # Append dir to PATH
-    DetailPrint "Add to PATH: $0"
-    StrCpy $2 $1 1 -1       # Copy the last character of the existing path
-    StrCmp $2 ";" 0 +2      # Check for trailing ';'
-        StrCpy $1 $1 -1     # remove trailing ';'
-    StrCmp $1 "" +2         # Make sure Path is not empty
-        StrCpy $0 "$1;$0"   # Append new path at the end ($0)
-
-    # We can use the NSIS command here. Only 'ReadRegStr' is affected
-    WriteRegExpandStr ${Environ} "PATH" $0
-
-    # Broadcast registry change to open programs
-    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-
-    done:
-        Pop $4
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
-
-FunctionEnd
-
-
-#------------------------------------------------------------------------------
-# RemoveFromPath Function
-# - Removes item from Path for All Users
-# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-#   Windows Commands
-#
-# Usage:
-#   Push "C:\path\to\add"
-#   Call un.RemoveFromPath
-#------------------------------------------------------------------------------
-Function un.RemoveFromPath
-
-    Exch $0
-    Push $1
-    Push $2
-    Push $3
-    Push $4
-    Push $5
-    Push $6
-
-    # Open a handle to the key in the registry, handle in $3, Error in $4
-    System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    # Make sure registry handle opened successfully (returned 0)
-    IntCmp $4 0 0 done done
-
-    # Load the contents of path into $1, Error Code into $4, Path length into $2
-    System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
-
-    # Close the handle to the registry ($3)
-    System::Call "advapi32::RegCloseKey(i $3)"
-
-    # Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        Goto done
-
-    # If no error, continue
-    IntCmp $4 0 +5 # $4 != NO_ERROR
-        # Error 2 means the Key was not found
-        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
-            DetailPrint "AddToPath: unexpected error code $4"
-            Goto done
-        StrCpy $1 ""
-
-    # Ensure there's a trailing ';'
-    StrCpy $5 $1 1 -1   # Copy the last character of the path
-    StrCmp $5 ";" +2    # Check for trailing ';', if found continue
-        StrCpy $1 "$1;" # ensure trailing ';'
-
-    # Check for our directory inside the path
-    Push $1             # String to Search
-    Push "$0;"          # Dir to Find
-    Call un.StrStr
-    Pop $2              # The results of the search
-    StrCmp $2 "" done   # If results are empty, we're done, otherwise continue
-
-    # Remove our Directory from the Path
-    DetailPrint "Remove from PATH: $0"
-    StrLen $3 "$0;"       # Get the length of our dir ($3)
-    StrLen $4 $2          # Get the length of the return from StrStr ($4)
-    StrCpy $5 $1 -$4      # $5 is now the part before the path to remove
-    StrCpy $6 $2 "" $3    # $6 is now the part after the path to remove
-    StrCpy $3 "$5$6"      # Combine $5 and $6
-
-    # Check for Trailing ';'
-    StrCpy $5 $3 1 -1     # Load the last character of the string
-    StrCmp $5 ";" 0 +2    # Check for ';'
-        StrCpy $3 $3 -1   # remove trailing ';'
-
-    # Write the new path to the registry
-    WriteRegExpandStr ${Environ} "PATH" $3
-
-    # Broadcast the change to all open applications
-    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-
-    done:
-        Pop $6
-        Pop $5
-        Pop $4
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
-
-FunctionEnd
 
 #------------------------------------------------------------------------------
 # UninstallMSI Function
