@@ -410,10 +410,7 @@ class BotoVpcTestCaseMixin:
             recurse_depth=1,
         )
 
-        res = self.conn.create_network_acl_entry(**params)
-        network_acl_id = res["NetworkAcl"]["NetworkAclId"]
-        self._create_tags(network_acl_id, tags)
-        return network_acl_id
+        return self.conn.create_network_acl_entry(**params)
 
     def _create_route_table(self, vpc_id, name=None, tags=None):
         """

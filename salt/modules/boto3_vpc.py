@@ -161,7 +161,7 @@ def _describe_resource(
     )
     boto_filters = [
         {"Name": k, "Values": v if isinstance(v, list) else [v]}
-        for k, v in filters or {}.items()
+        for k, v in (filters or {}).items()
     ]
     if client is None:
         client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
