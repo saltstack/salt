@@ -1915,7 +1915,9 @@ def _read_conf_file(path):
                 raise salt.exceptions.SaltConfigurationError(message)
 
     if remove_this_file:
-        log.error("Because this is a generated config file, we will destroy it now and recreate it later")
+        log.error(
+            "Deleting above configuration file because it can be generated"
+        )
         conf_opts = {}
         os.remove(path)
 
