@@ -1910,6 +1910,7 @@ def _read_conf_file(path):
             message = "Error parsing configuration file: {0} - {1}".format(path, err)
             log.error(message)
             if path.endswith("_schedule.conf"):
+                # Remove this file, once closed
                 remove_this_file = True
             else:
                 raise salt.exceptions.SaltConfigurationError(message)
