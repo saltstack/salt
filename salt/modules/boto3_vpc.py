@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon VPC.
 Be aware that this interacts with Amazon's services, and so may incur charges.
@@ -44,7 +43,6 @@ Be aware that this interacts with Amazon's services, and so may incur charges.
 :depends: boto3
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -58,7 +56,6 @@ import salt.utils.dicttrim
 import salt.utils.network
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.versions import LooseVersion
 
 # pylint: enable=3rd-party-module-not-gated
@@ -164,7 +161,7 @@ def _describe_resource(
     )
     boto_filters = [
         {"Name": k, "Values": v if isinstance(v, list) else [v]}
-        for k, v in six.iteritems(filters or {})
+        for k, v in filters or {}.items()
     ]
     if client is None:
         client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
@@ -385,7 +382,7 @@ def _create_resource(
     if params is None:
         params = {}
     if tags:
-        boto_tags = [{"Key": k, "Value": v} for k, v in six.iteritems(tags)]
+        boto_tags = [{"Key": k, "Value": v} for k, v in tags.items()]
         if support_create_tagging:
             params.update(
                 {
@@ -407,7 +404,6 @@ def _create_resource(
     try:
         res = boto_func(**params)
         if tags and not support_create_tagging:
-            log.debug("HERBERT: _create_resource: creating tags the old-fashioned way")
             tag_res = client.create_tags(
                 Resources=[res[resource_type_uc]["{}Id".format(resource_type_uc)]],
                 Tags=boto_tags,
@@ -1915,7 +1911,7 @@ def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=N
     """
     params = {
         "Resources": resource_ids,
-        "Tags": [{"Key": k, "Value": v} for k, v in six.iteritems(tags)],
+        "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     # Oh, the irony
     return _create_resource(
@@ -2790,7 +2786,7 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
     """
     params = lambda: {
         "Resources": resources if isinstance(resources, list) else [resources],
-        "Tags": [{"Key": k, "Value": v} for k, v in six.iteritems(tags)],
+        "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return _generic_action(

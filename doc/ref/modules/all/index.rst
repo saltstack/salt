@@ -56,6 +56,7 @@ execution modules
     boto3_elasticsearch
     boto3_route53
     boto3_sns
+    boto3_vpc
     boto_apigateway
     boto_asg
     boto_cfn

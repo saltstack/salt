@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -18,8 +15,6 @@ import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
-
 # pylint: disable=import-error
 from salt.utils.versions import LooseVersion
 
@@ -132,7 +127,7 @@ def _get_moto_version():
     Returns the moto version
     """
     try:
-        return LooseVersion(six.text_type(moto.__version__))
+        return LooseVersion(str(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution("moto").version)
@@ -206,7 +201,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        super(BotoVpcTestCaseBase, cls).setUpClass()
+        super().setUpClass()
         cls.network_acl_entry_parameters = {
             "network_acl_id": "fake",
             "rule_number": 100,
@@ -223,7 +218,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
         # cls.addCleanup(delattr, cls, 'mock_errormessage')
 
     def setUp(self):
-        super(BotoVpcTestCaseBase, self).setUp()
+        super().setUp()
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         boto_vpc.__init__(self.opts)
         delattr(self, "opts")
@@ -232,7 +227,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
         pass
 
 
-class BotoVpcTestCaseMixin(object):
+class BotoVpcTestCaseMixin:
     """
     Helper class to setup the moto virtual cloud using boto3 directly.
     """
@@ -823,7 +818,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
@@ -974,7 +969,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_id = self._create_subnet(vpc_id, name="test")
 
         res = boto_vpc.lookup_subnet(subnet_name="test", **salt_conn_parameters)
-        log.debug("HERBERT: res: %s", res)
         self.assertIn("result", res)
         self.assertIn("SubnetId", res["result"])
         self.assertEqual(res["result"]["SubnetId"], subnet_id)
@@ -1038,8 +1032,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         res = boto_vpc.describe_subnets(subnet_ids=subnet_id, **salt_conn_parameters)
         self.assertIn("result", res)
         self.assertLessEqual(
-            set(["SubnetId", "CidrBlock", "AvailabilityZone"]),
-            set(res["result"][0].keys()),
+            {"SubnetId", "CidrBlock", "AvailabilityZone"}, set(res["result"][0].keys()),
         )
         self.assertEqual(res["result"][0]["SubnetId"], subnet_id)
 
@@ -1073,7 +1066,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertIn("result", res)
         self.assertLessEqual(
-            set(["SubnetId", "CidrBlock", "AvailabilityZone", "Tags"]),
+            {"SubnetId", "CidrBlock", "AvailabilityZone", "Tags"},
             set(res["result"][0].keys()),
         )
 
@@ -1107,7 +1100,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", res)
         self.assertEqual(len(res["result"]), 2)
         self.assertLessEqual(
-            set(["SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"]),
+            {"SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"},
             set(res["result"][0].keys()),
         )
 
@@ -1125,7 +1118,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         res = boto_vpc.lookup_subnet(subnet_name="subnet2", **salt_conn_parameters)
         self.assertLessEqual(
-            set(["SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"]),
+            {"SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"},
             set(res["result"].keys()),
         )
 
@@ -1353,7 +1346,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
@@ -2049,7 +2042,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
