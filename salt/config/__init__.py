@@ -1908,6 +1908,10 @@ def _read_conf_file(path):
         except salt.utils.yaml.YAMLError as err:
             message = "Error parsing configuration file: {0} - {1}".format(path, err)
             log.error(message)
+            if path.endswith("_schedule.conf"):
+                log.error("Because this is a generated config file, we will destroy it now and recreate it later")
+                os.remove(path)
+                conf_opts = {}
             raise salt.exceptions.SaltConfigurationError(message)
 
         # only interpret documents as a valid conf, not things like strings,
