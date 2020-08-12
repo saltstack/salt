@@ -1563,8 +1563,10 @@ def create_route(
     When determining how to route traffic, we use the route with the most specific
     match. For example, traffic is destined for the IPv4 address 192.0.2.3 , and
     the route table includes the following two IPv4 routes:
+
         192.0.2.0/24 (goes to some target A)
         192.0.2.0/28 (goes to some target B)
+
     Both routes apply to the traffic destined for 192.0.2.3 . However, the second
     route in the list covers a smaller number of IP addresses and is therefore
     more specific, so we use that route to determine where to target the traffic.
@@ -2271,6 +2273,7 @@ def crud_security_group_rule(
         Allowed values: egress, ingress.
 
     The following arguments are part of the security group rule to add:
+
     :param str description: The description of the rule target.
     :param tuple(int, int) port_range: The start and end of the port range for
         the TCP and UDP protocols, or an ICMP/ICMPv6 type number. A value of
@@ -2279,6 +2282,7 @@ def crud_security_group_rule(
         Use ``-1`` to specify all protocols.
 
     The following designate the rule target. You must provide exactly one:
+
     :param str ip_range: Either an IPv4 or IPv6 CIDR range or a security
         group name.
     :param str prefix_list_id: The ID of a prefix list.
@@ -3966,6 +3970,7 @@ def lookup_address(
     Can also be used to determine if an Elastic IP exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str allocation_name: The ``Name``-tag of the address.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str allocation_id: [EC2-VPC] The allocation ID for the address.
@@ -4074,6 +4079,7 @@ def lookup_customer_gateway(
     Can also be used to determine if a DHCP options set exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str customer_gateway_id: ID of the VPN customer gateway.
     :param str customer_gateway_name: The ``Name``-tag of the VPN customer gateway.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4153,6 +4159,7 @@ def lookup_dhcp_options(
     Can also be used to determine if a DHCP options set exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str dhcp_options_id: ID of the DHCP options set.
     :param str dhcp_options_name: The ``Name``-tag of the DHCP options set.
         If also specifying ``Name`` in ``tags``, this option is ignored.
@@ -4230,6 +4237,7 @@ def lookup_internet_gateway(
     Can also be used to determine if an Internet gateway exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str internet_gateway_id: ID of the Internet gateway.
     :param str internet_gateway_name: The ``Name``-tag of the Internet gateway.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4315,6 +4323,8 @@ def lookup_local_gateway(
     Helper function to find a single local gateawy.
     Can also be used to determine if a local gateway exists.
 
+    The following paramers are translated into filters to refine the lookup:
+
     :param str local_gateway_id: The ID of a local gateway.
     :param str local_gateway_name: The ``Name``-tag of a local gateway.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4399,6 +4409,7 @@ def lookup_nat_gateway(
     Can also be used to determine if a NAT gateway exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str nat_gateway_id: ID of the NAT gateway.
     :param str nat_gateway_name: The ``Name``-tag of the NAT gateway.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4516,6 +4527,7 @@ def lookup_network_acl(
     Can also be used to determine if a network ACL exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str network_acl_id: ID of the network ACL.
     :param str network_acl_name: The ``Name``-tag of the network ACL.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4660,6 +4672,7 @@ def lookup_route_table(
     Can also be used to determine if a route table exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str route_table_id: ID of the route table.
     :param str route_table_name: The ``Name``-tag of the route table.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -4809,6 +4822,7 @@ def lookup_security_group(
     Can also be used to determine if a security group exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str group_id: The ID of the security group.
     :param str group_name: The name of the security group.
     :param str description: The description of the security group.
@@ -4946,6 +4960,7 @@ def lookup_subnet(
     Can also be used to determine if a subnet exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str subnet_id: ID of the subnet.
     :param str subnet_name: The ``Name``-tag of the subnet.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -5051,7 +5066,8 @@ def lookup_tag(
     Describes one or more of the tags for your EC2 resources.
 
     The following arguments specify filters to select the resource(s) to describe
-    the tags of.
+    the tags of:
+
     :param str tag_key: The tag key to filter on regardless of value.
     :param str resource_id: The ID of the resource to filter on.
     :param str resource_type: The resource type to filter on. Allowed values:
@@ -5129,6 +5145,7 @@ def lookup_vpc(
     Can also be used to determine if a VPC exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str vpc_id: ID of the VPC.
     :param str vpc_name: The ``Name``-tag of the VPC.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -5232,6 +5249,7 @@ def lookup_vpc_endpoint(
     Can also be used to determine if a VPC peering connection exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str vpc_endpoint_id: The ID of the endpoint.
     :param str vpc_endpoint_name: The ``Name``-tag of the VPC endpoint.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
@@ -5315,6 +5333,7 @@ def lookup_vpc_peering_connection(
     Can also be used to determine if a VPC peering connection exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str vpc_peering_connection_id: ID of the VPC peering connection.
     :param str vpc_peering_connection_name: The ``Name``-tag of the VPC peering
         connection.
@@ -5434,6 +5453,7 @@ def lookup_vpn_gateway(
     Can also be used to determine if a virtual private gateway exists.
 
     The following paramers are translated into filters to refine the lookup:
+
     :param str vpn_gateway_id: The ID of the virtual private gateway.
     :param str vpn_gateway_name: The ``Name``-tag of the virtual private gateway.
         If also specifying ``Name`` in ``tags``, this option takes precedence.
