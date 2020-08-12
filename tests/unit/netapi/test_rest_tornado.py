@@ -25,6 +25,7 @@ try:
     import salt.ext.tornado.escape
     import salt.ext.tornado.testing
     import salt.ext.tornado.concurrent
+    import salt.ext.tornado.ioloop
     from salt.ext.tornado.testing import AsyncTestCase, AsyncHTTPTestCase, gen_test
     from salt.ext.tornado.httpclient import HTTPRequest, HTTPError
     from salt.ext.tornado.websocket import websocket_connect
@@ -939,6 +940,9 @@ class TestSaltnadoUtils(AsyncTestCase):
 
 @skipIf(not HAS_TORNADO, "The tornado package needs to be installed")
 class TestEventListener(AsyncTestCase):
+    def get_new_ioloop(self):
+        return salt.ext.tornado.ioloop.IOLoop()
+
     def setUp(self):
         self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
         if not os.path.exists(self.sock_dir):
