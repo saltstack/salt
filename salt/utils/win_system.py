@@ -318,7 +318,9 @@ def get_pending_update():
         salt.utils.win_system.get_pending_update()
     """
     # So long as any of the registry keys exists, a reboot is pending.
-    base_key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update"
+    base_key = (
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update"
+    )
     sub_keys = ("RebootRequired", "PostRebootReporting")
     for sub_key in sub_keys:
         key = "\\".join((base_key, sub_key))
