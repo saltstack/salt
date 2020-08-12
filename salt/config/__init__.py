@@ -1902,6 +1902,7 @@ def _read_conf_file(path):
     Read in a config file from a given path and process it into a dictionary
     """
     log.debug("Reading configuration from %s", path)
+    remove_this_file = False
     with salt.utils.files.fopen(path, "r") as conf_file:
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
@@ -1909,28 +1910,32 @@ def _read_conf_file(path):
             message = "Error parsing configuration file: {0} - {1}".format(path, err)
             log.error(message)
             if path.endswith("_schedule.conf"):
-                log.error("Because this is a generated config file, we will destroy it now and recreate it later")
-                os.remove(path)
-                conf_opts = {}
-            raise salt.exceptions.SaltConfigurationError(message)
-
-        # only interpret documents as a valid conf, not things like strings,
-        # which might have been caused by invalid yaml syntax
-        if not isinstance(conf_opts, dict):
-            message = (
-                "Error parsing configuration file: {0} - conf "
-                "should be a document, not {1}.".format(path, type(conf_opts))
-            )
-            log.error(message)
-            raise salt.exceptions.SaltConfigurationError(message)
-
-        # allow using numeric ids: convert int to string
-        if "id" in conf_opts:
-            if not isinstance(conf_opts["id"], six.string_types):
-                conf_opts["id"] = six.text_type(conf_opts["id"])
+                remove_this_file = True
             else:
-                conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
-        return conf_opts
+                raise salt.exceptions.SaltConfigurationError(message)
+
+    if remove_this_file:
+        log.error("Because this is a generated config file, we will destroy it now and recreate it later")
+        conf_opts = {}
+        os.remove(path)
+
+    # only interpret documents as a valid conf, not things like strings,
+    # which might have been caused by invalid yaml syntax
+    if not isinstance(conf_opts, dict):
+        message = (
+            "Error parsing configuration file: {0} - conf "
+            "should be a document, not {1}.".format(path, type(conf_opts))
+        )
+        log.error(message)
+        raise salt.exceptions.SaltConfigurationError(message)
+
+    # allow using numeric ids: convert int to string
+    if "id" in conf_opts:
+        if not isinstance(conf_opts["id"], six.string_types):
+            conf_opts["id"] = six.text_type(conf_opts["id"])
+        else:
+            conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
+    return conf_opts
 
 
 def _absolute_path(path, relative_to=None):
