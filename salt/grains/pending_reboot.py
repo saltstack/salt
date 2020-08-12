@@ -26,6 +26,6 @@ def __virtual__():
 
 def pending_reboot():
     """
-    A grain that indicates that the system is pending a reboot.
+    A grain that indicates that a Windows system is pending a reboot.
     """
     return {"pending_reboot": salt.utils.win_system.get_pending_reboot()}
