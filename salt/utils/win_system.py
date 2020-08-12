@@ -111,7 +111,7 @@ def get_pending_computer_name():
         # and should always be present
         return None
     if pending:
-        return pending if pending != current else None
+        return pending if pending.lower() != current.lower() else None
 
 
 def get_pending_component_servicing():
