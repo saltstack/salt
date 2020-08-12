@@ -212,15 +212,6 @@ class WinSystemTestCase(TestCase):
         with patch("salt.utils.win_reg.key_exists", side_effect=[False, True]):
             self.assertTrue(win_system.get_pending_update())
 
-    def test_get_pending_update_true_3(self):
-        """
-        If the Pending key contains subkeys, should return True
-        """
-        with patch("salt.utils.win_reg.key_exists", side_effect=[False, False]), patch(
-            "salt.utils.win_reg.list_keys", return_value=["subkey"]
-        ):
-            self.assertTrue(win_system.get_pending_update())
-
     def test_get_reboot_required_witnessed_false_1(self):
         """
         The ``Reboot Required`` value name does not exist, should return False
