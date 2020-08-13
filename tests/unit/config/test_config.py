@@ -8,7 +8,7 @@ from salt.exceptions import SaltConfigurationError
 
 # Import Salt Testing Libs
 from tests.support.mock import patch, MagicMock
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class ConfigTestCase(TestCase):
