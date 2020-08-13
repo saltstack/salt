@@ -1902,7 +1902,7 @@ def _read_conf_file(path):
     Read in a config file from a given path and process it into a dictionary
     """
     log.debug("Reading configuration from %s", path)
-    remove_this_file = False
+    append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
@@ -1910,17 +1910,23 @@ def _read_conf_file(path):
             message = "Error parsing configuration file: {0} - {1}".format(path, err)
             log.error(message)
             if path.endswith("_schedule.conf"):
-                # Remove this file, once closed
-                remove_this_file = True
+                # Create empty dictionary of config options
+                conf_opts = {}
+                # Rename this file, once closed
+                append_file_suffix_YAMLError = True
             else:
+                if sys.platform.lower().startswith("win"):
+                    # On Windows, the NSSM Service Manager repeats
+                    # SaltConfigurationError
+                    # so fast that the hardware becomes unusable.
+                    time.sleep(60*60)
                 raise salt.exceptions.SaltConfigurationError(message)
 
-    if remove_this_file:
-        log.error(
-            "Deleting above configuration file because it can be generated"
-        )
-        conf_opts = {}
-        os.remove(path)
+    if append_file_suffix_YAMLError:
+        message = "Renaming to {0}".format(path+"YAMLError")
+        log.error(message)
+        os.replace(path, path+"YAMLError")
+
 
     # only interpret documents as a valid conf, not things like strings,
     # which might have been caused by invalid yaml syntax
