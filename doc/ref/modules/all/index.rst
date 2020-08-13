@@ -194,6 +194,7 @@ execution modules
     hosts
     http
     icinga2
+    idem
     ifttt
     ilo
     incron
