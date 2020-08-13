@@ -3421,6 +3421,7 @@ class SyndicManager(MinionBase):
         Wrapper to call the '_return_pub_multi' a syndic, best effort to get the one you asked for
         """
         func = "_return_pub_multi"
+        successful = False
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
                 log.error(
@@ -3433,13 +3434,8 @@ class SyndicManager(MinionBase):
             future, data = self.pub_futures.get(master, (None, None))
             if future is not None:
                 if not future.done():
-                    if master == master_id:
-                        # Targeted master previous send not done yet, call again later
-                        return False
-                    else:
-                        # Fallback master is busy, try the next one
-                        continue
-                elif future.exception():
+                    continue
+                if future.exception():
                     # Previous execution on this master returned an error
                     log.error(
                         "Unable to call %s on %s, trying another...", func, master
@@ -3453,9 +3449,9 @@ class SyndicManager(MinionBase):
                 values, "_syndic_return", timeout=self._return_retry_timer(), sync=False
             )
             self.pub_futures[master] = (future, values)
-            return True
+            successful = True
         # Loop done and didn't exit: wasn't sent, try again later
-        return False
+        return successful
 
     def iter_master_options(self, master_id=None):
         """
