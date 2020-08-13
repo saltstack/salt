@@ -1922,7 +1922,6 @@ def _read_conf_file(path):
         log.error(message)
         os.replace(path, path+"YAMLError")
 
-
     # only interpret documents as a valid conf, not things like strings,
     # which might have been caused by invalid yaml syntax
     if not isinstance(conf_opts, dict):
