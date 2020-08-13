@@ -1915,11 +1915,6 @@ def _read_conf_file(path):
                 # Rename this file, once closed
                 append_file_suffix_YAMLError = True
             else:
-                if sys.platform.lower().startswith("win"):
-                    # On Windows, the NSSM Service Manager repeats
-                    # SaltConfigurationError
-                    # so fast that the hardware becomes unusable.
-                    time.sleep(60*60)
                 raise salt.exceptions.SaltConfigurationError(message)
 
     if append_file_suffix_YAMLError:
