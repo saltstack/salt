@@ -434,5 +434,5 @@ def playbooks(
     log.debug("Ansible Playbook Return: %s", ret)
     retdata = json.loads(ret["stdout"])
     if ret["retcode"]:
-        __context__["retcode"] = ret["retcode"]
+        __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata
