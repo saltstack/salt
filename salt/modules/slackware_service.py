@@ -260,7 +260,7 @@ def _rcd_mode(name, ena):
             perms |= 0o111
             os.chmod(rcd, perms)
         elif ena == "OFF":
-            perms &= 0o666
+            perms &= 0o777666
             os.chmod(rcd, perms)
         return True
 
