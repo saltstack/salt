@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 # Import Salt Libs
@@ -26,7 +22,7 @@ class WinSystemImportTestCase(TestCase):
     def test_import(self):
         if isinstance(win_system, Exception):
             raise Exception(
-                "Importing win_system caused traceback: {0}".format(win_system)
+                "Importing win_system caused traceback: {}".format(win_system)
             )
 
 
