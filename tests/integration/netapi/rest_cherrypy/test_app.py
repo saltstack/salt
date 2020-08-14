@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import absolute_import
-
 import os
 
 import salt.utils.json
@@ -117,6 +114,50 @@ class TestRun(cptc.BaseRestCherryPyTest):
             headers={"content-type": "application/x-www-form-urlencoded"},
         )
         self.assertEqual(response.status, "200 OK")
+
+    @slowTest
+    def test_json_response_can_be_gzipped(self):
+        """
+        Test the run URL with good auth credentials
+        """
+        cmd = dict(self.low, **dict(self.auth_creds))
+        body = urlencode(cmd)
+
+        request, response = self.request(
+            "/run",
+            method="POST",
+            body=body,
+            headers={
+                "content-type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "Accept-encoding": "gzip",
+            },
+        )
+        self.assertEqual(response.status, "200 OK")
+        self.assertEqual(response.headers["Content-type"], "application/json")
+        self.assertEqual(response.headers["Content-encoding"], "gzip")
+
+    @slowTest
+    def test_yaml_response_can_be_gzipped(self):
+        """
+        Test the run URL with good auth credentials
+        """
+        cmd = dict(self.low, **dict(self.auth_creds))
+        body = urlencode(cmd)
+
+        request, response = self.request(
+            "/run",
+            method="POST",
+            body=body,
+            headers={
+                "content-type": "application/x-www-form-urlencoded",
+                "Accept": "application/x-yaml",
+                "Accept-encoding": "gzip",
+            },
+        )
+        self.assertEqual(response.status, "200 OK")
+        self.assertEqual(response.headers["Content-type"], "application/x-yaml")
+        self.assertEqual(response.headers["Content-encoding"], "gzip")
 
     def test_run_bad_login(self):
         """

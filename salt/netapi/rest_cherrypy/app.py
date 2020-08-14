@@ -2892,6 +2892,12 @@ class API:
                 "request.dispatch": cherrypy.dispatch.MethodDispatcher(),
                 "tools.trailing_slash.on": True,
                 "tools.gzip.on": True,
+                "tools.gzip.mime_types": [
+                    "text/html",
+                    "text/plain",
+                    "application/json",
+                    "application/x-yaml",
+                ],
                 "tools.html_override.on": True,
                 "tools.cors_tool.on": True,
             },

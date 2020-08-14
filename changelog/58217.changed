@@ -1,0 +1,2 @@
+Update cherrypy configuration so that salt-api gzips json and yaml response
+data if gzip is included in the Accept-Encoding request header.
