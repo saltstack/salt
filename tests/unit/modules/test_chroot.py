@@ -25,7 +25,6 @@
 :platform:      Linux
 """
 
-
 import sys
 
 import salt.modules.chroot as chroot
@@ -69,6 +68,17 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         exist.return_value = False
         self.assertTrue(chroot.create("/chroot"))
         makedirs.assert_called()
+
+    @patch("salt.utils.files.fopen")
+    def test_in_chroot(self, fopen):
+        """
+        Test the detection of chroot environment.
+        """
+        matrix = (("a", "b", True), ("a", "a", False))
+        for root_mountinfo, self_mountinfo, result in matrix:
+            fopen.return_value.__enter__.return_value = fopen
+            fopen.read = MagicMock(side_effect=(root_mountinfo, self_mountinfo))
+            self.assertEqual(chroot.in_chroot(), result)
 
     @patch("salt.modules.chroot.exist")
     def test_call_fails_input_validation(self, exist):
