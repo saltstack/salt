@@ -4,14 +4,10 @@ Run remote execution commands via the local client
 """
 # import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import re
-import logging
 import jinja2.nativetypes
 
 # Import salt libs
 import salt.client
-
-log = logging.getLogger(__name__)
 
 jinja_env = jinja2.nativetypes.NativeEnvironment(
     variable_start_string = '${',
