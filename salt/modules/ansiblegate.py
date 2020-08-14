@@ -43,7 +43,6 @@ import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, LoaderError
-from salt.ext import six
 from salt.utils.decorators import depends
 
 try:
@@ -427,6 +426,6 @@ def playbooks(
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
     retdata = json.loads(ret["stdout"])
-    if ret["retcode"]:
+    if "retcode" in ret:
         __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata
