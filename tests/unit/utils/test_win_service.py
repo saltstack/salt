@@ -1,26 +1,13 @@
-# Import Python Libs
-import os
-
 # Import Salt Libs
 import salt.utils.platform
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
 try:
     import salt.utils.win_service as win_service
-    from salt.exceptions import CommandExecutionError
 except Exception as exc:  # pylint: disable=broad-except
     win_service = exc
-
-# Import 3rd Party Libs
-try:
-    import pywintypes
-    import win32service
-    WINAPI = True
-except ImportError:
-    WINAPI = False
 
 
 class WinServiceImportTestCase(TestCase):
@@ -36,7 +23,6 @@ class WinServiceImportTestCase(TestCase):
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")
-@skipIf(not WINAPI, "Missing PyWin32 libraries")
 class WinServiceTestCase(TestCase):
     """
     Test cases for salt.utils.win_service
