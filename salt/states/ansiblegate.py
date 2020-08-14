@@ -223,7 +223,6 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             ret["result"] = True
             ret["changes"] = _changes(results)
         else:
-            ret["comment"] = "Changes were made by playbook {}".format(name)
             ret["changes"] = _changes(results)
             ret["result"] = all(
                 not check["failures"]
@@ -231,4 +230,10 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
                 and not check["skipped"]
                 for check in results["stats"].values()
             )
+            if ret["result"]:
+                ret["comment"] = "Changes were made by playbook {}".format(name)
+            else:
+                ret[
+                    "comment"
+                ] = "There were some issues running the playbook {}".format(name)
     return ret
