@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Run remote execution commands via the local client
 """
 # import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 import jinja2.nativetypes
 
 # Import salt libs
 import salt.client
 
 jinja_env = jinja2.nativetypes.NativeEnvironment(
-    variable_start_string='${',
-    variable_end_string='}',
-    autoescape=None,
+    variable_start_string="${", variable_end_string="}", autoescape=None
 )
 
 
@@ -77,7 +73,9 @@ def cmd(name, tgt, func, tgt_type="glob", ret="", arg=(), kwarg=None, **kwargs):
     func = _substitute_registers(func)
     arg = [_substitute_registers(x) for x in arg]
     if kwarg is not None:
-        kwarg = {_substitute_registers(k): _substitute_registers(v) for k, v in kwarg.items()}
+        kwarg = {
+            _substitute_registers(k): _substitute_registers(v) for k, v in kwarg.items()
+        }
 
     jid = local.cmd_async(
         tgt, func, arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs
