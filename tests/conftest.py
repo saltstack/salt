@@ -1135,6 +1135,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
             factory.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
         )
     )
+    if salt.utils.platform.is_darwin():
+        roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
     log.debug(
         "Writing to configuration file %s. Configuration:\n%s",
         roster_path,
