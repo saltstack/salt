@@ -10,10 +10,11 @@ import jinja2.nativetypes
 import salt.client
 
 jinja_env = jinja2.nativetypes.NativeEnvironment(
-    variable_start_string = '${',
-    variable_end_string = '}',
-    autoescape = None,
+    variable_start_string='${',
+    variable_end_string='}',
+    autoescape=None,
 )
+
 
 def cmd(name, tgt, func, tgt_type="glob", ret="", arg=(), kwarg=None, **kwargs):
     """
