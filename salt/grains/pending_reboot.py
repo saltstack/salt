@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Grain that indicates the system is pending a reboot
 See functions in salt.utils.win_system to see what conditions would indicate
 a reboot is pending
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import python libs
 import logging
 
