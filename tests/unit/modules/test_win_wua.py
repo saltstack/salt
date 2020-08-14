@@ -40,6 +40,7 @@ class WinWuaInstalledTestCase(TestCase):
     """
     Test the functions in the win_wua.installed function
     """
+
     service_auto = {"StartType": "Auto"}
     service_disabled = {"StartType": "Disabled"}
 
