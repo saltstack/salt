@@ -435,6 +435,7 @@ class SSHSingleTests(TestCase):
         assert re.search('SET_PATH=""', ret)
 
 
+@skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHTests(ShellCase):
     def setUp(self):
         self.roster = """
