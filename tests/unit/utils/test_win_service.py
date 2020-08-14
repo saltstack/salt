@@ -11,14 +11,13 @@ except Exception as exc:  # pylint: disable=broad-except
 
 
 class WinServiceImportTestCase(TestCase):
-
     def test_import(self):
         """
         Simply importing should not raise an error, especially on Linux
         """
         if isinstance(win_service, Exception):
             raise Exception(
-                "Importing win_system caused traceback: {0}".format(win_service)
+                "Importing win_system caused traceback: {}".format(win_service)
             )
 
 
@@ -54,7 +53,7 @@ class WinServiceTestCase(TestCase):
             "Status_ServiceCode",
             "Status_WaitHint",
             "TagID",
-            "sid"
+            "sid",
         ]
         for field_name in field_names:
             self.assertIn(field_name, info)
