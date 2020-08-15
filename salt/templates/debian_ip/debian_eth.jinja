@@ -10,7 +10,7 @@
   'master': 'bond-master',
   'accept_ra': 'accept_ra',
   } -%}
-{% set concat_opts = ['dns_nameservers'] -%}
+{% set concat_opts = ['dns_nameservers', 'dns_search'] -%}
 {% set valid_opts = [
   'autoconf', 'accept_ra', 'privext', 'dhcp', 'preferred-lifetime', 'dad-attempts', 'dad-interval',
   'hwaddress', 'vlan_raw_device', 'address', 'addresses', 'netmask', 'broadcast',
