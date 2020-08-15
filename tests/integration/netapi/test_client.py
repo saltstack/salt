@@ -21,6 +21,7 @@ from tests.support.helpers import (
 # Import Salt libs
 import salt.config
 import salt.netapi
+import salt.utils.files
 
 from salt.exceptions import (
     EauthAuthenticationError
@@ -271,3 +272,120 @@ class NetapiSSHClientTest(SSHCase):
 
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists('badfile.txt'))
+
+    @staticmethod
+    def cleanup_file(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    @staticmethod
+    def cleanup_dir(path):
+        try:
+            salt.utils.files.rm_rf(path)
+        except OSError:
+            pass
+
+    def test_shell_inject_ssh_priv(self):
+        """
+        Verify CVE-2020-16846 for ssh_priv variable
+        """
+        # ZDI-CAN-11143
+        path = "/tmp/test-11143"
+        self.addCleanup(self.cleanup_file, path)
+        self.addCleanup(self.cleanup_file, "aaa")
+        self.addCleanup(self.cleanup_file, "aaa.pub")
+        self.addCleanup(self.cleanup_dir, "aaa|id>")
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "www.zerodayinitiative.com",
+            "fun": "xx",
+            "eauth": "xx",
+            "ssh_priv": "aaa|id>{} #".format(path),
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    def test_shell_inject_tgt(self):
+        """
+        Verify CVE-2020-16846 for tgt variable
+        """
+        # ZDI-CAN-11167
+        path = "/tmp/test-11167"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "root|id>{} #@127.0.0.1".format(path),
+            "fun": "xx",
+            "eauth": "xx",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roaster",
+            "rosters": "/",
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    def test_shell_inject_ssh_options(self):
+        """
+        Verify CVE-2020-16846 for ssh_options
+        """
+        # ZDI-CAN-11169
+        path = "/tmp/test-11169"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "xx",
+            "eauth": "xx",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roaster",
+            "rosters": "/",
+            "ssh_options": ["|id>{} #".format(path), "lol"],
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    def test_shell_inject_ssh_port(self):
+        """
+        Verify CVE-2020-16846 for ssh_port variable
+        """
+        # ZDI-CAN-11172
+        path = "/tmp/test-11172"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "xx",
+            "eauth": "xx",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roaster",
+            "rosters": "/",
+            "ssh_port": "hhhhh|id>{} #".format(path),
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    def test_shell_inject_remote_port_forwards(self):
+        """
+        Verify CVE-2020-16846 for remote_port_forwards variable
+        """
+        # ZDI-CAN-11173
+        path = "/tmp/test-1173"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "xx",
+            "eauth": "xx",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roaster",
+            "rosters": "/",
+            "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
