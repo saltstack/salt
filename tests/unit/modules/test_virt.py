@@ -666,6 +666,187 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             {"0": "20", "1": "10"},
         )
 
+    def test_gen_xml_cputune(self):
+        """
+        Test virt._gen_xml() with CPU tuning
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        cputune = {
+            "shares": 2048,
+            "period": 122000,
+            "quota": -1,
+            "global_period": 1000000,
+            "global_quota": -3,
+            "emulator_period": 1200000,
+            "emulator_quota": -10,
+            "iothread_period": 133000,
+            "iothread_quota": -1,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priority": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priority": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [
+                {"scheduler": "idle"},
+                {"scheduler": "batch", "iothreads": "5-7", "priority": 1},
+            ],
+            "emulatorsched": {"scheduler": "rr", "priority": 2},
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {"maximum": 1, "tuning": cputune, "iothreads": 2},
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("cputune").find("shares").text, "2048")
+        self.assertEqual(root.find("cputune").find("period").text, "122000")
+        self.assertEqual(root.find("cputune").find("quota").text, "-1")
+        self.assertEqual(root.find("cputune").find("global_period").text, "1000000")
+        self.assertEqual(root.find("cputune").find("global_quota").text, "-3")
+        self.assertEqual(root.find("cputune").find("emulator_period").text, "1200000")
+        self.assertEqual(root.find("cputune").find("emulator_quota").text, "-10")
+        self.assertEqual(root.find("cputune").find("iothread_period").text, "133000")
+        self.assertEqual(root.find("cputune").find("iothread_quota").text, "-1")
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1-4,^2",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"), "0,1",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"), "2,3",
+        )
+        self.assertEqual(
+            root.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"), "0,4",
+        )
+        self.assertEqual(
+            root.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1-3"
+        )
+        self.assertEqual(
+            root.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5-6",
+        )
+        self.assertEqual(
+            root.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7-8",
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in root.findall("cputune/vcpusched")
+            },
+            {
+                "0": {"scheduler": "fifo", "priority": "1"},
+                "1": {"scheduler": "fifo", "priority": "2"},
+                "2": {"scheduler": "idle", "priority": "3"},
+            },
+        )
+        self.assertDictEqual(
+            {
+                s.get("iothreads"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in root.findall("cputune/iothreadsched")
+            },
+            {
+                None: {"scheduler": "idle", "priority": None},
+                "5-7": {"scheduler": "batch", "priority": "1"},
+            },
+        )
+        self.assertEqual(root.find("cputune/emulatorsched").get("scheduler"), "rr")
+        self.assertEqual(root.find("cputune/emulatorsched").get("priority"), "2")
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']").attrib.get("vcpus"), "0-3"
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "level"
+            ),
+            "3",
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "type"
+            ),
+            "both",
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            root.find("./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"), None
+        )
+        self.assertNotEqual(
+            root.find("./cputune/cachetune[@vcpus='4-5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            root.find("./cputune/cachetune[@vcpus='4-5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            root.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(root.find("./cputune/memorytune[@vcpus='0-2']"), None)
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='0-2']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "60",
+        )
+        self.assertNotEqual(root.find("./cputune/memorytune[@vcpus='3-4']"), None)
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='3-4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            root.find("./cputune/memorytune[@vcpus='3-4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+        self.assertEqual(root.find("iothreads").text, "2")
+
     def test_default_disk_profile_hypervisor_esxi(self):
         """
         Test virt._disk_profile() default ESXi profile
@@ -2665,6 +2846,179 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("./memoryBacking/access").attrib["mode"], "shared")
         self.assertNotEqual(setxml.find("./memoryBacking/discard"), None)
 
+        # test adding iothreads
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": True,
+            },
+            virt.update("my_vm", cpu={"iothreads": 5}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("iothreads").text, "5")
+
+        # test adding cpu tune parameters
+        cputune = {
+            "shares": 2048,
+            "period": 122000,
+            "quota": -1,
+            "global_period": 1000000,
+            "global_quota": -3,
+            "emulator_period": 1200000,
+            "emulator_quota": -10,
+            "iothread_period": 133000,
+            "iothread_quota": -1,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priotity": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priotity": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [{"scheduler": "batch", "iothreads": "7"}],
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": True,
+            },
+            virt.update("my_vm", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares").text, "2048")
+        self.assertEqual(setxml.find("cputune").find("period").text, "122000")
+        self.assertEqual(setxml.find("cputune").find("quota").text, "-1")
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "1000000")
+        self.assertEqual(setxml.find("cputune").find("global_quota").text, "-3")
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "1200000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-10")
+        self.assertEqual(setxml.find("cputune").find("iothread_period").text, "133000")
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-1")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1-4,^2",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"),
+            "0,1",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,3",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"),
+            "0,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1-3"
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5-6",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7-8",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpusched[@vcpus='0']").attrib.get("priority"),
+            "1",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("vcpusched[@vcpus='0']")
+            .attrib.get("scheduler"),
+            "fifo",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadsched").attrib.get("iothreads"), "7"
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadsched").attrib.get("scheduler"),
+            "batch",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']").attrib.get("vcpus"), "0-3"
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "level"
+            ),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "type"
+            ),
+            "both",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"), None
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4-5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4-5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='0-2']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='0-2']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "60",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='3-4']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+
         # Update disks case
         devattach_mock = MagicMock(return_value=0)
         devdetach_mock = MagicMock(return_value=0)
@@ -4453,6 +4807,426 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             virt.update("vm_with_memback_param", mem=unchanged_page),
         )
+
+    def test_update_iothreads_params(self):
+        """
+        Test virt.update() with iothreads parameters.
+        """
+        xml_with_iothreads_params = """
+            <domain type='kvm' id='8'>
+              <name>xml_with_iothreads_params</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <iothreads>6</iothreads>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm(
+            "xml_with_iothreads_params", xml_with_iothreads_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test updating existing iothreads
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": False,
+            },
+            virt.update("xml_with_iothreads_params", cpu={"iothreads": 7}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("iothreads").text, "7")
+
+    def test_update_cputune_paramters(self):
+        """
+        Test virt.update() with cputune parameters.
+        """
+        xml_with_cputune_params = """
+                    <domain type='kvm' id='8'>
+                      <name>xml_with_cputune_params</name>
+                      <memory unit='KiB'>1048576</memory>
+                      <currentMemory unit='KiB'>1048576</currentMemory>
+                      <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+                      <vcpu placement='auto'>1</vcpu>
+                      <iothreads>4</iothreads>
+                      <cputune>
+                        <shares>2048</shares>
+                        <period>1000000</period>
+                        <quota>-1</quota>
+                        <global_period>1000000</global_period>
+                        <global_quota>-1</global_quota>
+                        <emulator_period>1000000</emulator_period>
+                        <emulator_quota>-1</emulator_quota>
+                        <iothread_period>1000000</iothread_period>
+                        <iothread_quota>-1</iothread_quota>
+                        <vcpupin vcpu="0" cpuset="0-2"/>
+                        <vcpupin vcpu="1" cpuset="3"/>
+                        <vcpupin vcpu="2" cpuset="4"/>
+                        <vcpupin vcpu="3" cpuset="5-7"/>
+                        <emulatorpin cpuset="1-2"/>
+                        <iothreadpin iothread="1" cpuset="1-5"/>
+                        <iothreadpin iothread="2" cpuset="6-7"/>
+                        <vcpusched vcpus="0" scheduler="idle" priority="3"/>
+                        <vcpusched vcpus="1" scheduler="rr" priority="1"/>
+                        <vcpusched vcpus="2" scheduler="fifo" priority="2"/>
+                        <iothreadsched iothreads="4" scheduler="fifo"/>
+                        <emulatorsched scheduler="idle"/>
+                        <cachetune vcpus="0-4">
+                          <cache id="0" level="2" type="both" size="4" unit="KiB"/>
+                          <cache id="1" level="2" type="both" size="4" unit="KiB"/>
+                          <monitor level="5" vcpus="0-2"/>
+                          <monitor level="6" vcpus="1-3"/>
+                        </cachetune>
+                        <cachetune vcpus="5-8">
+                          <monitor level="5" vcpus="5-6"/>
+                          <monitor level="3" vcpus="7-8"/>
+                        </cachetune>
+                        <memorytune vcpus="0-6">
+                          <node id="0" bandwidth="45"/>
+                        </memorytune>
+                        <memorytune vcpus="7-8">
+                          <node id="0" bandwidth="120"/>
+                        </memorytune>
+                      </cputune>
+                      <os>
+                        <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                      </os>
+                    </domain>
+                """
+        domain_mock = self.set_mock_vm(
+            "xml_with_cputune_params", xml_with_cputune_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test updating existing cputune parameters
+        cputune = {
+            "shares": 1024,
+            "period": 5000,
+            "quota": -20,
+            "global_period": 4000,
+            "global_quota": -30,
+            "emulator_period": 3000,
+            "emulator_quota": -4,
+            "iothread_period": 7000,
+            "iothread_quota": -5,
+            "vcpupin": {0: "1-4,^2", 1: "0,1", 2: "2,3", 3: "0,4"},
+            "emulatorpin": "1-3",
+            "iothreadpin": {1: "5-6", 2: "7-8"},
+            "vcpusched": [
+                {"scheduler": "fifo", "priority": 1, "vcpus": "0"},
+                {"scheduler": "fifo", "priority": 2, "vcpus": "1"},
+                {"scheduler": "idle", "priority": 3, "vcpus": "2"},
+            ],
+            "iothreadsched": [
+                {"scheduler": "batch", "iothreads": "5-7", "priority": 1}
+            ],
+            "emulatorsched": {"scheduler": "rr", "priority": 2},
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 3, "type": "both", "size": 3},
+                    1: {"level": 3, "type": "both", "size": 3},
+                    "monitor": {1: 3, "0-3": 3},
+                },
+                "4-5": {"monitor": {4: 3, 5: 2}},
+            },
+            "memorytune": {"0-2": {0: 60}, "3-4": {0: 50, 1: 70}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": False,
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares").text, "1024")
+        self.assertEqual(setxml.find("cputune").find("period").text, "5000")
+        self.assertEqual(setxml.find("cputune").find("quota").text, "-20")
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "4000")
+        self.assertEqual(setxml.find("cputune").find("global_quota").text, "-30")
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "3000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-4")
+        self.assertEqual(setxml.find("cputune").find("iothread_period").text, "7000")
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-5")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1-4,^2",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='1']").attrib.get("cpuset"),
+            "0,1",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,3",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='3']").attrib.get("cpuset"),
+            "0,4",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("emulatorpin").attrib.get("cpuset"), "1-3"
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5-6",
+        )
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='2']")
+            .attrib.get("cpuset"),
+            "7-8",
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/vcpusched")
+            },
+            {
+                "0": {"scheduler": "fifo", "priority": "1"},
+                "1": {"scheduler": "fifo", "priority": "2"},
+                "2": {"scheduler": "idle", "priority": "3"},
+            },
+        )
+        self.assertDictEqual(
+            {
+                s.get("iothreads"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/iothreadsched")
+            },
+            {"5-7": {"scheduler": "batch", "priority": "1"}},
+        )
+        self.assertEqual(setxml.find("cputune/emulatorsched").get("scheduler"), "rr")
+        self.assertEqual(setxml.find("cputune/emulatorsched").get("priority"), "2")
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']").attrib.get("vcpus"), "0-3"
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "level"
+            ),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "type"
+            ),
+            "both",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1']"), None
+        )
+        self.assertNotEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4-5']").attrib.get("vcpus"), None
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='4-5']/cache[@id='0']"), None
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='4']"
+            ).attrib.get("level"),
+            "3",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='4-5']/monitor[@vcpus='5']"
+            ).attrib.get("level"),
+            "2",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='0-2']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='0-2']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "60",
+        )
+        self.assertNotEqual(setxml.find("./cputune/memorytune[@vcpus='3-4']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "50",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "70",
+        )
+
+        # test removing cputune attributes and sub elements
+        cputune = {
+            "shares": None,
+            "period": 20000,
+            "quota": None,
+            "global_period": 5000,
+            "global_quota": None,
+            "emulator_period": 2000,
+            "emulator_quota": -4,
+            "iothread_period": None,
+            "iothread_quota": -5,
+            "vcpupin": {0: "1-4,^2", 2: "2,4"},
+            "emulatorpin": None,
+            "iothreadpin": {1: "5-6"},
+            "vcpusched": [{"scheduler": "idle", "priority": 5, "vcpus": "1"}],
+            "iothreadsched": None,
+            "cachetune": {
+                "0-3": {
+                    0: {"level": 4, "type": "data", "size": 7},
+                    "monitor": {"1-2": 11},
+                },
+            },
+            "memorytune": {"3-4": {0: 37, 1: 73}},
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": False,
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("shares"), None)
+        self.assertEqual(setxml.find("cputune").find("period").text, "20000")
+        self.assertEqual(setxml.find("cputune").find("quota"), None)
+        self.assertEqual(setxml.find("cputune").find("global_period").text, "5000")
+        self.assertEqual(setxml.find("cputune").find("global_quota"), None)
+        self.assertEqual(setxml.find("cputune").find("emulator_period").text, "2000")
+        self.assertEqual(setxml.find("cputune").find("emulator_quota").text, "-4")
+        self.assertEqual(setxml.find("cputune").find("iothread_period"), None)
+        self.assertEqual(setxml.find("cputune").find("iothread_quota").text, "-5")
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='0']").attrib.get("cpuset"),
+            "1-4,^2",
+        )
+        self.assertEqual(setxml.find("cputune").find("vcpupin[@vcpu='1']"), None)
+        self.assertEqual(
+            setxml.find("cputune").find("vcpupin[@vcpu='2']").attrib.get("cpuset"),
+            "2,4",
+        )
+        self.assertEqual(setxml.find("cputune").find("vcpupin[@vcpu='3']"), None)
+        self.assertEqual(setxml.find("cputune").find("emulatorpin"), None)
+        self.assertEqual(
+            setxml.find("cputune")
+            .find("iothreadpin[@iothread='1']")
+            .attrib.get("cpuset"),
+            "5-6",
+        )
+        self.assertEqual(
+            setxml.find("cputune").find("iothreadpin[@iothread='2']"), None
+        )
+        self.assertDictEqual(
+            {
+                s.get("vcpus"): {
+                    "scheduler": s.get("scheduler"),
+                    "priority": s.get("priority"),
+                }
+                for s in setxml.findall("cputune/vcpusched")
+            },
+            {"1": {"scheduler": "idle", "priority": "5"}},
+        )
+        self.assertEqual(setxml.find("cputune").find("iothreadsched"), None)
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']").attrib.get("vcpus"), "0-3"
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "size"
+            ),
+            "7",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "level"
+            ),
+            "4",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='0']").attrib.get(
+                "type"
+            ),
+            "data",
+        )
+        self.assertEqual(
+            setxml.find(
+                "./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='1-2']"
+            ).attrib.get("level"),
+            "11",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/monitor[@vcpus='3-4']"), None
+        )
+        self.assertEqual(
+            setxml.find("./cputune/cachetune[@vcpus='0-3']/cache[@id='1']"), None
+        )
+        self.assertEqual(setxml.find("./cputune/cachetune[@vcpus='4-5']"), None)
+        self.assertEqual(setxml.find("./cputune/memorytune[@vcpus='0-2']"), None)
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='0']").attrib.get(
+                "bandwidth"
+            ),
+            "37",
+        )
+        self.assertEqual(
+            setxml.find("./cputune/memorytune[@vcpus='3-4']/node[@id='1']").attrib.get(
+                "bandwidth"
+            ),
+            "73",
+        )
+
+        cputune_subelement = {
+            "vcpupin": None,
+            "iothreadpin": None,
+            "vcpusched": None,
+            "iothreadsched": None,
+            "cachetune": None,
+            "memorytune": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+                "cpu": False,
+            },
+            virt.update("xml_with_cputune_params", cpu={"tuning": cputune_subelement}),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cputune").find("vcpupin"), None)
+        self.assertEqual(setxml.find("cputune").find("iothreadpin"), None)
+        self.assertEqual(setxml.find("cputune").find("vcpusched"), None)
+        self.assertEqual(setxml.find("cputune").find("iothreadsched"), None)
+        self.assertEqual(setxml.find("cputune").find("cachetune"), None)
+        self.assertEqual(setxml.find("cputune").find("memorytune"), None)
 
     def test_handle_unit(self):
         """
