@@ -82,6 +82,8 @@ Additional Installation Guides
     ../tutorials/standalone_minion
     ../tutorials/quickstart
 
+.. _installation-dependencies:
+
 Dependencies
 ------------
 
