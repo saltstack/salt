@@ -8,6 +8,7 @@
   'pre_down_cmds': 'pre-down',
   'post_down_cmds': 'post-down',
   'master': 'bond-master',
+  'accept_ra': 'accept_ra',
   } -%}
 {% set concat_opts = ['dns_nameservers'] -%}
 {% set valid_opts = [
@@ -25,7 +26,7 @@
 {% endif %}{% for inet in ['inet', 'inet6'] -%}
 {% if data.data[inet] and data.data[inet].addrfam == inet %}{% set interface = data.data[inet] -%}
 {% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
-{% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt).replace('_', '-') -%}
+{% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt.replace('_', '-')) -%}
 {% set val = interface.get(opt, False) %}{% if val -%}
 {% if opt in concat_opts and val is iterable %}    {{ debopt }} {{ val|join(' ') }}
 {% elif val is string or val is number       %}    {{ debopt }} {{ val }}
