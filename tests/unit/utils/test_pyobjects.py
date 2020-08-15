@@ -1,5 +1,5 @@
 import logging
-import os
+import pathlib
 import shutil
 import tempfile
 import textwrap
@@ -9,6 +9,7 @@ import jinja2
 import salt.config
 import salt.state
 import salt.utils.files
+import salt.utils.yaml
 from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (
@@ -214,37 +215,58 @@ class RendererMixin:
     trigger the methods in the ``TestCase`` class.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.root_dir = pathlib.Path(tempfile.mkdtemp("pyobjects", dir=RUNTIME_VARS.TMP))
+        cls.state_tree_dir = cls.root_dir / "state_tree"
+        cls.state_tree_dir.mkdir()
+        cls.cache_dir = cls.root_dir / "cachedir"
+        cls.cache_dir.mkdir()
+        conf_dir = cls.root_dir / "conf"
+        conf_dir.mkdir()
+        config_defaults = {
+            "id": "match",
+            "root_dir": str(cls.root_dir),
+            "cachedir": str(cls.cache_dir),
+            "file_client": "local",
+            "file_roots": {"base": [str(cls.state_tree_dir)]},
+            "pidfile": "run/minion.pid",
+            "pki_dir": "pki",
+            "sock_dir": "run/minion",
+            "log_file": "logs/minion.log",
+            "state_events": False,
+            "test": False,
+        }
+        conf_file = str(conf_dir / "minion")
+        with salt.utils.files.fopen(conf_file, "w") as wfh:
+            salt.utils.yaml.safe_dump(config_defaults, wfh, default_flow_style=False)
+        cls._config = salt.config.minion_config(
+            conf_file, minion_id="match", cache_minion_id=True
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.root_dir = cls.state_tree_dir = cls.cache_dir = cls._config = None
+
     def setUp(self, *args, **kwargs):
         super().setUp(*args, **kwargs)
-
-        self.root_dir = tempfile.mkdtemp("pyobjects_test_root", dir=RUNTIME_VARS.TMP)
-        self.state_tree_dir = os.path.join(self.root_dir, "state_tree")
-        self.cache_dir = os.path.join(self.root_dir, "cachedir")
-        if not os.path.isdir(self.root_dir):
-            os.makedirs(self.root_dir)
-
-        if not os.path.isdir(self.state_tree_dir):
-            os.makedirs(self.state_tree_dir)
-
-        if not os.path.isdir(self.cache_dir):
-            os.makedirs(self.cache_dir)
-        self.config = salt.config.minion_config(None)
-        self.config["root_dir"] = self.root_dir
-        self.config["state_events"] = False
-        self.config["id"] = "match"
-        self.config["file_client"] = "local"
-        self.config["file_roots"] = dict(base=[self.state_tree_dir])
-        self.config["cachedir"] = self.cache_dir
-        self.config["test"] = False
-
-    def tearDown(self, *args, **kwargs):
-        shutil.rmtree(self.root_dir)
-        del self.config
-        super().tearDown(*args, **kwargs)
+        self.root_dir.mkdir(exist_ok=True)
+        self.addCleanup(shutil.rmtree, str(self.root_dir), ignore_errors=True)
+        self.state_tree_dir.mkdir(exist_ok=True)
+        self.cache_dir.mkdir(exist_ok=True)
+        self.config = self._config.copy()
+        self.addCleanup(delattr, self, "config")
 
     def write_template_file(self, filename, content):
-        full_path = os.path.join(self.state_tree_dir, filename)
+        full_path = str(self.state_tree_dir / filename)
         with salt.utils.files.fopen(full_path, "w") as f:
+            log.debug(
+                "Writting template %r. Contents:\n%s\n%s\n%s",
+                full_path,
+                ">" * 80,
+                content,
+                "<" * 80,
+            )
             f.write(content)
         return full_path
 
@@ -269,6 +291,7 @@ class RendererMixin:
 class RendererTests(RendererMixin, StateTests, MapBuilder):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.recursive_map_template = textwrap.dedent(
             """\
         #!pyobjects
@@ -289,6 +312,7 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
 
     @classmethod
     def tearDownClass(cls):
+        super().tearDownClass()
         cls.File = None
 
     @slowTest
@@ -660,9 +684,7 @@ class SaltObjectTests(TestCase):
         def times2(x):
             return x * 2
 
-        __salt__ = {"math.times2": times2}
-
-        Salt = SaltObject(__salt__)
+        Salt = SaltObject({"math.times2": times2})
 
         self.assertRaises(AttributeError, attr_fail)
         self.assertEqual(Salt.math.times2, times2)
