@@ -27,7 +27,7 @@
 {% if data.data[inet] and data.data[inet].addrfam == inet %}{% set interface = data.data[inet] -%}
 {% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
 {% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt.replace('_', '-')) -%}
-{% set val = interface.get(opt, False) %}{% if val -%}
+{% set val = interface.get(opt, False) %}{% if not val is sameas False -%}
 {% if opt in concat_opts and val is iterable %}    {{ debopt }} {{ val|join(' ') }}
 {% elif val is string or val is number       %}    {{ debopt }} {{ val }}
 {% elif val is iterable %}{% for v in val    %}    {{ debopt }} {{ v }}
