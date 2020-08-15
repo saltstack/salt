@@ -477,6 +477,7 @@ IPV6_ATTR_MAP = {
     "addresses": __anything,
     "netmask": __ipv6_netmask,
     "broadcast": __ipv6,
+    "metric": __int,
     "gateway": __ipv6,  # supports a colon-delimited list
     "hwaddress": __mac,
     "mtu": __int,
