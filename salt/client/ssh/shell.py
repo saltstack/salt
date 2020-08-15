@@ -9,6 +9,7 @@ import os
 
 # Import python libs
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -31,22 +32,15 @@ RSTR = "_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878"
 RSTR_RE = re.compile(r"(?:^|\r?\n)" + RSTR + r"(?:\r?\n|$)")
 
 
-class NoPasswdError(Exception):
-    pass
-
-
-class KeyAcceptError(Exception):
-    pass
-
-
 def gen_key(path):
     """
     Generate a key for use with salt-ssh
     """
-    cmd = 'ssh-keygen -P "" -f {0} -t rsa -q'.format(path)
-    if not os.path.isdir(os.path.dirname(path)):
+    cmd = ["ssh-keygen", "-P", '""', "-f", path, "-t", "rsa", "-q"]
+    dirname = os.path.dirname(path)
+    if dirname and not os.path.isdir(dirname):
         os.makedirs(os.path.dirname(path))
-    subprocess.call(cmd, shell=True)
+    subprocess.call(cmd)
 
 
 def gen_shell(opts, **kwargs):
@@ -278,27 +272,13 @@ class Shell(object):
 
         return " ".join(command)
 
-    def _old_run_cmd(self, cmd):
-        """
-        Cleanly execute the command string
-        """
-        try:
-            proc = subprocess.Popen(
-                cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
-            )
-
-            data = proc.communicate()
-            return data[0], data[1], proc.returncode
-        except Exception:  # pylint: disable=broad-except
-            return ("local", "Unknown Error", None)
-
     def _run_nb_cmd(self, cmd):
         """
         cmd iterator
         """
         try:
             proc = salt.utils.nb_popen.NonBlockingPopen(
-                cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
+                self._split_cmd(cmd), stderr=subprocess.PIPE, stdout=subprocess.PIPE,
             )
             while True:
                 time.sleep(0.1)
@@ -375,6 +355,21 @@ class Shell(object):
 
         return self._run_cmd(cmd)
 
+    def _split_cmd(self, cmd):
+        """
+        Split a command string so that it is suitable to pass to Popen without
+        shell=True. This prevents shell injection attacks in the options passed
+        to ssh or some other command.
+        """
+        try:
+            ssh_part, cmd_part = cmd.split("/bin/sh")
+        except ValueError:
+            cmd_lst = shlex.split(cmd)
+        else:
+            cmd_lst = shlex.split(ssh_part)
+            cmd_lst.append("/bin/sh {}".format(cmd_part))
+        return cmd_lst
+
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         """
         Execute a shell command via VT. This is blocking and assumes that ssh
@@ -384,8 +379,7 @@ class Shell(object):
             return "", "No command or passphrase", 245
 
         term = salt.utils.vt.Terminal(
-            cmd,
-            shell=True,
+            self._split_cmd(cmd),
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
