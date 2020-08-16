@@ -1,13 +1,15 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
+# Import python libs
+import os
 
 # Import Salt Libs
 import salt.modules.slackware_service as slackware_service
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, PropertyMock, patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 glob_output = [
@@ -172,13 +174,13 @@ class SlackwareServicesTestCase(TestCase, LoaderModuleMockMixin):
         os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
         os_chmod = MagicMock(autospec=True, return_value=True)
         os_chmod_mock = patch("os.chmod", os_chmod)
-        with os_path_exists_mock, os_chmod_mock:
-            with patch("os.stat") as os_stat_mock:
-                type(os_stat_mock.return_value).st_mode = PropertyMock(
-                    return_value=0o644
-                )
-            slackware_service.enable("lxc")
-            os_chmod.assert_called_with("/etc/rc.d/rc.lxc", 0o100755)
+        os_stat_result = os.stat_result(
+            (0o100644, 142555, 64770, 1, 0, 0, 1340, 1597376187, 1597376188, 1597376189)
+        )
+        os_stat_mock = patch("os.stat", autospec=True, return_value=os_stat_result)
+        with os_path_exists_mock, os_chmod_mock, os_stat_mock:
+            slackware_service.enable("svc_to_enable")
+            os_chmod.assert_called_with("/etc/rc.d/rc.svc_to_enable", 0o100755)
 
     def test_disable(self):
         """
@@ -187,13 +189,13 @@ class SlackwareServicesTestCase(TestCase, LoaderModuleMockMixin):
         os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
         os_chmod = MagicMock(autospec=True, return_value=True)
         os_chmod_mock = patch("os.chmod", os_chmod)
-        with os_path_exists_mock, os_chmod_mock:
-            with patch("os.stat") as os_stat_mock:
-                type(os_stat_mock.return_value).st_mode = PropertyMock(
-                    return_value=0o755
-                )
-            slackware_service.disable("lxc")
-            os_chmod.assert_called_with("/etc/rc.d/rc.lxc", 0o100644)
+        os_stat_result = os.stat_result(
+            (0o100755, 142555, 64770, 1, 0, 0, 1340, 1597376187, 1597376188, 1597376189)
+        )
+        os_stat_mock = patch("os.stat", autospec=True, return_value=os_stat_result)
+        with os_path_exists_mock, os_chmod_mock, os_stat_mock:
+            slackware_service.disable("svc_to_disable")
+            os_chmod.assert_called_with("/etc/rc.d/rc.svc_to_disable", 0o100644)
 
     def test_enabled_success(self):
         """
