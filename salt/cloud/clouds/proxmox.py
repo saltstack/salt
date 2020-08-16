@@ -114,11 +114,6 @@ def _authenticate():
     url = config.get_cloud_config_value(
         "url", get_configured_provider(), __opts__, search_global=False
     )
-    username = (
-        config.get_cloud_config_value(
-            "user", get_configured_provider(), __opts__, search_global=False
-        ),
-    )
     port = config.get_cloud_config_value(
         "port", get_configured_provider(), __opts__, default=8006, search_global=False
     )
