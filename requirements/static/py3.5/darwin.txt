@@ -71,7 +71,7 @@ netaddr==0.7.19           # via junos-eznc
 ntc-templates==1.4.0      # via junos-eznc
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
-paramiko==2.4.2           # via junos-eznc, ncclient, scp
+paramiko==2.7.1           # via junos-eznc, ncclient, scp
 pathlib2==2.3.3           # via pytest
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.1            # via pytest
