@@ -629,7 +629,6 @@ class GitPythonMixin:
 
 @destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
-@skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
