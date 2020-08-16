@@ -1,1 +1,1 @@
-Prevent creating world readable private keys with the tls execution module.
+Fix CVE-2020-17490 Prevent creating world readable private keys with the tls execution module.
