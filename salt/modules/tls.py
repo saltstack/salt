@@ -829,13 +829,13 @@ def create_ca(
                 write_key = False
             else:
                 log.info("Saving old CA ssl key in %s", bck)
-                with salt.utils.files.fopen(bck, "w") as bckf:
+                fp = os.open(bck, os.O_CREAT | os.O_RDWR, 0o600)
+                with salt.utils.files.fopen(fp, "w") as bckf:
                     bckf.write(old_key)
-                    os.chmod(bck, 0o600)
     if write_key:
-        with salt.utils.files.fopen(ca_keyp, "wb") as ca_key:
+        fp = os.open(ca_keyp, os.O_CREAT | os.O_RDWR, 0o600)
+        with salt.utils.files.fopen(fp, "wb") as ca_key:
             ca_key.write(salt.utils.stringutils.to_bytes(keycontent))
-            os.chmod(ca_keyp, 0o600)
 
     with salt.utils.files.fopen(certp, "wb") as ca_crt:
         ca_crt.write(
@@ -1155,13 +1155,13 @@ def create_csr(
 
     # Write private key and request
     priv_keyp = "{}/{}.key".format(csr_path, csr_filename)
-    with salt.utils.files.fopen(priv_keyp, "wb+") as priv_key:
+    fp = os.open(priv_keyp, os.O_CREAT | os.O_RDWR, 0o600)
+    with salt.utils.files.fopen(fp, "wb+") as priv_key:
         priv_key.write(
             salt.utils.stringutils.to_bytes(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
             )
         )
-        os.chmod(priv_keyp, 0o600)
 
     with salt.utils.files.fopen(csr_f, "wb+") as csr:
         csr.write(
@@ -1296,13 +1296,13 @@ def create_self_signed_cert(
     priv_key_path = "{}/{}/certs/{}.key".format(
         cert_base_path(), tls_dir, cert_filename
     )
-    with salt.utils.files.fopen(priv_key_path, "wb+") as priv_key:
+    fp = os.open(priv_key_path, os.O_CREAT | os.O_RDWR, 0o600)
+    with salt.utils.files.fopen(fp, "wb+") as priv_key:
         priv_key.write(
             salt.utils.stringutils.to_bytes(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
             )
         )
-        os.chmod(priv_key_path, 0o600)
 
     crt_path = "{}/{}/certs/{}.crt".format(cert_base_path(), tls_dir, cert_filename)
     with salt.utils.files.fopen(crt_path, "wb+") as crt:
