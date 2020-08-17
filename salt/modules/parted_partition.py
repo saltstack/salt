@@ -545,6 +545,22 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     return out
 
 
+def mkpartfs(device, part_type, fs_type=None, start=None, end=None):
+    """
+    The mkpartfs actually is an alias to mkpart and is kept for compatibility.
+    To know the valid options and usage syntax read mkpart documentation.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' partition.mkpartfs /dev/sda primary fs_type=fat32 start=0 end=639
+        salt '*' partition.mkpartfs /dev/sda primary start=0 end=639
+    """
+    out = mkpart(device, part_type, fs_type, start, end)
+    return out
+
+
 def name(device, partition, name):
     """
     Set the name of partition to name. This option works only on Mac, PC98, and
