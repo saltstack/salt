@@ -126,7 +126,7 @@ def greater_than(name):
 
     .. code-block:: bash
 
-        salt '*' salt_version.greater_than '3001'
+        salt '*' salt_version.greater_than 'Oxygen'
     """
     if _check_release_cmp(name) == 1:
         log.info("The minion's version code name is greater than '{}'.".format(name))
@@ -147,7 +147,7 @@ def less_than(name):
 
     .. code-block:: bash
 
-        salt '*' salt_version.less_than '3001'
+        salt '*' salt_version.less_than 'Oxygen'
     """
     if _check_release_cmp(name) == -1:
         log.info("The minion's version code name is less than '{}'.".format(name))
