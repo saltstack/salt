@@ -1097,7 +1097,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", res)
         self.assertEqual(len(res["result"]), 2)
         self.assertLessEqual(
-            {"SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"},
+            {"SubnetId", "CidrBlock", "AvailabilityZone", "State"},
             set(res["result"][0].keys()),
         )
 
@@ -1115,7 +1115,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         res = boto_vpc.lookup_subnet(subnet_name="subnet2", **salt_conn_parameters)
         self.assertLessEqual(
-            {"SubnetId", "CidrBlock", "AvailabilityZone", "OwnerId", "State"},
+            {"SubnetId", "CidrBlock", "AvailabilityZone", "State"},
             set(res["result"].keys()),
         )
 
@@ -2053,4 +2053,5 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         res = boto_vpc.create_vpc_peering_connection(
             requester_vpc_id=my_vpc_id, peer_vpc_id=other_vpc_id, **salt_conn_parameters
         )
-        self.assertTrue(res["result"])
+        self.assertIn("result", res)
+        self.assertIn("VpcPeeringConnectionId", res["result"])

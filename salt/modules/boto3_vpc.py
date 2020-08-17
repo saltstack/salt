@@ -43,8 +43,10 @@ Be aware that this interacts with Amazon's services, and so may incur charges.
 :depends: boto3
 """
 # Import Python libs
-
+import hashlib
 import inspect
+import itertools
+import json
 import logging
 import sys
 
@@ -77,9 +79,10 @@ log = logging.getLogger(__name__)
 __virtualname__ = "boto3_vpc"
 # Minimum required version of botocore to use tags in the _create call
 SUPPORT_CREATE_TAGGING = {
-    "vpc": "1.17.14",
-    "subnet": "1.17.14",
-    "dhcp_options": "1.17.14",
+    "create_vpc": "1.17.14",
+    "create_subnet": "1.17.14",
+    "create_dhcp_options": "1.17.14",
+    "copy_snapshot": "1.17.14",  # TODO: Verify version number
 }
 # Describing these resources will return an XSet instead of X-plural.
 DESCRIBE_RESOURCES_RETURN_AS_SET = [
@@ -92,6 +95,9 @@ DESCRIBE_RESOURCES_RETURN_AS_SET = [
     "scheduled_instance",
     "connection_notification",
 ]
+DESCRIBE_RESOURCES_ALT_IDS = {
+    "address": "AllocationIds",
+}
 
 
 def __virtual__():
@@ -117,10 +123,28 @@ def __init__(opts):
     logging.getLogger("boto3").setLevel(logging.INFO)
 
 
+def _plural(name):
+    """
+    Helper function that returns the plural form of a boto3 resource.
+
+    :param str name: Name of the resource in snake_case
+    """
+    if name.endswith("ss"):
+        ret = name + "es"
+    elif name.endswith("s"):
+        ret = name
+    elif name in DESCRIBE_RESOURCES_RETURN_AS_SET:
+        ret = name + "set"
+    else:
+        ret = name + "s"
+    return ret
+
+
 def _describe_resource(
     resource_type,
     ids=None,
     filters=None,
+    result_key=None,
     region=None,
     keyid=None,
     key=None,
@@ -134,6 +158,8 @@ def _describe_resource(
     :param str resource_type: The name of the resource type in snake_case.
     :param str/list ids: Zero or more resource_ids to describe.
     :param dict filters: Return only resources that match these filters.
+    :param str result_key: Override result key of value returned.
+        Default: _plural(UpperCamel(resource_type))
     :param * kwargs: Any additional kwargs to pass to the boto3 function.
 
     :rtype: dict
@@ -145,18 +171,11 @@ def _describe_resource(
     """
     if not isinstance(ids, list):
         ids = [ids]
-    if resource_type.endswith("ss"):
-        resource_type_plural = resource_type + "es"
-    elif resource_type.endswith("s"):
-        resource_type_plural = resource_type
-    elif resource_type in DESCRIBE_RESOURCES_RETURN_AS_SET:
-        resource_type_plural = resource_type + "set"
-    else:
-        resource_type_plural = resource_type + "s"
+    resource_type_plural = _plural(resource_type)
     resource_type_uc = salt.utils.stringutils.snake_to_camel_case(
         resource_type, uppercamel=True
     )
-    resource_type_uc_plural = salt.utils.stringutils.snake_to_camel_case(
+    result_key = result_key or salt.utils.stringutils.snake_to_camel_case(
         resource_type_plural, uppercamel=True
     )
     boto_filters = [
@@ -165,26 +184,25 @@ def _describe_resource(
     ]
     if client is None:
         client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    # Ugly hack, but AWS does not have a thing called AddressId(s), but instead uses AllocationId(s)
     params = salt.utils.data.filter_falsey(
         {
             "Filters": boto_filters,
             "{}Ids".format(
-                resource_type_uc if resource_type != "address" else "Allocation"
+                DESCRIBE_RESOURCES_ALT_IDS.get(resource_type, resource_type_uc)
             ): ids,
         },
         recurse_depth=1,
     )
-    boto_func_name = "describe_{}".format(resource_type_plural)
-    if not hasattr(client, boto_func_name):
+    boto_function_name = "describe_{}".format(resource_type_plural)
+    if not hasattr(client, boto_function_name):
         raise SaltInvocationError(
-            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_func_name)
+            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_function_name)
         )
-    boto_func = getattr(client, boto_func_name)
+    boto_function = getattr(client, boto_function_name)
     try:
-        res = boto_func(**params, **kwargs)
+        res = boto_function(**params, **kwargs)
         log.debug("_describe_resource(%s): res: %s", resource_type, res)
-        return {"result": res.get(resource_type_uc_plural)}
+        return {"result": res.get(result_key)}
     except (ParamValidationError, ClientError) as exp:
         return {"error": __utils__["boto3.get_error"](exp)["message"]}
 
@@ -193,6 +211,7 @@ def _lookup_resource(
     resource_type,
     filters=None,
     tags=None,
+    result_key=None,
     region=None,
     keyid=None,
     key=None,
@@ -205,6 +224,8 @@ def _lookup_resource(
     :param str resource_type: The name of the resource type in snake_case.
     :param dict filters: The filters to use in the lookup.
     :param dict tags: The tags to filter on in the lookup.
+    :param str result_key: Overrides result_key whose value is returned by
+        _desribe_resource. Default: Plural(UpperCamel(resource_type))
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -228,6 +249,7 @@ def _lookup_resource(
     res = _describe_resource(
         resource_type,
         filters=filters,
+        result_key=result_key,
         region=region,
         keyid=keyid,
         key=key,
@@ -258,24 +280,30 @@ def _lookup_resources(resources, region=None, keyid=None, key=None, profile=None
     """
     Helper function to perform multiple lookups successively
 
-    :param str/(str, list)/(str, list, str/list)/list resources: One or more
-        entries for attributes of resource types that this call requires.
+    :type resources: str or tuple(str, dict) or tuple(str, dict, str) or
+        tuple(str, dict, list(str))
+    :param resources: One or more entries for attributes of resource types that
+        this call requires. The types shown are for a single resource. Provide
+        a list to allow for multiple resources.
         The values represent:
 
-        - The name of the resource type to retrieve.
-        - The kwargs to pass to ``lookup_resource``. You can pass alternate AWS
-          IAM credentials (region, keyid, key) or profile if a specific resource
+        - Required: The name of the resource type to retrieve.
+        - Optional: The kwargs to pass to ``lookup_resource``. You can pass alternate
+          AWS IAM credentials (region, keyid, key) or profile if a specific resource
           needs to be looked up in another account, as can be the case with VPC
           peering connections.
-        - The key to use with salt.utils.data.traverse_dict_and_list to extract
-          the needed data element(s) from the result of _lookup_resource.
-          Default: ``ResourceTypeId``
+          This can also be a list of dicts in order to do multiple lookups for the
+          same resource_type. In this case, the returned data will be a list of
+          lists instead of a list of values.
+        - Optional: The key(s) to use with salt.utils.data.traverse_dict_and_list
+          to extract the needed data element(s) from the result of ``_lookup_resource``.
+          Default: UpperCamel(resource_type) + "Id"
 
         For example, ``disassociate_route_table`` needs an AssociationId, which
         is an attribute of a ``route_table`` that can be looked up by various
         arguments (see ``lookup_route_table``). For that, this argument could be:
         ('route_table', {'route_table_name': 'My Name', 'association_subnet_id': 'subnet-1234'},
-        'Associations:0:RouteTableAssociationId').
+        'RouteTableAssociationId').
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -300,57 +328,78 @@ def _lookup_resources(resources, region=None, keyid=None, key=None, profile=None
             raise saltInvocationError(
                 "No resource_type specified in resource #{}".format(idx)
             )
-        if lookup_kwargs and not isinstance(lookup_kwargs, dict):
-            raise SaltInvocationError(
-                "lookup kwargs specified is not a dict but: {}".format(
-                    type(lookup_kwargs)
-                )
-            )
         result_keys = result_keys or [default_result_key]
         if not isinstance(result_keys, list):
             result_keys = [result_keys]
-        if (
-            result_keys == [default_result_key]
-            and default_lookup_kwarg in lookup_kwargs
-            and lookup_kwargs[default_lookup_kwarg] is not None
-        ):
-            # No lookup is neccesary
-            lookup_results.append(lookup_kwargs[default_lookup_kwarg])
-        else:
-            if lookup_kwargs is None:
-                lookup_kwargs = {}
-            lookup_function = MODULE_FUNCTIONS.get("lookup_{}".format(resource_type))
-            if not lookup_function:
+        if not isinstance(lookup_kwargs, list):
+            lookup_kwargs = [lookup_kwargs]
+        for single_lookup_kwargs in lookup_kwargs:
+            single_lookup_results = []
+            if single_lookup_kwargs and not isinstance(single_lookup_kwargs, dict):
                 raise SaltInvocationError(
-                    "This module does not have a lookup-function for {}"
-                    "".format(resource_type)
+                    "lookup kwargs specified is not a dict but: {}".format(
+                        type(single_lookup_kwargs)
+                    )
                 )
-            conn_kwargs = {
-                "region": lookup_kwargs.get("region", region),
-                "keyid": lookup_kwargs.get("keyid", keyid),
-                "key": lookup_kwargs.get("key", key),
-                "profile": lookup_kwargs.get("profile", profile),
+            if single_lookup_kwargs is None:
+                single_lookup_kwargs = {}
+            single_lookup_kwargs_uc = {
+                salt.utils.stringutils.snake_to_camel_case(item, uppercamel=True): value
+                for item, value in single_lookup_kwargs.items()
             }
-            client = _get_client(**conn_kwargs)
-            res = lookup_function(client=client, **lookup_kwargs)
-            log.debug("lookup_resources: res: %s", res)
-            if "error" in res:
-                return res
-            for result_key in result_keys:
-                lookup_results.append(
-                    salt.utils.data.traverse_dict_and_list(res["result"], result_key)
+            if set(result_keys) <= set(single_lookup_kwargs_uc.keys()) and all(
+                [single_lookup_kwargs_uc[result_key] for result_key in result_keys]
+            ):
+                # No lookup is neccesary, all result keys are present in single_lookup_kwargs with value
+                single_lookup_results.extend(
+                    [single_lookup_kwargs_uc[result_key] for result_key in result_keys]
                 )
-                log.debug(
-                    "lookup_resources: result_key: %s, result: %s",
-                    result_key,
-                    lookup_results[-1],
+            elif (
+                result_keys == [default_result_key]
+                and default_lookup_kwarg in single_lookup_kwargs
+                and single_lookup_kwargs[default_lookup_kwarg] is not None
+            ):
+                # No lookup is neccesary, the default result key is present in single_lookup_kwargs with value
+                single_lookup_results.append(single_lookup_kwargs[default_lookup_kwarg])
+            else:
+                lookup_function = MODULE_FUNCTIONS.get(
+                    "lookup_{}".format(resource_type)
                 )
+                if not lookup_function:
+                    raise SaltInvocationError(
+                        "This module does not have a lookup-function for {}"
+                        "".format(resource_type)
+                    )
+                conn_kwargs = {
+                    "region": single_lookup_kwargs.get("region", region),
+                    "keyid": single_lookup_kwargs.get("keyid", keyid),
+                    "key": single_lookup_kwargs.get("key", key),
+                    "profile": single_lookup_kwargs.get("profile", profile),
+                }
+                client = _get_client(**conn_kwargs)
+                res = lookup_function(client=client, **single_lookup_kwargs)
+                log.debug("lookup_resources: res: %s", res)
+                if "error" in res:
+                    return res
+                for result_key in result_keys:
+                    single_lookup_results.append(
+                        salt.utils.data.traverse_dict_and_list(
+                            res["result"], result_key
+                        )
+                    )
+                    log.debug(
+                        "lookup_resources: result_key: %s, result: %s",
+                        result_key,
+                        single_lookup_results[-1],
+                    )
+            lookup_results.extend(single_lookup_results)
     ret["result"] = lookup_results
     return ret
 
 
 def _create_resource(
     resource_type,
+    boto_function_name=None,
     params=None,
     tags=None,
     wait_until_state=None,
@@ -360,9 +409,13 @@ def _create_resource(
     profile=None,
 ):
     """
-    Helper function to deduplicate common code in create-functions.
+    Helper function to deduplicate common code in create-functions. Some other
+    functions also follow the same structure (copy_snapshot), so the boto function
+    name is now a kwarg.
 
     :param str resource_type: The name of the resource type in snake_case.
+    :param str boto_function_name: Name of the boto function to call.
+        Default: ``create_resource_type``.
     :param dict params: Params to pass to the boto3 create_X function.
     :param dict tags: The tags to assign to the created object.
     :param str wait_until_state: The resource state to wait for (if available).
@@ -374,7 +427,8 @@ def _create_resource(
 
     :raises: SaltInvocationError if there are errors regarding the provided arguments.
     """
-    # support_create_tagging = LooseVersion(botocore.__version__) >= LooseVersion(SUPPORT_CREATE_TAGGING.get(resource_type, '9000'))
+    boto_function_name = boto_function_name or "create_{}".format(resource_type)
+    # support_create_tagging = LooseVersion(botocore.__version__) >= LooseVersion(SUPPORT_CREATE_TAGGING.get(boto_function_name, '9000'))
     support_create_tagging = False
     resource_type_uc = salt.utils.stringutils.snake_to_camel_case(
         resource_type, uppercamel=True
@@ -395,14 +449,13 @@ def _create_resource(
                 }
             )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    boto_func_name = "create_{}".format(resource_type)
-    if not hasattr(client, boto_func_name):
+    if not hasattr(client, boto_function_name):
         raise SaltInvocationError(
-            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_func_name)
+            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_function_name)
         )
-    boto_func = getattr(client, boto_func_name)
+    boto_function = getattr(client, boto_function_name)
     try:
-        res = boto_func(**params)
+        res = boto_function(**params)
         if tags and not support_create_tagging:
             tag_res = client.create_tags(
                 Resources=[res[resource_type_uc]["{}Id".format(resource_type_uc)]],
@@ -431,8 +484,7 @@ def _generic_action(
     region=None,
     keyid=None,
     key=None,
-    profile=None,
-    **kwargs
+    profile=None
 ):
     """
     Helper function to deduplicate code when calling ``primary``.
@@ -440,7 +492,7 @@ def _generic_action(
     :param callable primary: Function to call. Can either be a boto3.client function,
         or a function from this module.
     :param callable params: Callable (lambda or function) that takes the result of
-        _lookup_resources(``required_resources``) (in order) and kwargs as arguments,
+        _lookup_resources(``required_resources``) (in order) as arguments,
         and returns a dict of parameters to pass to the boto3 function.
     :param *args: Positional arguments to pass to the primary function.
     :param str/(str, list)/(str, list, str)/list required_resources: One or more
@@ -464,7 +516,6 @@ def _generic_action(
         arguments (see ``lookup_route_table``). For that, this argument could be:
         ('route_table', {'route_table_name': 'My Name', 'association_subnet_id': 'subnet-1234'},
         'Associations:0:RouteTableAssociationId').
-    :param dict kwargs: These will be passed to the callable ``params``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -479,18 +530,13 @@ def _generic_action(
         required_resources = [required_resources]
     if required_resources:
         lookup_results = _lookup_resources(
-            required_resources,
-            region=region,
-            keyid=keyid,
-            key=key,
-            profile=profile,
-            **kwargs,
+            required_resources, region=region, keyid=keyid, key=key, profile=profile,
         )
         if "error" in lookup_results:
             return lookup_results
-        primary_params = params(*lookup_results["result"], **kwargs)
+        primary_params = params(*lookup_results["result"])
     else:
-        primary_params = params(**kwargs)
+        primary_params = params()
     try:
         log.debug(
             "generic_action:\n" "\t\targs: %s\n" "\t\tparams: %s", args, primary_params
@@ -572,6 +618,58 @@ def _derive_ipv6_cidr_subnet(ipv6_subnet, ipv6_parent_block):
 
 
 # Here end the helper functions
+
+
+def accept_vpc_endpoint_connections(
+    service_id=None,
+    service_lookup=None,
+    vpc_endpoint_ids=None,
+    vpc_endpoint_lookups=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Accepts one or more interface VPC endpoint connection requests to your VPC
+    endpoint service.
+
+    :param str service_id: The ID of the VPC endpoint service.
+    :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service``
+        accepts. Used to lookup the ``service_id`` if it is not provided.
+    :param str/list(str) vpc_endpoint_ids: The (list of) ID(s) of the interface
+        VPC endpoint(s).
+    :param dict/list(dict) vpc_endpoint_lookups: One or more dicts of kwargs that
+        ``lookup_vpc_endpoint`` accepts. Used to lookup any ``vpc_endpoint_ids``
+        if none are provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
+        call on succes.
+    """
+    service_lookup = service_lookup or {"service_id": service_id}
+    vpc_endpoint_lookups = vpc_endpoint_lookups or [
+        {"vpc_endpoint_id": item} for item in vpc_endpoint_ids or []
+    ]
+    required_resources = [
+        ("vpc_endpoint_service", service_lookup, "ServiceId"),
+        ("vpc_endpoint", vpc_endpoint_lookups),
+    ]
+    params = lambda x, y: {
+        "ServiceId": x,
+        "VpcEndpointIds": itertools.chain.from_iterable(y),
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.accept_vpc_endpoint_connections,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
 
 
 def accept_vpc_peering_connection(
@@ -671,6 +769,126 @@ def allocate_address(
         return {"error": __utils__["boto3.get_error"](exp)["message"]}
 
 
+def associate_address(
+    allocation_id=None,
+    address_lookup=None,
+    instance_id=None,
+    instance_lookup=None,
+    public_ip=None,
+    allow_reassociation=None,
+    network_interface_id=None,
+    network_interface_lookup=None,
+    private_ip_address=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Associates an Elastic IP address, or carrier IP address (for instances that
+    are in subnets in Wavelength Zones) with an instance or a network interface.
+    Before you can use an Elastic IP address, you must allocate it to your account.
+
+    An Elastic IP address is for use in either the EC2-Classic platform or in a VPC.
+
+    If the Elastic IP address is already associated with a different instance,
+    it is disassociated from that instance and associated with the specified instance.
+    If you associate an Elastic IP address with an instance that has an existing
+    Elastic IP address, the existing address is disassociated from the instance,
+    but remains allocated to your account.
+
+    [VPC in an EC2-Classic account] If you don't specify a private IP address,
+    the Elastic IP address is associated with the primary IP address. If the Elastic
+    IP address is already associated with a different instance or a network interface,
+    you get an error unless you allow reassociation. You cannot associate an Elastic
+    IP address with an instance or network interface that has an existing Elastic
+    IP address.
+
+    [Subnets in Wavelength Zones] You can associate an IP address from the telecommunication
+    carrier to the instance or network interface.
+
+    You cannot associate an Elastic IP address with an interface in a different
+    network border group.
+
+    :param str allocation_id: [EC2-VPC] The allocation ID. This is required for EC2-VPC.
+    :param dict address_lookup: [EC2-VPC] Any kwarg that ``lookup_address`` accepts.
+        When ``allocation_id`` is not provided, this is required, otherwise ignored.
+    :param str instance_id: The ID of the instance. This is required for EC2-Classic.
+        For EC2-VPC, you can specify either the instance ID or the network interface
+        ID, but not both. The operation fails if you specify an instance ID unless
+        exactly one network interface is attached.
+    :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts. Used
+        to lookup the ``instance_id`` if it is not provided.
+    :param str public_ip: The Elastic IP address to associate with the instance.
+        This is required for EC2-Classic.
+    :param bool allow_reassociation: [EC2-VPC] For a VPC in an EC2-Classic account,
+        specify true to allow an Elastic IP address that is already associated
+        with an instance or network interface to be reassociated with the specified
+        instance or network interface. Otherwise, the operation fails. In a VPC
+        in an EC2-VPC-only account, reassociation is automatic, therefore you can
+        specify false to ensure the operation fails if the Elastic IP address is
+        already associated with another resource.
+    :param str network_interface_id: [EC2-VPC] The ID of the network interface.
+        If the instance has more than one network interface, you must specify a
+        network interface ID.
+        For EC2-VPC, you can specify either the instance ID or the network interface
+        ID, but not both.
+    :param dict network_interface_lookup: [EC2-VPC] Any kwarg that ``lookup_network_interface``
+        accepts. Used to lookup ``network_interface_id`` if it is not provided.
+    :param str private_ip_address: [EC2-VPC] The primary or secondary private IP
+        address to associate with the Elastic IP address. If no private IP address
+        is specified, the Elastic IP address is associated with the primary private
+        IP address.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``associate_address``-call
+        on succes.
+    """
+    required_resources = []
+    address_lookup = address_lookup or {"allocation_id": allocation_id}
+    required_resources.append(("address", address_lookup))
+
+    instance_lookup = (
+        instance_lookup or {"instance_id": instance_id} if instance_id else None
+    )
+    network_interface_lookup = (
+        network_interface_lookup or {"network_interface_id": network_interface_id}
+        if network_interface_id
+        else None
+    )
+    if not salt.utils.data.exactly_one((instance_lookup, network_interface_lookup)):
+        raise SaltInvocationError(
+            "Exactly one of either interface_id/interface_lookup or "
+            "network_interface_id/network_interface_lookup is required."
+        )
+    if instance_lookup:
+        required_resources.append(("instance", instance_lookup))
+    if network_interface_lookup:
+        required_resources.append(("network_interface", network_interface_lookup))
+
+    params = lambda x, y: salt.utils.data.filter_falsey(
+        {
+            "AllocationId": x,
+            "InstanceId": y if instance_lookup else None,
+            "PublicIp": public_ip,
+            "AllowReassociation": allow_reassociation,
+            "NetworkInterfaceId": y if network_interface_lookup else None,
+            "PrivateIpAddress": private_ip_address,
+        }
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return _generic_action(
+        client.associate_address,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def associate_dhcp_options(
     dhcp_options_id=None,
     dhcp_options_lookup=None,
@@ -717,7 +935,13 @@ def associate_dhcp_options(
     }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return _generic_action(
-        client.associate_dhcp_options, params, required_resources=required_resources,
+        client.associate_dhcp_options,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
     )
 
 
@@ -822,7 +1046,14 @@ def associate_subnet_cidr_block(
             ipv6_subnet, ipv6_cidr_block_association_set[0]["Ipv6CidrBlock"]
         )
     params = lambda: {"SubnetId": subnet_id, "Ipv6CidrBlock": ipv6_cidr_block}
-    return _generic_action(client.associate_subnet_cidr_block, params,)
+    return _generic_action(
+        client.associate_subnet_cidr_block,
+        params,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
 
 
 def associate_vpc_cidr_block(
@@ -917,6 +1148,171 @@ def attach_internet_gateway(
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     return _generic_action(
         client.attach_internet_gateway,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def attach_network_interface(
+    device_index,
+    instance_id=None,
+    instance_lookup=None,
+    network_interface_id=None,
+    network_interface_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Attaches a network interface to an instance.
+
+    :param int device_index: The index of the device for the network interface
+        attachment.
+    :param str instance_id: The ID of the instance.
+    :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
+        Used to lookup the instance's ID if ``instance_id`` is not provided.
+    :param str network_interface_id: The ID of the network interface.
+    :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
+        accepts. Used to lookup the network interface's ID if ``network_itnerface_id``
+        is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``attach_network_interface``-
+        call on succes.
+    """
+    instance_lookup = instance_lookup or {"instance_id": instance_id}
+    network_interface_lookup = network_interface_lookup or {
+        "network_interface_id": network_interface_id
+    }
+    required_resources = [
+        ("instance", instance_lookup),
+        ("network_interface", network_interface_lookup),
+    ]
+    params = lambda x, y: {
+        "DeviceIndex": device_index,
+        "InstanceId": x,
+        "NetworkInterfaceId": y,
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.attach_network_interface,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def attach_volume(
+    device,
+    instance_id=None,
+    instance_lookup=None,
+    volume_id=None,
+    volume_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Attaches an EBS volume to a running or stopped instance and exposes it to the
+    instance with the specified device name.
+    Encrypted EBS volumes must be attached to instances that support Amazon EBS
+    encryption.
+    After you attach an EBS volume, you must make it available.
+
+    If a volume has an AWS Marketplace product code:
+        The volume can be attached only to a stopped instance.
+        AWS Marketplace product codes are copied from the volume to the instance.
+        You must be subscribed to the product.
+        The instance type and operating system of the instance must support the
+        product. For example, you can't detach a volume from a Windows instance
+        and attach it to a Linux instance.
+
+    :param str device: The device name (for example, ``/dev/sdh`` or ``xvdh``).
+    :param str instance_id: The ID of the instance.
+    :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
+        Used to lookup the instance's ID if ``instance_id`` is not provided.
+    :param str volume_id: The ID of the EBS volume.  The volume and instance must
+        be within the same Availability Zone.
+    :param dict volume_lookup: Any kwarg that ``lookup_volume`` accepts.
+        Used to lookup the volume's ID if ``volume_id`` is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``attach_volume``-call
+        on succes.
+    """
+    instance_lookup = instance_lookup or {"instance_id": instance_id}
+    volume_lookup = volume_lookup or {"volume_id": volume_id}
+    required_resources = [
+        ("instance", instance_lookup),
+        ("volume", volume_lookup),
+    ]
+    params = lambda x, y: {
+        "Device": device,
+        "InstanceId": x,
+        "VolumeId": y,
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.attach_volume,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def attach_vpn_gateway(
+    vpc_id=None,
+    vpc_lookup=None,
+    vpn_gateway_id=None,
+    vpn_gateway_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Attaches a virtual private gateway to a VPC. You can attach one virtual private
+    gateway to one VPC at a time.
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
+        Used to lookup the VPC ID if ``vpc_id`` is not provided.
+    :param str vpn_gateway_id: The ID of the virtual private gateway.
+    :param dict vpn_gateway_lookup: Any kwarg that ``lookup_vpn_gateway`` accepts.
+        Used to lookup the VPN gateway's ID if ``vpn_gateway_id`` is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``attach_vpn_gateway``-call
+        on succes.
+    """
+    vpc_lookup = vpc_lookup or {"vpc_id": vpc_id}
+    vpn_gateway_lookup = vpn_gateway_lookup or {"vpn_gateway": vpn_gateway_id}
+    required_resources = [
+        ("vpc", vpc_lookup),
+        ("vpn_gateway", vpn_gateway_lookup),
+    ]
+    params = lambda x, y: {
+        "VpcId": x,
+        "VpnGatewayId": y,
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.attach_vpn_gateway,
         params,
         required_resources=required_resources,
         region=region,
@@ -1089,6 +1485,280 @@ def authorize_security_group_ingress(
     )
 
 
+def cancel_spot_fleet_requests(
+    spot_fleet_requests_ids=None,
+    spot_fleet_requests_lookups=None,
+    terminate_instances=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Cancels the specified Spot Fleet requests.
+
+    After you cancel a Spot Fleet request, the Spot Fleet launches no new Spot Instances.
+    You must specify whether the Spot Fleet should also terminate its Spot Instances.
+    If you terminate the instances, the Spot Fleet request enters the ``cancelled_terminating``
+    state. Otherwise, the Spot Fleet request enters the ``cancelled_running`` state
+    and the instances continue to run until they are interrupted or you terminate
+    them manually.
+
+    :param str/list(str) spot_fleet_request_ids: The IDs of the Spot Fleet requests.
+    :param dict/list(dict) spot_fleet_request_lookups: Any kwarg or list of kwargs
+        that ``lookup_spot_fleet_request`` accepts. Used to lookup the Spot Fleet
+        request ID(s) if ``spot_fleet_request_ids`` is not provided.
+    :param bool terminate_instances: Indicates whether to terminate instances for
+        a Spot Fleet request if it is canceled successfully.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``cancel_spot_fleet_requests``-
+        call on succes.
+    """
+    spot_fleet_requests_lookups = spot_fleet_requests_lookups or [
+        {"spot_fleet_request_id": item} for item in spot_fleet_requests_ids or []
+    ]
+    required_resources = ("spot_fleet_requests", spot_fleet_requests_lookups)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "SpotFleetRequestIds": itertools.chain.from_iterable(x),
+            "TerminateInstances": terminate_instances,
+        }
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.cancel_spot_fleet_requests,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def cancel_spot_instance_requests(
+    spot_instance_request_ids=None,
+    spot_instance_request_lookups=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Cancels one or more Spot Instance requests.
+
+    :param str/list(str) spot_instance_request_ids: One or more Spot Instance request IDs.
+    :param dict/list(dict) spot_instance_request_lookups: Any kwarg or list of
+        kwargs that ``lookup_spot_instance_request`` accepts. Used to lookup the
+        Spot Instance request ID(s) if ``spot_instance_request_ids`` is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``cancel_spot_instance_requests``-
+        call on succes.
+    """
+    spot_instance_request_lookups = spot_instance_request_lookups or [
+        {"spot_instance_request_id": item} for item in spot_instance_request_ids or []
+    ]
+    required_resources = ("spot_instance_requests", spot_instance_request_lookups)
+    params = lambda x: {
+        "SpotInstanceRequestIds": itertools.chain.from_iterable(x),
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.cancel_spot_instance_requests,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def copy_image(
+    name,
+    source_region,
+    source_image_id=None,
+    source_image_lookup=None,
+    description=None,
+    encrypted=None,
+    kms_key_id=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Initiates the copy of an AMI from the specified source Region to the current
+    Region. You specify the destination Region by using its endpoint when making
+    the request.
+    Copies of encrypted backing snapshots for the AMI are encrypted. Copies of
+    unencrypted backing snapshots remain unencrypted, unless you set Encrypted
+    during the copy operation. You cannot create an unencrypted copy of an encrypted
+    backing snapshot.
+
+    :param str name: The name of the new AMI in the destination Region.
+    :param str source_region: The name of the Region that contains the AMI to copy.
+    :param str source_image_id: The ID of the AMI to copy.
+    :param dict source_image_lookup: Any kwarg that ``lookup_image`` accepts.
+        Used to lookup the AMI ID if ``source_image_id`` is not provided.
+    :param str description: A description for the new AMI in the destination Region.
+    :param bool encrypted: Specifies whether the destination snapshots of the copied
+        image should be encrypted. You can encrypt a copy of an unencrypted snapshot,
+        but you cannot create an unencrypted copy of an encrypted snapshot. The
+        default CMK for EBS is used unless you specify a non-default AWS Key Management
+        Service (AWS KMS) CMK using ``kms_key_id``.
+    :param str kms_key_id: An identifier for the symmetric AWS Key Management Service
+        (AWS KMS) customer master key (CMK) to use when creating the encrypted
+        volume. This parameter is only required if you want to use a non-default
+        CMK; if this parameter is not specified, the default CMK for EBS is used.
+        If a KmsKeyId is specified, the Encrypted flag must also be set.
+        To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
+        or alias ARN. When using an alias name, prefix it with "alias/". For example:
+
+            Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
+            Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+            Alias name: alias/ExampleAlias
+            Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
+
+        AWS parses KmsKeyId asynchronously, meaning that the action you call may
+        appear to complete even though you provided an invalid identifier. This
+        action will eventually report failure.
+        The specified CMK must exist in the Region that the snapshot is being copied to.
+        Amazon EBS does not support asymmetric CMKs.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``copy_image``-call on succes.
+    """
+    source_image_lookup = source_image_lookup or {"image_id": source_image_id}
+    required_resources = ("image", source_image_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "Description": description,
+            "Encrypted": encrypted,
+            "KmsKeyId": kms_key_id,
+            "Name": name,
+            "SourceImageId": x,
+            "SourceRegion": source_region,
+        }
+    )
+    params.update(
+        {
+            "ClientToken": hashlib.sha1(
+                json.dumps(params(source_image_lookup)).encode("utf8")
+            ).hexdigest
+        }
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.copy_image,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def copy_snapshot(
+    source_region,
+    source_snapshot_id=None,
+    source_snapshot_lookup=None,
+    description=None,
+    encrypted=None,
+    kms_key_id=None,
+    tags=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Copies a point-in-time snapshot of an EBS volume and stores it in Amazon S3.
+    You can copy the snapshot within the same Region or from one Region to another.
+    You can use the snapshot to create EBS volumes or Amazon Machine Images (AMIs).
+
+    Copies of encrypted EBS snapshots remain encrypted. Copies of unencrypted snapshots
+    remain unencrypted, unless you enable encryption for the snapshot copy operation.
+    By default, encrypted snapshot copies use the default AWS Key Management Service
+    (AWS KMS) customer master key (CMK); however, you can specify a different CMK.
+
+    To copy an encrypted snapshot that has been shared from another account, you
+    must have permissions for the CMK used to encrypt the snapshot.
+
+    Snapshots created by copying another snapshot have an arbitrary volume ID that
+    should not be used for any purpose.
+
+    :param str source_region: The ID of the Region that contains the snapshot to
+        be copied.
+    :param str source_snapshot_id: The ID of the EBS snapshot to copy.
+    :param dict source_snapshot_lookup: Any kwarg that ``lookup_snapshot`` accepts.
+        Used to lookup the EBS snapshot ID if ``source_snapshot_id`` is not provided.
+    :param str description: A description for the EBS snapshot.
+    :param bool encrypted: To encrypt a copy of an unencrypted snapshot if encryption
+        by default is not enabled, enable encryption using this parameter. Otherwise,
+        omit this parameter. Encrypted snapshots are encrypted, even if you omit
+        this parameter and encryption by default is not enabled. You cannot set
+        this parameter to false.
+    :param str kms_key_id: The identifier of the AWS Key Management Service (AWS KMS)
+        customer master key (CMK) to use for Amazon EBS encryption. If this parameter
+        is not specified, your AWS managed CMK for EBS is used. If KmsKeyId is
+        specified, the encrypted state must be ``True``.
+        You can specify the CMK using any of the following:
+
+            Key ID. For example, key/1234abcd-12ab-34cd-56ef-1234567890ab.
+            Key alias. For example, alias/ExampleAlias.
+            Key ARN. For example, arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef.
+            Alias ARN. For example, arn:aws:kms:us-east-1:012345678910:alias/ExampleAlias.
+
+        AWS authenticates the CMK asynchronously. Therefore, if you specify an
+        ID, alias, or ARN that is not valid, the action can appear to complete,
+        but eventually fails.
+    :param dict tags: The tags to apply to a resource when the resource is being created.
+    :param bool blocking: Wait for the snapshot to become available.
+
+    """
+    source_snapshot_lookup = source_snapshot_lookup or {
+        "snapshot_id": source_snapshot_id
+    }
+    required_resources = ("snapshot", source_snapshot_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "params": {
+                "Description": description,
+                "Encrypted": encrypted,
+                "KmsKeyId": kms_key_id,
+                "SourceRegion": source_region,
+                "SourceSnapshotId": x,
+            },
+            "boto_function_name": "copy_snapshot",
+            "tags": tags,
+            "wait_until_state": "completed" if blocking else None,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        },
+        recurse_depth=1,
+    )
+    return _generic_action(
+        _create_resource,
+        params,
+        "snapshot",
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def create_customer_gateway(
     bgp_asn,
     gateway_type,
@@ -1149,7 +1819,7 @@ def create_customer_gateway(
     )
     return _create_resource(
         "customer_gateway",
-        params,
+        params=params,
         tags=tags,
         region=region,
         keyid=keyid,
@@ -1235,6 +1905,126 @@ def create_dhcp_options(
     )
 
 
+def create_image(
+    name,
+    instance_id=None,
+    instance_lookup=None,
+    block_device_mappings=None,
+    description=None,
+    no_reboot=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that is
+    either running or stopped.
+
+    If you customized your instance with instance store volumes or EBS volumes
+    in addition to the root device volume, the new AMI contains block device mapping
+    information for those volumes. When you launch an instance from this new AMI,
+    the instance automatically launches with those additional volumes.
+
+    :param str name: A name for the new image.
+        Constraints: 3-128 alphanumeric characters, parentheses (()), square
+        brackets ([]), spaces ( ), periods (.), slashes (/), dashes (-), single
+        quotes ('), at-signs (@), or underscores(_)
+    :param str instance_id: The ID of the instance.
+    :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
+        Used to lookup the instance's ID if ``instance_id`` is not provided.
+    :param dict/list(dict) block_device_mappings: The block device mappings.
+        This parameter cannot be used to modify the encryption status of existing
+        volumes or snapshots. To create an AMI with encrypted snapshots, use the
+        ``copy_image`` function. These dicts consist of:
+
+        - DeviceName (str): The device name (for example, ``/dev/sdh`` or ``xvdh``).
+        - VirtualName (str): The virtual device name (ephemeral N). Instance store
+          volumes are numbered starting from 0. An instance type with 2 available
+          instance store volumes can specify mappings for ``ephemeral0`` and ``ephemeral1``.
+          The number of available instance store volumes depends on the instance type.
+          After you connect to the instance, you must mount the volume.
+          NVMe instance store volumes are automatically enumerated and assigned
+          a device name. Including them in your block device mapping has no effect.
+          Constraints: For M3 instances, you must specify instance store volumes
+          in the block device mapping for the instance. When you launch an M3 instance,
+          we ignore any instance store volumes specified in the block device mapping
+          for the AMI.
+        - Ebs (dict): Parameters used to automatically set up EBS volumes when
+          the instance is launched. This dict consists of:
+
+          - DeleteOnTermination (bool): Indicates whether the EBS volume is deleted
+            on instance termination.
+          - Iops (int): The number of I/O operations per second (IOPS) that the
+            volume supports. For io1 volumes, this represents the number of IOPS
+            that are provisioned for the volume. For gp2 volumes, this represents
+            the baseline performance of the volume and the rate at which the volume
+            accumulates I/O credits for bursting.
+            Constraints: Range is 100-16,000 IOPS for gp2 volumes and 100 to 64,000
+            IOPS for io1 volumes in most Regions. Maximum io1 IOPS of 64,000 is
+            guaranteed only on Nitro-based instances. Other instance families guarantee
+            performance up to 32,000 IOPS.
+            Condition: This parameter is required for requests to create io1 volumes;
+            it is not used in requests to create gp2, st1, sc1, or standard volumes.
+          - SnapshotId (str): The ID of the snapshot.
+          - VolumeSize (int): The size of the volume, in GiB.
+            Default: If you're creating the volume from a snapshot and don't specify
+            a volume size, the default is the snapshot size.
+            Constraints: 1-16384 for General Purpose SSD (gp2), 4-16384 for Provisioned
+            IOPS SSD (io1), 500-16384 for Throughput Optimized HDD (st1), 500-16384
+            for Cold HDD (sc1), and 1-1024 for Magnetic (standard ) volumes. If
+            you specify a snapshot, the volume size must be equal to or larger
+            than the snapshot size.
+          - VolumeType (str): The volume type. If you set the type to ``io1``,
+            you must also specify the Iops parameter. If you set the type to ``gp2``,
+            ``st1``, ``sc1``, or ``standard``, you must omit the Iops parameter.
+            Default: ``gp2``
+        - NoDevice (str): Suppresses the specified device included in the block
+          device mapping of the AMI.
+    :param str description: A description for the new image.
+    :param bool no_reboot:  By default, Amazon EC2 attempts to shut down and reboot
+        the instance before creating the image. If the 'No Reboot' option is set,
+        Amazon EC2 doesn't shut down the instance before creating the image. When
+        this option is used, file system integrity on the created image can't be
+        guaranteed.
+    :param bool blocking: Wait for the image to become available.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``create_image``-call on succes.
+    """
+    instance_lookup = instance_lookup or {"instance_id": instance_id}
+    required_resources = ("instance", instance_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "params": {
+                "BlockDeviceMappings": block_device_mappings,
+                "Description": description,
+                "InstanceId": x,
+                "Name": name,
+                "NoReboot": no_reboot,
+            },
+            "wait_until_state": "available" if blocking else None,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        },
+        recurse_depth=1,
+    )
+    return _generic_action(
+        _create_resource,
+        params,
+        "image",
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def create_internet_gateway(
     vpc_id=None,
     vpc_lookup=None,
@@ -1286,6 +2076,332 @@ def create_internet_gateway(
         if "error" in res2:
             ret.update(res2)
     return ret
+
+
+def create_key_pair(
+    key_name, tags=None, region=None, keyid=None, key=None, profile=None
+):
+    """
+    Creates a 2048-bit RSA key pair with the specified name. Amazon EC2 stores
+    the public key and displays the private key for you to save to a file. The
+    private key is returned as an unencrypted PEM encoded PKCS#1 private key. If
+    a key with the specified name already exists, Amazon EC2 returns an error.
+
+    You can have up to five thousand key pairs per Region.
+
+    The key pair returned to you is available only in the Region in which you create
+    it. If you prefer, you can create your own key pair using a third-party tool
+    and upload it to any Region using ``import_key_pair``.
+
+    :param str key_name: A unique name for the key pair.
+        Constraints: Up to 255 ASCII characters
+    :param dict tags: The tags to apply to a resource when the resource is being created.
+    """
+    return _create_resource(
+        "key_pair",
+        params={"KeyName": key_name},
+        tags=tags,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def create_launch_template(
+    launch_template_name,
+    version_description=None,
+    kernel_id=None,
+    ebs_optimized=None,
+    iam_instance_profile=None,
+    block_device_mappings=None,
+    network_interfaces=None,
+    image_id=None,
+    image_lookup=None,
+    instance_type=None,
+    key_name=None,
+    monitoring_enabled=None,
+    placement=None,
+    ram_disk_id=None,
+    disable_api_termination=None,
+    instance_initiated_shutdown_behavior=None,
+    user_data=None,
+    tag_specifications=None,
+    elastic_gpu_type=None,
+    elastic_inference_accelerators=None,
+    security_group_ids=None,
+    security_group_lookups=None,
+    instance_market_options=None,
+    credit_specification=None,
+    cpu_options=None,
+    capacity_reservation_specification=None,
+    license_specifications=None,
+    hibernation_configured=None,
+    metadata_options=None,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a launch template. A launch template contains the parameters to launch
+    an instance. When you launch an instance using RunInstances , you can specify
+    a launch template instead of providing the launch parameters in the request.
+
+    :param str launch_template_name: A name for the launch template.
+    :param str version_description: A description for the first version of the
+      launch template.
+    :param str kernel_id: The ID of the kernel.
+      Warning: We recommend that you use PV-GRUB instead of kernels and RAM disks.
+    :param bool ebs_optimized: Indicates whether the instance is optimized for
+      Amazon EBS I/O. This optimization provides dedicated throughput to Amazon
+      EBS and an optimized configuration stack to provide optimal Amazon EBS
+      I/O performance. This optimization isn't available with all instance types.
+      Additional usage charges apply when using an EBS-optimized instance.
+    :param dict iam_instance_profile: The IAM instance profile. This consists of:
+      - Arn (str): The Amazon Resource Name (ARN) of the instance profile.
+      - Name (str): The name of the instance profile.
+    :param list(dict) block_device_mappings: The block device mapping.
+      For a complete description of this, see :py:func:create_image.
+    :param list(dict) network_interfaces: One or more network interfaces. If you
+      specify a network interface, you must specify any security groups and subnets
+      as part of the network interface. These dicts contsist of:
+
+        - AssociateCarrierIpAddress (bool): Associates a Carrier IP address with
+          eth0 for a new network interface. Use this option when you launch an instance
+          in a Wavelength Zone and want to associate a Carrier IP address with the
+          network interface.
+        - AssociatePublicIpAddress (bool): Associates a public IPv4 address with
+          eth0 for a new network interface.
+        - DeleteOnTermination (bool): Indicates whether the network interface is
+          deleted when the instance is terminated.
+        - Description (str): A description for the network interface.
+        - DeviceIndex (int): The device index for the network interface attachment.
+        - Groups (list(str)): The IDs of one or more security groups.
+        - InterfaceType (str): The type of network interface. To create an Elastic
+          Fabric Adapter (EFA), specify ``efa``. If you are not creating an EFA,
+          specify ``interface`` or omit this parameter.
+          Allowed values: interface, efa.
+        - Ipv6AddressCount (int): The number of IPv6 addresses to assign to a network
+          interface. Amazon EC2 automatically selects the IPv6 addresses from the
+          subnet range. You can't use this option if specifying specific IPv6 addresses.
+        - Ipv6Addresses (list(dict)): One or more specific IPv6 addresses from
+          the IPv6 CIDR block range of your subnet. You can't use this option if
+          you're specifying a number of IPv6 addresses. The dict consists of:
+
+            - Ipv6Address (str): The IPv6 address.
+        - NetworkInterfaceId (str): The ID of the network interface.
+        - PrivateIpAddress (str): The primary private IPv4 address of the network interface.
+        - PrivateIpAddresses (list(dict)): One or more secondary private IPv4 addresses.
+          The dict consists of:
+
+            - Primary (bool): Indicates whether the private IPv4 address is the primary
+              private IPv4 address. Only one IPv4 address can be designated as primary.
+            - PrivateIpAddress (str): The private IPv4 address.
+        - SecondaryPrivateIpAddressCount (int): The number of secondary private IPv4
+          addresses to assign to a network interface.
+        - SubnetId (str): The ID of the subnet for the network interface.
+    :param str image_id: The ID of the AMI.
+    :param dict image_lookup: Any kwarg that lookup_image accepts. used to
+      lookup the image_id when ``image_id`` is not provided.
+    :param str instance_type: The instance type.
+    :param str key_name: The name of the key pair. You can create a key pair using
+      ``create_key_pair`` or ``import_key_pair``.
+      Warning: If you do not specify a key pair, you can't connect to the instance
+      unless you choose an AMI that is configured to allow users another way
+      to log in.
+    :param bool monitoring_enabled: Specify true to enable detailed monitoring.
+      Otherwise, basic monitoring is enabled.
+    :param dict placement: The placement for the instance. The dict consiste of:
+
+      - AvailabilityZone (str): The availability zone for the instance.
+      - Affinity (str): the affinity setting for an instance on a Dedicated Host.
+      - GroupName (str): The name of the placement group for the instance.
+      - HostId (str): The ID of the Dedicated Host for the instance.
+      - Tenancy (str): The tenancy of the instance (if the instance is running
+        in a VPC). An instance with a tenancy of ``dedicated`` runs on single-tenant
+        hardware.
+      - HostResourceGroupArn (str): The ARN of the host resource group in which
+        to launch the instances. If you specify a host resource group ARN, omit
+        the Tenancy parameter or set it to ``host``.
+      - PartitionNumber (int): The number of the partition the instance should
+        launch in. Valid only if the placement group strategy is set to ``partition``.
+    :param str ram_disk_id: The ID of the RAM disk.
+      Warning: We recommend that you use PV-GRUB instead of kernels and RAM disks.
+    :param bool disable_api_termination: If you set this parameter to ``True``,
+      you can't terminate the instance using the Amazon EC2 console, CLI, or API;
+      otherwise, you can. To change this attribute after launch, use ``modify_instance_attribute``.
+      Alternatively, if you set ``instance_initiated_shutdown_behavior`` to
+      ``terminate``, you can terminate the instance by running the shutdown command
+      from the instance.
+    :param str instance_initiated_shutdown_behavior: Indicates whether an instance
+      stops or terminates when you initiate shutdown from the instance (using
+      the operating system command for system shutdown).
+      Default: stop
+    :param str user_data: The Base64-encoded user data to make available to the instance.
+    :param dict instance_tags: The tags to apply to the resources during launch.
+      The specified tags are applied to all instances or volumes that are created
+      during launch.
+    :param elastic_gpu_type: The type of Elastic Graphics accelerator to associate
+      with the instance.
+    :param list(dict) elastic_inference_accelerators: The elastic inference accelerator
+      for the instance. The dict consists of:
+
+        - Type (str): The type of elastic inference accelerator.
+          Allowed values are: eia1.medium, eia1.large, and eia1.xlarge.
+        - Count (int): The number of elastic inference accelerators to attach to
+          the instance. Default: 1
+    :param list(str) security_group_ids: One or more security group IDs. You can
+      create a security group using :py:func:`create_security_group`.
+    :param list(dict) security_group_lookups: List of dicts that contain kwargs
+      that ``lookup_security_group`` accepts. Used to lookup security groups
+      if ``security_group_ids`` is not provided.
+    :param dict instance_market_options: The market (purchasing) option for the
+      instances. This dict consists of:
+
+        - MarketType (str): The market type.
+        - SpotOptions (dict): The options for Spot instances. This dict consists of:
+
+          - MaxPrice (str): The maximum hourly price you're willing to pay for the
+            Spot Instances
+          - SpotInstanceType (str): The Spot Instance request type.
+          - BlockDurationMinutes (int): The required duration for the Spot Instances
+            (also known as Spot blocks), in minutes. This value must be a multiple
+            of 60 (60, 120, 180, 240, 300, or 360).
+          - ValidUntil (datetime): The end date of the request. For a one-time request,
+            the request remains active until all instances launch, the request is
+            canceled, or this date is reached. If the request is persistent, it remains
+            active until it is canceled or this date and time is reached. The default
+            end date is 7 days from the current date.
+          - InstanceInterruptionBehavior: The behavior when a Spot Instance is interrupted.
+            The default is ``terminate``.
+    :param str credit_specification: The credit option for CPU usage of a T2, T3,
+      or T3a instance. Allowed values: ``standard``, ``unlimited``.
+    :param dict cpu_options: The CPU options for the instance. This dict consists of:
+
+      - CoreCount (int): The number of CPU cores for the instance.
+      - ThreadsPerCore (int): The number of threads per CPU core. To disable multithreading
+        for the instance, specify a value of 1. Otherwise, specify the default
+        value of 2.
+    :param dict capacity_reservation_specification: The Capacity Reservation targeting
+      option. If you do not specify this parameter, the instance's Capacity Reservation
+      preference defaults to ``open``, which enables it to run in any open Capacity
+      Reservation that has matching attributes (instance type, platform, Availability Zone).
+      This dict consists of:
+
+        - CapacityReservationPreference (str): Indicates the instance's Capacity
+          Reservation preferences. Possible preferences include:
+
+            - open: The instance can run in any open Capacity Reservation that has
+              matching attributes (instance type, platform, Availability Zone).
+            - none: The instance avoids running in a Capacity Reservation even if
+              one is available. The instance runs in On-Demand capacity.
+        - CapacityReservationTarget (dict): Information about the target Capacity
+          Reservation or Capacity Reservation group. This dict consists of:
+
+          - CapacityReservationId (str): The ID of the Capacity Reservation in which
+            to run the instance.
+          - CapacityReservationResourceGroupArn (str): The ARN of the Capacity Reservation
+            resource group in which to run the instance.
+    :param list(str) license_specifications: List of Amazon Resource Names (ARNs)
+      of the license configurations.
+    :param bool hibernation_configured: If you set this parameter to ``True``,
+      the instance is enabled for hibernation. Default: ``False``.
+    :param dict metadata_options: The metadata options for the instance. This dict
+      consists of:
+
+        - HttpTokens (str): The state of token usage for your instance metadata requests.
+          If the parameter is not specified in the request, the default state is ``optional``.
+          If the state is ``optional``, you can choose to retrieve instance metadata
+          with or without a signed token header on your request. If you retrieve
+          the IAM role credentials without a token, the version 1.0 role credentials
+          are returned. If you retrieve the IAM role credentials using a valid signed
+          token, the version 2.0 role credentials are returned.
+          If the state is ``required``, you must send a signed token header with
+          any instance metadata retrieval requests. In this state, retrieving the
+          IAM role credentials always returns the version 2.0 credentials; the version
+          1.0 credentials are not available.
+        - HttpPutResponseHopLimit (int): The desired HTTP PUT response hop limit
+          for instance metadata requests. The larger the number, the further instance
+          metadata requests can travel. Default: 1. Allowed values: Integers from 1 to 64.
+        - HttpEndpoint (str): This parameter enables or disables the HTTP metadata
+          endpoint on your instances. If the parameter is not specified, the default
+          state is ``enabled``. Note: If you specify a value of ``disabled``, you
+          will not be able to access your instance metadata.
+    :param dict tags: The tags to apply to the launch template during creation.
+    """
+    if image_lookup and not image_id:
+        res = lookup_image(
+            region=region, keyid=keyid, key=key, profile=profile, **image_lookup
+        )
+        if "error" in res:
+            return res
+        image_id = res["result"]["ImageId"]
+    if security_group_lookups and not security_group_ids:
+        security_group_ids = []
+        for security_group_lookup in security_group_lookups:
+            res = lookup_security_group(
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+                **security_group_lookup,
+            )
+            if "error" in res:
+                return res
+            security_group_ids.append(res["result"]["SecurityGroupId"])
+    params = salt.utils.data.filter_falsey(
+        {
+            "LaunchTemplateName": launch_template_name,
+            "VersionDescription": version_description,
+            "LaunchTemplateData": {
+                "KernelId": kernel_id,
+                "EbsOptimized": ebs_optimized,
+                "IamInstanceProfile": iam_instance_profile,
+                "BlockDeviceMappings": block_device_mappings,
+                "NetworkInterfaces": network_interfaces,
+                "ImageId": image_id,
+                "InstanceType": instance_type,
+                "KeyName": key_name,
+                "Monitoring": {"Enabled": monitoring_enabled},
+                "Placement": placement,
+                "RamDiskId": ram_disk_id,
+                "DisableApiTermination": disable_api_termination,
+                "InstanceInitiatedShutdownBehavior": instance_initiated_shutdown_behavior,
+                "UserData": user_data,
+                "TagSpecifications": tag_specifications,
+                "ElasticGpuSpecifications": [{"Type": elastic_gpu_type}],
+                "ElasticInferenceAccelerators": elastic_inference_accelerators,
+                "SecurityGroupIds": security_group_ids,
+                "InstanceMarketOptions": instance_market_options,
+                "CreditSpecification": {"CpuCredits": credit_specification},
+                "CpuOptions": cpu_options,
+                "CapacityReservationSpecification": capacity_reservation_specification,
+                "LicenseSpecifications": [
+                    {"LicenseConfigurationArn": item} for item in license_specifications
+                ],
+                "HibernationOptions": {"Configured": hibernation_configured},
+                "MetadataOptions": metadata_options,
+            },
+        }
+    )
+    params.update(
+        {
+            "ClientToken": hashlib.sha1(
+                json.dumps(params(image_lookup, security_group_lookups)).encode("utf8")
+            ).hexdigest
+        }
+    )
+    return _create_resource(
+        "launch_template",
+        params=params,
+        tags=tags,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
 
 
 def create_nat_gateway(
@@ -1341,10 +2457,14 @@ def create_nat_gateway(
         ("subnet", subnet_lookup),
         ("address", address_lookup, "AllocationId"),
     ]
+    client_token = hashlib.sha1(
+        (json.dumps(subnet_lookup) + json.dumps(address_lookup)).encode("utf8")
+    ).hexdigest()
     params = lambda x, y: salt.utils.data.filter_falsey(
         {
-            "params": {"SubnetId": x, "AllocationId": y},
+            "params": {"SubnetId": x, "AllocationId": y, "ClientToken": client_token},
             "tags": tags,
+            "wait_until_state": "available" if blocking else None,
             "region": region,
             "keyid": keyid,
             "key": key,
@@ -1361,7 +2481,6 @@ def create_nat_gateway(
         keyid=keyid,
         key=key,
         profile=profile,
-        **({"wait_until_state": "available"} if blocking else {}),
     )
 
 
@@ -1517,6 +2636,114 @@ def create_network_acl_entry(
     return _generic_action(
         client.create_network_acl_entry,
         params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def create_network_interface(
+    subnet_id=None,
+    subnet_lookup=None,
+    description=None,
+    security_group_ids=None,
+    security_group_lookups=None,
+    ipv6_address_count=None,
+    ipv6_addresses=None,
+    primary_private_ip_address=None,
+    secondary_private_ip_address_count=None,
+    secondary_private_ip_addresses=None,
+    interface_type=None,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a network interface in the specified subnet.
+
+    :param str subnet_id: The ID of the subnet.
+    :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
+      Used to lookup the subnet ID if ``subnet_id`` is not provided.
+    :param str description: A description for the network interface.
+    :param list(str) security_group_ids: The IDs of one or more security groups.
+    :param list(dict) security_group_lookups: List of dicts that contain kwargs
+      that :py:func:`lookup_security_group` accepts. Used to lookup security groups
+      if ``security_group_ids`` is not provided.
+    :param int ipv6_address_count: The number of IPv6 addresses to assign to a
+      network interface. Amazon EC2 automatically selects the IPv6 addresses
+      from the subnet range. You can't use this option if specifying specific
+      IPv6 addresses. If your subnet has the AssignIpv6AddressOnCreation attribute
+      set to ``True``, you can specify ``0`` to override this setting.
+    :param list(str) ipv6_addresses: One or more specific IPv6 addresses from the
+      IPv6 CIDR block range of your subnet. You can't use this option if you're
+      specifying a number of IPv6 addresses.
+    :param str primary_private_ip_address: The primary private IPv4 address of
+      the network interface. If you don't specify an IPv4 address, Amazon EC2
+      selects one for you from the subnet's IPv4 CIDR range.
+    :param int secondary_private_ip_address_count: The number of secondary private
+      IPv4 addresses to assign to a network interface. When you specify a number
+      of secondary IPv4 addresses, Amazon EC2 selects these IP addresses within
+      the subnet's IPv4 CIDR range. You can't specify this option and specify
+      more than one private IP address using ``secondary_private_ip_addresses``.
+      The number of IP addresses you can assign to a network interface varies
+      by instance type.
+    :param list(str): secondary_private_ip_addresses: One or more private IPv4
+      addresses.
+    :param str interface_type: Indicates the type of network interface. To create
+      an Elastic Fabric Adapter (EFA), specify ``efa``.
+    :param dict tags: Tags to apply to the new network interface.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``create_network_interface``-
+        call on succes.
+    """
+    subnet_lookup = subnet_lookup or {"subnet_id": subnet_id}
+    required_resources = ("subnet", subnet_lookup)
+    if security_group_lookups and not security_group_ids:
+        security_group_ids = []
+        for security_group_lookup in security_group_lookups:
+            res = lookup_security_group(
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+                **security_group_lookup,
+            )
+            if "error" in res:
+                return res
+            security_group_ids.append(res["result"]["SecurityGroupId"])
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "params": {
+                "Description": description,
+                "Groups": security_group_ids,
+                "Ipv6AddressCount": ipv6_address_count,
+                "Ipv6Addresses": [{"Ipv6Address": item} for item in ipv6_addresses],
+                "PrivateIpAddress": primary_private_ip_address,
+                "SecondaryPrivateIpAddressCount": secondary_private_ip_address_count,
+                "PrivateIpAddresses": [
+                    {"PrivateIpAddress": item}
+                    for item in secondary_private_ip_addresses
+                ],
+                "InterfaceType": interface_type,
+                "SubnetId": x,
+            },
+            "tags": tags,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        }
+    )
+    return _generic_action(
+        _create_resource,
+        params,
+        "network_interface",
         required_resources=required_resources,
         region=region,
         keyid=keyid,
@@ -1790,6 +3017,76 @@ def create_security_group(
     )
 
 
+def create_snapshot(
+    description=None,
+    volume_id=None,
+    volume_lookup=None,
+    tags=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a snapshot of an EBS volume and stores it in Amazon S3. You can use
+    snapshots for backups, to make copies of EBS volumes, and to save data before
+    shutting down an instance.
+
+    When a snapshot is created, any AWS Marketplace product codes that are associated
+    with the source volume are propagated to the snapshot.
+
+    You can take a snapshot of an attached volume that is in use. However, snapshots
+    only capture data that has been written to your EBS volume at the time the
+    snapshot command is issued; this may exclude any data that has been cached
+    by any applications or the operating system. If you can pause any file systems
+    on the volume long enough to take a snapshot, your snapshot should be complete.
+    However, if you cannot pause all file writes to the volume, you should unmount
+    the volume from within the instance, issue the snapshot command, and then remount
+    the volume to ensure a consistent and complete snapshot. You may remount and
+    use your volume while the snapshot status is ``pending``.
+
+    To create a snapshot for EBS volumes that serve as root devices, you should
+    stop the instance before taking the snapshot.
+
+    Snapshots that are taken from encrypted volumes are automatically encrypted.
+    Volumes that are created from encrypted snapshots are also automatically encrypted.
+    Your encrypted volumes and any associated snapshots always remain protected.
+
+    You can tag your snapshots during creation.
+
+    :param str description: A description for the snapshot.
+    :param str volume_id: The ID of the EBS volume.
+    :param dict volume_lookup: Any kwarg that :py:func:`lookup_volume` accepts.
+        Used to lookup the volume ID if ``volume_id`` is not provided.
+    :param dict tags: Tags to apply to the snapshot during creation.
+    :param bool blocking: Wait for the snapshot to be completed.
+    """
+    volume_lookup = volume_lookup or {"volume_id": volume_id}
+    required_resources = ("volume", volume_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "params": {"Description": description, "VolumeId": x},
+            "tags": tags,
+            "wait_until_state": "completed" if blocking else None,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        }
+    )
+    return _generic_action(
+        _create_resource,
+        params,
+        "snapshot",
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def create_subnet(
     cidr_block,
     vpc_id=None,
@@ -1888,11 +3185,11 @@ def create_subnet(
         "subnet",
         params=params,
         tags=tags,
+        wait_until_state="available" if blocking else None,
         region=region,
         keyid=keyid,
         key=key,
         profile=profile,
-        **({"wait_until_state": "available"} if blocking else {}),
     )
 
 
@@ -1918,6 +3215,113 @@ def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=N
     # Oh, the irony
     return _create_resource(
         "tags", params=params, region=region, keyid=keyid, key=key, profile=profile
+    )
+
+
+def create_volume(
+    availability_zone,
+    encrypted=None,
+    iops=None,
+    kms_key_id=None,
+    outpost_arn=None,
+    size=None,
+    snapshot_id=None,
+    snapshot_lookup=None,
+    volume_type=None,
+    tags=None,
+    multi_attach_enabled=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates an EBS volume that can be attached to an instance in the same Availability
+    Zone. The volume is created in the regional endpoint that you send the HTTP request to.
+    You can create a new empty volume or restore a volume from an EBS snapshot.
+    Any AWS Marketplace product codes from the snapshot are propagated to the volume.
+    You can create encrypted volumes. Encrypted volumes must be attached to instances
+    that support Amazon EBS encryption. Volumes that are created from encrypted
+    snapshots are also automatically encrypted.
+    You can tag your volumes during creation.
+
+    :param str availability_zone: The Availability Zone in which to create the volume.
+    :param bool encrypted: Specifies whether the volume should be encrypted. The
+      effect of setting the encryption state to true depends on the volume origin
+      (new or from a snapshot), starting encryption state, ownership, and whether
+      encryption by default is enabled. Encrypted Amazon EBS volumes must be
+      attached to instances that support Amazon EBS encryption.
+    :param int iops: The number of I/O operations per second (IOPS) to provision
+      for the volume, with a maximum ratio of 50 IOPS/GiB. Range is 100 to 64,000
+      IOPS for volumes in most Regions. Maximum IOPS of 64,000 is guaranteed
+      only on Nitro-based instances. Other instance families guarantee performance
+      up to 32,000 IOPS.
+    :param str kms_key_id: The identifier of the AWS Key Management Service (AWS KMS)
+      customer master key (CMK) to use for Amazon EBS encryption. If this parameter
+      is not specified, your AWS managed CMK for EBS is used. If KmsKeyId is
+      specified, the encrypted state must be ``True``.
+      You can specify the CMK using any of the following:
+
+        - Key ID. For example, key/1234abcd-12ab-34cd-56ef-1234567890ab.
+        - Key alias. For example, alias/ExampleAlias.
+        - Key ARN. For example, arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef.
+        - Alias ARN. For example, arn:aws:kms:us-east-1:012345678910:alias/ExampleAlias.
+
+      AWS authenticates the CMK asynchronously. Therefore, if you specify an ID,
+      alias, or ARN that is not valid, the action can appear to complete, but
+      eventually fails.
+    :param str outpost_arn: The Amazon Resource Name (ARN) of the Outpost.
+    :param int size: The size of the volume, in GiBs. You must specify either a
+      snapshot ID or a volume size.
+      Constraints: 1-16,384 for gp2, 4-16,384 for io1, 500-16,384 for st1, 500-16,384
+      for sc1, and 1-1,024 for standard. If you specify a snapshot, the volume
+      size must be equal to or larger than the snapshot size.
+      Default: If you're creating the volume from a snapshot and don't specify
+      a volume size, the default is the snapshot size.
+    :param str snapshot_id: The snapshot from which to create the volume. You must
+      specify either a snapshot ID or a volume size.
+    :param dict snapshot_lookup: Any kwarg that ``lookup_snapshot`` accepts.
+      Used to lookup the snapshot ID if ``snapshot_id`` is not provided.
+    :param str volume_type: The volume type. This can be ``gp2`` for General Purpose
+      SSD, ``io1`` for Provisioned IOPS SSD, ``st1`` for Throughput Optimized
+      HDD, ``sc1`` for Cold HDD, or ``standard`` for Magnetic volumes.
+      Default: ``gp2``.
+    :param dict tags: Tags to apply to the volume during creation.
+    :param bool multi_attach_enabled:  Specifies whether to enable Amazon EBS Multi-
+      Attach. If you enable Multi-Attach, you can attach the volume to up to
+      16 Nitro-based instances in the same Availability Zone.
+    :param bool blocking: Wait until the volume has become available.
+    """
+    if snapshot_lookup and not snapshot_id:
+        res = lookup_snapshot(
+            region=region, keyid=keyid, key=key, profile=profile, **snapshot_lookup
+        )
+        if "error" in res:
+            return res
+        snapshot_id = res["result"]["SnapshotId"]
+    params = salt.utils.data.filter_falsey(
+        {
+            "AvailabilityZone": availability_zone,
+            "Encrypted": encrypted,
+            "Iops": iops,
+            "KmsKeyId": kms_key_id,
+            "OutpostArn": outpost_arn,
+            "Size": size,
+            "SnapshotId": snapshot_id,
+            "VolumeType": volume_type,
+            "MultiAttachEnabled": multi_attach_enabled,
+        }
+    )
+    return _create_resource(
+        "volume",
+        params,
+        tags=tags,
+        wait_until_state="available" if blocking else None,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
     )
 
 
@@ -2130,6 +3534,13 @@ def create_vpc_endpoint(
             "profile": profile,
         }
     )
+    params.update(
+        {
+            "ClientToken": hashlib.sha1(
+                json.dumps(params(vpc_lookup)).encode("utf8")
+            ).hexdigest
+        }
+    )
     res = _generic_action(
         _create_resource,
         params,
@@ -2147,16 +3558,91 @@ def create_vpc_endpoint(
     return res
 
 
+def create_vpc_endpoint_service_configuration(
+    network_load_balancer_arns=None,
+    network_load_balancer_lookup=None,
+    acceptance_required=None,
+    private_dns_name=None,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a VPC endpoint service configuration to which service consumers (AWS
+    accounts, IAM users, and IAM roles) can connect. Service consumers can create
+    an interface VPC endpoint to connect to your service.
+    To create an endpoint service configuration, you must first create a Network
+    Load Balancer for your service.
+    If you set the private DNS name, you must prove that you own the private DNS
+    domain name.
+
+    :param str/list(str) network_load_balancer_arns: The Amazon Resource Names
+        (ARNs) of one or more Network Load Balancers for your service.
+    :param dict network_load_balancer_lookup: Dict that contains kwargs
+        that ``describe_network_load_balancer`` accepts. Used to lookup network
+        loadbalancers if ``network_load_balancer_arns`` is not provided.
+        Only supported if ``boto3_elb.describe_load_balancers`` exists.
+    :param bool acceptance_required: Indicates whether requests from service consumers
+        to create an endpoint to your service must be accepted. To accept a request,
+        use ``accept_vpc_endpoint_connections``.
+    :param str private_dns_name: The private DNS name to assign to the VPC endpoint
+        service.
+    :param dict tags: Tags to assign to the VPC endpoint service after creation.
+    """
+    if network_load_balancer_arns and not isinstance(network_load_balancer_arns, list):
+        network_load_balancer_arns = [network_load_balancer_arns]
+    if network_load_balancer_lookup:
+        if "boto3_elb.describe_load_balancers" not in __salt__:
+            raise SaltInvocationError(
+                "network_load_balancers_lookup can only be used when boto3_elb.describe_load_balancers "
+                "is implemented, but it is not available."
+            )
+        else:
+            res = __salt__["boto3_elb.describe_load_balancers"](
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+                **network_load_balancer_lookup,
+            )
+            if "error" in res:
+                return res
+            if not res["result"]:
+                return {
+                    "error": "No load balancers were found with the specified lookup values"
+                }
+            network_load_balancer_arns = [
+                item["LoadBalancerArn"] for item in res["result"]
+            ]
+    params = salt.utils.data.filter_falsey(
+        {
+            "AcceptanceRequired": acceptance_required,
+            "PrivateDnsName": private_dns_name,
+            "NetworkLoadbalancerArns": network_load_balancer_arns,
+        }
+    )
+    params.update(
+        {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest}
+    )
+    return _create_resource(
+        "vpc_endpoint_service_configuration",
+        params,
+        tags=tags,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def create_vpc_peering_connection(
     requester_vpc_id=None,
     requester_vpc_lookup=None,
     peer_vpc_id=None,
     peer_vpc_lookup=None,
     peer_owner_id=None,
-    peer_region=None,
-    peer_keyid=None,  # pylint: disable=unused-argument
-    peer_key=None,  # pylint: disable=unused-argument
-    peer_profile=None,  # pylint: disable=unused-argument
     blocking=False,
     region=None,
     keyid=None,
@@ -2190,57 +3676,316 @@ def create_vpc_peering_connection(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_vpc_peering_connection, boto3.client('ec2').get_waiter("vpc_peering_connection_pending")
     """
-    if not any((requester_vpc_id, requester_vpc_lookup)):
-        raise SaltInvocationError(
-            "At least one of requester_vpc_id or requester_vpc_lookup is required"
-        )
-    if not any((peer_vpc_id, peer_vpc_lookup)):
-        raise SaltInvocationError(
-            "At least one of peer_vpc_id or peer_vpc_lookup is required"
-        )
-    if requester_vpc_id is None:
-        res = vpc_lookup(
-            region=region, keyid=keyid, key=key, profile=profile, **requester_vpc_lookup
-        )
-        if "error" in res:
-            return res
-        requester_vpc_id = res["result"]["VpcId"]
-    if peer_vpc_id is None:
-        for auth_item in ["region", "keyid", "key", "profile"]:
-            peer_vpc_lookup[auth_item] = peer_vpc_lookup[auth_item] or locals().get(
-                "peer_" + auth_item
-            )
-        res = vpc_lookup(**peer_vpc_lookup)
-        if "error" in res:
-            return res
-        peer_vpc_id = res["result"]["VpcId"]
-    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    params = salt.utils.data.filter_falsey(
+    requester_vpc_lookup = requester_vpc_lookup or {"vpc_id": requester_vpc_id}
+    peer_vpc_lookup = peer_vpc_lookup or {"vpc_id": peer_vpc_id}
+    required_resources = [
+        ("vpc", requester_vpc_lookup),
+        ("vpc", peer_vpc_lookup),
+    ]
+    peer_region_supported = LooseVersion(boto3.__version__) > LooseVersion("1.4.6")
+    params = lambda x, y: salt.utils.data.filter_falsey(
         {
-            "VpcId": requester_vpc_id,
-            "PeerVpcId": peer_vpc_id,
-            "PeerOwnerId": peer_owner_id,
-            "PeerRegion": peer_region or region,
-        }
+            "params": {
+                "VpcId": x,
+                "PeerVpcId": y,
+                "PeerOwnerId": peer_owner_id,
+                "PeerRegion": peer_vpc_lookup.get("region", region)
+                if peer_region_supported
+                else None,
+            },
+            "wait_until_state": "pending" if blocking else None,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        },
+        recurse_depth=1,
     )
-    if LooseVersion(boto3.__version__) <= LooseVersion("1.4.6"):
-        # Boto3 1.4.6 does not support the PeerRegion parameter.
-        del params["PeerRegion"]
-    res = _generic_action(
-        client.create_vpc_peering_connection,
-        lambda: params,
+    return _generic_action(
+        _create_resource,
+        params,
+        "vpc_peering_connection",
+        required_resources=required_resources,
         region=region,
         keyid=keyid,
         key=key,
         profile=profile,
     )
-    if "error" in res:
-        return res
-    if blocking:
-        _wait_resource(
-            "vpc_peering_connection", res["result"], "pending", client=client
+
+
+def create_vpn_connection(
+    vpn_type,
+    customer_gateway_id=None,
+    customer_gateway_lookup=None,
+    vpn_gateway_id=None,
+    vpn_gateway_lookup=None,
+    transit_gateway_id=None,
+    transit_gateway_lookup=None,
+    enable_acceleration=None,
+    static_routes_only=None,
+    tunnel_inside_ip_version=None,
+    tunnel_inside_cidr=None,
+    tunnel_inside_ipv6_cidr=None,
+    pre_shared_key=None,
+    phase_1_lifetime_seconds=None,
+    phase_2_lifetime_seconds=None,
+    rekey_margin_time_seconds=None,
+    rekey_fuzz_percentage=None,
+    replay_window_size=None,
+    dpd_timeout_seconds=None,
+    phase_1_encryption_algorithms=None,
+    phase_2_encryption_algorithms=None,
+    phase_1_integrity_algorithms=None,
+    phase_2_integrity_algorithms=None,
+    phase_1_dh_group_numbers=None,
+    phase_2_dh_group_numbers=None,
+    ike_versions=None,
+    tags=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a VPN connection between an existing virtual private gateway or transit
+    gateway and a customer gateway. The supported connection type is `ipsec.1`.
+
+    The response includes information that you need to give to your network administrator
+    to configure your customer gateway.
+
+    Warning: We strongly recommend that you use HTTPS when calling this operation
+    because the response contains sensitive cryptographic information for configuring
+    your customer gateway device.
+
+    If you decide to shut down your VPN connection for any reason and later create
+    a new VPN connection, you must reconfigure your customer gateway with the new
+    information returned from this call.
+
+    This is an idempotent operation. If you perform the operation more than once,
+    Amazon EC2 doesn't return an error.
+
+    :param str vpn_type: The type of VPN connection. Allowed values: ``ipsec.1``.
+    :param str customer_gateway_id: The ID of the customer gateway.
+    :param dict customer_gateway_lookup: Any kwarg that ``lookup_customer_gateway``
+      accepts. Used to lookup the customer gateway ID if ``customer_gateway_id``
+      is not provided.
+    :param str vpn_gateway_id: The ID of the virtual private gateway. If you specify
+      a virtual private gateway, you cannot specify a transit gateway.
+    :param dict vpn_gateway_lookup: Any kwarg that :py:func:`lookup_vpn_gateway` accepts.
+      Used to lookup the customer gateway ID if ``vpn_gateway_id`` is not provided.
+    :param str transit_gateway_id: The ID of the transit gateway. If you specify
+      a transit gateway, you cannot specify a virtual private gateway.
+    :param dict transit_gateway_lookup: Any kwarg that ``lookup_transit_gateway``
+      accepts. Used to lookup the transit gateway ID if ``transit_gateway_id``
+      is not provided.
+    :param bool enable_acceleration: Indicate whether to enable acceleration for
+      the VPN connection. Default: ``False``.
+    :param bool static_routes_only: Indicate whether the VPN connection uses static
+      routes only. If you are creating a VPN connection for a device that does
+      not support BGP, you must specify ``True``.
+      Use :py:func:`create_vpn_connection_route` to create a static route.
+    :param str tunnel_inside_ip_version: Indicate whether the VPN tunnels process
+      IPv4 or IPv6 traffic. Default: ``ipv4``.
+    :param str tunnel_inside_cidr: The range of inside IPv4 addresses for the tunnel.
+      Any specified CIDR blocks must be unique across all VPN connections that
+      use the same virtual private gateway.
+      Constraints: A size /30 CIDR block from the 169.254.0.0/16 range.
+      The following CIDR blocks are reserved and cannot be used:
+
+        - 169.254.0.0/30
+        - 169.254.1.0/30
+        - 169.254.2.0/30
+        - 169.254.3.0/30
+        - 169.254.4.0/30
+        - 169.254.5.0/30
+        - 169.254.169.252/30
+    :param str tunnel_inside_ipv6_cidr: The range of inside IPv6 addresses for
+      the tunnel. Any specified CIDR blocks must be unique across all VPN connections
+      that use the same transit gateway.
+      Constraints: A size /126 CIDR block from the local fd00::/8 range.
+    :param str pre_shared_key: The pre-shared key (PSK) to establish initial authentication
+      between the virtual private gateway and customer gateway.
+      Constraints: Allowed characters are alphanumeric characters, periods (.),
+      and underscores (_). Must be between 8 and 64 characters in length and
+      cannot start with zero (0).
+    :param int phase_1_lifetime_seconds: The lifetime for phase 1 of the IKE negotiation,
+      in seconds. Constraints: A value between 900 and 28,800. Default: 28800
+    :param int phase_2_lifetime_seconds: The lifetime for phase 2 of the IKE negotiation,
+      in seconds. Constraints: A value between 900 and 3,600. The value must
+      be less than the value for ``phase_1_lifetime_seconds``. Default: 3600
+    :param int rekey_margin_time_seconds: The margin time, in seconds, before the
+      phase 2 lifetime expires, during which the AWS side of the VPN connection
+      performs an IKE rekey. The exact time of the rekey is randomly selected
+      based on the value for ``rekey_fuzz_percentage``. Constraints: A value
+      between 60 and half of ``phase_2_lifetime_seconds``. Default: 540
+    :param int rekey_fuzz_percentage: The percentage of the rekey window (determined
+      by ``rekey_margin_time_seconds``) during which the rekey time is randomly
+      selected. Constraints: A value between 0 and 100. Default: 100
+    :param int replay_window_size: The number of packets in an IKE replay window.
+      Constraints: A value between 64 and 2048. Default: 1024
+    :param int dpd_timeout_seconds: The number of seconds after which a DPD timeout
+      occurs. Constraints: A value between 0 and 30. Default: 30
+    :param list(str) phase_1_encryption_algorithms: One or more encryption algorithms
+      that are permitted for the VPN tunnel for phase 1 IKE negotiations.
+      Allowed values: AES128, AES256, AES128-GCM-16, AES256-GCM-16
+    :param list(str) phase_2_encryption_algorithms: One or more encryption algorithms
+      that are permitted for the VPN tunnel for phase 2 IKE negotiations.
+      Allowed values: AES128, AES256, AES128-GCM-16, AES256-GCM-16
+    :param list(str) phase_1_integrity_algorithms: One or more integrity algorithms
+      that are permitted for the VPN tunnel for phase 1 IKE negotiations.
+      Allowed values: SHA1, SHA2-256, SHA2-384, SHA2-512
+    :param list(str) phase_2_integrity_algorithms: One or more integrity algorithms
+      that are permitted for the VPN tunnel for phase 2 IKE negotiations.
+      Allowed values: SHA1, SHA2-256, SHA2-384, SHA2-512
+    :param list(int) phase_1_dh_group_numbers: One or more Diffie-Hellman group
+      numbers that are permitted for the VPN tunnel for phase 1 IKE negotiations.
+      Allowed values: 2, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
+    :param list(int) phase_2_dh_group_numbers: One or more Diffie-Hellman group
+      numbers that are permitted for the VPN tunnel for phase 2 IKE negotiations.
+      Allowed values: 2, 5, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24
+    :param list(str) ike_versions: The IKE versions that are permitted for the
+      VPN tunnel. Allowed values: ikev1, ikev2
+    :param dict tags: The tags to apply to the VPN connection.
+    :param bool blocking: Whether to wait until the VPN becomes available.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``create_vpn_connection``-call
+        on succes.
+    """
+    customer_gateway_lookup = customer_gateway_lookup or {
+        "customer_gateway_id": customer_gateway_id
+    }
+    vpn_gateway_lookup = salt.utils.data.filter_falsey(
+        vpn_gateway_lookup or {"vpn_gateway_id": vpn_gateway_id}
+    )
+    transit_gateway_lookup = salt.utils.data.filter_falsey(
+        transit_gateway_lookup or {"transit_gateway_id": transit_gateway_id}
+    )
+    if vpn_gateway_lookup and transit_gateway_lookup:
+        raise SaltInvocationError(
+            "You can only specify a vpn gateway or a transit gateway, not both."
         )
-    return res
+    if vpn_gateway_lookup:
+        res = lookup_vpn_gateway(
+            region=region, keyid=keyid, key=key, profile=profile, **vpn_gateway_lookup
+        )
+        if "error" in res:
+            return res
+        vpn_gateway_id = res["result"]["VpnGatewayId"]
+    if transit_gateway_lookup:
+        res = lookup_transit_gateway(
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+            **transit_gateway_lookup,
+        )
+        if "error" in res:
+            return res
+        transit_gateway_id = res["result"]["TransitGatewayId"]
+    required_resources = ("customer_gateway", customer_gateway_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "params": {
+                "CustomerGateawyId": x,
+                "Type": vpn_type,
+                "VpnGatewayId": vpn_gateway_id,
+                "TransitGatewayId": transit_gateway_id,
+                "Options": {
+                    "EnableAcceleration": enable_acceleration,
+                    "StaticRoutesOnly": static_routes_only,
+                    "TunnelInsideIpVersion": tunnel_inside_ip_version,
+                    "TunnelOptions": [
+                        {
+                            "TunnelInsideCidr": tunnel_inside_cidr,
+                            "TunnelInsideIpv6Cidr": tunnel_inside_ipv6_cidr,
+                            "PreSharedKey": pre_shared_key,
+                            "Phase1LifetimeSeconds": phase_1_lifetime_seconds,
+                            "Phase2LifetimeSeconds": phase_2_lifetime_seconds,
+                            "RekeyMarginTimeSeconds": rekey_margin_time_seconds,
+                            "RekeyFuzzPercentage": rekey_fuzz_percentage,
+                            "ReplayWindowSize": replay_window_size,
+                            "DPDTimeoutSeconds": dpd_timeout_seconds,
+                            "Phase1EncryptionAlgorithms": phase_1_encryption_algorithms,
+                            "Phase2EncryptionAlgorithms": phase_2_encryption_algorithms,
+                            "Phase1IntegrityAlgorithms": phase_1_integrity_algorithms,
+                            "Phase2IntegrityAlgorithms": phase_2_integrity_algorithms,
+                            "Phase1DHGroupNumbers": phase_1_dh_group_numbers,
+                            "Phase2DHGroupNumbers": phase_2_dh_group_numbers,
+                            "IKEVersions": ike_versions,
+                        }
+                    ],
+                },
+            },
+            "tags": tags,
+            "wait_until_state": "available" if blocking else None,
+            "region": region,
+            "keyid": keyid,
+            "key": key,
+            "profile": profile,
+        },
+        recurse_depth=4,
+    )
+    return _generic_action(
+        _create_resource,
+        params,
+        "vpn_connection",
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def create_vpn_gateway(
+    vpn_type,
+    availability_zone=None,
+    tags=None,
+    amazon_side_asn=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a virtual private gateway. A virtual private gateway is the endpoint
+    on the VPC side of your VPN connection. You can create a virtual private gateway
+    before creating the VPC itself.
+
+    :param str vpn_type: The type of VPN connection this virtual private gateway supports.
+    :param str availability_zone: The Availability Zone for the virtual private gateway.
+    :param dict tags: The tags to apply to the virtual private gateway.
+    :param int amazon_side_asn: A private Autonomous System Number (ASN) for the
+        Amazon side of a BGP session. If you're using a 16-bit ASN, it must be
+        in the 64512 to 65534 range. If you're using a 32-bit ASN, it must be in
+        the 4200000000 to 4294967294 range. Default: 64512
+    :param bool blocking: Wait until the VPN gateway becomes available.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``create_vpn_gateway``-call
+        on succes.
+    """
+    params = salt.utils.data.filter_falsey(
+        {
+            "AvailabilityZone": availability_zone,
+            "Type": vpn_type,
+            "AmazonSideAsn": amazon_side_asn,
+        }
+    )
+    return _create_resource(
+        "vpn_gateway",
+        params=params,
+        tags=tags,
+        wait_until_state="available" if blocking else None,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
 
 
 def crud_security_group_rule(
@@ -2485,6 +4230,41 @@ def delete_internet_gateway(
     )
 
 
+def delete_key_pair(
+    key_name=None, key_pair_id=None, key_pair_lookup=None,
+):
+    """
+    Deletes the specified key pair, by removing the public key from Amazon EC2.
+
+    :param str key_name: The name of the key pair.
+    :param str key_pair_id: The ID of the key pair.
+    :param dict key_pair_lookup: Any kwarg that ``lookup_key_pair`` accepts.
+        Used to lookup the Internet gateway's ID if ``key_pair_id`` and ``key_name``
+        are not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success.
+    """
+    key_pair_lookup = key_pair_lookup or salt.utils.data.filter_falsey(
+        {"ids": key_pair_id, "key_names": key_name}
+    )
+    required_resources = ("key_pair", key_pair_lookup)
+    params = lambda x: salt.utils.data.filter_falsey(
+        {"KeyPairId": x, "KeyName": key_name}
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.delete_key_pair,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def delete_nat_gateway(
     nat_gateway_id=None,
     nat_gateway_lookup=None,
@@ -2601,6 +4381,44 @@ def delete_network_acl_entry(
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     return _generic_action(
         client.delete_network_acl_entry,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def delete_network_interface(
+    network_interface_id=None,
+    network_interface_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Deletes the specified network interface. You must detach the network interface
+    before you can delete it.
+
+    :param str network_interface_id: The ID of the network interface.
+    :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
+        accepts. Used to lookup the network interface ID if ``network_interface_id``
+        is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success
+    """
+    network_interface_lookup = network_interface_lookup or {
+        "network_interface_id": network_interface_id
+    }
+    required_resources = ("network_interface", network_interface_lookup)
+    params = lambda x: {"NetworkInterfaceId": x}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.delete_network_interface,
         params,
         required_resources=required_resources,
         region=region,
@@ -2730,10 +4548,54 @@ def delete_security_group(
         salt.utils.data.filter_falsey({"group_id": group_id, "group_name": group_name})
     )
     required_resources = ("security_group", group_lookup, "GroupId")
-    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     params = lambda x: {"GroupId": x}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     return _generic_action(
         client.delete_security_group,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def delete_snapshot(
+    snapshot_id=None,
+    snapshot_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Deletes the specified snapshot.
+    When you make periodic snapshots of a volume, the snapshots are incremental,
+    and only the blocks on the device that have changed since your last snapshot
+    are saved in the new snapshot. When you delete a snapshot, only the data not
+    needed for any other snapshot is removed. So regardless of which prior snapshots
+    have been deleted, all active snapshots will have access to all the information
+    needed to restore the volume.
+
+    You cannot delete a snapshot of the root device of an EBS volume used by a
+    registered AMI. You must first de-register the AMI before you can delete the
+    snapshot.
+
+    :param str snapshot_id: The ID of the EBS snapshot.
+    :param dict snapshot_lookup: Any kwarg that ``lookup_snapshot`` accepts.
+        Used to lookup the snapshot ID if ``snapshot_id`` is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success.
+    """
+    snapshot_lookup = snapshot_lookup or {"snapshot_id": snapshot_id}
+    required_resources = ("snapshot", snapshot_lookup)
+    params = lambda x: {"SnapshotId": x}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.delete_snapshot,
         params,
         required_resources=required_resources,
         region=region,
@@ -2798,6 +4660,46 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
     )
 
 
+def delete_volume(
+    volume_id=None,
+    volume_lookup=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Deletes the specified EBS volume. The volume must be in the available state
+    (not attached to an instance).
+
+    The volume can remain in the deleting state for several minutes.
+
+    :param str volume_id: The ID of the volume.
+    :param dict volume_lookup: Any kwarg that :py:func:`lookup_volume` accepts.
+        When ``volume_id`` is not provided, this is required, otherwise ignored.
+    :param bool blocking: Whether to wait for the volume to be deleted.
+    """
+    volume_lookup = volume_lookup or {"volume_id": volume_id}
+    required_resources = ("volume", volume_lookup)
+    params = lambda x: {"VolumeId": x}
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    res = _generic_action(
+        client.delete_volume,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+    if "error" in res:
+        return res
+    if blocking:
+        _wait_resource("volume", {"TODO": "FIXME"}, "deleted", client=client)
+    return res
+
+
 def delete_vpc(
     vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None
 ):
@@ -2809,7 +4711,7 @@ def delete_vpc(
     associated with the VPC (except the default one), and so on.
 
     :param str vpc_id: The ID of the VPC to delete.
-    :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
+    :param dict vpc_lookup: Any kwarg that :py:func:`lookup_vpc` accepts.
         When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
@@ -2824,6 +4726,90 @@ def delete_vpc(
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return _generic_action(
         client.delete_vpc,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def delete_vpc_endpoint_service_configurations(
+    service_ids=None,
+    service_lookups=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Deletes one or more VPC endpoint service configurations in your account. Before
+    you delete the endpoint service configuration, you must reject any ``Available``
+    or ``PendingAcceptance`` interface endpoint connections that are attached to the
+    service.
+
+    :param str/list(str) service_ids: The IDs of one or more services
+    :param dict/list(dict) service_lookups: Any kwargs that ``lookup_vpc_endpoint_service``
+        accepts. When ``service_ids`` is not provided, this is required, otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
+        call on succes.
+    """
+    service_lookups = service_lookups or [
+        {"service_id": item} for item in service_ids or []
+    ]
+    required_resources = ("vpc_endpoint_service", service_lookups, "ServiceId")
+    params = lambda x: {
+        "ServiceIds": itertools.chain.from_iterable(x),
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.delete_vpc_endpoint_services,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def delete_vpc_endpoints(
+    vpc_endpoint_ids=None,
+    vpc_endpoint_lookups=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Deletes one or more specified VPC endpoints. Deleting a gateway endpoint also
+    deletes the endpoint routes in the route tables that were associated with the
+    endpoint. Deleting an interface endpoint deletes the endpoint network interfaces.
+
+    :param str/list(str) vpc_endpoint_ids: One or more VPC endpoint IDs.
+    :param dict/list(dict) vpc_endpoint_lookups: Any kwargs that ``lookup_vpc_endpoint``
+        accepts. When ``vpc_endpoint_ids`` is not provided, this is required,
+        otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``delete_vpc_endpoints``-call
+        on succes.
+    """
+    vpc_endpoint_lookups = vpc_endpoint_lookups or [
+        {"vpc_endpoint_id": item} for item in vpc_endpoint_ids or []
+    ]
+    required_resources = ("vpc_endpoint", vpc_endpoint_lookups)
+    params = lambda x: {
+        "VpcEndpointIds": itertools.chain.from_iterable(x),
+    }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return _generic_action(
+        client.delete_vpc_endpoints,
         params,
         required_resources=required_resources,
         region=region,
@@ -2875,6 +4861,21 @@ def delete_vpc_peering_connection(
         key=key,
         profile=profile,
     )
+
+
+def delete_vpn_connection():
+    """
+    """
+
+
+def delete_vpn_gateway():
+    """
+    """
+
+
+def deregister_image():
+    """
+    """
 
 
 def describe_addresses(
@@ -3040,6 +5041,21 @@ def describe_dhcp_options(
     )
 
 
+def describe_images():
+    """
+    """
+
+
+def describe_instance_attribute():
+    """
+    """
+
+
+def describe_instance_credit_specifications():
+    """
+    """
+
+
 def describe_internet_gateways(
     internet_gateway_ids=None,
     filters=None,
@@ -3077,6 +5093,11 @@ def describe_internet_gateways(
         profile=profile,
         client=client,
     )
+
+
+def describe_key_pairs():
+    """
+    """
 
 
 def describe_local_gateways(
@@ -3188,6 +5209,16 @@ def describe_network_acls(
     )
 
 
+def describe_network_interfaces():
+    """
+    """
+
+
+def describe_regions():
+    """
+    """
+
+
 def describe_route_tables(
     route_table_ids=None,
     filters=None,
@@ -3272,6 +5303,26 @@ def describe_security_groups(
     )
 
 
+def describe_snapshots():
+    """
+    """
+
+
+def describe_spot_fleet_instances():
+    """
+    """
+
+
+def describe_spot_fleet_requests():
+    """
+    """
+
+
+def describe_spot_instance_requests():
+    """
+    """
+
+
 def describe_stale_security_groups(
     vpc_id=None,
     vpc_lookup=None,
@@ -3298,7 +5349,10 @@ def describe_stale_security_groups(
     """
     vpc_lookup = vpc_lookup or {"vpc_id": vpc_id}
     required_resources = ("vpc", vpc_lookup)
-    params = lambda x: {"ids": x}
+    params = lambda x: {
+        "ids": x,
+        "client": client,
+    }
     return _generic_action(
         _describe_resource,
         params,
@@ -3308,7 +5362,6 @@ def describe_stale_security_groups(
         keyid=keyid,
         key=key,
         profile=profile,
-        client=client,
     )
 
 
@@ -3405,6 +5458,11 @@ def describe_transit_gateways(
     )
 
 
+def describe_volumes():
+    """
+    """
+
+
 def describe_vpc_attributes(
     attributes,
     vpc_id=None,
@@ -3459,6 +5517,128 @@ def describe_vpc_attributes(
         except (ParamValidationError, ClientError) as exp:
             return {"error": __utils__["boto3.get_error"](exp)["message"]}
     return {"result": ret}
+
+
+def describe_vpc_endpoint_service_configurations(
+    service_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the VPC endpoint service configurations in your account (your services).
+
+    :param str/list service_ids: The IDs of one or more services.
+    :param dict filters: One or more filters. See
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_configurations
+        for a complete list.
+        Note that the filters can be supplied as a dict with the keys being the
+        names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_vpc_endpoint_service_configurations``-
+        call on succes.
+    """
+    return _describe_resource(
+        "vpc_endpoint_service_configuration",
+        ids=service_ids,
+        filters=filters,
+        result_key="ServiceConfigurations",
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+        client=client,
+    )
+
+
+def describe_vpc_endpoint_service_permissions(
+    service_id=None,
+    service_lookup=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the principals (service consumers) that are permitted to discover
+    your VPC endpoint service.
+
+    :param str service_id: The ID of the service.
+    :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
+        When ``service_id`` is not provided, this is required, otherwise ignored.
+    :param dict filters: One or more filters. See
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_permissions
+        for a complete list.
+        Note that the filters can be supplied as a dict with the keys being the
+        names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto
+        ``describe_vpc_endpoint_service_permissions``-call on succes.
+    """
+    service_lookup = service_lookup or {"service_id": service_id}
+    required_resources = ("vpc_endpoint_service", service_lookup, "ServiceId")
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "ServiceId": x,  # _describe_resource will pass this trough to boto via **kwargs
+            "filters": filters,
+            "client": client,
+        }
+    )
+    return _generic_action(
+        _describe_resource,
+        params,
+        "vpc_endpoint_service_permission",
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def describe_vpc_endpoint_services(
+    service_names=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes available services to which you can create a VPC endpoint.
+
+    :param str/list service_names: One or more service names.
+    :param dict filters: One or more filters. See
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_services
+        for a complete list.
+        Note that the filters can be supplied as a dict with the keys being the
+        names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_vpc_endpoint_services``-
+        call on succes.
+    """
+    return _describe_resource(
+        "vpc_endpoint_service",
+        filters=filters,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+        client=client,
+        ServiceNames=service_names,
+    )
 
 
 def describe_vpc_endpoints(
@@ -3573,6 +5753,11 @@ def describe_vpcs(
     )
 
 
+def describe_vpn_connections():
+    """
+    """
+
+
 def describe_vpn_gateways(
     vpn_gateway_ids=None,
     filters=None,
@@ -3667,6 +5852,36 @@ def detach_internet_gateway(
         key=key,
         profile=profile,
     )
+
+
+def detach_network_interface():
+    """
+    """
+
+
+def detach_volume():
+    """
+    """
+
+
+def detach_vpn_gateway():
+    """
+    """
+
+
+def disable_vpc_classic_link():
+    """
+    """
+
+
+def disable_vpc_classic_link_dns_support():
+    """
+    """
+
+
+def disassociate_address():
+    """
+    """
 
 
 def disassociate_route_table(
@@ -3803,7 +6018,14 @@ def disassociate_subnet_cidr_block(
             }
         association_id = res["Ipv6CidrBlockAssociationSet"][0]["AssociationId"]
     params = lambda: {"AssociationId": association_id}
-    res = _generic_action(client.disassociate_subnet_cidr_block, params,)
+    res = _generic_action(
+        client.disassociate_subnet_cidr_block,
+        params,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
     if "error" in res:
         return res
     if blocking:
@@ -5305,6 +7527,107 @@ def lookup_vpc_endpoint(
     )
 
 
+def lookup_vpc_endpoint_service(
+    service_name=None,
+    tags=None,
+    tag_key=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Helper function to find a single VPC endpoint service.
+    Can also be used to determine if a VPC endpoint service exists.
+
+    The following paramers are translated into filters to refine the lookup:
+
+    :param str service_name: The name of the service.
+    :param dict tags: Any tags to filter on.
+    :param str tag_key: The key of a tag assigned to the resource. Use this filter
+        to find all resources assigned a tag with a specific key, regardless of
+        the tag value.
+    :param dict filters: Dict with filters to identify the VPC endpoint service.
+        Note that for any of the values supplied in the arguments above that also
+        occur in ``filters``, the arguments above will take presedence.
+    """
+    if filters is None:
+        filters = {}
+    filters.update(
+        salt.utils.data.filter_falsey(
+            {"service-name": service_name, "tag-key": tag_key}
+        )
+    )
+    return _lookup_resource(
+        "vpc_endpoint_service",
+        filters=filters,
+        tags=tags,
+        result_key="ServiceDetails",
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+        client=client,
+    )
+
+
+def lookup_vpc_endpoint_service_configuration(
+    service_name=None,
+    service_id=None,
+    service_state=None,
+    tags=None,
+    tag_key=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Helper function to find a single VPC endpoint service.
+    Can also be used to determine if a VPC endpoint service exists.
+
+    The following paramers are translated into filters to refine the lookup:
+
+    :param str service_name: The name of the service.
+    :param str service_id: The ID of the service.
+    :param str service_state: The state of the service. Allowed values: Pending,
+        Available, Deleting, Deleted, Failed.
+    :param dict tags: Any tags to filter on.
+    :param str tag_key: The key of a tag assigned to the resource. Use this filter
+        to find all resources assigned a tag with a specific key, regardless of
+        the tag value.
+    :param dict filters: Dict with filters to identify the VPC peering connection.
+        Note that for any of the values supplied in the arguments above that also
+        occur in ``filters``, the arguments above will take presedence.
+    """
+    if filters is None:
+        filters = {}
+    filters.update(
+        salt.utils.data.filter_falsey(
+            {
+                "service-name": service_name,
+                "service-id": service_id,
+                "service-state": service_state,
+                "tag-key": tag_key,
+            }
+        )
+    )
+    return _lookup_resource(
+        "vpc_endpoint_service_configuration",
+        filters=filters,
+        tags=tags,
+        result_key="ServiceConfigurations",
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+        client=client,
+    )
+
+
 def lookup_vpc_peering_connection(
     vpc_peering_connection_id=None,
     vpc_peering_connection_name=None,
@@ -5650,6 +7973,118 @@ def modify_vpc_attribute(
     return ret
 
 
+def modify_vpc_endpoint_service_configuration(
+    service_id=None,
+    service_lookup=None,
+    private_dns_name=None,
+    remove_private_dns_name=None,
+    acceptance_required=None,
+    add_network_load_balancer_arns=None,
+    remove_network_load_balancer_arns=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Modifies the attributes of your VPC endpoint service configuration. You can
+    change the Network Load Balancers for your service, and you can specify whether
+    acceptance is required for requests to connect to your endpoint service through
+    an interface VPC endpoint.
+
+    If you set or modify the private DNS name, you must prove that you own the
+    private DNS domain name.
+
+    :param str service_id: The ID of the service.
+    :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
+        When ``service_id`` is not provided, this is required, otherwise ignored.
+    :param str private_dns_name: The private DNS name to assign to the endpoint service.
+    :param bool remove_private_dns_name: Removes the private DNS name of the endpoint service.
+    :param bool acceptance_required: Indicates whether requests to create an endpoint
+        to your service must be accepted.
+    :param str/list(str) add_network_load_balancer_arns: The Amazon Resource Names
+        (ARNs) of Network Load Balancers to add to your service configuration.
+    :param str/list(str) remove_network_load_balancer_arns: The Amazon Resource
+        Names (ARNs) of Network Load Balancers to remove from your service configuration.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        containing ``True`` on succes.
+    """
+    service_lookup = service_lookup or {"service_id": service_id}
+    required_resources = ("vpc_endpoint_service", service_lookup, "ServiceId")
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "ServiceId": x,
+            "PrivateDnsName": private_dns_name,
+            "RemovePrivateDnsName": remove_private_dns_name,
+            "AcceptanceRequired": acceptance_required,
+            "AddNetworkLoadBalancerArns": add_network_load_balancer_arns,
+            "RemoveNetworkLoadBalancerArns": remove_network_load_balancer_arns,
+        }
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return _generic_action(
+        client.modify_vpc_endpoint_service_configuration,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
+def modify_vpc_endpoint_service_permissions(
+    service_id=None,
+    service_lookup=None,
+    add_allowed_principals=None,
+    remove_allowed_principals=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Modifies the permissions for your VPC endpoint service. You can add or remove
+    permissions for service consumers (IAM users, IAM roles, and AWS accounts)
+    to connect to your endpoint service.
+
+    If you grant permissions to all principals, the service is public. Any users
+    who know the name of a public service can send a request to attach an endpoint.
+    If the service does not require manual approval, attachments are automatically
+    approved.
+
+    :param str service_id: The ID of the service.
+    :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
+        When ``service_id`` is not provided, this is required, otherwise ignored.
+    :param list(str) add_allowed_principals: The Amazon Resource Names (ARN) of
+        one or more principals. Permissions are granted to the principals in this
+        list. To grant permissions to all principals, specify an asterisk (*).
+    :param list(str) remove_allowed_principals: The Amazon Resource Names (ARN) of
+        one or more principals. Permissions are revoked for principals in this list.
+    """
+    service_lookup = service_lookup or {"service_id": service_id}
+    required_resources = ("vpc_endpoint_service", service_lookup, "ServiceId")
+    params = lambda x: salt.utils.data.filter_falsey(
+        {
+            "ServiceId": x,
+            "AddAllowedPrincipals": add_allowed_principals,
+            "RemoveAllowedPrincipals": remove_allowed_principals,
+        }
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return _generic_action(
+        client.modify_vpc_endpoint_service_permissions,
+        params,
+        required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+
+
 def modify_vpc_tenancy(
     instance_tenancy,
     vpc_id=None,
@@ -5809,6 +8244,10 @@ def replace_network_acl_association(
         client.replace_network_acl_association,
         params,
         required_resources=required_resources,
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
     )
 
 
