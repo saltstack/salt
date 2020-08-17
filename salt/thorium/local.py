@@ -8,7 +8,7 @@ import jinja2.nativetypes
 import salt.client
 
 jinja_env = jinja2.nativetypes.NativeEnvironment(
-    variable_start_string="${", variable_end_string="}", autoescape=None
+    variable_start_string="{|", variable_end_string="|}", autoescape=None
 )
 
 
@@ -16,7 +16,7 @@ def cmd(name, tgt, func, tgt_type="glob", ret="", arg=(), kwarg=None, **kwargs):
     """
     Execute a remote execution command. The tgt, func, arg, and kwarg arguments
     can all be given jinja templates that take the register dictionary as
-    context. The jinja variable delimiters used is '${ }' in order to avoid
+    context. The jinja variable delimiters used is '{| |}' in order to avoid
     clashing with compile-time rendering.
 
     tgt
@@ -57,10 +57,10 @@ def cmd(name, tgt, func, tgt_type="glob", ret="", arg=(), kwarg=None, **kwargs):
         # Assume 'region' and 'wait_time' have been set using reg, or calc.
         run_remote_args:
           local.cmd:
-            - tgt: ${region['val']}-*-minion
+            - tgt: {|region['val']|}-*-minion
             - func: test.sleep
             - kwarg:
-              length: ${wait_time['val']}
+              length: {|wait_time['val']|}
 
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
