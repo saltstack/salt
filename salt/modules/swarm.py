@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Docker Swarm Module using Docker's Python SDK
 =============================================
@@ -25,7 +24,6 @@ Docker Python SDK
 More information: https://docker-py.readthedocs.io/en/stable/
 """
 # Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.json
@@ -108,7 +106,7 @@ def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
         salt_return = {}
         __context__["client"].swarm.init(advertise_addr, listen_addr, force_new_cluster)
         output = (
-            "Docker swarm has been initialized on {0} "
+            "Docker swarm has been initialized on {} "
             "and the worker/manager Join token is below".format(
                 __context__["server_name"]
             )

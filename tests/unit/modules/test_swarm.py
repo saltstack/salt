@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.swarm
@@ -25,7 +22,7 @@ class SwarmTestCase(TestCase, LoaderModuleMockMixin):
         Test that __virtual__ requires a proper loaded docker library
         """
 
-        class ValidDockerModule(object):
+        class ValidDockerModule:
             class APIClient:
                 pass
 
@@ -41,7 +38,7 @@ class SwarmTestCase(TestCase, LoaderModuleMockMixin):
             )
 
     def test___virtual___not_valid_docker_module(self):
-        class NotValidDockerModule(object):
+        class NotValidDockerModule:
             pass
 
         with patch(
