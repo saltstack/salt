@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Dave Rawks (dave@pandora.com)
 
@@ -8,7 +7,6 @@
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.parted_partition as parted
 
@@ -443,3 +441,9 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
     def test__is_fstype(self):
         assert parted._is_fstype("fat")
         assert not parted._is_fstype("thicc")
+
+    def test_mkpart_without_fstype(self):
+        """Test if mkpart works with an empty fstype"""
+        self.cmdrun.return_value = ""
+        output = parted.mkpart("/dev/nothinghere", "primary")
+        assert output == []
