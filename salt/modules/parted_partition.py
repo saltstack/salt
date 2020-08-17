@@ -512,7 +512,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     if part_type not in {"primary", "logical", "extended"}:
         raise CommandExecutionError("Invalid part_type passed to partition.mkpart")
 
-    if not _is_fstype(fs_type):
+    if fs_type and not _is_fstype(fs_type):
         raise CommandExecutionError("Invalid fs_type passed to partition.mkpart")
 
     if start is not None and end is not None:
@@ -542,39 +542,6 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         cmd = ("parted", "-m", "-s", "--", device, "mkpart", part_type, start, end)
 
     out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    return out
-
-
-def mkpartfs(device, part_type, fs_type, start, end):
-    """
-    Make a <part_type> partition with a new filesystem of <fs_type>, beginning
-    at <start> and ending at <end> (by default in megabytes).
-
-    <part_type> should be one of "primary", "logical", or "extended". <fs_type>
-    must be one of "ext2", "fat32", "fat16", "linux-swap" or "reiserfs" (if
-    libreiserfs is installed)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
-    """
-    _validate_device(device)
-
-    if part_type not in {"primary", "logical", "extended"}:
-        raise CommandExecutionError("Invalid part_type passed to partition.mkpartfs")
-
-    if fs_type and not _is_fstype(fs_type):
-        raise CommandExecutionError("Invalid fs_type passed to partition.mkpartfs")
-
-    _validate_partition_boundary(start)
-    _validate_partition_boundary(end)
-
-    cmd = "parted -m -s -- {} mkpart {} {} {} {}".format(
-        device, part_type, fs_type, start, end
-    )
-    out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
 
