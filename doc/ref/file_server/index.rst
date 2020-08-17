@@ -133,13 +133,14 @@ from within a minion module the built in ``__opts__`` data can be passed:
     import salt.minion
     import salt.fileclient
 
-    def get_file(path, dest, saltenv='base'):
-        '''
+
+    def get_file(path, dest, saltenv="base"):
+        """
         Used to get a single file from the Salt master
 
         CLI Example:
         salt '*' cp.get_file salt://vimrc /etc/vimrc
-        '''
+        """
         # Get the fileclient object
         client = salt.fileclient.get_file_client(__opts__)
         # Call get_file
@@ -153,12 +154,13 @@ data is not available, it needs to be generated:
     import salt.fileclient
     import salt.config
 
-    def get_file(path, dest, saltenv='base'):
-        '''
+
+    def get_file(path, dest, saltenv="base"):
+        """
         Used to get a single file from the Salt master
-        '''
+        """
         # Get the configuration data
-        opts = salt.config.minion_config('/etc/salt/minion')
+        opts = salt.config.minion_config("/etc/salt/minion")
         # Get the fileclient object
         client = salt.fileclient.get_file_client(opts)
         # Call get_file

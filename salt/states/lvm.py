@@ -40,6 +40,31 @@ def __virtual__():
     return (False, "lvm command not found")
 
 
+def _convert_to_mb(size):
+
+    size = str(size)
+    unit = size[-1:].lower()
+    if unit.isdigit():
+        unit = "m"
+    else:
+        size = size[:-1]
+    size = int(size)
+
+    if unit == "s":
+        target_size = size / 2048
+    elif unit == "m":
+        target_size = size
+    elif unit == "g":
+        target_size = size * 1024
+    elif unit == "t":
+        target_size = size * 1024 * 1024
+    elif unit == "p":
+        target_size = size * 1024 * 1024 * 1024
+    else:
+        raise salt.exceptions.ArgumentValueError("Unit {0} is invalid.".format(unit))
+    return target_size
+
+
 def pv_present(name, **kwargs):
     """
     Set a Physical Device to be used as an LVM Physical Volume
@@ -214,7 +239,7 @@ def lv_present(
         The name of the Volume Group on which the Logical Volume resides
 
     size
-        The initial size of the Logical Volume
+        The size of the Logical Volume
 
     extents
         The number of logical extents to allocate
@@ -245,6 +270,11 @@ def lv_present(
     """
     ret = {"changes": {}, "comment": "", "name": name, "result": True}
 
+    if extents and size:
+        ret["comment"] = "Only one of extents or size can be specified."
+        ret["result"] = False
+        return ret
+
     _snapshot = None
 
     if snapshot:
@@ -256,34 +286,88 @@ def lv_present(
     else:
         lvpath = "/dev/{0}/{1}".format(vgname, name)
 
-    if __salt__["lvm.lvdisplay"](lvpath, quiet=True):
-        ret["comment"] = "Logical Volume {0} already present".format(name)
-    elif __opts__["test"]:
-        ret["comment"] = "Logical Volume {0} is set to be created".format(name)
-        ret["result"] = None
-        return ret
-    else:
-        changes = __salt__["lvm.lvcreate"](
-            name,
-            vgname,
-            size=size,
-            extents=extents,
-            snapshot=_snapshot,
-            pv=pv,
-            thinvolume=thinvolume,
-            thinpool=thinpool,
-            force=force,
-            **kwargs
-        )
+    lv_info = __salt__["lvm.lvdisplay"](lvpath, quiet=True)
+    lv_info = lv_info.get(lvpath)
 
-        if __salt__["lvm.lvdisplay"](lvpath):
-            ret["comment"] = "Created Logical Volume {0}".format(name)
-            ret["changes"]["created"] = changes
+    if not lv_info:
+        if __opts__["test"]:
+            ret["comment"] = "Logical Volume {0} is set to be created".format(name)
+            ret["result"] = None
+            return ret
         else:
-            ret["comment"] = "Failed to create Logical Volume {0}. Error: {1}".format(
-                name, changes
+            changes = __salt__["lvm.lvcreate"](
+                name,
+                vgname,
+                size=size,
+                extents=extents,
+                snapshot=_snapshot,
+                pv=pv,
+                thinvolume=thinvolume,
+                thinpool=thinpool,
+                force=force,
+                **kwargs
             )
-            ret["result"] = False
+
+            if __salt__["lvm.lvdisplay"](lvpath):
+                ret["comment"] = "Created Logical Volume {0}".format(name)
+                ret["changes"]["created"] = changes
+            else:
+                ret[
+                    "comment"
+                ] = "Failed to create Logical Volume {0}. Error: {1}".format(
+                    name, changes
+                )
+                ret["result"] = False
+    else:
+        ret["comment"] = "Logical Volume {0} already present".format(name)
+        if size or extents:
+            old_extents = int(lv_info["Current Logical Extents Associated"])
+            old_size_mb = _convert_to_mb(lv_info["Logical Volume Size"] + "s")
+            if size:
+                size_mb = _convert_to_mb(size)
+                extents = old_extents
+            else:
+                size_mb = old_size_mb
+
+            # This is here waiting a change in lvm.lvresize backend
+            if size_mb < old_size_mb or extents < old_extents:
+                ret["comment"] = "Reducing a LV is not supported by now"
+                ret["result"] = False
+                return ret
+
+            if size_mb != old_size_mb or extents != old_extents:
+                if __opts__["test"]:
+                    ret["comment"] = "Logical Volume {0} is set to be resized".format(
+                        name
+                    )
+                    ret["result"] = None
+                    return ret
+                else:
+                    if size:
+                        changes = __salt__["lvm.lvresize"](lvpath=lvpath, size=size,)
+                    else:
+                        changes = __salt__["lvm.lvresize"](
+                            lvpath=lvpath, extents=extents,
+                        )
+
+                    if not changes:
+                        ret[
+                            "comment"
+                        ] = "Failed to resize Logical Volume. Unknown Error."
+                        ret["result"] = False
+
+                    lv_info = __salt__["lvm.lvdisplay"](lvpath, quiet=True)[lvpath]
+                    new_size_mb = _convert_to_mb(lv_info["Logical Volume Size"] + "s")
+                    if new_size_mb != old_size_mb:
+                        ret["comment"] = "Resized Logical Volume {0}".format(name)
+                        ret["changes"]["resized"] = changes
+                    else:
+                        ret[
+                            "comment"
+                        ] = "Failed to resize Logical Volume {0}. Error: {1}".format(
+                            name, changes
+                        )
+                        ret["result"] = False
     return ret
 
 

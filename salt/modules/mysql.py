@@ -516,11 +516,23 @@ def _grant_to_tokens(grant):
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ""
     phrase = "grants"
+    column = False
+    current_grant = ""
 
     for token in exploded_grant[position_tracker:]:
 
         if token == "," and phrase == "grants":
             position_tracker += 1
+            continue
+
+        if token == "(" and phrase == "grants":
+            position_tracker += 1
+            column = True
+            continue
+
+        if token == ")" and phrase == "grants":
+            position_tracker += 1
+            column = False
             continue
 
         if token == "ON" and phrase == "grants":
@@ -543,6 +555,7 @@ def _grant_to_tokens(grant):
             if (
                 exploded_grant[position_tracker + 1] == ","
                 or exploded_grant[position_tracker + 1] == "ON"
+                or exploded_grant[position_tracker + 1] in ["(", ")"]
             ):
                 # End of token detected
                 if multiword_statement:
@@ -550,6 +563,10 @@ def _grant_to_tokens(grant):
                     grant_tokens.append(" ".join(multiword_statement))
                     multiword_statement = []
                 else:
+                    if not column:
+                        current_grant = token
+                    else:
+                        token = "{0}.{1}".format(current_grant, token)
                     grant_tokens.append(token)
             else:  # This is a multi-word, ala LOCK TABLES
                 multiword_statement.append(token)
@@ -2174,16 +2191,21 @@ def db_optimize(name, table=None, **connection_args):
 def __grant_normalize(grant):
     # MySQL normalizes ALL to ALL PRIVILEGES, we do the same so that
     # grant_exists and grant_add ALL work correctly
-    if grant == "ALL":
+    if grant.strip().upper() == "ALL":
         grant = "ALL PRIVILEGES"
 
     # Grants are paste directly in SQL, must filter it
-    exploded_grants = grant.split(",")
-    for chkgrant in exploded_grants:
+    exploded_grants = __grant_split(grant)
+    for chkgrant, _ in exploded_grants:
         if chkgrant.strip().upper() not in __grants__:
             raise Exception("Invalid grant : '{0}'".format(chkgrant))
 
     return grant
+
+
+def __grant_split(grant):
+    pattern = re.compile(r"([\w\s]+)(\([^)(]*\))?\s*,?")
+    return pattern.findall(grant)
 
 
 def __ssl_option_sanitize(ssl_option):

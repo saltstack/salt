@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 virt execution module unit tests
 """
@@ -6,7 +5,6 @@ virt execution module unit tests
 # pylint: disable=3rd-party-module-not-gated
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -22,9 +20,6 @@ import salt.syspaths
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -137,7 +132,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "model": "virtio",
                     "filename": "myvm_system.qcow2",
                     "image": "/path/to/image",
-                    "source_file": "{0}{1}myvm_system.qcow2".format(root_dir, os.sep),
+                    "source_file": "{}{}myvm_system.qcow2".format(root_dir, os.sep),
                 },
                 {
                     "name": "data",
@@ -146,7 +141,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "format": "raw",
                     "model": "virtio",
                     "filename": "myvm_data.raw",
-                    "source_file": "{0}{1}myvm_data.raw".format(root_dir, os.sep),
+                    "source_file": "{}{}myvm_data.raw".format(root_dir, os.sep),
                 },
             ],
             disks,
@@ -583,8 +578,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIsNone(root.get("type"))
         self.assertEqual(root.find("name").text, "vmname/system.vmdk")
         self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
-        self.assertEqual(root.find("capacity").text, six.text_type(8192 * 1024))
-        self.assertEqual(root.find("allocation").text, six.text_type(0))
+        self.assertEqual(root.find("capacity").text, str(8192 * 1024))
+        self.assertEqual(root.find("allocation").text, str(0))
         self.assertEqual(root.find("target/format").get("type"), "vmdk")
         self.assertIsNone(root.find("target/permissions"))
         self.assertIsNone(root.find("target/nocow"))
@@ -616,9 +611,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIsNone(root.find("target/path"))
         self.assertEqual(root.find("target/format").get("type"), "qcow2")
         self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
-        self.assertEqual(root.find("capacity").text, six.text_type(8192 * 1024))
+        self.assertEqual(root.find("capacity").text, str(8192 * 1024))
         self.assertEqual(root.find("capacity").attrib["unit"], "KiB")
-        self.assertEqual(root.find("allocation").text, six.text_type(4096 * 1024))
+        self.assertEqual(root.find("allocation").text, str(4096 * 1024))
         self.assertEqual(root.find("target/permissions/mode").text, "0775")
         self.assertEqual(root.find("target/permissions/owner").text, "123")
         self.assertEqual(root.find("target/permissions/group").text, "456")
@@ -639,7 +634,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "kvm")
         self.assertEqual(root.find("vcpu").text, "1")
-        self.assertEqual(root.find("memory").text, six.text_type(512 * 1024))
+        self.assertEqual(root.find("memory").text, str(512 * 1024))
         self.assertEqual(root.find("memory").attrib["unit"], "KiB")
 
         disks = root.findall(".//disk")
@@ -672,7 +667,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         self.assertEqual(root.attrib["type"], "vmware")
         self.assertEqual(root.find("vcpu").text, "1")
-        self.assertEqual(root.find("memory").text, six.text_type(512 * 1024))
+        self.assertEqual(root.find("memory").text, str(512 * 1024))
         self.assertEqual(root.find("memory").attrib["unit"], "KiB")
 
         disks = root.findall(".//disk")
@@ -715,7 +710,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "xen")
             self.assertEqual(root.find("vcpu").text, "1")
-            self.assertEqual(root.find("memory").text, six.text_type(512 * 1024))
+            self.assertEqual(root.find("memory").text, str(512 * 1024))
             self.assertEqual(root.find("memory").attrib["unit"], "KiB")
             self.assertEqual(
                 root.find(".//kernel").text, "/usr/lib/grub2/x86_64-xen/grub.xen"
@@ -769,7 +764,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "vmware")
             self.assertEqual(root.find("vcpu").text, "1")
-            self.assertEqual(root.find("memory").text, six.text_type(512 * 1024))
+            self.assertEqual(root.find("memory").text, str(512 * 1024))
             self.assertEqual(root.find("memory").attrib["unit"], "KiB")
             self.assertTrue(len(root.findall(".//disk")) == 2)
             self.assertTrue(len(root.findall(".//interface")) == 2)
@@ -802,9 +797,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib["type"], "kvm")
             self.assertEqual(root.find("vcpu").text, "1")
-            self.assertEqual(root.find("memory").text, six.text_type(512 * 1024))
+            self.assertEqual(root.find("memory").text, str(512 * 1024))
             self.assertEqual(root.find("memory").attrib["unit"], "KiB")
-            self.assertTrue(len(root.findall(".//disk")) == 2)
+            disks = root.findall(".//disk")
+            self.assertTrue(len(disks) == 2)
+            self.assertEqual(disks[0].find("target").get("dev"), "vda")
+            self.assertEqual(disks[1].find("target").get("dev"), "vdb")
             self.assertTrue(len(root.findall(".//interface")) == 2)
 
     def test_disk_profile_kvm_disk_pool(self):
@@ -869,12 +867,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.mock_conn,
                 None,
                 "kvm",
-                [{"name": "mydisk", "device": "cdrom"}],
+                [
+                    {
+                        "name": "mydisk",
+                        "device": "cdrom",
+                        "source_file": "/path/to/my.iso",
+                    }
+                ],
                 "hello",
             )
 
             self.assertEqual(len(diskp), 1)
             self.assertEqual(diskp[0]["model"], "ide")
+            self.assertEqual(diskp[0]["format"], "raw")
 
     def test_disk_profile_pool_disk_type(self):
         """
@@ -933,6 +938,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "hello",
         )
         self.assertEqual(diskp[0]["filename"], ("vdb2"))
+
+        # Reuse existing volume case
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "kvm",
+            [{"name": "mydisk", "pool": "test-vdb", "source_file": "vdb1"}],
+            "hello",
+        )
+        self.assertEqual(diskp[0]["filename"], ("vdb1"))
 
     def test_gen_xml_volume(self):
         """
@@ -1131,11 +1146,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
         """
+        self.mock_conn.storagePoolLookupByName.return_value.XMLDesc.return_value = (
+            "<pool type='dir'/>"
+        )
         diskp = virt._disk_profile(
             self.mock_conn,
             None,
             "kvm",
             [
+                {"name": "system", "pool": "default"},
                 {
                     "name": "tested",
                     "device": "cdrom",
@@ -1156,12 +1175,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_conn, "hello", 1, 512, diskp, nicp, "kvm", "hvm", "x86_64",
         )
         root = ET.fromstring(xml_data)
-        disk = root.findall(".//disk")[0]
+        disk = root.findall(".//disk")[1]
         self.assertEqual(disk.get("type"), "file")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertIsNone(disk.find("source"))
+        self.assertEqual(disk.find("target").get("dev"), "hda")
 
-        disk = root.findall(".//disk")[1]
+        disk = root.findall(".//disk")[2]
         self.assertEqual(disk.get("type"), "network")
         self.assertEqual(disk.attrib["device"], "cdrom")
         self.assertEqual(
@@ -1611,7 +1631,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertIsNone(definition.find("./devices/disk[2]/source"))
                 self.assertEqual(
                     mock_run.call_args[0][0],
-                    'qemu-img create -f qcow2 "{0}" 10240M'.format(expected_disk_path),
+                    'qemu-img create -f qcow2 "{}" 10240M'.format(expected_disk_path),
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
 
@@ -1705,11 +1725,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               <vcpu placement='auto'>1</vcpu>
               <os>
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+                <boot dev="hd"/>
               </os>
               <devices>
                 <disk type='file' device='disk'>
                   <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}my_vm_system.qcow2'/>
+                  <source file='{}{}my_vm_system.qcow2'/>
                   <backingStore/>
                   <target dev='vda' bus='virtio'/>
                   <alias name='virtio-disk0'/>
@@ -1836,7 +1857,36 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "initrd": "/root/f8-i386-initrd",
         }
 
+        # Update boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="cdrom network hd"),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            ["cdrom", "network", "hd"],
+            [node.get("dev") for node in setxml.findall("os/boot")],
+        )
+
+        # Update unchanged boot devices case
+        define_mock.reset_mock()
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", boot_dev="hd"),
+        )
+        define_mock.assert_not_called()
+
         # Update with boot parameter case
+        define_mock.reset_mock()
         self.assertEqual(
             {
                 "definition": True,
@@ -1945,7 +1995,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 )  # pylint: disable=no-member
                 self.assertEqual(
                     mock_run.call_args[0][0],
-                    'qemu-img create -f qcow2 "{0}" 2048M'.format(added_disk_path),
+                    'qemu-img create -f qcow2 "{}" 2048M'.format(added_disk_path),
                 )
                 self.assertEqual(mock_chmod.call_args[0][0], added_disk_path)
                 self.assertListEqual(
@@ -2207,9 +2257,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
               </os>
               <devices>
-                <disk type='file' device='cdrom'>
+                <disk type='network' device='cdrom'>
                   <driver name='qemu' type='raw' cache='none' io='native'/>
-                  <source file='/srv/dvd-image-1.iso'/>
+                  <source protocol='https' name='/dvd-image-1.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
                   <backingStore/>
                   <target dev='hda' bus='ide'/>
                   <readonly/>
@@ -2240,6 +2292,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <readonly/>
                   <alias name='ide0-0-3'/>
                   <address type='drive' controller='0' bus='0' target='0' unit='3'/>
+                </disk>
+                <disk type='network' device='cdrom'>
+                  <driver name='qemu' type='raw' cache='none' io='native'/>
+                  <source protocol='https' name='/dvd-image-6.iso'>
+                    <host name='test-srv.local' port='80'/>
+                  </source>
+                  <backingStore/>
+                  <target dev='hde' bus='ide'/>
+                  <readonly/>
                 </disk>
               </devices>
             </domain>
@@ -2275,6 +2336,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     "name": "dvd4",
                     "device": "cdrom",
                     "source_file": "/srv/dvd-image-5.iso",
+                    "model": "ide",
+                },
+                {
+                    "name": "dvd5",
+                    "device": "cdrom",
+                    "source_file": "/srv/dvd-image-6.iso",
                     "model": "ide",
                 },
             ],
@@ -2348,6 +2415,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "unit": "3",
                     },
                     "source": {"file": "/srv/dvd-image-5.iso"},
+                },
+                {
+                    "type": "file",
+                    "device": "cdrom",
+                    "driver": {
+                        "name": "qemu",
+                        "type": "raw",
+                        "cache": "none",
+                        "io": "native",
+                    },
+                    "backingStore": None,
+                    "target": {"dev": "hde", "bus": "ide"},
+                    "readonly": None,
+                    "source": {"file": "/srv/dvd-image-6.iso"},
                 },
             ],
             [
@@ -2475,12 +2556,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         kernel_none = {
-            "kernel": "None",
-            "initrd": "None",
-            "cmdline": "None",
+            "kernel": None,
+            "initrd": None,
+            "cmdline": None,
         }
 
-        uefi_none = {"loader": "None", "nvram": "None"}
+        uefi_none = {"loader": None, "nvram": None}
 
         self.assertEqual(
             {
@@ -2553,7 +2634,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             salt.modules.config.__opts__, mock_config  # pylint: disable=no-member
         ):
 
-            for name in six.iterkeys(mock_config["virt"]["nic"]):
+            for name in mock_config["virt"]["nic"].keys():
                 profile = salt.modules.virt._nic_profile(name, "kvm")
                 self.assertEqual(len(profile), 2)
 
@@ -3587,8 +3668,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "44454c4c-3400-105a-8033-b3c04f4b344a", caps["host"]["host"]["uuid"]
         )
         self.assertEqual(
-            set(["qemu", "kvm"]),
-            set([domainCaps["domain"] for domainCaps in caps["domains"]]),
+            {"qemu", "kvm"}, {domainCaps["domain"] for domainCaps in caps["domains"]},
         )
 
     def test_network_tag(self):
@@ -3689,9 +3769,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for i in range(2):
             net_mock = MagicMock()
 
-            net_mock.name.return_value = "net{0}".format(i)
+            net_mock.name.return_value = "net{}".format(i)
             net_mock.UUIDString.return_value = "some-uuid"
-            net_mock.bridgeName.return_value = "br{0}".format(i)
+            net_mock.bridgeName.return_value = "br{}".format(i)
             net_mock.autostart.return_value = True
             net_mock.isActive.return_value = False
             net_mock.isPersistent.return_value = True
@@ -4151,8 +4231,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_mocks = []
         for i in range(2):
             pool_mock = MagicMock()
-            pool_mock.name.return_value = "pool{0}".format(i)
-            pool_mock.UUIDString.return_value = "some-uuid-{0}".format(i)
+            pool_mock.name.return_value = "pool{}".format(i)
+            pool_mock.UUIDString.return_value = "some-uuid-{}".format(i)
             pool_mock.info.return_value = [0, 1234, 5678, 123]
             pool_mock.autostart.return_value = True
             pool_mock.isPersistent.return_value = True
@@ -4683,11 +4763,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for idx, disk in enumerate(vms_disks):
             vm = MagicMock()
             # pylint: disable=no-member
-            vm.name.return_value = "vm{0}".format(idx)
+            vm.name.return_value = "vm{}".format(idx)
             vm.XMLDesc.return_value = """
                     <domain type='kvm' id='1'>
-                      <name>vm{0}</name>
-                      <devices>{1}</devices>
+                      <name>vm{}</name>
+                      <devices>{}</devices>
                     </domain>
                 """.format(
                 idx, disk
@@ -4748,7 +4828,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 # pylint: disable=no-member
                 mock_volume.name.return_value = vol_data["name"]
                 mock_volume.key.return_value = vol_data["key"]
-                mock_volume.path.return_value = "/path/to/{0}.qcow2".format(
+                mock_volume.path.return_value = "/path/to/{}.qcow2".format(
                     vol_data["name"]
                 )
                 if vol_data["info"]:
@@ -4757,7 +4837,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         """
                         <backingStore>
                           <format type="qcow2"/>
-                          <path>{0}</path>
+                          <path>{}</path>
                         </backingStore>
                     """.format(
                             vol_data["backingStore"]
@@ -5222,7 +5302,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         def create_mock_vm(idx):
             mock_vm = MagicMock()
-            mock_vm.name.return_value = "vm{0}".format(idx)
+            mock_vm.name.return_value = "vm{}".format(idx)
             return mock_vm
 
         mock_vms = [create_mock_vm(idx) for idx in range(3)]
