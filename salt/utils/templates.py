@@ -99,6 +99,51 @@ class AliasedModule(object):
 
 
 def wrap_tmpl_func(render_str):
+
+    def _sls_context(tmplpath, sls):
+        """
+        Generate SLS/Template Context Items
+        """
+
+        sls_context = {}
+
+        # Normalize SLS as path
+        slspath = sls.replace(".", "/")
+
+        if tmplpath is not None:
+            # Normalize template path
+            template = tmplpath.replace("\\", "/")
+
+            # Determine proper template name without root
+            if template.endswith("%s.sls" % slspath):
+                template = template[-(4+len(slspath)):]
+            elif template.endswith("%s/init.sls" % slspath):
+                template = template[-(9+len(slspath)):]
+            else:
+                # Something went wrong
+                log.warning("Failed to determine proper template path")
+
+            tpldir = template.rsplit("/", 1)[0]
+            if not tpldir:
+                tpldir = "."
+
+            sls_context.update(dict(
+                tplpath=tmplpath,
+                tplfile=template,
+                tpldir=tpldir,
+                tpldot=tpldir.replace("/", "."),
+            ))
+
+        # Should this be normalized?
+        sls_context.update(dict(
+            slsdotpath=slspath.replace("/", "."),
+            slscolonpath=slspath.replace("/", ":"),
+            sls_path=slspath.replace("/", "_"),
+            slspath=slspath
+        ))
+
+        return sls_context
+
     def render_tmpl(
         tmplsrc, from_str=False, to_str=False, context=None, tmplpath=None, **kws
     ):
@@ -118,26 +163,7 @@ def wrap_tmpl_func(render_str):
         assert "saltenv" in context
 
         if "sls" in context:
-            slspath = context["sls"].replace(".", "/")
-            if tmplpath is not None:
-                context["tplpath"] = tmplpath
-                if not tmplpath.lower().replace("\\", "/").endswith("/init.sls"):
-                    slspath = os.path.dirname(slspath)
-                template = tmplpath.replace("\\", "/")
-                i = template.rfind(slspath.replace(".", "/"))
-                if i != -1:
-                    template = template[i:]
-                tpldir = os.path.dirname(template).replace("\\", "/")
-                tpldata = {
-                    "tplfile": template,
-                    "tpldir": "." if tpldir == "" else tpldir,
-                    "tpldot": tpldir.replace("/", "."),
-                }
-                context.update(tpldata)
-            context["slsdotpath"] = slspath.replace("/", ".")
-            context["slscolonpath"] = slspath.replace("/", ":")
-            context["sls_path"] = slspath.replace("/", "_")
-            context["slspath"] = slspath
+            context.update(_sls_context(tmplpath, context["sls"]))
 
         if isinstance(tmplsrc, six.string_types):
             if from_str:
