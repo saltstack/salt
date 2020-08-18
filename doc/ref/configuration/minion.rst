@@ -1067,7 +1067,9 @@ to be released (after reaching ``socket.timeout``) when there is no fqdn for tha
 These calls to ``socket.gethostbyaddr`` are processed asynchronously, however, it still
 adds 5 seconds every time grains are generated if an IP does not resolve. In Windows
 grains are regenerated each time a new process is spawned. Therefore, the default for
-Windows is ``False``. All other OSes default to ``True``. This options was
+Windows is ``False``. In many cases this value does not make sense to include for proxy
+minions as it will be FQDN for the host running the proxy minion process, so the default
+for proxy minions is ``False```. All other OSes default to ``True``. This options was
 added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml

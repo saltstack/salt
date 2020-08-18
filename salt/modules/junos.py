@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to interact with Junos devices.
 
@@ -15,8 +14,6 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 """
 
 # Import Python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import json
 import logging
@@ -31,7 +28,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import yaml
-from salt.ext import six
 
 try:
     from lxml import etree
@@ -134,9 +130,7 @@ class HandleFileCopy:
             else:
                 self._cached_folder = tempfile.mkdtemp()
                 log.debug(
-                    "Caching file {0} at {1}".format(
-                        self._file_path, self._cached_folder
-                    )
+                    "Caching file {} at {}".format(self._file_path, self._cached_folder)
                 )
                 self._cached_file = __salt__["cp.get_file"](
                     self._file_path, self._cached_folder
@@ -162,10 +156,10 @@ class HandleFileCopy:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if self._cached_file is not None:
             salt.utils.files.safe_rm(self._cached_file)
-            log.debug("Deleted cached file: {0}".format(self._cached_file))
+            log.debug("Deleted cached file: {}".format(self._cached_file))
         if self._cached_folder is not None:
             __salt__["file.rmdir"](self._cached_folder)
-            log.debug("Deleted cached folder: {0}".format(self._cached_folder))
+            log.debug("Deleted cached folder: {}".format(self._cached_folder))
 
 
 def timeoutDecorator(function):
@@ -206,7 +200,7 @@ def facts_refresh():
     try:
         conn.facts_refresh()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Execution failed due to "{0}"'.format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -235,7 +229,7 @@ def facts():
         ret["facts"] = __proxy__["junos.get_serialized_facts"]()
         ret["out"] = True
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not display facts due to "{0}"'.format(exception)
+        ret["message"] = 'Could not display facts due to "{}"'.format(exception)
         ret["out"] = False
     return ret
 
@@ -287,7 +281,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             if isinstance(kwargs["__pub_arg"][-1], dict):
                 op.update(kwargs["__pub_arg"][-1])
     elif "__pub_schedule" in kwargs:
-        for key, value in six.iteritems(kwargs):
+        for key, value in kwargs.items():
             if not key.startswith("__pub_"):
                 op[key] = value
     else:
@@ -309,7 +303,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             try:
                 filter_reply = etree.XML(op["filter"])
             except etree.XMLSyntaxError as ex:
-                ret["message"] = "Invalid filter: {0}".format(str(ex))
+                ret["message"] = "Invalid filter: {}".format(str(ex))
                 ret["out"] = False
                 return ret
 
@@ -319,7 +313,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))(filter_reply, options=op)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'RPC execution failed due to "{0}"'.format(exception)
+            ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
             return ret
     else:
@@ -328,7 +322,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))({"format": format_}, **op)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'RPC execution failed due to "{0}"'.format(exception)
+            ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
             return ret
 
@@ -393,11 +387,11 @@ def set_hostname(hostname=None, **kwargs):
 
     # Added to recent versions of JunOs
     # Use text format instead
-    set_string = "set system host-name {0}".format(hostname)
+    set_string = "set system host-name {}".format(hostname)
     try:
         conn.cu.load(set_string, format="set")
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not load configuration due to error "{0}"'.format(
+        ret["message"] = 'Could not load configuration due to error "{}"'.format(
             exception
         )
         ret["out"] = False
@@ -406,7 +400,7 @@ def set_hostname(hostname=None, **kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not commit check due to error "{0}"'.format(exception)
+        ret["message"] = 'Could not commit check due to error "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -419,7 +413,7 @@ def set_hostname(hostname=None, **kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = 'Successfully loaded host-name but commit failed with "{0}"'.format(
+            ] = 'Successfully loaded host-name but commit failed with "{}"'.format(
                 exception
             )
             return ret
@@ -488,7 +482,7 @@ def commit(**kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not perform commit check due to "{0}"'.format(exception)
+        ret["message"] = 'Could not perform commit check due to "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -508,7 +502,7 @@ def commit(**kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = 'Commit check succeeded but actual commit failed with "{0}"'.format(
+            ] = 'Commit check succeeded but actual commit failed with "{}"'.format(
                 exception
             )
     else:
@@ -566,7 +560,7 @@ def rollback(**kwargs):
     try:
         ret["out"] = conn.cu.rollback(id_)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Rollback failed due to "{0}"'.format(exception)
+        ret["message"] = 'Rollback failed due to "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -590,7 +584,7 @@ def rollback(**kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not commit check due to "{0}"'.format(exception)
+        ret["message"] = 'Could not commit check due to "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -602,7 +596,7 @@ def rollback(**kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = 'Rollback successful but commit failed with error "{0}"'.format(
+            ] = 'Rollback successful but commit failed with error "{}"'.format(
                 exception
             )
             return ret
@@ -636,7 +630,7 @@ def diff(**kwargs):
     try:
         ret["message"] = conn.cu.diff(rb_id=id_)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not get diff with error "{0}"'.format(exception)
+        ret["message"] = 'Could not get diff with error "{}"'.format(exception)
         ret["out"] = False
 
     return ret
@@ -692,15 +686,15 @@ def ping(dest_ip=None, **kwargs):
     else:
         op.update(kwargs)
 
-    op["count"] = six.text_type(op.pop("count", 5))
+    op["count"] = str(op.pop("count", 5))
     if "ttl" in op:
-        op["ttl"] = six.text_type(op["ttl"])
+        op["ttl"] = str(op["ttl"])
 
     ret["out"] = True
     try:
         ret["message"] = jxmlease.parse(etree.tostring(conn.rpc.ping(**op)))
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Execution failed due to "{0}"'.format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
     return ret
 
@@ -755,7 +749,7 @@ def cli(command=None, **kwargs):
     try:
         result = conn.cli(command, format_, warning=False)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Execution failed due to "{0}"'.format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
         return ret
 
@@ -769,8 +763,8 @@ def cli(command=None, **kwargs):
         try:
             with salt.utils.files.fopen(op["dest"], "w") as fp:
                 fp.write(salt.utils.stringutils.to_str(result))
-        except IOError:
-            ret["message"] = 'Unable to open "{0}" to write'.format(op["dest"])
+        except OSError:
+            ret["message"] = 'Unable to open "{}" to write'.format(op["dest"])
             ret["out"] = False
             return ret
 
@@ -846,7 +840,7 @@ def shutdown(**kwargs):
         ret["message"] = "Successfully powered off/rebooted."
         ret["out"] = True
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not poweroff/reboot beacause "{0}"'.format(exception)
+        ret["message"] = 'Could not poweroff/reboot beacause "{}"'.format(exception)
         ret["out"] = False
     return ret
 
@@ -1010,7 +1004,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = 'Could not load configuration due to : "{0}"'.format(exception)
+                    ] = 'Could not load configuration due to : "{}"'.format(exception)
                     ret["format"] = op["format"]
                     ret["out"] = False
                     return ret
@@ -1041,7 +1035,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = 'Commit check threw the following exception: "{0}"'.format(
+                        ] = 'Commit check threw the following exception: "{}"'.format(
                             exception
                         )
                         ret["out"] = False
@@ -1054,7 +1048,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = 'Commit check successful but commit failed with "{0}"'.format(
+                        ] = 'Commit check successful but commit failed with "{}"'.format(
                             exception
                         )
                         ret["out"] = False
@@ -1078,12 +1072,10 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = 'Could not write into diffs_file due to: "{0}"'.format(
-                        exception
-                    )
+                    ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
                     ret["out"] = False
         except ValueError as ex:
-            message = "install_config failed due to: {0}".format(str(ex))
+            message = "install_config failed due to: {}".format(str(ex))
             log.error(message)
             ret["message"] = message
             ret["out"] = False
@@ -1119,7 +1111,7 @@ def zeroize():
         conn.cli("request system zeroize")
         ret["message"] = "Completed zeroize and rebooted"
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not zeroize due to : "{0}"'.format(exception)
+        ret["message"] = 'Could not zeroize due to : "{}"'.format(exception)
         ret["out"] = False
 
     return ret
@@ -1181,7 +1173,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentaion:
+        Please refer to below URl for PyEZ sw.install() documentation:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
@@ -1232,14 +1224,14 @@ def install_os(path=None, **kwargs):
                     image_path, progress=True, timeout=timeout, **op
                 )
             except Exception as exception:  # pylint: disable=broad-except
-                ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
+                ret["message"] = 'Installation failed due to: "{}"'.format(exception)
                 ret["out"] = False
                 return ret
     else:
         try:
             install_status = conn.sw.install(path, progress=True, timeout=timeout, **op)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Installation failed due to: "{0}"'.format(exception)
+            ret["message"] = 'Installation failed due to: "{}"'.format(exception)
             ret["out"] = False
             return ret
 
@@ -1262,7 +1254,7 @@ def install_os(path=None, **kwargs):
         except Exception as exception:  # pylint: disable=broad-except
             ret[
                 "message"
-            ] = 'Installation successful but reboot failed due to : "{0}"'.format(
+            ] = 'Installation successful but reboot failed due to : "{}"'.format(
                 exception
             )
             ret["out"] = False
@@ -1293,18 +1285,16 @@ def file_copy(src, dest):
 
     with HandleFileCopy(src) as fp:
         if fp is None:
-            ret["message"] = "Invalid source file path {0}".format(src)
+            ret["message"] = "Invalid source file path {}".format(src)
             ret["out"] = False
             return ret
 
         try:
             with SCP(conn, progress=True) as scp:
                 scp.put(fp, dest)
-            ret["message"] = "Successfully copied file from {0} to {1}".format(
-                src, dest
-            )
+            ret["message"] = "Successfully copied file from {} to {}".format(src, dest)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Could not copy file : "{0}"'.format(exception)
+            ret["message"] = 'Could not copy file : "{}"'.format(exception)
             ret["out"] = False
         return ret
 
@@ -1333,7 +1323,7 @@ def lock():
         conn.cu.lock()
         ret["message"] = "Successfully locked the configuration."
     except jnpr.junos.exception.LockError as exception:
-        ret["message"] = 'Could not gain lock due to : "{0}"'.format(exception)
+        ret["message"] = 'Could not gain lock due to : "{}"'.format(exception)
         ret["out"] = False
 
     return ret
@@ -1356,7 +1346,7 @@ def unlock():
         conn.cu.unlock()
         ret["message"] = "Successfully unlocked the configuration."
     except jnpr.junos.exception.UnlockError as exception:
-        ret["message"] = 'Could not unlock configuration due to : "{0}"'.format(
+        ret["message"] = 'Could not unlock configuration due to : "{}"'.format(
             exception
         )
         ret["out"] = False
@@ -1474,7 +1464,7 @@ def load(path=None, **kwargs):
             if op.get(item, False)
         ]
         if len(list(actions)) > 1:
-            ret["message"] = "Only one config_action is allowed. Provided: {0}".format(
+            ret["message"] = "Only one config_action is allowed. Provided: {}".format(
                 actions
             )
             ret["out"] = False
@@ -1495,7 +1485,7 @@ def load(path=None, **kwargs):
             conn.cu.load(**op)
             ret["message"] = "Successfully loaded the configuration."
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = 'Could not load configuration due to : "{0}"'.format(
+            ret["message"] = 'Could not load configuration due to : "{}"'.format(
                 exception
             )
             ret["format"] = op["format"]
@@ -1522,7 +1512,7 @@ def commit_check():
         conn.cu.commit_check()
         ret["message"] = "Commit check succeeded."
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Commit check failed with {0}".format(exception)
+        ret["message"] = "Commit check failed with {}".format(exception)
         ret["out"] = False
 
     return ret
@@ -1597,13 +1587,13 @@ def get_table(
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
     try:
         if path is not None:
-            file_path = os.path.join(path, "{0}".format(table_file))
+            file_path = os.path.join(path, "{}".format(table_file))
         else:
-            file_path = os.path.join(pyez_tables_path, "{0}".format(table_file))
+            file_path = os.path.join(pyez_tables_path, "{}".format(table_file))
 
         with HandleFileCopy(file_path) as file_loc:
             if file_loc is None:
-                ret["message"] = "Given table file {0} cannot be located".format(
+                ret["message"] = "Given table file {} cannot be located".format(
                     table_file
                 )
                 ret["out"] = False
@@ -1614,11 +1604,11 @@ def get_table(
                         fp.read(), Loader=yamlordereddictloader.Loader
                     )
                     globals().update(FactoryLoader().load(ret["table"]))
-            except IOError as err:
+            except OSError as err:
                 ret[
                     "message"
-                ] = "Uncaught exception during YAML Load - please report: {0}".format(
-                    six.text_type(err)
+                ] = "Uncaught exception during YAML Load - please report: {}".format(
+                    str(err)
                 )
                 ret["out"] = False
                 return ret
@@ -1628,8 +1618,8 @@ def get_table(
             except KeyError as err:
                 ret[
                     "message"
-                ] = "Uncaught exception during get API call - please report: {0}".format(
-                    six.text_type(err)
+                ] = "Uncaught exception during get API call - please report: {}".format(
+                    str(err)
                 )
                 ret["out"] = False
                 return ret
@@ -1668,12 +1658,12 @@ def get_table(
     except ConnectClosedError:
         ret["message"] = (
             "Got ConnectClosedError exception. Connection lost "
-            "with {0}".format(str(conn))
+            "with {}".format(str(conn))
         )
         ret["out"] = False
         return ret
     except Exception as err:  # pylint: disable=broad-except
-        ret["message"] = "Uncaught exception - please report: {0}".format(str(err))
+        ret["message"] = "Uncaught exception - please report: {}".format(str(err))
         traceback.print_exc()
         ret["out"] = False
         return ret
