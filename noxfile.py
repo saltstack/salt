@@ -293,7 +293,7 @@ def _install_requirements(session, transport, *extra_requirements):
 def _run_with_coverage(session, *test_cmd):
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
-            "--progress-bar=off", "coverage==5.0.1", silent=PIP_INSTALL_SILENT
+            "--progress-bar=off", "coverage==5.2", silent=PIP_INSTALL_SILENT
         )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
