@@ -7,6 +7,15 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3001.2 (2020-08-18)
+========================
+
+Fixed
+-----
+
+- CVE-2020-16804 - Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Fix CVE-2020-17490 Prevent creating world readable private keys with the tls execution module. (#58216)
+
 
 Salt 3001.1 (2020-07-27)
 ========================
