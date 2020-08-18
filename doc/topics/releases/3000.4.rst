@@ -1,0 +1,13 @@
+.. _release-3000-4:
+
+===========================
+Salt 3000.4 Release Notes
+===========================
+
+Version 3000.4 is a CVE fix release for :ref:`3000 <release-3000>`.
+
+Fixed
+-----
+
+- CVE-2020-16804 - Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Fix CVE-2020-17490 Prevent creating world readable private keys with the tls execution module. (#58216)
