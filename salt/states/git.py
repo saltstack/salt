@@ -643,6 +643,7 @@ def latest(
     if target is not None:
         if not isinstance(target, six.string_types):
             target = six.text_type(target)
+        target = os.path.expanduser(target)
         if not os.path.isabs(target):
             return _fail(ret, "target '{0}' is not an absolute path".format(target))
     if branch is not None and not isinstance(branch, six.string_types):
@@ -2095,6 +2096,7 @@ def present(
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     # If the named directory is a git repo return True
+    name = os.path.expanduser(name)
     if os.path.isdir(name):
         if bare and os.path.isfile(os.path.join(name, "HEAD")):
             return ret
@@ -2299,6 +2301,7 @@ def detached(
     if target is not None:
         if not isinstance(target, six.string_types):
             target = six.text_type(target)
+        target = os.path.expanduser(target)
         if not os.path.isabs(target):
             return _fail(ret, "Target '{0}' is not an absolute path".format(target))
     if user is not None and not isinstance(user, six.string_types):
@@ -2721,6 +2724,7 @@ def cloned(
     elif not isinstance(target, six.string_types):
         target = six.text_type(target)
 
+    target = os.path.expanduser(target)
     if not os.path.isabs(target):
         ret["comment"] = "'target' path must be absolute"
         return ret
