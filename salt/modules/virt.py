@@ -670,7 +670,9 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             bandwidth_value = int(max_bandwidth)
         except ValueError:
-            raise SaltInvocationError("Invalid max_bandwidth value: {}".format(max_bandwidth))
+            raise SaltInvocationError(
+                "Invalid max_bandwidth value: {}".format(max_bandwidth)
+            )
         dom.migrateSetMaxSpeed(bandwidth_value)
 
     max_downtime = kwargs.get("max_downtime")
@@ -678,7 +680,9 @@ def _migrate(dom, dst_uri, **kwargs):
         try:
             downtime_value = int(max_downtime)
         except ValueError:
-            raise SaltInvocationError("Invalid max_downtime value: {}".format(max_downtime))
+            raise SaltInvocationError(
+                "Invalid max_downtime value: {}".format(max_downtime)
+            )
         dom.migrateSetMaxDowntime(downtime_value)
 
     if kwargs.get("offline") is True:
@@ -710,7 +714,9 @@ def _migrate(dom, dst_uri, **kwargs):
     parallel_connections = kwargs.get("parallel_connections")
     if parallel_connections:
         try:
-            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(parallel_connections)
+            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(
+                parallel_connections
+            )
         except ValueError:
             raise SaltInvocationError("Invalid parallel_connections value")
         flags |= libvirt.VIR_MIGRATE_PARALLEL

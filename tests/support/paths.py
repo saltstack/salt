@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
@@ -10,9 +9,6 @@
 
     Tests related paths
 """
-
-from __future__ import absolute_import
-
 import logging
 import os
 import re
@@ -63,7 +59,7 @@ TMP_ROOT_DIR = os.path.join(TMP, "rootdir")
 FILES = os.path.join(INTEGRATION_TEST_DIR, "files")
 BASE_FILES = os.path.join(INTEGRATION_TEST_DIR, "files", "file", "base")
 PROD_FILES = os.path.join(INTEGRATION_TEST_DIR, "files", "file", "prod")
-PYEXEC = "python{0}.{1}".format(*sys.version_info)
+PYEXEC = "python{}.{}".format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, "mockbin")
 SCRIPT_DIR = os.path.join(CODE_DIR, "scripts")
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-state-tree")
