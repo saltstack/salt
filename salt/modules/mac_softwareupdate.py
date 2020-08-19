@@ -44,7 +44,7 @@ def _get_available(recommended=False, restart=False, shut_down=False):
     cmd = ["softwareupdate", "--list"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    if __grains__["osrelease_info"][1] >= 15:
+    if __grains__["osmajorrelease"] > 10 or __grains__["osrelease_info"][1] >= 15:
         # Example output:
         # Software Update Tool
         #
