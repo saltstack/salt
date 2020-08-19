@@ -634,6 +634,15 @@ def _migrate(dom, dst_uri, **kwargs):
                            is allowed to be down at the end of live migration.
         - parallel_connections: Specify a number of parallel network connections
                            to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
         - copy_storage:    Migrate non-shared storage. It must be one of the
                            following values:
             - all:         Full disk copy
@@ -673,6 +682,28 @@ def _migrate(dom, dst_uri, **kwargs):
     if kwargs.get("offline") is True:
         flags |= libvirt.VIR_MIGRATE_OFFLINE
         migrated_state = libvirt.VIR_DOMAIN_RUNNING_UNPAUSED
+
+    if kwargs.get("compressed") is True:
+        flags |= libvirt.VIR_MIGRATE_COMPRESSED
+
+    comp_methods = kwargs.get("comp_methods")
+    if comp_methods:
+        params[libvirt.VIR_MIGRATE_PARAM_COMPRESSION] = comp_methods.split(",")
+
+    comp_options = {
+        "comp_mt_level": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_LEVEL,
+        "comp_mt_threads": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_THREADS,
+        "comp_mt_dthreads": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_DTHREADS,
+        "comp_xbzrle_cache": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
+    }
+
+    for (comp_option, param_key) in comp_options.items():
+        comp_option_value = kwargs.get(comp_option)
+        if comp_option_value:
+            try:
+                params[param_key] = int(comp_option_value)
+            except ValueError:
+                raise SaltInvocationError("Invalid {} value".format(comp_option))
 
     parallel_connections = kwargs.get("parallel_connections")
     if parallel_connections:
@@ -3852,6 +3883,15 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
                           is allowed to be down at the end of live migration.
         - parallel_connections: Specify a number of parallel network connections
                           to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
         - username:       Username to connect with target host
         - password:       Password to connect with target host
 
@@ -3907,6 +3947,15 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
                           is allowed to be down at the end of live migration.
         - parallel_connections: Specify a number of parallel network connections
                           to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
         - username:       Username to connect with target host
         - password:       Password to connect with target host
 
@@ -3962,6 +4011,15 @@ def migrate(vm_, target, ssh=False, **kwargs):
                            is allowed to be down at the end of live migration.
         - parallel_connections: Specify a number of parallel network connections
                            to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
         - copy_storage:    Migrate non-shared storage. It must be one of the
                            following values:
             - all:         Full disk copy
