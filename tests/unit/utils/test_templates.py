@@ -3,9 +3,6 @@
 Unit tests for salt.utils.templates.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import sys
@@ -264,130 +261,149 @@ class WrapRenderTestCase(TestCase):
 
     def test_generate_sls_context__top_level(self):
         """ generate_sls_context - top_level Use case"""
-        self._test_generated_sls_context("/tmp/boo.sls", "boo",
-                                         tplpath="/tmp/boo.sls",
-                                         tplfile="boo.sls",
-                                         tpldir=".",
-                                         tpldot="",
-                                         slsdotpath="",
-                                         slscolonpath="",
-                                         sls_path="",
-                                         slspath="")
+        self._test_generated_sls_context(
+            "/tmp/boo.sls",
+            "boo",
+            tplpath="/tmp/boo.sls",
+            tplfile="boo.sls",
+            tpldir=".",
+            tpldot="",
+            slsdotpath="",
+            slscolonpath="",
+            sls_path="",
+            slspath="")
 
     def test_generate_sls_context__one_level_init_implicit(self):
         """ generate_sls_context - Basic one level with impliocit init.sls """
-        self._test_generated_sls_context("/tmp/foo/init.sls", "foo",
-                                         tplpath="/tmp/foo/init.sls",
-                                         tplfile="foo/init.sls",
-                                         tpldir="foo",
-                                         tpldot="foo",
-                                         slsdotpath="foo",
-                                         slscolonpath="foo",
-                                         sls_path="foo",
-                                         slspath="foo")
+        self._test_generated_sls_context(
+            "/tmp/foo/init.sls",
+            "foo",
+            tplpath="/tmp/foo/init.sls",
+            tplfile="foo/init.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo")
 
     def test_generate_sls_context__one_level_init_explicit(self):
         """ generate_sls_context - Basic one level with explicit init.sls """
-        self._test_generated_sls_context("/tmp/foo/init.sls", "foo.init",
-                                         tplpath="/tmp/foo/init.sls",
-                                         tplfile="foo/init.sls",
-                                         tpldir="foo",
-                                         tpldot="foo",
-                                         slsdotpath="foo",
-                                         slscolonpath="foo",
-                                         sls_path="foo",
-                                         slspath="foo")
+        self._test_generated_sls_context(
+            "/tmp/foo/init.sls",
+            "foo.init",
+            tplpath="/tmp/foo/init.sls",
+            tplfile="foo/init.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo")
 
     def test_generate_sls_context__one_level(self):
         """ generate_sls_context - Basic one level with name"""
-        self._test_generated_sls_context("/tmp/foo/boo.sls", "foo.boo",
-                                         tplpath="/tmp/foo/boo.sls",
-                                         tplfile="foo/boo.sls",
-                                         tpldir="foo",
-                                         tpldot="foo",
-                                         slsdotpath="foo",
-                                         slscolonpath="foo",
-                                         sls_path="foo",
-                                         slspath="foo")
+        self._test_generated_sls_context(
+            "/tmp/foo/boo.sls",
+            "foo.boo",
+            tplpath="/tmp/foo/boo.sls",
+            tplfile="foo/boo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo")
 
     def test_generate_sls_context__one_level_repeating(self):
         """ generate_sls_context - Basic one level with name same as dir
 
         (Issue #56410)
         """
-        self._test_generated_sls_context("/tmp/foo/foo.sls", "foo.foo",
-                                         tplpath="/tmp/foo/foo.sls",
-                                         tplfile="foo/foo.sls",
-                                         tpldir="foo",
-                                         tpldot="foo",
-                                         slsdotpath="foo",
-                                         slscolonpath="foo",
-                                         sls_path="foo",
-                                         slspath="foo")
+        self._test_generated_sls_context(
+            "/tmp/foo/foo.sls",
+            "foo.foo",
+            tplpath="/tmp/foo/foo.sls",
+            tplfile="foo/foo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo")
 
     def test_generate_sls_context__two_level_init_implicit(self):
         """ generate_sls_context - Basic two level with implicit init.sls """
-        self._test_generated_sls_context("/tmp/foo/bar/init.sls", "foo.bar",
-                                         tplpath="/tmp/foo/bar/init.sls",
-                                         tplfile="foo/bar/init.sls",
-                                         tpldir="foo/bar",
-                                         tpldot="foo.bar",
-                                         slsdotpath="foo.bar",
-                                         slscolonpath="foo:bar",
-                                         sls_path="foo_bar",
-                                         slspath="foo/bar")
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/init.sls",
+            "foo.bar",
+            tplpath="/tmp/foo/bar/init.sls",
+            tplfile="foo/bar/init.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar")
 
     def test_generate_sls_context__two_level_init_explicit(self):
         """ generate_sls_context - Basic two level with explicit init.sls """
-        self._test_generated_sls_context("/tmp/foo/bar/init.sls", "foo.bar.init",
-                                         tplpath="/tmp/foo/bar/init.sls",
-                                         tplfile="foo/bar/init.sls",
-                                         tpldir="foo/bar",
-                                         tpldot="foo.bar",
-                                         slsdotpath="foo.bar",
-                                         slscolonpath="foo:bar",
-                                         sls_path="foo_bar",
-                                         slspath="foo/bar")
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/init.sls",
+            "foo.bar.init",
+            tplpath="/tmp/foo/bar/init.sls",
+            tplfile="foo/bar/init.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar")
 
     def test_generate_sls_context__two_level(self):
         """ generate_sls_context - Basic two level with name"""
-        self._test_generated_sls_context("/tmp/foo/bar/boo.sls", "foo.bar.boo",
-                                         tplpath="/tmp/foo/bar/boo.sls",
-                                         tplfile="foo/bar/boo.sls",
-                                         tpldir="foo/bar",
-                                         tpldot="foo.bar",
-                                         slsdotpath="foo.bar",
-                                         slscolonpath="foo:bar",
-                                         sls_path="foo_bar",
-                                         slspath="foo/bar")
+        self._test_generated_sls_context(
+            "/tmp/foo/bar/boo.sls",
+            "foo.bar.boo",
+            tplpath="/tmp/foo/bar/boo.sls",
+            tplfile="foo/bar/boo.sls",
+            tpldir="foo/bar",
+            tpldot="foo.bar",
+            slsdotpath="foo.bar",
+            slscolonpath="foo:bar",
+            sls_path="foo_bar",
+            slspath="foo/bar")
 
     def test_generate_sls_context__two_level_repeating(self):
         """ generate_sls_context - Basic two level with name same as dir
 
         (Issue #56410)
         """
-        self._test_generated_sls_context("/tmp/foo/foo/foo.sls", "foo.foo.foo",
-                                         tplpath="/tmp/foo/foo/foo.sls",
-                                         tplfile="foo/foo/foo.sls",
-                                         tpldir="foo/foo",
-                                         tpldot="foo.foo",
-                                         slsdotpath="foo.foo",
-                                         slscolonpath="foo:foo",
-                                         sls_path="foo_foo",
-                                         slspath="foo/foo",)
+        self._test_generated_sls_context(
+            "/tmp/foo/foo/foo.sls",
+            "foo.foo.foo",
+            tplpath="/tmp/foo/foo/foo.sls",
+            tplfile="foo/foo/foo.sls",
+            tpldir="foo/foo",
+            tpldot="foo.foo",
+            slsdotpath="foo.foo",
+            slscolonpath="foo:foo",
+            sls_path="foo_foo",
+            slspath="foo/foo",)
 
     def test_generate_sls_context__two_level_repeating2(self):
         """ generate_sls_context - Basic two level with name same as dir
 
         (Issue #56410)
         """
-        self._test_generated_sls_context("/tmp/foo/foo/foo_bar.sls",
-                                         "foo.foo.foo_bar",
-                                         tplpath="/tmp/foo/foo/foo_bar.sls",
-                                         tplfile="foo/foo/foo_bar.sls",
-                                         tpldir="foo/foo",
-                                         tpldot="foo.foo",
-                                         slsdotpath="foo.foo",
-                                         slscolonpath="foo:foo",
-                                         sls_path="foo_foo",
-                                         slspath="foo/foo")
+        self._test_generated_sls_context(
+            "/tmp/foo/foo/foo_bar.sls",
+            "foo.foo.foo_bar",
+            tplpath="/tmp/foo/foo/foo_bar.sls",
+            tplfile="foo/foo/foo_bar.sls",
+            tpldir="foo/foo",
+            tpldot="foo.foo",
+            slsdotpath="foo.foo",
+            slscolonpath="foo:foo",
+            sls_path="foo_foo",
+            slspath="foo/foo")

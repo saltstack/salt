@@ -124,9 +124,9 @@ def generate_sls_context(tmplpath, sls):
 
         # Determine proper template name without root
         if template.endswith("{}.sls".format(slspath)):
-            template = template[-(4 + len(slspath)):]
+            template = template[-(4 + len(slspath)) :]
         elif template.endswith("{}/init.sls".format(slspath)):
-            template = template[-(9 + len(slspath)):]
+            template = template[-(9 + len(slspath)) :]
         else:
             # Something went wrong
             log.warning("Failed to determine proper template path")
@@ -154,6 +154,7 @@ def generate_sls_context(tmplpath, sls):
     )
 
     return sls_context
+
 
 def wrap_tmpl_func(render_str):
 
