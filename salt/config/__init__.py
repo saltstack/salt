@@ -2562,8 +2562,8 @@ def cloud_config(
                 raise salt.exceptions.SaltCloudConfigError(
                     "Do not mix the old cloud providers configuration with "
                     "the new one. The providers configuration should now go "
-                    "in the file `{}` or a separate `*.conf` file within "
-                    "`cloud.providers.d/` which is relative to `{}`.".format(
+                    "in the file `{0}` or a separate `*.conf` file within "
+                    "`cloud.providers.d/` which is relative to `{0}`.".format(
                         os.path.join(salt.syspaths.CONFIG_DIR, "cloud.providers")
                     )
                 )
@@ -2914,7 +2914,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         "forth."
                     )
                     raise salt.exceptions.SaltCloudConfigError(
-                        "The cloud provider alias '{}' has multiple entries "
+                        "The cloud provider alias '{0}' has multiple entries "
                         "for the '{1[driver]}' driver.".format(key, details)
                     )
                 handled_providers.add(details["driver"])
