@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for salt.utils.templates.py
 """
@@ -6,7 +5,6 @@ Unit tests for salt.utils.templates.py
 import logging
 import os
 import sys
-from unittest import mock
 
 import salt.utils.files
 
@@ -15,7 +13,7 @@ import salt.utils.templates
 
 # Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, mock, skipIf
 
 try:
     import Cheetah as _
@@ -219,7 +217,7 @@ class WrapRenderTestCase(TestCase):
 
     def assertDictContainsAll(self, actual, **expected):
         """ Make sure dictionary contains at least all expected values"""
-        actual = {key: actual[key] for key in expected.keys() if key in actual.keys()}
+        actual = {key: actual[key] for key in expected if key in actual}
         self.assertEqual(expected, actual)
 
     def _test_generated_sls_context(self, tmplpath, sls, **expected):

@@ -149,7 +149,6 @@ def generate_sls_context(tmplpath, sls):
             slsdotpath=slspath.replace("/", "."),
             slscolonpath=slspath.replace("/", ":"),
             sls_path=slspath.replace("/", "_"),
-
         )
     )
 
@@ -157,7 +156,6 @@ def generate_sls_context(tmplpath, sls):
 
 
 def wrap_tmpl_func(render_str):
-
     def render_tmpl(
         tmplsrc, from_str=False, to_str=False, context=None, tmplpath=None, **kws
     ):
