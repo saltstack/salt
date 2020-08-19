@@ -12,9 +12,9 @@ import salt.utils.files
 import salt.utils.templates
 
 # Import Salt Testing Libs
+from tests.support import mock
 from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
-from tests.support import mock
 
 try:
     import Cheetah as _
@@ -215,7 +215,6 @@ class MockRender:
 
 
 class WrapRenderTestCase(TestCase):
-
     def assertDictContainsAll(self, actual, **expected):
         """ Make sure dictionary contains at least all expected values"""
         actual = {key: actual[key] for key in expected if key in actual}
