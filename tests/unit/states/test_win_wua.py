@@ -128,7 +128,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.uptodate(name="NA")
             self.assertDictEqual(result, expected)
 
-    def test_uptodate_testmode(self):
+    def test_uptodate_test_mode(self):
         """
         Test uptodate function in test=true mode.
         """
