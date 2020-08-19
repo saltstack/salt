@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Validate the virt module
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 from numbers import Number
 from xml.etree import ElementTree
 
@@ -212,7 +209,7 @@ class VirtTest(ModuleCase):
         self.assertIn(info["cpumodel"], self.cpu_models)
 
 
-class VirtMinion(object):
+class VirtMinion:
     def __init__(self, module_case, target_name, sshd_port, tcp_port, tls_port):
         self.target_name = target_name
         self.uri = "localhost:{}".format(sshd_port)
@@ -222,26 +219,21 @@ class VirtMinion(object):
         self.module_case = module_case
 
     def run(self, func, args=None):
-        return self.module_case.run_function(func, args or [], minion_tgt=self.target_name)
+        return self.module_case.run_function(
+            func, args or [], minion_tgt=self.target_name
+        )
+
 
 @skip_if_binaries_missing("docker")
 @slowTest
 class VirtMigrateTest(ModuleCase):
     def setUp(self):
-        super(VirtMigrateTest, self).setUp()
+        super().setUp()
         self.minion_0 = VirtMinion(
-            self,
-            "virt_minion_0",
-            sshd_port=2201,
-            tcp_port=2203,
-            tls_port=2204
+            self, "virt_minion_0", sshd_port=2201, tcp_port=2203, tls_port=2204
         )
         self.minion_1 = VirtMinion(
-            self,
-            "virt_minion_1",
-            sshd_port=2202,
-            tcp_port=2205,
-            tls_port=2206
+            self, "virt_minion_1", sshd_port=2202, tcp_port=2205, tls_port=2206
         )
         self.domain = "core-vm"
         self.skipSetUpTearDown = ["test_define_xml_path"]
@@ -250,10 +242,7 @@ class VirtMigrateTest(ModuleCase):
             self.minion_0.run("virt.define_xml_path", ["/core-vm.xml"])
             self.minion_0.run("virt.start", [self.domain])
             self.wait_for_all_jobs(
-                minions=(
-                    self.minion_0.target_name,
-                    self.minion_1.target_name,
-                )
+                minions=(self.minion_0.target_name, self.minion_1.target_name)
             )
 
     def tearDown(self):
@@ -263,12 +252,9 @@ class VirtMigrateTest(ModuleCase):
             self.minion_0.run("virt.undefine", [self.domain])
             self.minion_1.run("virt.undefine", [self.domain])
             self.wait_for_all_jobs(
-                minions=(
-                    self.minion_0.target_name,
-                    self.minion_1.target_name,
-                )
+                minions=(self.minion_0.target_name, self.minion_1.target_name)
             )
-        super(VirtMigrateTest, self).tearDown()
+        super().tearDown()
 
     def test_define_xml_path(self):
         """
