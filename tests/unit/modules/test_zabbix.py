@@ -234,18 +234,18 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_mediatype(self):
         """
-        query_submitted = { "params": {"filter": {"description": 10}, "output": "extend"}, 
+        query_submitted = { "params": {"filter": {"description": 10}, "output": "extend"},
         "id": 0, "auth": "251feb98e3c25b6b7fb984b6c7a79817", "method": "mediatype.get"}
         """
 
         module_return = [
             {
-                "mediatypeid":"10",
-                "type":"0",
-                "name":"Testing",
-                "smtp_server":"mail.example.com",
-                "smtp_helo":"example.com",
-                "smtp_email":"zabbix@example.com"
+                "mediatypeid": "10",
+                "type": "0",
+                "name": "Testing",
+                "smtp_server": "mail.example.com",
+                "smtp_helo": "example.com",
+                "smtp_email": "zabbix@example.com",
             }
         ]
 
@@ -253,24 +253,32 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             "jsonrpc": "2.0",
             "result": [
                 {
-                    "mediatypeid":"10",
-                    "type":"0",
-                    "name":"Testing",
-                    "smtp_server":"mail.example.com",
-                    "smtp_helo":"example.com",
-                    "smtp_email":"zabbix@example.com"
+                    "mediatypeid": "10",
+                    "type": "0",
+                    "name": "Testing",
+                    "smtp_server": "mail.example.com",
+                    "smtp_helo": "example.com",
+                    "smtp_email": "zabbix@example.com",
                 }
             ],
             "id": 0,
         }
         zabbix_version_return_list = ["3.4", "4.4.5"]
         for zabbix_version_return in zabbix_version_return_list:
-          patch_apiinfo_version = patch.object(zabbix, "apiinfo_version", autospec=True, return_value=zabbix_version_return)
-          patch_query = patch.object(zabbix, "_query", autospec=True, return_value=query_return)
-          patch_login = patch.object(zabbix, "_login", autospec=True, return_value=CONN_ARGS)
-
-          with patch_apiinfo_version, patch_query, patch_login:
-            self.assertEqual(zabbix.mediatype_get("10", **CONN_ARGS), module_return)
+            patch_apiinfo_version = patch.object(
+                zabbix,
+                "apiinfo_version",
+                autospec=True,
+                return_value=zabbix_version_return,
+            )
+            patch_query = patch.object(
+                zabbix, "_query", autospec=True, return_value=query_return
+            )
+            patch_login = patch.object(
+                zabbix, "_login", autospec=True, return_value=CONN_ARGS
+            )
+            with patch_apiinfo_version, patch_query, patch_login:
+                self.assertEqual(zabbix.mediatype_get("10", **CONN_ARGS), module_return)
 
     def test_user_create(self):
         """
