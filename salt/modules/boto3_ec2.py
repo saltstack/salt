@@ -43,7 +43,6 @@ Be aware that this interacts with Amazon's services, and so may incur charges.
 :depends: boto3
 """
 # Import Python libs
-import contextlib
 import hashlib
 import inspect
 import itertools
@@ -78,27 +77,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 __virtualname__ = "boto3_vpc"
-# Minimum required version of botocore to use tags in the _create call
-SUPPORT_CREATE_TAGGING = {
-    "create_vpc": "1.17.14",
-    "create_subnet": "1.17.14",
-    "create_dhcp_options": "1.17.14",
-    "copy_snapshot": "1.17.14",  # TODO: Verify version number
-}
-# Describing these resources will return an XSet instead of X-plural.
-DESCRIBE_RESOURCES_RETURN_AS_SET = [
-    "stale_security_group",
-    "security_group_reference",
-    "elastic_gpu",
-    "offering",
-    "host_reservation",
-    "scheduled_instance_availability",
-    "scheduled_instance",
-    "connection_notification",
-]
-DESCRIBE_RESOURCES_ALT_IDS = {
-    "address": "AllocationIds",
-}
 
 
 def __virtual__():
@@ -122,467 +100,6 @@ def __init__(opts):
             __name__, "ec2", get_conn_funcname="_get_client"
         )
     logging.getLogger("boto3").setLevel(logging.INFO)
-
-
-def _plural(name):
-    """
-    Helper function that returns the plural form of a boto3 resource.
-
-    :param str name: Name of the resource in snake_case
-    """
-    if name.endswith("ss"):
-        ret = name + "es"
-    elif name.endswith("s"):
-        ret = name
-    elif name in DESCRIBE_RESOURCES_RETURN_AS_SET:
-        ret = name + "set"
-    else:
-        ret = name + "s"
-    return ret
-
-
-def _describe_resource(
-    resource_type,
-    ids=None,
-    filters=None,
-    result_key=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-    **kwargs,
-):
-    """
-    Helper function to deduplicate common code in describe-functions.
-
-    :param str resource_type: The name of the resource type in snake_case.
-    :param str/list ids: Zero or more resource_ids to describe.
-    :param dict filters: Return only resources that match these filters.
-    :param str result_key: Override result key of value returned.
-        Default: _plural(UpperCamel(resource_type))
-    :param * kwargs: Any additional kwargs to pass to the boto3 function.
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto3 ``describe_{resource_type}``-call
-        on succes.
-
-    :raises: SaltInvocationError if there are errors regarding the provided arguments.
-    """
-    if not isinstance(ids, list):
-        ids = [ids]
-    resource_type_plural = _plural(resource_type)
-    resource_type_uc = salt.utils.stringutils.snake_to_camel_case(
-        resource_type, uppercamel=True
-    )
-    result_key = result_key or salt.utils.stringutils.snake_to_camel_case(
-        resource_type_plural, uppercamel=True
-    )
-    boto_filters = [
-        {"Name": k, "Values": v if isinstance(v, list) else [v]}
-        for k, v in (filters or {}).items()
-    ]
-    if client is None:
-        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    params = salt.utils.data.filter_falsey(
-        {
-            "Filters": boto_filters,
-            "{}Ids".format(
-                DESCRIBE_RESOURCES_ALT_IDS.get(resource_type, resource_type_uc)
-            ): ids,
-        },
-        recurse_depth=1,
-    )
-    boto_function_name = "describe_{}".format(resource_type_plural)
-    if not hasattr(client, boto_function_name):
-        raise SaltInvocationError(
-            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_function_name)
-        )
-    boto_function = getattr(client, boto_function_name)
-    try:
-        res = boto_function(**params, **kwargs)
-        log.debug("_describe_resource(%s): res: %s", resource_type, res)
-        return {"result": res.get(result_key)}
-    except (ParamValidationError, ClientError) as exp:
-        return {"error": __utils__["boto3.get_error"](exp)["message"]}
-
-
-def _lookup_resource(
-    resource_type,
-    filters=None,
-    tags=None,
-    result_key=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
-    """
-    Helper function to deduplicate common code in lookup-functions.
-
-    :param str resource_type: The name of the resource type in snake_case.
-    :param dict filters: The filters to use in the lookup.
-    :param dict tags: The tags to filter on in the lookup.
-    :param str result_key: Overrides result_key whose value is returned by
-        _desribe_resource. Default: Plural(UpperCamel(resource_type))
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_resource_type``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
-    """
-    ret = {}
-    if filters is None:
-        filters = {}
-    if tags is not None:
-        filters.update(
-            {"tag:{}".format(tag_key): tag_value for tag_key, tag_value in tags.items()}
-        )
-    if not filters:
-        raise SaltInvocationError(
-            "No constraints where given when for lookup_{}.".format(resource_type)
-        )
-    res = _describe_resource(
-        resource_type,
-        filters=filters,
-        result_key=result_key,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
-    )
-    log.debug("_lookup_resource(%s): res: %s", resource_type, res)
-    if "error" in res:
-        ret = res
-    elif not res["result"]:
-        ret["result"] = {}
-        ret["error"] = "No {} found with the specified parameters".format(resource_type)
-    elif len(res["result"]) > 1:
-        resource_type_plural = resource_type + (
-            "" if resource_type.endswith("s") else "s"
-        )
-        ret["error"] = (
-            "There are multiple {} with the specified filters."
-            " Please specify additional filters."
-            "".format(resource_type_plural)
-        )
-    else:
-        ret["result"] = res["result"][0]
-    log.debug("_lookup_resource(%s): ret: %s", resource_type, ret)
-    return ret
-
-
-@contextlib.contextmanager
-def _lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
-    """
-    Helper function to perform multiple lookups successively
-
-    :param dict/list(dict) *args: One or more entries for attributes of resource
-        types that should be looked up. The types shown are for a single resource.
-        Provide a list to allow for multiple resources.
-        The dictionary consists of:
-
-        - name (str): Required. The name of the resource type to retrieve.
-        - as (str): Optional. The key to use in the result instead of ``name``.
-          Used when multiple different resources of the same name need to be looked up.
-        - kwargs (dict or list(dict)): Required. The kwargs to pass to ``lookup_resource``.
-          You can pass alternate AWS IAM credentials (region, keyid, key) or profile
-          if a specific resource needs to be looked up in another account, as can
-          be the case with VPC peering connections.
-          This can also be a list of dicts in order to do multiple lookups for the
-          same resource_type. In this case, the returned data will be a dict of
-          lists instead of a dict of values.
-          This is used, for example, by :py:func:`accept_vpc_entpoint_connections`.
-        - required (bool): Optional. Indication whether the resource lookup must be succesful.
-          That is, this resource is a required resource. Default: ``True``
-        - result_keys (str/list(str)): Optional. The key(s) to use with salt.utils.data.traverse_dict_and_list
-          to extract the needed data element(s) from the result of :py:func:`_lookup_resource`.
-          Default: UpperCamel(resource_type) + "Id"
-
-        For example, ``disassociate_route_table`` needs an AssociationId, which
-        is an attribute of a ``route_table`` that can be looked up by various
-        arguments (see ``lookup_route_table``). For that, this argument could be:
-
-        .. code-block:: python
-
-        {
-            'name': 'route_table',
-            'kwargs': {'route_table_name': 'My Name', 'association_subnet_id': 'subnet-1234'},
-            'result_keys': 'RouteTableAssociationId'
-        }
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict of looked up resources with dict of ``result_keys`` and its values.
-        If ``result_keys`` contained no, or only one value, the return structure is:
-
-        .. code-block:: python
-
-        {'result': {``name``: result_value}}
-
-        Otherwise, the return structure is:
-
-        .. code-block:: python
-
-        {'result': {``name``: {result_key: result_value}}}
-
-    :raises: SaltInvocationError if any of the required arguments are missing or incorrect.
-    """
-    ret = {}
-    lookup_results = {}
-    for idx, item in enumerate(args):
-        if not isinstance(item, dict):
-            raise SaltInvocationError(
-                "Expected dictionary for resource #{}, got {}.".format(idx, type(item))
-            )
-        if item.get("name") is None:
-            raise SaltInvocationError(
-                'No "name" specified in resource #{}.'.format(idx)
-            )
-        if item.get("kwargs") is None:
-            raise SaltInvocationError(
-                'No "kwargs" specified in resource #{}.'.format(idx)
-            )
-        name = item["name"]
-        default_result_key = (
-            salt.utils.stringutils.snake_to_camel_case(name, uppercamel=True) + "Id"
-        )
-        result_keys = item.get("result_keys", [default_result_key])
-        lookup_kwargs = item["kwargs"]
-        default_lookup_kwarg = name + "_id"
-        if not isinstance(result_keys, list):
-            result_keys = [result_keys]
-        if not isinstance(lookup_kwargs, list):
-            lookup_kwargs = [lookup_kwargs]
-        for single_lookup_kwargs in lookup_kwargs:
-            single_lookup_results = {}
-            if single_lookup_kwargs and not isinstance(single_lookup_kwargs, dict):
-                raise SaltInvocationError(
-                    "lookup kwargs specified is not a dict but: {}".format(
-                        type(single_lookup_kwargs)
-                    )
-                )
-            if single_lookup_kwargs is None:
-                single_lookup_kwargs = {}
-            single_lookup_kwargs_uc = {
-                salt.utils.stringutils.snake_to_camel_case(item, uppercamel=True): value
-                for item, value in single_lookup_kwargs.items()
-            }
-            if set(result_keys) <= set(single_lookup_kwargs_uc.keys()) and all(
-                [single_lookup_kwargs_uc[result_key] for result_key in result_keys]
-            ):
-                # No lookup is neccesary, all result keys are present in single_lookup_kwargs with value
-                if len(result_keys) == 1:
-                    single_lookup_results = single_lookup_kwargs_uc[result_keys[0]]
-                else:
-                    single_lookup_results = {
-                        result_key: single_lookup_kwargs_uc[result_key]
-                        for result_key in result_keys
-                    }
-            elif (
-                result_keys == [default_result_key]
-                and single_lookup_kwargs.get(default_lookup_kwarg) is not None
-            ):
-                # No lookup is neccesary, the default result key is present in single_lookup_kwargs with value
-                single_lookup_results = single_lookup_kwargs[default_lookup_kwarg]
-            else:
-                lookup_function = MODULE_FUNCTIONS.get("lookup_{}".format(name))
-                if not lookup_function:
-                    if item.get("required", True):
-                        raise SaltInvocationError(
-                            "This module does not have a lookup-function for {}"
-                            "".format(name)
-                        )
-                    single_lookup_results = None
-                else:
-                    conn_kwargs = {
-                        "region": single_lookup_kwargs.get("region", region),
-                        "keyid": single_lookup_kwargs.get("keyid", keyid),
-                        "key": single_lookup_kwargs.get("key", key),
-                        "profile": single_lookup_kwargs.get("profile", profile),
-                    }
-                    client = _get_client(**conn_kwargs)
-                    try:
-                        res = lookup_function(client=client, **single_lookup_kwargs)
-                    except SaltInvocationError as exc:
-                        res = {"error": "{}".format(exc)}
-                    log.debug("lookup_resources: res: %s", res)
-                    if "error" in res and item.get("required", True):
-                        yield res
-                        return
-                    single_lookup_results = (
-                        None
-                        if "error" in res
-                        else {
-                            result_key: salt.utils.data.traverse_dict_and_list(
-                                res["result"], result_key
-                            )
-                            for result_key in result_keys
-                        }
-                    )
-
-                if len(result_keys) == 1 and single_lookup_results:
-                    single_lookup_results = list(single_lookup_results.values())[0]
-                log.debug(
-                    "lookup_resources(%s):\n" "\t\tkwargs: %s\n" "\t\tresult: %s",
-                    name,
-                    single_lookup_kwargs,
-                    single_lookup_results,
-                )
-            lookup_results[item.get("as", name)] = single_lookup_results
-    ret["result"] = lookup_results
-    log.debug("_lookup_resources: ret: %s", ret)
-    yield ret
-
-
-def _create_resource(
-    resource_type,
-    boto_function_name=None,
-    params=None,
-    tags=None,
-    wait_until_state=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
-    """
-    Helper function to deduplicate common code in create-functions. Some other
-    functions also follow the same structure (copy_snapshot), so the boto function
-    name is now a kwarg.
-
-    :param str resource_type: The name of the resource type in snake_case.
-    :param str boto_function_name: Name of the boto function to call.
-        Default: ``create_resource_type``.
-    :param dict params: Params to pass to the boto3 create_X function.
-    :param dict tags: The tags to assign to the created object.
-    :param str wait_until_state: The resource state to wait for (if available).
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_dhcp_options``-call
-        on succes.
-
-    :raises: SaltInvocationError if there are errors regarding the provided arguments.
-    """
-    boto_function_name = boto_function_name or "create_{}".format(resource_type)
-    # support_create_tagging = LooseVersion(botocore.__version__) >= LooseVersion(SUPPORT_CREATE_TAGGING.get(boto_function_name, '9000'))
-    support_create_tagging = False
-    resource_type_uc = salt.utils.stringutils.snake_to_camel_case(
-        resource_type, uppercamel=True
-    )
-    if params is None:
-        params = {}
-    if tags:
-        boto_tags = [{"Key": k, "Value": v} for k, v in tags.items()]
-        if support_create_tagging:
-            params.update(
-                {
-                    "TagSpecifications": [
-                        {
-                            "ResourceType": resource_type.replace("_", "-"),
-                            "Tags": boto_tags,
-                        }
-                    ],
-                }
-            )
-    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    if not hasattr(client, boto_function_name):
-        raise SaltInvocationError(
-            'Boto3 EC2 client does not have a "{}"-function.'.format(boto_function_name)
-        )
-    boto_function = getattr(client, boto_function_name)
-    try:
-        res = boto_function(**params)
-        if tags and not support_create_tagging:
-            tag_res = client.create_tags(
-                Resources=[res[resource_type_uc]["{}Id".format(resource_type_uc)]],
-                Tags=boto_tags,
-            )
-            if "error" in tag_res:
-                return tag_res
-        ret = res.get(resource_type_uc, False)
-        if ret and tags and not support_create_tagging:
-            # Add Tags to result description, just like when it _is_ supported.
-            ret["Tags"] = boto_tags
-        if ret and wait_until_state is not None:
-            res = _wait_resource(resource_type, ret, wait_until_state, client=client)
-            if "error" in res:
-                return res
-    except (ParamValidationError, ClientError) as exp:
-        return {"error": __utils__["boto3.get_error"](exp)["message"]}
-    return {"result": ret}
-
-
-def _generic_action(
-    primary, params, *args,
-):
-    """
-    Helper function to deduplicate code when calling ``primary``.
-
-    :param callable primary: Function to call. Can either be a boto3.client function,
-        or a function from this module.
-    :param dict params: Parameters to pass to the ``primary`` function.
-    :param *args: Positional arguments to pass to the ``primary`` function.
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with returned data if available, otherwise ``True`` on success.
-
-    :raises: SaltInvocationError if there are errors regarding the provided arguments.
-    """
-    ret = {}
-    try:
-        log.debug("generic_action:\n" "\t\targs: %s\n" "\t\tparams: %s", args, params)
-        res = primary(*args, **params)
-        res.pop("ResponseMetadata", None)
-    except (ParamValidationError, ClientError) as exp:
-        return {"error": __utils__["boto3.get_error"](exp)["message"]}
-    if "error" in res:
-        return res
-    if not res:
-        ret["result"] = True
-    elif isinstance(res, dict) and "result" in res:
-        ret["result"] = res["result"]
-    else:
-        ret["result"] = res
-    return ret
-
-
-def _wait_resource(resource_type, resource_description, desired_state, client=None):
-    """
-    Helper function to use waiters.
-    Returns immediately on error, otherwise blocks until the desired state is reached.
-
-    :param str resource_type: The name of the resource involved.
-    :param dict resource_description: The output of a describe_X or lookup_X function.
-    :param str desired_state: The resource state to wait for.
-
-    :rtype: dict
-    :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with returned data if available, otherwise ``True`` on success.
-    """
-    ret = {}
-    resource_type_cc = salt.utils.stringutils.snake_to_camel_case(
-        resource_type, uppercamel=True
-    )
-    resource_id = resource_description.get(resource_type_cc + "Id")
-    if not resource_id:
-        ret["error"] = "No ResourceId found in resource_description"
-    else:
-        try:
-            waiter = client.get_waiter(resource_type + "_" + desired_state)
-            waiter.wait(**{resource_type_cc + "Ids": resource_id})
-        except (ParameterValidationError, ClientError, WaiterError) as exc:
-            ret["error"] = exc
-    ret["result"] = "error" not in ret
-    return ret
 
 
 def _derive_ipv6_cidr_subnet(ipv6_subnet, ipv6_parent_block):
@@ -647,13 +164,15 @@ def accept_vpc_endpoint_connections(
         with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
         call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint_service",
             "kwargs": service_lookup or {"service_id": service_id},
             "result_keys": "ServiceId",
         },
         {
+            "service": "ec2",
             "name": "vpc_endpoint",
             "kwargs": vpc_endpoint_lookups
             or [{"vpc_endpoint_id": item} for item in vpc_endpoint_ids or []],
@@ -671,7 +190,9 @@ def accept_vpc_endpoint_connections(
             "VpcEndpointIds": itertools.chain.from_iterable(res["vpc_endpoint"]),
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.accept_vpc_endpoint_connections, params,)
+    return __utils__["boto3.generic_action"](
+        client.accept_vpc_endpoint_connections, params
+    )
 
 
 def accept_vpc_peering_connection(
@@ -710,19 +231,25 @@ def accept_vpc_peering_connection(
     vpc_peering_connection_lookup["filters"].update(
         {"status-code": "pending-acceptance"}
     )
-    lookup_resources = {
-        "name": "vpc_peering_connection",
-        "kwargs": vpc_peering_connection_lookup,
-    }
-    with _lookup_resources(
-        lookup_resources, region=region, keyid=keyid, key=key, profile=profile
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "vpc_peering_connection",
+            "kwargs": vpc_peering_connection_lookup,
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
     ) as res:
         if "error" in res:
             return res
         res = res["result"]
         params = {"VpcPeeringConnectionId": res["vpc_peering_connection"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.accept_vpc_peering_connection, params,)
+    return __utils__["boto3.generic_action"](
+        client.accept_vpc_peering_connection, params
+    )
 
 
 def allocate_address(
@@ -848,17 +375,20 @@ def associate_address(
         with dict containing the result of the boto ``associate_address``-call
         on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "address",
             "kwargs": address_lookup or {"allocation_id": allocation_id},
         },
         {
+            "service": "ec2",
             "name": "instance",
             "kwargs": instance_lookup or {"instance_id": instance_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "network_interface",
             "kwargs": network_interface_lookup
             or {"network_interface_id": network_interface_id},
@@ -883,7 +413,7 @@ def associate_address(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.associate_address, params,)
+    return __utils__["boto3.generic_action"](client.associate_address, params)
 
 
 def associate_dhcp_options(
@@ -920,12 +450,13 @@ def associate_dhcp_options(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_dhcp_options, boto3.client('ec2').associate_dhcp_options
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "dhcp_options",
             "kwargs": dhcp_options_lookup or {"dhcp_options_id": dhcp_options_id},
         },
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -939,7 +470,7 @@ def associate_dhcp_options(
             "VpcId": res["vpc"],
         }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.associate_dhcp_options, params,)
+    return __utils__["boto3.generic_action"](client.associate_dhcp_options, params)
 
 
 def associate_route_table(
@@ -973,12 +504,17 @@ def associate_route_table(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_route_tables, boto3.client('ec2').associate_route_table
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
         },
-        {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+        {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -992,7 +528,7 @@ def associate_route_table(
             "SubnetId": res["subnet"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.associate_route_table, params,)
+    return __utils__["boto3.generic_action"](client.associate_route_table, params)
 
 
 def associate_subnet_cidr_block(
@@ -1027,8 +563,9 @@ def associate_subnet_cidr_block(
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_vpcs, boto3.client('ec2').associate_subnet_cidr_block
     """
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "subnet",
             "kwargs": subnet_lookup or {"subnet_id": subnet_id},
             "result_keys": ["SubnetId", "VpcId"],
@@ -1044,8 +581,9 @@ def associate_subnet_cidr_block(
         subnet_id = res["SubnetId"]
         vpc_id = res["VpcId"]
     if ipv6_cidr_block is None:
-        with _lookup_resources(
+        with __salt__["boto3_generic.lookup_resources"](
             {
+                "service": "ec2",
                 "name": "vpc",
                 "kwargs": {"vpc_id": vpc_id},
                 "result_keys": "Ipv6CidrBlockAssociationSet",
@@ -1066,7 +604,7 @@ def associate_subnet_cidr_block(
                 ipv6_subnet, ipv6_cidr_block_association_set[0]["Ipv6CidrBlock"]
             )
     params = {"SubnetId": subnet_id, "Ipv6CidrBlock": ipv6_cidr_block}
-    return _generic_action(client.associate_subnet_cidr_block, params,)
+    return __utils__["boto3.generic_action"](client.associate_subnet_cidr_block, params)
 
 
 def associate_vpc_cidr_block(
@@ -1100,8 +638,8 @@ def associate_vpc_cidr_block(
 
     :depends: boto3.client('ec2').associate_vpc_cidr_block
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -1117,7 +655,7 @@ def associate_vpc_cidr_block(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.associate_vpc_cidr_block, params,)
+    return __utils__["boto3.generic_action"](client.associate_vpc_cidr_block, params)
 
 
 def attach_internet_gateway(
@@ -1148,13 +686,14 @@ def attach_internet_gateway(
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').attach_internet_gateway
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "internet_gateway",
             "kwargs": internet_gateway_lookup
             or {"internet_gateway_id": internet_gateway_id},
         },
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -1168,7 +707,7 @@ def attach_internet_gateway(
             "VpcId": res["vpc"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.attach_internet_gateway, params,)
+    return __utils__["boto3.generic_action"](client.attach_internet_gateway, params)
 
 
 def attach_network_interface(
@@ -1200,9 +739,10 @@ def attach_network_interface(
         with dict containing the result of the boto ``attach_network_interface``-
         call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {"name": "instance", "kwargs": instance_lookup or {"instance_id": instance_id}},
         {
+            "service": "ec2",
             "name": "network_interface",
             "kwargs": network_interface_lookup
             or {"network_interface_id": network_interface_id},
@@ -1221,7 +761,7 @@ def attach_network_interface(
             "NetworkInterfaceId": res["network_interface"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.attach_network_interface, params,)
+    return __utils__["boto3.generic_action"](client.attach_network_interface, params)
 
 
 def attach_volume(
@@ -1264,9 +804,17 @@ def attach_volume(
         with dict containing the result of the boto ``attach_volume``-call
         on succes.
     """
-    with _lookup_resources(
-        {"name": "instance", "kwargs": instance_lookup or {"instance_id": instance_id}},
-        {"name": "volume", "kwargs": volume_lookup or {"volume_id": volume_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookup or {"instance_id": instance_id},
+        },
+        {
+            "service": "ec2",
+            "name": "volume",
+            "kwargs": volume_lookup or {"volume_id": volume_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -1281,7 +829,7 @@ def attach_volume(
             "VolumeId": res["volume"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.attach_volume, params,)
+    return __utils__["boto3.generic_action"](client.attach_volume, params)
 
 
 def attach_vpn_gateway(
@@ -1310,9 +858,10 @@ def attach_vpn_gateway(
         with dict containing the result of the boto ``attach_vpn_gateway``-call
         on succes.
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         {
+            "service": "ec2",
             "name": "vpn_gateway",
             "kwargs": vpn_gateway_lookup or {"vpn_gateway_id": vpn_gateway_id},
         },
@@ -1329,7 +878,7 @@ def attach_vpn_gateway(
             "VpnGatewayId": res["vpn_gateway"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.attach_vpn_gateway, params,)
+    return __utils__["boto3.generic_action"](client.attach_vpn_gateway, params)
 
 
 def authorize_security_group_egress(
@@ -1424,8 +973,9 @@ def authorize_security_group_egress(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": group_lookup or {"group_id": group_id},
             "result_keys": "GroupId",
@@ -1442,7 +992,9 @@ def authorize_security_group_egress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.authorize_security_group_egress, params,)
+    return __utils__["boto3.generic_action"](
+        client.authorize_security_group_egress, params
+    )
 
 
 def authorize_security_group_ingress(
@@ -1480,8 +1032,9 @@ def authorize_security_group_ingress(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": group_lookup or {"group_id": group_id},
             "result_keys": "GroupId",
@@ -1498,7 +1051,9 @@ def authorize_security_group_ingress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.authorize_security_group_ingress, params,)
+    return __utils__["boto3.generic_action"](
+        client.authorize_security_group_ingress, params
+    )
 
 
 def cancel_spot_fleet_requests(
@@ -1532,8 +1087,9 @@ def cancel_spot_fleet_requests(
         with dict containing the result of the boto ``cancel_spot_fleet_requests``-
         call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "spot_fleet_requests",
             "kwargs": spot_fleet_requests_lookups
             or [
@@ -1557,7 +1113,7 @@ def cancel_spot_fleet_requests(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.cancel_spot_fleet_requests, params,)
+    return __utils__["boto3.generic_action"](client.cancel_spot_fleet_requests, params)
 
 
 def cancel_spot_instance_requests(
@@ -1581,8 +1137,9 @@ def cancel_spot_instance_requests(
         with dict containing the result of the boto ``cancel_spot_instance_requests``-
         call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "spot_instance_requests",
             "kwargs": spot_instance_request_lookups
             or [
@@ -1603,7 +1160,9 @@ def cancel_spot_instance_requests(
             ),
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.cancel_spot_instance_requests, params,)
+    return __utils__["boto3.generic_action"](
+        client.cancel_spot_instance_requests, params
+    )
 
 
 def copy_image(
@@ -1662,8 +1221,9 @@ def copy_image(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with dict containing the result of the boto ``copy_image``-call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "image",
             "kwargs": source_image_lookup or {"image_id": source_image_id},
         },
@@ -1688,7 +1248,7 @@ def copy_image(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.copy_image, params,)
+    return __utils__["boto3.generic_action"](client.copy_image, params)
 
 
 def copy_snapshot(
@@ -1750,8 +1310,9 @@ def copy_snapshot(
     :param bool blocking: Wait for the snapshot to become available.
 
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "snapshot",
             "kwargs": source_snapshot_lookup or {"snapshot_id": source_snapshot_id},
         },
@@ -1762,6 +1323,7 @@ def copy_snapshot(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -1774,14 +1336,13 @@ def copy_snapshot(
                 "boto_function_name": "copy_snapshot",
                 "tags": tags,
                 "wait_until_state": "completed" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             },
             recurse_depth=1,
         )
-    return _generic_action(_create_resource, params, "snapshot",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "snapshot"
+    )
 
 
 def create_customer_gateway(
@@ -1842,14 +1403,9 @@ def create_customer_gateway(
             "DeviceName": device_name,
         }
     )
-    return _create_resource(
-        "customer_gateway",
-        params=params,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "customer_gateway", params=params, tags=tags, client=client,
     )
 
 
@@ -1919,14 +1475,9 @@ def create_dhcp_options(
             ],
         }
     )
-    return _create_resource(
-        "dhcp_options",
-        params=params,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "dhcp_options", params=params, tags=tags, client=client,
     )
 
 
@@ -2019,8 +1570,12 @@ def create_image(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with dict containing the result of the boto ``create_image``-call on succes.
     """
-    with _lookup_resources(
-        {"name": "instance", "kwargs": instance_lookup or {"instance_id": instance_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookup or {"instance_id": instance_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -2028,6 +1583,7 @@ def create_image(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -2038,14 +1594,13 @@ def create_image(
                     "NoReboot": no_reboot,
                 },
                 "wait_until_state": "available" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             },
             recurse_depth=1,
         )
-    return _generic_action(_create_resource, params, "image",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "image"
+    )
 
 
 def create_internet_gateway(
@@ -2074,13 +1629,9 @@ def create_internet_gateway(
 
     :depends: boto3.client('ec2').create_internet_gateway, boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').attach_internet_gateway
     """
-    res = _create_resource(
-        "internet_gateway",
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.create_resource"](
+        "internet_gateway", tags=tags, client=client,
     )
     if "error" in res:
         return res
@@ -2120,14 +1671,9 @@ def create_key_pair(
         Constraints: Up to 255 ASCII characters
     :param dict tags: The tags to apply to a resource when the resource is being created.
     """
-    return _create_resource(
-        "key_pair",
-        params={"KeyName": key_name},
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "key_pair", params={"KeyName": key_name}, tags=tags, client=client,
     )
 
 
@@ -2354,13 +1900,15 @@ def create_launch_template(
           will not be able to access your instance metadata.
     :param dict tags: The tags to apply to the launch template during creation.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "image",
             "kwargs": image_lookup or {"image_id": image_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": security_group_lookups
             or {"security_group_ids": security_group_ids},
@@ -2413,14 +1961,9 @@ def create_launch_template(
     params.update(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
-    return _create_resource(
-        "launch_template",
-        params=params,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "launch_template", params=params, tags=tags, client=client,
     )
 
 
@@ -2471,9 +2014,14 @@ def create_nat_gateway(
         if "error" in res:
             return res
         allocation_id = res["result"]["AllocationId"]
-    with _lookup_resources(
-        {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+        },
+        {
+            "service": "ec2",
             "name": "address",
             "kwargs": address_lookup or {"allocation_id": allocation_id},
             "result_keys": "AllocationId",
@@ -2486,22 +2034,26 @@ def create_nat_gateway(
         if "error" in res:
             return res
         res = res["result"]
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {"SubnetId": res["subnet"], "AllocationId": res["address"]},
                 "tags": tags,
                 "wait_until_state": "available" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
             },
             recurse_depth=1,
         )
         params["params"].update(
-            {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
+            {
+                "ClientToken": hashlib.sha1(
+                    json.dumps(params).encode("utf8")
+                ).hexdigest(),
+            }
         )
-    return _generic_action(_create_resource, params, "nat_gateway",)
+        params.update({"client": client})
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "nat_gateway"
+    )
 
 
 def create_network_acl(
@@ -2529,8 +2081,8 @@ def create_network_acl(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_network_acl
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -2538,17 +2090,13 @@ def create_network_acl(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
-            {
-                "params": {"VpcId": res["result"]["vpc"]},
-                "tags": tags,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
-            }
+            {"params": {"VpcId": res["result"]["vpc"]}, "tags": tags, "client": client}
         )
-    return _generic_action(_create_resource, params, "network_acl",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "network_acl"
+    )
 
 
 def create_network_acl_entry(
@@ -2632,8 +2180,9 @@ def create_network_acl_entry(
                     len(port_range)
                 )
             )
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_acl",
             "kwargs": network_acl_lookup or {"network_acl_id": network_acl_id},
         },
@@ -2661,7 +2210,7 @@ def create_network_acl_entry(
             recurse_depth=1,
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.create_network_acl_entry, params,)
+    return __utils__["boto3.generic_action"](client.create_network_acl_entry, params)
 
 
 def create_network_interface(
@@ -2722,9 +2271,14 @@ def create_network_interface(
         with dict containing the result of the boto ``create_network_interface``-
         call on succes.
     """
-    with _lookup_resources(
-        {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+        },
+        {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": security_group_lookups
             or {"security_group_ids": security_group_ids},
@@ -2739,6 +2293,7 @@ def create_network_interface(
         if "error" in res:
             return res
         res = res["result"]
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -2756,13 +2311,12 @@ def create_network_interface(
                     "SubnetId": res["subnet"],
                 },
                 "tags": tags,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             }
         )
-    return _generic_action(_create_resource, params, "network_interface",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "network_interface"
+    )
 
 
 def create_route(
@@ -2859,50 +2413,59 @@ def create_route(
 
     :depends: boto3.client('ec2').create_route
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
         },
         {
+            "service": "ec2",
             "name": "egress_only_internet_gateway",
             "kwargs": egress_only_internet_gateway_lookup
             or {"egress_only_internet_gateway_id": egress_only_internet_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "gateway",
             "kwargs": gateway_lookup or {"gateway_id": gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "instance",
             "kwargs": instance_lookup or {"instance_id": instance_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "local_gateway",
             "kwargs": local_gateway_lookup or {"local_gateway_id": local_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "nat_gateway",
             "kwargs": nat_gateway_lookup or {"nat_gateway_id": nat_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "transit_gateway",
             "kwargs": transit_gateway_lookup
             or {"transit_gateway_id": transit_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "network_interface",
             "kwargs": network_interface_lookup
             or {"network_interface_id": network_interface_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "vpc_peering_connection",
             "kwargs": vpc_peering_connection_lookup
             or {"vpc_peering_connection_id": vpc_peering_connection_id},
@@ -2933,7 +2496,7 @@ def create_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.create_route, params,)
+    return __utils__["boto3.generic_action"](client.create_route, params)
 
 
 def create_route_table(
@@ -2961,8 +2524,8 @@ def create_route_table(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_route_table
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -2970,17 +2533,13 @@ def create_route_table(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
-            {
-                "params": {"VpcId": res["result"]["vpc"]},
-                "tags": tags,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
-            }
+            {"params": {"VpcId": res["result"]["vpc"]}, "tags": tags, "client": client}
         )
-    return _generic_action(_create_resource, params, "route_table",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "route_table"
+    )
 
 
 def create_security_group(
@@ -3020,8 +2579,8 @@ def create_security_group(
 
     :param
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -3029,6 +2588,7 @@ def create_security_group(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -3037,13 +2597,12 @@ def create_security_group(
                     "VpcId": res["result"]["vpc"],
                 },
                 "tags": tags,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             }
         )
-    return _generic_action(_create_resource, params, "security_group",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "security_group"
+    )
 
 
 def create_snapshot(
@@ -3091,8 +2650,12 @@ def create_snapshot(
     :param dict tags: Tags to apply to the snapshot during creation.
     :param bool blocking: Wait for the snapshot to be completed.
     """
-    with _lookup_resources(
-        {"name": "volume", "kwargs": volume_lookup or {"volume_id": volume_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "volume",
+            "kwargs": volume_lookup or {"volume_id": volume_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -3100,6 +2663,7 @@ def create_snapshot(
     ) as res:
         if "error" in res:
             return res
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -3108,13 +2672,12 @@ def create_snapshot(
                 },
                 "tags": tags,
                 "wait_until_state": "completed" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             }
         )
-    return _generic_action(_create_resource, params, "snapshot",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "snapshot"
+    )
 
 
 def create_subnet(
@@ -3181,8 +2744,9 @@ def create_subnet(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_subnet, boto3.client('ec2').get_waiter("subnet_available")
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc",
             "kwargs": vpc_lookup or {"vpc_id": vpc_id},
             "result_keys": ["VpcId", "Ipv6CidrBlockAssociationSet"],
@@ -3210,15 +2774,13 @@ def create_subnet(
                 "Ipv6CidrBlock": ipv6_cidr_block,
             }
         )
-    return _create_resource(
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
         "subnet",
         params=params,
         tags=tags,
         wait_until_state="available" if blocking else None,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+        client=client,
     )
 
 
@@ -3242,9 +2804,8 @@ def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=N
         "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     # Oh, the irony
-    return _create_resource(
-        "tags", params=params, region=region, keyid=keyid, key=key, profile=profile
-    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"]("tags", params=params, client=client,)
 
 
 def create_volume(
@@ -3322,8 +2883,9 @@ def create_volume(
       16 Nitro-based instances in the same Availability Zone.
     :param bool blocking: Wait until the volume has become available.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "snapshot",
             "kwargs": snapshot_lookup or {"snapshot_id": snapshot_id},
             "required": False,
@@ -3348,15 +2910,13 @@ def create_volume(
                 "MultiAttachEnabled": multi_attach_enabled,
             }
         )
-    return _create_resource(
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
         "volume",
         params,
         tags=tags,
         wait_until_state="available" if blocking else None,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+        client=client,
     )
 
 
@@ -3429,14 +2989,9 @@ def create_vpc(
             "InstanceTenancy": instance_tenancy,
         }
     )
-    return _create_resource(
-        "vpc",
-        params=params,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "vpc", params=params, tags=tags, client=client,
     )
 
 
@@ -3519,19 +3074,22 @@ def create_vpc_endpoint(
         with dict containing the result of the boto ``create_vpc_endpoint``-
         call on succes.
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "subnet",
             "kwargs": subnet_lookup or {"subnet_id": subnet_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": security_group_lookups
             or {"security_group_ids": security_group_ids},
@@ -3545,6 +3103,7 @@ def create_vpc_endpoint(
         if "error" in res:
             return res
         res = res["result"]
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -3559,16 +3118,15 @@ def create_vpc_endpoint(
                 },
                 "tags": tags,
                 "wait_until_state": "available" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
             }
         )
     params["params"].update(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
-    return _generic_action(_create_resource, params, "vpc_endpoint",)
+    param.update({"client": client})
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "vpc_endpoint"
+    )
 
 
 def create_vpc_endpoint_service_configuration(
@@ -3607,25 +3165,20 @@ def create_vpc_endpoint_service_configuration(
     if network_load_balancer_arns and not isinstance(network_load_balancer_arns, list):
         network_load_balancer_arns = [network_load_balancer_arns]
     if network_load_balancer_lookup:
-        if "boto3_elb.describe_load_balancers" not in __salt__:
-            raise SaltInvocationError(
-                "network_load_balancers_lookup can only be used when boto3_elb.describe_load_balancers "
-                "is implemented, but it is not available."
-            )
-        else:
-            res = __salt__["boto3_elb.describe_load_balancers"](
-                region=region,
-                keyid=keyid,
-                key=key,
-                profile=profile,
-                **network_load_balancer_lookup,
-            )
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "elb",
+                "name": "load_balancer",
+                "kwargs": network_load_balancer_lookup,
+                "result_keys": "LoadBalancerArn",
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
             if "error" in res:
                 return res
-            if not res["result"]:
-                return {
-                    "error": "No load balancers were found with the specified lookup values"
-                }
             network_load_balancer_arns = [
                 item["LoadBalancerArn"] for item in res["result"]
             ]
@@ -3639,14 +3192,9 @@ def create_vpc_endpoint_service_configuration(
     params.update(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
-    return _create_resource(
-        "vpc_endpoint_service_configuration",
-        params,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "vpc_endpoint_service_configuration", params, tags=tags, client=client,
     )
 
 
@@ -3690,13 +3238,15 @@ def create_vpc_peering_connection(
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_vpc_peering_connection, boto3.client('ec2').get_waiter("vpc_peering_connection_pending")
     """
     peer_region_supported = LooseVersion(boto3.__version__) > LooseVersion("1.4.6")
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc",
             "as": "requester_vpc",
             "kwargs": requester_vpc_lookup or {"vpc_id": requester_vpc_id},
         },
         {
+            "service": "ec2",
             "name": "vpc",
             "as": "peer_vpc",
             "kwargs": peer_vpc_lookup or {"vpc_id": peer_vpc_id},
@@ -3709,6 +3259,7 @@ def create_vpc_peering_connection(
         if "error" in res:
             return res
         res = res["result"]
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -3720,14 +3271,13 @@ def create_vpc_peering_connection(
                     else None,
                 },
                 "wait_until_state": "pending" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             },
             recurse_depth=1,
         )
-    return _generic_action(_create_resource, params, "vpc_peering_connection",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "vpc_peering_connection"
+    )
 
 
 def create_vpn_connection(
@@ -3877,18 +3427,21 @@ def create_vpn_connection(
         raise SaltInvocationError(
             "You can only specify a vpn gateway or a transit gateway, not both."
         )
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "customer_gateway",
             "kwargs": customer_gateway_lookup
             or {"customer_gateway_id": customer_gateway_id},
         },
         {
+            "service": "ec2",
             "name": "vpn_gateway",
             "kwargs": vpn_gateway_lookup or {"vpn_gateway_id": vpn_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "transit_gateway",
             "kwargs": transit_gateway_lookup
             or {"transit_gateway_id": transit_gateway_id},
@@ -3902,6 +3455,7 @@ def create_vpn_connection(
         if "error" in res:
             return res
         res = res["result"]
+        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
         params = salt.utils.data.filter_falsey(
             {
                 "params": {
@@ -3937,14 +3491,13 @@ def create_vpn_connection(
                 },
                 "tags": tags,
                 "wait_until_state": "available" if blocking else None,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
+                "client": client,
             },
             recurse_depth=4,
         )
-    return _generic_action(_create_resource, params, "vpn_connection",)
+    return __utils__["boto3.generic_action"](
+        __utils__["boto3.create_resource"], params, "vpn_connection"
+    )
 
 
 def create_vpn_gateway(
@@ -3983,15 +3536,13 @@ def create_vpn_gateway(
             "AmazonSideAsn": amazon_side_asn,
         }
     )
-    return _create_resource(
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.create_resource"](
         "vpn_gateway",
         params=params,
         tags=tags,
         wait_until_state="available" if blocking else None,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
+        client=client,
     )
 
 
@@ -4141,8 +3692,9 @@ def delete_customer_gateway(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "customer_gateway",
             "kwargs": customer_gateway_lookup
             or {"customer_gateway_id": customer_gateway_id},
@@ -4156,7 +3708,7 @@ def delete_customer_gateway(
             return res
         params = {"CustomerGatewayId": res["result"]["customer_gateway"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_customer_gateway, params,)
+    return __utils__["boto3.generic_action"](client.delete_customer_gateway, params)
 
 
 def delete_dhcp_options(
@@ -4183,8 +3735,9 @@ def delete_dhcp_options(
 
     :depends: boto3.client('ec2').describe_dhcp_options, boto3.client('ec2').delete_dhcp_options
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "dhcp_options",
             "kwargs": dhcp_options_lookup or {"dhcp_options_id": dhcp_options_id},
         },
@@ -4197,7 +3750,7 @@ def delete_dhcp_options(
             return res
         params = {"DhcpOptionsId": res["result"]["dhcp_options"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.delete_dhcp_options, params,)
+    return __utils__["boto3.generic_action"](client.delete_dhcp_options, params)
 
 
 def delete_internet_gateway(
@@ -4223,8 +3776,9 @@ def delete_internet_gateway(
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').delete_internet_gateway
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "internet_gateway",
             "kwargs": internet_gateway_lookup
             or {"internet_gateway_id": internet_gateway_id},
@@ -4238,7 +3792,7 @@ def delete_internet_gateway(
             return res
         params = {"InternetGatewayId": res["result"]["internet_gateway"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_internet_gateway, params,)
+    return __utils__["boto3.generic_action"](client.delete_internet_gateway, params)
 
 
 def delete_key_pair(
@@ -4257,13 +3811,19 @@ def delete_key_pair(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success.
     """
-    lookup_resources = {
-        "name": "key_pair",
-        "kwargs": key_pair_lookup
-        or salt.utils.data.filter_falsey({"ids": key_pair_id, "key_names": key_name}),
-    }
-    with _lookup_resources(
-        lookup_resources, region=region, keyid=keyid, key=key, profile=profile
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "key_pair",
+            "kwargs": key_pair_lookup
+            or salt.utils.data.filter_falsey(
+                {"ids": key_pair_id, "key_names": key_name}
+            ),
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
     ) as res:
         if "error" in res:
             return res
@@ -4272,7 +3832,7 @@ def delete_key_pair(
             {"KeyPairId": res["key_pair"], "KeyName": key_name}
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_key_pair, params,)
+    return __utils__["boto3.generic_action"](client.delete_key_pair, params)
 
 
 def delete_nat_gateway(
@@ -4300,8 +3860,9 @@ def delete_nat_gateway(
 
     :depends: boto3.client('ec2').describe_nat_gateways, boto3.client('ec2').delete_nat_gateway, boto3.client('ec2').get_waiter('nat_gateway_deleted')
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "nat_gateway",
             "kwargs": nat_gateway_lookup or {"nat_gateway_id": nat_gateway_id},
         },
@@ -4314,7 +3875,7 @@ def delete_nat_gateway(
             return res
         params = {"NatGatewayId": res["result"]["nat_gateway"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    res = _generic_action(client.delete_nat_gateway, params,)
+    res = __utils__["boto3.generic_action"](client.delete_nat_gateway, params)
     if "error" in res:
         return res
     if blocking:
@@ -4345,8 +3906,9 @@ def delete_network_acl(
 
     :depends: boto3.client('ec2').delete_network_acl, boto3.client('ec2').describe_network_acls, boto3.client('ec2').describe_vpcs
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_acl",
             "kwargs": network_acl_lookup or {"network_acl_id": network_acl_id},
         },
@@ -4359,7 +3921,7 @@ def delete_network_acl(
             return res
         params = {"NetworkAclId": res["result"]["network_acl"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_network_acl, params,)
+    return __utils__["boto3.generic_action"](client.delete_network_acl, params)
 
 
 def delete_network_acl_entry(
@@ -4385,8 +3947,9 @@ def delete_network_acl_entry(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_acl",
             "kwargs": network_acl_lookup or {"network_acl_id": network_acl_id},
         },
@@ -4403,7 +3966,7 @@ def delete_network_acl_entry(
             "RuleNumber": rule_number,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_network_acl_entry, params,)
+    return __utils__["boto3.generic_action"](client.delete_network_acl_entry, params)
 
 
 def delete_network_interface(
@@ -4427,8 +3990,9 @@ def delete_network_interface(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_interface",
             "kwargs": network_interface_lookup
             or {"network_interface_id": network_interface_id},
@@ -4442,7 +4006,7 @@ def delete_network_interface(
             return res
         params = {"NetworkInterfaceId": res["result"]["network_interface"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_network_interface, params,)
+    return __utils__["boto3.generic_action"](client.delete_network_interface, params)
 
 
 def delete_route(
@@ -4472,8 +4036,9 @@ def delete_route(
 
     :depends: boto3.client('ec2').delete_route
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
         },
@@ -4492,7 +4057,7 @@ def delete_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_route, params,)
+    return __utils__["boto3.generic_action"](client.delete_route, params)
 
 
 def delete_route_table(
@@ -4517,8 +4082,9 @@ def delete_route_table(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').delete_route_table
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
         },
@@ -4531,7 +4097,7 @@ def delete_route_table(
             return res
         params = {"RouteTableId": res["result"]["route_table"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_route_table, params,)
+    return __utils__["boto3.generic_action"](client.delete_route_table, params)
 
 
 def delete_security_group(
@@ -4563,8 +4129,9 @@ def delete_security_group(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": group_lookup
             or salt.utils.data.filter_falsey(
@@ -4581,7 +4148,7 @@ def delete_security_group(
             return res
         params = {"GroupId": res["result"]["security_group"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_security_group, params,)
+    return __utils__["boto3.generic_action"](client.delete_security_group, params)
 
 
 def delete_snapshot(
@@ -4613,8 +4180,12 @@ def delete_snapshot(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success.
     """
-    with _lookup_resources(
-        {"name": "snapshot", "kwargs": snapshot_lookup or {"snapshot_id": snapshot_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "snapshot",
+            "kwargs": snapshot_lookup or {"snapshot_id": snapshot_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -4624,7 +4195,7 @@ def delete_snapshot(
             return res
         params = {"SnapshotId": res["result"]["snapshot"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_snapshot, params,)
+    return __utils__["boto3.generic_action"](client.delete_snapshot, params)
 
 
 def delete_subnet(
@@ -4644,8 +4215,12 @@ def delete_subnet(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').delete_subnet
     """
-    with _lookup_resources(
-        {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -4655,7 +4230,7 @@ def delete_subnet(
             return res
         params = {"SubnetId": res["result"]["subnet"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_subnet, params,)
+    return __utils__["boto3.generic_action"](client.delete_subnet, params)
 
 
 def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None):
@@ -4676,7 +4251,7 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
         "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.delete_tags, params)
+    return __utils__["boto3.generic_action"](client.delete_tags, params)
 
 
 def delete_volume(
@@ -4699,8 +4274,12 @@ def delete_volume(
         When ``volume_id`` is not provided, this is required, otherwise ignored.
     :param bool blocking: Whether to wait for the volume to be deleted.
     """
-    with _lookup_resources(
-        {"name": "volume", "kwargs": volume_lookup or {"volume_id": volume_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "volume",
+            "kwargs": volume_lookup or {"volume_id": volume_id},
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -4710,7 +4289,7 @@ def delete_volume(
             return res
         params = {"VolumeId": res["result"]["volume"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    res = _generic_action(client.delete_volume, params,)
+    res = __utils__["boto3.generic_action"](client.delete_volume, params)
     if "error" in res:
         return res
     if blocking:
@@ -4738,8 +4317,8 @@ def delete_vpc(
 
     :depends boto3.client('ec2').delete_vpc
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -4749,7 +4328,7 @@ def delete_vpc(
             return res
         params = {"VpcId": res["result"]["vpc"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.delete_vpc, params,)
+    return __utils__["boto3.generic_action"](client.delete_vpc, params)
 
 
 def delete_vpc_endpoint_service_configurations(
@@ -4775,8 +4354,9 @@ def delete_vpc_endpoint_service_configurations(
         with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
         call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint_service",
             "kwargs": service_lookups
             or [{"service_id": item} for item in service_ids or []],
@@ -4795,7 +4375,9 @@ def delete_vpc_endpoint_service_configurations(
             )
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_vpc_endpoint_services, params,)
+    return __utils__["boto3.generic_action"](
+        client.delete_vpc_endpoint_services, params
+    )
 
 
 def delete_vpc_endpoints(
@@ -4821,8 +4403,9 @@ def delete_vpc_endpoints(
         with dict containing the result of the boto ``delete_vpc_endpoints``-call
         on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint",
             "kwargs": vpc_endpoint_lookups
             or [{"vpc_endpoint_id": item} for item in vpc_endpoint_ids or []],
@@ -4840,7 +4423,7 @@ def delete_vpc_endpoints(
             )
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_vpc_endpoints, params,)
+    return __utils__["boto3.generic_action"](client.delete_vpc_endpoints, params)
 
 
 def delete_vpc_peering_connection(
@@ -4870,8 +4453,9 @@ def delete_vpc_peering_connection(
 
     :depends: boto3.client('ec2').describe_vpc_peering_connections, boto3.client('ec2').delete_vpc_peering_connection
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_peering_connection",
             "kwargs": vpc_peering_connection_lookup
             or {"vpc_peering_connection_id": vpc_peering_connection_id},
@@ -4885,7 +4469,9 @@ def delete_vpc_peering_connection(
             return res
         params = {"VpcPeeringConnectionId": res["result"]["vpc_peering_connection"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.delete_vpc_peering_connection, params,)
+    return __utils__["boto3.generic_action"](
+        client.delete_vpc_peering_connection, params
+    )
 
 
 def delete_vpn_connection():
@@ -4929,15 +4515,13 @@ def describe_addresses(
     """
     if public_ips and not isinstance(public_ips, list):
         public_ips = [public_ips]
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "address",
         ids=allocation_ids,
         filters=filters,
         PublicIps=public_ips,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -4976,16 +4560,14 @@ def describe_availability_zones(
         with dict containing the result of the boto ``describe_availability_zone``-
         call on succes.
     """
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "availability_zone",
         ids=zone_ids,
         filters=filters,
         ZoneNames=zone_names,
         AllAvailabilityZones=all_availability_zones,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -5016,15 +4598,10 @@ def describe_customer_gateways(
 
     :depends: boto3.client('ec2').describe_customer_gateways
     """
-    return _describe_resource(
-        "customer_gateway",
-        ids=customer_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "customer_gateway", ids=customer_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5054,15 +4631,10 @@ def describe_dhcp_options(
 
     :depends: boto3.client('ec2').describe_dhcp_options
     """
-    return _describe_resource(
-        "dhcp_options",
-        ids=dhcp_option_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "dhcp_options", ids=dhcp_option_ids, filters=filters, client=client,
     )
 
 
@@ -5108,15 +4680,10 @@ def describe_internet_gateways(
 
     :depends: boto3.client('ec2').describe_internet_gateways
     """
-    return _describe_resource(
-        "internet_gateway",
-        ids=internet_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "internet_gateway", ids=internet_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5146,15 +4713,10 @@ def describe_local_gateways(
         Note that the filters can be supplied as a dict with the keys being the
         names of the filter, and the value being either a string or a list of strings.
     """
-    return _describe_resource(
-        "local_gateway",
-        ids=local_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "local_gateway", ids=local_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5184,15 +4746,10 @@ def describe_nat_gateways(
 
     :depends: boto3.client('ec2').describe_nat_gateways
     """
-    return _describe_resource(
-        "nat_gateway",
-        ids=nat_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "nat_gateway", ids=nat_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5222,15 +4779,10 @@ def describe_network_acls(
 
     :depends: boto3.client('ec2').describe_network_acls
     """
-    return _describe_resource(
-        "network_acl",
-        ids=network_acl_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "network_acl", ids=network_acl_ids, filters=filters, client=client,
     )
 
 
@@ -5270,15 +4822,10 @@ def describe_route_tables(
 
     :depends: boto3.client('ec2').describe_route_tables
     """
-    return _describe_resource(
-        "route_table",
-        ids=route_table_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "route_table", ids=route_table_ids, filters=filters, client=client,
     )
 
 
@@ -5315,15 +4862,13 @@ def describe_security_groups(
     """
     if group_names and not isinstance(group_names, list):
         group_names = [group_names]
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "security_group",
         ids=group_ids,
         filters=filters,
         GroupNames=group_names,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -5372,8 +4917,8 @@ def describe_stale_security_groups(
         with dict containing the result of the boto ``describe_stale_security_groups``-
         call on succes.
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -5385,7 +4930,9 @@ def describe_stale_security_groups(
             "ids": res["result"]["vpc"],
             "client": client,
         }
-    return _generic_action(_describe_resource, params, "stale_security_group",)
+    return __utils__["boto3.generic_action"](
+        _describe_resource, params, "stale_security_group"
+    )
 
 
 def describe_subnets(
@@ -5414,15 +4961,10 @@ def describe_subnets(
 
     :depends: boto3.client('ec2').describe_subnets
     """
-    return _describe_resource(
-        "subnet",
-        ids=subnet_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "subnet", ids=subnet_ids, filters=filters, client=client,
     )
 
 
@@ -5438,15 +4980,9 @@ def describe_tags(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key with
         dict containing the tags on succes.
     """
-    return _describe_resource(
-        "tag",
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
-    )
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"]("tag", filters=filters, client=client,)
 
 
 def describe_transit_gateways(
@@ -5469,15 +5005,10 @@ def describe_transit_gateways(
         Note that the filters can be supplied as a dict with the keys being the
         names of the filter, and the value being either a string or a list of strings.
     """
-    return _describe_resource(
-        "transit_gateway",
-        ids=transit_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "transit_gateway", ids=transit_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5566,15 +5097,13 @@ def describe_vpc_endpoint_service_configurations(
         with dict containing the result of the boto ``describe_vpc_endpoint_service_configurations``-
         call on succes.
     """
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "vpc_endpoint_service_configuration",
         ids=service_ids,
         filters=filters,
         result_key="ServiceConfigurations",
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -5607,8 +5136,9 @@ def describe_vpc_endpoint_service_permissions(
         with dict containing the result of the boto
         ``describe_vpc_endpoint_service_permissions``-call on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint_service",
             "kwargs": service_lookup or {"service_id": service_id},
             "result_keys": "ServiceId",
@@ -5633,7 +5163,7 @@ def describe_vpc_endpoint_service_permissions(
                 "profile": profile,
             }
         )
-    return _generic_action(
+    return __utils__["boto3.generic_action"](
         _describe_resource, params, "vpc_endpoint_service_permission",
     )
 
@@ -5662,13 +5192,11 @@ def describe_vpc_endpoint_services(
         with dict containing the result of the boto ``describe_vpc_endpoint_services``-
         call on succes.
     """
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "vpc_endpoint_service",
         filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
         ServiceNames=service_names,
     )
@@ -5698,15 +5226,10 @@ def describe_vpc_endpoints(
         with dict containing the result of the boto ``describe_vpc_endpoints``-
         call on succes.
     """
-    return _describe_resource(
-        "vpc_endpoint",
-        ids=vpc_endpoint_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "vpc_endpoint", ids=vpc_endpoint_ids, filters=filters, client=client,
     )
 
 
@@ -5737,14 +5260,12 @@ def describe_vpc_peering_connections(
 
     :depends: boto3.client('ec2').describe_vpc_peering_connections
     """
-    return _describe_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
         "vpc_peering_connection",
         ids=vpc_peering_connection_ids,
         filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -5774,15 +5295,10 @@ def describe_vpcs(
 
     :depends: boto3.client('ec2').describe_vpcs
     """
-    return _describe_resource(
-        "vpc",
-        ids=vpc_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "vpc", ids=vpc_ids, filters=filters, client=client,
     )
 
 
@@ -5812,15 +5328,10 @@ def describe_vpn_gateways(
         with dict containing the result of the boto ``describe_vpn_gateways``-
         call on succes.
     """
-    return _describe_resource(
-        "vpn_gateway",
-        ids=vpn_gateway_ids,
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "vpn_gateway", ids=vpn_gateway_ids, filters=filters, client=client,
     )
 
 
@@ -5853,8 +5364,8 @@ def detach_internet_gateway(
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').detach_internet_gateway
     """
-    with _lookup_resources(
-        {"name": vpc, "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": vpc, "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -5868,8 +5379,12 @@ def detach_internet_gateway(
         "internet_gateway_id": internet_gateway_id,
         "attachment_vpc_id": vpc_id,
     }
-    with _lookup_resources(
-        {"name": "internet_gateway", "kwargs": internet_gateway_lookup},
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "internet_gateway",
+            "kwargs": internet_gateway_lookup,
+        },
         region=region,
         keyid=keyid,
         key=key,
@@ -5880,7 +5395,7 @@ def detach_internet_gateway(
         res = res["result"]
         params = {"InternetGatewayId": res["internet_gateway"], "VpcId": vpc_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.detach_internet_gateway, params,)
+    return __utils__["boto3.generic_action"](client.detach_internet_gateway, params)
 
 
 def detach_network_interface():
@@ -5965,8 +5480,12 @@ def disassociate_route_table(
             and route_table_lookup.get("association_subnet_id") is not None
         ):
             subnet_id = route_table_lookup.get("association_subnet_id")
-        with _lookup_resources(
-            {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "subnet",
+                "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+            },
             region=region,
             keyid=keyid,
             key=key,
@@ -5977,8 +5496,9 @@ def disassociate_route_table(
             subnet_id = res["result"]["subnet"]
         route_table_lookup = route_table_lookup or {"route_table_id": route_table_id}
         route_table_lookup["association_subnet_id"] = subnet_id
-        with _lookup_resources(
+        with __salt__["boto3_generic.lookup_resources"](
             {
+                "service": "ec2",
                 "name": "route_table",
                 "kwargs": route_table_lookup,
                 "result_keys": "Associations:0:RouteTableAssociationId",
@@ -5992,7 +5512,7 @@ def disassociate_route_table(
                 return res
             association_id = res["result"]["route_table"]
     params = {"AssociationId": association_id}
-    return _generic_action(client.disassociate_route_table, params,)
+    return __utils__["boto3.generic_action"](client.disassociate_route_table, params)
 
 
 def disassociate_subnet_cidr_block(
@@ -6029,8 +5549,9 @@ def disassociate_subnet_cidr_block(
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_subnets, boto3.client('ec2').disassociate_subnet_cidr_block
     """
     if association_id is None:
-        with _lookup_resources(
+        with __salt__["boto3_generic.lookup_resources"](
             {
+                "service": "ec2",
                 "name": "subnet",
                 "kwargs": subnet_lookup or {"subnet_id": subnet_id},
                 "result_keys": "Ipv6CidrBlockAssociationSet",
@@ -6060,7 +5581,9 @@ def disassociate_subnet_cidr_block(
         association_id = current_ipv6_association[0]["AssociationId"]
     params = {"AssociationId": association_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    res = _generic_action(client.disassociate_subnet_cidr_block, params,)
+    res = __utils__["boto3.generic_action"](
+        client.disassociate_subnet_cidr_block, params
+    )
     if "error" in res:
         return res
     if blocking:
@@ -6108,8 +5631,9 @@ def disassociate_vpc_cidr_block(
             raise SaltinvocationError(
                 'vpc_lookup must contain an entry for either "cidr_block" or "ipv6_cidr_block".'
             )
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc",
             "kwargs": vpc_lookup or {"association_id": association_id},
             "result_keys": "CidrBlockAssociationSet:0:AssociationId",
@@ -6124,7 +5648,7 @@ def disassociate_vpc_cidr_block(
         res = res["result"]
         params = {"AssociationId": res["vpc"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    res = _generic_action(client.disassociate_vpc_cidr_block, params,)
+    res = __utils__["boto3.generic_action"](client.disassociate_vpc_cidr_block, params)
     if "error" in res:
         return res
     if blocking:
@@ -6193,14 +5717,10 @@ def lookup_availability_zone(
             }
         )
     )
-    return _lookup_resource(
-        "availability_zone",
-        filters=filters,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "availability_zone", filters=filters, client=client,
     )
 
 
@@ -6307,15 +5827,10 @@ def lookup_address(
             }
         )
     )
-    return _lookup_resource(
-        "address",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "address", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6385,15 +5900,10 @@ def lookup_customer_gateway(
             }
         )
     )
-    return _lookup_resource(
-        "customer_gateway",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "customer_gateway", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6465,15 +5975,10 @@ def lookup_dhcp_options(
             }
         )
     )
-    return _lookup_resource(
-        "dhcp_options",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "dhcp_options", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6552,15 +6057,10 @@ def lookup_internet_gateway(
             }
         )
     )
-    return _lookup_resource(
-        "internet_gateway",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "internet_gateway", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6637,15 +6137,10 @@ def lookup_local_gateway(
             }
         )
     )
-    return _lookup_resource(
-        "local_gateway",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "local_gateway", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6743,15 +6238,10 @@ def lookup_nat_gateway(
             }
         )
     )
-    return _lookup_resource(
-        "nat_gateway",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "nat_gateway", filters=filters, tags=tags, client=client,
     )
 
 
@@ -6886,15 +6376,10 @@ def lookup_network_acl(
             }
         )
     )
-    return _lookup_resource(
-        "network_acl",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "network_acl", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7039,15 +6524,10 @@ def lookup_route_table(
             }
         )
     )
-    return _lookup_resource(
-        "route_table",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "route_table", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7138,12 +6618,7 @@ def lookup_security_group(
     """
     if vpc_id is None and vpc_lookup is not None:
         res = lookup_vpc(
-            region=region,
-            keyid=keyid,
-            key=key,
-            profile=profile,
-            client=client,
-            **vpc_lookup,
+            region=region, keyid=keyid, key=key, profile=profile, **vpc_lookup,
         )
         if "error" in res:
             return res
@@ -7180,15 +6655,10 @@ def lookup_security_group(
             }
         )
     )
-    return _lookup_resource(
-        "security_group",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "security_group", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7299,15 +6769,10 @@ def lookup_subnet(
             }
         )
     )
-    return _lookup_resource(
-        "subnet",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "subnet", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7366,15 +6831,10 @@ def lookup_tag(
             }
         )
     )
-    return _lookup_resource(
-        "tag",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "tag", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7478,15 +6938,10 @@ def lookup_vpc(
             }
         )
     )
-    return _lookup_resource(
-        "vpc",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "vpc", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7555,15 +7010,10 @@ def lookup_vpc_endpoint(
             }
         )
     )
-    return _lookup_resource(
-        "vpc_endpoint",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "vpc_endpoint", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7599,15 +7049,13 @@ def lookup_vpc_endpoint_service(
             {"service-name": service_name, "tag-key": tag_key}
         )
     )
-    return _lookup_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
         "vpc_endpoint_service",
         filters=filters,
         tags=tags,
         result_key="ServiceDetails",
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -7655,15 +7103,13 @@ def lookup_vpc_endpoint_service_configuration(
             }
         )
     )
-    return _lookup_resource(
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
         "vpc_endpoint_service_configuration",
         filters=filters,
         tags=tags,
         result_key="ServiceConfigurations",
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
         client=client,
     )
 
@@ -7780,15 +7226,10 @@ def lookup_vpc_peering_connection(
             }
         )
     )
-    return _lookup_resource(
-        "vpc_peering_connection",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "vpc_peering_connection", filters=filters, tags=tags, client=client,
     )
 
 
@@ -7871,15 +7312,10 @@ def lookup_vpn_gateway(
             }
         )
     )
-    return _lookup_resource(
-        "vpc_peering_connection",
-        filters=filters,
-        tags=tags,
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-        client=client,
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "vpc_peering_connection", filters=filters, tags=tags, client=client,
     )
 
 
@@ -8051,8 +7487,9 @@ def modify_vpc_endpoint_service_configuration(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         containing ``True`` on succes.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint_service",
             "kwargs": service_lookup or {"service_id": service_id},
             "result_keys": "ServiceId",
@@ -8076,7 +7513,9 @@ def modify_vpc_endpoint_service_configuration(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.modify_vpc_endpoint_service_configuration, params,)
+    return __utils__["boto3.generic_action"](
+        client.modify_vpc_endpoint_service_configuration, params
+    )
 
 
 def modify_vpc_endpoint_service_permissions(
@@ -8108,8 +7547,9 @@ def modify_vpc_endpoint_service_permissions(
     :param list(str) remove_allowed_principals: The Amazon Resource Names (ARN) of
         one or more principals. Permissions are revoked for principals in this list.
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "vpc_endpoint_service",
             "kwargs": service_lookup or {"service_id": service_id},
             "result_keys": "ServiceId",
@@ -8130,7 +7570,9 @@ def modify_vpc_endpoint_service_permissions(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.modify_vpc_endpoint_service_permissions, params,)
+    return __utils__["boto3.generic_action"](
+        client.modify_vpc_endpoint_service_permissions, params
+    )
 
 
 def modify_vpc_tenancy(
@@ -8162,8 +7604,8 @@ def modify_vpc_tenancy(
 
     :depends: boto3.client('ec2').modify_vpc_tenancy
     """
-    with _lookup_resources(
-        {"name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -8174,7 +7616,7 @@ def modify_vpc_tenancy(
         res = res["result"]
         params = {"VpcId": res["vpc"], "InstanceTenancy": instance_tenancy}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return _generic_action(client.modify_vpc_tenancy, params,)
+    return __utils__["boto3.generic_action"](client.modify_vpc_tenancy, params)
 
 
 def release_address(
@@ -8217,8 +7659,9 @@ def release_address(
 
     :depends: boto3.client('ec2').describe_addresses, boto3.client('ec2').release_address
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "address",
             "kwargs": address_lookup or {"allocation_id": address_id},
             "result_keys": "AllocationId",
@@ -8233,7 +7676,7 @@ def release_address(
         res = res["result"]
         params = {"AllocationId": res["address"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.release_address, params,)
+    return __utils__["boto3.generic_action"](client.release_address, params)
 
 
 def replace_network_acl_association(
@@ -8272,8 +7715,12 @@ def replace_network_acl_association(
     if not association_id:
         # A subnet can only be associated with a single network ACL. So if we find
         # the subnet, we find the correct ACL.
-        with _lookup_resources(
-            {"name": "subnet", "kwargs": subnet_lookup or {"subnet_id": subnet_id}},
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "subnet",
+                "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+            },
             region=region,
             keyid=keyid,
             key=key,
@@ -8282,8 +7729,9 @@ def replace_network_acl_association(
             if "error" in res:
                 return res
             subnet_id = res["result"]["subnet"]
-        with _lookup_resources(
+        with __salt__["boto3_generic.lookup_resources"](
             {
+                "service": "ec2",
                 "name": "network_acl",
                 "kwargs": {"association_subnet_id": subnet_id},
                 "result_keys": ["NetworkAclId", "Associations"],
@@ -8302,8 +7750,9 @@ def replace_network_acl_association(
                 if item["SubnetId"] == subnet_id
             ][0]
             network_acl_id = res["NetworkAclId"]
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_acl",
             "kwargs": network_acl_lookup or {"network_acl_id": network_acl_id},
         },
@@ -8318,7 +7767,9 @@ def replace_network_acl_association(
             "AssociationId": association_id,
             "NetworkAclId": res["result"]["network_acl"],
         }
-    return _generic_action(client.replace_network_acl_association, params,)
+    return __utils__["boto3.generic_action"](
+        client.replace_network_acl_association, params
+    )
 
 
 def replace_network_acl_entry(
@@ -8387,8 +7838,9 @@ def replace_network_acl_entry(
                     len(port_range)
                 )
             )
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "network_acl",
             "kwargs": network_acl_lookup or {"network_acl_id": network_acl_id},
         },
@@ -8416,7 +7868,7 @@ def replace_network_acl_entry(
             recurse_depth=1,
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.replace_network_acl_entry, params,)
+    return __utils__["boto3.generic_action"](client.replace_network_acl_entry, params)
 
 
 def replace_route(
@@ -8505,13 +7957,15 @@ def replace_route(
     # Amazon decided, in their wisdom, to let ``gateway`` be an IGW *or* a VPN gateway
     # So we need to look this up manually
     if gateway_id is None and gateway_lookup is not None:
-        with _lookup_resources(
+        with __salt__["boto3_generic.lookup_resources"](
             {
+                "service": "ec2",
                 "name": "internet_gateway",
                 "kwargs": gateway_lookup or {"internet_gateway_id": gateway_id},
                 "required": False,
             },
             {
+                "service": "ec2",
                 "name": "vpn_gateway",
                 "kwargs": gateway_lookup or {"vpn_gateway_id": gateway_id},
                 "required": False,
@@ -8534,45 +7988,53 @@ def replace_route(
                         "virtual private gateway matched."
                     )
                 }
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "route_table",
             "kwargs": route_table_lookup or {"route_table_id": route_table_id},
         },
         {
+            "service": "ec2",
             "name": "egress_only_internet_gateway",
             "kwargs": egress_only_internet_gateway_lookup
             or {"egress_only_internet_gateway_id": egress_only_internet_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "instance",
             "kwargs": instance_lookup or {"instance_id": instance_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "local_gateway",
             "kwargs": local_gateway_lookup or {"local_gateway_id": local_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "nat_gateway",
             "kwargs": nat_gateway_lookup or {"nat_gateway_id": nat_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "transit_gateway",
             "kwargs": transit_gateway_lookup
             or {"transit_gateway_id": transit_gateway_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "network_interface",
             "kwargs": network_interface_lookup
             or {"network_interface_id": network_interface_id},
             "required": False,
         },
         {
+            "service": "ec2",
             "name": "vpc_peering_connection",
             "kwargs": vpc_peering_connection_lookup
             or {"vpc_peering_connection_id": vpc_peering_connection_id},
@@ -8604,7 +8066,7 @@ def replace_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.replace_route, params,)
+    return __utils__["boto3.generic_action"](client.replace_route, params)
 
 
 def revoke_security_group_egress(
@@ -8642,8 +8104,9 @@ def revoke_security_group_egress(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": group_lookup or {"group_id": group_id},
             "result_keys": "GroupId",
@@ -8660,7 +8123,9 @@ def revoke_security_group_egress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.revoke_security_group_egress, params,)
+    return __utils__["boto3.generic_action"](
+        client.revoke_security_group_egress, params
+    )
 
 
 def revoke_security_group_ingress(
@@ -8701,8 +8166,9 @@ def revoke_security_group_ingress(
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with ``True`` on success
     """
-    with _lookup_resources(
+    with __salt__["boto3_generic.lookup_resources"](
         {
+            "service": "ec2",
             "name": "security_group",
             "kwargs": group_lookup or {"group_id": group_id},
             "result_keys": "GroupId",
@@ -8719,7 +8185,9 @@ def revoke_security_group_ingress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return _generic_action(client.revoke_security_group_ingress, params,)
+    return __utils__["boto3.generic_action"](
+        client.revoke_security_group_ingress, params
+    )
 
 
 # This has to be at the end of the file

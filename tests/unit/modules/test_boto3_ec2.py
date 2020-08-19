@@ -1,5 +1,6 @@
 # Import Python libs
 
+import inspect
 import logging
 
 # pylint: disable=3rd-party-module-not-gated
@@ -9,7 +10,8 @@ from pkg_resources import DistributionNotFound
 # Import Salt libs
 import salt.config
 import salt.loader
-import salt.modules.boto3_vpc as boto_vpc
+import salt.modules.boto3_ec2 as boto3_ec2
+import salt.modules.boto3_generic as boto3_generic
 import salt.utils.boto3mod
 import salt.utils.data
 from salt.exceptions import SaltInvocationError
@@ -61,7 +63,7 @@ except ImportError:
         """
         if the mock_ec2 function is not available due to import failure
         this replaces the decorated function with stub_function.
-        Allows boto_vpc unit tests to use the @mock_ec2 decorator
+        Allows boto3_ec2 unit tests to use the @mock_ec2 decorator
         without a "NameError: name 'mock_ec2' is not defined" error.
         """
 
@@ -197,7 +199,18 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
         utils = salt.loader.utils(
             opts, whitelist=["boto", "boto3", "args", "systemd", "path", "platform"]
         )
-        return {boto_vpc: {"__utils__": utils}}
+        return {
+            boto3_ec2: {
+                "__utils__": utils,
+                "__salt__": {
+                    "boto3_generic.{}".format(function_name): function
+                    for function_name, function in inspect.getmembers(
+                        boto3_generic, inspect.isfunction
+                    )
+                },
+            },
+            boto3_generic: {"__salt__": salt.loader.raw_mod(opts, "boto3_ec2", None)},
+        }
 
     @classmethod
     def setUpClass(cls):
@@ -220,7 +233,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         super().setUp()
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        boto_vpc.__init__(self.opts)
+        boto3_ec2.__init__(self.opts)
         delattr(self, "opts")
 
     def test_dummy(self):
@@ -444,7 +457,7 @@ class BotoVpcTestCaseMixin:
 
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     """
-    TestCase for salt.modules.boto_vpc module
+    TestCase for salt.modules.boto3_ec2 module
     """
 
     @mock_ec2
@@ -457,7 +470,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.lookup_vpc(vpc_id=vpc_id, **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(vpc_id=vpc_id, **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -472,7 +485,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
-        res = boto_vpc.describe_vpcs(vpc_ids="fake", **salt_conn_parameters)
+        res = boto3_ec2.describe_vpcs(vpc_ids="fake", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertIn("VpcID {'fake'} does not exist.", res["error"])
@@ -487,7 +500,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc(name="test")
 
-        res = boto_vpc.lookup_vpc(vpc_name="test", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(vpc_name="test", **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -502,7 +515,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
-        res = boto_vpc.lookup_vpc(vpc_name="test", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(vpc_name="test", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual("No vpc found with the specified parameters", res["error"])
@@ -517,7 +530,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc(tags={"test": "testvalue"})
 
-        res = boto_vpc.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -532,7 +545,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
-        res = boto_vpc.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual("No vpc found with the specified parameters", res["error"])
@@ -549,7 +562,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -564,7 +577,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
-        res = boto_vpc.lookup_vpc(cidr="10.10.10.10/24", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(cidr="10.10.10.10/24", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual("No vpc found with the specified parameters", res["error"])
@@ -577,7 +590,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc(name="test")
 
-        res = boto_vpc.lookup_vpc(vpc_name="test", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(vpc_name="test", **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -590,7 +603,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc(name="test")
 
-        res = boto_vpc.lookup_vpc(vpc_name="test_fake", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(vpc_name="test_fake", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual("No vpc found with the specified parameters", res["error"])
@@ -603,7 +616,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -616,7 +629,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()
 
-        res = boto_vpc.lookup_vpc(cidr="10.10.10.10/24", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(cidr="10.10.10.10/24", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual("No vpc found with the specified parameters", res["error"])
@@ -629,7 +642,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc(tags={"test": "testvalue"})
 
-        res = boto_vpc.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(tags={"test": "testvalue"}, **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertEqual(res["result"]["VpcId"], vpc_id)
@@ -642,7 +655,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc(tags={"test": "testvalue"})
 
-        res = boto_vpc.lookup_vpc(
+        res = boto3_ec2.lookup_vpc(
             tags={"test": "fake-testvalue"}, **salt_conn_parameters
         )
 
@@ -659,7 +672,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with self.assertRaisesRegex(
             SaltInvocationError, "No constraints where given when for lookup_vpc.",
         ):
-            boto_vpc.lookup_vpc(**salt_conn_parameters)
+            boto3_ec2.lookup_vpc(**salt_conn_parameters)
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_vpc"))
@@ -672,7 +685,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self._create_vpc(name="vpc-test1")
         self._create_vpc(name="vpc-test2")
 
-        res = boto_vpc.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
+        res = boto3_ec2.lookup_vpc(cidr="10.0.0.0/16", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual(
@@ -686,7 +699,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         tests True VPC created.
         """
-        res = boto_vpc.create_vpc(cidr_block, **salt_conn_parameters)
+        res = boto3_ec2.create_vpc(cidr_block, **salt_conn_parameters)
 
         self.assertTrue(res["result"])
 
@@ -698,7 +711,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         tests True VPC created.
         """
-        res = boto_vpc.create_vpc(
+        res = boto3_ec2.create_vpc(
             cidr_block, tags={"Name": "test"}, **salt_conn_parameters
         )
 
@@ -715,7 +728,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto_vpc.create_vpc(cidr_block, **salt_conn_parameters)
+            res = boto3_ec2.create_vpc(cidr_block, **salt_conn_parameters)
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
 
     @mock_ec2
@@ -728,7 +741,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.delete_vpc(vpc_id, **salt_conn_parameters)
+        res = boto3_ec2.delete_vpc(vpc_id, **salt_conn_parameters)
         self.assertTrue(res["result"])
 
     @mock_ec2
@@ -739,7 +752,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting a non-existent vpc
         """
-        res = boto_vpc.delete_vpc("1234", **salt_conn_parameters)
+        res = boto3_ec2.delete_vpc("1234", **salt_conn_parameters)
         self.assertIn("error", res)
         self.assertIn("VpcID 1234 does not exist.", res["error"])
 
@@ -760,7 +773,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_id = self._create_vpc(name="test", tags={"test": "testvalue"})
 
-        res = boto_vpc.describe_vpcs(vpc_ids=vpc_id, **salt_conn_parameters)
+        res = boto3_ec2.describe_vpcs(vpc_ids=vpc_id, **salt_conn_parameters)
 
         # Check individual properties as newer versions might return more
         self.assertEqual(res["result"][0]["VpcId"], vpc_id)
@@ -782,7 +795,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc(name="test", tags={"test": "testvalue"})
 
-        res = boto_vpc.describe_vpcs(vpc_ids="vpc-fake", **salt_conn_parameters)
+        res = boto3_ec2.describe_vpcs(vpc_ids="vpc-fake", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertIn("VpcID {'vpc-fake'} does not exist.", res["error"])
@@ -800,7 +813,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto_vpc.describe_vpcs(vpc_ids=vpc_id, **salt_conn_parameters)
+            res = boto3_ec2.describe_vpcs(vpc_ids=vpc_id, **salt_conn_parameters)
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
 
 
@@ -828,7 +841,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.create_subnet(
+        res = boto3_ec2.create_subnet(
             cidr_block="10.0.0.0/24", vpc_id=vpc_id, **salt_conn_parameters
         )
 
@@ -845,7 +858,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.create_subnet(
+        res = boto3_ec2.create_subnet(
             cidr_block="10.0.0.0/24",
             vpc_id=vpc_id,
             tags={"Name": "test"},
@@ -864,7 +877,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.create_subnet(
+        res = boto3_ec2.create_subnet(
             cidr_block="10.0.0.0/24",
             vpc_id=vpc_id,
             tags={"test": "testvalue"},
@@ -888,7 +901,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto_vpc.create_subnet(
+            res = boto3_ec2.create_subnet(
                 cidr_block="10.0.0.0/24", vpc_id=vpc_id, **salt_conn_parameters
             )
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
@@ -904,7 +917,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id)
 
-        res = boto_vpc.delete_subnet(subnet_id=subnet_id, **salt_conn_parameters)
+        res = boto3_ec2.delete_subnet(subnet_id=subnet_id, **salt_conn_parameters)
 
         self.assertTrue(res["result"])
 
@@ -916,7 +929,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting a subnet that doesn't exist
         """
-        delete_subnet_result = boto_vpc.delete_subnet(
+        delete_subnet_result = boto3_ec2.delete_subnet(
             subnet_id="1234", **salt_conn_parameters
         )
         log.debug(
@@ -937,7 +950,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id)
 
-        res = boto_vpc.lookup_subnet(subnet_id=subnet_id, **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_id=subnet_id, **salt_conn_parameters)
         self.assertIn("result", res)
         self.assertIn("SubnetId", res["result"])
         self.assertIn("SubnetId", res["result"])
@@ -949,7 +962,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests checking if a subnet exists which doesn't exist
         """
-        res = boto_vpc.lookup_subnet(subnet_id="fake", **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_id="fake", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual(res["error"], "No subnet found with the specified parameters")
@@ -965,7 +978,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id, name="test")
 
-        res = boto_vpc.lookup_subnet(subnet_name="test", **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_name="test", **salt_conn_parameters)
         self.assertIn("result", res)
         self.assertIn("SubnetId", res["result"])
         self.assertEqual(res["result"]["SubnetId"], subnet_id)
@@ -981,7 +994,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         self._create_subnet(vpc_id)
 
-        res = boto_vpc.lookup_subnet(subnet_name="test", **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_name="test", **salt_conn_parameters)
 
         self.assertIn("error", res)
         self.assertEqual(res["error"], "No subnet found with the specified parameters")
@@ -997,7 +1010,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id, tags={"test": "testvalue"})
 
-        res = boto_vpc.lookup_subnet(tags={"test": "testvalue"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(
+            tags={"test": "testvalue"}, **salt_conn_parameters
+        )
         self.assertIn("result", res)
         self.assertIn("SubnetId", res["result"])
         self.assertEqual(res["result"]["SubnetId"], subnet_id)
@@ -1013,7 +1028,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         self._create_subnet(vpc_id)
 
-        res = boto_vpc.lookup_subnet(tags={"test": "testvalue"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(
+            tags={"test": "testvalue"}, **salt_conn_parameters
+        )
         self.assertIn("error", res)
         self.assertEqual(res["error"], "No subnet found with the specified parameters")
 
@@ -1026,7 +1043,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id)
 
-        res = boto_vpc.describe_subnets(subnet_ids=subnet_id, **salt_conn_parameters)
+        res = boto3_ec2.describe_subnets(subnet_ids=subnet_id, **salt_conn_parameters)
         self.assertIn("result", res)
         self.assertLessEqual(
             {"SubnetId", "CidrBlock", "AvailabilityZone"}, set(res["result"][0].keys()),
@@ -1041,7 +1058,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()
 
-        res = boto_vpc.describe_subnets(
+        res = boto3_ec2.describe_subnets(
             subnet_ids="subnet-a1b2c3", **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -1058,7 +1075,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         self._create_subnet(vpc_id, name="test")
 
-        res = boto_vpc.describe_subnets(
+        res = boto3_ec2.describe_subnets(
             filters={"tag:Name": "test"}, **salt_conn_parameters
         )
         self.assertIn("result", res)
@@ -1075,7 +1092,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         self._create_vpc()
 
-        res = boto_vpc.describe_subnets(
+        res = boto3_ec2.describe_subnets(
             filters={"tag:Name": "test"}, **salt_conn_parameters
         )
         self.assertIn("result", res)
@@ -1091,7 +1108,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet1_id = self._create_subnet(vpc_id, cidr_block="10.0.1.0/24")
         subnet2_id = self._create_subnet(vpc_id, cidr_block="10.0.2.0/24")
 
-        res = boto_vpc.describe_subnets(
+        res = boto3_ec2.describe_subnets(
             subnet_ids=[subnet1_id, subnet2_id], **salt_conn_parameters
         )
         self.assertIn("result", res)
@@ -1113,7 +1130,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self._create_subnet(vpc_id, name="subnet1", cidr_block="10.0.1.0/24")
         self._create_subnet(vpc_id, name="subnet2", cidr_block="10.0.2.0/24")
 
-        res = boto_vpc.lookup_subnet(subnet_name="subnet2", **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_name="subnet2", **salt_conn_parameters)
         self.assertLessEqual(
             {"SubnetId", "CidrBlock", "AvailabilityZone", "State"},
             set(res["result"].keys()),
@@ -1127,7 +1144,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
         self._create_subnet(vpc_id, name="subnet1", availability_zone="us-east-1a")
-        res = boto_vpc.lookup_subnet(subnet_name="subnet1", **salt_conn_parameters)
+        res = boto3_ec2.lookup_subnet(subnet_name="subnet1", **salt_conn_parameters)
         self.assertIn("result", res)
         self.assertEqual(res["result"]["AvailabilityZone"], "us-east-1a")
 
@@ -1155,7 +1172,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests creating an internet gateway successfully (with no vpc id or name)
         """
 
-        res = boto_vpc.create_internet_gateway(**salt_conn_parameters)
+        res = boto3_ec2.create_internet_gateway(**salt_conn_parameters)
         self.assertTrue(res["result"])
 
     @mock_ec2
@@ -1167,7 +1184,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests that creating an internet gateway for a non-existent VPC fails.
         """
 
-        res = boto_vpc.create_internet_gateway(
+        res = boto3_ec2.create_internet_gateway(
             vpc_lookup={"vpc_name": "non-existent-vpc"}, **salt_conn_parameters
         )
         self.assertTrue("error" in res)
@@ -1183,7 +1200,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         self._create_vpc(name="test-vpc")
 
-        res = boto_vpc.create_internet_gateway(
+        res = boto3_ec2.create_internet_gateway(
             vpc_lookup={"vpc_name": "test-vpc"}, **salt_conn_parameters
         )
 
@@ -1200,7 +1217,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.create_internet_gateway(vpc_id=vpc_id, **salt_conn_parameters)
+        res = boto3_ec2.create_internet_gateway(vpc_id=vpc_id, **salt_conn_parameters)
 
         self.assertTrue(res["result"])
 
@@ -1226,7 +1243,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id, availability_zone="us-east-1a")
-        res = boto_vpc.create_nat_gateway(subnet_id=subnet_id, **salt_conn_parameters)
+        res = boto3_ec2.create_nat_gateway(subnet_id=subnet_id, **salt_conn_parameters)
         self.assertTrue(res["result"])
 
     @mock_ec2
@@ -1238,7 +1255,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests that creating an nat gateway for a non-existent subnet fails.
         """
 
-        ngw_creation_result = boto_vpc.create_nat_gateway(
+        ngw_creation_result = boto3_ec2.create_nat_gateway(
             subnet_id="non-existent-subnet", **salt_conn_parameters
         )
         self.assertTrue("error" in ngw_creation_result)
@@ -1262,7 +1279,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             create=True,
             return_value={"Subnets": [{"SubnetId": subnet_id, "VpcId": vpc_id}]},
         ):
-            res = boto_vpc.create_nat_gateway(
+            res = boto3_ec2.create_nat_gateway(
                 subnet_lookup={"subnet_name": "test-subnet"}, **salt_conn_parameters
             )
         self.assertIn("result", res)
@@ -1288,7 +1305,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests creating an internet gateway successfully (with no vpc id or name)
         """
 
-        res = boto_vpc.create_customer_gateway(
+        res = boto3_ec2.create_customer_gateway(
             65000, "ipsec.1", public_ip="10.1.1.1", **salt_conn_parameters
         )
         self.assertTrue(res["result"])
@@ -1301,7 +1318,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests checking if a customer gateway exists when it does exist
         """
 
-        res = boto_vpc.create_customer_gateway(
+        res = boto3_ec2.create_customer_gateway(
             65000,
             "ipsec.1",
             public_ip="10.1.1.1",
@@ -1311,7 +1328,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", res)
         customer_gateway_id = res["result"]["CustomerGatewayId"]
         # Moto 1.3.14 does not support filters except filter-by-tags.
-        res = boto_vpc.lookup_customer_gateway(
+        res = boto3_ec2.lookup_customer_gateway(
             tags={"Name": "test_cgw"}, **salt_conn_parameters
         )
         self.assertIn("result", res)
@@ -1325,7 +1342,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests checking if a subnet exists which doesn't exist
         """
-        res = boto_vpc.describe_customer_gateways(
+        res = boto3_ec2.describe_customer_gateways(
             customer_gateway_ids="fake", **salt_conn_parameters
         )
         self.assertIn("result", res)
@@ -1354,7 +1371,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creating dhcp options successfully
         """
-        res = boto_vpc.create_dhcp_options(
+        res = boto3_ec2.create_dhcp_options(
             **dhcp_options_parameters, **salt_conn_parameters
         )
 
@@ -1368,7 +1385,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creating dchp options with name successfully
         """
-        res = boto_vpc.create_dhcp_options(
+        res = boto3_ec2.create_dhcp_options(
             tags={"Name": "test"}, **dhcp_options_parameters, **salt_conn_parameters
         )
 
@@ -1382,7 +1399,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creating dchp options with tag successfully
         """
-        res = boto_vpc.create_dhcp_options(
+        res = boto3_ec2.create_dhcp_options(
             tags={"test": "testvalue"},
             **dhcp_options_parameters,
             **salt_conn_parameters
@@ -1402,7 +1419,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto_vpc.create_dhcp_options(
+            res = boto3_ec2.create_dhcp_options(
                 **dhcp_options_parameters, **salt_conn_parameters
             )
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
@@ -1418,7 +1435,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         dhcp_options_id = self._create_dhcp_options()
 
-        res = boto_vpc.associate_dhcp_options(
+        res = boto3_ec2.associate_dhcp_options(
             dhcp_options_id=dhcp_options_id, vpc_id=vpc_id, **salt_conn_parameters
         )
 
@@ -1434,7 +1451,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        res = boto_vpc.associate_dhcp_options(
+        res = boto3_ec2.associate_dhcp_options(
             dhcp_options_id="fake", vpc_id=vpc_id, **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -1450,7 +1467,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         dhcp_options_id = self._create_dhcp_options()
 
-        res = boto_vpc.associate_dhcp_options(
+        res = boto3_ec2.associate_dhcp_options(
             dhcp_options_id=dhcp_options_id, vpc_id="fake", **salt_conn_parameters
         )
 
@@ -1466,7 +1483,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         dhcp_options_id = self._create_dhcp_options()
 
-        res = boto_vpc.describe_dhcp_options(
+        res = boto3_ec2.describe_dhcp_options(
             dhcp_option_ids=dhcp_options_id, **salt_conn_parameters
         )
         self.assertTrue(res["result"])
@@ -1479,7 +1496,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests existence of dhcp options failure
         """
-        res = boto_vpc.describe_dhcp_options("fake", **salt_conn_parameters)
+        res = boto3_ec2.describe_dhcp_options("fake", **salt_conn_parameters)
         self.assertIn("error", res)
         self.assertIn("DhcpOptionID fake does not exist.", res["error"])
 
@@ -1504,7 +1521,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        network_acl_creation_result = boto_vpc.create_network_acl(
+        network_acl_creation_result = boto3_ec2.create_network_acl(
             vpc_id=vpc_id, **salt_conn_parameters
         )
 
@@ -1520,7 +1537,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        network_acl_creation_result = boto_vpc.create_network_acl(
+        network_acl_creation_result = boto3_ec2.create_network_acl(
             vpc_id, tags={"Name": "test"}, **salt_conn_parameters
         )
 
@@ -1536,7 +1553,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        network_acl_creation_result = boto_vpc.create_network_acl(
+        network_acl_creation_result = boto3_ec2.create_network_acl(
             vpc_id=vpc_id, tags={"test": "testvalue"}, **salt_conn_parameters
         )
 
@@ -1550,7 +1567,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creation of network acl with a non-existent vpc
         """
-        network_acl_creation_result = boto_vpc.create_network_acl(
+        network_acl_creation_result = boto3_ec2.create_network_acl(
             vpc_id="fake", **salt_conn_parameters
         )
 
@@ -1571,7 +1588,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto_vpc.create_network_acl(vpc_id=vpc_id, **salt_conn_parameters)
+            res = boto3_ec2.create_network_acl(vpc_id=vpc_id, **salt_conn_parameters)
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
 
     @mock_ec2
@@ -1585,7 +1602,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         network_acl_id = self._create_network_acl(vpc_id)
 
-        res = boto_vpc.delete_network_acl(
+        res = boto3_ec2.delete_network_acl(
             network_acl_id=network_acl_id, **salt_conn_parameters
         )
 
@@ -1599,7 +1616,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting a non-existent network acl
         """
-        network_acl_deletion_result = boto_vpc.delete_network_acl(
+        network_acl_deletion_result = boto3_ec2.delete_network_acl(
             network_acl_id="fake", **salt_conn_parameters
         )
 
@@ -1616,7 +1633,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_id = self._create_network_acl(vpc_id, tags={"Name": "testacl"})
 
         # Moto 1.13.14 does not implement the network-acl-id filter, lookup by tag instead.
-        res = boto_vpc.lookup_network_acl(
+        res = boto3_ec2.lookup_network_acl(
             tags={"Name": "testacl"}, **salt_conn_parameters
         )
 
@@ -1630,7 +1647,9 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests checking network acl does not exist
         """
-        res = boto_vpc.lookup_network_acl(tags={"Name": "fake"}, **salt_conn_parameters)
+        res = boto3_ec2.lookup_network_acl(
+            tags={"Name": "fake"}, **salt_conn_parameters
+        )
 
         self.assertIn("error", res)
         self.assertEqual(
@@ -1648,7 +1667,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             SaltInvocationError,
             "No constraints where given when for lookup_network_acl.",
         ):
-            boto_vpc.lookup_network_acl(**salt_conn_parameters)
+            boto3_ec2.lookup_network_acl(**salt_conn_parameters)
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_network_acl_entry"))
@@ -1663,7 +1682,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         params = dict(self.network_acl_entry_parameters)
         params.update({"network_acl_id": network_acl_id})
-        network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(
+        network_acl_entry_creation_result = boto3_ec2.create_network_acl_entry(
             **params, **salt_conn_parameters
         )
 
@@ -1677,7 +1696,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creating network acl entry for non-existent network acl
         """
-        res = boto_vpc.create_network_acl_entry(
+        res = boto3_ec2.create_network_acl_entry(
             **self.network_acl_entry_parameters, **salt_conn_parameters
         )
 
@@ -1698,7 +1717,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         params.update({"network_acl_id": network_acl_id})
         self._create_network_acl_entry(**params)
 
-        res = boto_vpc.replace_network_acl_entry(**params, **salt_conn_parameters)
+        res = boto3_ec2.replace_network_acl_entry(**params, **salt_conn_parameters)
 
         self.assertIn("result", res)
         self.assertTrue(res["result"])
@@ -1711,7 +1730,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests replacing a network acl entry for a non-existent network acl
         """
-        res = boto_vpc.create_network_acl_entry(
+        res = boto3_ec2.create_network_acl_entry(
             **self.network_acl_entry_parameters, **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -1731,7 +1750,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         params.update({"network_acl_id": network_acl_id})
         self._create_network_acl_entry(**params)
 
-        res = boto_vpc.delete_network_acl_entry(
+        res = boto3_ec2.delete_network_acl_entry(
             100, True, network_acl_id=network_acl_id, **salt_conn_parameters
         )  # TODO: Make bugreport to moto: deleting network acl entries that do not exist is not handled properly
 
@@ -1746,7 +1765,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting a non-existent network acl entry
         """
-        res = boto_vpc.delete_network_acl_entry(
+        res = boto3_ec2.delete_network_acl_entry(
             100, False, network_acl_id="fake", **salt_conn_parameters
         )
 
@@ -1774,7 +1793,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc_id = self._create_vpc()
 
-        route_table_creation_result = boto_vpc.create_route_table(
+        route_table_creation_result = boto3_ec2.create_route_table(
             vpc_id=vpc_id, **salt_conn_parameters
         )
 
@@ -1788,7 +1807,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creating route table on a non-existent vpc
         """
-        route_table_creation_result = boto_vpc.create_route_table(
+        route_table_creation_result = boto3_ec2.create_route_table(
             vpc_id="fake", **salt_conn_parameters
         )
 
@@ -1805,7 +1824,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        route_table_deletion_result = boto_vpc.delete_route_table(
+        route_table_deletion_result = boto3_ec2.delete_route_table(
             route_table_id=route_table_id, **salt_conn_parameters
         )
 
@@ -1819,7 +1838,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting non-existent route table
         """
-        res = boto_vpc.delete_route_table(route_table_id="fake", **salt_conn_parameters)
+        res = boto3_ec2.delete_route_table(
+            route_table_id="fake", **salt_conn_parameters
+        )
 
         self.assertIn("error", res)
 
@@ -1833,7 +1854,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.describe_route_tables(
+        res = boto3_ec2.describe_route_tables(
             route_table_ids=route_table_id, **salt_conn_parameters
         )
 
@@ -1846,7 +1867,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests existence of route table failure
         """
-        res = boto_vpc.describe_route_tables(
+        res = boto3_ec2.describe_route_tables(
             route_table_ids="fake", **salt_conn_parameters
         )
 
@@ -1865,7 +1886,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_id = self._create_subnet(vpc_id)
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.associate_route_table(
+        res = boto3_ec2.associate_route_table(
             route_table_id=route_table_id, subnet_id=subnet_id, **salt_conn_parameters
         )
 
@@ -1882,7 +1903,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         subnet_id = self._create_subnet(vpc_id)
 
-        res = boto_vpc.associate_route_table(
+        res = boto3_ec2.associate_route_table(
             route_table_id="fake", subnet_id=subnet_id, **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -1899,7 +1920,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.associate_route_table(
+        res = boto3_ec2.associate_route_table(
             route_table_id=route_table_id, subnet_id="fake", **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -1918,7 +1939,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         route_table_id = self._create_route_table(vpc_id)
         association_id = self._associate_route_table(route_table_id, subnet_id)
 
-        res = boto_vpc.disassociate_route_table(
+        res = boto3_ec2.disassociate_route_table(
             association_id=association_id, **salt_conn_parameters
         )
 
@@ -1935,7 +1956,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.create_route(
+        res = boto3_ec2.create_route(
             route_table_id=route_table_id,
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -1951,7 +1972,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests creation of route on non-existent route table
         """
-        res = boto_vpc.create_route(
+        res = boto3_ec2.create_route(
             route_table_id="fake",
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -1970,7 +1991,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.delete_route(
+        res = boto3_ec2.delete_route(
             route_table_id=route_table_id,
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -1985,7 +2006,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests deleting route from a non-existent route table
         """
-        res = boto_vpc.delete_route(
+        res = boto3_ec2.delete_route(
             route_table_id="fake",
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -2004,7 +2025,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
         route_table_id = self._create_route_table(vpc_id)
 
-        res = boto_vpc.replace_route(
+        res = boto3_ec2.replace_route(
             route_table_id=route_table_id,
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -2019,7 +2040,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests replacing a route when the route table doesn't exist
         """
-        res = boto_vpc.replace_route(
+        res = boto3_ec2.replace_route(
             route_table_id="fake",
             destination_cidr_block=cidr_block,
             **salt_conn_parameters
@@ -2050,7 +2071,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         my_vpc_id = self._create_vpc()
         other_vpc_id = self._create_vpc()
-        res = boto_vpc.create_vpc_peering_connection(
+        res = boto3_ec2.create_vpc_peering_connection(
             requester_vpc_id=my_vpc_id, peer_vpc_id=other_vpc_id, **salt_conn_parameters
         )
         self.assertIn("result", res)
