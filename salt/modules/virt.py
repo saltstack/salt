@@ -623,6 +623,7 @@ def _migrate(dom, dst_uri, **kwargs):
         - offline: If set to True it will migrate the domain definition
                    without starting the domain on destination and without
                    stopping it on source host. Defalt value is False.
+        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
         - copy_storage: migrate non-shared storage
             "all": full disk copy
             "inc" or "incremental": incremental copy
@@ -634,6 +635,14 @@ def _migrate(dom, dst_uri, **kwargs):
     flags = libvirt.VIR_MIGRATE_LIVE
     flags |= libvirt.VIR_MIGRATE_PERSIST_DEST
     flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+
+    max_bandwidth = kwargs.get("max_bandwidth")
+    if max_bandwidth:
+        try:
+            bandwidth_value = int(max_bandwidth)
+        except ValueError:
+            raise SaltInvocationError("Invalid max_bandwidth value: {}".format(max_bandwidth))
+        dom.migrateSetMaxSpeed(bandwidth_value)
 
     if kwargs.get("offline") is True:
         flags |= libvirt.VIR_MIGRATE_OFFLINE
@@ -3794,6 +3803,7 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         - offline: If set to True it will migrate the domain definition
                    without starting the domain on destination and without
                    stopping it on source host. Defalt value is False.
+        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
         - username: username to connect with target host
         - password: password to connect with target host
 
@@ -3838,6 +3848,7 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         - offline: If set to True it will migrate the domain definition
                    without starting the domain on destination and without
                    stopping it on source host. Defalt value is False.
+        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
         - username: username to connect with target host
         - password: password to connect with target host
 
@@ -3882,6 +3893,7 @@ def migrate(vm_, target, ssh=False, **kwargs):
         - offline: If set to True it will migrate the domain definition
                    without starting the domain on destination and without
                    stopping it on source host. Defalt value is False.
+        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
         - copy_storage: migrate non-shared storage
             "all": full disk copy
             "inc" or "incremental": incremental copy
