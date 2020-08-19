@@ -632,6 +632,8 @@ def _migrate(dom, dst_uri, **kwargs):
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
                            is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                           to be used to send memory pages to the destination host.
         - copy_storage:    Migrate non-shared storage. It must be one of the
                            following values:
             - all:         Full disk copy
@@ -639,8 +641,9 @@ def _migrate(dom, dst_uri, **kwargs):
         - username:        Username to connect with target host
         - password:        Password to connect with target host
     """
-    migrated_state = libvirt.VIR_DOMAIN_RUNNING_MIGRATED
     flags = 0
+    params = {}
+    migrated_state = libvirt.VIR_DOMAIN_RUNNING_MIGRATED
 
     if kwargs.get("live", True):
         flags |= libvirt.VIR_MIGRATE_LIVE
@@ -671,7 +674,19 @@ def _migrate(dom, dst_uri, **kwargs):
         flags |= libvirt.VIR_MIGRATE_OFFLINE
         migrated_state = libvirt.VIR_DOMAIN_RUNNING_UNPAUSED
 
+    parallel_connections = kwargs.get("parallel_connections")
+    if parallel_connections:
+        try:
+            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(parallel_connections)
+        except ValueError:
+            raise SaltInvocationError("Invalid parallel_connections value")
+        flags |= libvirt.VIR_MIGRATE_PARALLEL
+
     if __salt__["config.get"]("virt:tunnel"):
+        if parallel_connections:
+            raise SaltInvocationError(
+                "Parallel migration isn't compatible with tunneled migration"
+            )
         flags |= libvirt.VIR_MIGRATE_PEER2PEER
         flags |= libvirt.VIR_MIGRATE_TUNNELLED
 
@@ -690,7 +705,7 @@ def _migrate(dom, dst_uri, **kwargs):
             username=kwargs.get("username"),
             password=kwargs.get("password"),
         )
-        new_dom = dom.migrate(dst_conn, flags=flags)
+        new_dom = dom.migrate3(dconn=dst_conn, params=params, flags=flags)
         if new_dom:
             state = new_dom.state()
         dst_conn.close()
@@ -3835,6 +3850,8 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
                           is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                          to be used to send memory pages to the destination host.
         - username:       Username to connect with target host
         - password:       Password to connect with target host
 
@@ -3888,6 +3905,8 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
                           is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                          to be used to send memory pages to the destination host.
         - username:       Username to connect with target host
         - password:       Password to connect with target host
 
@@ -3941,6 +3960,8 @@ def migrate(vm_, target, ssh=False, **kwargs):
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
                            is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                           to be used to send memory pages to the destination host.
         - copy_storage:    Migrate non-shared storage. It must be one of the
                            following values:
             - all:         Full disk copy
