@@ -1793,8 +1793,8 @@ def _validate_opts(opts):
     errors = []
 
     err = (
-        "Config option '{0}' with value {1} has an invalid type of {2}, a "
-        "{3} is required for this option"
+        "Config option '{}' with value {} has an invalid type of {}, a "
+        "{} is required for this option"
     )
     for key, val in opts.items():
         if key in VALID_OPTS:
@@ -1903,7 +1903,7 @@ def _read_conf_file(path):
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
         except salt.utils.yaml.YAMLError as err:
-            message = "Error parsing configuration file: {0} - {1}".format(path, err)
+            message = "Error parsing configuration file: {} - {}".format(path, err)
             log.error(message)
             if path.endswith("_schedule.conf"):
                 # Create empty dictionary of config options
@@ -1914,16 +1914,16 @@ def _read_conf_file(path):
                 raise salt.exceptions.SaltConfigurationError(message)
 
     if append_file_suffix_YAMLError:
-        message = "Renaming to {0}".format(path+"YAMLError")
+        message = "Renaming to {}".format(path + "YAMLError")
         log.error(message)
-        os.replace(path, path+"YAMLError")
+        os.replace(path, path + "YAMLError")
 
     # only interpret documents as a valid conf, not things like strings,
     # which might have been caused by invalid yaml syntax
     if not isinstance(conf_opts, dict):
         message = (
-            "Error parsing configuration file: {0} - conf "
-            "should be a document, not {1}.".format(path, type(conf_opts))
+            "Error parsing configuration file: {} - conf "
+            "should be a document, not {}.".format(path, type(conf_opts))
         )
         log.error(message)
         raise salt.exceptions.SaltConfigurationError(message)
@@ -2000,7 +2000,7 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
     # If the configuration file is missing, attempt to copy the template,
     # after removing the first header line.
     if not os.path.isfile(path):
-        template = "{0}.template".format(path)
+        template = "{}.template".format(path)
         if os.path.isfile(template):
             log.debug("Writing %s based on %s", path, template)
             with salt.utils.files.fopen(path, "w") as out:
@@ -2562,8 +2562,8 @@ def cloud_config(
                 raise salt.exceptions.SaltCloudConfigError(
                     "Do not mix the old cloud providers configuration with "
                     "the new one. The providers configuration should now go "
-                    "in the file `{0}` or a separate `*.conf` file within "
-                    "`cloud.providers.d/` which is relative to `{0}`.".format(
+                    "in the file `{}` or a separate `*.conf` file within "
+                    "`cloud.providers.d/` which is relative to `{}`.".format(
                         os.path.join(salt.syspaths.CONFIG_DIR, "cloud.providers")
                     )
                 )
@@ -2621,7 +2621,7 @@ def apply_cloud_config(overrides, defaults=None):
                 for detail in details:
                     if "driver" not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
-                            "The cloud provider alias '{0}' has an entry "
+                            "The cloud provider alias '{}' has an entry "
                             "missing the required setting of 'driver'.".format(alias)
                         )
 
@@ -2634,12 +2634,12 @@ def apply_cloud_config(overrides, defaults=None):
                     if alias not in config["providers"]:
                         config["providers"][alias] = {}
 
-                    detail["provider"] = "{0}:{1}".format(alias, driver)
+                    detail["provider"] = "{}:{}".format(alias, driver)
                     config["providers"][alias][driver] = detail
             elif isinstance(details, dict):
                 if "driver" not in details:
                     raise salt.exceptions.SaltCloudConfigError(
-                        "The cloud provider alias '{0}' has an entry "
+                        "The cloud provider alias '{}' has an entry "
                         "missing the required setting of 'driver'".format(alias)
                     )
 
@@ -2651,7 +2651,7 @@ def apply_cloud_config(overrides, defaults=None):
                 if alias not in config["providers"]:
                     config["providers"][alias] = {}
 
-                details["provider"] = "{0}:{1}".format(alias, driver)
+                details["provider"] = "{}:{}".format(alias, driver)
                 config["providers"][alias][driver] = details
 
     # Migrate old configuration
@@ -2914,7 +2914,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         "forth."
                     )
                     raise salt.exceptions.SaltCloudConfigError(
-                        "The cloud provider alias '{0}' has multiple entries "
+                        "The cloud provider alias '{}' has multiple entries "
                         "for the '{1[driver]}' driver.".format(key, details)
                     )
                 handled_providers.add(details["driver"])
@@ -2922,7 +2922,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         for entry in val:
 
             if "driver" not in entry:
-                entry["driver"] = "-only-extendable-{0}".format(ext_count)
+                entry["driver"] = "-only-extendable-{}".format(ext_count)
                 ext_count += 1
 
             if key not in providers:
@@ -2965,14 +2965,14 @@ def apply_cloud_providers_config(overrides, defaults=None):
                                 details["driver"], provider_alias, alias, provider
                             )
                         )
-                    details["extends"] = "{0}:{1}".format(alias, provider)
+                    details["extends"] = "{}:{}".format(alias, provider)
                     # change provider details '-only-extendable-' to extended
                     # provider name
                     details["driver"] = provider
                 elif providers.get(extends):
                     raise salt.exceptions.SaltCloudConfigError(
-                        "The '{0}' cloud provider entry in '{1}' is "
-                        "trying to extend from '{2}' and no provider was "
+                        "The '{}' cloud provider entry in '{}' is "
+                        "trying to extend from '{}' and no provider was "
                         "specified. Not extending!".format(
                             details["driver"], provider_alias, extends
                         )
@@ -2986,10 +2986,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                 else:
                     if driver in providers.get(extends):
-                        details["extends"] = "{0}:{1}".format(extends, driver)
+                        details["extends"] = "{}:{}".format(extends, driver)
                     elif "-only-extendable-" in providers.get(extends):
-                        details["extends"] = "{0}:{1}".format(
-                            extends, "-only-extendable-{0}".format(ext_count)
+                        details["extends"] = "{}:{}".format(
+                            extends, "-only-extendable-{}".format(ext_count)
                         )
                     else:
                         # We're still not aware of what we're trying to extend
@@ -3523,7 +3523,7 @@ def _update_ssl_config(opts):
             or not val.startswith(prefix)
             or not hasattr(ssl, val)
         ):
-            message = "SSL option '{0}' must be set to one of the following values: '{1}'.".format(
+            message = "SSL option '{}' must be set to one of the following values: '{}'.".format(
                 key, "', '".join([val for val in dir(ssl) if val.startswith(prefix)])
             )
             log.error(message)
@@ -3702,7 +3702,7 @@ def _update_discovery_config(opts):
         for key in opts["discovery"]:
             if key not in discovery_config:
                 raise salt.exceptions.SaltConfigurationError(
-                    "Unknown discovery option: {0}".format(key)
+                    "Unknown discovery option: {}".format(key)
                 )
         if opts.get("__role") != "minion":
             for key in ["attempts", "pause", "match"]:
