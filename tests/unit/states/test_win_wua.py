@@ -4,6 +4,7 @@ Test the win_wua state module
 # Import Python Libs
 try:
     from dataclasses import dataclass, field
+
     HAS_DATACLASSES = True
 except ImportError:
     HAS_DATACLASSES = False
