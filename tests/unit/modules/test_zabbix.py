@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Christian McHugh <christian.mchugh@gmail.com>`
 """
 
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals
 
 import salt.modules.zabbix as zabbix
 from salt.exceptions import SaltException
