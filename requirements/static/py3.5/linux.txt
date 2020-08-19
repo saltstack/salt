@@ -158,7 +158,7 @@ ntc-templates==1.4.0      # via junos-eznc
 oauthlib==3.1.0           # via requests-oauthlib
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
-paramiko==2.4.2
+paramiko==2.7.1
 passlib==1.7.2
 pathlib2==2.3.3           # via pytest
 pathtools==0.1.2          # via watchdog
@@ -168,7 +168,7 @@ psutil==5.6.7
 py==1.8.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
-pyasn1==0.4.5             # via paramiko, pyasn1-modules, rsa
+pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.7

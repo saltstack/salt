@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import logging
 import os
 import shutil
@@ -28,136 +25,49 @@ from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
-File = StateFactory("file")
-Service = StateFactory("service")
 
-pydmesg_expected = {
-    "file.managed": [
-        {"group": "root"},
-        {"mode": "0755"},
-        {"require": [{"file": "/usr/local/bin"}]},
-        {"source": "salt://debian/files/pydmesg.py"},
-        {"user": "root"},
-    ]
-}
-pydmesg_salt_expected = OrderedDict([("/usr/local/bin/pydmesg", pydmesg_expected)])
-pydmesg_kwargs = dict(
-    user="root", group="root", mode="0755", source="salt://debian/files/pydmesg.py"
-)
-
-basic_template = """#!pyobjects
-File.directory('/tmp', mode='1777', owner='root', group='root')
-"""
-
-invalid_template = """#!pyobjects
-File.fail('/tmp')
-"""
-
-include_template = """#!pyobjects
-include('http')
-"""
-
-extend_template = """#!pyobjects
-include('http')
-
-from salt.utils.pyobjects import StateFactory
-Service = StateFactory('service')
-
-Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
-"""
-
-map_prefix = """\
-#!pyobjects
-from salt.utils.pyobjects import StateFactory
-Service = StateFactory('service')
-
-{% macro priority(value) %}
-    priority = {{ value }}
-{% endmacro %}
-class Samba(Map):
-"""
-
-map_suffix = """
-with Pkg.installed("samba", names=[Samba.server, Samba.client]):
-    Service.running("samba", name=Samba.service)
-"""
-
-map_data = {
-    "debian": "    class Debian:\n"
-    "        server = 'samba'\n"
-    "        client = 'samba-client'\n"
-    "        service = 'samba'\n",
-    "centos": "    class RougeChapeau:\n"
-    "        __match__ = 'RedHat'\n"
-    "        server = 'samba'\n"
-    "        client = 'samba'\n"
-    "        service = 'smb'\n",
-    "ubuntu": "    class Ubuntu:\n"
-    "        __grain__ = 'os'\n"
-    "        service = 'smbd'\n",
-}
-
-import_template = """#!pyobjects
-import salt://map.sls
-
-Pkg.removed("samba-imported", names=[map.Samba.server, map.Samba.client])
-"""
-
-recursive_map_template = """#!pyobjects
-from salt://map.sls import Samba
-
-class CustomSamba(Samba):
-    pass
-"""
-
-recursive_import_template = """#!pyobjects
-from salt://recursive_map.sls import CustomSamba
-
-Pkg.removed("samba-imported", names=[CustomSamba.server, CustomSamba.client])"""
-
-scope_test_import_template = """#!pyobjects
-from salt://recursive_map.sls import CustomSamba
-
-# since we import CustomSamba we should shouldn't be able to see Samba
-Pkg.removed("samba-imported", names=[Samba.server, Samba.client])"""
-
-from_import_template = """#!pyobjects
-# this spacing is like this on purpose to ensure it's stripped properly
-from   salt://map.sls  import     Samba
-
-Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
-"""
-
-import_as_template = """#!pyobjects
-from salt://map.sls import Samba as Other
-Pkg.removed("samba-imported", names=[Other.server, Other.client])
-"""
-
-random_password_template = """#!pyobjects
-import random, string
-password = ''.join([random.SystemRandom().choice(
-        string.ascii_letters + string.digits) for _ in range(20)])
-"""
-
-random_password_import_template = """#!pyobjects
-from salt://password.sls import password
-"""
-
-requisite_implicit_list_template = """#!pyobjects
-from salt.utils.pyobjects import StateFactory
-Service = StateFactory('service')
-
-with Pkg.installed("pkg"):
-    Service.running("service", watch=File("file"), require=Cmd("cmd"))
-"""
-
-
-class MapBuilder(object):
+class MapBuilder:
     def build_map(self, template=None):
         """
         Build from a specific template or just use a default if no template
         is passed to this function.
         """
+
+        map_prefix = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt.utils.pyobjects import StateFactory
+        Service = StateFactory('service')
+
+        {% macro priority(value) %}
+            priority = {{ value }}
+        {% endmacro %}
+        class Samba(Map):
+        """
+        )
+
+        map_suffix = textwrap.dedent(
+            """\
+        with Pkg.installed("samba", names=[Samba.server, Samba.client]):
+            Service.running("samba", name=Samba.service)
+        """
+        )
+
+        map_data = {
+            "debian": "    class Debian:\n"
+            "        server = 'samba'\n"
+            "        client = 'samba-client'\n"
+            "        service = 'samba'\n",
+            "centos": "    class RougeChapeau:\n"
+            "        __match__ = 'RedHat'\n"
+            "        server = 'samba'\n"
+            "        client = 'samba'\n"
+            "        service = 'smb'\n",
+            "ubuntu": "    class Ubuntu:\n"
+            "        __grain__ = 'os'\n"
+            "        service = 'smbd'\n",
+        }
+
         if template is None:
             template = textwrap.dedent(
                 """\
@@ -173,37 +83,70 @@ class MapBuilder(object):
 
 
 class StateTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.File = StateFactory("file")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.File = None
+
     def setUp(self):
         Registry.empty()
+        self.pydmesg_expected = {
+            "file.managed": [
+                {"group": "root"},
+                {"mode": "0755"},
+                {"require": [{"file": "/usr/local/bin"}]},
+                {"source": "salt://debian/files/pydmesg.py"},
+                {"user": "root"},
+            ]
+        }
+        self.pydmesg_salt_expected = OrderedDict(
+            [("/usr/local/bin/pydmesg", self.pydmesg_expected)]
+        )
+        self.pydmesg_kwargs = dict(
+            user="root",
+            group="root",
+            mode="0755",
+            source="salt://debian/files/pydmesg.py",
+        )
+
+    def tearDown(self):
+        self.pydmesg_expected = self.pydmesg_salt_expected = self.pydmesg_kwargs = None
 
     def test_serialization(self):
         f = State(
             "/usr/local/bin/pydmesg",
             "file",
             "managed",
-            require=File("/usr/local/bin"),
-            **pydmesg_kwargs
+            require=self.File("/usr/local/bin"),
+            **self.pydmesg_kwargs
         )
 
-        self.assertEqual(f(), pydmesg_expected)
+        self.assertEqual(f(), self.pydmesg_expected)
 
     def test_factory_serialization(self):
-        File.managed(
-            "/usr/local/bin/pydmesg", require=File("/usr/local/bin"), **pydmesg_kwargs
+        self.File.managed(
+            "/usr/local/bin/pydmesg",
+            require=self.File("/usr/local/bin"),
+            **self.pydmesg_kwargs
         )
 
-        self.assertEqual(Registry.states["/usr/local/bin/pydmesg"], pydmesg_expected)
+        self.assertEqual(
+            Registry.states["/usr/local/bin/pydmesg"], self.pydmesg_expected
+        )
 
     def test_context_manager(self):
-        with File("/usr/local/bin"):
-            pydmesg = File.managed("/usr/local/bin/pydmesg", **pydmesg_kwargs)
+        with self.File("/usr/local/bin"):
+            pydmesg = self.File.managed("/usr/local/bin/pydmesg", **self.pydmesg_kwargs)
 
             self.assertEqual(
-                Registry.states["/usr/local/bin/pydmesg"], pydmesg_expected
+                Registry.states["/usr/local/bin/pydmesg"], self.pydmesg_expected
             )
 
             with pydmesg:
-                File.managed("/tmp/something", owner="root")
+                self.File.managed("/tmp/something", owner="root")
 
                 self.assertEqual(
                     Registry.states["/tmp/something"],
@@ -221,23 +164,27 @@ class StateTests(TestCase):
                 )
 
     def test_salt_data(self):
-        File.managed(
-            "/usr/local/bin/pydmesg", require=File("/usr/local/bin"), **pydmesg_kwargs
+        self.File.managed(
+            "/usr/local/bin/pydmesg",
+            require=self.File("/usr/local/bin"),
+            **self.pydmesg_kwargs
         )
 
-        self.assertEqual(Registry.states["/usr/local/bin/pydmesg"], pydmesg_expected)
+        self.assertEqual(
+            Registry.states["/usr/local/bin/pydmesg"], self.pydmesg_expected
+        )
 
-        self.assertEqual(Registry.salt_data(), pydmesg_salt_expected)
+        self.assertEqual(Registry.salt_data(), self.pydmesg_salt_expected)
 
         self.assertEqual(Registry.states, OrderedDict())
 
     def test_duplicates(self):
         def add_dup():
-            File.managed("dup", name="/dup")
+            self.File.managed("dup", name="/dup")
 
         add_dup()
         self.assertRaises(DuplicateState, add_dup)
-
+        Service = StateFactory("service")
         Service.running("dup", name="dup-service")
 
         self.assertEqual(
@@ -258,7 +205,7 @@ class StateTests(TestCase):
         )
 
 
-class RendererMixin(object):
+class RendererMixin:
     """
     This is a mixin that adds a ``.render()`` method to render a template
 
@@ -268,7 +215,7 @@ class RendererMixin(object):
     """
 
     def setUp(self, *args, **kwargs):
-        super(RendererMixin, self).setUp(*args, **kwargs)
+        super().setUp(*args, **kwargs)
 
         self.root_dir = tempfile.mkdtemp("pyobjects_test_root", dir=RUNTIME_VARS.TMP)
         self.state_tree_dir = os.path.join(self.root_dir, "state_tree")
@@ -293,7 +240,7 @@ class RendererMixin(object):
     def tearDown(self, *args, **kwargs):
         shutil.rmtree(self.root_dir)
         del self.config
-        super(RendererMixin, self).tearDown(*args, **kwargs)
+        super().tearDown(*args, **kwargs)
 
     def write_template_file(self, filename, content):
         full_path = os.path.join(self.state_tree_dir, filename)
@@ -320,8 +267,38 @@ class RendererMixin(object):
 
 
 class RendererTests(RendererMixin, StateTests, MapBuilder):
+    @classmethod
+    def setUpClass(cls):
+        cls.recursive_map_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt://map.sls import Samba
+
+        class CustomSamba(Samba):
+            pass
+        """
+        )
+        cls.recursive_import_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt://recursive_map.sls import CustomSamba
+
+        Pkg.removed("samba-imported", names=[CustomSamba.server, CustomSamba.client])"""
+        )
+        cls.File = StateFactory("file")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.File = None
+
     @slowTest
     def test_basic(self):
+        basic_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        File.directory('/tmp', mode='1777', owner='root', group='root')
+        """
+        )
         ret = self.render(basic_template)
         self.assertEqual(
             ret,
@@ -345,17 +322,40 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
     @slowTest
     def test_invalid_function(self):
         def _test():
+            invalid_template = textwrap.dedent(
+                """\
+            #!pyobjects
+            File.fail('/tmp')
+            """
+            )
             self.render(invalid_template)
 
         self.assertRaises(InvalidFunction, _test)
 
     @slowTest
     def test_include(self):
+        include_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        include('http')
+        """
+        )
         ret = self.render(include_template)
         self.assertEqual(ret, OrderedDict([("include", ["http"])]))
 
     @slowTest
     def test_extend(self):
+        extend_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        include('http')
+
+        from salt.utils.pyobjects import StateFactory
+        Service = StateFactory('service')
+
+        Service.running(extend('apache'), watch=[{'file': '/etc/file'}])
+        """
+        )
         ret = self.render(
             extend_template, {"grains": {"os_family": "Debian", "os": "Debian"}}
         )
@@ -403,19 +403,54 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
             )
 
         self.write_template_file("map.sls", self.build_map())
+
+        import_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        import salt://map.sls
+
+        Pkg.removed("samba-imported", names=[map.Samba.server, map.Samba.client])
+        """
+        )
         render_and_assert(import_template)
+
+        from_import_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        # this spacing is like this on purpose to ensure it's stripped properly
+        from   salt://map.sls  import     Samba
+
+        Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
+        """
+        )
         render_and_assert(from_import_template)
+
+        import_as_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt://map.sls import Samba as Other
+        Pkg.removed("samba-imported", names=[Other.server, Other.client])
+        """
+        )
         render_and_assert(import_as_template)
 
-        self.write_template_file("recursive_map.sls", recursive_map_template)
-        render_and_assert(recursive_import_template)
+        self.write_template_file("recursive_map.sls", self.recursive_map_template)
+        render_and_assert(self.recursive_import_template)
 
     @slowTest
     def test_import_scope(self):
         self.write_template_file("map.sls", self.build_map())
-        self.write_template_file("recursive_map.sls", recursive_map_template)
+        self.write_template_file("recursive_map.sls", self.recursive_map_template)
 
         def do_render():
+            scope_test_import_template = textwrap.dedent(
+                """\
+            #!pyobjects
+            from salt://recursive_map.sls import CustomSamba
+
+            # since we import CustomSamba we should shouldn't be able to see Samba
+            Pkg.removed("samba-imported", names=[Samba.server, Samba.client])"""
+            )
             ret = self.render(
                 scope_test_import_template,
                 {"grains": {"os_family": "Debian", "os": "Debian"}},
@@ -426,17 +461,50 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
     @slowTest
     def test_random_password(self):
         """Test for https://github.com/saltstack/salt/issues/21796"""
+        random_password_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        import random, string
+        password = ''.join([random.SystemRandom().choice(
+                string.ascii_letters + string.digits) for _ in range(20)])
+        """
+        )
         ret = self.render(random_password_template)
 
     @slowTest
     def test_import_random_password(self):
         """Import test for https://github.com/saltstack/salt/issues/21796"""
+        random_password_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        import random, string
+        password = ''.join([random.SystemRandom().choice(
+                string.ascii_letters + string.digits) for _ in range(20)])
+        """
+        )
         self.write_template_file("password.sls", random_password_template)
+
+        random_password_import_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt://password.sls import password
+        """
+        )
         ret = self.render(random_password_import_template)
 
     @slowTest
     def test_requisite_implicit_list(self):
         """Ensure that the implicit list characteristic works as expected"""
+        requisite_implicit_list_template = textwrap.dedent(
+            """\
+        #!pyobjects
+        from salt.utils.pyobjects import StateFactory
+        Service = StateFactory('service')
+
+        with Pkg.installed("pkg"):
+            Service.running("service", watch=File("file"), require=Cmd("cmd"))
+        """
+        )
         ret = self.render(
             requisite_implicit_list_template,
             {"grains": {"os_family": "Debian", "os": "Debian"}},
