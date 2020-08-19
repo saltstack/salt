@@ -254,7 +254,7 @@ class WrapRenderTestCase(TestCase):
         """ generate_sls_context - top_level Use case"""
         self._test_generated_sls_context("/tmp/boo.sls", "boo",
                                          tplpath="/tmp/boo.sls",
-                                         tplfile="",
+                                         tplfile="boo.sls",
                                          tpldir=".",
                                          tpldot="",
                                          slsdotpath="",
@@ -281,10 +281,10 @@ class WrapRenderTestCase(TestCase):
                                          tplfile="foo/init.sls",
                                          tpldir="foo",
                                          tpldot="foo",
-                                         slsdotpath="foo.init",
-                                         slscolonpath="foo:init",
-                                         sls_path="foo_init",
-                                         slspath="foo/init")
+                                         slsdotpath="foo",
+                                         slscolonpath="foo",
+                                         sls_path="foo",
+                                         slspath="foo")
 
     def test_generate_sls_context__one_level(self):
         """ generate_sls_context - Basic one level with name"""
@@ -305,9 +305,9 @@ class WrapRenderTestCase(TestCase):
         """
         self._test_generated_sls_context("/tmp/foo/foo.sls", "foo.foo",
                                          tplpath="/tmp/foo/foo.sls",
-                                         tplfile="foo.sls", # BUG, should be "foo/foo.sls",
-                                         tpldir=".", # BUG, should be "foo",
-                                         tpldot="", # BUG, should be "foo",
+                                         tplfile="foo/foo.sls",
+                                         tpldir="foo",
+                                         tpldot="foo",
                                          slsdotpath="foo",
                                          slscolonpath="foo",
                                          sls_path="foo",
@@ -332,10 +332,10 @@ class WrapRenderTestCase(TestCase):
                                          tplfile="foo/bar/init.sls",
                                          tpldir="foo/bar",
                                          tpldot="foo.bar",
-                                         slsdotpath="foo.bar.init",
-                                         slscolonpath="foo:bar:init",
-                                         sls_path="foo_bar_init",
-                                         slspath="foo/bar/init")
+                                         slsdotpath="foo.bar",
+                                         slscolonpath="foo:bar",
+                                         sls_path="foo_bar",
+                                         slspath="foo/bar")
 
     def test_generate_sls_context__two_level(self):
         """ generate_sls_context - Basic two level with name"""
@@ -356,9 +356,9 @@ class WrapRenderTestCase(TestCase):
         """
         self._test_generated_sls_context("/tmp/foo/foo/foo.sls", "foo.foo.foo",
                                          tplpath="/tmp/foo/foo/foo.sls",
-                                         tplfile="foo/foo.sls", # BUG, should be "foo/foo/foo.sls",
-                                         tpldir="foo", # BUG, should be "foo/foo",
-                                         tpldot="foo", # BUG, should be "foo.foo",
+                                         tplfile="foo/foo/foo.sls",
+                                         tpldir="foo/foo",
+                                         tpldot="foo.foo",
                                          slsdotpath="foo.foo",
                                          slscolonpath="foo:foo",
                                          sls_path="foo_foo",
@@ -372,9 +372,9 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context("/tmp/foo/foo/foo_bar.sls",
                                          "foo.foo.foo_bar",
                                          tplpath="/tmp/foo/foo/foo_bar.sls",
-                                         tplfile="foo/foo_bar.sls", # BUG, should be "foo/foo/foo_bar.sls",
-                                         tpldir="foo", # BUG, should be "foo/foo",
-                                         tpldot="foo", # BUG, should be "foo.foo",
+                                         tplfile="foo/foo/foo_bar.sls",
+                                         tpldir="foo/foo",
+                                         tpldot="foo.foo",
                                          slsdotpath="foo.foo",
                                          slscolonpath="foo:foo",
                                          sls_path="foo_foo",
