@@ -4,8 +4,8 @@ XML Manager
 
 State management of XML files
 """
-import xml.etree.ElementTree as ET
 import copy
+import xml.etree.ElementTree as ET
 
 
 def __virtual__():
@@ -35,24 +35,74 @@ def _element_tree_equal(original, new):
     )
 
 
+def value_present(name, xpath, value, **kwargs):
+    """
+    .. versionadded:: 3000
+
+    Manages a given XML file
+
+    name
+        The location of the XML file to manage, as an absolute path.
+
+    xpath
+        xpath location to manage
+
+    value
+        value to ensure present
+
+    .. code-block:: yaml
+
+        ensure_value_true:
+          xml.value_present:
+            - name: /tmp/test.xml
+            - xpath: .//playwright[@id='1']
+            - value: William Shakespeare
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if "test" not in kwargs:
+        kwargs["test"] = __opts__.get("test", False)
+
+    current_value = __salt__["xml.get_value"](name, xpath)
+    if not current_value:
+        ret["result"] = False
+        ret["comment"] = "xpath query {} not found in {}".format(xpath, name)
+        return ret
+
+    if current_value != value:
+        if kwargs["test"]:
+            ret["result"] = None
+            ret["comment"] = "{} will be updated".format(name)
+            ret["changes"] = {name: {"old": current_value, "new": value}}
+        else:
+            results = __salt__["xml.set_value"](name, xpath, value)
+            ret["result"] = results
+            ret["comment"] = "{} updated".format(name)
+            ret["changes"] = {name: {"old": current_value, "new": value}}
+    else:
+        ret["comment"] = "{} is already present".format(value)
+
+    return ret
+
+
 def merge_fragment(name, fragment, xpath=None):
     """
-    .. versionadded:: NEXT
+    .. versionadded:: NEXT_RELEASE
 
     Merge a block of XML into another, in a given file. This is used for
     ensuring a tree exists, or tweaking attributes of a well-known location in
     a config file. This state only matches tags as it merges fragments, so it
     does not work well (if at all) with list-style data.
 
-    name : string
+    name
         The location of the XML file to manage, as an absolute path.
 
-    xpath : string
+    xpath
         optional xpath location under which to place the fragment. See
         https://docs.python.org/3/library/xml.etree.elementtree.html#example
         to see what syntax is supported.
 
-    fragment : string
+    fragment
         XML fragment to create _under_ the location specified in `path`.
         The fragment must be valid XML. If the path already contains XML and
         the fragment's tags match, they will be merged -- the fragment's
@@ -60,6 +110,7 @@ def merge_fragment(name, fragment, xpath=None):
         This means attributes are merged, text, and tail values are replaced.
 
     .. code-block:: yaml
+
         ensure_tree_exists:
         xml.ensure:
             - name: /etc/data.xml # MUST already have valid XML.
@@ -75,13 +126,12 @@ def merge_fragment(name, fragment, xpath=None):
         xml.ensure:
             - name: /etc/data.xml
             - resolve: merge
+            - xpath: people
             - fragment: |
-                <people are_cool="maybe">
-                  <artists active="false">  # overwrites 'active=true'
-                    <authors />
-                    <painters />
-                  </artists>
-                </people>
+                <artists active="false">  # overwrites 'active=true'
+                  <authors />
+                  <painters />
+                </artists>
 
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -118,7 +168,7 @@ def merge_fragment(name, fragment, xpath=None):
             for index, new_child in enumerate(new):
                 sub_changes = _merge_or_append_elements(sub_element, new_child)
                 if sub_changes:
-                    changeset[f"{new_child.tag}-{index}"] = sub_changes
+                    changeset["{}-{}".format(new_child.tag, index)] = sub_changes
         else:
             original.append(new)
             changeset[new.tag] = {"new": ET.tostring(original)}
@@ -138,34 +188,34 @@ def merge_fragment(name, fragment, xpath=None):
 
 def add_fragment(name, fragment, xpath=None, replace=False):
     """
-    .. versionadded:: NEXT
+    .. versionadded:: NEXT_RELEASE
 
     Manage a block of XML inside a given file
 
-    name : string
+    name
         The location of the XML file to manage, as an absolute path.
 
-    xpath : string
+    xpath
         optional xpath location under which to place the fragment. See
         https://docs.python.org/3/library/xml.etree.elementtree.html#example
         to see what syntax is supported.
-
         Defaults to the root element.
 
-    fragment : string
+    fragment
         XML fragment to create _under_ the location specified in `path`.
         The fragment must be valid XML.
 
-    replace : bool
+    replace
         When adding the fragment and no exact match can be found the state will
         either append the node, or replace it if this parameter is set to True.
 
     .. code-block:: yaml
+
         ensure_authors:
           xml.add_fragment:
             - name: /etc/data.xml
-            - path: people/artists
-            - resolve: replace  # 'append' would make another '<authors/> block'
+            - xpath: people/artists
+            - replace: True  # 'False' would make another '<authors/> block'
             - fragment: |
               <authors>
                 <author active="false">
@@ -223,54 +273,4 @@ def add_fragment(name, fragment, xpath=None, replace=False):
     ret["changes"][fragment_root.tag] = {"new": ET.tostring(fragment_root)}
 
     tree.write(name)
-    return ret
-
-
-def value_present(name, xpath, value, **kwargs):
-    """
-    .. versionadded:: 3000
-
-    Manages a given XML file
-
-    name : string
-        The location of the XML file to manage, as an absolute path.
-
-    xpath : string
-        xpath location to manage
-
-    value : string
-        value to ensure present
-
-    .. code-block:: yaml
-
-        ensure_value_true:
-          xml.value_present:
-            - name: /tmp/test.xml
-            - xpath: .//playwright[@id='1']
-            - value: William Shakespeare
-    """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-
-    if "test" not in kwargs:
-        kwargs["test"] = __opts__.get("test", False)
-
-    current_value = __salt__["xml.get_value"](name, xpath)
-    if not current_value:
-        ret["result"] = False
-        ret["comment"] = f"xpath query {xpath} not found in {name}"
-        return ret
-
-    if current_value != value:
-        if kwargs["test"]:
-            ret["result"] = None
-            ret["comment"] = f"{name} will be updated"
-            ret["changes"] = {name: {"old": current_value, "new": value}}
-        else:
-            results = __salt__["xml.set_value"](name, xpath, value)
-            ret["result"] = results
-            ret["comment"] = f"{name} updated"
-            ret["changes"] = {name: {"old": current_value, "new": value}}
-    else:
-        ret["comment"] = f"{value} is already present"
-
     return ret
