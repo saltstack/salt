@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Connection module for Amazon EC2
 
@@ -43,11 +44,12 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 # pylint: disable=E0602
 
 # Import Python libs
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import time
 
 # Import Salt libs
-import salt.utils.boto3mod
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.json
@@ -89,7 +91,7 @@ def __virtual__():
         boto_ver="2.8.0", check_boto3=False
     )
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "ec2", pack=__salt__)
+        __utils__["boto.assign_funcs"](__name__, "ec2", pack=__salt__)
     return has_boto_reqs
 
 
