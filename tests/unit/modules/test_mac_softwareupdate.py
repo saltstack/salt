@@ -142,3 +142,45 @@ class MacSoftwareUpdateCatalinaTestCase(TestCase, LoaderModuleMockMixin):
         result = mac_softwareupdate.list_available(shut_down=True)
         expected = {"BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689"}
         self.assertEqual(result, expected)
+
+
+class MacSoftwareUpdateBigSurTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {mac_softwareupdate: {"__grains__": {"osrelease_info": [11, 0]}}}
+
+    @patch("salt.utils.mac_utils.execute_return_result")
+    def test_list_available(self, mock_execute):
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available()
+        expected = {
+            "Command Line Tools beta 5 for Xcode-11.0": "11.0",
+            "macOS Catalina Developer Beta-6": "5",
+            "BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689",
+            "iCal-1.0.2": "1.0.2",
+        }
+        self.assertEqual(result, expected)
+
+    @patch("salt.utils.mac_utils.execute_return_result")
+    def test_list_recommended(self, mock_execute):
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available(recommended=True)
+        expected = {
+            "Command Line Tools beta 5 for Xcode-11.0": "11.0",
+            "macOS Catalina Developer Beta-6": "5",
+            "BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689",
+        }
+        self.assertEqual(result, expected)
+
+    @patch("salt.utils.mac_utils.execute_return_result")
+    def test_list_restart(self, mock_execute):
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available(restart=True)
+        expected = {"macOS Catalina Developer Beta-6": "5"}
+        self.assertEqual(result, expected)
+
+    @patch("salt.utils.mac_utils.execute_return_result")
+    def test_list_shut_down(self, mock_execute):
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available(shut_down=True)
+        expected = {"BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689"}
+        self.assertEqual(result, expected)
