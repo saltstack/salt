@@ -3353,7 +3353,7 @@ def _cache_id(minion_id, cache_file):
     try:
         with salt.utils.files.fopen(cache_file, "w") as idf:
             idf.write(minion_id)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         log.error("Could not cache minion ID: %s", exc)
 
 
@@ -3466,7 +3466,7 @@ def get_id(opts, cache_minion_id=False):
             if name and name != "localhost":
                 log.debug("Using cached minion ID from %s: %s", id_cache, name)
                 return name, False
-        except (IOError, OSError):
+        except OSError:
             pass
     if "__role" in opts and opts.get("__role") == "minion":
         log.debug(
