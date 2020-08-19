@@ -207,7 +207,7 @@ class RenderTestCase(TestCase):
         self.assertEqual(res.strip(), "OK")
 
 
-class MockRender(object):
+class MockRender:
     def __call__(self, tplstr, context, tmplpath=None):
         self.tplstr = tplstr
         self.context = context
@@ -271,7 +271,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="",
             slscolonpath="",
             sls_path="",
-            slspath="")
+            slspath="",
+        )
 
     def test_generate_sls_context__one_level_init_implicit(self):
         """ generate_sls_context - Basic one level with impliocit init.sls """
@@ -285,7 +286,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo",
             slscolonpath="foo",
             sls_path="foo",
-            slspath="foo")
+            slspath="foo",
+        )
 
     def test_generate_sls_context__one_level_init_explicit(self):
         """ generate_sls_context - Basic one level with explicit init.sls """
@@ -299,7 +301,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo",
             slscolonpath="foo",
             sls_path="foo",
-            slspath="foo")
+            slspath="foo",
+        )
 
     def test_generate_sls_context__one_level(self):
         """ generate_sls_context - Basic one level with name"""
@@ -313,7 +316,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo",
             slscolonpath="foo",
             sls_path="foo",
-            slspath="foo")
+            slspath="foo",
+        )
 
     def test_generate_sls_context__one_level_repeating(self):
         """ generate_sls_context - Basic one level with name same as dir
@@ -330,7 +334,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo",
             slscolonpath="foo",
             sls_path="foo",
-            slspath="foo")
+            slspath="foo",
+        )
 
     def test_generate_sls_context__two_level_init_implicit(self):
         """ generate_sls_context - Basic two level with implicit init.sls """
@@ -344,7 +349,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo.bar",
             slscolonpath="foo:bar",
             sls_path="foo_bar",
-            slspath="foo/bar")
+            slspath="foo/bar",
+        )
 
     def test_generate_sls_context__two_level_init_explicit(self):
         """ generate_sls_context - Basic two level with explicit init.sls """
@@ -358,7 +364,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo.bar",
             slscolonpath="foo:bar",
             sls_path="foo_bar",
-            slspath="foo/bar")
+            slspath="foo/bar",
+        )
 
     def test_generate_sls_context__two_level(self):
         """ generate_sls_context - Basic two level with name"""
@@ -372,7 +379,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo.bar",
             slscolonpath="foo:bar",
             sls_path="foo_bar",
-            slspath="foo/bar")
+            slspath="foo/bar",
+        )
 
     def test_generate_sls_context__two_level_repeating(self):
         """ generate_sls_context - Basic two level with name same as dir
@@ -389,7 +397,8 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo.foo",
             slscolonpath="foo:foo",
             sls_path="foo_foo",
-            slspath="foo/foo",)
+            slspath="foo/foo",
+        )
 
     def test_generate_sls_context__two_level_repeating2(self):
         """ generate_sls_context - Basic two level with name same as dir
@@ -406,4 +415,5 @@ class WrapRenderTestCase(TestCase):
             slsdotpath="foo.foo",
             slscolonpath="foo:foo",
             sls_path="foo_foo",
-            slspath="foo/foo")
+            slspath="foo/foo",
+        )
