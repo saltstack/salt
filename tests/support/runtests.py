@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -44,9 +43,7 @@
 
     .. _`pytest`: http://pytest.org
     .. _`nose`: https://nose.readthedocs.org
-    """
-from __future__ import absolute_import, print_function
-
+"""
 import logging
 import os
 import shutil
@@ -54,7 +51,6 @@ import shutil
 import salt.utils.path
 import salt.utils.platform
 import tests.support.paths as paths
-from salt.ext import six
 
 try:
     import pwd
@@ -75,7 +71,7 @@ def this_user():
 
 class RootsDict(dict):
     def merge(self, data):
-        for key, values in six.iteritems(data):
+        for key, values in data.items():
             if key not in self:
                 self[key] = values
                 continue
@@ -115,7 +111,7 @@ def recursive_copytree(source, destination, overwrite=False):
                 shutil.copy2(src_path, dst_path)
 
 
-class RuntimeVars(object):
+class RuntimeVars:
 
     __self_attributes__ = ("_vars", "_locked", "lock")
 
@@ -132,8 +128,7 @@ class RuntimeVars(object):
         self._locked = True
 
     def __iter__(self):
-        for name, value in six.iteritems(self._vars):
-            yield name, value
+        yield from self._vars.items()
 
     def __getattribute__(self, name):
         if name in object.__getattribute__(self, "_vars"):
@@ -143,7 +138,7 @@ class RuntimeVars(object):
     def __setattr__(self, name, value):
         if getattr(self, "_locked", False) is True:
             raise RuntimeError(
-                "After {0} is locked, no additional data can be added to it".format(
+                "After {} is locked, no additional data can be added to it".format(
                     self.__class__.__name__
                 )
             )
