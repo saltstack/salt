@@ -230,23 +230,6 @@ class WrapRenderTestCase(TestCase):
         actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
-    @with_tempdir()
-    def _get_context(self, tempdir, tmplpath, sls):
-        """ Get context from render """
-        slsfile = os.path.join(tempdir, "foo")
-        with salt.utils.files.fopen(slsfile, "w") as fp:
-            fp.write("{{ slspath }}")
-        context = {"opts": {}, "saltenv": "base", "sls": sls}
-        render = MockRender()
-        wrapped = salt.utils.templates.wrap_tmpl_func(render)
-        res = wrapped(slsfile, context=context, tmplpath=tmplpath)
-        return render.context
-
-    def _test_generated_sls_context_via_render(self, tmplpath, sls, **expected):
-        """ Test SLS Context generation via rendering"""
-        actual = self._get_context(tmplpath=tmplpath, sls=sls)
-        self.assertDictContainsAll(actual, **expected)
-
     @mock.patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
     def test_sls_context_call(self, tempdir, generate_sls_context):
