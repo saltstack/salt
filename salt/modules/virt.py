@@ -643,10 +643,8 @@ def _migrate(dom, dst_uri, **kwargs):
         - comp_mt_threads: Set number of compress threads on source host.
         - comp_mt_dthreads: Set number of decompress threads on target host.
         - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - copy_storage:    Migrate non-shared storage. It must be one of the
-                           following values:
-                - all:         Full disk copy
-                - incremental: Incremental copy
+        - copy_storage:    Migrate non-shared storage. It must be one of the following
+                           values: all (full disk copy) or incremental (Incremental copy)
         - postcopy:        Enable the use of post-copy migration.
         - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
         - username:        Username to connect with target host
@@ -4046,10 +4044,8 @@ def migrate(vm_, target, ssh=False, **kwargs):
         - comp_mt_threads: Set number of compress threads on source host.
         - comp_mt_dthreads: Set number of decompress threads on target host.
         - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - copy_storage:    Migrate non-shared storage. It must be one of the
-                           following values:
-                - all:         Full disk copy
-                - incremental: Incremental copy
+        - copy_storage:    Migrate non-shared storage. It must be one of the following
+                           values: all (full disk copy) or incremental (Incremental copy)
         - postcopy:        Enable the use of post-copy migration.
         - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
         - username:        Username to connect with target host
