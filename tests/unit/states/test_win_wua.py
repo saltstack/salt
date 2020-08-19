@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Test the win_wua state module
 """
 # Import Python Libs
-from __future__ import (  # Import Salt Libs
-    absolute_import,
-    print_function,
-    unicode_literals,
-)
-from dataclasses import dataclass, field
 import sys
+from dataclasses import dataclass, field
 
 # Import Salt Libs
 import salt.states.win_wua as win_wua
@@ -81,7 +75,7 @@ UPDATES_LIST_NONE = {}
 UPDATES_SUMMARY = {"Installed": 10}
 
 
-class Updates(object):
+class Updates:
     def __init__(self):
         self.updates = []
 
@@ -236,7 +230,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
                 ID="eac02b09-d745-4891-b80f-400e0e5e4b6d",
                 IsDownloaded=False,
                 IsInstalled=False,
-                Title="Update 2"
+                Title="Update 2",
             ),
         }
         update_search_dict = {
@@ -312,17 +306,19 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
             expected = {
-                'changes': {
-                    'installed': {
-                        'eac02b09-d745-4891-b80f-400e0e5e4b6d': {
-                            'KBs': ['KB4052623'],
-                            'NeedsReboot': True,
-                            'Title': 'Update 2...'}
+                "changes": {
+                    "installed": {
+                        "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+                            "KBs": ["KB4052623"],
+                            "NeedsReboot": True,
+                            "Title": "Update 2...",
+                        }
                     }
                 },
-                'comment': 'Updates installed successfully',
-                'name': 'KB4062623',
-                'result': True}
+                "comment": "Updates installed successfully",
+                "name": "KB4062623",
+                "result": True,
+            }
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
@@ -381,7 +377,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
                 ),
                 IsDownloaded=False,
                 IsInstalled=False,
-                Title="Update 2"
+                Title="Update 2",
             ),
         }
 
@@ -415,13 +411,14 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
             expected = {
-                'changes': {},
-                'comment': 'Updates will be installed:',
+                "changes": {},
+                "comment": "Updates will be installed:",
                 # I don't know how to mock this part so the list will show up.
                 # It's an update collection object populated using the Add
                 # method. But this works for now
-                'name': 'KB4062623',
-                'result': None}
+                "name": "KB4062623",
+                "result": None,
+            }
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
@@ -451,7 +448,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
                 ),
                 IsDownloaded=True,
                 IsInstalled=True,
-                Title="Update 2"
+                Title="Update 2",
             ),
         }
 
@@ -485,9 +482,10 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
             expected = {
-                'changes': {},
-                'comment': 'Updates already installed: KB4052623',
-                'name': 'KB4062623',
-                'result': True}
+                "changes": {},
+                "comment": "Updates already installed: KB4052623",
+                "name": "KB4062623",
+                "result": True,
+            }
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
