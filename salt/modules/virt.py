@@ -620,21 +620,33 @@ def _migrate(dom, dst_uri, **kwargs):
     :param dom: domain object to migrate
     :param dst_uri: destination URI
     :param kwargs:
-        - offline: If set to True it will migrate the domain definition
-                   without starting the domain on destination and without
-                   stopping it on source host. Defalt value is False.
-        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
-        - copy_storage: migrate non-shared storage
-            "all": full disk copy
-            "inc" or "incremental": incremental copy
-        - username: username to connect with target host
-        - password: password to connect with target host
+        - live:            Use live migration. Defalt value is True.
+        - persistent:      Leave the domain persistent on destination host.
+                           Defalt value is True.
+        - undefinesource:  Undefine the domain on the source host.
+                           Defalt value is True.
+        - offline:         If set to True it will migrate the domain definition
+                           without starting the domain on destination and without
+                           stopping it on source host. Defalt value is False.
+        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
+        - copy_storage:    Migrate non-shared storage. It must be one of the
+                           following values:
+            - all:         Full disk copy
+            - incremental: Incremental copy
+        - username:        Username to connect with target host
+        - password:        Password to connect with target host
     """
     migrated_state = libvirt.VIR_DOMAIN_RUNNING_MIGRATED
+    flags = 0
 
-    flags = libvirt.VIR_MIGRATE_LIVE
-    flags |= libvirt.VIR_MIGRATE_PERSIST_DEST
-    flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+    if kwargs.get("live", True):
+        flags |= libvirt.VIR_MIGRATE_LIVE
+
+    if kwargs.get("persistent", True):
+        flags |= libvirt.VIR_MIGRATE_PERSIST_DEST
+
+    if kwargs.get("undefinesource", True):
+        flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
 
     max_bandwidth = kwargs.get("max_bandwidth")
     if max_bandwidth:
@@ -3800,12 +3812,17 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - offline: If set to True it will migrate the domain definition
-                   without starting the domain on destination and without
-                   stopping it on source host. Defalt value is False.
-        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
-        - username: username to connect with target host
-        - password: password to connect with target host
+        - live:           Use live migration. Defalt value is True.
+        - persistent:     Leave the domain persistent on destination host.
+                          Defalt value is True.
+        - undefinesource: Undefine the domain on the source host.
+                          Defalt value is True.
+        - offline:        If set to True it will migrate the domain definition
+                          without starting the domain on destination and without
+                          stopping it on source host. Defalt value is False.
+        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
+        - username:       Username to connect with target host
+        - password:       Password to connect with target host
 
         .. versionadded:: 3002
 
@@ -3845,12 +3862,17 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - offline: If set to True it will migrate the domain definition
-                   without starting the domain on destination and without
-                   stopping it on source host. Defalt value is False.
-        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
-        - username: username to connect with target host
-        - password: password to connect with target host
+        - live:           Use live migration. Defalt value is True.
+        - persistent:     Leave the domain persistent on destination host.
+                          Defalt value is True.
+        - undefinesource: Undefine the domain on the source host.
+                          Defalt value is True.
+        - offline:        If set to True it will migrate the domain definition
+                          without starting the domain on destination and without
+                          stopping it on source host. Defalt value is False.
+        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
+        - username:       Username to connect with target host
+        - password:       Password to connect with target host
 
         .. versionadded:: 3002
 
@@ -3890,15 +3912,21 @@ def migrate(vm_, target, ssh=False, **kwargs):
        .. deprecated:: 3002
 
     :param kwargs:
-        - offline: If set to True it will migrate the domain definition
-                   without starting the domain on destination and without
-                   stopping it on source host. Defalt value is False.
-        - max_bandwidth: The maximum bandwidth (in MiB/s) that will be used.
-        - copy_storage: migrate non-shared storage
-            "all": full disk copy
-            "inc" or "incremental": incremental copy
-        - username: username to connect with target host
-        - password: password to connect with target host
+        - live:            Use live migration. Defalt value is True.
+        - persistent:      Leave the domain persistent on destination host.
+                           Defalt value is True.
+        - undefinesource:  Undefine the domain on the source host.
+                           Defalt value is True.
+        - offline:         If set to True it will migrate the domain definition
+                           without starting the domain on destination and without
+                           stopping it on source host. Defalt value is False.
+        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
+        - copy_storage:    Migrate non-shared storage. It must be one of the
+                           following values:
+            - all:         Full disk copy
+            - incremental: Incremental copy
+        - username:        Username to connect with target host
+        - password:        Password to connect with target host
 
         .. versionadded:: 3002
 
