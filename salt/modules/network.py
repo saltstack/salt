@@ -19,6 +19,7 @@ from multiprocessing.pool import ThreadPool
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
+import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
@@ -35,7 +36,7 @@ def __virtual__():
     Only work on POSIX-like systems
     """
     # Disable on Windows, a specific file module exists:
-    if __utils__["platform.is_windows"]():
+    if salt.utils.platform.is_windows():
         return (
             False,
             "The network execution module cannot be loaded on Windows: use win_network instead.",
