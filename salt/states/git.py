@@ -2096,7 +2096,6 @@ def present(
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     # If the named directory is a git repo return True
-    name = os.path.expanduser(name)
     if os.path.isdir(name):
         if bare and os.path.isfile(os.path.join(name, "HEAD")):
             return ret
