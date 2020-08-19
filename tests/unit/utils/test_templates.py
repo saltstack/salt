@@ -13,7 +13,8 @@ import salt.utils.templates
 
 # Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
-from tests.support.unit import TestCase, mock, skipIf
+from tests.support.unit import TestCase, skipIf
+from tests.support import mock
 
 try:
     import Cheetah as _

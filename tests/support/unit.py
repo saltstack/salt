@@ -35,7 +35,6 @@ from unittest import TestSuite as _TestSuite
 from unittest import TextTestResult as _TextTestResult
 from unittest import TextTestRunner as _TextTestRunner
 from unittest import expectedFailure, skip, skipIf
-from unittest import mock
 from unittest.case import SkipTest, _id
 
 from salt.ext import six
