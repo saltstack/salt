@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt modules
 import salt.modules.mac_softwareupdate as mac_softwareupdate
