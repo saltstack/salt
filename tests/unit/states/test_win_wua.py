@@ -213,7 +213,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.uptodate(name="NA")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses available in Python 3.7")
     def test_installed(self):
         """
         Test installed function
@@ -354,7 +354,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses available in Python 3.7")
     def test_installed_test_mode(self):
         """
         Test installed function in test mode
@@ -425,7 +425,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses available in Python 3.7")
     def test_installed_already_installed(self):
         """
         Test installed function when the update is already installed
