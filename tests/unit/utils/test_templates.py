@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import sys
+from unittest import mock
 
 import salt.utils.files
 
@@ -219,14 +220,15 @@ class MockRender(object):
 
 class WrapRenderTestCase(TestCase):
 
-    def _sub_dict(self, src, ref):
-        """ Create a sub-dictionary containing keys from reference"""
-        return {key: src[key] for key in ref.keys() if key in src.keys()}
-
     def assertDictContainsAll(self, actual, **expected):
         """ Make sure dictionary contains at least all expected values"""
-        actual = self._sub_dict(actual, expected)
+        actual = {key: actual[key] for key in expected.keys() if key in actual.keys()}
         self.assertEqual(expected, actual)
+
+    def _test_generated_sls_context(self, tmplpath, sls, **expected):
+        """ Generic SLS Context Test"""
+        actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
+        self.assertDictContainsAll(actual, **expected)
 
     @with_tempdir()
     def _get_context(self, tempdir, tmplpath, sls):
@@ -240,15 +242,42 @@ class WrapRenderTestCase(TestCase):
         res = wrapped(slsfile, context=context, tmplpath=tmplpath)
         return render.context
 
-    def _test_generated_sls_context_new(self, tmplpath, sls, expected):
-        """ Generic SLS Context Test"""
-        #actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
-        #self.assertDictEqual(actual, expected)
-
-    def _test_generated_sls_context(self, tmplpath, sls, **expected):
+    def _test_generated_sls_context_via_render(self, tmplpath, sls, **expected):
         """ Test SLS Context generation via rendering"""
         actual = self._get_context(tmplpath=tmplpath, sls=sls)
         self.assertDictContainsAll(actual, **expected)
+
+    @mock.patch("salt.utils.templates.generate_sls_context")
+    @with_tempdir()
+    def test_sls_context_call(self, tempdir, generate_sls_context):
+        """ Check that generate_sls_context is called with proper parameters"""
+        sls = "foo.bar"
+        tmplpath = "/tmp/foo/bar.sls"
+
+        slsfile = os.path.join(tempdir, "foo")
+        with salt.utils.files.fopen(slsfile, "w") as fp:
+            fp.write("{{ slspath }}")
+        context = {"opts": {}, "saltenv": "base", "sls": sls}
+        render = MockRender()
+        wrapped = salt.utils.templates.wrap_tmpl_func(render)
+        res = wrapped(slsfile, context=context, tmplpath=tmplpath)
+        generate_sls_context.assert_called_with(tmplpath, sls)
+
+    @mock.patch("salt.utils.templates.generate_sls_context")
+    @with_tempdir()
+    def test_sls_context_no_call(self, tempdir, generate_sls_context):
+        """ Check that generate_sls_context is not called if sls is not set"""
+        sls = "foo.bar"
+        tmplpath = "/tmp/foo/bar.sls"
+
+        slsfile = os.path.join(tempdir, "foo")
+        with salt.utils.files.fopen(slsfile, "w") as fp:
+            fp.write("{{ slspath }}")
+        context = {"opts": {}, "saltenv": "base"}
+        render = MockRender()
+        wrapped = salt.utils.templates.wrap_tmpl_func(render)
+        res = wrapped(slsfile, context=context, tmplpath=tmplpath)
+        generate_sls_context.assert_not_called()
 
     def test_generate_sls_context__top_level(self):
         """ generate_sls_context - top_level Use case"""
