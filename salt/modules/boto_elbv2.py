@@ -45,7 +45,6 @@ import logging
 # Import Salt libs
 import salt.utils.boto3mod
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -293,7 +292,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None, profile=N
         salt myminion boto_elbv2.register_targets myelb "[instance_id,instance_id]"
     """
     targetsdict = []
-    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
+    if isinstance(targets, str):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
@@ -330,7 +329,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None, profile
         salt myminion boto_elbv2.deregister_targets myelb "[instance_id,instance_id]"
     """
     targetsdict = []
-    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
+    if isinstance(targets, str):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
