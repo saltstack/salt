@@ -2,8 +2,11 @@
 Test the win_wua state module
 """
 # Import Python Libs
-import sys
-from dataclasses import dataclass, field
+try:
+    from dataclasses import dataclass, field
+    HAS_DATACLASSES = True
+except ImportError:
+    HAS_DATACLASSES = False
 
 # Import Salt Libs
 import salt.states.win_wua as win_wua
@@ -210,7 +213,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.uptodate(name="NA")
             self.assertDictEqual(result, expected)
 
-    @skipIf(sys.version_info < (3, 7), "Test requires Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
     def test_installed(self):
         """
         Test installed function
@@ -351,7 +354,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(sys.version_info < (3, 7), "Test requires Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
     def test_installed_test_mode(self):
         """
         Test installed function in test mode
@@ -422,7 +425,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(sys.version_info < (3, 7), "Test requires Python 3.7")
+    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses only available in Python 3.7")
     def test_installed_already_installed(self):
         """
         Test installed function when the update is already installed
