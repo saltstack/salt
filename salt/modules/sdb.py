@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Module for Manipulating Data via the Salt DB API
 ================================================
 """
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 # Import salt libs
 import salt.utils.sdb
