@@ -171,7 +171,7 @@ def update():
                         mtime_map_path,
                         line,
                     )
-    except (IOError, OSError):
+    except OSError:
         pass
 
     # compare the maps, set changed to the return value
@@ -317,7 +317,7 @@ def _file_lists(load, form):
     if not os.path.isdir(list_cachedir):
         try:
             os.makedirs(list_cachedir)
-        except os.error:
+        except OSError:
             log.critical("Unable to make cachedir %s", list_cachedir)
             return []
     list_cache = os.path.join(
