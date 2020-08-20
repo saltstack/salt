@@ -74,7 +74,7 @@ SUPPORT_CREATE_TAGGING = {
     "create_dhcp_options": "1.17.14",
     "copy_snapshot": "1.17.14",  # TODO: Verify version number
 }
-# Describing these resources will return an XSet instead of _plural(X).
+# Describing these resources will return an XSet instead of plural(X).
 DESCRIBE_RESOURCES_RETURN_AS_SET = [
     "stale_security_group",
     "security_group_reference",
@@ -347,7 +347,7 @@ def json_objs_equal(left, right):
     return ordered(left) == ordered(right)
 
 
-def _plural(name):
+def plural(name):
     """
     Helper function that returns the plural form of a boto3 resource.
 
@@ -364,6 +364,21 @@ def _plural(name):
     return ret
 
 
+def dict_to_boto_filters(filters):
+    """
+    Helper function that transforms a dict to the structure AWS wants in its filters arguments.
+
+    :param dict filters: The filters.
+
+    :rtype: list(dict)
+    :return: Filters, AWS/Boto style.
+    """
+    return [
+        {"Name": k, "Values": v if isinstance(v, list) else [v]}
+        for k, v in (filters or {}).items()
+    ]
+
+
 def describe_resource(
     resource_type, ids=None, filters=None, result_key=None, client=None, **kwargs,
 ):
@@ -376,7 +391,7 @@ def describe_resource(
     :param str/list ids: Zero or more resource_ids to describe.
     :param dict filters: Return only resources that match these filters.
     :param str result_key: Override result key of value returned.
-        Default: _plural(UpperCamel(resource_type))
+        Default: plural(UpperCamel(resource_type))
     :param * kwargs: Any additional kwargs to pass to the boto3 function.
 
     :rtype: dict
@@ -388,20 +403,16 @@ def describe_resource(
     """
     if not isinstance(ids, list):
         ids = [ids]
-    resource_type_plural = _plural(resource_type)
+    resource_type_plural = plural(resource_type)
     resource_type_uc = salt.utils.stringutils.snake_to_camel_case(
         resource_type, uppercamel=True
     )
     result_key = result_key or salt.utils.stringutils.snake_to_camel_case(
         resource_type_plural, uppercamel=True
     )
-    boto_filters = [
-        {"Name": k, "Values": v if isinstance(v, list) else [v]}
-        for k, v in (filters or {}).items()
-    ]
     params = salt.utils.data.filter_falsey(
         {
-            "Filters": boto_filters,
+            "Filters": dict_to_boto_filters(filters),
             "{}Ids".format(
                 DESCRIBE_RESOURCES_ALT_IDS.get(resource_type, resource_type_uc)
             ): ids,
@@ -478,7 +489,7 @@ def lookup_resource(
             ret["error"] = (
                 "There are multiple {} with the specified filters."
                 " Please specify additional filters."
-                "".format(_plural(resource_type))
+                "".format(plural(resource_type))
             )
         else:
             ret["result"] = res["result"]
@@ -570,36 +581,36 @@ def create_resource(
     return {"result": ret}
 
 
-def generic_action(
+def handle_response(
     primary, params, *args,
 ):
     """
-    Helper function to deduplicate code when calling ``primary``.
+    Helper function to deduplicate code when calling another function ``primary``.
+    This is intended to handle exceptions boto might raise, and format the result
+    of a boto function call (directly or indirectly) into a nice 'error'/'result'-dict.
 
     :param callable primary: Function to call. Can either be a boto3.client function,
-        or a function from this module.
+        or a function from an execution module that calls a boto3 client function.
     :param dict params: Parameters to pass to the ``primary`` function.
     :param *args: Positional arguments to pass to the ``primary`` function.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
         with returned data if available, otherwise ``True`` on success.
-
-    :raises: SaltInvocationError if there are errors regarding the provided arguments.
     """
     ret = {}
     try:
-        log.debug("generic_action:\n" "\t\targs: %s\n" "\t\tparams: %s", args, params)
+        log.debug("handle_response:\n" "\t\targs: %s\n" "\t\tparams: %s", args, params)
         res = primary(*args, **params)
         res.pop("ResponseMetadata", None)
     except (
         botocore.exceptions.ParamValidationError,
         botocore.exceptions.ClientError,
     ) as exp:
-        return {"error": get_error(exp)["message"]}
+        res = {"error": get_error(exp)["message"]}
     if "error" in res:
-        return res
-    if not res:
+        ret = res
+    elif not res:
         ret["result"] = True
     elif isinstance(res, dict) and "result" in res:
         ret["result"] = res["result"]
@@ -608,14 +619,18 @@ def generic_action(
     return ret
 
 
-def wait_resource(resource_type, resource_description, desired_state, client=None):
+def wait_resource(
+    resource_type, desired_state, resource_id=None, params=None, client=None
+):
     """
     Helper function to use waiters.
     Returns immediately on error, otherwise blocks until the desired state is reached.
 
     :param str resource_type: The name of the resource involved.
-    :param dict resource_description: The output of a describe_X or lookup_X function.
     :param str desired_state: The resource state to wait for.
+    :param str resource_id: The ID of the resource to wait for.
+    :param dict params: The params to pass to the waiter. This replaces ``resource_id``
+      and can be used when multiple arguments are required.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -625,18 +640,23 @@ def wait_resource(resource_type, resource_description, desired_state, client=Non
     resource_type_cc = salt.utils.stringutils.snake_to_camel_case(
         resource_type, uppercamel=True
     )
-    resource_id = resource_description.get(resource_type_cc + "Id")
-    if not resource_id:
-        ret["error"] = "No ResourceId found in resource_description"
-    else:
-        try:
+    if not any((resource_id, params)):
+        raise SaltInvocationError("You must specify either resource_id or params.")
+    waiter_name = resource_type + "_" + desired_state
+    params = params or {resource_type_cc + "Ids": resource_id}
+    try:
+        if waiter_name in client.waiter_names:
             waiter = client.get_waiter(resource_type + "_" + desired_state)
-            waiter.wait(**{resource_type_cc + "Ids": resource_id})
-        except (
-            botocore.exceptions.ParamValidationError,
-            botocore.exceptions.ClientError,
-            botocore.exceptions.WaiterError,
-        ) as exc:
-            ret["error"] = exc
+        else:
+            waiter = __utils__["boto3_waiters.get_waiter"](
+                client, resource_name=resource_type, desired_state=desired_state,
+            )
+        waiter.wait(**params)
+    except (
+        botocore.exceptions.ParamValidationError,
+        botocore.exceptions.ClientError,
+        botocore.exceptions.WaiterError,
+    ) as exc:
+        ret["error"] = exc
     ret["result"] = "error" not in ret
     return ret

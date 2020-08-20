@@ -190,7 +190,7 @@ def accept_vpc_endpoint_connections(
             "VpcEndpointIds": itertools.chain.from_iterable(res["vpc_endpoint"]),
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.accept_vpc_endpoint_connections, params
     )
 
@@ -247,7 +247,7 @@ def accept_vpc_peering_connection(
         res = res["result"]
         params = {"VpcPeeringConnectionId": res["vpc_peering_connection"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.accept_vpc_peering_connection, params
     )
 
@@ -413,7 +413,7 @@ def associate_address(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.associate_address, params)
+    return __utils__["boto3.handle_response"](client.associate_address, params)
 
 
 def associate_dhcp_options(
@@ -470,7 +470,7 @@ def associate_dhcp_options(
             "VpcId": res["vpc"],
         }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.associate_dhcp_options, params)
+    return __utils__["boto3.handle_response"](client.associate_dhcp_options, params)
 
 
 def associate_route_table(
@@ -528,7 +528,7 @@ def associate_route_table(
             "SubnetId": res["subnet"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.associate_route_table, params)
+    return __utils__["boto3.handle_response"](client.associate_route_table, params)
 
 
 def associate_subnet_cidr_block(
@@ -604,7 +604,9 @@ def associate_subnet_cidr_block(
                 ipv6_subnet, ipv6_cidr_block_association_set[0]["Ipv6CidrBlock"]
             )
     params = {"SubnetId": subnet_id, "Ipv6CidrBlock": ipv6_cidr_block}
-    return __utils__["boto3.generic_action"](client.associate_subnet_cidr_block, params)
+    return __utils__["boto3.handle_response"](
+        client.associate_subnet_cidr_block, params
+    )
 
 
 def associate_vpc_cidr_block(
@@ -655,7 +657,7 @@ def associate_vpc_cidr_block(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.associate_vpc_cidr_block, params)
+    return __utils__["boto3.handle_response"](client.associate_vpc_cidr_block, params)
 
 
 def attach_internet_gateway(
@@ -707,7 +709,7 @@ def attach_internet_gateway(
             "VpcId": res["vpc"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.attach_internet_gateway, params)
+    return __utils__["boto3.handle_response"](client.attach_internet_gateway, params)
 
 
 def attach_network_interface(
@@ -761,7 +763,7 @@ def attach_network_interface(
             "NetworkInterfaceId": res["network_interface"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.attach_network_interface, params)
+    return __utils__["boto3.handle_response"](client.attach_network_interface, params)
 
 
 def attach_volume(
@@ -829,7 +831,7 @@ def attach_volume(
             "VolumeId": res["volume"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.attach_volume, params)
+    return __utils__["boto3.handle_response"](client.attach_volume, params)
 
 
 def attach_vpn_gateway(
@@ -878,7 +880,7 @@ def attach_vpn_gateway(
             "VpnGatewayId": res["vpn_gateway"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.attach_vpn_gateway, params)
+    return __utils__["boto3.handle_response"](client.attach_vpn_gateway, params)
 
 
 def authorize_security_group_egress(
@@ -992,7 +994,7 @@ def authorize_security_group_egress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.authorize_security_group_egress, params
     )
 
@@ -1051,7 +1053,7 @@ def authorize_security_group_ingress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.authorize_security_group_ingress, params
     )
 
@@ -1113,7 +1115,7 @@ def cancel_spot_fleet_requests(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.cancel_spot_fleet_requests, params)
+    return __utils__["boto3.handle_response"](client.cancel_spot_fleet_requests, params)
 
 
 def cancel_spot_instance_requests(
@@ -1160,7 +1162,7 @@ def cancel_spot_instance_requests(
             ),
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.cancel_spot_instance_requests, params
     )
 
@@ -1248,7 +1250,7 @@ def copy_image(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.copy_image, params)
+    return __utils__["boto3.handle_response"](client.copy_image, params)
 
 
 def copy_snapshot(
@@ -1340,7 +1342,7 @@ def copy_snapshot(
             },
             recurse_depth=1,
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "snapshot"
     )
 
@@ -1598,7 +1600,7 @@ def create_image(
             },
             recurse_depth=1,
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "image"
     )
 
@@ -2051,7 +2053,7 @@ def create_nat_gateway(
             }
         )
         params.update({"client": client})
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "nat_gateway"
     )
 
@@ -2094,7 +2096,7 @@ def create_network_acl(
         params = salt.utils.data.filter_falsey(
             {"params": {"VpcId": res["result"]["vpc"]}, "tags": tags, "client": client}
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "network_acl"
     )
 
@@ -2210,7 +2212,7 @@ def create_network_acl_entry(
             recurse_depth=1,
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.create_network_acl_entry, params)
+    return __utils__["boto3.handle_response"](client.create_network_acl_entry, params)
 
 
 def create_network_interface(
@@ -2314,7 +2316,7 @@ def create_network_interface(
                 "client": client,
             }
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "network_interface"
     )
 
@@ -2496,7 +2498,7 @@ def create_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.create_route, params)
+    return __utils__["boto3.handle_response"](client.create_route, params)
 
 
 def create_route_table(
@@ -2537,7 +2539,7 @@ def create_route_table(
         params = salt.utils.data.filter_falsey(
             {"params": {"VpcId": res["result"]["vpc"]}, "tags": tags, "client": client}
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "route_table"
     )
 
@@ -2600,7 +2602,7 @@ def create_security_group(
                 "client": client,
             }
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "security_group"
     )
 
@@ -2675,7 +2677,7 @@ def create_snapshot(
                 "client": client,
             }
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "snapshot"
     )
 
@@ -3124,7 +3126,7 @@ def create_vpc_endpoint(
         {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
     )
     param.update({"client": client})
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "vpc_endpoint"
     )
 
@@ -3275,7 +3277,7 @@ def create_vpc_peering_connection(
             },
             recurse_depth=1,
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "vpc_peering_connection"
     )
 
@@ -3495,7 +3497,7 @@ def create_vpn_connection(
             },
             recurse_depth=4,
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         __utils__["boto3.create_resource"], params, "vpn_connection"
     )
 
@@ -3708,7 +3710,7 @@ def delete_customer_gateway(
             return res
         params = {"CustomerGatewayId": res["result"]["customer_gateway"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_customer_gateway, params)
+    return __utils__["boto3.handle_response"](client.delete_customer_gateway, params)
 
 
 def delete_dhcp_options(
@@ -3750,7 +3752,7 @@ def delete_dhcp_options(
             return res
         params = {"DhcpOptionsId": res["result"]["dhcp_options"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_dhcp_options, params)
+    return __utils__["boto3.handle_response"](client.delete_dhcp_options, params)
 
 
 def delete_internet_gateway(
@@ -3792,7 +3794,7 @@ def delete_internet_gateway(
             return res
         params = {"InternetGatewayId": res["result"]["internet_gateway"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_internet_gateway, params)
+    return __utils__["boto3.handle_response"](client.delete_internet_gateway, params)
 
 
 def delete_key_pair(
@@ -3832,7 +3834,7 @@ def delete_key_pair(
             {"KeyPairId": res["key_pair"], "KeyName": key_name}
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_key_pair, params)
+    return __utils__["boto3.handle_response"](client.delete_key_pair, params)
 
 
 def delete_nat_gateway(
@@ -3873,15 +3875,19 @@ def delete_nat_gateway(
     ) as res:
         if "error" in res:
             return res
-        params = {"NatGatewayId": res["result"]["nat_gateway"]}
+        nat_gateway_id = res["result"]["nat_gateway"]
+        params = {"NatGatewayId": nat_gateway_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    res = __utils__["boto3.generic_action"](client.delete_nat_gateway, params)
+    res = __utils__["boto3.handle_response"](client.delete_nat_gateway, params)
     if "error" in res:
         return res
     if blocking:
-        nat_gateway_id = res["result"]["NatGatewayId"]
-        _wait_resource("nat_gateway", res["result"], "deleted", client=client)
-    return res
+        ret = __utils__["boto3.wait_resource"](
+            "nat_gateway", "deleted", resource_id=nat_gateway_id, client=client,
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
 def delete_network_acl(
@@ -3921,7 +3927,7 @@ def delete_network_acl(
             return res
         params = {"NetworkAclId": res["result"]["network_acl"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_network_acl, params)
+    return __utils__["boto3.handle_response"](client.delete_network_acl, params)
 
 
 def delete_network_acl_entry(
@@ -3966,7 +3972,7 @@ def delete_network_acl_entry(
             "RuleNumber": rule_number,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_network_acl_entry, params)
+    return __utils__["boto3.handle_response"](client.delete_network_acl_entry, params)
 
 
 def delete_network_interface(
@@ -4006,7 +4012,7 @@ def delete_network_interface(
             return res
         params = {"NetworkInterfaceId": res["result"]["network_interface"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_network_interface, params)
+    return __utils__["boto3.handle_response"](client.delete_network_interface, params)
 
 
 def delete_route(
@@ -4057,7 +4063,7 @@ def delete_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_route, params)
+    return __utils__["boto3.handle_response"](client.delete_route, params)
 
 
 def delete_route_table(
@@ -4097,7 +4103,7 @@ def delete_route_table(
             return res
         params = {"RouteTableId": res["result"]["route_table"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_route_table, params)
+    return __utils__["boto3.handle_response"](client.delete_route_table, params)
 
 
 def delete_security_group(
@@ -4148,7 +4154,7 @@ def delete_security_group(
             return res
         params = {"GroupId": res["result"]["security_group"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_security_group, params)
+    return __utils__["boto3.handle_response"](client.delete_security_group, params)
 
 
 def delete_snapshot(
@@ -4195,7 +4201,7 @@ def delete_snapshot(
             return res
         params = {"SnapshotId": res["result"]["snapshot"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_snapshot, params)
+    return __utils__["boto3.handle_response"](client.delete_snapshot, params)
 
 
 def delete_subnet(
@@ -4230,7 +4236,7 @@ def delete_subnet(
             return res
         params = {"SubnetId": res["result"]["subnet"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_subnet, params)
+    return __utils__["boto3.handle_response"](client.delete_subnet, params)
 
 
 def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None):
@@ -4251,7 +4257,7 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
         "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_tags, params)
+    return __utils__["boto3.handle_response"](client.delete_tags, params)
 
 
 def delete_volume(
@@ -4287,14 +4293,19 @@ def delete_volume(
     ) as res:
         if "error" in res:
             return res
-        params = {"VolumeId": res["result"]["volume"]}
+        volume_id = res["result"]["volume"]
+        params = {"VolumeId": volume_id}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    res = __utils__["boto3.generic_action"](client.delete_volume, params)
+    ret = __utils__["boto3.handle_response"](client.delete_volume, params)
     if "error" in res:
         return res
     if blocking:
-        _wait_resource("volume", {"TODO": "FIXME"}, "deleted", client=client)
-    return res
+        ret = __utils__["boto3.wait_resource"](
+            "volume", "deleted", resource_id=volume_id, client=client,
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
 def delete_vpc(
@@ -4328,7 +4339,7 @@ def delete_vpc(
             return res
         params = {"VpcId": res["result"]["vpc"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_vpc, params)
+    return __utils__["boto3.handle_response"](client.delete_vpc, params)
 
 
 def delete_vpc_endpoint_service_configurations(
@@ -4375,7 +4386,7 @@ def delete_vpc_endpoint_service_configurations(
             )
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.delete_vpc_endpoint_services, params
     )
 
@@ -4423,7 +4434,7 @@ def delete_vpc_endpoints(
             )
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.delete_vpc_endpoints, params)
+    return __utils__["boto3.handle_response"](client.delete_vpc_endpoints, params)
 
 
 def delete_vpc_peering_connection(
@@ -4441,10 +4452,12 @@ def delete_vpc_peering_connection(
     connection in the ``pending-acceptance`` state. You cannot delete a VPC peering
     connection that's in the ``failed`` state.
 
-    :param str vpc_peering_connection_name: The ``Name``-tag of the VPC peering
-        connection to delete.
     :param str vpc_peering_connection_id: The ID of the VPC peering connection
-        to delete
+        to delete.
+    :param dict vpc_peering_connection_lookup: Any kwargs that ``lookup_vpc_peering_connection``
+        accepts. When ``vpc_peering_connection_id`` is not provided, this is required,
+        otherwise ignored.
+    :param bool blocking: Wait until the vpc_peering_connection is deleted.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -4469,24 +4482,168 @@ def delete_vpc_peering_connection(
             return res
         params = {"VpcPeeringConnectionId": res["result"]["vpc_peering_connection"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    res = __utils__["boto3.handle_response"](
         client.delete_vpc_peering_connection, params
     )
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "vpn_peering_connection", params, "deleted", client=client
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
-def delete_vpn_connection():
+def delete_vpn_connection(
+    vpn_connection_id=None,
+    vpn_connection_lookup=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Deletes the specified VPN connection.
+
+    If you're deleting the VPC and its associated components, we recommend that
+    you detach the virtual private gateway from the VPC and delete the VPC before
+    deleting the VPN connection. If you believe that the tunnel credentials for
+    your VPN connection have been compromised, you can delete the VPN connection
+    and create a new one that has new keys, without needing to delete the VPC or
+    virtual private gateway. If you create a new VPN connection, you must reconfigure
+    the customer gateway device using the new configuration information returned
+    with the new VPN connection ID.
+
+    For certificate-based authentication, delete all AWS Certificate Manager (ACM)
+    private certificates used for the AWS-side tunnel endpoints for the VPN connection
+    before deleting the VPN connection.
+
+    :param str vpn_connection_id: The ID of the VPN connection.
+    :param dict vpn_connection_lookup: Any kwargs that ``lookup_vpn_connection``
+        accepts. When ``vpc_connection_id`` is not provided, this is required,
+        otherwise ignored.
+    :param bool blocking: Wait until the VPN connection is deleted.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "vpn_connection",
+            "kwargs": vpn_connection_lookup or {"vpn_connection_id": vpn_connection_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"VpnConnectionId": res["result"]["vpn_connection"]}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.delete_vpn_connection, params)
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "vpn_connection", params, "deleted", client=client
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
-def delete_vpn_gateway():
+def delete_vpn_gateway(
+    vpn_gateway_id=None,
+    vpn_gateway_lookup=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Deletes the specified virtual private gateway. You must first detach the virtual
+    private gateway from the VPC. Note that you don't need to delete the virtual
+    private gateway if you plan to delete and recreate the VPN connection between
+    your VPC and your network.
+
+    :param str vpn_gateway_id: The ID of the virtual private gateway.
+    :param dict vpn_gateway_lookup: Any kwargs that ``lookup_vpn_gateway``
+        accepts. When ``vpc_gateway_id`` is not provided, this is required,
+        otherwise ignored.
+    :param bool blocking: Wait until the VPN gateway is deleted.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "vpn_gateway",
+            "kwargs": vpn_gateway_lookup or {"vpn_gateway_id": vpn_gateway_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"VpnGatewayId": res["result"]["vpn_gateway"]}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.delete_vpn_gateway, params)
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "vpn_gateway", params, "deleted", client=client
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
-def deregister_image():
+def deregister_image(
+    image_id=None, image_lookup=None, region=None, keyid=None, key=None, profile=None
+):
     """
+    Deregisters the specified AMI. After you deregister an AMI, it can't be used
+    to launch new instances; however, it doesn't affect any instances that you've
+    already launched from the AMI. You'll continue to incur usage costs for those
+    instances until you terminate them.
+
+    When you deregister an Amazon EBS-backed AMI, it doesn't affect the snapshot
+    that was created for the root volume of the instance during the AMI creation
+    process. When you deregister an instance store-backed AMI, it doesn't affect
+    the files that you uploaded to Amazon S3 when you created the AMI.
+
+    :param str image_id: The ID of the AMI.
+    :param dict image_lookup: Any kwargs that ``lookup_image`` accepts. When ``image_id``
+        is not provided, this is required, otherwise ignored.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "image",
+            "kwargs": image_lookup or {"image_id": image_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"ImageId": res["result"]["image"]}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](client.deregister_image, params)
 
 
 def describe_addresses(
@@ -4638,19 +4795,172 @@ def describe_dhcp_options(
     )
 
 
-def describe_images():
+def describe_images(
+    image_ids=None,
+    filters=None,
+    executable_users=None,
+    owners=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the specified images (AMIs, AKIs, and ARIs) available to you or all
+    of the images available to you.
+
+    The images available to you include public images, private images that you
+    own, and private images owned by other AWS accounts for which you have explicit
+    launch permissions.
+
+    Recently deregistered images appear in the returned results for a short interval
+    and then return empty results. After all instances that reference a deregistered
+    AMI are terminated, specifying the ID of the image results in an error indicating
+    that the AMI ID cannot be found.
+
+    :param list(str) image_ids: The image IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_images
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+    :param list(str) executable_users: Scopes the images by users with explicit
+      launch permissions. Specify an AWS account ID, ``self`` (the sender of the
+      request), or ``all`` (public AMIs).
+    :param list(str) owners: Scopes the results to images with the specified owners.
+      You can specify a combination of AWS account IDs, self , amazon , and aws-marketplace .
+      If you omit this parameter, the results include all images for which you
+      have launch permissions, regardless of ownership.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_images``-call
+        on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    params = salt.utils.data.filter_falsey(
+        {"ExecutableUsers": executable_users, "Owners": owners}
+    )
+    return __utils__["boto3.describe_resource"](
+        "image", ids=image_ids, filters=filters, client=client, **params
+    )
 
 
-def describe_instance_attribute():
+def describe_instance_attribute(
+    attribute,
+    instance_id=None,
+    instance_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the specified attribute of the specified instance. You can specify
+    only one attribute at a time. Valid attribute values are:
+
+      - instanceType
+      - kernel
+      - ramdisk
+      - userData
+      - disableApiTermination
+      - instanceInitiatedShutdownBehavior
+      - rootDeviceName
+      - blockDeviceMapping
+      - productCodes
+      - sourceDestCheck
+      - groupSet
+      - ebsOptimized
+      - sriovNetSupport
+
+    :param str attribute: The instance attribute.
+    :param str instance_id: The ID of the instance.
+    :param dict instance_lookup: Any kwargs that ``lookup_instance`` accepts.
+        When ``instance_id`` is not provided, this is required, otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_instance_attribute``-call
+        on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookup or {"instance_id": instance_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = salt.utils.data.filter_falsey(
+            {"Attribute": attribute, "InstanceId": instance_id}
+        )
+    return __utils__["boto3.describe_resource"](
+        "image", filters=filters, client=client, **params
+    )
 
 
-def describe_instance_credit_specifications():
+def describe_instance_credit_specifications(
+    instance_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the credit option for CPU usage of the specified burstable performance
+    instances. The credit options are ``standard`` and ``unlimited``.
+
+    If you do not specify an instance ID, Amazon EC2 returns burstable performance
+    instances with the unlimited credit option, as well as instances that were
+    previously configured as T2, T3, and T3a with the unlimited credit option.
+    For example, if you resize a T2 instance, while it is configured as ``unlimited``,
+    to an M4 instance, Amazon EC2 returns the M4 instance.
+
+    If you specify one or more instance IDs, Amazon EC2 returns the credit option
+    (``standard`` or ``unlimited``) of those instances. If you specify an instance
+    ID that is not valid, such as an instance that is not a burstable performance
+    instance, an error is returned.
+
+    Recently terminated instances might appear in the returned results. This interval
+    is usually less than one hour.
+
+    If an Availability Zone is experiencing a service disruption and you specify
+    instance IDs in the affected zone, or do not specify any instance IDs at all,
+    the call fails. If you specify only instance IDs in an unaffected zone, the
+    call works normally.
+
+    :param str/list(str) instance_ids: The (list of) IDs of the instance(s).
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instance_credit_specifications
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_instance_credit_specifications``-
+        call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "instance_credit_specification",
+        ids=instance_ids,
+        filters=filters,
+        client=client,
+    )
 
 
 def describe_internet_gateways(
@@ -4687,9 +4997,36 @@ def describe_internet_gateways(
     )
 
 
-def describe_key_pairs():
+def describe_key_pairs(
+    key_pair_ids=None,
+    key_names=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the specified key pairs or all of your key pairs.
+
+    :param str/list(str) key_pair_ids: The IDs of the key pairs.
+    :param str/list(str) key_names: The key pair names.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_key_pairs
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "key_pair",
+        ids=key_pair_ids,
+        filters=filters,
+        client=client,
+        KeyNames=key_names,
+    )
 
 
 def describe_local_gateways(
@@ -4786,14 +5123,67 @@ def describe_network_acls(
     )
 
 
-def describe_network_interfaces():
+def describe_network_interfaces(
+    network_interface_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes one or more of your network interfaces.
+
+    :param str/list(str) network_interface_ids: One or more network interface IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_network_interfaces
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_network_interfaces``-
+        call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "network_interface", ids=network_interface_ids, filters=filters, client=client,
+    )
 
 
-def describe_regions():
+def describe_regions(
+    region_names=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the Regions that are enabled for your account, or all Regions.
+
+    :param str/list(str) region_names: The names of the Regions. You can specify
+      any Regions, whether they are enabled and disabled for your account.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_regions
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_regions``-
+        call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "region", filters=filters, client=client, RegionNames=region_names,
+    )
 
 
 def describe_route_tables(
@@ -4873,24 +5263,179 @@ def describe_security_groups(
     )
 
 
-def describe_snapshots():
+def describe_snapshots(
+    snapshot_ids=None,
+    owner_ids=None,
+    restorable_by_user_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the specified EBS snapshots available to you or all of the EBS snapshots
+    available to you.
+
+    The snapshots available to you include public snapshots, private snapshots
+    that you own, and private snapshots owned by other AWS accounts for which you
+    have explicit create volume permissions.
+
+    The create volume permissions fall into the following categories:
+
+      - public: The owner of the snapshot granted create volume permissions for
+        the snapshot to the all group. All AWS accounts have create volume permissions
+        for these snapshots.
+      - explicit: The owner of the snapshot granted create volume permissions to
+        a specific AWS account.
+      - implicit: An AWS account has implicit create volume permissions for all
+        snapshots it owns.
+    The list of snapshots returned can be filtered by specifying snapshot IDs,
+    snapshot owners, or AWS accounts with create volume permissions. If no options
+    are specified, Amazon EC2 returns all snapshots for which you have create volume
+    permissions.
+
+    If you specify one or more snapshot IDs, only snapshots that have the specified
+    IDs are returned. If you specify an invalid snapshot ID, an error is returned.
+    If you specify a snapshot ID for which you do not have access, it is not included
+    in the returned results.
+
+    If you specify one or more snapshot owners using the OwnerIds option, only
+    snapshots from the specified owners and for which you have access are returned.
+    The results can include the AWS account IDs of the specified owners, amazon
+    for snapshots owned by Amazon, or self for snapshots that you own.
+
+    If you specify a list of restorable users, only snapshots with create snapshot
+    permissions for those users are returned. You can specify AWS account IDs (if
+    you own the snapshots), self for snapshots for which you own or have explicit
+    permissions, or all for public snapshots.
+
+    To get the state of fast snapshot restores for a snapshot, use :py:func:`describe_fast_snapshot_restores`.
+
+    :param str/list(str) snapshot_ids: The snapshot IDs.
+      Default: Describes the snapshots for which you have create volume permissions.
+    :param list(str) owner_ids: Scopes the results to snapshots with the specified
+      owners. You can specify a combination of AWS account IDs, ``self``, and ``amazon``.
+    :param list(str) restorable_by_user_ids: The IDs of the AWS accounts that can
+      create volumes from the snapshot.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_snapshots
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_snapshots``-call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "snapshot",
+        ids=snapshot_ids,
+        filters=filters,
+        client=client,
+        OwnerIds=owner_ids,
+        RestorableByUserIds=restorable_by_user_ids,
+    )
 
 
-def describe_spot_fleet_instances():
+def describe_spot_fleet_instances(
+    spot_fleet_request_id, region=None, keyid=None, key=None, profile=None, client=None,
+):
     """
+    Describes the running instances for the specified Spot Fleet.
+
+    :param str spot_fleet_request_id: The ID of the Spot Fleet request.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_spot_fleet_instances``-
+      call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "spot_fleet_instance",
+        client=client,
+        result_key="ActiveInstances",
+        SpotFleetRequestId=spot_fleet_request_id,
+    )
 
 
-def describe_spot_fleet_requests():
+def describe_spot_fleet_requests(
+    spot_fleet_request_ids,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes your Spot Fleet requests.
+
+    Spot Fleet requests are deleted 48 hours after they are canceled and their
+    instances are terminated.
+
+    :param str/list(str) spot_fleet_request_ids: The IDs of the Spot Fleet requests.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_spot_fleet_requests``-
+      call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "spot_fleet_request",
+        ids=spot_fleet_request_ids,
+        client=client,
+        result_key="SpotFleetRequestConfigs",
+    )
 
 
-def describe_spot_instance_requests():
+def describe_spot_instance_requests(
+    spot_instance_request_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
+    Describes the specified Spot Instance requests.
+
+    You can use DescribeSpotInstanceRequests to find a running Spot Instance by
+    examining the response. If the status of the Spot Instance is ``fulfilled``,
+    the instance ID appears in the response and contains the identifier of the
+    instance. Alternatively, you can use DescribeInstances with a filter to look
+    for instances where the instance lifecycle is ``spot``.
+
+    Spot Instance requests are deleted four hours after they are canceled and their
+    instances are terminated.
+
+    :param str/list(str) spot_instance_request_ids: One or more Spot Instance request IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_spot_instance_requests
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_spot_instance_requests``-
+      call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "spot_instance_request",
+        ids=spot_instance_request_ids,
+        filters=filters,
+        client=client,
+    )
 
 
 def describe_stale_security_groups(
@@ -4930,7 +5475,7 @@ def describe_stale_security_groups(
             "ids": res["result"]["vpc"],
             "client": client,
         }
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         _describe_resource, params, "stale_security_group"
     )
 
@@ -5004,6 +5549,11 @@ def describe_transit_gateways(
         for a complete list.
         Note that the filters can be supplied as a dict with the keys being the
         names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_transit_gateways``-
+        call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5014,7 +5564,25 @@ def describe_transit_gateways(
 
 def describe_volumes():
     """
+    Describes the specified EBS volumes or all of your EBS volumes.
+
+    :param str/list(str) volume_ids: The volume IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_volumes
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_volumes``-call
+        on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "volume", ids=volume_ids, filters=filters, client=client,
+    )
 
 
 def describe_vpc_attributes(
@@ -5163,7 +5731,7 @@ def describe_vpc_endpoint_service_permissions(
                 "profile": profile,
             }
         )
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         _describe_resource, params, "vpc_endpoint_service_permission",
     )
 
@@ -5304,7 +5872,25 @@ def describe_vpcs(
 
 def describe_vpn_connections():
     """
+    Describes one or more of your VPN connections.
+
+    :param str/list(str) vpn_connection_ids: One or more VPN connection IDs.
+      Default: Describes your VPN connections.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpn_connections
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_vpcs``-call on succes.
     """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "vpn_connection", ids=vpn_connection_ids, filters=filters, client=client,
+    )
 
 
 def describe_vpn_gateways(
@@ -5395,22 +5981,201 @@ def detach_internet_gateway(
         res = res["result"]
         params = {"InternetGatewayId": res["internet_gateway"], "VpcId": vpc_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.detach_internet_gateway, params)
+    return __utils__["boto3.handle_response"](client.detach_internet_gateway, params)
 
 
-def detach_network_interface():
+def detach_network_interface(
+    attachment_id=None,
+    network_interface_lookup=None,
+    force=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Detaches a network interface from an instance.
+
+    :param str attachment_id: The ID of the attachment.
+    :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
+      accepts. Used to lookup the attachment ID if ``attachment_id`` is not provided.
+    :param bool force: Specifies whether to force a detachment. Note:
+      Use the Force parameter only as a last resort to detach a network interface
+      from a failed instance.
+      If you use the Force parameter to detach a network interface, you might not
+      be able to attach a different network interface to the same index on the
+      instance without first stopping and starting the instance.
+      If you force the detachment of a network interface, the instance metadata
+      might not get updated. This means that the attributes associated with the
+      detached network interface might still be visible. The instance metadata
+      will get updated when you stop and start the instance.
     """
+    if attachment_id is None:
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "network_interface",
+                "kwargs": network_interface_lookup,
+                "result_keys": "Attachment:AttachmentId",
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
+            if "error" in res:
+                return res
+            attachment_id = res["result"]["network_interface"]
+    params = salt.utils.data.filter_falsey(
+        {"AttachmentId": attachment_id, "Force": force}
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](client.detach_network_interface, params)
 
 
-def detach_volume():
+def detach_volume(
+    volume_id=None,
+    volume_lookup=None,
+    instance_id=None,
+    instance_lookup=None,
+    device=None,
+    force=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Detaches an EBS volume from an instance. Make sure to unmount any file systems
+    on the device within your operating system before detaching the volume. Failure
+    to do so can result in the volume becoming stuck in the busy state while detaching.
+    If this happens, detachment can be delayed indefinitely until you unmount the
+    volume, force detachment, reboot the instance, or all three. If an EBS volume
+    is the root device of an instance, it can't be detached while the instance is
+    running. To detach the root volume, stop the instance first.
+
+    When a volume with an AWS Marketplace product code is detached from an instance,
+    the product code is no longer associated with the instance.
+
+    :param str volume_id: The ID of the volume.
+    :param dict volume_lookup: Any kwarg that ``lookup_volume`` accepts. Used to
+      lookup ``volume_id`` if it is not provided.
+    :param str instance_id: The ID of the instance. If you are detaching a Multi-
+      Attach enabled volume, you must specify an instance ID.
+    :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts. Used
+      to lookup ``instance_id`` if it is not provided.
+    :param str device: The device name.
+    :param bool Force: Forces detachment if the previous detachment attempt did
+      not occur cleanly (for example, logging into an instance, unmounting the
+      volume, and detaching normally). This option can lead to data loss or a corrupted
+      file system. Use this option only as a last resort to detach a volume from
+      a failed instance. The instance won't have an opportunity to flush file system
+      caches or file system metadata. If you use this option, you must perform
+      file system check and repair procedures.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "volume",
+            "kwargs": volume_lookup or {"volume_id": volume_id},
+        },
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookup or {"instance_id": instance_id},
+            "required": False,
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        res = res["result"]
+        params = salt.utils.data.filter_falsey(
+            {
+                "Device": device,
+                "Force": force,
+                "InstanceId": res["instance"],
+                "VolumeId": res["volume"],
+            }
+        )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](client.detach_volume, params)
 
 
-def detach_vpn_gateway():
+def detach_vpn_gateway(
+    vpc_id=None,
+    vpc_lookup=None,
+    vpn_gateway_id=None,
+    vpn_gateway_lookup=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Detaches a virtual private gateway from a VPC. You do this if you're planning
+    to turn off the VPC and not use it anymore. You can confirm a virtual private
+    gateway has been completely detached from a VPC by describing the virtual private
+    gateway (any attachments to the virtual private gateway are also described).
+
+    You must wait for the attachment's state to switch to detached before you can
+    delete the VPC or attach a different VPC to the virtual private gateway.
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts. Used to lookup
+      ``vpc_id`` if it is not provided.
+    :param str vpn_gateway_id: The ID of the virtual private gateway.
+    :param dict vpn_gateway_lookup: Any kwarg that ``lookup_vpn_gateway`` accepts.
+      Used to lookup ``vpn_gateway_id`` if it is not provided.
+    :param bool blocking: Wait until the virtual private gateway is detached.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with ``True`` on success.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        {
+            "service": "ec2",
+            "name": "vpn_gateway",
+            "kwargs": vpn_gateway_lookup or {"vpn_gateway_id": vpn_gateway_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        res = res["result"]
+        vpc_id = res["vpc"]
+        vpn_gateway_id = res["vpn_gateway"]
+    params = salt.utils.data.filter_falsey(
+        {"VpcId": vpc_id, "VpnGatewayId": vpn_gateway_id}
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.detach_vpn_gateway, params)
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "vpn_gateway",
+            "detached",
+            params={
+                "VpnGatewayIds": vpn_gateway_id,
+                "Filters": __utils__["boto3.dict_to_boto_filters"](
+                    {"attachment.vpc-id": vpc_id}
+                ),
+            },
+            client=client,
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
 def disable_vpc_classic_link():
@@ -5512,7 +6277,7 @@ def disassociate_route_table(
                 return res
             association_id = res["result"]["route_table"]
     params = {"AssociationId": association_id}
-    return __utils__["boto3.generic_action"](client.disassociate_route_table, params)
+    return __utils__["boto3.handle_response"](client.disassociate_route_table, params)
 
 
 def disassociate_subnet_cidr_block(
@@ -5581,7 +6346,7 @@ def disassociate_subnet_cidr_block(
         association_id = current_ipv6_association[0]["AssociationId"]
     params = {"AssociationId": association_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    res = __utils__["boto3.generic_action"](
+    res = __utils__["boto3.handle_response"](
         client.disassociate_subnet_cidr_block, params
     )
     if "error" in res:
@@ -5648,7 +6413,7 @@ def disassociate_vpc_cidr_block(
         res = res["result"]
         params = {"AssociationId": res["vpc"]}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    res = __utils__["boto3.generic_action"](client.disassociate_vpc_cidr_block, params)
+    res = __utils__["boto3.handle_response"](client.disassociate_vpc_cidr_block, params)
     if "error" in res:
         return res
     if blocking:
@@ -5982,6 +6747,144 @@ def lookup_dhcp_options(
     )
 
 
+def lookup_image(
+    image_id=None,
+    image_name=None,
+    architecture=None,
+    delete_on_termination=None,
+    device_name=None,
+    snapshot_id=None,
+    volume_size=None,
+    volume_type=None,
+    encrypted=None,
+    description=None,
+    ena_support=None,
+    hypervisor=None,
+    image_type=None,
+    is_public=None,
+    kernel_id=None,
+    manifest_location=None,
+    owner_alias=None,
+    owner_id=None,
+    platform=None,
+    product_code=None,
+    product_code_type=None,
+    ramdisk_id=None,
+    root_device_name=None,
+    root_device_type=None,
+    state=None,
+    state_reason_code=None,
+    state_reason_message=None,
+    sriov_net_support=None,
+    tags=None,
+    tag_key=None,
+    virtualization_type=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    client=None,
+):
+    """
+    Helper function to find a single Image.
+    Can also be used to determine if an Image exists.
+
+    The following paramers are translated into filters to refine the lookup:
+
+    :param str image_id: The ID of the image.
+    :param str image_name: The name of the AMI (provided during image creation).
+    :param str architecture: The image architecture. Allowed values: i386, x86_64, arm64.
+    :param bool delete_on_termination: A Boolean value that indicates whether the
+      Amazon EBS volume is deleted on instance termination.
+    :param str device_name: The device name specified in the block device mapping.
+      (for example, ``/dev/sdh`` or ``xvdh``).
+    :param str snapshot_id: The ID of the snapshot used for the EBS volume.
+    :param int volume_size: The volume size of the EBS volume, in GiB.
+    :param str volume_type: The volume type of the EBS volume. Allowed values:
+      gp2, io1, st1, sc1, standard.
+    :param bool encrypted: A Boolean that indicates whether the EBS volume is encrypted.
+    :param str description: The description of the image (provided during image creation).
+    :param bool ena_support: A Boolean that indicates whether enhanced networking
+      with ENA is enabled.
+    :param str hypervisor: The hypervisor type. Allowed values: ovm, xen.
+    :param str image_type: The image type. Allowed values: machine, kernel, ramdisk.
+    :param bool is_public: A Boolean that indicates whether the image is public.
+    :param str kernel_id: The kernel ID.
+    :param str manifest_location: The location of the image manifest.
+    :param str owner_alias: The owner alias, from an Amazon-maintained list
+      (``amazon`` or ``aws-marketplace``). This is not the user-configured AWS
+      account alias set using the IAM console. We recommend that you use the related
+      parameter instead of this filter.
+    :param str owner_id: The AWS account ID of the owner. We recommend that you
+      use the related parameter instead of this filter.
+    :param str platform: The platform. To only list Windows-based AMIs, use ``windows``.
+    :param str product_code: The product code.
+    :param str product_code_type: The type of the product code. Allowed values:
+      devpay, marketplace.
+    :param str ramdisk_id: The RAM disk ID.
+    :param str root_device_name: The device name of the root device volume (for
+      example, ``/dev/sda1``).
+    :param str root_device_type: The type of the root device volume. Allowed values:
+      ebs, instance-store.
+    :param str state: The state of the image. Allowed values: available, pending, failed.
+    :param str state_reason_code: The reason code for the state change.
+    :param str state_reason_message: The message for the state change.
+    :param str sriov_net_support: A value of ``simple`` indicates that enhanced
+      networking with the Intel 82599 VF interface is enabled.
+    :param dict tags: Any tags to filter on.
+    :param str tag_key: The key of a tag assigned to the resource. Use this filter
+        to find all resources assigned a tag with a specific key, regardless of
+        the tag value.
+    :param str virtualization_type: The virtualization type. Allowed values: paravirtual, hvm.
+    :param dict filters: Dict with filters to identify the Image.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
+    """
+    if filters is None:
+        filters = {}
+    filters.update(
+        salt.utils.data.filter_falsey(
+            {
+                "architecture": architecture,
+                "block-device-mapping.delete-on-termination": delete_on_termination,
+                "block-device-mapping.device-name": device_name,
+                "block-device-mapping.snapshot-id": snapshot_id,
+                "block-device-mapping.volume-size": volume_size,
+                "block-device-mapping.volume-type": volume_type,
+                "block-device-mapping.encrypted": encrypted,
+                "description": description,
+                "ena-support": ena_support,
+                "hypervisor": hypervisor,
+                "image-id": image_id,
+                "image-type": image_type,
+                "is-public": is_public,
+                "kernel-id": kernel_id,
+                "manifest-location": manifest_location,
+                "name": image_name,
+                "owner-alias": owner_alias,
+                "owner-id": owner_id,
+                "platform": platform,
+                "product-code": product_code,
+                "product-code-type": product_code_type,
+                "ramdisk-id": ramdisk_id,
+                "root-device-name": root_device_name,
+                "root-device-type": root_device_type,
+                "state": state,
+                "state-reason-code": state_reason_code,
+                "state-reason-message": state_reason_message,
+                "sriov-net-support": sriov_net_support,
+                "tag-key": tag_key,
+                "virtualization_type": virtualization_type,
+            }
+        )
+    )
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "image", filters=filters, tags=tags, client=client,
+    )
+
+
 def lookup_internet_gateway(
     internet_gateway_id=None,
     internet_gateway_name=None,
@@ -6064,6 +6967,51 @@ def lookup_internet_gateway(
     )
 
 
+def lookup_key_pair():
+    """
+    Helper function to find a single key pair.
+    Can also be used to determine if a key pair exists.
+
+    The following paramers are translated into filters to refine the lookup:
+
+    :param str key_pair_id: The ID of the key pair.
+    :param str fingerprint: The fingerprint of the key pair.
+    :param str key_name: The name of the key pair.
+    :param str tag_key: The key of a tag assigned to the resource. Use this filter
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
+    :param dict tags: The tags to filter on.
+    :param dict filters: Dict with filters to identify the key pair.
+        Note that for any of the values supplied in the arguments above that also
+        occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+        with dict containing the result of the boto ``describe_key_pairs``-
+        call on succes.
+        If the call was succesful but returned nothing, both the 'error' and 'result'
+        key will be set with the notice that nothing was found and an empty dict
+        respectively (since it is assumed you're looking to find something).
+    """
+    if filters is None:
+        filters = {}
+    filters.update(
+        salt.utils.data.filter_falsey(
+            {
+                "key-pair-id": key_pair_id,
+                "fingerprint": fingerprint,
+                "key-name": key_name,
+                "tag-key": tag_key,
+            }
+        )
+    )
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.lookup_resource"](
+        "key_pair", filters=filters, tags=tags, client=client,
+    )
+
+
 def lookup_local_gateway(
     local_gateway_id=None,
     local_gateway_name=None,
@@ -6082,7 +7030,7 @@ def lookup_local_gateway(
     client=None,
 ):
     """
-    Helper function to find a single local gateawy.
+    Helper function to find a single local gateway.
     Can also be used to determine if a local gateway exists.
 
     The following paramers are translated into filters to refine the lookup:
@@ -7513,7 +8461,7 @@ def modify_vpc_endpoint_service_configuration(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.modify_vpc_endpoint_service_configuration, params
     )
 
@@ -7570,7 +8518,7 @@ def modify_vpc_endpoint_service_permissions(
             }
         )
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.modify_vpc_endpoint_service_permissions, params
     )
 
@@ -7616,7 +8564,7 @@ def modify_vpc_tenancy(
         res = res["result"]
         params = {"VpcId": res["vpc"], "InstanceTenancy": instance_tenancy}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.generic_action"](client.modify_vpc_tenancy, params)
+    return __utils__["boto3.handle_response"](client.modify_vpc_tenancy, params)
 
 
 def release_address(
@@ -7676,7 +8624,7 @@ def release_address(
         res = res["result"]
         params = {"AllocationId": res["address"]}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.release_address, params)
+    return __utils__["boto3.handle_response"](client.release_address, params)
 
 
 def replace_network_acl_association(
@@ -7767,7 +8715,7 @@ def replace_network_acl_association(
             "AssociationId": association_id,
             "NetworkAclId": res["result"]["network_acl"],
         }
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.replace_network_acl_association, params
     )
 
@@ -7868,7 +8816,7 @@ def replace_network_acl_entry(
             recurse_depth=1,
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.replace_network_acl_entry, params)
+    return __utils__["boto3.handle_response"](client.replace_network_acl_entry, params)
 
 
 def replace_route(
@@ -8066,7 +9014,7 @@ def replace_route(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](client.replace_route, params)
+    return __utils__["boto3.handle_response"](client.replace_route, params)
 
 
 def revoke_security_group_egress(
@@ -8123,7 +9071,7 @@ def revoke_security_group_egress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.revoke_security_group_egress, params
     )
 
@@ -8185,7 +9133,7 @@ def revoke_security_group_ingress(
             "IpPermissions": ip_permissions,
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.generic_action"](
+    return __utils__["boto3.handle_response"](
         client.revoke_security_group_ingress, params
     )
 
