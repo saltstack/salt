@@ -10,11 +10,11 @@ import os
 import sys
 import tempfile
 import traceback
+from pathlib import Path
 
 # Import 3rd-party libs
 import jinja2
 import jinja2.ext
-from pathlib import Path
 
 # Import Salt libs
 import salt.utils.data

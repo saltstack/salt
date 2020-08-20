@@ -5,7 +5,6 @@ Unit tests for salt.utils.templates.py
 import logging
 import os
 import sys
-
 from pathlib import PurePath, PurePosixPath
 
 import salt.utils.files
@@ -224,7 +223,7 @@ class WrapRenderTestCase(TestCase):
 
     def _test_generated_sls_context(self, tmplpath, sls, **expected):
         """ Generic SLS Context Test"""
-        #DeNormalize tmplpath
+        # DeNormalize tmplpath
         tmplpath = str(PurePath(PurePosixPath(tmplpath)))
         if tmplpath.startswith("\\"):
             tmplpath = "C:{}".format(tmplpath)
@@ -405,10 +404,7 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    @skipIf(
-        sys.platform == "win32",
-        "Backslash not possible under windows"
-    )
+    @skipIf(sys.platform == "win32", "Backslash not possible under windows")
     def test_generate_sls_context__backslash_in_path(self):
         """ generate_sls_context - Handle backslash in path on non-windows
         """
