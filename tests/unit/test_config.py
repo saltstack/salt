@@ -26,7 +26,6 @@ from tests.support.helpers import patched_environ, slowTest, with_tempdir, with_
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
