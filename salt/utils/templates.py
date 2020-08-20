@@ -124,7 +124,9 @@ def generate_sls_context(tmplpath, sls):
         template = str(Path(tmplpath).as_posix())
 
         # Determine proper template name without root
-        if template.endswith("{}.sls".format(slspath)):
+        if not sls:
+            template = template.rsplit("/", 1)[-1]
+        elif template.endswith("{}.sls".format(slspath)):
             template = template[-(4 + len(slspath)) :]
         elif template.endswith("{}/init.sls".format(slspath)):
             template = template[-(9 + len(slspath)) :]
