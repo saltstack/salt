@@ -48,6 +48,8 @@ class TestModulesJinja(ModuleCase):
     def test_load_map(self, grains):
         ret = self.run_function("jinja.load_map", [self._path("map.jinja"), "template"])
 
+        assert isinstance(ret, dict), "failed to return dictionary from load_map: {}".format(ret)
+
         with salt.utils.files.fopen(self._path("defaults.yaml", absolute=True)) as fh_:
             defaults = salt.utils.yaml.safe_load(fh_)
         with salt.utils.files.fopen(self._path("osarchmap.json", absolute=True)) as fh_:
