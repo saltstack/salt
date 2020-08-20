@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.sdb as sdb

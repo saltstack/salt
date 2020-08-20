@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Basic functions for accessing the SDB interface
 
 For configuration options, see the docs for specific sdb
 modules.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import random
@@ -55,7 +53,7 @@ def sdb_get(uri, opts, utils=None, strict=False):
         else:
             return uri
 
-    fun = "{0}.get".format(profile["driver"])
+    fun = "{}.get".format(profile["driver"])
     query = uri[indx + 1 :]
 
     loaded_db = salt.loader.sdb(opts, fun, utils=utils)
@@ -86,7 +84,7 @@ def sdb_set(uri, value, opts, utils=None):
     if "driver" not in profile:
         return False
 
-    fun = "{0}.set".format(profile["driver"])
+    fun = "{}.set".format(profile["driver"])
     query = uri[indx + 1 :]
 
     loaded_db = salt.loader.sdb(opts, fun, utils=utils)
@@ -117,7 +115,7 @@ def sdb_delete(uri, opts, utils=None):
     if "driver" not in profile:
         return False
 
-    fun = "{0}.delete".format(profile["driver"])
+    fun = "{}.delete".format(profile["driver"])
     query = uri[indx + 1 :]
 
     loaded_db = salt.loader.sdb(opts, fun, utils=utils)
