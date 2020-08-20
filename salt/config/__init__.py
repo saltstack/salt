@@ -2737,7 +2737,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         vms[key] = val
 
     # Is any VM profile extending data!?
-    for profile, details in vms.copy().items:
+    for profile, details in vms.copy().items():
         if "extends" not in details:
             if ":" in details["provider"]:
                 alias, driver = details["provider"].split(":")
