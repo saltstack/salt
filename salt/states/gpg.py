@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the GPG keychains
 ===============================
@@ -6,8 +5,6 @@ Management of the GPG keychains
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 
@@ -15,7 +12,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.path
 from salt.exceptions import CheckError, SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +67,7 @@ def present(
 
     if not keys:
         keys = name
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
     if trust:
         if trust not in _VALID_TRUST_VALUES:
@@ -212,9 +208,9 @@ def absent(name, keys=None, user=None, passphrases=None, gnupghome=None):
 
     if not keys:
         keys = name
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
-    if isinstance(passphrases, six.string_types):
+    if isinstance(passphrases, str):
         passphrases = [passphrases]
     elif passphrases is None:
         passphrases = []
@@ -287,7 +283,7 @@ def trusted(name, keys=None, user=None, gnupghome=None, trust=None):
 
     if not keys:
         keys = name
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
 
     _current_keys = __salt__["gpg.list_keys"](user=user, gnupghome=gnupghome)

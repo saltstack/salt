@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Gareth J. Greenaway <gareth@saltstack.com>`
     :codeauthor: :email:`David Murphy <dmurphy@saltstack.com>`
     :codeauthor: :email:`Herbert Buurman <herbert.buurman@ogd.nl>`
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import errno
 import os

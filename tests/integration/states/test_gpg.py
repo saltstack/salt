@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests for gpg state.
+
+:codeauthor: :email:`Herbert Buurman <herbert.buurman@ogd.nl>`
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import errno
 import os
 import tempfile

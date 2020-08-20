@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage a GPG keychains, add keys, create keys, retrieve keys from keyservers.
 Sign, encrypt and sign plus encrypt text and files.
@@ -11,10 +10,6 @@ Sign, encrypt and sign plus encrypt text and files.
     installed.
 
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import errno
 import functools
 import logging
@@ -28,7 +23,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CheckError, SaltInvocationError
-from salt.ext import six
 from salt.utils.decorators import depends
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -217,7 +211,7 @@ def _create_gpg(user=None, gnupghome=None):
             # Since using the gnupg library means we cannot "run as" another user,
             # all gpg-calls are done as the user salt is running as.
             options.append("--no-permission-warning")
-    except EnvironmentError as exc:
+    except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise
         log.error('%s: GNUPGHOME="%s" does not exist.', __name__, gnupghome)
@@ -557,7 +551,7 @@ def delete_key(
         )
         if skey:
             if delete_secret:
-                res = six.text_type(
+                res = str(
                     gpg.delete_keys(fingerprint, secret=True, passphrase=passphrase)
                 )
                 if res == "ok":
@@ -575,7 +569,7 @@ def delete_key(
             if not ret["result"]:
                 return ret
         # Delete the public key
-        res = six.text_type(gpg.delete_keys(fingerprint))
+        res = str(gpg.delete_keys(fingerprint))
         if res == "ok":
             ret["result"] = True
             ret["message"].append("Public key {} deleted".format(fingerprint))
@@ -702,7 +696,7 @@ def import_key(text=None, filename=None, user=None, gnupghome=None):
         try:
             with salt.utils.files.flopen(filename, "rb") as _fp:
                 text = salt.utils.stringutils.to_unicode(_fp.read())
-        except IOError:
+        except OSError:
             raise SaltInvocationError('filename "{}" does not exist.'.format(filename))
 
     gpg = _create_gpg(user=user, gnupghome=gnupghome)
@@ -776,7 +770,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None, passphrase=
         ret["result"] = False
         ret["message"] = "Unable to initialize GPG."
     else:
-        if isinstance(keyids, six.string_types):
+        if isinstance(keyids, str):
             keyids = keyids.split(",")
         ret["result"] = True
         ret["message"] = gpg.export_keys(keyids, secret=secret, passphrase=passphrase)
@@ -818,7 +812,7 @@ def receive_keys(
         ret["message"] = "Unable to initialize GPG."
         return ret
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = keys.split(",")
     res = gpg.recv_keys(keyserver, *keys)
     if isinstance(res, gnupg.ImportResult):
@@ -1168,7 +1162,7 @@ def verify(
                 cached_signature = salt.utils.files.mkstemp()
                 with salt.utils.files.flopen(cached_signature, "w") as _fp:
                     _fp.write(signature)
-            except IOError as exc:
+            except OSError as exc:
                 ret["result"] = False
                 ret["message"] = "Failed to store signature in tempfile: {}.".format(
                     exc.__str__()
@@ -1205,7 +1199,7 @@ def verify(
             ret["result"] = True
             ret["username"] = res.username
             ret["key_id"] = res.key_id
-            ret["trust_level"] = VERIFY_TRUST_LEVELS[six.text_type(res.trust_level)]
+            ret["trust_level"] = VERIFY_TRUST_LEVELS[str(res.trust_level)]
             ret["message"] = "The signature is verified."
         else:
             ret["result"] = False
@@ -1491,7 +1485,7 @@ def decrypt(
                     try:
                         with salt.utils.files.flopen(output, "wb") as _fp:
                             _fp.write(res.data)
-                    except IOError as exc:
+                    except OSError as exc:
                         ret["result"] = False
                         ret[
                             "message"
