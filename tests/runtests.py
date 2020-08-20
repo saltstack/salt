@@ -4,7 +4,6 @@ Discover all instances of unittest.TestCase in this directory.
 """
 # pylint: disable=file-perms
 
-# Import python libs
 import collections
 import os
 import sys
@@ -65,7 +64,6 @@ import salt.utils.platform  # isort:skip
 if not salt.utils.platform.is_windows():
     import resource
 
-# Import Salt Testing libs
 from tests.support.parser import PNUM, print_header  # isort:skip
 from tests.support.parser.cover import SaltCoverageTestingParser  # isort:skip
 
@@ -910,8 +908,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     ):
                         status.append(self.run_integration_suite(**TEST_SUITES[suite]))
             return status
-        except TestDaemonStartFailed as err:
-            self.exit(status=2, msg=str(err))
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def run_multimaster_tests(self):
         """
