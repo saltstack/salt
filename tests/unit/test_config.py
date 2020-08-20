@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for salt.config
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import textwrap
@@ -59,7 +56,7 @@ PATH = "path/to/some/cloud/conf/file"
 DEFAULT = {"default_include": PATH}
 
 
-class DefaultConfigsBase(object):
+class DefaultConfigsBase:
     @classmethod
     def setUpClass(cls):
         cls.mock_master_default_opts = dict(
@@ -822,7 +819,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         def _count_strings(config):
             if isinstance(config, dict):
-                for key, val in six.iteritems(config):
+                for key, val in config.items():
                     log.debug("counting strings in dict key: %s", key)
                     log.debug("counting strings in dict val: %s", val)
                     _count_strings(key)
@@ -832,12 +829,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 for item in config:
                     _count_strings(item)
             else:
-                if isinstance(config, six.string_types):
-                    if isinstance(config, six.text_type):
-                        tally["unicode"] = tally.get("unicode", 0) + 1
-                    else:
-                        # We will never reach this on PY3
-                        tally.setdefault("non_unicode", []).append(config)
+                if isinstance(config, str):
+                    tally["unicode"] = tally.get("unicode", 0) + 1
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
@@ -912,6 +905,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         which should cause the invalid file to be replaced by ``_schedule.confYAMLError``
         """
         import salt.config as config
+
         yaml_error = MagicMock(side_effect=[salt.utils.yaml.YAMLError])
         with patch("salt.utils.files.fopen", MagicMock()), patch(
             "salt.utils.yaml.safe_load", yaml_error
@@ -926,6 +920,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         SaltConfigurationError and should not trigger an os.replace
         """
         import salt.config as config
+
         yaml_error = MagicMock(side_effect=[salt.utils.yaml.YAMLError])
         with patch("salt.utils.files.fopen", MagicMock()), patch(
             "salt.utils.yaml.safe_load", yaml_error
@@ -941,6 +936,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         an os.replace
         """
         import salt.config as config
+
         mock_safe_load = MagicMock(return_value="some non dict data")
         with patch("salt.utils.files.fopen", MagicMock()), patch(
             "salt.utils.yaml.safe_load", mock_safe_load
@@ -954,6 +950,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         An integer id should be a string
         """
         import salt.config as config
+
         mock_safe_load = MagicMock(return_value={"id": 1234})
         with patch("salt.utils.files.fopen", MagicMock()), patch(
             "salt.utils.yaml.safe_load", mock_safe_load
@@ -1917,7 +1914,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             "salt.config.client_config",
             MagicMock(return_value=self.mock_master_default_opts),
         ):
-            expected = "{0}/var/log/salt/api".format(
+            expected = "{}/var/log/salt/api".format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != "/" else ""
             )
             if salt.utils.platform.is_windows():
@@ -1936,7 +1933,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             "salt.config.client_config",
             MagicMock(return_value=self.mock_master_default_opts),
         ):
-            expected = "{0}/var/run/salt-api.pid".format(
+            expected = "{}/var/run/salt-api.pid".format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != "/" else ""
             )
             if salt.utils.platform.is_windows():
