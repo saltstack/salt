@@ -27,12 +27,11 @@ from tests.support.unit import TestCase, skipIf
 
 try:
     import pytest
-except ImportError as import_error:
+except ImportError:
     pytest = None
-NO_PYTEST = not bool(pytest)
 
 
-@skipIf(NO_PYTEST, False)
+@skipIf(pytest is None, "PyTest is missing")
 @skipIf(salt.utils.platform.is_windows(), "Not supported on Windows")
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     @classmethod
