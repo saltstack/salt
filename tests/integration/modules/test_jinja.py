@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test the jinja module
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.utils.files
@@ -48,7 +45,9 @@ class TestModulesJinja(ModuleCase):
     def test_load_map(self, grains):
         ret = self.run_function("jinja.load_map", [self._path("map.jinja"), "template"])
 
-        assert isinstance(ret, dict), "failed to return dictionary from load_map: {}".format(ret)
+        assert isinstance(
+            ret, dict
+        ), "failed to return dictionary from jinja.load_map: {}".format(ret)
 
         with salt.utils.files.fopen(self._path("defaults.yaml", absolute=True)) as fh_:
             defaults = salt.utils.yaml.safe_load(fh_)
