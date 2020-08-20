@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -11,7 +8,6 @@ import salt.modules.yumpkg as yumpkg
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -332,10 +328,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             }
             for pkgname, pkginfo in pkgs.items():
-                if six.PY3:
-                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
-                else:
-                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         """
@@ -632,7 +625,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                             except AssertionError:
                                 continue
                         else:
-                            self.fail("repo '{0}' not checked".format(repo))
+                            self.fail("repo '{}' not checked".format(repo))
 
     def test_list_upgrades_dnf(self):
         """
