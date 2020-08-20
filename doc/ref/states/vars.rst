@@ -149,8 +149,8 @@ tplpath
 -------
 
 Full path to sls template file being process on local disk. This is usually
-pointingto a copy of the sls file in a cache directory. It is probably best not
-to use this.
+pointing to a copy of the sls file in a cache directory. This will be in OS
+specific format (windows vs posix). (It is probably best not to use this.)
 
 .. code-block:: jinja
 

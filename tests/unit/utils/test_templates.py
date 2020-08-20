@@ -227,7 +227,7 @@ class WrapRenderTestCase(TestCase):
         tmplpath = str(PurePath(PurePosixPath(tmplpath)))
         if tmplpath.startswith("\\"):
             tmplpath = "C:{}".format(tmplpath)
-
+        expected["tplpath"] = tmplpath
         actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
@@ -268,7 +268,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/boo.sls",
             "boo",
-            tplpath="/tmp/boo.sls",
             tplfile="boo.sls",
             tpldir=".",
             tpldot="",
@@ -283,7 +282,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo",
-            tplpath="/tmp/foo/init.sls",
             tplfile="foo/init.sls",
             tpldir="foo",
             tpldot="foo",
@@ -298,7 +296,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo.init",
-            tplpath="/tmp/foo/init.sls",
             tplfile="foo/init.sls",
             tpldir="foo",
             tpldot="foo",
@@ -313,7 +310,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/boo.sls",
             "foo.boo",
-            tplpath="/tmp/foo/boo.sls",
             tplfile="foo/boo.sls",
             tpldir="foo",
             tpldot="foo",
@@ -331,7 +327,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/foo.sls",
             "foo.foo",
-            tplpath="/tmp/foo/foo.sls",
             tplfile="foo/foo.sls",
             tpldir="foo",
             tpldot="foo",
@@ -346,7 +341,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/bar/init.sls",
             "foo.bar",
-            tplpath="/tmp/foo/bar/init.sls",
             tplfile="foo/bar/init.sls",
             tpldir="foo/bar",
             tpldot="foo.bar",
@@ -361,7 +355,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/bar/init.sls",
             "foo.bar.init",
-            tplpath="/tmp/foo/bar/init.sls",
             tplfile="foo/bar/init.sls",
             tpldir="foo/bar",
             tpldot="foo.bar",
@@ -376,7 +369,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/bar/boo.sls",
             "foo.bar.boo",
-            tplpath="/tmp/foo/bar/boo.sls",
             tplfile="foo/bar/boo.sls",
             tpldir="foo/bar",
             tpldot="foo.bar",
@@ -394,7 +386,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/foo/foo.sls",
             "foo.foo.foo",
-            tplpath="/tmp/foo/foo/foo.sls",
             tplfile="foo/foo/foo.sls",
             tpldir="foo/foo",
             tpldot="foo.foo",
@@ -411,7 +402,6 @@ class WrapRenderTestCase(TestCase):
         self._test_generated_sls_context(
             "/tmp/foo/foo\\foo.sls",
             "foo.foo\\foo",
-            tplpath="/tmp/foo/foo\\foo.sls",
             tplfile="foo/foo\\foo.sls",
             tpldir="foo",
             tpldot="foo",
