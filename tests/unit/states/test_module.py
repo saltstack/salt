@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas (nicole@saltstack.com)
 """
-
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from inspect import ArgSpec
@@ -132,8 +129,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: None})
-        if ret["comment"] != "Unavailable function: {0}.".format(CMD) or ret["result"]:
-            self.fail("module.run did not fail as expected: {0}".format(ret))
+        if ret["comment"] != "Unavailable function: {}.".format(CMD) or ret["result"]:
+            self.fail("module.run did not fail as expected: {}".format(ret))
 
     def test_module_run_hidden_varargs(self):
         """
@@ -156,10 +153,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Function {0} to be executed.".format(CMD)
+            ret["comment"] != "Function {} to be executed.".format(CMD)
             or not ret["result"]
         ):
-            self.fail("module.run failed: {0}".format(ret))
+            self.fail("module.run failed: {}".format(ret))
 
     def test_run_missing_arg(self):
         """
@@ -183,8 +180,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"use_superseded": ["module.run"]}
         ):
             ret = module.run(**{CMD: ["Fred"]})
-        if ret["comment"] != "{0}: Success".format(CMD) or not ret["result"]:
-            self.fail("module.run failed: {0}".format(ret))
+        if ret["comment"] != "{}: Success".format(CMD) or not ret["result"]:
+            self.fail("module.run failed: {}".format(ret))
 
     def test_run_state_apply_result_false(self):
         """
@@ -206,7 +203,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             ret["comment"],
             (
-                "'{0}' failed: {1}() got an unexpected keyword argument "
+                "'{}' failed: {}() got an unexpected keyword argument "
                 "'foo'".format(CMD, module_function)
             ),
         )
@@ -327,7 +324,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module._run(CMD)
         self.assertFalse(ret["result"])
         self.assertEqual(
-            ret["comment"], "Module function {0} is not available".format(CMD)
+            ret["comment"], "Module function {} is not available".format(CMD)
         )
 
     def test_module_run_test_true(self):
@@ -337,7 +334,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(module.__opts__, {"test": True}):
             ret = module._run(CMD)
         self.assertEqual(
-            ret["comment"], "Module function {0} is set to execute".format(CMD)
+            ret["comment"], "Module function {} is set to execute".format(CMD)
         )
 
     def test_module_run_missing_arg(self):

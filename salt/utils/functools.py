@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions to modify other functions
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -16,7 +13,6 @@ import salt.utils.args
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
 from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
@@ -62,11 +58,11 @@ def alias_function(fun, name, doc=None):
     )
     alias_fun.__dict__.update(fun.__dict__)
 
-    if doc and isinstance(doc, six.string_types):
+    if doc and isinstance(doc, str):
         alias_fun.__doc__ = doc
     else:
         orig_name = fun.__name__
-        alias_msg = "\nThis function is an alias of " "``{0}``.\n".format(orig_name)
+        alias_msg = "\nThis function is an alias of " "``{}``.\n".format(orig_name)
         alias_fun.__doc__ = alias_msg + (fun.__doc__ or "")
 
     return alias_fun
