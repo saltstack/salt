@@ -6,6 +6,8 @@ import logging
 import os
 import sys
 
+from pathlib import PurePath, PurePosixPath
+
 import salt.utils.files
 
 # Import Salt libs
@@ -222,6 +224,11 @@ class WrapRenderTestCase(TestCase):
 
     def _test_generated_sls_context(self, tmplpath, sls, **expected):
         """ Generic SLS Context Test"""
+        #DeNormalize tmplpath
+        tmplpath = str(PurePath(PurePosixPath(tmplpath)))
+        if tmplpath.startswith("\\"):
+            tmplpath = "C:{}".format(tmplpath)
+
         actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
@@ -398,20 +405,22 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    def test_generate_sls_context__two_level_repeating2(self):
-        """ generate_sls_context - Basic two level with name same as dir
-
-        (Issue #56410)
+    @skipIf(
+        sys.platform == "win32",
+        "Backslash not possible under windows"
+    )
+    def test_generate_sls_context__backslash_in_path(self):
+        """ generate_sls_context - Handle backslash in path on non-windows
         """
         self._test_generated_sls_context(
-            "/tmp/foo/foo/foo_bar.sls",
-            "foo.foo.foo_bar",
-            tplpath="/tmp/foo/foo/foo_bar.sls",
-            tplfile="foo/foo/foo_bar.sls",
-            tpldir="foo/foo",
-            tpldot="foo.foo",
-            slsdotpath="foo.foo",
-            slscolonpath="foo:foo",
-            sls_path="foo_foo",
-            slspath="foo/foo",
+            "/tmp/foo/foo\\foo.sls",
+            "foo.foo\\foo",
+            tplpath="/tmp/foo/foo\\foo.sls",
+            tplfile="foo/foo\\foo.sls",
+            tpldir="foo",
+            tpldot="foo",
+            slsdotpath="foo",
+            slscolonpath="foo",
+            sls_path="foo",
+            slspath="foo",
         )

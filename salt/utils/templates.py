@@ -14,6 +14,7 @@ import traceback
 # Import 3rd-party libs
 import jinja2
 import jinja2.ext
+from pathlib import Path
 
 # Import Salt libs
 import salt.utils.data
@@ -120,7 +121,7 @@ def generate_sls_context(tmplpath, sls):
 
     if tmplpath:
         # Normalize template path
-        template = tmplpath.replace("\\", "/")
+        template = str(Path(tmplpath).as_posix())
 
         # Determine proper template name without root
         if template.endswith("{}.sls".format(slspath)):
