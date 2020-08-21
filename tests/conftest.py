@@ -483,7 +483,7 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = str(CODE_DIR / "tests" / "integration" / "utils")
+    integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
         and PRE_PYTEST_SKIP_OR_NOT is True
@@ -547,7 +547,11 @@ def pytest_runtest_setup(item):
             )
 
     if salt.utils.platform.is_windows():
-        if not item.fspath.fnmatch(str(CODE_DIR / "tests" / "unit" / "*")):
+        unit_tests_paths = (
+            str(TESTS_DIR / "unit"),
+            str(TESTS_DIR / "pytests" / "unit"),
+        )
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -650,13 +654,13 @@ def from_filenames_collection_modifyitems(config, items):
         return
 
     test_categories_paths = (
-        (CODE_DIR / "tests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "multimaster").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "unit").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "e2e").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "functional").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "unit").relative_to(CODE_DIR),
+        (TESTS_DIR / "integration").relative_to(CODE_DIR),
+        (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
+        (TESTS_DIR / "unit").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "e2e").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "functional").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "integration").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "unit").relative_to(CODE_DIR),
     )
 
     test_module_paths = set()
@@ -674,9 +678,7 @@ def from_filenames_collection_modifyitems(config, items):
             continue
         from_filenames_listing.add(path)
 
-    filename_map = yaml.deserialize(
-        (CODE_DIR / "tests" / "filename_map.yml").read_text()
-    )
+    filename_map = yaml.deserialize((TESTS_DIR / "filename_map.yml").read_text())
     # Let's add the match all rule
     for rule, matches in filename_map.items():
         if rule == "*":
