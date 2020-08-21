@@ -12,7 +12,7 @@ jinja_env = jinja2.nativetypes.NativeEnvironment(
 )
 
 
-def cmd(name, tgt, func, tgt_type="glob", ret="", arg=(), kwarg=None, **kwargs):
+def cmd(name, tgt, func, arg=(), tgt_type="glob", ret="", kwarg=None, **kwargs):
     """
     Execute a remote execution command. The tgt, func, arg, and kwarg arguments
     can all be given jinja templates that take the register dictionary as
