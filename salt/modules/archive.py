@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import contextlib  # For < 2.7 compat
 import copy
 import errno
@@ -32,7 +29,6 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import third party libs
-from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 try:
@@ -211,7 +207,7 @@ def list_(
                     stderr = cached.communicate()[1]
                     if cached.returncode != 0:
                         raise CommandExecutionError(
-                            "Failed to decompress {0}".format(name),
+                            "Failed to decompress {}".format(name),
                             info={"error": stderr},
                         )
             else:
@@ -239,7 +235,7 @@ def list_(
 
                 if decompress_cmd:
                     decompressed = subprocess.Popen(
-                        "{0} {1}".format(decompress_cmd, _quote(cached)),
+                        "{} {}".format(decompress_cmd, _quote(cached)),
                         shell=True,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
@@ -247,7 +243,7 @@ def list_(
                     return _list_tar(name, decompressed, None, True)
 
         raise CommandExecutionError(
-            "Unable to list contents of {0}. If this is an XZ-compressed tar "
+            "Unable to list contents of {}. If this is an XZ-compressed tar "
             "archive, install XZ Utils to enable listing its contents. If it "
             "is compressed using something other than XZ, it may be necessary "
             "to specify CLI options to decompress the archive. See the "
@@ -295,7 +291,7 @@ def list_(
                             files.remove(dirname)
             return list(dirs), files, links
         except zipfile.BadZipfile:
-            raise CommandExecutionError("{0} is not a ZIP file".format(name))
+            raise CommandExecutionError("{} is not a ZIP file".format(name))
 
     def _list_rar(name, cached):
         """
@@ -327,7 +323,7 @@ def list_(
                     files.append(path)
             if not dirs and not files:
                 raise CommandExecutionError(
-                    "Failed to list {0}, is it a rar file? If so, the "
+                    "Failed to list {}, is it a rar file? If so, the "
                     "installed version of rar may be too old to list data in "
                     "a parsable format. Installing the rarfile Python module "
                     "may be an easier workaround if newer rar is not readily "
@@ -338,7 +334,7 @@ def list_(
 
     cached = __salt__["cp.cache_file"](name, saltenv, source_hash=source_hash)
     if not cached:
-        raise CommandExecutionError("Failed to cache {0}".format(name))
+        raise CommandExecutionError("Failed to cache {}".format(name))
 
     try:
         if strip_components:
@@ -365,7 +361,7 @@ def list_(
                     "'archive_format' argument."
                 )
             raise CommandExecutionError(
-                "Unsupported archive format '{0}'".format(archive_format)
+                "Unsupported archive format '{}'".format(archive_format)
             )
 
         if not archive_format:
@@ -381,17 +377,15 @@ def list_(
         args = (options,) if archive_format == "tar" else ()
         try:
             dirs, files, links = func(name, cached, *args)
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             raise CommandExecutionError(
-                "Failed to list contents of {0}: {1}".format(name, exc.__str__())
+                "Failed to list contents of {}: {}".format(name, exc.__str__())
             )
         except CommandExecutionError as exc:
             raise
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                "Uncaught exception '{0}' when listing contents of {1}".format(
-                    exc, name
-                )
+                "Uncaught exception '{}' when listing contents of {}".format(exc, name)
             )
 
         if clean:
@@ -470,10 +464,10 @@ def _expand_sources(sources, cwd=None):
     """
     if sources is None:
         return []
-    if isinstance(sources, six.string_types):
+    if isinstance(sources, str):
         sources = [x.strip() for x in sources.split(",")]
-    elif isinstance(sources, (float, six.integer_types)):
-        sources = [six.text_type(sources)]
+    elif isinstance(sources, (float, (int,))):
+        sources = [str(sources)]
     return [path for source in sources for path in _glob(source, cwd=cwd)]
 
 
@@ -554,10 +548,10 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
     if options:
         cmd.extend(options.split())
 
-    cmd.extend(["{0}".format(tarfile)])
+    cmd.extend(["{}".format(tarfile)])
     cmd.extend(_expand_sources(sources, cwd=cwd))
     if dest:
-        cmd.extend(["-C", "{0}".format(dest)])
+        cmd.extend(["-C", "{}".format(dest)])
 
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
@@ -596,7 +590,7 @@ def gzip(sourcefile, template=None, runas=None, options=None):
     cmd = ["gzip"]
     if options:
         cmd.append(options)
-    cmd.append("{0}".format(sourcefile))
+    cmd.append("{}".format(sourcefile))
 
     return __salt__["cmd.run"](
         cmd, template=template, runas=runas, python_shell=False
@@ -635,7 +629,7 @@ def gunzip(gzipfile, template=None, runas=None, options=None):
     cmd = ["gunzip"]
     if options:
         cmd.append(options)
-    cmd.append("{0}".format(gzipfile))
+    cmd.append("{}".format(gzipfile))
 
     return __salt__["cmd.run"](
         cmd, template=template, runas=runas, python_shell=False
@@ -704,7 +698,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
         salt '*' archive.cmd_zip /tmp/zipfile.zip 'sourcefile*' cwd=/tmp
     """
     cmd = ["zip", "-r"]
-    cmd.append("{0}".format(zip_file))
+    cmd.append("{}".format(zip_file))
     cmd.extend(_expand_sources(sources, cwd=cwd))
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
@@ -781,7 +775,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
         egid = os.getegid()
         uinfo = __salt__["user.info"](runas)
         if not uinfo:
-            raise SaltInvocationError("User '{0}' does not exist".format(runas))
+            raise SaltInvocationError("User '{}' does not exist".format(runas))
 
     if cwd and not os.path.isabs(cwd):
         raise SaltInvocationError("cwd must be absolute")
@@ -851,7 +845,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
                 )
             else:
                 raise CommandExecutionError(
-                    "Exception encountered creating zipfile: {0}".format(exc)
+                    "Exception encountered creating zipfile: {}".format(exc)
                 )
 
     return archived_files
@@ -936,17 +930,17 @@ def cmd_unzip(
 
         salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     """
-    if isinstance(excludes, six.string_types):
+    if isinstance(excludes, str):
         excludes = [x.strip() for x in excludes.split(",")]
-    elif isinstance(excludes, (float, six.integer_types)):
-        excludes = [six.text_type(excludes)]
+    elif isinstance(excludes, (float, (int,))):
+        excludes = [str(excludes)]
 
     cmd = ["unzip"]
     if password:
         cmd.extend(["-P", password])
     if options:
         cmd.extend(shlex.split(options))
-    cmd.extend(["{0}".format(zip_file), "-d", "{0}".format(dest)])
+    cmd.extend(["{}".format(zip_file), "-d", "{}".format(dest)])
 
     if excludes is not None:
         cmd.append("-x")
@@ -1065,7 +1059,7 @@ def unzip(
         egid = os.getegid()
         uinfo = __salt__["user.info"](runas)
         if not uinfo:
-            raise SaltInvocationError("User '{0}' does not exist".format(runas))
+            raise SaltInvocationError("User '{}' does not exist".format(runas))
 
     zip_file, dest = _render_filenames(zip_file, dest, None, template)
 
@@ -1083,10 +1077,10 @@ def unzip(
         with contextlib.closing(zipfile.ZipFile(zip_file, "r")) as zfile:
             files = zfile.namelist()
 
-            if isinstance(excludes, six.string_types):
+            if isinstance(excludes, str):
                 excludes = [x.strip() for x in excludes.split(",")]
-            elif isinstance(excludes, (float, six.integer_types)):
-                excludes = [six.text_type(excludes)]
+            elif isinstance(excludes, (float, (int,))):
+                excludes = [str(excludes)]
 
             cleaned_files.extend([x for x in files if x not in excludes])
             for target in cleaned_files:
@@ -1121,7 +1115,7 @@ def unzip(
         # Wait to raise the exception until euid/egid are restored to avoid
         # permission errors in writing to minion log.
         raise CommandExecutionError(
-            "Exception encountered unpacking zipfile: {0}".format(exc)
+            "Exception encountered unpacking zipfile: {}".format(exc)
         )
     finally:
         # Restore the euid/egid
@@ -1178,7 +1172,7 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
     """
     cached = __salt__["cp.cache_file"](name, saltenv, source_hash=source_hash)
     if not cached:
-        raise CommandExecutionError("Failed to cache {0}".format(name))
+        raise CommandExecutionError("Failed to cache {}".format(name))
 
     archive_info = {"archive location": cached}
     try:
@@ -1188,7 +1182,7 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
         ret = True
     except zipfile.BadZipfile:
         raise CommandExecutionError(
-            "{0} is not a ZIP file".format(name), info=archive_info
+            "{} is not a ZIP file".format(name), info=archive_info
         )
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc.__str__(), info=archive_info)
@@ -1251,7 +1245,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
         # Globbing for sources combined with cwd (3002.0 and later)
         salt '*' archive.rar /tmp/zipfile.rar 'sourcefile*' cwd=/tmp
     """
-    cmd = ["rar", "a", "-idp", "{0}".format(rarfile)]
+    cmd = ["rar", "a", "-idp", "{}".format(rarfile)]
     cmd.extend(_expand_sources(sources, cwd=cwd))
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
@@ -1290,19 +1284,19 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=F
         salt '*' archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,file_2
 
     """
-    if isinstance(excludes, six.string_types):
+    if isinstance(excludes, str):
         excludes = [entry.strip() for entry in excludes.split(",")]
 
     cmd = [
         salt.utils.path.which_bin(("unrar", "rar")),
         "x",
         "-idp",
-        "{0}".format(rarfile),
+        "{}".format(rarfile),
     ]
     if excludes is not None:
         for exclude in excludes:
-            cmd.extend(["-x", "{0}".format(exclude)])
-    cmd.append("{0}".format(dest))
+            cmd.extend(["-x", "{}".format(exclude)])
+    cmd.append("{}".format(dest))
     files = __salt__["cmd.run"](
         cmd, template=template, runas=runas, python_shell=False
     ).splitlines()
@@ -1323,7 +1317,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             "Attempted to render file paths with unavailable engine "
-            "{0}".format(template)
+            "{}".format(template)
         )
 
     kwargs = {}
@@ -1349,7 +1343,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
         if not data["result"]:
             # Failed to render the template
             raise CommandExecutionError(
-                "Failed to render file path with error: {0}".format(data["data"])
+                "Failed to render file path with error: {}".format(data["data"])
             )
         else:
             return data["data"]
@@ -1372,6 +1366,6 @@ def _trim_files(files, trim_output):
         and len(files) > count
     ):
         files = files[:count]
-        files.append("List trimmed after {0} files.".format(count))
+        files.append("List trimmed after {} files.".format(count))
 
     return files
