@@ -348,7 +348,7 @@ def pytest_collection_modifyitems(config, items):
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
             for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope == "function":
+                if fixturedef.scope in ("function", "class", "module"):
                     continue
                 try:
                     node_ids = fixturedef.node_ids
@@ -417,7 +417,7 @@ def pytest_runtest_protocol(item, nextitem):
         if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
         for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope == "function":
+            if fixturedef.scope in ("function", "class", "module"):
                 continue
             used_fixture_defs.append(fixturedef)
     try:
