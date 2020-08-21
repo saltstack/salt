@@ -218,7 +218,7 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller")
+    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
 
     devs = []
     try:
@@ -846,22 +846,19 @@ def _virtual(osdata):
                 grains["virtual"] = "LXC"
                 break
         elif command == "virt-what":
-            try:
-                output = output.splitlines()[-1]
-            except IndexError:
-                pass
-            if output in ("kvm", "qemu", "uml", "xen", "lxc"):
-                grains["virtual"] = output
-                break
-            elif "vmware" in output:
-                grains["virtual"] = "VMware"
-                break
-            elif "parallels" in output:
-                grains["virtual"] = "Parallels"
-                break
-            elif "hyperv" in output:
-                grains["virtual"] = "HyperV"
-                break
+            for line in output.splitlines():
+                if line in ("kvm", "qemu", "uml", "xen", "lxc"):
+                    grains["virtual"] = line
+                    break
+                elif "vmware" in line:
+                    grains["virtual"] = "VMware"
+                    break
+                elif "parallels" in line:
+                    grains["virtual"] = "Parallels"
+                    break
+                elif "hyperv" in line:
+                    grains["virtual"] = "HyperV"
+                    break
         elif command == "dmidecode":
             # Product Name: VirtualBox
             if "Vendor: QEMU" in output:
@@ -2366,7 +2363,10 @@ def fqdns():
     # fqdns
     opt = {"fqdns": []}
     if __opts__.get(
-        "enable_fqdns_grains", False if salt.utils.platform.is_windows() else True
+        "enable_fqdns_grains",
+        False
+        if salt.utils.platform.is_windows() or salt.utils.platform.is_proxy()
+        else True,
     ):
         opt = __salt__["network.fqdns"]()
     return opt
