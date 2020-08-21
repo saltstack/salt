@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -10,7 +9,6 @@
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -62,7 +60,7 @@ else:
     )
     if MAYBE_RUN_COVERAGE:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
-        os.environ[str("COVERAGE_PROCESS_START")] = str(COVERAGERC_FILE)
+        os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
 pytest_plugins = ["tempdir", "helpers_namespace"]
@@ -433,7 +431,7 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = str(CODE_DIR / "tests" / "integration" / "utils")
+    integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
         and PRE_PYTEST_SKIP_OR_NOT is True
@@ -497,7 +495,11 @@ def pytest_runtest_setup(item):
             )
 
     if salt.utils.platform.is_windows():
-        if not item.fspath.fnmatch(str(CODE_DIR / "tests" / "unit" / "*")):
+        unit_tests_paths = (
+            str(TESTS_DIR / "unit"),
+            str(TESTS_DIR / "pytests" / "unit"),
+        )
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -555,8 +557,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{0} ({1} tests)\n".format(group_id, len(items)),
-        yellow=True,
+        "Running test group #{} ({} tests)\n".format(group_id, len(items)), yellow=True,
     )
 
 
@@ -595,13 +596,13 @@ def from_filenames_collection_modifyitems(config, items):
         return
 
     test_categories_paths = (
-        (CODE_DIR / "tests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "multimaster").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "unit").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "e2e").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "functional").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "unit").relative_to(CODE_DIR),
+        (TESTS_DIR / "integration").relative_to(CODE_DIR),
+        (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
+        (TESTS_DIR / "unit").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "e2e").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "functional").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "integration").relative_to(CODE_DIR),
+        (TESTS_DIR / "pytests" / "unit").relative_to(CODE_DIR),
     )
 
     test_module_paths = set()
@@ -619,9 +620,7 @@ def from_filenames_collection_modifyitems(config, items):
             continue
         from_filenames_listing.add(path)
 
-    filename_map = yaml.deserialize(
-        (CODE_DIR / "tests" / "filename_map.yml").read_text()
-    )
+    filename_map = yaml.deserialize((TESTS_DIR / "filename_map.yml").read_text())
     # Let's add the match all rule
     for rule, matches in filename_map.items():
         if rule == "*":
@@ -700,7 +699,7 @@ class GrainsMarkEvaluator(MarkEvaluator):
     _cached_grains = None
 
     def _getglobals(self):
-        item_globals = super(GrainsMarkEvaluator, self)._getglobals()
+        item_globals = super()._getglobals()
         if GrainsMarkEvaluator._cached_grains is None:
             sminion = create_sminion()
             GrainsMarkEvaluator._cached_grains = sminion.opts["grains"].copy()
