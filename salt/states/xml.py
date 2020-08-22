@@ -85,7 +85,7 @@ def value_present(name, xpath, value, **kwargs):
     return ret
 
 
-def merge_fragment(name, fragment, xpath=None):
+def contains_tree(name, fragment, xpath=None):
     """
     .. versionadded:: NEXT_RELEASE
 
@@ -93,6 +93,7 @@ def merge_fragment(name, fragment, xpath=None):
     ensuring a tree exists, or tweaking attributes of a well-known location in
     a config file. This state only matches tags as it merges fragments, so it
     does not work well (if at all) with list-style data.
+    This will NOT merge text/tail nodes.
 
     name
         The location of the XML file to manage, as an absolute path.
@@ -112,7 +113,7 @@ def merge_fragment(name, fragment, xpath=None):
     .. code-block:: yaml
 
         ensure_tree_exists:
-        xml.ensure:
+        xml.contains_tree:
             - name: /etc/data.xml # MUST already have valid XML.
             - resolve: merge
             - fragment: |
@@ -123,7 +124,7 @@ def merge_fragment(name, fragment, xpath=None):
                 </people>
 
         ensure_attribute_set:
-        xml.ensure:
+        xml.contains_tree:
             - name: /etc/data.xml
             - resolve: merge
             - xpath: people
@@ -156,14 +157,6 @@ def merge_fragment(name, fragment, xpath=None):
                     "new": str(sub_element.attrib),
                     "old": (old_attrs),
                 }
-            if new.text != sub_element.text:
-                old_text = sub_element.text
-                sub_element.text = new.text
-                changeset["text"] = {"new": new.text, "old": old_text}
-            if new.tail:
-                old_tail = sub_element.tail
-                sub_element.tail = new.tail
-                changeset["tail"] = {"new": new.tail, "old": old_tail}
 
             for index, new_child in enumerate(new):
                 sub_changes = _merge_or_append_elements(sub_element, new_child)
@@ -186,7 +179,7 @@ def merge_fragment(name, fragment, xpath=None):
     return ret
 
 
-def add_fragment(name, fragment, xpath=None, replace=False):
+def contains_fragment(name, fragment, xpath=None, replace=False):
     """
     .. versionadded:: NEXT_RELEASE
 
@@ -212,10 +205,10 @@ def add_fragment(name, fragment, xpath=None, replace=False):
     .. code-block:: yaml
 
         ensure_authors:
-          xml.add_fragment:
+          xml.contains_fragment:
             - name: /etc/data.xml
             - xpath: people/artists
-            - replace: True  # 'False' would make another '<authors/> block'
+            - replace: True    # 'False' would make another '<authors/> block'
             - fragment: |
               <authors>
                 <author active="false">
@@ -238,9 +231,12 @@ def add_fragment(name, fragment, xpath=None, replace=False):
     tree = ET.parse(name)
 
     if xpath is not None:
-        target_parent = target_parent.find(xpath)
+        target_parent = tree.find(xpath)
     else:
         target_parent = tree.getroot()
+
+    if target_parent is None:
+        ret["comment"] = "No managable XML found"
 
     no_changes = False
     # First look for an exact matching child element.
@@ -256,7 +252,7 @@ def add_fragment(name, fragment, xpath=None, replace=False):
     # No match..
     if replace:
         doppelganger = target_parent.find(fragment_root.tag)
-        if doppelganger:
+        if doppelganger is not None:
             position = list(target_parent).index(doppelganger)
             target_parent.remove(doppelganger)
             target_parent.insert(position, fragment_root)
