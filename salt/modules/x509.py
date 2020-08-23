@@ -675,7 +675,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type="X509 CRL")
 
     crltempfile = tempfile.NamedTemporaryFile(delete=True)
-    crltempfile.write(salt.utils.stringutils.to_str(text))
+    crltempfile.write(salt.utils.stringutils.to_bytes(text, encoding='ascii'))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
@@ -1004,7 +1004,7 @@ def create_crl(
 
         if "reason" in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
-            reason = salt.utils.stringutils.to_str(rev_item["reason"])
+            reason = salt.utils.stringutils.to_bytes(rev_item["reason"])
             rev.set_reason(reason)
 
         crl.add_revoked(rev)
@@ -1892,13 +1892,13 @@ def verify_crl(crl, cert):
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type="X509 CRL")
     crltempfile = tempfile.NamedTemporaryFile(delete=True)
-    crltempfile.write(salt.utils.stringutils.to_str(crltext))
+    crltempfile.write(salt.utils.stringutils.to_bytes(crltext, encoding='ascii'))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type="CERTIFICATE")
     certtempfile = tempfile.NamedTemporaryFile(delete=True)
-    certtempfile.write(salt.utils.stringutils.to_str(certtext))
+    certtempfile.write(salt.utils.stringutils.to_bytes(certtext, encoding='ascii'))
     certtempfile.flush()
 
     cmd = "openssl crl -noout -in {0} -CAfile {1}".format(
