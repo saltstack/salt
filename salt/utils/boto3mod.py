@@ -582,7 +582,7 @@ def create_resource(
 
 
 def handle_response(
-    primary, params, *args,
+    primary, params, *args, **kwargs,
 ):
     """
     Helper function to deduplicate code when calling another function ``primary``.
@@ -593,6 +593,7 @@ def handle_response(
         or a function from an execution module that calls a boto3 client function.
     :param dict params: Parameters to pass to the ``primary`` function.
     :param *args: Positional arguments to pass to the ``primary`` function.
+    :param **kwargs: Additional kwarts to pass to the ``primary`` function.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -600,8 +601,13 @@ def handle_response(
     """
     ret = {}
     try:
-        log.debug("handle_response:\n" "\t\targs: %s\n" "\t\tparams: %s", args, params)
-        res = primary(*args, **params)
+        log.debug(
+            "handle_response:\n" "\t\targs: %s\n" "\t\tparams: %s\n" "\t\tkwargs: %s",
+            args,
+            params,
+            kwargs,
+        )
+        res = primary(*args, **params, **kwargs)
         res.pop("ResponseMetadata", None)
     except (
         botocore.exceptions.ParamValidationError,
