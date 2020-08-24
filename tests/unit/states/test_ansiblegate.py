@@ -43,7 +43,6 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {ansible: {}}
 
-    @patch("salt.utils.path.which", MagicMock(return_value=True))
     def test_ansible_playbooks_states_success(self):
         """
         Test ansible.playbooks states executions success.
@@ -58,7 +57,7 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             ansible.__salt__,
             {"ansible.playbooks": MagicMock(return_value=success_output)},
-        ):
+        ), patch("salt.utils.path.which", MagicMock(return_value=True)):
             with patch.dict(ansible.__opts__, {"test": False}):
                 ret = ansible.playbooks("foobar")
                 self.assertTrue(ret["result"])
@@ -74,7 +73,6 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
 
-    @patch("salt.utils.path.which", MagicMock(return_value=True))
     def test_ansible_playbooks_states_failed(self):
         """
         Test ansible.playbooks failed states executions.
@@ -89,7 +87,7 @@ class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             ansible.__salt__,
             {"ansible.playbooks": MagicMock(return_value=failed_output)},
-        ):
+        ), patch("salt.utils.path.which", MagicMock(return_value=True)):
             with patch.dict(ansible.__opts__, {"test": False}):
                 ret = ansible.playbooks("foobar")
                 self.assertFalse(ret["result"])
