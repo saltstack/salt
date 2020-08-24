@@ -99,6 +99,30 @@ WAITER_CONFIG_GENERATORS = {
             "failure_values": ["error", "pending_termination"],
         },
     },
+    "subnet_ipv6_cidr_block": {
+        "disassociated": {
+            "value_path": "Subnets[].Ipv6CidrBlockAssociationSet[].Ipv6CidrBlockState.State",
+            "success_values": ["disassociated"],
+            "failure_values": ["associating", "associated", "failing", "failed"],
+            "operation": "DescribeSubnets",
+        },
+    },
+    "vpc_cidr_block": {
+        "disassociated": {
+            "value_path": "Vpcs[].CidrBlockAssociationSet[].CidrBLockState.State",
+            "success_values": ["disassociated"],
+            "failure_values": ["associating", "associated", "failing", "failed"],
+            "operation": "DescribeVpcs",
+        },
+    },
+    "vpc_ipv6_cidr_block": {
+        "disassociated": {
+            "value_path": "Vpcs[].Ipv6CidrBlockAssociationSet[].Ipv6CidrBLockState.State",
+            "success_values": ["disassociated"],
+            "failure_values": ["associating", "associated", "failing", "failed"],
+            "operation": "DescribeVpcs",
+        },
+    },
     "vpc_peering_connection": {
         "pending": {
             "value_path": "VpcPeeringConnections[].Status.Code",
