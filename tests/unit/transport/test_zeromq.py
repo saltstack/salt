@@ -728,7 +728,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-{}".format(sid, i)}
             server_channel.publish(load)
-        server_channel.close()
+        server_channel.pub_close()
 
     @staticmethod
     def _send_large(opts, sid, num=10, size=250000 * 3):
@@ -741,7 +741,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
-        server_channel.close()
+        server_channel.pub_close()
 
     @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     @slowTest
