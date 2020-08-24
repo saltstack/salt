@@ -192,7 +192,6 @@ def test_ansible_module_call(resolver):
             assert ret == {"completed": True, "timeout": 1200}
 
 
-@patch("salt.utils.path.which", MagicMock(return_value=True))
 def test_ansible_playbooks_return_retcode(resolver):
     """
     Test ansible.playbooks execution module function include retcode in the return.
@@ -200,6 +199,8 @@ def test_ansible_playbooks_return_retcode(resolver):
     """
     ref_out = {"retcode": 0, "stdout": '{"foo": "bar"}'}
     cmd_run_all = MagicMock(return_value=ref_out)
-    with patch.dict(ansible.__salt__, {"cmd.run_all": cmd_run_all}):
+    with patch.dict(ansible.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=True)
+    ):
         ret = ansible.playbooks("fake-playbook.yml")
         assert "retcode" in ret
