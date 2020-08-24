@@ -1,5 +1,5 @@
 """
-Connection module for Amazon VPC.
+Connection module for Amazon EC2/VPC.
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
 :configuration: This module accepts explicit IAM credentials but can also
@@ -102,13 +102,45 @@ def __init__(opts):
     logging.getLogger("boto3").setLevel(logging.INFO)
 
 
+def arguments_to_list(*args):
+    """
+    Decorator function to specify arguments to _listify
+
+    :param list(str) args: keywords of kwargs of called function to _listify.
+    """
+
+    def _listify(thing):
+        """
+        Helper function to convert thing into [thing] if it is not already a list.
+        Used in functions that accept a thing or a list of things to internally
+        always handle it as a list of things.
+        Note: Does nothing when ``thing`` is ``None``.
+
+        :param any thing: Something to put in a list or not.
+
+        :rtype: list
+        """
+        return [thing] if thing is not None and not isinstance(thing, list) else thing
+
+    def decorator(func):
+        def wrapper(*f_args, **f_kwargs):
+            for keyword in args:
+                if keyword in f_kwargs:
+                    f_kwargs[keyword] = _listify(f_kwargs[keyword])
+            return func(*f_args, **f_kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def _derive_ipv6_cidr_subnet(ipv6_subnet, ipv6_parent_block):
     """
     Helper function to create the 64bit IPv6 CIDR block given only the last
     digit(s) of the subnet.
 
     For example:
-        ipv6_cidr_block = 1
+        ipv6_subnet = 1
         ipv6_parent_block = 'fdc8:4d2f:d387:fc00::/56'
         result = 'fdc8:4d2f:d387:fc01/64'
 
@@ -133,9 +165,7 @@ def _derive_ipv6_cidr_subnet(ipv6_subnet, ipv6_parent_block):
     return res
 
 
-# Here end the helper functions
-
-
+@arguments_to_list("vpc_endpoint_ids", "vpc_endpoint_lookups")
 def accept_vpc_endpoint_connections(
     service_id=None,
     service_lookup=None,
@@ -152,17 +182,17 @@ def accept_vpc_endpoint_connections(
 
     :param str service_id: The ID of the VPC endpoint service.
     :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service``
-        accepts. Used to lookup the ``service_id`` if it is not provided.
+      accepts. Used to lookup the ``service_id`` if it is not provided.
     :param str/list(str) vpc_endpoint_ids: The (list of) ID(s) of the interface
-        VPC endpoint(s).
+      VPC endpoint(s).
     :param dict/list(dict) vpc_endpoint_lookups: One or more dicts of kwargs that
-        ``lookup_vpc_endpoint`` accepts. Used to lookup any ``vpc_endpoint_ids``
-        if none are provided.
+      ``lookup_vpc_endpoint`` accepts. Used to lookup any ``vpc_endpoint_ids``
+      if none are provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
-        call on succes.
+      with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -214,12 +244,12 @@ def accept_vpc_peering_connection(
 
     :param str vpc_peering_connection_id: The ID of the VPC peering connection.
     :param dict vpc_peering_lookup: Any kwarg that ``lookup_vpc_peering_connection``
-        accepts. Used to lookup the ``vpc_peering_connection_id`` if it is not provided.
+      accepts. Used to lookup the ``vpc_peering_connection_id`` if it is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``accept_vpc_peering_connection``-
-        call on succes.
+      with dict containing the result of the boto ``accept_vpc_peering_connection``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpc_peering_connections, boto3.client('ec2').accept_vpc_peering_connection
     """
@@ -275,16 +305,15 @@ def allocate_address(
     region and 5 Elastic IP addresses for EC2-VPC per region.
 
     :param str address: The Elastic IP address to recover or an IPv4 address from
-        an address pool.
+      an address pool.
     :param str public_ipv4_pool: The ID of an address pool that you own. Use this
-        parameter to let Amazon EC2 select an address from the address pool. To
-        specify a specific address from the address pool, use the Address parameter
-        instead.
+      parameter to let Amazon EC2 select an address from the address pool. To
+      specify a specific address from the address pool, use the Address parameter
+      instead.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``allocate_address``-call
-        on succes.
+      with dict containing the result of the boto ``allocate_address``-call on succes.
 
     :depends: boto3.client('ec2').allocate_address
     """
@@ -342,38 +371,38 @@ def associate_address(
 
     :param str allocation_id: [EC2-VPC] The allocation ID. This is required for EC2-VPC.
     :param dict address_lookup: [EC2-VPC] Any kwarg that ``lookup_address`` accepts.
-        When ``allocation_id`` is not provided, this is required, otherwise ignored.
+      When ``allocation_id`` is not provided, this is required, otherwise ignored.
     :param str instance_id: The ID of the instance. This is required for EC2-Classic.
-        For EC2-VPC, you can specify either the instance ID or the network interface
-        ID, but not both. The operation fails if you specify an instance ID unless
-        exactly one network interface is attached.
+      For EC2-VPC, you can specify either the instance ID or the network interface
+      ID, but not both. The operation fails if you specify an instance ID unless
+      exactly one network interface is attached.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts. Used
-        to lookup the ``instance_id`` if it is not provided.
+      to lookup the ``instance_id`` if it is not provided.
     :param str public_ip: The Elastic IP address to associate with the instance.
-        This is required for EC2-Classic.
+      This is required for EC2-Classic.
     :param bool allow_reassociation: [EC2-VPC] For a VPC in an EC2-Classic account,
-        specify true to allow an Elastic IP address that is already associated
-        with an instance or network interface to be reassociated with the specified
-        instance or network interface. Otherwise, the operation fails. In a VPC
-        in an EC2-VPC-only account, reassociation is automatic, therefore you can
-        specify false to ensure the operation fails if the Elastic IP address is
-        already associated with another resource.
+      specify true to allow an Elastic IP address that is already associated
+      with an instance or network interface to be reassociated with the specified
+      instance or network interface. Otherwise, the operation fails. In a VPC
+      in an EC2-VPC-only account, reassociation is automatic, therefore you can
+      specify false to ensure the operation fails if the Elastic IP address is
+      already associated with another resource.
     :param str network_interface_id: [EC2-VPC] The ID of the network interface.
-        If the instance has more than one network interface, you must specify a
-        network interface ID.
-        For EC2-VPC, you can specify either the instance ID or the network interface
-        ID, but not both.
+      If the instance has more than one network interface, you must specify a
+      network interface ID.
+      For EC2-VPC, you can specify either the instance ID or the network interface
+      ID, but not both.
     :param dict network_interface_lookup: [EC2-VPC] Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup ``network_interface_id`` if it is not provided.
+      accepts. Used to lookup ``network_interface_id`` if it is not provided.
     :param str private_ip_address: [EC2-VPC] The primary or secondary private IP
-        address to associate with the Elastic IP address. If no private IP address
-        is specified, the Elastic IP address is associated with the primary private
-        IP address.
+      address to associate with the Elastic IP address. If no private IP address
+      is specified, the Elastic IP address is associated with the primary private
+      IP address.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``associate_address``-call
-        on succes.
+      with dict containing the result of the boto ``associate_address``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -437,16 +466,16 @@ def associate_dhcp_options(
     instance.
 
     :param str dhcp_options_id: The ID of the DHCP options set, or ``default`` to
-        associate no DHCP options with the VPC.
+      associate no DHCP options with the VPC.
     :param dict dhcp_options_lookup: Any kwarg that lookup_dhcp_options accepts.
-        When ``dhcp_options_id`` is not provided, this is required, otherwise ignored.
+      When ``dhcp_options_id`` is not provided, this is required, otherwise ignored.
     :param str vpc_id: The ID of the VPC to associate the options with.
     :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_dhcp_options, boto3.client('ec2').associate_dhcp_options
     """
@@ -492,15 +521,15 @@ def associate_route_table(
 
     :param str route_table_id: The ID of the route table to associate.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str subnet_id: the ID of the subnet to associate with.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the subnet's ID if ``subnet_id`` is not provided.
+      Used to lookup the subnet's ID if ``subnet_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``associate_route_table``-
-        call on succes.
+      with dict containing the result of the boto ``associate_route_table``-call
+      on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_route_tables, boto3.client('ec2').associate_route_table
     """
@@ -548,17 +577,17 @@ def associate_subnet_cidr_block(
 
     :param str subnet_id: The ID of the subnet to work on.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
+      Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
     :param str ipv6_cidr_block: The IPv6 CIDR block for your subnet. The subnet
-        must have a /64 prefix length. Exclusive with ipv6_subnet.
+      must have a /64 prefix length. Exclusive with ipv6_subnet.
     :param int ipv6_subnet: The IPv6 subnet. This uses an implicit /64 netmask.
-        Use this if you don't know the parent subnet and want to extract that
-        from the VPC information. Exclusive with ipv6_cidr_block.
+      Use this if you don't know the parent subnet and want to extract that
+      from the VPC information. Exclusive with ipv6_cidr_block.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``associate_subnet_cidr_block``-
-        call on succes.
+      with dict containing the result of the boto ``associate_subnet_cidr_block``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_vpcs, boto3.client('ec2').associate_subnet_cidr_block
     """
@@ -626,17 +655,17 @@ def associate_vpc_cidr_block(
 
     :param str vpc_id: The ID of the VPC to operate on.
     :param str vpc_lookup: Any kwarg that lookup_vpc accepts.
-        This is used to lookup the VPC when ``vpc_id`` is not provided, otherwise
-        it is ignored.
+      This is used to lookup the VPC when ``vpc_id`` is not provided, otherwise
+      it is ignored.
     :param bool amazon_provided_ipv6_cidr_block: Requests an Amazon-provided IPv6
-        CIDR block with a /56 prefix length for the VPC. You cannot specify the
-        range of IPv6 addresses, or the size of the CIDR block.
+      CIDR block with a /56 prefix length for the VPC. You cannot specify the
+      range of IPv6 addresses, or the size of the CIDR block.
     :param str cidr_block: An IPv4 CIDR block to associate with the VPC.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``associate_vpc_cidr_block``-
-        call on succes.
+      with dict containing the result of the boto ``associate_vpc_cidr_block``-
+      call on succes.
 
     :depends: boto3.client('ec2').associate_vpc_cidr_block
     """
@@ -676,15 +705,15 @@ def attach_internet_gateway(
 
     :param str internet_gateway_id: The ID of the Internet gateway to attach.
     :param dict internet_gateway_lookup: Any kwarg that ``lookup_internet_gateway``
-        accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
-        is not provided.
+      accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
+      is not provided.
     :param str vpc_id: The ID of the VPC to attach the Internet gateway to.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').attach_internet_gateway
     """
@@ -727,19 +756,19 @@ def attach_network_interface(
     Attaches a network interface to an instance.
 
     :param int device_index: The index of the device for the network interface
-        attachment.
+      attachment.
     :param str instance_id: The ID of the instance.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
-        Used to lookup the instance's ID if ``instance_id`` is not provided.
+      Used to lookup the instance's ID if ``instance_id`` is not provided.
     :param str network_interface_id: The ID of the network interface.
     :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup the network interface's ID if ``network_itnerface_id``
-        is not provided.
+      accepts. Used to lookup the network interface's ID if ``network_itnerface_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``attach_network_interface``-
-        call on succes.
+      with dict containing the result of the boto ``attach_network_interface``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"name": "instance", "kwargs": instance_lookup or {"instance_id": instance_id}},
@@ -785,26 +814,25 @@ def attach_volume(
     After you attach an EBS volume, you must make it available.
 
     If a volume has an AWS Marketplace product code:
-        The volume can be attached only to a stopped instance.
-        AWS Marketplace product codes are copied from the volume to the instance.
-        You must be subscribed to the product.
-        The instance type and operating system of the instance must support the
-        product. For example, you can't detach a volume from a Windows instance
-        and attach it to a Linux instance.
+      The volume can be attached only to a stopped instance.
+      AWS Marketplace product codes are copied from the volume to the instance.
+      You must be subscribed to the product.
+      The instance type and operating system of the instance must support the
+      product. For example, you can't detach a volume from a Windows instance
+      and attach it to a Linux instance.
 
     :param str device: The device name (for example, ``/dev/sdh`` or ``xvdh``).
     :param str instance_id: The ID of the instance.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
-        Used to lookup the instance's ID if ``instance_id`` is not provided.
+      Used to lookup the instance's ID if ``instance_id`` is not provided.
     :param str volume_id: The ID of the EBS volume.  The volume and instance must
-        be within the same Availability Zone.
+      be within the same Availability Zone.
     :param dict volume_lookup: Any kwarg that ``lookup_volume`` accepts.
-        Used to lookup the volume's ID if ``volume_id`` is not provided.
+      Used to lookup the volume's ID if ``volume_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``attach_volume``-call
-        on succes.
+      with dict containing the result of the boto ``attach_volume``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -850,15 +878,15 @@ def attach_vpn_gateway(
 
     :param str vpc_id: The ID of the VPC.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC ID if ``vpc_id`` is not provided.
     :param str vpn_gateway_id: The ID of the virtual private gateway.
     :param dict vpn_gateway_lookup: Any kwarg that ``lookup_vpn_gateway`` accepts.
-        Used to lookup the VPN gateway's ID if ``vpn_gateway_id`` is not provided.
+      Used to lookup the VPN gateway's ID if ``vpn_gateway_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``attach_vpn_gateway``-call
-        on succes.
+      with dict containing the result of the boto ``attach_vpn_gateway``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
@@ -908,72 +936,72 @@ def authorize_security_group_egress(
 
     :param str group_id: The ID of the security group to add egress rules to.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security group's ID if ``security_group_id`` is not provided.
+      Used to lookup the security group's ID if ``security_group_id`` is not provided.
     :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
-        a destination security group and a CIDR IP address range in the same set
-        of permissions. These sets consist of:
+      a destination security group and a CIDR IP address range in the same set
+      of permissions. These sets consist of:
 
-        - FromPort (int): The start of port range for the TCP and UDP protocols,
-          or an ICMP/ICMPv6 type number. A value of -1 indicates all ICMP/ICMPv6
-          types. If you specify all ICMP/ICMPv6 types, you must specify all codes.
-        - IpProtocol (str): The IP protocol name (tcp, udp, icmp, icmpv6 ) or number.
-          [VPC only] Use -1 to specify all protocols. When authorizing security
-          group rules, specifying -1 or a protocol number other than tcp, udp,
-          icmp, or icmpv6 allows traffic on all ports, regardless of any port range
-          you specify. For tcp, udp, and icmp, you must specify a port range. For
-          icmpv6, the port range is optional; if you omit the port range, traffic
-          for all types and codes is allowed.
-        - IpRanges (list(dict)): The IPv4 ranges. These consist of:
+      - FromPort (int): The start of port range for the TCP and UDP protocols,
+        or an ICMP/ICMPv6 type number. A value of -1 indicates all ICMP/ICMPv6
+        types. If you specify all ICMP/ICMPv6 types, you must specify all codes.
+      - IpProtocol (str): The IP protocol name (tcp, udp, icmp, icmpv6 ) or number.
+        [VPC only] Use -1 to specify all protocols. When authorizing security
+        group rules, specifying -1 or a protocol number other than tcp, udp,
+        icmp, or icmpv6 allows traffic on all ports, regardless of any port range
+        you specify. For tcp, udp, and icmp, you must specify a port range. For
+        icmpv6, the port range is optional; if you omit the port range, traffic
+        for all types and codes is allowed.
+      - IpRanges (list(dict)): The IPv4 ranges. These consist of:
 
-          - CidrIp (str): The IPv4 CIDR range. You can either specify a CIDR range
-            or a source security group, not both. To specify a single IPv4 address,
-            use the /32 prefix length.
-          - Description: A description for the security group rule that references
-            this IPv4 address range.
+        - CidrIp (str): The IPv4 CIDR range. You can either specify a CIDR range
+          or a source security group, not both. To specify a single IPv4 address,
+          use the /32 prefix length.
+        - Description: A description for the security group rule that references
+          this IPv4 address range.
 
-        - IPv6Ranges (list(dict)): The IPv6 ranges. These consist of:
+      - IPv6Ranges (list(dict)): The IPv6 ranges. These consist of:
 
-          - CidrIpv6 (str): The IPv6 CIDR range. You can either specify a CIDR
-            range or a source security group, not both. To specify a single IPv6
-            address, use the /128 prefix length.
-          - Description (str): A description for the security group rule that references
-            this IPv6 address range.
+        - CidrIpv6 (str): The IPv6 CIDR range. You can either specify a CIDR
+          range or a source security group, not both. To specify a single IPv6
+          address, use the /128 prefix length.
+        - Description (str): A description for the security group rule that references
+          this IPv6 address range.
 
-        - PrefixListIds (list(dict)): The prefix list IDs. These consist of:
+      - PrefixListIds (list(dict)): The prefix list IDs. These consist of:
 
-          - Description (str): A description for the security group rule that references
-            this prefix list ID.
-          - PrefixListId (str): The ID of the prefix.
+        - Description (str): A description for the security group rule that references
+          this prefix list ID.
+        - PrefixListId (str): The ID of the prefix.
 
-        - ToPort (int): The end of port range for the TCP and UDP protocols, or
-          an ICMP/ICMPv6 code. A value of -1 indicates all ICMP/ICMPv6 codes.
-          If you specify all ICMP/ICMPv6 types, you must specify all codes.
-        - UserIdGroupPairs (list(dict)): The security group and AWS account ID
-          pairs. These consist of:
+      - ToPort (int): The end of port range for the TCP and UDP protocols, or
+        an ICMP/ICMPv6 code. A value of -1 indicates all ICMP/ICMPv6 codes.
+        If you specify all ICMP/ICMPv6 types, you must specify all codes.
+      - UserIdGroupPairs (list(dict)): The security group and AWS account ID
+        pairs. These consist of:
 
-          - Description (str): A description for the security group rule that references
-            this user ID group pair.
-          - GroupId (str): The ID of the security group.
-          - GroupName (str): The name of the security group. In a request, use
-            this parameter for a security group in EC2-Classic or a default VPC
-            only. For a security group in a nondefault VPC, use the security group ID.
-            For a referenced security group in another VPC, this value is not returned
-            if the referenced security group is deleted.
-          - PeeringStatus (str): The status of a VPC peering connection, if applicable.
-          - UserId (str): The ID of an AWS account.
-            For a referenced security group in another VPC, the account ID of the
-            referenced security group is returned in the response. If the referenced
-            security group is deleted, this value is not returned.
-            [EC2-Classic] Required when adding or removing rules that reference
-            a security group in another AWS account.
-          - VpcId (str): The ID of the VPC for the referenced security group,
-            if applicable.
-          - VpcPeeringConnectionId (str): The ID of the VPC peering connection,
-            if applicable.
+        - Description (str): A description for the security group rule that references
+          this user ID group pair.
+        - GroupId (str): The ID of the security group.
+        - GroupName (str): The name of the security group. In a request, use
+          this parameter for a security group in EC2-Classic or a default VPC
+          only. For a security group in a nondefault VPC, use the security group ID.
+          For a referenced security group in another VPC, this value is not returned
+          if the referenced security group is deleted.
+        - PeeringStatus (str): The status of a VPC peering connection, if applicable.
+        - UserId (str): The ID of an AWS account.
+          For a referenced security group in another VPC, the account ID of the
+          referenced security group is returned in the response. If the referenced
+          security group is deleted, this value is not returned.
+          [EC2-Classic] Required when adding or removing rules that reference
+          a security group in another AWS account.
+        - VpcId (str): The ID of the VPC for the referenced security group,
+          if applicable.
+        - VpcPeeringConnectionId (str): The ID of the VPC peering connection,
+          if applicable.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1025,14 +1053,14 @@ def authorize_security_group_ingress(
 
     :param str group_id: The ID of the security group to add ingress rules to.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security group's ID if ``security_group_id`` is not provided.
+      Used to lookup the security group's ID if ``security_group_id`` is not provided.
     :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
-        a source security group and a CIDR IP address range in the same set
-        of permissions. For the content specifications, see ``authorise_security_group_egress``.
+      a source security group and a CIDR IP address range in the same set
+      of permissions. For the content specifications, see ``authorise_security_group_egress``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1058,6 +1086,7 @@ def authorize_security_group_ingress(
     )
 
 
+@arguments_to_list("spot_fleet_request_ids", "spot_fleet_request_lookups")
 def cancel_spot_fleet_requests(
     spot_fleet_requests_ids=None,
     spot_fleet_requests_lookups=None,
@@ -1079,15 +1108,15 @@ def cancel_spot_fleet_requests(
 
     :param str/list(str) spot_fleet_request_ids: The IDs of the Spot Fleet requests.
     :param dict/list(dict) spot_fleet_request_lookups: Any kwarg or list of kwargs
-        that ``lookup_spot_fleet_request`` accepts. Used to lookup the Spot Fleet
-        request ID(s) if ``spot_fleet_request_ids`` is not provided.
+      that ``lookup_spot_fleet_request`` accepts. Used to lookup the Spot Fleet
+      request ID(s) if ``spot_fleet_request_ids`` is not provided.
     :param bool terminate_instances: Indicates whether to terminate instances for
-        a Spot Fleet request if it is canceled successfully.
+      a Spot Fleet request if it is canceled successfully.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``cancel_spot_fleet_requests``-
-        call on succes.
+      with dict containing the result of the boto ``cancel_spot_fleet_requests``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1118,6 +1147,7 @@ def cancel_spot_fleet_requests(
     return __utils__["boto3.handle_response"](client.cancel_spot_fleet_requests, params)
 
 
+@arguments_to_list("spot_instance_request_ids", "spot_instance_request_lookups")
 def cancel_spot_instance_requests(
     spot_instance_request_ids=None,
     spot_instance_request_lookups=None,
@@ -1131,13 +1161,13 @@ def cancel_spot_instance_requests(
 
     :param str/list(str) spot_instance_request_ids: One or more Spot Instance request IDs.
     :param dict/list(dict) spot_instance_request_lookups: Any kwarg or list of
-        kwargs that ``lookup_spot_instance_request`` accepts. Used to lookup the
-        Spot Instance request ID(s) if ``spot_instance_request_ids`` is not provided.
+      kwargs that ``lookup_spot_instance_request`` accepts. Used to lookup the
+      Spot Instance request ID(s) if ``spot_instance_request_ids`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``cancel_spot_instance_requests``-
-        call on succes.
+      with dict containing the result of the boto ``cancel_spot_instance_requests``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1193,35 +1223,35 @@ def copy_image(
     :param str source_region: The name of the Region that contains the AMI to copy.
     :param str source_image_id: The ID of the AMI to copy.
     :param dict source_image_lookup: Any kwarg that ``lookup_image`` accepts.
-        Used to lookup the AMI ID if ``source_image_id`` is not provided.
+      Used to lookup the AMI ID if ``source_image_id`` is not provided.
     :param str description: A description for the new AMI in the destination Region.
     :param bool encrypted: Specifies whether the destination snapshots of the copied
-        image should be encrypted. You can encrypt a copy of an unencrypted snapshot,
-        but you cannot create an unencrypted copy of an encrypted snapshot. The
-        default CMK for EBS is used unless you specify a non-default AWS Key Management
-        Service (AWS KMS) CMK using ``kms_key_id``.
+      image should be encrypted. You can encrypt a copy of an unencrypted snapshot,
+      but you cannot create an unencrypted copy of an encrypted snapshot. The
+      default CMK for EBS is used unless you specify a non-default AWS Key Management
+      Service (AWS KMS) CMK using ``kms_key_id``.
     :param str kms_key_id: An identifier for the symmetric AWS Key Management Service
-        (AWS KMS) customer master key (CMK) to use when creating the encrypted
-        volume. This parameter is only required if you want to use a non-default
-        CMK; if this parameter is not specified, the default CMK for EBS is used.
-        If a KmsKeyId is specified, the Encrypted flag must also be set.
-        To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
-        or alias ARN. When using an alias name, prefix it with "alias/". For example:
+      (AWS KMS) customer master key (CMK) to use when creating the encrypted
+      volume. This parameter is only required if you want to use a non-default
+      CMK; if this parameter is not specified, the default CMK for EBS is used.
+      If a KmsKeyId is specified, the Encrypted flag must also be set.
+      To specify a CMK, use its key ID, Amazon Resource Name (ARN), alias name,
+      or alias ARN. When using an alias name, prefix it with "alias/". For example:
 
-            Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
-            Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
-            Alias name: alias/ExampleAlias
-            Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
+        Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
+        Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+        Alias name: alias/ExampleAlias
+        Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
 
-        AWS parses KmsKeyId asynchronously, meaning that the action you call may
-        appear to complete even though you provided an invalid identifier. This
-        action will eventually report failure.
-        The specified CMK must exist in the Region that the snapshot is being copied to.
-        Amazon EBS does not support asymmetric CMKs.
+      AWS parses KmsKeyId asynchronously, meaning that the action you call may
+      appear to complete even though you provided an invalid identifier. This
+      action will eventually report failure.
+      The specified CMK must exist in the Region that the snapshot is being copied to.
+      Amazon EBS does not support asymmetric CMKs.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``copy_image``-call on succes.
+      with dict containing the result of the boto ``copy_image``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1284,33 +1314,36 @@ def copy_snapshot(
     should not be used for any purpose.
 
     :param str source_region: The ID of the Region that contains the snapshot to
-        be copied.
+      be copied.
     :param str source_snapshot_id: The ID of the EBS snapshot to copy.
     :param dict source_snapshot_lookup: Any kwarg that ``lookup_snapshot`` accepts.
-        Used to lookup the EBS snapshot ID if ``source_snapshot_id`` is not provided.
+      Used to lookup the EBS snapshot ID if ``source_snapshot_id`` is not provided.
     :param str description: A description for the EBS snapshot.
     :param bool encrypted: To encrypt a copy of an unencrypted snapshot if encryption
-        by default is not enabled, enable encryption using this parameter. Otherwise,
-        omit this parameter. Encrypted snapshots are encrypted, even if you omit
-        this parameter and encryption by default is not enabled. You cannot set
-        this parameter to false.
+      by default is not enabled, enable encryption using this parameter. Otherwise,
+      omit this parameter. Encrypted snapshots are encrypted, even if you omit
+      this parameter and encryption by default is not enabled. You cannot set
+      this parameter to false.
     :param str kms_key_id: The identifier of the AWS Key Management Service (AWS KMS)
-        customer master key (CMK) to use for Amazon EBS encryption. If this parameter
-        is not specified, your AWS managed CMK for EBS is used. If KmsKeyId is
-        specified, the encrypted state must be ``True``.
-        You can specify the CMK using any of the following:
+      customer master key (CMK) to use for Amazon EBS encryption. If this parameter
+      is not specified, your AWS managed CMK for EBS is used. If KmsKeyId is
+      specified, the encrypted state must be ``True``.
+      You can specify the CMK using any of the following:
 
-            Key ID. For example, key/1234abcd-12ab-34cd-56ef-1234567890ab.
-            Key alias. For example, alias/ExampleAlias.
-            Key ARN. For example, arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef.
-            Alias ARN. For example, arn:aws:kms:us-east-1:012345678910:alias/ExampleAlias.
+        Key ID. For example, key/1234abcd-12ab-34cd-56ef-1234567890ab.
+        Key alias. For example, alias/ExampleAlias.
+        Key ARN. For example, arn:aws:kms:us-east-1:012345678910:key/abcd1234-a123-456a-a12b-a123b4cd56ef.
+        Alias ARN. For example, arn:aws:kms:us-east-1:012345678910:alias/ExampleAlias.
 
-        AWS authenticates the CMK asynchronously. Therefore, if you specify an
-        ID, alias, or ARN that is not valid, the action can appear to complete,
-        but eventually fails.
+      AWS authenticates the CMK asynchronously. Therefore, if you specify an
+      ID, alias, or ARN that is not valid, the action can appear to complete,
+      but eventually fails.
     :param dict tags: The tags to apply to a resource when the resource is being created.
     :param bool blocking: Wait for the snapshot to become available.
 
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``copy_snapshot``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1383,18 +1416,18 @@ def create_customer_gateway(
 
     :param int bgp_asn: For devices that support BGP, the customer gateway's BGP ASN.
     :param str gateway_type: The type of VPN connection that this customer gateway
-        supports (ipsec.1).
+      supports (ipsec.1).
     :param str public_ip: The Internet-routable IP address for the customer gateway's
-        outside interface. The address must be static.
+      outside interface. The address must be static.
     :param str certificate_arn: The Amazon Resource Name (ARN) for the customer
-        gateway certificate.
+      gateway certificate.
     :param str device_name: A name for the customer gateway device.
-        Length Constraints: Up to 255 characters.
+      Length Constraints: Up to 255 characters.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_customer_gateway``-call
-        on succes.
+      with dict containing the result of the boto ``create_customer_gateway``-call
+      on succes.
     """
     params = salt.utils.data.filter_falsey(
         {
@@ -1429,32 +1462,32 @@ def create_dhcp_options(
     launch in the VPC to use this set of DHCP options.
 
     :param list domain_name_servers: The IP addresses of up to four domain name servers,
-        or AmazonProvidedDNS. The default DHCP option set specifies AmazonProvidedDNS.
-        If specifying more than one domain name server, specify the IP addresses
-        in a single parameter, separated by commas. To have your instance receive
-        a custom DNS hostname as specified in domain-name , you must set domain-name-servers
-        to a custom DNS server.
+      or AmazonProvidedDNS. The default DHCP option set specifies AmazonProvidedDNS.
+      If specifying more than one domain name server, specify the IP addresses
+      in a single parameter, separated by commas. To have your instance receive
+      a custom DNS hostname as specified in domain-name , you must set domain-name-servers
+      to a custom DNS server.
     :param str domain_name: If you're using AmazonProvidedDNS in ``us-east-1``, specify
-        ``ec2.internal``. If you're using AmazonProvidedDNS in another Region,
-        specify region.compute.internal (for example, ``ap-northeast-1.compute.internal``).
-        Otherwise, specify a domain name (for example, ExampleCompany.com ).
-        This value is used to complete unqualified DNS hostnames. Important:
-        Some Linux operating systems accept multiple domain names separated by
-        spaces. However, Windows and other Linux operating systems treat the
-        value as a single domain, which results in unexpected behavior. If your
-        DHCP options set is associated with a VPC that has instances with multiple
-        operating systems, specify only one domain name.
+      ``ec2.internal``. If you're using AmazonProvidedDNS in another Region,
+      specify region.compute.internal (for example, ``ap-northeast-1.compute.internal``).
+      Otherwise, specify a domain name (for example, ExampleCompany.com ).
+      This value is used to complete unqualified DNS hostnames. Important:
+      Some Linux operating systems accept multiple domain names separated by
+      spaces. However, Windows and other Linux operating systems treat the
+      value as a single domain, which results in unexpected behavior. If your
+      DHCP options set is associated with a VPC that has instances with multiple
+      operating systems, specify only one domain name.
     :param list ntp_servers: The IP addresses of up to four Network Time Protocol (NTP) servers.
     :param list netbios_name_servers: The IP addresses of up to four NetBIOS name servers.
     :param str netbios_node_type: The NetBIOS node type ("1", "2", "4", or "8").
-        We recommend that you specify "2" (broadcast and multicast are not currently
-        supported). For more information about these node types, see RFC 2132.
+      We recommend that you specify "2" (broadcast and multicast are not currently
+      supported). For more information about these node types, see RFC 2132.
     :param dict tags: Tags to assign to the DHCP option set after creation.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_dhcp_options``-call
-        on succes.
+      with dict containing the result of the boto ``create_dhcp_options``-call
+      on succes.
 
     :depends: boto3.client('ec2').create_dhcp_options
     """
@@ -1506,71 +1539,71 @@ def create_image(
     the instance automatically launches with those additional volumes.
 
     :param str name: A name for the new image.
-        Constraints: 3-128 alphanumeric characters, parentheses (()), square
-        brackets ([]), spaces ( ), periods (.), slashes (/), dashes (-), single
-        quotes ('), at-signs (@), or underscores(_)
+      Constraints: 3-128 alphanumeric characters, parentheses (()), square
+      brackets ([]), spaces ( ), periods (.), slashes (/), dashes (-), single
+      quotes ('), at-signs (@), or underscores(_)
     :param str instance_id: The ID of the instance.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
-        Used to lookup the instance's ID if ``instance_id`` is not provided.
+      Used to lookup the instance's ID if ``instance_id`` is not provided.
     :param dict/list(dict) block_device_mappings: The block device mappings.
-        This parameter cannot be used to modify the encryption status of existing
-        volumes or snapshots. To create an AMI with encrypted snapshots, use the
-        ``copy_image`` function. These dicts consist of:
+      This parameter cannot be used to modify the encryption status of existing
+      volumes or snapshots. To create an AMI with encrypted snapshots, use the
+      ``copy_image`` function. These dicts consist of:
 
-        - DeviceName (str): The device name (for example, ``/dev/sdh`` or ``xvdh``).
-        - VirtualName (str): The virtual device name (ephemeral N). Instance store
-          volumes are numbered starting from 0. An instance type with 2 available
-          instance store volumes can specify mappings for ``ephemeral0`` and ``ephemeral1``.
-          The number of available instance store volumes depends on the instance type.
-          After you connect to the instance, you must mount the volume.
-          NVMe instance store volumes are automatically enumerated and assigned
-          a device name. Including them in your block device mapping has no effect.
-          Constraints: For M3 instances, you must specify instance store volumes
-          in the block device mapping for the instance. When you launch an M3 instance,
-          we ignore any instance store volumes specified in the block device mapping
-          for the AMI.
-        - Ebs (dict): Parameters used to automatically set up EBS volumes when
-          the instance is launched. This dict consists of:
+      - DeviceName (str): The device name (for example, ``/dev/sdh`` or ``xvdh``).
+      - VirtualName (str): The virtual device name (ephemeral N). Instance store
+        volumes are numbered starting from 0. An instance type with 2 available
+        instance store volumes can specify mappings for ``ephemeral0`` and ``ephemeral1``.
+        The number of available instance store volumes depends on the instance type.
+        After you connect to the instance, you must mount the volume.
+        NVMe instance store volumes are automatically enumerated and assigned
+        a device name. Including them in your block device mapping has no effect.
+        Constraints: For M3 instances, you must specify instance store volumes
+        in the block device mapping for the instance. When you launch an M3 instance,
+        we ignore any instance store volumes specified in the block device mapping
+        for the AMI.
+      - Ebs (dict): Parameters used to automatically set up EBS volumes when
+        the instance is launched. This dict consists of:
 
-          - DeleteOnTermination (bool): Indicates whether the EBS volume is deleted
-            on instance termination.
-          - Iops (int): The number of I/O operations per second (IOPS) that the
-            volume supports. For io1 volumes, this represents the number of IOPS
-            that are provisioned for the volume. For gp2 volumes, this represents
-            the baseline performance of the volume and the rate at which the volume
-            accumulates I/O credits for bursting.
-            Constraints: Range is 100-16,000 IOPS for gp2 volumes and 100 to 64,000
-            IOPS for io1 volumes in most Regions. Maximum io1 IOPS of 64,000 is
-            guaranteed only on Nitro-based instances. Other instance families guarantee
-            performance up to 32,000 IOPS.
-            Condition: This parameter is required for requests to create io1 volumes;
-            it is not used in requests to create gp2, st1, sc1, or standard volumes.
-          - SnapshotId (str): The ID of the snapshot.
-          - VolumeSize (int): The size of the volume, in GiB.
-            Default: If you're creating the volume from a snapshot and don't specify
-            a volume size, the default is the snapshot size.
-            Constraints: 1-16384 for General Purpose SSD (gp2), 4-16384 for Provisioned
-            IOPS SSD (io1), 500-16384 for Throughput Optimized HDD (st1), 500-16384
-            for Cold HDD (sc1), and 1-1024 for Magnetic (standard ) volumes. If
-            you specify a snapshot, the volume size must be equal to or larger
-            than the snapshot size.
-          - VolumeType (str): The volume type. If you set the type to ``io1``,
-            you must also specify the Iops parameter. If you set the type to ``gp2``,
-            ``st1``, ``sc1``, or ``standard``, you must omit the Iops parameter.
-            Default: ``gp2``
-        - NoDevice (str): Suppresses the specified device included in the block
-          device mapping of the AMI.
+        - DeleteOnTermination (bool): Indicates whether the EBS volume is deleted
+          on instance termination.
+        - Iops (int): The number of I/O operations per second (IOPS) that the
+          volume supports. For io1 volumes, this represents the number of IOPS
+          that are provisioned for the volume. For gp2 volumes, this represents
+          the baseline performance of the volume and the rate at which the volume
+          accumulates I/O credits for bursting.
+          Constraints: Range is 100-16,000 IOPS for gp2 volumes and 100 to 64,000
+          IOPS for io1 volumes in most Regions. Maximum io1 IOPS of 64,000 is
+          guaranteed only on Nitro-based instances. Other instance families guarantee
+          performance up to 32,000 IOPS.
+          Condition: This parameter is required for requests to create io1 volumes;
+          it is not used in requests to create gp2, st1, sc1, or standard volumes.
+        - SnapshotId (str): The ID of the snapshot.
+        - VolumeSize (int): The size of the volume, in GiB.
+          Default: If you're creating the volume from a snapshot and don't specify
+          a volume size, the default is the snapshot size.
+          Constraints: 1-16384 for General Purpose SSD (gp2), 4-16384 for Provisioned
+          IOPS SSD (io1), 500-16384 for Throughput Optimized HDD (st1), 500-16384
+          for Cold HDD (sc1), and 1-1024 for Magnetic (standard ) volumes. If
+          you specify a snapshot, the volume size must be equal to or larger
+          than the snapshot size.
+        - VolumeType (str): The volume type. If you set the type to ``io1``,
+          you must also specify the Iops parameter. If you set the type to ``gp2``,
+          ``st1``, ``sc1``, or ``standard``, you must omit the Iops parameter.
+          Default: ``gp2``
+      - NoDevice (str): Suppresses the specified device included in the block
+        device mapping of the AMI.
     :param str description: A description for the new image.
     :param bool no_reboot:  By default, Amazon EC2 attempts to shut down and reboot
-        the instance before creating the image. If the 'No Reboot' option is set,
-        Amazon EC2 doesn't shut down the instance before creating the image. When
-        this option is used, file system integrity on the created image can't be
-        guaranteed.
+      the instance before creating the image. If the 'No Reboot' option is set,
+      Amazon EC2 doesn't shut down the instance before creating the image. When
+      this option is used, file system integrity on the created image can't be
+      guaranteed.
     :param bool blocking: Wait for the image to become available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_image``-call on succes.
+      with dict containing the result of the boto ``create_image``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1621,13 +1654,13 @@ def create_internet_gateway(
 
     :param str vpc_id: The ID of the VPC to attach the IGW to after creation.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param dict tags: Tags to assign to the Internet gateway after creation.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_internet_gateway``-
-        call on succes.
+      with dict containing the result of the boto ``create_internet_gateway``-
+      call on succes.
 
     :depends: boto3.client('ec2').create_internet_gateway, boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').attach_internet_gateway
     """
@@ -1670,8 +1703,12 @@ def create_key_pair(
     and upload it to any Region using ``import_key_pair``.
 
     :param str key_name: A unique name for the key pair.
-        Constraints: Up to 255 ASCII characters
+      Constraints: Up to 255 ASCII characters
     :param dict tags: The tags to apply to a resource when the resource is being created.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_key_pair``-call on succes.
     """
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     return __utils__["boto3.create_resource"](
@@ -1901,6 +1938,11 @@ def create_launch_template(
           state is ``enabled``. Note: If you specify a value of ``disabled``, you
           will not be able to access your instance metadata.
     :param dict tags: The tags to apply to the launch template during creation.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_launch_template``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1990,23 +2032,23 @@ def create_nat_gateway(
 
     :param str subnet_id: The subnet in which to create the NAT gateway.
     :param dict subnet_lookup: Any kwarg that lookup_subnet accepts. Used to
-        lookup the subnet_id when ``subnet_id`` is not provided.
+      lookup the subnet_id when ``subnet_id`` is not provided.
     :param str allocation_id: The allocation ID of an Elastic IP address to
-        associate with the NAT gateway. If the Elastic IP address is associated
-        with another resource, you must first disassociate it.
+      associate with the NAT gateway. If the Elastic IP address is associated
+      with another resource, you must first disassociate it.
     :param str address_lookup: Any kwarg that lookup_address accepts. used to
-        lookup the allocation_id when ``allocation_id`` is not provided. You can,
-        for example provide ``{'public_ip': '1.2.3.4'}`` to specify the Elastic IP
-        to use for the NAT gateway.
-        Either allocation_id or address_lookup must be specified.
-        If this is not done, a new Elastic IP address will be created.
+      lookup the allocation_id when ``allocation_id`` is not provided. You can,
+      for example provide ``{'public_ip': '1.2.3.4'}`` to specify the Elastic IP
+      to use for the NAT gateway.
+      Either allocation_id or address_lookup must be specified.
+      If this is not done, a new Elastic IP address will be created.
     :param dict tags: Tags to assign to the NAT gateway after creation.
     :param bool blocking: Wait for the NAT gateway to become available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_nat_gateway``-call
-        on succes.
+      with dict containing the result of the boto ``create_nat_gateway``-call
+      on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_addresses, boto3.client('ec2').allocate_address, boto3.client('ec2').create_nat_gateway, boto3.client('ec2').get_waiter('nat_gateway_available')
     """
@@ -2073,13 +2115,13 @@ def create_network_acl(
 
     :param str vpc_id: The ID of the VPC to create the network ACL in.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param dict tags: Tags to assign to the network ACL after creation.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_network_acl``-
-        call on succes.
+      with dict containing the result of the boto ``create_network_acl``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_network_acl
     """
@@ -2135,39 +2177,39 @@ def create_network_acl_entry(
     create an entry and delete the old one.
 
     :param str protocol: The protocol number. A value of "-1" means all protocols.
-        If you specify "-1" or a protocol number other than "6" (TCP), "17" (UDP),
-        or "1" (ICMP), traffic on all ports is allowed, regardless of any ports
-        or ICMP types or codes that you specify. If you specify protocol "58" (ICMPv6)
-        and specify an IPv4 CIDR block, traffic for all ICMP types and codes allowed,
-        regardless of any that you specify. If you specify protocol "58" (ICMPv6)
-        and specify an IPv6 CIDR block, you must specify an ICMP type and code.
+      If you specify "-1" or a protocol number other than "6" (TCP), "17" (UDP),
+      or "1" (ICMP), traffic on all ports is allowed, regardless of any ports
+      or ICMP types or codes that you specify. If you specify protocol "58" (ICMPv6)
+      and specify an IPv4 CIDR block, traffic for all ICMP types and codes allowed,
+      regardless of any that you specify. If you specify protocol "58" (ICMPv6)
+      and specify an IPv6 CIDR block, you must specify an ICMP type and code.
     :param bool egress: Indicates whether this is an egress rule (rule is applied
-        to traffic leaving the subnet).
+      to traffic leaving the subnet).
     :param int rule_number: The rule number for the entry (for example, 100).
-        ACL entries are processed in ascending order by rule number.
-        Constraints: Positive integer from 1 to 32766. The range 32767 to 65535
-        is reserved for internal use.
+      ACL entries are processed in ascending order by rule number.
+      Constraints: Positive integer from 1 to 32766. The range 32767 to 65535
+      is reserved for internal use.
     :param str rule_action: Indicates whether to allow or deny the traffic that
-        matches the rule. Allowed values: allow, deny.
+      matches the rule. Allowed values: allow, deny.
     :param str network_acl_id: The ID of the network ACL.
     :param str network_acl_lookup: Any kwarg that ``lookup_network_acl`` accepts.
-        Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
+      Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
     :param str cidr_block:  The IPv4 network range to allow or deny, in CIDR notation
-        (for example ``172.16.0.0/24``). We modify the specified CIDR block to its
-        canonical form; for example, if you specify ``100.68.0.18/18``, we modify
-        it to ``100.68.0.0/18``.
+      (for example ``172.16.0.0/24``). We modify the specified CIDR block to its
+      canonical form; for example, if you specify ``100.68.0.18/18``, we modify
+      it to ``100.68.0.0/18``.
     :param int icmp_code: The ICMP code. A value of -1 means all codes for the
-        specified ICMP type.
+      specified ICMP type.
     :param int icmp_type: The ICMP type. A value of -1 means all types.
     :param str ipv6_cidr_block: The IPv6 network range to allow or deny, in CIDR
-        notation (for example ``2001:db8:1234:1a00::/64``).
+      notation (for example ``2001:db8:1234:1a00::/64``).
     :param tuple(int, int) port_range: The first and last port in the range.
-        TCP or UDP protocols: The range of ports the rule applies to.
-        Required if specifying protocol 6 (TCP) or 17 (UDP).
+      TCP or UDP protocols: The range of ports the rule applies to.
+      Required if specifying protocol 6 (TCP) or 17 (UDP).
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
 
     :depends: boto3.client('ec2').create_network_acl_entry, boto3.client('ec2').describe_network_acls, boto3.client('ec2').describe_vpcs
     """
@@ -2270,8 +2312,8 @@ def create_network_interface(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_network_interface``-
-        call on succes.
+      with dict containing the result of the boto ``create_network_interface``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -2359,8 +2401,8 @@ def create_route(
     match. For example, traffic is destined for the IPv4 address 192.0.2.3 , and
     the route table includes the following two IPv4 routes:
 
-        192.0.2.0/24 (goes to some target A)
-        192.0.2.0/28 (goes to some target B)
+      192.0.2.0/24 (goes to some target A)
+      192.0.2.0/28 (goes to some target B)
 
     Both routes apply to the traffic destined for 192.0.2.3 . However, the second
     route in the list covers a smaller number of IP addresses and is therefore
@@ -2368,50 +2410,50 @@ def create_route(
 
     :param str route_table_id: The ID of the route table for the route.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str destination_cidr_block: The IPv4 CIDR address block used for the
-        destination match. Routing decisions are based on the most specific match.
+      destination match. Routing decisions are based on the most specific match.
     :param str destination_ipv6_cidr_block: The IPv6 CIDR block used for the
-        destination match. Routing decisions are based on the most specific match.
+      destination match. Routing decisions are based on the most specific match.
     :param str destination_prefix_list_id: The ID of a prefix list used for the
-        destination match.
+      destination match.
     :param str egress_only_internet_gateway_id: [IPv6 traffic only] The ID of an
-        egress-only internet gateway.
+      egress-only internet gateway.
     :param dict egress_only_internet_gateway_lookup: Any kwarg that
-        ``lookup_egress_only_internet_gateway`` accepts. Used to lookup the egress-
-        only internet gateway if ``egress_only_internet_gateway_id`` is not provided.
+      ``lookup_egress_only_internet_gateway`` accepts. Used to lookup the egress-
+      only internet gateway if ``egress_only_internet_gateway_id`` is not provided.
     :param str gateway_id: The ID of an internet gateway or virtual private gateway
-        attached to your VPC.
+      attached to your VPC.
     :param dict gateway_lookup: Any kwarg that ``lookup_gateway`` accepts.
-        Used to lookup the gateway's ID if ``gateway_id`` is not provided.
+      Used to lookup the gateway's ID if ``gateway_id`` is not provided.
     :param str instance_id: The ID of a NAT instance in your VPC. The operation
-        fails if you specify an instance ID unless exactly one network interface
-        is attached.
+      fails if you specify an instance ID unless exactly one network interface
+      is attached.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
-        Used to lookup the instance's ID if ``instance_id`` is not provided.
+      Used to lookup the instance's ID if ``instance_id`` is not provided.
     :param str nat_gateway_id: [IPv4 traffic only] The ID of a NAT gateway.
     :param dict nat_gateway_lookup: Any kwarg that ``lookup_nat_gateway`` accepts.
-        Used to lookup the NAT gateway if ``nat_gateway_id`` is not provided.
+      Used to lookup the NAT gateway if ``nat_gateway_id`` is not provided.
     :param str transit_gateway_id: The ID of a transit gateway.
     :param dict transit_gateway_lookup: Any kwarg that ``lookup_transit_gateway``
-        accepts. Used to lookup the transit gateway if ``transit_gateway_id`` is
-        not provided.
+      accepts. Used to lookup the transit gateway if ``transit_gateway_id`` is
+      not provided.
     :param str local_gateway_id: The ID of the local gateway.
     :param dict local_gateway_lookup: Any kwarg that ``lookup_local_gateway``
-        accepts. Used to lookup the transit gateway if ``local_gateway_id`` is
-        not provided.
+      accepts. Used to lookup the transit gateway if ``local_gateway_id`` is
+      not provided.
     :param str network_interface_id: The ID of a network interface.
     :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup the network interface if ``network_interface_id``
-        is not provided.
+      accepts. Used to lookup the network interface if ``network_interface_id``
+      is not provided.
     :param str vpc_peering_connection_id: The ID of a VPC peering connection.
     :param dict vpc_peering_connection_lookup: Any kwarg that ``lookup_vpc_peering_connection``
-        accepts. Used to lookup the VPC peering connction if ``vpc_peering_connection_id``
-        is not provided.
+      accepts. Used to lookup the VPC peering connction if ``vpc_peering_connection_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_route``-call on succes.
+      with dict containing the result of the boto ``create_route``-call on succes.
 
     :depends: boto3.client('ec2').create_route
     """
@@ -2516,12 +2558,12 @@ def create_route_table(
 
     :param str vpc_id: the ID of the VPC the route table is to be created in.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_route_table``-call
-        on succes.
+      with dict containing the result of the boto ``create_route_table``-call
+      on succes.
     :param dict tags: Tags to assign to the route_table after creation.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_route_table
@@ -2579,7 +2621,23 @@ def create_security_group(
     authorize_security_group_ingress, authorize_security_group_egress,
     revoke_security_group_ingress, and revoke_security_group_egress.
 
-    :param
+    :param str name: The name of the security group.
+      Constraints: Up to 255 characters in length. Cannot start with ``sg-``.
+      Constraints for EC2-Classic: ASCII characters
+      Constraints for EC2-VPC: a-z, A-Z, 0-9, spaces, and ._-:/()#,@[]+=&;{}!$*
+    :param str description: A description for the security group. This is informational only.
+      Constraints: Up to 255 characters in length
+      Constraints for EC2-Classic: ASCII characters
+      Constraints for EC2-VPC: a-z, A-Z, 0-9, spaces, and ._-:/()#,@[]+=&;{}!$*
+    :param str vpc_id: [EC2-VPC] The ID of the VPC. Required for EC2-VPC.
+    :param str vpc_lookup: [EC2-VPC] Any kwarg that ``lookup_vpc`` accepts.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+    :param dict tags: The tags to assign to the security group.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_security_group``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
@@ -2648,9 +2706,13 @@ def create_snapshot(
     :param str description: A description for the snapshot.
     :param str volume_id: The ID of the EBS volume.
     :param dict volume_lookup: Any kwarg that :py:func:`lookup_volume` accepts.
-        Used to lookup the volume ID if ``volume_id`` is not provided.
+      Used to lookup the volume ID if ``volume_id`` is not provided.
     :param dict tags: Tags to apply to the snapshot during creation.
     :param bool blocking: Wait for the snapshot to be completed.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_snapshot``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -2723,26 +2785,26 @@ def create_subnet(
     all stopped), but no remaining IP addresses available.
 
     :param str cidr_block: The IPv4 network range for the subnet, in CIDR notation.
-        For example, 10.0.0.0/24.
+      For example, 10.0.0.0/24.
     :param str vpc_id: The ID of the VPC to create the subnet in.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param str ipv6_cidr_block: The IPv6 CIDR block for your subnet. The subnet
-        must have a /64 prefix length. Exclusive with ipv6_subnet.
+      must have a /64 prefix length. Exclusive with ipv6_subnet.
     :param int ipv6_subnet: The IPv6 subnet. This uses an implicit /64 netmask.
-        Use this if you don't know the parent subnet and want to extract that
-        from the VPC information. Exclusive with ipv6_cidr_block.
+      Use this if you don't know the parent subnet and want to extract that
+      from the VPC information. Exclusive with ipv6_cidr_block.
     :param str availability_zone: The Availability Zone to create the subnet in.
     :param str availability_zone_id: The ID of the AZ to create the subnet in.
-        Either availability_zone or availability_zone_id must be specified. If
-        both are specified, availability_zone_id takes precedence.
+      Either availability_zone or availability_zone_id must be specified. If
+      both are specified, availability_zone_id takes precedence.
     :param dict tags: Tags to assign to the subnet after creation.
-        Only supported with botocore 1.17.14 or newer.
+      Only supported with botocore 1.17.14 or newer.
     :param bool blocking: Specify ``True`` to wait until the subnet is available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_subnet``-call on succes.
+      with dict containing the result of the boto ``create_subnet``-call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_subnet, boto3.client('ec2').get_waiter("subnet_available")
     """
@@ -2792,17 +2854,17 @@ def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=N
     resources. Each resource can have a maximum of 50 tags. Each tag consists of
     a key and optional value. Tag keys must be unique per resource.
 
-    :param str/list resource_ids: A (list of) ID(s) to create tags for.
+    :param str/list(str) resource_ids: A (list of) ID(s) to create tags for.
     :param dict tags: Tags to create on the resource(s).
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').create_tags
     """
     params = {
-        "Resources": resource_ids,
+        "Resources": resource_ids if isinstance(resource_ids, list) else [resource_ids],
         "Tags": [{"Key": k, "Value": v} for k, v in tags.items()],
     }
     # Oh, the irony
@@ -2884,6 +2946,10 @@ def create_volume(
       Attach. If you enable Multi-Attach, you can attach the volume to up to
       16 Nitro-based instances in the same Availability Zone.
     :param bool blocking: Wait until the volume has become available.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_volume``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -2956,25 +3022,25 @@ def create_vpc(
 
     :param str cidr_block: The primary CIDR block to create the VPC with.
     :param bool amazon_provided_ipv6_cidr_block: Requests an Amazon-provided IPv6
-        CIDR block with a /56 prefix length for the VPC. You cannot specify the
-        range of IP addresses, or the size of the CIDR block.
+      CIDR block with a /56 prefix length for the VPC. You cannot specify the
+      range of IP addresses, or the size of the CIDR block.
     :param str ipv6_pool: The ID of an IPv6 address pool from which to allocate
-        the IPv6 CIDR block.
+      the IPv6 CIDR block.
     :param str ipv6_cidr_block: The IPv6 CIDR block from the IPv6 address pool.
-        You must also specify Ipv6Pool in the request.
-        To let Amazon choose the IPv6 CIDR block for you, omit this parameter.
+      You must also specify Ipv6Pool in the request.
+      To let Amazon choose the IPv6 CIDR block for you, omit this parameter.
     :param str instance_tenancy: The tenancy options for instances launched into
-        the VPC. For ``default``, instances are launched with shared tenancy by
-        default. You can launch instances with any tenancy into a shared tenancy
-        VPC. For ``dedicated``, instances are launched as dedicated tenancy instances
-        by default. You can only launch instances with a tenancy of ``dedicated``
-        or ``host`` into a dedicated tenancy VPC.
+      the VPC. For ``default``, instances are launched with shared tenancy by
+      default. You can launch instances with any tenancy into a shared tenancy
+      VPC. For ``dedicated``, instances are launched as dedicated tenancy instances
+      by default. You can only launch instances with a tenancy of ``dedicated``
+      or ``host`` into a dedicated tenancy VPC.
     :param dict tags: Tags to apply to the VPC after creation.
-        Only supported with botocore 1.17.14 or newer.
+      Only supported with botocore 1.17.14 or newer.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_vpc``-call on succes.
+      with dict containing the result of the boto ``create_vpc``-call on succes.
 
     :depends: boto3.client('ec2').create_vpc
     """
@@ -3003,12 +3069,12 @@ def create_vpc_endpoint(
     vpc_lookup=None,
     vpc_endpoint_type=None,
     policy_document=None,
-    route_table_ids=None,  # pylint: disable=unused-argument
-    route_table_lookups=None,  # pylint: disable=unused-argument
-    subnet_ids=None,  # pylint: disable=unused-argument
-    subnet_lookups=None,  # pylint: disable=unused-argument
-    security_group_ids=None,  # pylint: disable=unused-argument
-    security_group_lookups=None,  # pylint: disable=unused-argument
+    route_table_ids=None,
+    route_table_lookups=None,
+    subnet_ids=None,
+    subnet_lookups=None,
+    security_group_ids=None,
+    security_group_lookups=None,
     private_dns_enabled=None,
     tags=None,
     blocking=False,
@@ -3036,58 +3102,62 @@ def create_vpc_endpoint(
     Use describe_vpc_endpoint_services to get a list of supported services.
 
     :param str service_name: The service name. To get a list of available services,
-        use the describe_vpc_endpoint_services function, or get the name from the
-        service provider.
+      use the describe_vpc_endpoint_services function, or get the name from the
+      service provider.
     :param str vpc_id: The ID of the VPC in which the endpoint will be used.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param str vpc_endpoint_type: The type of endpoint. Allowed values:
-        Interface, Gateway. Default: Gateway
+      Interface, Gateway. Default: Gateway
     :param list(str) route_table_ids: [Gateway endpoint] One or more route table IDs.
     :param list(dict) route_table_lookups: [Gateway endpoint] List of dicts that
-        contain kwargs that ``lookup_route_table`` accepts. Used to lookup route_tables
-        if ``route_table_ids`` is not provided.
+      contain kwargs that ``lookup_route_table`` accepts. Used to lookup route_tables
+      if ``route_table_ids`` is not provided.
     :param list(str) subnet_ids: [Interface endpoint] One or more subnets in which
-        to create an endpoint network interface.
+      to create an endpoint network interface.
     :param list(dict) subnet_lookups: [Interface endpoint] List of dicts that
-        contain kwargs that ``lookup_subnet`` accepts. Used to lookup subnets if
-        ``subnet_ids`` is not provided.
+      contain kwargs that ``lookup_subnet`` accepts. Used to lookup subnets if
+      ``subnet_ids`` is not provided.
     :param list(str) security_group_ids: [Interface endpoint] The ID of one or
-        more security groups to associate with the endpoint network interface.
+      more security groups to associate with the endpoint network interface.
     :param list(dict) security_group_lookups: [interface endpoint] List of dicts
-        that contain kwargs that ``lookup_security_group`` accepts. Used to lookup
-        security groups if ``security_group_ids`` is not provided.
+      that contain kwargs that ``lookup_security_group`` accepts. Used to lookup
+      security groups if ``security_group_ids`` is not provided.
     :param bool private_dns_enabled: [Interface endpoint] Indicates whether to
-        associate a private hosted zone with the specified VPC. The private hosted
-        zone contains a record set for the default public DNS name for the service
-        for the Region (for example, ``kinesis.us-east-1.amazonaws.com``), which
-        resolves to the private IP addresses of the endpoint network interfaces
-        in the VPC. This enables you to make requests to the default public DNS
-        name for the service instead of the public DNS names that are automatically
-        generated by the VPC endpoint service.
-        To use a private hosted zone, you must set the following VPC attributes
-        to ``True`` : ``enableDnsHostnames`` and ``enableDnsSupport``.
-        Use modify_vpc_attributes to set the VPC attributes.
+      associate a private hosted zone with the specified VPC. The private hosted
+      zone contains a record set for the default public DNS name for the service
+      for the Region (for example, ``kinesis.us-east-1.amazonaws.com``), which
+      resolves to the private IP addresses of the endpoint network interfaces
+      in the VPC. This enables you to make requests to the default public DNS
+      name for the service instead of the public DNS names that are automatically
+      generated by the VPC endpoint service.
+      To use a private hosted zone, you must set the following VPC attributes
+      to ``True`` : ``enableDnsHostnames`` and ``enableDnsSupport``.
+      Use modify_vpc_attributes to set the VPC attributes.
     :param dict tags: Tags to associate with the endpoint after creation.
     :param bool blocking: Wait for the VPC endpoint to be in the ``available`` state.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_vpc_endpoint``-
-        call on succes.
+      with dict containing the result of the boto ``create_vpc_endpoint``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         {
             "service": "ec2",
             "name": "route_table",
-            "kwargs": route_table_lookup or {"route_table_id": route_table_id},
+            "kwargs": route_table_lookups
+            or [
+                {"route_table_id": route_table_id} for route_table_id in route_table_ids
+            ],
             "required": False,
         },
         {
             "service": "ec2",
             "name": "subnet",
-            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+            "kwargs": subnet_lookups
+            or [{"subnet_id": subnet_id} for subnet_id in subnet_ids],
             "required": False,
         },
         {
@@ -3131,6 +3201,7 @@ def create_vpc_endpoint(
     )
 
 
+@arguments_to_list("network_load_balancer_arns")
 def create_vpc_endpoint_service_configuration(
     network_load_balancer_arns=None,
     network_load_balancer_lookup=None,
@@ -3152,20 +3223,23 @@ def create_vpc_endpoint_service_configuration(
     domain name.
 
     :param str/list(str) network_load_balancer_arns: The Amazon Resource Names
-        (ARNs) of one or more Network Load Balancers for your service.
+      (ARNs) of one or more Network Load Balancers for your service.
     :param dict network_load_balancer_lookup: Dict that contains kwargs
-        that ``describe_network_load_balancer`` accepts. Used to lookup network
-        loadbalancers if ``network_load_balancer_arns`` is not provided.
-        Only supported if ``boto3_elb.describe_load_balancers`` exists.
+      that ``describe_network_load_balancer`` accepts. Used to lookup network
+      loadbalancers if ``network_load_balancer_arns`` is not provided.
+      Only supported if ``boto3_elb.describe_load_balancers`` exists.
     :param bool acceptance_required: Indicates whether requests from service consumers
-        to create an endpoint to your service must be accepted. To accept a request,
-        use ``accept_vpc_endpoint_connections``.
+      to create an endpoint to your service must be accepted. To accept a request,
+      use ``accept_vpc_endpoint_connections``.
     :param str private_dns_name: The private DNS name to assign to the VPC endpoint
-        service.
+      service.
     :param dict tags: Tags to assign to the VPC endpoint service after creation.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``create_vpc_endpoint_service_configuration``-
+      call on succes.
     """
-    if network_load_balancer_arns and not isinstance(network_load_balancer_arns, list):
-        network_load_balancer_arns = [network_load_balancer_arns]
     if network_load_balancer_lookup:
         with __salt__["boto3_generic.lookup_resources"](
             {
@@ -3220,22 +3294,22 @@ def create_vpc_peering_connection(
 
     :param str requester_vpc_id: The ID of the requester VPC.
     :param dict requester_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the requester's VPC ID if ``requester_vpc_id`` is not provided.
+      Used to lookup the requester's VPC ID if ``requester_vpc_id`` is not provided.
     :param str peer_vpc_id: The ID of the accepter VPC.
     :param dict peer_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the peer VPC ID if ``peer_vpc_id`` is not provided.
-        If the peer VPC belongs to another account, you must provide the appropriate
-        region, keyid and key (or profile containing all of those) in the
-        ``peer_vpc_lookup``-dict.
+      Used to lookup the peer VPC ID if ``peer_vpc_id`` is not provided.
+      If the peer VPC belongs to another account, you must provide the appropriate
+      region, keyid and key (or profile containing all of those) in the
+      ``peer_vpc_lookup``-dict.
     :param str peer_owner_id: The Account ID of the owner of the accepter VPC.
-        Only supply this if it differs from the account ID of the requester.
+      Only supply this if it differs from the account ID of the requester.
     :param bool blocking: Wait for the VPC peering connection to be in the
-        ``pending-acceptance``-state.
+      ``pending-acceptance``-state.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_vpc_peering_connection``-
-        call on succes.
+      with dict containing the result of the boto ``create_vpc_peering_connection``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').create_vpc_peering_connection, boto3.client('ec2').get_waiter("vpc_peering_connection_pending")
     """
@@ -3420,8 +3494,8 @@ def create_vpn_connection(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_vpn_connection``-call
-        on succes.
+      with dict containing the result of the boto ``create_vpn_connection``-call
+      on succes.
     """
     if (vpn_gateway_id or vpn_gateway_lookup) and (
         transit_gateway_id or transit_gateway_lookup
@@ -3521,15 +3595,15 @@ def create_vpn_gateway(
     :param str availability_zone: The Availability Zone for the virtual private gateway.
     :param dict tags: The tags to apply to the virtual private gateway.
     :param int amazon_side_asn: A private Autonomous System Number (ASN) for the
-        Amazon side of a BGP session. If you're using a 16-bit ASN, it must be
-        in the 64512 to 65534 range. If you're using a 32-bit ASN, it must be in
-        the 4200000000 to 4294967294 range. Default: 64512
+      Amazon side of a BGP session. If you're using a 16-bit ASN, it must be
+      in the 64512 to 65534 range. If you're using a 32-bit ASN, it must be in
+      the 4200000000 to 4294967294 range. Default: 64512
     :param bool blocking: Wait until the VPN gateway becomes available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``create_vpn_gateway``-call
-        on succes.
+      with dict containing the result of the boto ``create_vpn_gateway``-call
+      on succes.
     """
     params = salt.utils.data.filter_falsey(
         {
@@ -3570,37 +3644,37 @@ def crud_security_group_rule(
     other items of the rule determine which rule to update.
 
     :param str operation: What to do with the security group rule. Allowed values:
-        add, remove, update.
+      add, remove, update.
     :param str group_id: The ID of the security group to add the rule to.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security group's ID if ``group_id`` is not provided.
+      Used to lookup the security group's ID if ``group_id`` is not provided.
     :param str direction: To specify whether this is an egress or ingress rule.
-        Allowed values: egress, ingress.
+      Allowed values: egress, ingress.
 
     The following arguments are part of the security group rule to add:
 
     :param str description: The description of the rule target.
     :param tuple(int, int) port_range: The start and end of the port range for
-        the TCP and UDP protocols, or an ICMP/ICMPv6 type number. A value of
-        (-1, -1) indicates all ICMP/ICMPv6 types.
+      the TCP and UDP protocols, or an ICMP/ICMPv6 type number. A value of
+      (-1, -1) indicates all ICMP/ICMPv6 types.
     :param str ip_protocol: The IP protocol name (tcp, udp, icmp, icmpv6).
-        Use ``-1`` to specify all protocols.
+      Use ``-1`` to specify all protocols.
 
     The following designate the rule target. You must provide exactly one:
 
     :param str ip_range: Either an IPv4 or IPv6 CIDR range or a security
-        group name.
+      group name.
     :param str prefix_list_id: The ID of a prefix list.
     :param str prefix_list_lookup: Any kwargs that ``lookup_prefix_list`` accepts.
-        Used to lookup prefix list IDs if ``lookup_prefix_id`` is not provided.
+      Used to lookup prefix list IDs if ``lookup_prefix_id`` is not provided.
     :param dict user_id_group_pair: A security group and AWS account ID pair.
-        A full description of its contents is given in the documentation of
-        ``authorize_security_group_egress``.
+      A full description of its contents is given in the documentation of
+      ``authorize_security_group_egress``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``allocate_address``-call
-        on succes.
+      with dict containing the result of the boto ``allocate_address``-call
+      on succes.
     """
     if not salt.utils.data.exactly_one(
         [ip_range, prefix_list_id, prefix_list_lookup, user_id_group_pair]
@@ -3687,12 +3761,12 @@ def delete_customer_gateway(
 
     :param str customer_gateway_id: The ID of the customer gateway.
     :param str customer_gateway_lookup: Any kwarg that ``lookup_customer_gateway``
-        accepts. Used to lookup the customer gateway ID if ``customer_gateway_id``
-        is not provided.
+      accepts. Used to lookup the customer gateway ID if ``customer_gateway_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -3729,11 +3803,11 @@ def delete_dhcp_options(
 
     :param str dhcp_options_id: The ID of the DHCP option set to delete.
     :param str dhcp_options_lookup: Any kwarg that lookup_dhcp_options accepts.
-        When ``dhcp_options_id`` is not provided, this is required, otherwise ignored.
+      When ``dhcp_options_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_dhcp_options, boto3.client('ec2').delete_dhcp_options
     """
@@ -3769,12 +3843,12 @@ def delete_internet_gateway(
 
     :param str internet_gateway_id: The ID of the Internet Gateway.
     :param dict internet_gateway_lookup: Any kwarg that ``lookup_internet_gateway``
-        accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
-        is not provided.
+      accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').delete_internet_gateway
     """
@@ -3806,12 +3880,12 @@ def delete_key_pair(
     :param str key_name: The name of the key pair.
     :param str key_pair_id: The ID of the key pair.
     :param dict key_pair_lookup: Any kwarg that ``lookup_key_pair`` accepts.
-        Used to lookup the Internet gateway's ID if ``key_pair_id`` and ``key_name``
-        are not provided.
+      Used to lookup the Internet gateway's ID if ``key_pair_id`` and ``key_name``
+      are not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -3853,12 +3927,12 @@ def delete_nat_gateway(
 
     :param str nat_gateway_id: The ID of the NAT gateway to delete.
     :param dict nat_gateway_lookup: Any kwarg that lookup_nat_gateway accepts.
-        Used to lookup the nat_gateway_id when ``nat_gateway_id`` is not provided.
+      Used to lookup the nat_gateway_id when ``nat_gateway_id`` is not provided.
     :param bool blocking: Whether to wait for the deletion to be complete.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_nat_gateways, boto3.client('ec2').delete_nat_gateway, boto3.client('ec2').get_waiter('nat_gateway_deleted')
     """
@@ -3904,11 +3978,11 @@ def delete_network_acl(
 
     :param str network_acl_id: The ID of the network ACL.
     :param str network_acl_lookup: Any kwarg that ``lookup_network_acl`` accepts.
-        Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
+      Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
 
     :depends: boto3.client('ec2').delete_network_acl, boto3.client('ec2').describe_network_acls, boto3.client('ec2').describe_vpcs
     """
@@ -3947,11 +4021,11 @@ def delete_network_acl_entry(
     :param bool egress: Indicates whether the rule is an egress rule.
     :param str network_acl_id: The ID of the network ACL.
     :param str network_acl_lookup: Any kwarg that ``lookup_network_acl`` accepts.
-        Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
+      Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -3989,12 +4063,12 @@ def delete_network_interface(
 
     :param str network_interface_id: The ID of the network interface.
     :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup the network interface ID if ``network_interface_id``
-        is not provided.
+      accepts. Used to lookup the network interface ID if ``network_interface_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4030,15 +4104,15 @@ def delete_route(
 
     :param str route_table_id: The ID of the route table.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str destination_cidr_block: The IPv4 CIDR range for the route. The
-        value you specify must match the CIDR for the route exactly.
+      value you specify must match the CIDR for the route exactly.
     :param str destination_ipv6_cidr_block: The IPv6 CIDR range for the route.
-        The value you specify must match the CIDR for the route exactly.
+      The value you specify must match the CIDR for the route exactly.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').delete_route
     """
@@ -4080,11 +4154,11 @@ def delete_route_table(
 
     :param str route_table_id: The ID of the route table to delete.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').delete_route_table
     """
@@ -4124,16 +4198,16 @@ def delete_security_group(
 
     :param str group_id: The ID of the security group.
     :param str group_name: [EC2-Classic, default VPC] The name of the security group.
-        This only works when the security group is in the default VPC. If this is
-        not the case, use ``group_lookup`` below.
+      This only works when the security group is in the default VPC. If this is
+      not the case, use ``group_lookup`` below.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security_group ID if ``group_id`` and ``group_name``
-        are not provided or you want to delete a security group by name in a non-
-        default VPC.
+      Used to lookup the security_group ID if ``group_id`` and ``group_name``
+      are not provided or you want to delete a security group by name in a non-
+      default VPC.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4180,11 +4254,11 @@ def delete_snapshot(
 
     :param str snapshot_id: The ID of the EBS snapshot.
     :param dict snapshot_lookup: Any kwarg that ``lookup_snapshot`` accepts.
-        Used to lookup the snapshot ID if ``snapshot_id`` is not provided.
+      Used to lookup the snapshot ID if ``snapshot_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4213,11 +4287,11 @@ def delete_subnet(
 
     :param str subnet_id: The ID of the subnet to delete.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
+      Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').delete_subnet
     """
@@ -4243,12 +4317,12 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
     """
     Deletes the specified set of tags from the specified set of resources.
 
-    :param str/list resources: A (list of) ID(s) to delete tags from.
+    :param str/list(str) resources: A (list of) ID(s) to delete tags from.
     :param dict tags: Tags to delete from the resource(s).
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').delete_tags
     """
@@ -4277,8 +4351,12 @@ def delete_volume(
 
     :param str volume_id: The ID of the volume.
     :param dict volume_lookup: Any kwarg that :py:func:`lookup_volume` accepts.
-        When ``volume_id`` is not provided, this is required, otherwise ignored.
+      When ``volume_id`` is not provided, this is required, otherwise ignored.
     :param bool blocking: Whether to wait for the volume to be deleted.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4320,11 +4398,11 @@ def delete_vpc(
 
     :param str vpc_id: The ID of the VPC to delete.
     :param dict vpc_lookup: Any kwarg that :py:func:`lookup_vpc` accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        containint ``True`` on success.
+      containint ``True`` on success.
 
     :depends boto3.client('ec2').delete_vpc
     """
@@ -4342,6 +4420,7 @@ def delete_vpc(
     return __utils__["boto3.handle_response"](client.delete_vpc, params)
 
 
+@arguments_to_list("service_ids", "service_lookups")
 def delete_vpc_endpoint_service_configurations(
     service_ids=None,
     service_lookups=None,
@@ -4358,12 +4437,12 @@ def delete_vpc_endpoint_service_configurations(
 
     :param str/list(str) service_ids: The IDs of one or more services
     :param dict/list(dict) service_lookups: Any kwargs that ``lookup_vpc_endpoint_service``
-        accepts. When ``service_ids`` is not provided, this is required, otherwise ignored.
+      accepts. When ``service_ids`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
-        call on succes.
+      with dict containing the result of the boto ``accept_vpc_endpoint_connections``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4391,6 +4470,7 @@ def delete_vpc_endpoint_service_configurations(
     )
 
 
+@arguments_to_list("vpc_endpoint_ids", "vpc_endpoint_lookups")
 def delete_vpc_endpoints(
     vpc_endpoint_ids=None,
     vpc_endpoint_lookups=None,
@@ -4406,13 +4486,13 @@ def delete_vpc_endpoints(
 
     :param str/list(str) vpc_endpoint_ids: One or more VPC endpoint IDs.
     :param dict/list(dict) vpc_endpoint_lookups: Any kwargs that ``lookup_vpc_endpoint``
-        accepts. When ``vpc_endpoint_ids`` is not provided, this is required,
-        otherwise ignored.
+      accepts. When ``vpc_endpoint_ids`` is not provided, this is required,
+      otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``delete_vpc_endpoints``-call
-        on succes.
+      with dict containing the result of the boto ``delete_vpc_endpoints``-call
+      on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4453,16 +4533,16 @@ def delete_vpc_peering_connection(
     connection that's in the ``failed`` state.
 
     :param str vpc_peering_connection_id: The ID of the VPC peering connection
-        to delete.
+      to delete.
     :param dict vpc_peering_connection_lookup: Any kwargs that ``lookup_vpc_peering_connection``
-        accepts. When ``vpc_peering_connection_id`` is not provided, this is required,
-        otherwise ignored.
+      accepts. When ``vpc_peering_connection_id`` is not provided, this is required,
+      otherwise ignored.
     :param bool blocking: Wait until the vpc_peering_connection is deleted.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``delete_vpc_peering_connection``-
-        call on succes.
+      with dict containing the result of the boto ``delete_vpc_peering_connection``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpc_peering_connections, boto3.client('ec2').delete_vpc_peering_connection
     """
@@ -4523,13 +4603,13 @@ def delete_vpn_connection(
 
     :param str vpn_connection_id: The ID of the VPN connection.
     :param dict vpn_connection_lookup: Any kwargs that ``lookup_vpn_connection``
-        accepts. When ``vpc_connection_id`` is not provided, this is required,
-        otherwise ignored.
+      accepts. When ``vpc_connection_id`` is not provided, this is required,
+      otherwise ignored.
     :param bool blocking: Wait until the VPN connection is deleted.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4575,13 +4655,13 @@ def delete_vpn_gateway(
 
     :param str vpn_gateway_id: The ID of the virtual private gateway.
     :param dict vpn_gateway_lookup: Any kwargs that ``lookup_vpn_gateway``
-        accepts. When ``vpc_gateway_id`` is not provided, this is required,
-        otherwise ignored.
+      accepts. When ``vpc_gateway_id`` is not provided, this is required,
+      otherwise ignored.
     :param bool blocking: Wait until the VPN gateway is deleted.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4626,7 +4706,12 @@ def deregister_image(
 
     :param str image_id: The ID of the AMI.
     :param dict image_lookup: Any kwargs that ``lookup_image`` accepts. When ``image_id``
-        is not provided, this is required, otherwise ignored.
+      is not provided, this is required, otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``deregister_image``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -4646,6 +4731,41 @@ def deregister_image(
     return __utils__["boto3.handle_response"](client.deregister_image, params)
 
 
+@arguments_to_list("attributes")
+def describe_account_attributes(
+    attributes=None, region=None, keyid=None, key=None, profile=None, client=None,
+):
+    """
+    Describes attributes of your AWS account. The following are the supported account
+    attributes:
+
+    ``supported-platforms``: Indicates whether your account can launch instances
+      into EC2-Classic and EC2-VPC, or only into EC2-VPC.
+    ``default-vpc``: The ID of the default VPC for your account, or ``none``.
+    ``max-instances``: This attribute is no longer supported. The returned value
+      does not reflect your actual vCPU limit for running On-Demand Instances.
+    ``vpc-max-security-groups-per-interface``: The maximum number of security groups
+      that you can assign to a network interface.
+    ``max-elastic-ips``: The maximum number of Elastic IP addresses that you can
+      allocate for use with EC2-Classic.
+    ``vpc-max-elastic-ips``: The maximum number of Elastic IP addresses that you
+      can allocate for use with EC2-VPC.
+
+    :param str/list(str) attributes: One or more attributes to describe.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_account_attributes``-
+      call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "account_attribute", AttributeNames=attributes, client=client,
+    )
+
+
+@arguments_to_list("public_ips", "allocation_ids")
 def describe_addresses(
     filters=None,
     public_ips=None,
@@ -4660,18 +4780,16 @@ def describe_addresses(
     Describes one or more Elastic IP addresses.
 
     :param dict filters: The dict with filters to specify the EIP(s) to describe.
-    :param str/list public_ips: The (list of) Public IPs to specify the EIP(s) to describe.
-    :param str/list allocation_ids: The (list of) Allocation IDs to specify the EIP(s) to describe.
+    :param str/list(str) public_ips: The (list of) Public IPs to specify the EIP(s) to describe.
+    :param str/list(str) allocation_ids: The (list of) Allocation IDs to specify the EIP(s) to describe.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_addresses``-
-        call on succes.
+      with dict containing the result of the boto ``describe_addresses``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_addresses
     """
-    if public_ips and not isinstance(public_ips, list):
-        public_ips = [public_ips]
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return __utils__["boto3.describe_resource"](
@@ -4703,19 +4821,19 @@ def describe_availability_zones(
     :param list(str) zone_ids: The IDs of the Zones.
     :param list(str) zone_names: The names of the Zones.
     :param bool all_availability_zones: Include all Availability Zones and Local
-        Zones regardless of your opt in status.
-        If you do not use this parameter, the results include only the zones for
-        the Regions where you have chosen the option to opt in.
+      Zones regardless of your opt in status.
+      If you do not use this parameter, the results include only the zones for
+      the Regions where you have chosen the option to opt in.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_availability_zones
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_availability_zones
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_availability_zone``-
-        call on succes.
+      with dict containing the result of the boto ``describe_availability_zone``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -4729,6 +4847,7 @@ def describe_availability_zones(
     )
 
 
+@arguments_to_list("customer_gateway_ids")
 def describe_customer_gateways(
     customer_gateway_ids=None,
     filters=None,
@@ -4741,17 +4860,17 @@ def describe_customer_gateways(
     """
     Describes one or more of your VPN customer gateways.
 
-    :param str/list customer_gateway_ids: One or more customer gateway IDs.
+    :param str/list(str) customer_gateway_ids: One or more customer gateway IDs.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_customer_gateways
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_customer_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_customer_gateways``-call
-        on succes.
+      with dict containing the result of the boto ``describe_customer_gateways``-call
+      on succes.
 
     :depends: boto3.client('ec2').describe_customer_gateways
     """
@@ -4762,6 +4881,7 @@ def describe_customer_gateways(
     )
 
 
+@arguments_to_list("dhcp_option_ids")
 def describe_dhcp_options(
     dhcp_option_ids=None,
     filters=None,
@@ -4774,17 +4894,17 @@ def describe_dhcp_options(
     """
     Describes one or more of your DHCP options sets.
 
-    :param str/list dhcp_option_ids: The (list of) DHCP option ID(s) to describe.
+    :param str/list(str) dhcp_option_ids: The (list of) DHCP option ID(s) to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_dhcp_options
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_dhcp_options
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_dhcp_options``-call
-        on succes.
+      with dict containing the result of the boto ``describe_dhcp_options``-call
+      on succes.
 
     :depends: boto3.client('ec2').describe_dhcp_options
     """
@@ -4793,6 +4913,323 @@ def describe_dhcp_options(
     return __utils__["boto3.describe_resource"](
         "dhcp_options", ids=dhcp_option_ids, filters=filters, client=client,
     )
+
+
+@arguments_to_list("egress_only_internet_gateway_ids")
+def describe_egress_only_internet_gateways(
+    egress_only_internet_gateway_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=none,
+):
+    """
+    Describes one or more of your egress-only internet gateways.
+
+    :param str/list(str): egress_only_internet_gateway_ids: One or more egress-only
+      internet gateway IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_egress_only_internet_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_egress_only_internet_gateways``-
+      call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "egress_only_internet_gateway",
+        ids=egress_only_internet_gateway_ids,
+        filters=filters,
+        client=client,
+    )
+
+
+@arguments_to_list("elastic_gpu_ids")
+def describe_elastic_gpus(
+    elastic_gpu_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the Elastic Graphics accelerator associated with your instances.
+
+    :param str/list(str) elastic_gpu_ids: The Elastic Graphic accelerator IDs.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_elastic_gpus
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_elastic_gpus``-call
+      on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "elastic_gpu", ids=elastic_gpu_ids, filters=filters, client=client,
+    )
+
+
+@arguments_to_list("fleet_ids")
+def describe_fleets(
+    fleet_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the specified EC2 Fleets or all of your EC2 Fleets.
+
+    :param str/list(str) fleet_ids: The ID of the EC2 Fleets.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_fleets
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_fleets``-call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "fleet", ids=fleet_ids, filters=filters, client=client,
+    )
+
+
+@arguments_to_list("attributes")
+def describe_fpga_image_attribute(
+    attributes=None,
+    fpga_image_id=None,
+    fpga_image_lookup=None,
+    region=None,
+    keyid=NOne,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the specified attribute of the specified Amazon FPGA Image (AFI).
+
+    :param str/list(str) attributes: The AFI attribute. Allowed values:
+        ``description``, ``name``, ``load_permission``, ``product_codes``.
+    :param str fpga_image_id: The ID of the AFI.
+    :param dict fpga_image_lookup: Any kwargs that ``lookup_fpga_image`` accepts.
+      When ``fpga_image_id`` is not provided, this is required, otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_fpga_image_attribute``-
+      call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "fpga_image",
+            "kwargs": fpga_image_lookup or {"fpga_image_id": fpga_image_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"FpgaImageId": res["result"]["fpga_image"]}
+    ret = {}
+    for attribute in attributes:
+        # Well this is nasty. When selecting the attribute for querying, it needs
+        # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
+        params["Attribute"] = salt.utils.stringutils.snake_to_camel_case(attribute)
+        try:
+            res = client.describe_fpga_image_attribute(**params)
+            ret[attribute] = res[
+                salt.utils.stringutils.snake_to_camel_case(attribute, uppercamel=True)
+            ]["Value"]
+        except (ParamValidationError, ClientError) as exp:
+            return {"error": __utils__["boto3.get_error"](exp)["message"]}
+    return {"result": ret}
+
+
+@arguments_to_list("fpga_image_ids", "owners")
+def describe_fpga_images(
+    fpga_image_ids=None,
+    owners=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the Amazon FPGA Images (AFIs) available to you. These include public
+    AFIs, private AFIs that you own, and AFIs owned by other AWS accounts for which
+    you have load permissions.
+
+    :param str/list(str) fpga_image_ids: The AFI IDs.
+    :param str/list(str) owners: Filters the AFI by owner. Specify an AWS account
+      ID, ``self`` (owner is the sender of the request), or an AWS owner alias
+      (valid values are ``amazon``,  ``aws-marketplace``).
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_fpga_images
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_fpga_images``-call
+      on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "fpga_image", ids=fpga_image_ids, filters=filters, client=client, Owners=owners,
+    )
+
+
+@arguments_to_list("host_ids")
+def describe_hosts(
+    host_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the specified Dedicated Hosts or all your Dedicated Hosts.
+
+    The results describe only the Dedicated Hosts in the Region you're currently
+    using. All listed instances consume capacity on your Dedicated Host. Dedicated
+    Hosts that have recently been released are listed with the state ``released``.
+
+    :param str/list(str) host_ids: The IDs of the Dedicated Hosts. The IDs are
+      used for targeted instance launches.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_hosts
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_hosts``-call
+      on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "host", ids=host_ids, filters=filters, client=client,
+    )
+
+
+@arguments_to_list("association_ids")
+def describe_iam_instance_profile_associations(
+    association_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes your IAM instance profile associations.
+
+    :param str/list(str) association_ids: The IAM instance profile associations.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_iam_instance_profile_associations
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_iam_instance_profile_associations``-
+      call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "iam_instance_profile_association",
+        AssociationIds=association_ids,
+        filters=filters,
+        client=client,
+    )
+
+
+@arguments_to_list("attributes")
+def describe_image_attribute(
+    attributes=None,
+    image_id=None,
+    image_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the specified attribute(s) of the specified AMI.
+
+    :param str/list(str) attributes: One or more AMI attributes to describe.
+      Allowed values: ``description``, ``kernel``, ``ramdisk``, ``launch_permission``,
+      ``product_codes``, ``block_device_mapping``, ``sriov_net_support``.
+    :param str image_id: The ID of the AMI.
+    :param dict image_lookup: Any kwargs that ``lookup_image`` accepts.
+      When ``image_id`` is not provided, this is required, otherwise ignored.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the attributes and their values on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "image",
+            "kwargs": image_lookup or {"image_id": image_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"ImageId": res["result"]["image"]}
+    ret = {}
+    for attribute in attributes:
+        # Well this is nasty. When selecting the attribute for querying, it needs
+        # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
+        params["Attribute"] = salt.utils.stringutils.snake_to_camel_case(attribute)
+        try:
+            res = client.describe_image_attribute(**params)
+            ret[attribute] = res[
+                salt.utils.stringutils.snake_to_camel_case(attribute, uppercamel=True)
+            ]["Value"]
+        except (ParamValidationError, ClientError) as exp:
+            return {"error": __utils__["boto3.get_error"](exp)["message"]}
+    return {"result": ret}
 
 
 def describe_images(
@@ -4848,8 +5285,9 @@ def describe_images(
     )
 
 
+@arguments_to_list("attributes")
 def describe_instance_attribute(
-    attribute,
+    attributes=None,
     instance_id=None,
     instance_lookup=None,
     region=None,
@@ -4859,35 +5297,22 @@ def describe_instance_attribute(
     client=None,
 ):
     """
-    Describes the specified attribute of the specified instance. You can specify
-    only one attribute at a time. Valid attribute values are:
+    Describes one or more specified attributes of the specified instance.
+    Valid attribute values are: ``instance_type``, ``kernel``, ``ramdisk``, ``user_data``,
+    ``disable_api_termination``, ``instance_initiated_shutdown_behavior``, ``root_device_name``,
+    ``block_device_mapping``, ``product_codes``, ``source_dest_check``, ``group_set``,
+    ``ebs_optimized``, ``sriov_net_support``.
 
-      - instanceType
-      - kernel
-      - ramdisk
-      - userData
-      - disableApiTermination
-      - instanceInitiatedShutdownBehavior
-      - rootDeviceName
-      - blockDeviceMapping
-      - productCodes
-      - sourceDestCheck
-      - groupSet
-      - ebsOptimized
-      - sriovNetSupport
-
-    :param str attribute: The instance attribute.
+    :param str/list(str) attributes: One or more instance attributes to describe.
     :param str instance_id: The ID of the instance.
     :param dict instance_lookup: Any kwargs that ``lookup_instance`` accepts.
-        When ``instance_id`` is not provided, this is required, otherwise ignored.
+      When ``instance_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_instance_attribute``-call
-        on succes.
+      with dict containing the result of the boto ``describe_instance_attribute``-call
+      on succes.
     """
-    if client is None:
-        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
@@ -4901,14 +5326,23 @@ def describe_instance_attribute(
     ) as res:
         if "error" in res:
             return res
-        params = salt.utils.data.filter_falsey(
-            {"Attribute": attribute, "InstanceId": instance_id}
-        )
-    return __utils__["boto3.describe_resource"](
-        "image", filters=filters, client=client, **params
-    )
+        params = {"InstanceId": res["result"]["instance"]}
+    ret = {}
+    for attribute in attributes:
+        # Well this is nasty. When selecting the attribute for querying, it needs
+        # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
+        params["Attribute"] = salt.utils.stringutils.snake_to_camel_case(attribute)
+        try:
+            res = client.describe_instance_attribute(**params)
+            ret[attribute] = res[
+                salt.utils.stringutils.snake_to_camel_case(attribute, uppercamel=True)
+            ]["Value"]
+        except (ParamValidationError, ClientError) as exp:
+            return {"error": __utils__["boto3.get_error"](exp)["message"]}
+    return {"result": ret}
 
 
+@arguments_to_list("instance_ids")
 def describe_instance_credit_specifications(
     instance_ids=None,
     filters=None,
@@ -4950,8 +5384,8 @@ def describe_instance_credit_specifications(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_instance_credit_specifications``-
-        call on succes.
+      with dict containing the result of the boto ``describe_instance_credit_specifications``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -4963,6 +5397,129 @@ def describe_instance_credit_specifications(
     )
 
 
+@arguments_to_list("instance_ids", "instance_lookups")
+def describe_instance_status(
+    instance_ids=None,
+    instance_lookups=None,
+    include_all_instances=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the status of the specified instances or all of your instances. By
+    default, only running instances are described, unless you specifically indicate
+    to return the status of all instances.
+
+    Instance status includes the following components:
+    - Status checks - Amazon EC2 performs status checks on running EC2 instances
+      to identify hardware and software issues.
+    - Scheduled events - Amazon EC2 can schedule events (such as reboot, stop,
+      or terminate) for your instances related to hardware issues, software updates,
+      or system maintenance.
+    - Instance state - You can manage your instances from the moment you launch
+      them through their termination.
+
+    :param str/list(str) instance_ids: The instance IDs. Default: describes all
+      your instances. Constraints: Maximum 100 explicitly specified instance IDs.
+    :param dict/list(dict) instance_lookups: One or more dicts of kwargs that
+      ``lookup_instance`` accepts. Used to lookup any ``instance_ids``
+      if none are provided.
+    :param bool include_all_instances: When ``True``, includes the health status
+      for all instances. When ``False``, includes the health status for running
+      instances only. Default: ``False``
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instance_status
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_instance_status``-
+      call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookups
+            or [{"instance_id": instance_id} for instance_id in instance_ids or []],
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = salt.utils.data.filter_falsey(
+            {
+                "ids": res["result"]["instance"],
+                "filters": filters,
+                "IncludeAllInstances": include_all_instances,
+            }
+        )
+    return __utils__["boto3.describe_resource"](
+        "instance_status", client=client, **params
+    )
+
+
+@arguments_to_list("instance_ids")
+def describe_instances(
+    instance_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes the specified instances or all instances.
+
+    If you specify instance IDs, the output includes information for only the specified
+    instances. If you specify filters, the output includes information for only
+    those instances that meet the filter criteria. If you do not specify instance
+    IDs or filters, the output includes information for all instances, which can
+    affect performance. We recommend that you use pagination to ensure that the
+    operation returns quickly and successfully.
+
+    If you specify an instance ID that is not valid, an error is returned. If you
+    specify an instance that you do not own, it is not included in the output.
+
+    Recently terminated instances might appear in the returned results. This interval
+    is usually less than one hour.
+
+    If you describe instances in the rare case where an Availability Zone is experiencing
+    a service disruption and you specify instance IDs that are in the affected
+    zone, or do not specify any instance IDs at all, the call fails. If you describe
+    instances and specify only instance IDs that are in an unaffected zone, the
+    call works normally.
+
+    :param str/list(str) instance_ids: The instance IDs. Default: Describes all
+      your instances.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_instances
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_instances``-call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "instance", ids=instance_ids, filters=filters, client=client,
+    )
+
+
+@arguments_to_list("internet_gateway_ids")
 def describe_internet_gateways(
     internet_gateway_ids=None,
     filters=None,
@@ -4975,18 +5532,18 @@ def describe_internet_gateways(
     """
     Describes one or more of your internet gateways.
 
-    :param str/list internet_gateway_ids: The (list of) IDs of the internet gateway(s)
-        to describe.
+    :param str/list(str) internet_gateway_ids: The (list of) IDs of the internet
+      gateway(s) to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_internet_gateways
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_internet_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_internet_gateways``-
-        call on succes.
+      with dict containing the result of the boto ``describe_internet_gateways``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_internet_gateways
     """
@@ -4997,6 +5554,80 @@ def describe_internet_gateways(
     )
 
 
+@arguments_to_list("pool_ids")
+def describe_ipv6_pools(
+    pool_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes your IPv6 address pools.
+
+    :param str/list(str): pool_ids: The IDs of the IPv6 address pools.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_ipv6_pools
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_ipv6_pools``-
+      call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.describe_resource"](
+        "ipv6_pool", ids=pool_ids, filters=filters, client=client,
+    )
+
+
+@arguments_to_list("launch_template_ids", "launch_template_names")
+def describe_launch_templates(
+    launch_template_ids=None,
+    launch_template_names=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
+    """
+    Describes one or more launch templates.
+
+    :param str/list(str) launch_template_ids: One or more launch template IDs.
+    :param str/list(str) launch_template_names: One or more launch template names.
+    :param dict filters: One or more filters. See
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_launch_templates
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_launch_templates``-
+      call on succes.
+    """
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    params = salt.utils.data.filter_falsey(
+        {"LaunchTemplateNames": launch_template_names}
+    )
+    return __utils__["boto3.describe_resource"](
+        "launch_template",
+        ids=launch_template_ids,
+        filters=filters,
+        client=client,
+        **params,
+    )
+
+
+@arguments_to_list("key_pair_ids", "key_names")
 def describe_key_pairs(
     key_pair_ids=None,
     key_names=None,
@@ -5017,6 +5648,11 @@ def describe_key_pairs(
       for a complete list.
       Note that the filters can be supplied as a dict with the keys being the
       names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_key_pairs``-call
+      on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5029,6 +5665,7 @@ def describe_key_pairs(
     )
 
 
+@arguments_to_list("local_gateway_ids")
 def describe_local_gateways(
     local_gateway_ids=None,
     filters=None,
@@ -5042,13 +5679,18 @@ def describe_local_gateways(
     Describes one or more local gateways. By default, all local gateways are described.
     Alternatively, you can filter the results.
 
-    :param str/list local_gateway_ids: The (list of) ID(s) of local gateway(s)
-        to describe.
+    :param str/list(str) local_gateway_ids: The (list of) ID(s) of local gateway(s)
+      to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_local_gateways
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_local_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_local_gateways``-call
+      on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5057,6 +5699,7 @@ def describe_local_gateways(
     )
 
 
+@arguments_to_list("nat_gateway_ids")
 def describe_nat_gateways(
     nat_gateway_ids=None,
     filters=None,
@@ -5069,17 +5712,17 @@ def describe_nat_gateways(
     """
     Describes one or more NAT Gateways.
 
-    :param str/list nat_gateway_ids: The (list of) NAT Gateway IDs to specify the NGW(s) to describe.
+    :param str/list(str) nat_gateway_ids: The (list of) NAT Gateway IDs to specify the NGW(s) to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_nat_gateways
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_nat_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_nat_gateways``-
-        call on succes.
+      with dict containing the result of the boto ``describe_nat_gateways``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_nat_gateways
     """
@@ -5090,6 +5733,7 @@ def describe_nat_gateways(
     )
 
 
+@arguments_to_list("network_acl_ids")
 def describe_network_acls(
     network_acl_ids=None,
     filters=None,
@@ -5102,17 +5746,17 @@ def describe_network_acls(
     """
     Describes one or more of your network ACLs.
 
-    :param str/list route_table_ids: The (list of) ID(s) of network ACLs to describe.
+    :param str/list(str) network_acl_ids: The (list of) ID(s) of network ACLs to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_network_acls
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_network_acls
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_network_acls``-
-        call on succes.
+      with dict containing the result of the boto ``describe_network_acls``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_network_acls
     """
@@ -5123,6 +5767,7 @@ def describe_network_acls(
     )
 
 
+@arguments_to_list("network_interface_ids")
 def describe_network_interfaces(
     network_interface_ids=None,
     filters=None,
@@ -5144,8 +5789,8 @@ def describe_network_interfaces(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_network_interfaces``-
-        call on succes.
+      with dict containing the result of the boto ``describe_network_interfaces``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5154,6 +5799,7 @@ def describe_network_interfaces(
     )
 
 
+@arguments_to_list("region_names")
 def describe_regions(
     region_names=None,
     filters=None,
@@ -5176,8 +5822,8 @@ def describe_regions(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_regions``-
-        call on succes.
+      with dict containing the result of the boto ``describe_regions``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5186,6 +5832,7 @@ def describe_regions(
     )
 
 
+@arguments_to_list("route_table_ids")
 def describe_route_tables(
     route_table_ids=None,
     filters=None,
@@ -5198,17 +5845,17 @@ def describe_route_tables(
     """
     Describes one or more of your route tables.
 
-    :param str/list route_table_ids: The (list of) ID(s) of route tables to describe.
+    :param str/list(str) route_table_ids: The (list of) ID(s) of route tables to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_route_tables
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_route_tables
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_route_tables``-
-        call on succes.
+      with dict containing the result of the boto ``describe_route_tables``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_route_tables
     """
@@ -5219,6 +5866,7 @@ def describe_route_tables(
     )
 
 
+@arguments_to_list("group_ids", "group_names")
 def describe_security_groups(
     group_ids=None,
     group_names=None,
@@ -5232,26 +5880,24 @@ def describe_security_groups(
     """
     Describes the specified security groups or all of your security groups.
 
-    :param str/list group_ids: The IDs of the security groups. Required for security
-        groups in a nondefault VPC. Default: Describes all your security groups.
-    :param str/list group_names: [EC2-Classic and default VPC only] The names of
-        the security groups. You can specify either the security group name or
-        the security group ID. For security groups in a nondefault VPC, use the
-        group-name filter to describe security groups by name.
-        Default: Describes all your security groups.
+    :param str/list(str) group_ids: The IDs of the security groups. Required for security
+      groups in a nondefault VPC. Default: Describes all your security groups.
+    :param str/list(str) group_names: [EC2-Classic and default VPC only] The names of
+      the security groups. You can specify either the security group name or
+      the security group ID. For security groups in a nondefault VPC, use the
+      group-name filter to describe security groups by name.
+      Default: Describes all your security groups.
     :param dict filters: The filters. If using multiple filters for rules, the
-        results include security groups for which any combination of rules - not
-        necessarily a single rule - match all filters.
+      results include security groups for which any combination of rules - not
+      necessarily a single rule - match all filters.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_security_groups``
-        call on succes.
+      with dict containing the result of the boto ``describe_security_groups``
+      call on succes.
 
     :depends: boto3.client('ec2').describe_security_groups
     """
-    if group_names and not isinstance(group_names, list):
-        group_names = [group_names]
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return __utils__["boto3.describe_resource"](
@@ -5263,6 +5909,7 @@ def describe_security_groups(
     )
 
 
+@arguments_to_list("snapshot_ids", "owner_ids")
 def describe_snapshots(
     snapshot_ids=None,
     owner_ids=None,
@@ -5284,13 +5931,13 @@ def describe_snapshots(
 
     The create volume permissions fall into the following categories:
 
-      - public: The owner of the snapshot granted create volume permissions for
-        the snapshot to the all group. All AWS accounts have create volume permissions
-        for these snapshots.
-      - explicit: The owner of the snapshot granted create volume permissions to
-        a specific AWS account.
-      - implicit: An AWS account has implicit create volume permissions for all
-        snapshots it owns.
+    - public: The owner of the snapshot granted create volume permissions for
+      the snapshot to the all group. All AWS accounts have create volume permissions
+      for these snapshots.
+    - explicit: The owner of the snapshot granted create volume permissions to
+      a specific AWS account.
+    - implicit: An AWS account has implicit create volume permissions for all
+      snapshots it owns.
     The list of snapshots returned can be filtered by specifying snapshot IDs,
     snapshot owners, or AWS accounts with create volume permissions. If no options
     are specified, Amazon EC2 returns all snapshots for which you have create volume
@@ -5364,8 +6011,9 @@ def describe_spot_fleet_instances(
     )
 
 
+@arguments_to_list("spot_fleet_request_ids")
 def describe_spot_fleet_requests(
-    spot_fleet_request_ids,
+    spot_fleet_request_ids=None,
     region=None,
     keyid=None,
     key=None,
@@ -5395,6 +6043,7 @@ def describe_spot_fleet_requests(
     )
 
 
+@arguments_to_list("spot_instance_request_ids")
 def describe_spot_instance_requests(
     spot_instance_request_ids=None,
     filters=None,
@@ -5455,12 +6104,12 @@ def describe_stale_security_groups(
 
     :param str vpc_id: The ID of the VPC.
     :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_stale_security_groups``-
-        call on succes.
+      with dict containing the result of the boto ``describe_stale_security_groups``-
+      call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
@@ -5471,15 +6120,12 @@ def describe_stale_security_groups(
     ) as res:
         if "error" in res:
             return res
-        params = {
-            "ids": res["result"]["vpc"],
-            "client": client,
-        }
-    return __utils__["boto3.handle_response"](
-        _describe_resource, params, "stale_security_group"
-    )
+        return __utils__["boto3.describe_resource"](
+            "stale_security_group", ids=res["result"]["vpc"], client=client,
+        )
 
 
+@arguments_to_list("subnet_ids")
 def describe_subnets(
     subnet_ids=None,
     filters=None,
@@ -5492,17 +6138,17 @@ def describe_subnets(
     """
     Describes one or more of your subnets.
 
-    :param str/list subnet_ids: The (list of) subnet IDs to specify the Subnets to describe.
+    :param str/list(str) subnet_ids: The (list of) subnet IDs to specify the Subnets to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_subnets
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_subnets
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_subnets``-call
-        on succes.
+      with dict containing the result of the boto ``describe_subnets``-call
+      on succes.
 
     :depends: boto3.client('ec2').describe_subnets
     """
@@ -5523,13 +6169,14 @@ def describe_tags(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key with
-        dict containing the tags on succes.
+      dict containing the tags on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return __utils__["boto3.describe_resource"]("tag", filters=filters, client=client,)
 
 
+@arguments_to_list("transit_gateway_ids")
 def describe_transit_gateways(
     transit_gateway_ids=None,
     filters=None,
@@ -5543,17 +6190,17 @@ def describe_transit_gateways(
     Describes one or more transit gateways. By default, all transit gateways are
     described. Alternatively, you can filter the results.
 
-    :param str/list transit_gateway_ids: The (list of) IDs of the transit gateways.
+    :param str/list(str) transit_gateway_ids: The (list of) IDs of the transit gateways.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_transit_gateways
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_transit_gateways
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_transit_gateways``-
-        call on succes.
+      with dict containing the result of the boto ``describe_transit_gateways``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5562,7 +6209,10 @@ def describe_transit_gateways(
     )
 
 
-def describe_volumes():
+@arguments_to_list("volume_ids")
+def describe_volumes(
+    volume_ids=None, filters=None, region=None, keyid=None, key=None, profile=None,
+):
     """
     Describes the specified EBS volumes or all of your EBS volumes.
 
@@ -5575,8 +6225,8 @@ def describe_volumes():
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_volumes``-call
-        on succes.
+      with dict containing the result of the boto ``describe_volumes``-call
+      on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5585,8 +6235,9 @@ def describe_volumes():
     )
 
 
+@argument_to_list("attributes")
 def describe_vpc_attributes(
-    attributes,
+    attributes=None,
     vpc_id=None,
     vpc_lookup=None,
     region=None,
@@ -5598,35 +6249,29 @@ def describe_vpc_attributes(
     """
     Describes the specified attribute(s) of the specified VPC.
 
-    :param str/list attributes: The (list of) attribute(s) to get.
-        Allowed values: ``enable_dns_support``, ``enable_dns_hostnames``
+    :param str/list(str) attributes: One or more attributes to describe.
+      Allowed values: ``enable_dns_support``, ``enable_dns_hostnames``
     :param str vpc_id: The ID of the VPC to operate on.
     :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the attributes and their values on succes.
+      with dict containing the attributes and their values on succes.
 
     :depends: boto3.client('ec2').describe_vpc_attribute
     """
-    if not any((vpc_id, vpc_lookup)):
-        raise SaltInvocationError(
-            "At least one of vpc_id or vpc_lookup must be specified."
-        )
-    if not isinstance(attributes, list):
-        attributes = [attributes]
-    ret = {}
-    if client is None:
-        client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    # We're not calling _generic_action here as that would mean it would do a
-    # vpc lookup for every attribute.
-    if vpc_id is None:
-        res = lookup_vpc(client=client, **vpc_lookup)
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
         if "error" in res:
             return res
-        vpc_id = res["result"]["VpcId"]
-    params = {"VpcId": vpc_id}
+        params = {"VpcId": res["result"]["vpc"]}
+    ret = {}
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -5641,6 +6286,7 @@ def describe_vpc_attributes(
     return {"result": ret}
 
 
+@arguments_to_list("service_ids")
 def describe_vpc_endpoint_service_configurations(
     service_ids=None,
     filters=None,
@@ -5653,17 +6299,17 @@ def describe_vpc_endpoint_service_configurations(
     """
     Describes the VPC endpoint service configurations in your account (your services).
 
-    :param str/list service_ids: The IDs of one or more services.
+    :param str/list(str) service_ids: The IDs of one or more services.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_configurations
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_configurations
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpc_endpoint_service_configurations``-
-        call on succes.
+      with dict containing the result of the boto ``describe_vpc_endpoint_service_configurations``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5692,17 +6338,17 @@ def describe_vpc_endpoint_service_permissions(
 
     :param str service_id: The ID of the service.
     :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
-        When ``service_id`` is not provided, this is required, otherwise ignored.
+      When ``service_id`` is not provided, this is required, otherwise ignored.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_permissions
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_service_permissions
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto
-        ``describe_vpc_endpoint_service_permissions``-call on succes.
+      with dict containing the result of the boto
+      ``describe_vpc_endpoint_service_permissions``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -5718,24 +6364,15 @@ def describe_vpc_endpoint_service_permissions(
     ) as res:
         if "error" in res:
             return res
-        params = salt.utils.data.filter_falsey(
-            {
-                "ServiceId": res["result"][
-                    "vpc_endpoint_service"
-                ],  # _describe_resource will pass this trough to boto via **kwargs
-                "filters": filters,
-                "client": client,
-                "region": region,
-                "keyid": keyid,
-                "key": key,
-                "profile": profile,
-            }
+        return __utils__["boto3.describe_resource"](
+            "vpc_endpoint_service_permission",
+            filters=filters,
+            client=client,
+            ServiceId=res["result"]["vpc_endpoint_service"],
         )
-    return __utils__["boto3.handle_response"](
-        _describe_resource, params, "vpc_endpoint_service_permission",
-    )
 
 
+@arguments_to_list("service_names")
 def describe_vpc_endpoint_services(
     service_names=None,
     filters=None,
@@ -5748,17 +6385,17 @@ def describe_vpc_endpoint_services(
     """
     Describes available services to which you can create a VPC endpoint.
 
-    :param str/list service_names: One or more service names.
+    :param str/list(str) service_names: One or more service names.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_services
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoint_services
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpc_endpoint_services``-
-        call on succes.
+      with dict containing the result of the boto ``describe_vpc_endpoint_services``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5770,6 +6407,7 @@ def describe_vpc_endpoint_services(
     )
 
 
+@arguments_to_list("vpc_endpoint_ids")
 def describe_vpc_endpoints(
     vpc_endpoint_ids=None,
     filters=None,
@@ -5782,17 +6420,17 @@ def describe_vpc_endpoints(
     """
     Describes one or more of your VPC endpoints.
 
-    :param str/list: The (list of) ID(s) of the VPC endpoint(s) to describe.
+    :param str/list(str) vpc_endpoint_ids: The (list of) ID(s) of the VPC endpoint(s) to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoints
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_endpoints
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpc_endpoints``-
-        call on succes.
+      with dict containing the result of the boto ``describe_vpc_endpoints``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5801,6 +6439,7 @@ def describe_vpc_endpoints(
     )
 
 
+@arguments_to_list("vpc_peering_connection_ids")
 def describe_vpc_peering_connections(
     vpc_peering_connection_ids=None,
     filters=None,
@@ -5813,18 +6452,18 @@ def describe_vpc_peering_connections(
     """
     Describes one or more of your VPC peering connections.
 
-    :param str/list vpc_peering_connection_ids: The (list of) ID(s) of VPC Peering
-        connections to describe.
+    :param str/list(str) vpc_peering_connection_ids: The (list of) ID(s) of VPC Peering
+      connections to describe.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_peering_connections
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpc_peering_connections
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpc_peering_connections``-
-        call on succes.
+      with dict containing the result of the boto ``describe_vpc_peering_connections``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpc_peering_connections
     """
@@ -5838,6 +6477,7 @@ def describe_vpc_peering_connections(
     )
 
 
+@arguments_to_list("vpc_ids")
 def describe_vpcs(
     vpc_ids=None,
     filters=None,
@@ -5850,16 +6490,16 @@ def describe_vpcs(
     """
     Describes one or more of your VPCs.
 
-    :param str/list vpc_ids: One or more VPC IDs. Default: Describes all your VPCs.
+    :param str/list(str) vpc_ids: One or more VPC IDs. Default: Describes all your VPCs.
     :param dict filters: One or more filters. See
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpcs
-        for a complete list.
-        Note that the filters can be supplied as a dict with the keys being the
-        names of the filter, and the value being either a string or a list of strings.
+      https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_vpcs
+      for a complete list.
+      Note that the filters can be supplied as a dict with the keys being the
+      names of the filter, and the value being either a string or a list of strings.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpcs``-call on succes.
+      with dict containing the result of the boto ``describe_vpcs``-call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs
     """
@@ -5870,7 +6510,15 @@ def describe_vpcs(
     )
 
 
-def describe_vpn_connections():
+@arguments_to_list("vpn_connection_ids")
+def describe_vpn_connections(
+    vpn_connection_ids=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
     Describes one or more of your VPN connections.
 
@@ -5884,7 +6532,7 @@ def describe_vpn_connections():
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpcs``-call on succes.
+      with dict containing the result of the boto ``describe_vpcs``-call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5893,6 +6541,7 @@ def describe_vpn_connections():
     )
 
 
+@arguments_to_list("vpn_gateway_ids")
 def describe_vpn_gateways(
     vpn_gateway_ids=None,
     filters=None,
@@ -5905,14 +6554,14 @@ def describe_vpn_gateways(
     """
     Describes one or more of your virtual private gateways.
 
-    :param str/list vpn_gateway_ids: One or more virtual private gateway IDs.
+    :param str/list(str) vpn_gateway_ids: One or more virtual private gateway IDs.
     :param dict filters: The filters to apply to the list of virtual private gateways
-        to describe.
+      to describe.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpn_gateways``-
-        call on succes.
+      with dict containing the result of the boto ``describe_vpn_gateways``-
+      call on succes.
     """
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
@@ -5938,15 +6587,15 @@ def detach_internet_gateway(
 
     :param str internet_gateway_id: The ID of the Internet gateway to detach.
     :param dict internet_gateway_lookup: Any kwarg that ``lookup_internet_gateway``
-        accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
-        is not provided.
+      accepts. Used to lookup the Internet gateway's ID if ``internet_gateway_id``
+      is not provided.
     :param str vpc_id: The ID of the VPC to detach from the IGW.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').detach_internet_gateway
     """
@@ -6009,6 +6658,10 @@ def detach_network_interface(
       might not get updated. This means that the attributes associated with the
       detached network interface might still be visible. The instance metadata
       will get updated when you stop and start the instance.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on succes.
     """
     if attachment_id is None:
         with __salt__["boto3_generic.lookup_resources"](
@@ -6072,6 +6725,10 @@ def detach_volume(
       a failed instance. The instance won't have an opportunity to flush file system
       caches or file system metadata. If you use this option, you must perform
       file system check and repair procedures.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``detach_volume``-call on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -6135,7 +6792,7 @@ def detach_vpn_gateway(
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
@@ -6178,19 +6835,109 @@ def detach_vpn_gateway(
     return ret
 
 
-def disable_vpc_classic_link():
+def disable_vpc_classic_link(
+    vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None,
+):
     """
+    Disables ClassicLink for a VPC. You cannot disable ClassicLink for a VPC that
+    has EC2-Classic instances linked to it.
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts. Used to lookup
+      ``vpc_id`` if it is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on success.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = salt.utils.data.filter_falsey({"VpcId": res["result"]["vpc"]})
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](client.disable_vpc_classic_link, params)
 
 
-def disable_vpc_classic_link_dns_support():
+def disable_vpc_classic_link_dns_support(
+    vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None,
+):
     """
+    Disables ClassicLink DNS support for a VPC. If disabled, DNS hostnames resolve
+    to public IP addresses when addressed between a linked EC2-Classic instance
+    and instances in the VPC to which it's linked. For more information, see ClassicLink
+    in the Amazon Elastic Compute Cloud User Guide .
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts. Used to lookup
+      ``vpc_id`` if it is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on success.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = salt.utils.data.filter_falsey({"VpcId": res["result"]["vpc"]})
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](
+        client.disable_vpc_classic_link_dns_support, params
+    )
 
 
-def disassociate_address():
+def disassociate_address(
+    association_id=None,
+    address_lookup=None,
+    public_ip=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
     """
+    Disassociates an Elastic IP address from the instance or network interface
+    it's associated with.
+
+    :param str association_id: [EC2-VPC] The association ID.
+    :param dict address_lookup: Any kwarg that ``lookup_address`` accepts. Used
+      to lookup ``association_id`` if it is not provided.
+    :param str public_ip: [EC2-Classic] The Elastic IP address.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on succes.
     """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "address",
+            "kwargs": address_lookup or {"association_id": association_id},
+            "result_keys": "AssociationId",
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = salt.utils.data.filter_falsey(
+            {"AssociationId": res["result"]["address"], "PublicIp": public_ip}
+        )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](client.disassociate_address, params)
 
 
 def disassociate_route_table(
@@ -6211,25 +6958,25 @@ def disassociate_route_table(
     route table. Instead, it uses the routes in the VPC's main route table.
 
     :param str association_id: The association ID of the route table-subnet association.
-        If this is not known, it will be looked up using describe_route_tables
-        and the route_table- and subnet-information below.
+      If this is not known, it will be looked up using describe_route_tables
+      and the route_table- and subnet-information below.
     :param str route_table_id: The ID of the route table to disassociate.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str subnet_id: The ID of the subnet to disassociate from.
-        If ``association_subnet_id`` is present in ``route_table_lookup``, that
-        is assumed to be the subnet_id to disassociate from and this argument
-        is ignored.
+      If ``association_subnet_id`` is present in ``route_table_lookup``, that
+      is assumed to be the subnet_id to disassociate from and this argument
+      is ignored.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the subnet's ID if ``subnet_id`` is not provided.
-        If ``association_subnet_id`` is present in ``route_table_lookup``, that
-        is assumed to be the subnet_id to disassociate from, negating the need
-        for a subnet lookup.
+      Used to lookup the subnet's ID if ``subnet_id`` is not provided.
+      If ``association_subnet_id`` is present in ``route_table_lookup``, that
+      is assumed to be the subnet_id to disassociate from, negating the need
+      for a subnet lookup.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``disassociate_route_table``-
-        call on succes.
+      with dict containing the result of the boto ``disassociate_route_table``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_route_tables, boto3.client('ec2').disassociate_route_table
     """
@@ -6298,18 +7045,18 @@ def disassociate_subnet_cidr_block(
 
     :param str association_id: The association ID for the CIDR block.
     :param str ipv6_cidr_block: The IPv6 CIDR block to disassociate.
-        Provide this together with ``subnet_id`` or ``subnet_lookup`` if you want
-        the association_id looked up. Since a subnet can only be associated with
-        a single ipv6_cidr_block, this argument is optional.
+      Provide this together with ``subnet_id`` or ``subnet_lookup`` if you want
+      the association_id looked up. Since a subnet can only be associated with
+      a single ipv6_cidr_block, this argument is optional.
     :param str subnet_id: The ID of the subnet to work on.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
+      Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
     :param bool blocking: Block until the ipv6_cidr_block has been disassociated.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``disassociate_subnet_cidr_block``-
-        call on succes.
+      with dict containing the result of the boto ``disassociate_subnet_cidr_block``-
+      call on succes.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_subnets, boto3.client('ec2').disassociate_subnet_cidr_block
     """
@@ -6328,22 +7075,21 @@ def disassociate_subnet_cidr_block(
         ) as res:
             if "error" in res:
                 return res
-            current_ipv6_association = res["subnet"]
+            current_ipv6_association = res["result"]["subnet"]
         if not current_ipv6_association:
             return {
                 "error": "The subnet specified does not have an IPv6 CIDR block association"
             }
-        current_associated_ipv6_cidr_block = current_ipv6_association[0][
-            "Ipv6Cidrblock"
+        current_associated_ipv6_cidr_block = [
+            item
+            for item in current_ipv6_association
+            if item["Ipv6CidrBlock"] == ipv6_cidr_block
         ]
-        if (
-            ipv6_cidr_block is not None
-            and current_associated_ipv6_cidr_block != ipv6_cidr_block
-        ):
+        if not current_associated_ipv6_cidr_block:
             return {
-                "error": "The subnet specified has a different cidr block associated than specified for removal."
+                "error": "The subnet does not have the specified IPv6 CIDR block associated."
             }
-        association_id = current_ipv6_association[0]["AssociationId"]
+        association_id = current_associated_ipv6_cidr_block[0]["AssociationId"]
     params = {"AssociationId": association_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     res = __utils__["boto3.handle_response"](
@@ -6352,8 +7098,12 @@ def disassociate_subnet_cidr_block(
     if "error" in res:
         return res
     if blocking:
-        # TODO: Implement custom boto waiters here.
-        pass
+        params = __utils__["boto3.dict_to_boto_filters"](
+            {"ipv6-cidr-block-association.association_id": association_id}
+        )
+        __utils__["boto3.wait_resource"](
+            "subnet_ipv6_cidr_block", "disassociated", params=params, client=client,
+        )
     return {"result": True}
 
 
@@ -6376,19 +7126,21 @@ def disassociate_vpc_cidr_block(
 
     :param str association_id: The ID of the association to remove.
     :param str vpc_lookup: Any kwarg that lookup_vpc accepts.
-        This is used to lookup the association_id. As such, it must contain the
-        either the kwarg ``cidr_block`` or ``ipv6_cidr_block`` to specify the exact
-        IPv4/IPv6 CIDR block to disassociate.
-        When ``association_id`` is not provided, this is required, otherwise ignored.
+      This is used to lookup the association_id. As such, it must contain the
+      either the kwarg ``cidr_block`` or ``ipv6_cidr_block`` to specify the exact
+      IPv4/IPv6 CIDR block to disassociate.
+      When ``association_id`` is not provided, this is required, otherwise ignored.
     :param bool blocking: Wait for the disassociation to be complete.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``disassociate_vpc_cidr_block``-
-        call on succes.
+      with dict containing the result of the boto ``disassociate_vpc_cidr_block``-
+      call on succes.
 
     :depends: boto3.client('ec2').disassociate_vpc_cidr_block
     """
+    # The annoying thing here is that if association_id is given, we don't know
+    # whether that's an IPv4 CIDR block or an IPv6 CIDR block ...
     if association_id is None:
         if not vpc_lookup:
             raise SaltInvocationError("vpc_lookup is required.")
@@ -6396,12 +7148,25 @@ def disassociate_vpc_cidr_block(
             raise SaltinvocationError(
                 'vpc_lookup must contain an entry for either "cidr_block" or "ipv6_cidr_block".'
             )
+        else:
+            cidr_block_type = "ipv6" if "ipv6_cidr_block" in vpc_lookup else ""
+    # ... So we will have to lookup both ...
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
             "name": "vpc",
-            "kwargs": vpc_lookup or {"association_id": association_id},
-            "result_keys": "CidrBlockAssociationSet:0:AssociationId",
+            "kwargs": vpc_lookup
+            or {"cidr-block-association.association-id": association_id},
+            "result_keys": "CidrBlockAssociationSet",
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "vpc",
+            "as": "vpc6",
+            "kwargs": {"ipv6-cidr-block-association.association-id": association_id},
+            "result_keys": "Ipv6CidrBlockAssociationSet",
+            "required": False,
         },
         region=region,
         keyid=keyid,
@@ -6411,15 +7176,163 @@ def disassociate_vpc_cidr_block(
         if "error" in res:
             return res
         res = res["result"]
-        params = {"AssociationId": res["vpc"]}
+        # ... And figure out which one it was ...
+        if association_id:
+            matching_ipv4_cidr_blocks = [
+                item for item in res["vpc"] if item["AssociationId"] == association_id
+            ]
+            matching_ipv6_cidr_blocks = [
+                item for item in res["vpc6"] if item["AssociationId"] == association_id
+            ]
+            if not any((matching_ipv4_cidr_blocks, matching_ipv6_cidr_blocks)):
+                raise SaltInvocationError(
+                    "No VPC found with matching associated IPv4 or IPv6 CIDR blocks."
+                )
+        else:
+            matching_ipv4_cidr_blocks = [
+                item
+                for item in res["vpc"]
+                if item["CidrBlock"] == vpc_lookup.get("cidr_block")
+            ]
+            matching_ipv6_cidr_blocks = [
+                item
+                for item in res["vpc6"]
+                if item["Ipv6CidrBlock"] == vpc_lookup.get("ipv6_cidr_block")
+            ]
+        cidr_block_type = "ipv6" if matching_ipv6_cidr_blocks else ""
+        res = (
+            res["result"]["vpc6"][0]
+            if matching_ipv6_cidr_blocks
+            else res["result"]["vpc"][0]
+        )
+        association_id = res["vpc{}".format("6" if cidr_block_type else "")][
+            "AssociationId"
+        ]
+        params = {"AssociationId": association_id}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     res = __utils__["boto3.handle_response"](client.disassociate_vpc_cidr_block, params)
     if "error" in res:
         return res
     if blocking:
-        # TODO: Implement custom waiter
-        pass
+        # ... All so we can wait for the correct CIDR block to be disassociated.
+        params = __utils__["boto3.dict_to_boto_filters"](
+            {
+                "{}{}cidr-block-association.association_id".format(
+                    cidr_block_type, "-" if cidr_block_type else ""
+                ): association_id
+            }
+        )
+        res = __utils__["boto3.wait_resource"](
+            "vpc_{}{}cidr_block".format(
+                cidr_block_type, "_" if cidr_block_type else ""
+            ),
+            "disassociated",
+            params=params,
+            client=client,
+        )
+        if "error" in res:
+            return res
     return {"result": True}
+
+
+def enable_vpc_classic_link(
+    vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None,
+):
+    """
+    Enables a VPC for ClassicLink. You can then link EC2-Classic instances to your
+    ClassicLink-enabled VPC to allow communication over private IP addresses. You
+    cannot enable your VPC for ClassicLink if any of your VPC route tables have
+    existing routes for address ranges within the 10.0.0.0/8 IP address range,
+    excluding local routes for VPCs in the 10.0.0.0/16 and 10.1.0.0/16 IP address ranges.
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts. Used to lookup
+      ``vpc_id`` if it is not provided.
+
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``enable_vpc_classic_link``-
+      call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"VpcId": res["result"]["vpc"]}
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](client.enable_vpc_classic_link, params)
+
+
+def enable_vpc_classic_link_dns_support(
+    vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None,
+):
+    """
+    Enables a VPC to support DNS hostname resolution for ClassicLink. If enabled,
+    the DNS hostname of a linked EC2-Classic instance resolves to its private IP
+    address when addressed from an instance in the VPC to which it's linked. Similarly,
+    the DNS hostname of an instance in a VPC resolves to its private IP address
+    when addressed from a linked EC2-Classic instance.
+
+    :param str vpc_id: The ID of the VPC.
+    :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts. Used to lookup
+      ``vpc_id`` if it is not provided.
+
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``enable_vpc_classic_link_dns_support``-
+      call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"VpcId": res["result"]["vpc"]}
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](
+        client.enable_vpc_classic_link_dns_support, params
+    )
+
+
+def import_key_pair(
+    key_name,
+    public_key_material,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Imports the public key from an RSA key pair that you created with a third-party
+    tool. Compare this with :py:func:`create_key_pair`, in which AWS creates the
+    key pair and gives the keys to you (AWS keeps a copy of the public key).
+    With :py:func:`import_key_pair`, you create the key pair and give AWS just
+    the public key. The private key is never transferred between you and AWS.
+
+    :param str key_name: A unique name for the key pair.
+    :param str public_key_material: The base64-encoded public key.
+    :param dict tags: The tags to apply to the imported key pair.
+    """
+    params = {
+        "KeyName": key_name,
+        "PublicKeyMaterial": public_key_material,
+    }
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.create_resource"](
+        "key_pair",
+        boto_function_name="import_key_pair",
+        params=params,
+        tags=tags,
+        client=client,
+    )
 
 
 def lookup_availability_zone(
@@ -6442,27 +7355,27 @@ def lookup_availability_zone(
     Can also be used to determine if an Availability Zone exists.
 
     :param str zone_id: The ID of the Availability Zone (for example, ``use1-az1``)
-        or the Local Zone (for example, use ``usw2-lax1-az1``).
+      or the Local Zone (for example, use ``usw2-lax1-az1``).
     :param str zone_name: The name of the Availability Zone (for example, ``us-east-1a``)
-        or the Local Zone (for example, use ``us-west-2-lax-1a``).
+      or the Local Zone (for example, use ``us-west-2-lax-1a``).
     :param str group_name: For Availability Zones, use the Region name. For Local
-        Zones, use the name of the group associated with the Local Zone (for example,
-        ``us-west-2-lax-1``).
+      Zones, use the name of the group associated with the Local Zone (for example,
+      ``us-west-2-lax-1``).
     :param str message: The Zone message.
     :param str opt_in_status: The opt in status.
-        Allowed values: opted-in, not-opted-in, opt-in-not-required.
+      Allowed values: opted-in, not-opted-in, opt-in-not-required.
     :param str region_name: The name of the Region for the Zone (for example, ``us-east-1``).
     :param str state: The state of the Availability Zone or Local Zone.
-        Allowed values: available, information, impaired, unavailable.
+      Allowed values: available, information, impaired, unavailable.
     :param str zone_type: The type of zone, for example, ``local-zone``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_availability_zones``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_availability_zones``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_availability_zone
     """
@@ -6518,40 +7431,40 @@ def lookup_address(
     The following paramers are translated into filters to refine the lookup:
 
     :param str allocation_name: The ``Name``-tag of the address.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str allocation_id: [EC2-VPC] The allocation ID for the address.
     :param str association_id: [EC2-VPC] The association ID for the address.
     :param str domain: Indicates whether the address is for use in EC2-Classic
-        (``standard``) or in a VPC (``vpc``).
+      (``standard``) or in a VPC (``vpc``).
     :param str instance_id: The ID of the instance the address is associated
-        with, if any.
+      with, if any.
     :param dict instance_lookup: Any kwarg that ``lookup_instance``
-        accepts. Used to lookup ``instance_id`` if it is not provided.
+      accepts. Used to lookup ``instance_id`` if it is not provided.
     :param str network_border_group: The location from where the IP address is
-        advertised.
+      advertised.
     :param str network_interface_id: [EC2-VPC] The ID of the network interface
-        that the address is associated with, if any.
+      that the address is associated with, if any.
     :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup ``network_interface_id`` if it is not provided.
+      accepts. Used to lookup ``network_interface_id`` if it is not provided.
     :param str network_interface_owner_id:  The AWS account ID of the owner.
     :param str private_ip_address:  [EC2-VPC] The private IP address associated
-        with the Elastic IP address.
+      with the Elastic IP address.
     :param str public_ip: The Elastic IP address.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the Elastic IP.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_addresses``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_addresses``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_addresses
     """
@@ -6623,30 +7536,30 @@ def lookup_customer_gateway(
 
     :param str customer_gateway_id: ID of the VPN customer gateway.
     :param str customer_gateway_name: The ``Name``-tag of the VPN customer gateway.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str bgp_asn: The customer gateway's Border Gateway Protocol (BGP)
-        Autonomous System Number (ASN).
+      Autonomous System Number (ASN).
     :param str ip_address: The IP address of the customer gateway's Internet-routable
-        external interface.
+      external interface.
     :param str state: The state of the customer gateway.
-        Allowed values: pending, available, deleting, deleted.
+      Allowed values: pending, available, deleting, deleted.
     :param str gateway_type: The type of customer gateway. Currently, the only
-        supported type is ipsec.1
+      supported type is ipsec.1
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPN customer gateway.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_customer_gateways``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_customer_gateways``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_customer_gateways
     """
@@ -6698,7 +7611,7 @@ def lookup_dhcp_options(
 
     :param str dhcp_options_id: ID of the DHCP options set.
     :param str dhcp_options_name: The ``Name``-tag of the DHCP options set.
-        If also specifying ``Name`` in ``tags``, this option is ignored.
+      If also specifying ``Name`` in ``tags``, this option is ignored.
     :param list domain_name_servers: Value of this option.
     :param str domain_name: Value of this option.
     :param list ntp_servers: Value of this option.
@@ -6707,19 +7620,19 @@ def lookup_dhcp_options(
     :param str owner_id: The ID of the AWS account that owns the DHCP options set.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the DHCP options.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_dhcp_options``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_dhcp_options``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_dhcp_options
     """
@@ -6833,12 +7746,19 @@ def lookup_image(
       networking with the Intel 82599 VF interface is enabled.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param str virtualization_type: The virtualization type. Allowed values: paravirtual, hvm.
     :param dict filters: Dict with filters to identify the Image.
       Note that for any of the values supplied in the arguments above that also
       occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_image``-call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if filters is None:
         filters = {}
@@ -6909,28 +7829,28 @@ def lookup_internet_gateway(
 
     :param str internet_gateway_id: ID of the Internet gateway.
     :param str internet_gateway_name: The ``Name``-tag of the Internet gateway.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str attachment_state: The current state of the attachment between the
-        gateway and the VPC (``available``). Present only if a VPC is attached.
+      gateway and the VPC (``available``). Present only if a VPC is attached.
     :param str attachment_vpc_id: The ID of an attached VPC.
     :param dict attachment_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``attachment_vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``attachment_vpc_id`` is not provided.
     :param str owner_id: The ID of the AWS account that owns the internet gateway.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the Internet gateway.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_internet_gateways``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_internet_gateways``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_internet_gateways
     """
@@ -6967,7 +7887,19 @@ def lookup_internet_gateway(
     )
 
 
-def lookup_key_pair():
+def lookup_key_pair(
+    key_pair_id=None,
+    fingerprint=None,
+    key_name=None,
+    tag_key=None,
+    tags=None,
+    filters=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+    client=None,
+):
     """
     Helper function to find a single key pair.
     Can also be used to determine if a key pair exists.
@@ -6982,16 +7914,16 @@ def lookup_key_pair():
       the tag value.
     :param dict tags: The tags to filter on.
     :param dict filters: Dict with filters to identify the key pair.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_key_pairs``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_key_pairs``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if filters is None:
         filters = {}
@@ -7037,26 +7969,26 @@ def lookup_local_gateway(
 
     :param str local_gateway_id: The ID of a local gateway.
     :param str local_gateway_name: The ``Name``-tag of a local gateway.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str route_table_id: The ID of the local gateway route table.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str association_id: The ID of the association.
     :param str virtual_interface_group_id: The ID of the virtual interface group.
     :param str outpost_arn: The Amazon Resouce Name of the Outpost.
     :param str state: The state of the association.
     :param dict tags: Any tags to filter on.
     :param dict filters: Dict with filters to identify the local gateway.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_local_gateways``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_local_gateways``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if route_table_id is None and route_table_lookup is not None:
         res = lookup_route_table(
@@ -7117,32 +8049,32 @@ def lookup_nat_gateway(
 
     :param str nat_gateway_id: ID of the NAT gateway.
     :param str nat_gateway_name: The ``Name``-tag of the NAT gateway.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
-    :param str state: The state of the NAT gateway:
-        (``pending`` | ``failed`` | ``available`` | ``deleting`` | ``deleted``).
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
+    :param str state: The state of the NAT gateway. Allowed values:
+      ``pending``, ``failed``, ``available``, ``deleting``, ``deleted``.
     :param str subnet_id: The ID of the subnet in which the NAT gateway resides.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the subnet's ID if ``subnet_id`` is not provided.
-        If ``vpc_id`` or ``vpc_lookup`` are provided, the resulting VPC ID will
-        be used in the lookup of the subnet.
+      Used to lookup the subnet's ID if ``subnet_id`` is not provided.
+      If ``vpc_id`` or ``vpc_lookup`` are provided, the resulting VPC ID will
+      be used in the lookup of the subnet.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param str vpc_id: The ID of the VPC in which the NAT gateway resides.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the vpc's ID if ``vpc_id`` is not provided.
+      Used to lookup the vpc's ID if ``vpc_id`` is not provided.
     :param dict filters: Dict with filters to identify the NAT gateway.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_nat_gateways``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_nat_gateways``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_nat_gateways
     """
@@ -7230,19 +8162,19 @@ def lookup_network_acl(
 
     :param str network_acl_id: ID of the network ACL.
     :param str network_acl_name: The ``Name``-tag of the network ACL.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str vpc_id: The ID of the VPC for the network ACL.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param str association_id: The ID of an association ID for the ACL.
     :param str association_network_acl_id: The ID of the network ACL involved in
-        the association.
+      the association.
     :param str assocation_subnet_id: The ID of the subnet involved in the association.
     :param dict association_subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the associated subnet ID if ``association_subnet_id`` is
-        not provided.
+      Used to lookup the associated subnet ID if ``association_subnet_id`` is
+      not provided.
     :param bool default: Indicates whether the ACL is the default network ACL for
-        the VPC.
+      the VPC.
     :param str entry_cidr: The IPv4 CIDR range specified in the entry.
     :param int entry_icmp_code: The ICMP code specified in the entry, if any.
     :param int entry_icmp_type: The ICMP type specified in the entry, if any.
@@ -7250,27 +8182,27 @@ def lookup_network_acl(
     :param int entry_port_range_from: The start of the port range specified in the entry.
     :param int entry_port_range_to: The end of the port range specified in the entry.
     :param str entry_protocol: The protocol specified in the entry.
-        Allowed values: tcp, udp, icmp or a protocol number.
+      Allowed values: tcp, udp, icmp or a protocol number.
     :param str entry_rule_action: Allows or denies the matching traffic.
-        Allowed values: allow, deny.
+      Allowed values: allow, deny.
     :param str entry_rule_number: The number of an entry (in other words, rule)
-        in the set of ACL entries.
+      in the set of ACL entries.
     :param str owner_id:  The ID of the AWS account that owns the network ACL.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the network ACL.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_network_acls``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_network_acls``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_network_acls
     """
@@ -7370,59 +8302,59 @@ def lookup_route_table(
 
     :param str route_table_id: ID of the route table.
     :param str route_table_name: The ``Name``-tag of the route table.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str vpc_id: The ID of the VPC for the route table.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param str association_id: The ID of an association ID for the route table.
     :param str association_route_table_id: The ID of the route table involved in
-        the association.
+      the association.
     :param str association_subnet_id: The ID of the subnet involved in the association.
     :param dict association_subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Use dto lookup the subnet's ID if ``association_subnet_id`` is not provided.
+      Use dto lookup the subnet's ID if ``association_subnet_id`` is not provided.
     :param bool association_main: Indicates whether the route table is the main
-        route table for the VPC. Route tables that do not have an association ID
-        are not returned in the response.
+      route table for the VPC. Route tables that do not have an association ID
+      are not returned in the response.
     :param str owner_id: The ID of the AWS account that owns the route table.
     :param str route_destination_cidr_block: The IPv4 CIDR range specified in a
-        route in the table.
+      route in the table.
     :param str route_destination_ipv6_cidr_block: The IPv6 CIDR range specified
-        in a route in the route table.
+      in a route in the route table.
     :param str route_destination_prefix_list_id: The ID (prefix) of the AWS service
-        specified in a route in the table.
+      specified in a route in the table.
     :param str route_egress_only_internet_gateway_id:  The ID of an egress-only
-        Internet gateway specified in a route in the route table.
+      Internet gateway specified in a route in the route table.
     :param str route_gateway_id: The ID of a gateway specified in a route in the table.
     :param str route_instance_id: The ID of an instance specified in a route in
-        the table.
+      the table.
     :param str route_nat_gateway_id: The ID of a NAT gateway.
     :param str route_transit_gateway_id: The ID of a transit gateway.
     :param str route_origin: Describes how the route was created. ``CreateRouteTable``
-        indicates that the route was automatically created when the route table
-        was created; ``CreateRoute`` indicates that the route was manually added
-        to the route table; ``EnableVgwRoutePropagation`` indicates that the route
-        was propagated by route propagation.
+      indicates that the route was automatically created when the route table
+      was created; ``CreateRoute`` indicates that the route was manually added
+      to the route table; ``EnableVgwRoutePropagation`` indicates that the route
+      was propagated by route propagation.
     :param str route_state: The state of a route in the route table. Allowed values:
-        ``active``, ``blackhole``. The blackhole state indicates that the route's
-        target isn't available (for example, the specified gateway isn't attached
-        to the VPC, the specified NAT instance has been terminated, and so on).
+      ``active``, ``blackhole``. The blackhole state indicates that the route's
+      target isn't available (for example, the specified gateway isn't attached
+      to the VPC, the specified NAT instance has been terminated, and so on).
     :param str route_vpc_peering_connection_id: The ID of a VPC peering connection
-        specified in a route in the table.
+      specified in a route in the table.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the route table.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_route_tables``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_route_tables``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_route_tables
     """
@@ -7517,52 +8449,60 @@ def lookup_security_group(
     :param str group_name: The name of the security group.
     :param str description: The description of the security group.
     :param str egress_ip_permission_cidr: An IPv4 CIDR block for an outbound
-        security group rule.
+      security group rule.
     :param int egress_ip_permission_from_port: For an outbound rule, the start
-        of port range for the TCP and UDP protocols, or an ICMP type number.
+      of port range for the TCP and UDP protocols, or an ICMP type number.
     :param str egress_ip_permission_group_id: The ID of a security group that
-        has been referenced in an outbound security group rule.
+      has been referenced in an outbound security group rule.
     :param str egress_ip_permission_group_name: The name of a security group
-        that has been referenced in an outbound security group rule.
+      that has been referenced in an outbound security group rule.
     :param str egress_ip_permission_ipv6_cidr: An IPv6 CIDR block for an outbound
-        security group rule.
+      security group rule.
     :param str egress_ip_permission_prefix_list_id: The ID of a prefix list to
-        which a security group rule allows outbound access.
+      which a security group rule allows outbound access.
     :param str egress_ip_permission_protocol: The IP protocol for an outbound
-        security group rule. Allowed values: tcp, udp, icmp or a protocol number.
+      security group rule. Allowed values: tcp, udp, icmp or a protocol number.
     :param int egress_ip_permission_to_port: For an outbound rule, the end of
-        port range for the TCP and UDP protocols, or an ICMP code.
+      port range for the TCP and UDP protocols, or an ICMP code.
     :param str egress_ip_permission_user_id: The ID of an AWS account that has
-        been referenced in an outbound security group rule.
+      been referenced in an outbound security group rule.
     :param str ip_permission_cidr: An IPv4 CIDR block for an inbound security
-        group rule.
+      group rule.
     :param int ip_permission_from_port: For an inbound rule, the start of port
-        range for the TCP and UDP protocols, or an ICMP type number.
+      range for the TCP and UDP protocols, or an ICMP type number.
     :param str ip_permission_group_id: The ID of a security group that has been
-        referenced in an inbound security group rule.
+      referenced in an inbound security group rule.
     :param str ip_permission_group_name: The name of a security group that has
-        been referenced in an inbound security group rule.
+      been referenced in an inbound security group rule.
     :param str ip_permission_ipv6_cidr: An IPv6 CIDR block for an inbound security
-        group rule.
+      group rule.
     :param str ip_permission_prefix_list_id: The ID of a prefix list from which
-        a security group rule allows inbound access.
+      a security group rule allows inbound access.
     :param str ip_permission_protocol: The IP protocol for an inbound security
-        group rule. Allowed values: tcp, udp, icmp or a protocol number.
+      group rule. Allowed values: tcp, udp, icmp or a protocol number.
     :param int ip_permission_to_port: For an inbound rule, the end of port range
-        for the TCP and UDP protocols, or an ICMP code.
+      for the TCP and UDP protocols, or an ICMP code.
     :param str ip_permission_user_id: The ID of an AWS account that has been referenced
-        in an inbound security group rule.
+      in an inbound security group rule.
     :param str owner_id: The AWS account ID of the owner of the security group.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param str vpc_id: The ID of the VPC specified when the security group was created.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param dict filters: Dict with filters to identify the security group.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_security_groups``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if vpc_id is None and vpc_lookup is not None:
         res = lookup_vpc(
@@ -7643,42 +8583,42 @@ def lookup_subnet(
 
     :param str subnet_id: ID of the subnet.
     :param str subnet_name: The ``Name``-tag of the subnet.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str subnet_arn: The Amaxon Resource Name (ARN) of the subnet.
     :param str vpc_id: The ID of the VPC for the subnet.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup the VPC's ID if ``vpc_id`` is not provided.
+      Used to lookup the VPC's ID if ``vpc_id`` is not provided.
     :param str availability_zone: The Availability Zone for the subnet.
     :param str availability_zone_id: The ID of the Availability Zone for the subnet.
     :param str available_ip_address_count: The number of IPv4 addresses in the
-        subnet that are available.
+      subnet that are available.
     :param str cidr_block: The IPv4 CIDR block of the subnet. The CIDR block you
-        specify must exactly match the subnet's CIDR block for information to be
-        returned for the subnet.
+      specify must exactly match the subnet's CIDR block for information to be
+      returned for the subnet.
     :param bool default_for_az: Indicates whether this is the default subnet for
-        the Availability Zone.
+      the Availability Zone.
     :param str ipv6_cidr_block: An IPv6 CIDR block associated with the subnet.
     :param str ipv6_cidr_block_association_id: An association ID for an IPv6 CIDR
-        block associated with the subnet.
+      block associated with the subnet.
     :param str ipv6_cidr_block_state: The state of an IPv6 CIDR block associated
-        with the subnet.
+      with the subnet.
     :param str owner_id:  The ID of the AWS account that owns the subnet.
     :param str state: The state of the subnet (``pending`` | ``available``).
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the subnet.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_subnets``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_subnets``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets
     """
@@ -7746,24 +8686,24 @@ def lookup_tag(
     :param str tag_key: The tag key to filter on regardless of value.
     :param str resource_id: The ID of the resource to filter on.
     :param str resource_type: The resource type to filter on. Allowed values:
-        customer-gateway, dedicated-host, dhcp-options, elastic-ip, fleet, fpga-image,
-        host-reservation, image, instance, internet-gateway, key-pair, launch-template,
-        natgateway, network-acl, network-interface, placement-group, reserved-instances,
-        route-table, security-group, snapshot, spot-instances-request, subnet, volume,
-        vpc, vpc-endpoint, vpc-endpoint-service, vpc-peering-connection, vpn-connection,
-        vpn-gateway.
+      customer-gateway, dedicated-host, dhcp-options, elastic-ip, fleet, fpga-image,
+      host-reservation, image, instance, internet-gateway, key-pair, launch-template,
+      natgateway, network-acl, network-interface, placement-group, reserved-instances,
+      route-table, security-group, snapshot, spot-instances-request, subnet, volume,
+      vpc, vpc-endpoint, vpc-endpoint-service, vpc-peering-connection, vpn-connection,
+      vpn-gateway.
     :param dict tags: Tags to filter on.
     :param str tag_value: The tag value to filter on, regardless of key.
     :param dict filters: The dict with filters to specify the resource to
-        describe tags of.
+      describe tags of.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_tags``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_tags``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_tags
     """
@@ -7818,48 +8758,48 @@ def lookup_vpc(
 
     :param str vpc_id: ID of the VPC.
     :param str vpc_name: The ``Name``-tag of the VPC.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str cidr: The primary IPv4 CIDR block of the VPC. The CIDR block you
-        specify must exactly match the VPC's CIDR block for information to be
-        returned for the VPC. Must contain the slash followed by one or two digits
-        (for example, ``/28`` ).
+      specify must exactly match the VPC's CIDR block for information to be
+      returned for the VPC. Must contain the slash followed by one or two digits
+      (for example, ``/28`` ).
     :param str cidr_block: An IPv4 CIDR block associated with the VPC.
     :param str cidr_block_association_id: The association ID for an IPv4 CIDR
-        block associated with the VPC.
+      block associated with the VPC.
     :param str cidr_block_state: The state of an IPv4 CIDR block associated with
-        the VPC.
+      the VPC.
     :param str dhcp_options_id: The ID of a set of DHCP options.
     :param str ipv6_cidr_block: An IPv6 CIDR block associated with the VPC.
     :param str ipv6_cidr_block_pool: The ID of the IPv6 address pool from which
-        the IPv6 CIDR block is allocated.
+      the IPv6 CIDR block is allocated.
     :param str ipv6_cidr_block_association_id: The association ID for an IPv6
-        CIDR block associated with the VPC.
+      CIDR block associated with the VPC.
     :param str ipv6_cidr_block_state: The state of an IPv6 CIDR block associated
-        with the VPC.
+      with the VPC.
     :param str is_default: Indicates whether the VPC is the default VPC.
     :param str owner_id: The ID of the AWS account that owns the VPC.
     :param str state: The state of the VPC (``pending`` | ``available``).
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPC.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
     :param str region: The region to connect to to perform the lookup.
     :param str keyid: The AWS Access key to use to perform the lookup.
     :param str key: The AWS secret key to use to perform the lookup.
     :param str profile: The Boto3 authentication profile to use to perform the lookup.
     :param object client: An already connected Boto3 client object to use to
-        perform the lookup.
+      perform the lookup.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpcs``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_vpcs``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_vpcs
     """
@@ -7917,20 +8857,28 @@ def lookup_vpc_endpoint(
 
     :param str vpc_endpoint_id: The ID of the endpoint.
     :param str vpc_endpoint_name: The ``Name``-tag of the VPC endpoint.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str service_name: The name of the service.
     :param str vpc_id: The ID of the VPC in which the endpoint resides.
     :param dict vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup ``vpc_id`` if it is not provided.
+      Used to lookup ``vpc_id`` if it is not provided.
     :param str vpc_endpoint_state: The state of the endpoint. Allowed values:
-        pendingAcceptance, pending, available, deleting, deleted, rejected, failed.
+      pendingAcceptance, pending, available, deleting, deleted, rejected, failed.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPC endpoint.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_vpc_endpoints``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if vpc_id is None and vpc_lookup is not None:
         res = lookup_vpc(
@@ -7984,11 +8932,19 @@ def lookup_vpc_endpoint_service(
     :param str service_name: The name of the service.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPC endpoint service.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_vpc_endpoint_services``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if filters is None:
         filters = {}
@@ -8030,14 +8986,22 @@ def lookup_vpc_endpoint_service_configuration(
     :param str service_name: The name of the service.
     :param str service_id: The ID of the service.
     :param str service_state: The state of the service. Allowed values: Pending,
-        Available, Deleting, Deleted, Failed.
+      Available, Deleting, Deleted, Failed.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPC peering connection.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``describe_vpc_endpoint_service_configurations``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if filters is None:
         filters = {}
@@ -8093,48 +9057,48 @@ def lookup_vpc_peering_connection(
 
     :param str vpc_peering_connection_id: ID of the VPC peering connection.
     :param str vpc_peering_connection_name: The ``Name``-tag of the VPC peering
-        connection.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      connection.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str accepter_vpc_cidr_block: The IPv4 CIDR block of the accepter VPC.
     :param str accepter_vpc_owner_id:  The AWS account ID of the owner of the
-        accepter VPC.
+      accepter VPC.
     :param str accepter_vpc_id: The ID of the accepter VPC.
     :param dict accepter_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup ``accepter_vpc_id`` if it is not provided.
-        It is allowed to provide alternative credentials in this dict if the owner
-        of the accepter VPC is different from the account that is used to perform
-        this lookup.
+      Used to lookup ``accepter_vpc_id`` if it is not provided.
+      It is allowed to provide alternative credentials in this dict if the owner
+      of the accepter VPC is different from the account that is used to perform
+      this lookup.
     :param datetime expiration_time: The expiration date and time for the VPC
-        peering connection.
+      peering connection.
     :param str requester_vpc_cidr_block: The IPv4 CIDR block of the requester's VPC.
     :param str requester_vpc_owner_id: The AWS account ID of the owner of the
-        requester VPC.
+      requester VPC.
     :param str requester_vpc_id: The ID of the requester VPC.
     :param dict requester_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup ``requester_vpc_id`` if it is not provided.
-        It is allowed to provide alternative credentials in this dict if the owner
-        of the requester VPC is different from the account that is used to perform
-        this lookup.
+      Used to lookup ``requester_vpc_id`` if it is not provided.
+      It is allowed to provide alternative credentials in this dict if the owner
+      of the requester VPC is different from the account that is used to perform
+      this lookup.
     :param str status_code: The status of the VPC peering connection.
-        Allowed values: pending-acceptance, failed, expired, provisioning, active,
-        deleting, deleted, rejected.
+      Allowed values: pending-acceptance, failed, expired, provisioning, active,
+      deleting, deleted, rejected.
     :param str status_message: A message that provides more information about the
-        status of the VPC peering connection, if applicable.
+      status of the VPC peering connection, if applicable.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param dict filters: Dict with filters to identify the VPC peering connection.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpc_peering_connections``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_vpc_peering_connections``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
 
     :depends: boto3.client('ec2').describe_vpc_peering_connections
     """
@@ -8208,35 +9172,35 @@ def lookup_vpn_gateway(
 
     :param str vpn_gateway_id: The ID of the virtual private gateway.
     :param str vpn_gateway_name: The ``Name``-tag of the virtual private gateway.
-        If also specifying ``Name`` in ``tags``, this option takes precedence.
+      If also specifying ``Name`` in ``tags``, this option takes precedence.
     :param str amazon_side_asn: The Autonomous System Number (ASN) for the Amazon
-        side of the gateway.
+      side of the gateway.
     :param str attachment_state: The current state of the attachment between the
-        gateway and the VPC. Allowed values: attaching, attached, detaching, detached.
+      gateway and the VPC. Allowed values: attaching, attached, detaching, detached.
     :param str attachment_vpc_id: The ID of an attached VPC.
     :param dict attachment_vpc_lookup: Any kwarg that ``lookup_vpc`` accepts.
-        Used to lookup ``attachment_vpc_id`` if it is not provided.
+      Used to lookup ``attachment_vpc_id`` if it is not provided.
     :param str availability_zone:  The Availability Zone for the virtual private
-        gateway (if applicable).
+      gateway (if applicable).
     :param str state: The state of the virtual private gateway.
-        Allowed values: pending, available, deleting, deleted.
+      Allowed values: pending, available, deleting, deleted.
     :param dict tags: Any tags to filter on.
     :param str tag_key: The key of a tag assigned to the resource. Use this filter
-        to find all resources assigned a tag with a specific key, regardless of
-        the tag value.
+      to find all resources assigned a tag with a specific key, regardless of
+      the tag value.
     :param str vpn_gateway_type: The type of virtual private gateway.
-        Currently the only supported type is ``ipsec.1``.
+      Currently the only supported type is ``ipsec.1``.
     :param dict filters: Dict with filters to identify the VPC peering connection.
-        Note that for any of the values supplied in the arguments above that also
-        occur in ``filters``, the arguments above will take presedence.
+      Note that for any of the values supplied in the arguments above that also
+      occur in ``filters``, the arguments above will take presedence.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``describe_vpn_gateways``-
-        call on succes.
-        If the call was succesful but returned nothing, both the 'error' and 'result'
-        key will be set with the notice that nothing was found and an empty dict
-        respectively (since it is assumed you're looking to find something).
+      with dict containing the result of the boto ``describe_vpn_gateways``-
+      call on succes.
+      If the call was succesful but returned nothing, both the 'error' and 'result'
+      key will be set with the notice that nothing was found and an empty dict
+      respectively (since it is assumed you're looking to find something).
     """
     if attachment_vpc_id is None and attachment_vpc_lookup is not None:
         res = lookup_vpc(**attachment_vpc_lookup)
@@ -8267,6 +9231,183 @@ def lookup_vpn_gateway(
     )
 
 
+@arguments_to_list("security_group_ids", "security_group_lookups")
+def modify_network_interface_attribute(
+    network_interface_id=None,
+    network_interface_lookup=None,
+    delete_on_termination=None,
+    attachment_id=None,
+    description=None,
+    security_group_ids=None,
+    security_group_lookups=None,
+    source_dest_check=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Modifies the specified network interface attribute. You can use this action
+    to attach and detach security groups from an existing EC2 instance.
+    You can modify multiple attributes; this function will call boto multiple times
+    for each attribute. At the first failure, the error will be returned.
+
+    :param str network_interface_id: The ID of the network interface.
+    :param str network_interface_lookup: Any kwarg that ``lookup_network_interface``
+      accepts. Used to lookup ``network_interface_id`` if it is not provided.
+    :param bool delete_on_termination: Indicates whether the network interface
+      is deleted when the instance is terminated. You must specify ``attachment_id``,
+      ``network_interface_id`` or ``network_interface_lookup`` when modifying
+      this attribute.
+    :param str attachment_id: The ID of the network interface attachment.
+    :param str description: A description for the network interface.
+    :param str/list(str) security_group_ids: Changes the security groups for the
+      network interface. The new set of groups you specify replaces the current
+      set. You must specify at least one group, even if it's just the default security
+      group in the VPC.
+    :param str/list(str) security_group_lookups: Any kwarg that ``lookup_security_group``
+      accepts. Used to lookup ``security_group_ids`` if it is not provided.
+    :param bool source_dest_check: Indicates whether source/destination checking
+      is enabled. A value of ``True`` means checking is enabled, and ``False``
+      means checking is disabled. This value must be ``False`` for a NAT instance
+      to perform NAT.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on success.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "network_interface",
+            "kwargs": network_interface_lookup
+            or salt.utils.data.filter_falsey(
+                {
+                    "network_interface_id": network_interface_id,
+                    "attachment_id": attachment_id,
+                }
+            ),
+            "result_keys": ["NetworkInterfaceId", "Attachment:AttachmentId"],
+        },
+        {
+            "service": "ec2",
+            "name": "security_group",
+            "kwargs": security_group_lookups
+            or [{"group_id": group_id} for group_id in security_group_ids or []],
+            "result_keys": "GroupId",
+            "required": False,
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        res = res["result"]
+        network_interface_id = res["network_interface"]["NetworkInterfaceId"]
+        params = salt.utils.data.filter_falsey(
+            {
+                "Attachment": {
+                    "AttachmentId": res["network_interface"]["Attachment:AttachmentId"],
+                    "DeleteOnTermination": delete_on_termination,
+                },
+                "Description": {"Value": description},
+                "Groups": res.get("security_group"),
+                "SourceDestCheck": {"Value": source_dest_check},
+            }
+        )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    for attribute, new_value in params.items():
+        res = __utils__["boto3.handle_response"](
+            client.modify_network_interface_attribute,
+            NetworkInterfaceId=network_interface_id,
+            **{attribute: new_value},
+        )
+        if "error" in res:
+            return res
+    return {"result": True}
+
+
+def modify_spot_fleet_request(
+    spot_fleet_request_id=None,
+    spot_fleet_request_lookup=None,
+    excess_capacity_termination_policy=None,
+    target_capacity=None,
+    on_demand_target_capacity=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Modifies the specified Spot Fleet request.
+
+    You can only modify a Spot Fleet request of type ``maintain``.
+
+    While the Spot Fleet request is being modified, it is in the modifying state.
+
+    To scale up your Spot Fleet, increase its target capacity. The Spot Fleet launches
+    the additional Spot Instances according to the allocation strategy for the
+    Spot Fleet request. If the allocation strategy is lowestPrice , the Spot Fleet
+    launches instances using the Spot Instance pool with the lowest price. If the
+    allocation strategy is diversified , the Spot Fleet distributes the instances
+    across the Spot Instance pools. If the allocation strategy is ``capacityOptimized``,
+    Spot Fleet launches instances from Spot Instance pools with optimal capacity
+    for the number of instances that are launching.
+
+    To scale down your Spot Fleet, decrease its target capacity. First, the Spot
+    Fleet cancels any open requests that exceed the new target capacity. You can
+    request that the Spot Fleet terminate Spot Instances until the size of the
+    fleet no longer exceeds the new target capacity. If the allocation strategy
+    is ``lowestPrice``, the Spot Fleet terminates the instances with the highest
+    price per unit. If the allocation strategy is ``capacityOptimized``, the Spot
+    Fleet terminates the instances in the Spot Instance pools that have the least
+    available Spot Instance capacity. If the allocation strategy is ``diversified``,
+    the Spot Fleet terminates instances across the Spot Instance pools. Alternatively,
+    you can request that the Spot Fleet keep the fleet at its current size, but
+    not replace any Spot Instances that are interrupted or that you terminate manually.
+
+    If you are finished with your Spot Fleet for now, but will use it again later,
+    you can set the target capacity to 0.
+
+    :param str spot_fleet_request_id: The ID of the Spot Fleet request.
+    :param dict spot_fleet_request_lookup: Any kwarg that ``lookup_spot_fleet_request``
+      accepts. Used to lookup ``spot_fleet_request_id`` if it is not provided.
+    :param str excess_capacity_termination_policy: Indicates whether running Spot
+      Instances should be terminated if the target capacity of the Spot Fleet request
+      is decreased below the current size of the Spot Fleet.
+    :param int target_capacity: The size of the fleet.
+    :param int on_demand_target_capacity: The number of On-Demand Instances in
+      the fleet.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "spot_fleet_request",
+            "kwargs": spot_fleet_request_lookup
+            or {"spot_fleet_request_id": spot_fleet_request_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {
+            "ExcessCapacityTerminationPolicy": excess_capacity_termination_policy,
+            "SpotFleetRequestId": res["result"]["spot_fleet_request"],
+            "TargetCapacity": target_capacity,
+            "OnDemandTargetCapacity": on_demand_target_capacity,
+        }
+    return __utils__["boto3.handle_response"](client.modify_spot_fleet_request, params)
+
+
 def modify_subnet_attribute(
     subnet_id=None,
     subnet_lookup=None,
@@ -8284,30 +9425,30 @@ def modify_subnet_attribute(
 
     :param str subnet_id: The ID of the subnet to modify.
     :param dict subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
+      Used to lookup the Subnet's ID if ``subnet_id`` is not provided.
     :param bool assign_ipv6_address_on_creation: Specify ``True`` to indicate that
-        network interfaces created in the specified subnet should be assigned an
-        IPv6 address. This includes a network interface that's created when launching
-        an instance into the subnet (the instance therefore receives an IPv6 address).
-        If you enable the IPv6 addressing feature for your subnet, your network
-        interface or instance only receives an IPv6 address if it's created using
-        version 2016-11-15 or later of the Amazon EC2 API.
+      network interfaces created in the specified subnet should be assigned an
+      IPv6 address. This includes a network interface that's created when launching
+      an instance into the subnet (the instance therefore receives an IPv6 address).
+      If you enable the IPv6 addressing feature for your subnet, your network
+      interface or instance only receives an IPv6 address if it's created using
+      version 2016-11-15 or later of the Amazon EC2 API.
     :param bool map_public_ip_on_launch: Specify ``True`` to indicate that network
-        interfaces created in the specified subnet should be assigned a public
-        IPv4 address. This includes a network interface that's created when launching
-        an instance into the subnet (the instance therefore receives a public IPv4
-        address).
+      interfaces created in the specified subnet should be assigned a public
+      IPv4 address. This includes a network interface that's created when launching
+      an instance into the subnet (the instance therefore receives a public IPv4
+      address).
     :param bool map_customer_owned_ip_on_launch: Specify ``True`` to indicate that
-        network interfaces attached to instances created in the specified subnet
-        should be assigned a customer-owned IPv4 address.
-        When this value is ``True``, you must specify the customer-owned IP pool
-        using ``customer_owned_ipv4_pool``.
+      network interfaces attached to instances created in the specified subnet
+      should be assigned a customer-owned IPv4 address.
+      When this value is ``True``, you must specify the customer-owned IP pool
+      using ``customer_owned_ipv4_pool``.
     :param str customer_owned_ipv4_pool: The customer-owned IPv4 address pool
-        associated with the subnet.
+      associated with the subnet.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').modify_subnet_attribute
     """
@@ -8353,23 +9494,23 @@ def modify_vpc_attribute(
 
     :param str vpc_id: The ID of the VPC to operate on.
     :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
     :param bool enable_dns_support: Indicates whether the DNS resolution is supported
-        for the VPC. If enabled, queries to the Amazon provided DNS server at the
-        169.254.169.253 IP address, or the reserved IP address at the base of the
-        VPC network range "plus two" succeed. If disabled, the Amazon provided DNS
-        service in the VPC that resolves public DNS hostnames to IP addresses is
-        not enabled.
+      for the VPC. If enabled, queries to the Amazon provided DNS server at the
+      169.254.169.253 IP address, or the reserved IP address at the base of the
+      VPC network range "plus two" succeed. If disabled, the Amazon provided DNS
+      service in the VPC that resolves public DNS hostnames to IP addresses is
+      not enabled.
     :param bool enable_dns_hostnames: Indicates whether the instances launched
-        in the VPC get DNS hostnames. If enabled, instances in the VPC get DNS
-        hostnames; otherwise, they do not.
-        You can only enable DNS hostnames if DNS support is already enabled.
-        If you specify both these attributes, two calls will be executed in the
-        correct order.
+      in the VPC get DNS hostnames. If enabled, instances in the VPC get DNS
+      hostnames; otherwise, they do not.
+      You can only enable DNS hostnames if DNS support is already enabled.
+      If you specify both these attributes, two calls will be executed in the
+      correct order.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        containing ``True`` on succes.
+      containing ``True`` on succes.
 
     :depends boto3.client('ec2').modify_vpc_attribute
     """
@@ -8397,6 +9538,9 @@ def modify_vpc_attribute(
     return ret
 
 
+@arguments_to_list(
+    "add_network_load_balancer_arns", "remove_network_load_balancer_arns"
+)
 def modify_vpc_endpoint_service_configuration(
     service_id=None,
     service_lookup=None,
@@ -8421,15 +9565,15 @@ def modify_vpc_endpoint_service_configuration(
 
     :param str service_id: The ID of the service.
     :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
-        When ``service_id`` is not provided, this is required, otherwise ignored.
+      When ``service_id`` is not provided, this is required, otherwise ignored.
     :param str private_dns_name: The private DNS name to assign to the endpoint service.
     :param bool remove_private_dns_name: Removes the private DNS name of the endpoint service.
     :param bool acceptance_required: Indicates whether requests to create an endpoint
-        to your service must be accepted.
+      to your service must be accepted.
     :param str/list(str) add_network_load_balancer_arns: The Amazon Resource Names
-        (ARNs) of Network Load Balancers to add to your service configuration.
+      (ARNs) of Network Load Balancers to add to your service configuration.
     :param str/list(str) remove_network_load_balancer_arns: The Amazon Resource
-        Names (ARNs) of Network Load Balancers to remove from your service configuration.
+      Names (ARNs) of Network Load Balancers to remove from your service configuration.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -8488,12 +9632,16 @@ def modify_vpc_endpoint_service_permissions(
 
     :param str service_id: The ID of the service.
     :param dict service_lookup: Any kwarg that ``lookup_vpc_endpoint_service`` accepts.
-        When ``service_id`` is not provided, this is required, otherwise ignored.
+      When ``service_id`` is not provided, this is required, otherwise ignored.
     :param list(str) add_allowed_principals: The Amazon Resource Names (ARN) of
-        one or more principals. Permissions are granted to the principals in this
-        list. To grant permissions to all principals, specify an asterisk (*).
+      one or more principals. Permissions are granted to the principals in this
+      list. To grant permissions to all principals, specify an asterisk (*).
     :param list(str) remove_allowed_principals: The Amazon Resource Names (ARN) of
-        one or more principals. Permissions are revoked for principals in this list.
+      one or more principals. Permissions are revoked for principals in this list.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on succes.
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -8544,11 +9692,11 @@ def modify_vpc_tenancy(
     :param str instance_tenancy: The instance tenancy attribute for the VPC.
     :param str vpc_id: The ID of the VPC to operate on.
     :param dict vpc_lookup: Any kwarg that lookup_vpc accepts.
-        When ``vpc_id`` is not provided, this is required, otherwise ignored.
+      When ``vpc_id`` is not provided, this is required, otherwise ignored.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key with
-        dict containing the result of the boto ``modify_vpc_tenancy``-call on succes.
+      dict containing the result of the boto ``modify_vpc_tenancy``-call on succes.
 
     :depends: boto3.client('ec2').modify_vpc_tenancy
     """
@@ -8561,10 +9709,221 @@ def modify_vpc_tenancy(
     ) as res:
         if "error" in res:
             return res
-        res = res["result"]
-        params = {"VpcId": res["vpc"], "InstanceTenancy": instance_tenancy}
+        params = {"VpcId": res["result"]["vpc"], "InstanceTenancy": instance_tenancy}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     return __utils__["boto3.handle_response"](client.modify_vpc_tenancy, params)
+
+
+@arguments_to_list("instance_ids", "instance_lookups")
+def reboot_instances(
+    instance_ids=None,
+    instance_lookups=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Requests a reboot of the specified instances. This operation is asynchronous;
+    it only queues a request to reboot the specified instances. The operation succeeds
+    if the instances are valid and belong to you. Requests to reboot terminated
+    instances are ignored.
+
+    If an instance does not cleanly shut down within four minutes, Amazon EC2 performs
+    a hard reboot.
+
+    :param str/list(str) instance_ids: The instance IDs.
+    :param dict/list(dict) instance_lookups: One or more dicts of kwargs that
+      ``lookup_instance`` accepts. Used to lookup any ``instance_ids``
+      if none are provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on success.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookups
+            or [{"instance_ids": instance_id} for instance_id in instance_ids or []],
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"InstanceIds": res["instance"]}
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](client.reboot_instances, params)
+
+
+def register_image(
+    name,
+    image_location=None,
+    architecture=None,
+    block_device_mappings=None,
+    description=None,
+    ena_support=None,
+    kernel_id=None,
+    billing_products=None,
+    ramdisk_id=None,
+    root_device_name=None,
+    sriov_net_support=None,
+    virtualization_type=None,
+    tags=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Registers an AMI. When you're creating an AMI, this is the final step you must
+    complete before you can launch an instance from the AMI.
+
+    Note:
+      For Amazon EBS-backed instances, ``create_image`` creates and registers the
+      AMI in a single request, so you don't have to register the AMI yourself.
+
+    You can also use ``register_image`` to create an Amazon EBS-backed Linux AMI
+    from a snapshot of a root device volume. You specify the snapshot using the
+    block device mapping.
+
+    If any snapshots have AWS Marketplace product codes, they are copied to the
+    new AMI.
+
+    Windows and some Linux distributions, such as Red Hat Enterprise Linux (RHEL)
+    and SUSE Linux Enterprise Server (SLES), use the EC2 billing product code associated
+    with an AMI to verify the subscription status for package updates. To create
+    a new AMI for operating systems that require a billing product code, instead
+    of registering the AMI, do the following to preserve the billing product code
+    association:
+
+      - Launch an instance from an existing AMI with that billing product code.
+      - Customize the instance.
+      - Create an AMI from the instance using CreateImage .
+    If you purchase a Reserved Instance to apply to an On-Demand Instance that
+    was launched from an AMI with a billing product code, make sure that the Reserved
+    Instance has the matching billing product code. If you purchase a Reserved
+    Instance without the matching billing product code, the Reserved Instance will
+    not be applied to the On-Demand Instance.
+
+    If needed, you can deregister an AMI at any time. Any modifications you make
+    to an AMI backed by an instance store volume invalidates its registration.
+    If you make changes to an image, deregister the previous image and register
+    the new image.
+
+    :param str name: A name for your AMI. Constraints: 3-128 alphanumeric characters,
+      parentheses (()), square brackets ([]), spaces ( ), periods (.), slashes (/),
+      dashes (-), single quotes ('), at-signs (@), or underscores(_)
+    :param str image_location: The full path to your AMI manifest in Amazon S3
+      storage. The specified bucket must have the aws-exec-read canned access control
+      list (ACL) to ensure that it can be accessed by Amazon EC2.
+    :param str architecture: The architecture of the AMI.
+      Default: For Amazon EBS-backed AMIs, ``i386``. For instance store-backed
+      AMIs, the architecture specified in the manifest file.
+    :param list(dict) block_device_mappings: See :py:func:`create_image` for the
+      full description of this argument.
+    :param str description: A description for your AMI.
+    :param bool ena_support: Set to true to enable enhanced networking with ENA
+      for the AMI and any instances that you launch from the AMI.
+      This option is supported only for HVM AMIs. Specifying this option with a
+      PV AMI can make instances launched from the AMI unreachable.
+    :param str kernel_id: The ID of the kernel.
+    :param list(str): billing_products: The billing product codes. Your account
+      must be authorized to specify billing product codes. Otherwise, you can use
+      the AWS Marketplace to bill for the use of an AMI.
+    :param str ramdisk_id: The ID of the RAM disk.
+    :param str root_device_name: The device name of the root device volume
+      (for example, ``/dev/sda1``).
+    :param str sriov_net_support: Set to simple to enable enhanced networking with
+      the Intel 82599 Virtual Function interface for the AMI and any instances
+      that you launch from the AMI.
+      There is no way to disable sriovNetSupport at this time.
+      This option is supported only for HVM AMIs. Specifying this option with a
+      PV AMI can make instances launched from the AMI unreachable.
+    :param str virtualization_type: The type of virtualization.
+      Allowed values: hvm, paravirtual. Default: paravirtual
+    :param dict tags: The tags to apply to the created image.
+    :param bool blocking: Wait until the image becomes available.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``register_image``-call on succes.
+    """
+    params = salt.utils.data.filter_falsey(
+        {
+            "ImageLocation": image_location,
+            "Architecture": architecture,
+            "BlockDeviceMappings": block_device_mappings,
+            "Description": description,
+            "EnaSupport": ena_support,
+            "KernelId": kernel_id,
+            "Name": name,
+            "BillingProducts": billing_products,
+            "RamdiskId": ramdisk_id,
+            "RootDeviceName": root_device_name,
+            "SriovNetSupport": sriov_net_support,
+            "VirtualizationType": virtualization_type,
+        }
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](
+        __utils__["boto3.create_resource"],
+        "image",
+        boto_function_name="register_image",
+        params=params,
+        tags=tags,
+        wait_until_state="available" if blocking else None,
+        client=client,
+    )
+
+
+def reject_vpc_peering_connection(
+    vpc_peering_connection_id=None,
+    vpc_peering_connection_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Rejects a VPC peering connection request. The VPC peering connection must be
+    in the pending-acceptance state. Use :py:func:`describe_vpc_peering_connections`
+    to view your outstanding VPC peering connection requests. To delete an active
+    VPC peering connection, or to delete a VPC peering connection request that
+    you initiated, use :py:func:`delete_vpc_peering_connection`.
+
+    :param str vpc_peering_connection_id: The ID of the VPC peering connection.
+    :param dict vpc_peering_connection_lookup: Any kwarg that ``lookup_vpc_peering_connection``
+      accepts. Used to lookup ``vpc_peering_connection_id`` if it is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with ``True`` on success.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "vpc_peering_connection",
+            "kwargs": vpc_peering_connection_lookup
+            or {"vpc_peering_connection_id": vpc_peering_connection_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {"VpcPeeringConnectionId": res["vpc_peering_connection"]}
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](
+        client.reject_vpc_peering_connection, params
+    )
 
 
 def release_address(
@@ -8597,13 +9956,13 @@ def release_address(
 
     :param str address_id: The (Allocation)ID of the Elastic IP.
     :param dict address_lookup: Any kwarg that ``lookup_address``
-        accepts. Used to lookup the address' ID if ``address_id``
-        is not provided.
+      accepts. Used to lookup the address' ID if ``address_id``
+      is not provided.
     :param str eip_id: The AllocationID of the Elastic IP.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success.
+      with ``True`` on success.
 
     :depends: boto3.client('ec2').describe_addresses, boto3.client('ec2').release_address
     """
@@ -8643,22 +10002,22 @@ def replace_network_acl_association(
     create a subnet, it's automatically associated with the default network ACL.
 
     :param str association_id: The The ID of the current association between the
-        original network ACL and the subnet.
+      original network ACL and the subnet.
     :param str network_acl_id: The ID of the new network ACL to associate with
-        the subnet.
+      the subnet.
     :param str network_acl_lookup: Any kwarg that ``lookup_network_acl`` accepts.
-        Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
+      Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
     :param str subnet_id: The ID of the subnet to associate the network ACL with.
-        Only needs to be specified if ``association_id`` is not provided.
-        Since a subnet can only be associated with one network ACL at a time,
-        specifying the subnet is an alternative to specifying ``association_id``.
+      Only needs to be specified if ``association_id`` is not provided.
+      Since a subnet can only be associated with one network ACL at a time,
+      specifying the subnet is an alternative to specifying ``association_id``.
     :param str subnet_lookup: Any kwarg that ``lookup_subnet`` accepts.
-        Used to lookup the subnet ID if ``subnet_id`` is not provided.
+      Used to lookup the subnet ID if ``subnet_id`` is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with dict containing the result of the boto ``replace_network_acl_association``-
-        call on succes.
+      with dict containing the result of the boto ``replace_network_acl_association``-
+      call on succes.
     """
     if not association_id:
         # A subnet can only be associated with a single network ACL. So if we find
@@ -8741,39 +10100,39 @@ def replace_network_acl_entry(
     Replaces an entry (rule) in a network ACL.
 
     :param str protocol: The protocol number. A value of "-1" means all protocols.
-        If you specify "-1" or a protocol number other than "6" (TCP), "17" (UDP),
-        or "1" (ICMP), traffic on all ports is allowed, regardless of any ports
-        or ICMP types or codes that you specify. If you specify protocol "58" (ICMPv6)
-        and specify an IPv4 CIDR block, traffic for all ICMP types and codes allowed,
-        regardless of any that you specify. If you specify protocol "58" (ICMPv6)
-        and specify an IPv6 CIDR block, you must specify an ICMP type and code.
+      If you specify "-1" or a protocol number other than "6" (TCP), "17" (UDP),
+      or "1" (ICMP), traffic on all ports is allowed, regardless of any ports
+      or ICMP types or codes that you specify. If you specify protocol "58" (ICMPv6)
+      and specify an IPv4 CIDR block, traffic for all ICMP types and codes allowed,
+      regardless of any that you specify. If you specify protocol "58" (ICMPv6)
+      and specify an IPv6 CIDR block, you must specify an ICMP type and code.
     :param bool egress: Indicates whether this is an egress rule (rule is applied
-        to traffic leaving the subnet).
+      to traffic leaving the subnet).
     :param int rule_number: The rule number for the entry (for example, 100).
-        ACL entries are processed in ascending order by rule number.
-        Constraints: Positive integer from 1 to 32766. The range 32767 to 65535
-        is reserved for internal use.
+      ACL entries are processed in ascending order by rule number.
+      Constraints: Positive integer from 1 to 32766. The range 32767 to 65535
+      is reserved for internal use.
     :param str rule_action: Indicates whether to allow or deny the traffic that
-        matches the rule. Allowed values: allow, deny.
+      matches the rule. Allowed values: allow, deny.
     :param str network_acl_id: The ID of the network ACL.
     :param str network_acl_lookup: Any kwarg that ``lookup_network_acl`` accepts.
-        Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
+      Used to lookup the network ACL ID if ``network_acl_id`` is not provided.
     :param str cidr_block:  The IPv4 network range to allow or deny, in CIDR notation
-        (for example ``172.16.0.0/24``). We modify the specified CIDR block to its
-        canonical form; for example, if you specify ``100.68.0.18/18``, we modify
-        it to ``100.68.0.0/18``.
+      (for example ``172.16.0.0/24``). We modify the specified CIDR block to its
+      canonical form; for example, if you specify ``100.68.0.18/18``, we modify
+      it to ``100.68.0.0/18``.
     :param int icmp_code: The ICMP code. A value of -1 means all codes for the
-        specified ICMP type.
+      specified ICMP type.
     :param int icmp_type: The ICMP type. A value of -1 means all types.
     :param str ipv6_cidr_block: The IPv6 network range to allow or deny, in CIDR
-        notation (for example ``2001:db8:1234:1a00::/64``).
+      notation (for example ``2001:db8:1234:1a00::/64``).
     :param tuple(int, int) port_range: The first and last port in the range.
-        TCP or UDP protocols: The range of ports the rule applies to.
-        Required if specifying protocol 6 (TCP) or 17 (UDP).
+      TCP or UDP protocols: The range of ports the rule applies to.
+      Required if specifying protocol 6 (TCP) or 17 (UDP).
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     if port_range is not None:
         if not isinstance(portrange, (list, tuple)):
@@ -8857,50 +10216,50 @@ def replace_route(
 
     :param int route_table_id: The ID of the route table to operate on.
     :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
-        Used to lookup the route_table's ID if ``route_table_id`` is not provided.
+      Used to lookup the route_table's ID if ``route_table_id`` is not provided.
     :param str destination_cidr_block: The IPv4 CIDR address block used for the
-        destination match. The value that you provide must match the CIDR of an
-        existing route in the table.
+      destination match. The value that you provide must match the CIDR of an
+      existing route in the table.
     :param str destination_ipv6_cidr_block: The IPv6 CIDR address block used for
-        the destination match. The value that you provide must match the CIDR of
-        an existing route in the table.
+      the destination match. The value that you provide must match the CIDR of
+      an existing route in the table.
     :param str destination_prefix_list_id: The ID of the prefix list for the route.
     :param str egress_only_internet_gateway_id: [IPv6 traffic only] The ID of an
-        egress-only internet gateway.
+      egress-only internet gateway.
     :param dict egress_only_internet_gateway_lookup: Any kwarg that
-        ``lookup_egress_only_internet_gateway`` accepts. Used to lookup the egress-
-        only internet gateway if ``egress_only_internet_gateway_id`` is not provided.
+      ``lookup_egress_only_internet_gateway`` accepts. Used to lookup the egress-
+      only internet gateway if ``egress_only_internet_gateway_id`` is not provided.
     :param str gateway_id: The ID of an internet gateway or virtual private gateway.
     :param dict gateway_lookup: Any kwarg that ``lookup_gateway`` accepts.
-        Used to lookup the gateway's ID if ``gateway_id`` is not provided.
+      Used to lookup the gateway's ID if ``gateway_id`` is not provided.
     :param str instance_id: The ID of a NAT instance in your VPC.
     :param dict instance_lookup: Any kwarg that ``lookup_instance`` accepts.
-        Used to lookup the instance's ID if ``instance_id`` is not provided.
+      Used to lookup the instance's ID if ``instance_id`` is not provided.
     :param bool local_target: Specifies whether to reset the local route to its
-        default target (``local``).
+      default target (``local``).
     :param str nat_gateway_id: [IPv4 traffic only] The ID of a NAT gateway.
     :param dict nat_gateway_lookup: Any kwarg that ``lookup_nat_gateway`` accepts.
-        Used to lookup the NAT gateway if ``nat_gateway_id`` is not provided.
+      Used to lookup the NAT gateway if ``nat_gateway_id`` is not provided.
     :param str transit_gateway_id: The ID of a transit gateway.
     :param dict transit_gateway_lookup: Any kwarg that ``lookup_transit_gateway``
-        accepts. Used to lookup the transit gateway if ``transit_gateway_id`` is
-        not provided.
+      accepts. Used to lookup the transit gateway if ``transit_gateway_id`` is
+      not provided.
     :param str local_gateway_id: The ID of the local gateway.
     :param dict local_gateway_lookup: Any kwarg that ``lookup_local_gateway``
-        accepts. Used to lookup the transit gateway if ``local_gateway_id`` is
-        not provided.
+      accepts. Used to lookup the transit gateway if ``local_gateway_id`` is
+      not provided.
     :param str network_interface_id: The ID of a network interface.
     :param dict network_interface_lookup: Any kwarg that ``lookup_network_interface``
-        accepts. Used to lookup the network interface if ``network_interface_id``
-        is not provided.
+      accepts. Used to lookup the network interface if ``network_interface_id``
+      is not provided.
     :param str vpc_peering_connection_id: The ID of a VPC peering connection.
     :param dict vpc_peering_connection_lookup: Any kwarg that ``lookup_vpc_peering_connection``
-        accepts. Used to lookup the VPC peering connction if ``vpc_peering_connection_id``
-        is not provided.
+      accepts. Used to lookup the VPC peering connction if ``vpc_peering_connection_id``
+      is not provided.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     # Amazon decided, in their wisdom, to let ``gateway`` be an IGW *or* a VPN gateway
     # So we need to look this up manually
@@ -9017,6 +10376,502 @@ def replace_route(
     return __utils__["boto3.handle_response"](client.replace_route, params)
 
 
+def replace_route_table_association(
+    association_id=None,
+    current_route_table_lookup=None,
+    route_table_id=None,
+    route_table_lookup=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Changes the route table associated with a given subnet, internet gateway, or
+    virtual private gateway in a VPC. After the operation completes, the subnet
+    or gateway uses the routes in the new route table.
+
+    You can also use this operation to change which table is the main route table
+    in the VPC. Specify the main route table's association ID and the route table
+    ID of the new main route table.
+
+    :param str association_id: The association ID.
+    :param dict current_route_table_lookup: Any kwarg that ``lookup_route_table``
+      accepts. Used to lookup the ``association_id`` if it is not provided.
+    :param str route_table_id: The ID of the new route table to associate with
+      the subnet.
+    :param dict route_table_lookup: Any kwarg that ``lookup_route_table`` accepts.
+      Used to lookup ``route_table_id`` if it is not provided.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``replace_route_table_association``-
+      call on succes.
+    """
+    if not association_id:
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "route_table",
+                "kwargs": current_route_table_lookup,
+                "result_keys": ["RouteTableId", "Associations"],
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
+            if "error" in res:
+                return res
+            current_route_table_id = res["result"]["route_table"]["RouteTableId"]
+            association_id = [
+                item["RouteTableAssociationId"]
+                for item in res["result"]["route_table"]["Associations"]
+                if item["RouteTableId"] == current_route_table_id
+            ][0]
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "route_table",
+            "kwargs": route_table_lookup or {"route_table_id": route_table_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        params = {
+            "AssociationId": association_id,
+            "RouteTableId": res["result"]["route_table"],
+        }
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    return __utils__["boto3.handle_response"](
+        client.replace_route_table_association, params
+    )
+
+
+def request_spot_fleet(
+    iam_fleet_role,
+    target_capacity,
+    allocation_strategy=None,
+    on_demand_allocation_strategy=None,
+    excess_capacity_termination_policy=None,
+    fulfilled_capacity=None,
+    on_demand_fulfilled_capacity=None,
+    launch_specifications=None,
+    launch_template_configs=None,
+    spot_price=None,
+    on_demand_target_capacity=None,
+    on_demand_max_total_price=None,
+    spot_max_total_price=None,
+    terminate_instances_with_expiration=None,
+    request_type=None,
+    valid_from=None,
+    valid_until=None,
+    replace_unhealthy_instances=None,
+    instance_interruption_behavior=None,
+    load_balancers_config=None,
+    instance_pools_to_use_count=None,
+    tags=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a Spot Fleet request.
+
+    The Spot Fleet request specifies the total target capacity and the On-Demand
+    target capacity. Amazon EC2 calculates the difference between the total capacity
+    and On-Demand capacity, and launches the difference as Spot capacity.
+
+    You can submit a single request that includes multiple launch specifications
+    that vary by instance type, AMI, Availability Zone, or subnet.
+
+    By default, the Spot Fleet requests Spot Instances in the Spot Instance pool
+    where the price per unit is the lowest. Each launch specification can include
+    its own instance weighting that reflects the value of the instance type to
+    your application workload.
+
+    Alternatively, you can specify that the Spot Fleet distribute the target capacity
+    across the Spot pools included in its launch specifications. By ensuring that
+    the Spot Instances in your Spot Fleet are in different Spot pools, you can
+    improve the availability of your fleet.
+
+    You can specify tags for the Spot Fleet request and instances launched by the
+    fleet. You cannot tag other resource types in a Spot Fleet request because
+    only the spot-fleet-request and instance resource types are supported.
+
+    :param str iam_fleet_role: The Amazon Resource Name (ARN) of an AWS Identity
+      and Access Management (IAM) role that grants the Spot Fleet the permission
+      to request, launch, terminate, and tag instances on your behalf.
+      Spot Fleet can terminate Spot Instances on your behalf when you cancel its
+      Spot Fleet request using :py:func:`cancel_spot_fleet_requests` or when the
+      Spot Fleet request expires, if you set ``terminate_instances_with_expiration``.
+    :param int target_capacity: The number of units to request for the Spot Fleet.
+      You can choose to set the target capacity in terms of instances or a performance
+      characteristic that is important to your application workload, such as vCPUs,
+      memory, or I/O. If the request type is maintain , you can specify a target
+      capacity of 0 and add capacity later.
+    :param str allocation_strategy: Indicates how to allocate the target Spot Instance
+      capacity across the Spot Instance pools specified by the Spot Fleet request.
+      If the allocation strategy is ``lowestPrice``, Spot Fleet launches instances
+      from the Spot Instance pools with the lowest price. This is the default allocation
+      strategy.
+      If the allocation strategy is ``diversified``, Spot Fleet launches instances
+      from all the Spot Instance pools that you specify.
+      If the allocation strategy is ``capacityOptimized``, Spot Fleet launches
+      instances from Spot Instance pools with optimal capacity for the number of
+      instances that are launching.
+    :param str on_demand_allocation_strategy: The order of the launch template
+      overrides to use in fulfilling On-Demand capacity. If you specify ``lowestPrice``,
+      Spot Fleet uses price to determine the order, launching the lowest price
+      first. If you specify ``prioritized``, Spot Fleet uses the priority that
+      you assign to each Spot Fleet launch template override, launching the highest
+      priority first. If you do not specify a value, Spot Fleet defaults to ``lowestPrice``.
+    :param str excess_capacity_termination_policy: Indicates whether running Spot
+      Instances should be terminated if you decrease the target capacity of the
+      Spot Fleet request below the current size of the Spot Fleet.
+      Allowed values: noTermination, default
+    :param float fulfilled_capacity: The number of units fulfilled by this request
+      compared to the set target capacity. You cannot set this value.
+    :param float on_demand_fulfilled_capacity: The number of On-Demand units fulfilled
+      by this request compared to the set target On-Demand capacity.
+    :param list(dict) launch_specifications: The launch specifications for the
+      Spot Fleet request. If you specify ``launch_specifications``, you can't specify
+      ``launch_template_configs``. If you include On-Demand capacity in your request,
+      you must use ``launch_template_configs``. These dicts consist of:
+
+      - SecurityGroups(list(dict)): One or more security groups. When requesting
+        instances in a VPC, you must specify the IDs of the security groups. When
+        requesting instances in EC2-Classic, you can specify the names or the IDs
+        of the security groups. These dicts consist of:
+
+        - GroupName (str): The name of the security group.
+        - GroupId (str): The ID of the security group.
+      - BlockDeviceMappings (list(dict)): One or more block devices that are mapped
+        to the Spot Instances. You can't specify both a snapshot ID and an encryption
+        value. This is because only blank volumes can be encrypted on creation.
+        If a snapshot is the basis for a volume, it is not blank and its encryption
+        status is used for the volume encryption status. For the specification of
+        these dicts, see :py:func:`create_image`.
+      - EbsOptimized (bool): Indicates whether the instances are optimized for
+        EBS I/O. This optimization provides dedicated throughput to Amazon EBS
+        and an optimized configuration stack to provide optimal EBS I/O performance.
+        This optimization isn't available with all instance types. Additional usage
+        charges apply when using an EBS Optimized instance.
+        Default: ``False``
+      - IamInstanceProfile (dict): The IAM instance profile. This dict consists of:
+
+        - Arn (str): The Amazon Resource Name (ARN) of the instance profile.
+        - Name (str): The name of the instance profile.
+      - ImageId (str): The ID of the AMI.
+      - InstanceType (str): The instance type.
+      - KernelId (str): The ID of the kernel.
+      - KeyName (str): The name of the key pair.
+      - Monitoring (dict): Enable or disable monitoring for the instances. This
+        dict consists of:
+
+        - Enabled (bool): Enables monitoring for the instance. Default: ``False``.
+      - NetworkInterfaces (list(dict)): One or more network interfaces. If you
+        specify a network interface, you must specify subnet IDs and security group
+        IDs using the network interface. See :py:func:`create_launch_template` for
+        the description of these dicts.
+      - Placement (dict): The placement information. This dict consists of:
+
+        - AvailabilityZone (str): The Availability Zone.
+          [Spot Fleet only] To specify multiple Availability Zones, separate them
+          using commas; for example, "us-west-2a, us-west-2b".
+        - GroupName (str): The name of the placement group.
+        - Tenancy (str): The tenancy of the instance (if the instance is running
+          in a VPC). An instance with a tenancy of ``dedicated`` runs on single-tenant
+          hardware. The ``host`` tenancy is not supported for Spot Instances.
+      - RamdiskId (str): The ID of the RAM disk. Some kernels require additional
+        drivers at launch. Check the kernel requirements for information about
+        whether you need to specify a RAM disk. To find kernel requirements, refer
+        to the AWS Resource Center and search for the kernel ID.
+      - SpotPrice (str): The maximum price per unit hour that you are willing to
+        pay for a Spot Instance. If this value is not specified, the default is
+        the Spot price specified for the fleet. To determine the Spot price per
+        unit hour, divide the Spot price by the value of ``WeightedCapacity``.
+      - SubnetId (str): The IDs of the subnets in which to launch the instances.
+        To specify multiple subnets, separate them using commas; for example,
+        "subnet-1234abcdeexample1, subnet-0987cdef6example2".
+      - UserData (str): The Base64-encoded user data that instances use when starting up.
+      - WeightedCapacity (float): The number of units provided by the specified
+        instance type. These are the same units that you chose to set the target
+        capacity in terms of instances, or a performance characteristic such as
+        vCPUs, memory, or I/O.
+        If the target capacity divided by this value is not a whole number, Amazon
+        EC2 rounds the number of instances to the next whole number. If this value
+        is not specified, the default is 1.
+      - TagSpecifications (list(dict)): The tags to apply during creation.
+    :param list(dict) launch_template_configs: The launch template and overrides.
+      If you specify ``launch_template_configs``, you can't specify ``launch_specifications``.
+      If you include On-Demand capacity in your request, you must use ``launch_template_configs``.
+      These dicts consist of:
+
+      - LaunchTemplateSpecification (dict): The launch template. This dict consists of:
+
+        - LaunchTemplateId (str): The ID of the launch template. If you specify
+          the template ID, you can't specify the template name.
+        - LaunchTempalteName (str): The name of the launch template. If you specify
+          the template name, you can't specify the template ID.
+        - Version (str): The launch template version number, ``$Latest``, or ``$Default``.
+          You must specify a value, otherwise the request fails.
+          If the value is ``$Latest``, Amazon EC2 uses the latest version of the
+          launch template.
+          If the value is ``$Default``, Amazon EC2 uses the default version of
+          the launch template.
+      - Overrides (list(dict)): Any parameters that you specify override the same
+        parameters in the launch template. These dicts consist of:
+
+        - InstanceType (str): The instance type.
+        - SpotPrice (str): The maximum price per unit hour that you are willing
+          to pay for a Spot Instance.
+        - SubnetId (str): The ID of the subnet in which to launch the instances.
+        - AvailabilityZone (str): The Availability Zone in which to launch the instances.
+        - WeightedCapacity (float): The number of units provided by the specified
+          instance type.
+        - Priority (int): The priority for the launch template override.
+          If ``on_demand_allocation_strategy`` is set to ``prioritized``, Spot
+          Fleet uses priority to determine which launch template override to use
+          first in fulfilling On-Demand capacity. The highest priority is launched
+          first. Valid values are whole numbers starting at 0. The lower the number,
+          the higher the priority. If no number is set, the launch template override
+          has the lowest priority.
+    :param str spot_price: The maximum price per unit hour that you are willing
+      to pay for a Spot Instance. The default is the On-Demand price.
+    :param int on_demand_target_capacity: The number of On-Demand units to request.
+      You can choose to set the target capacity in terms of instances or a performance
+      characteristic that is important to your application workload, such as vCPUs,
+      memory, or I/O. If the request type is maintain , you can specify a target
+      capacity of 0 and add capacity later.
+    :param str on_demand_max_total_price: The maximum amount per hour for On-Demand
+      Instances that you're willing to pay. You can use the ``on_demand_max_total_price``
+      parameter, the ``spot_max_total_price`` parameter, or both parameters to
+      ensure that your fleet cost does not exceed your budget. If you set a maximum
+      price per hour for the On-Demand Instances and Spot Instances in your request,
+      Spot Fleet will launch instances until it reaches the maximum amount you're
+      willing to pay. When the maximum amount you're willing to pay is reached,
+      the fleet stops launching instances even if it hasn’t met the target capacity.
+    :param str spot_max_total_price: The maximum amount per hour for Spot Instances
+      that you're willing to pay. You can use the ``spot_max_total_price`` parameter,
+      the ``on_demand_max_total_price`` parameter, or both parameters to ensure that
+      your fleet cost does not exceed your budget. If you set a maximum price per
+      hour for the On-Demand Instances and Spot Instances in your request, Spot
+      Fleet will launch instances until it reaches the maximum amount you're willing
+      to pay. When the maximum amount you're willing to pay is reached, the fleet
+      stops launching instances even if it hasn’t met the target capacity.
+    :param bool terminate_instances_with_expiration: Indicates whether running Spot
+      Instances are terminated when the Spot Fleet request expires.
+    :param str request_type: The type of request. Indicates whether the Spot Fleet
+      only requests the target capacity or also attempts to maintain it. When this
+      value is ``request``, the Spot Fleet only places the required requests. It
+      does not attempt to replenish Spot Instances if capacity is diminished, nor
+      does it submit requests in alternative Spot pools if capacity is not available.
+      When this value is ``maintain``, the Spot Fleet maintains the target capacity.
+      The Spot Fleet places the required requests to meet capacity and automatically
+      replenishes any interrupted instances. Default: ``maintain``. ``instant`` is
+      listed but is not used by Spot Fleet.
+    :param datetime valid_from: The start date and time of the request, in UTC
+      format (YYYY-MM-DDT*HH*:MM:SS Z). By default, Amazon EC2 starts fulfilling
+      the request immediately.
+    :param datetime valid_until: The end date and time of the request, in UTC format
+      (YYYY-MM-DDT*HH*:MM:SS Z). After the end date and time, no new Spot
+      Instance requests are placed or able to fulfill the request. If no value
+      is specified, the Spot Fleet request remains until you cancel it.
+    :param bool replace_unhealthy_instances: Indicates whether Spot Fleet should
+      replace unhealthy instances.
+    :param str instance_interruption_behavior: The behavior when a Spot Instance
+      is interrupted. Allowed values: hibernate, stop, terminate. Default: terminate.
+    :param dict load_balancers_config: One or more Classic Load Balancers and target
+      groups to attach to the Spot Fleet request. Spot Fleet registers the running
+      Spot Instances with the specified Classic Load Balancers and target groups.
+      With Network Load Balancers, Spot Fleet cannot register instances that have
+      the following instance types: C1, CC1, CC2, CG1, CG2, CR1, CS1, G1, G2, HI1,
+      HS1, M1, M2, M3, and T1. This dict consists of:
+
+      - ClassicLoadBalancersConfig (dict): The Classic Load Balancers:
+
+        - ClassicLoadBalancers (list(dict)): One or more Classic Load Balancers.
+          These dicts consist of:
+
+          - Name (str): The name of the load balancer.
+      - TargetGroupsConfig (dict): The target groups:
+
+        - TargetGroups (list(dict)): One or more target groups. These dicts consist of:
+
+          - Arn (str): The Amazon Resource Name (ARN) of the target group.
+    :param int instance_pools_to_use_count: The number of Spot pools across which
+      to allocate your target Spot capacity. Valid only when Spot ``allocation_strategy``
+      is set to ``lowest-price``. Spot Fleet selects the cheapest Spot pools and
+      evenly allocates your target Spot capacity across the number of Spot pools
+      that you specify.
+    :param dict tags: The tags to appy to the Spot Fleet request. To tag instances
+      at launch, specify the tags in the launch template (valid only if you use
+      ``launch_template_configs``) or in the ``spot_fleet_tag_specification``
+      (valid only if you use ``launch_specifications``).
+    :param bool blocking: Wait until the spot fleet request has been fulfilled.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``request_spot_fleet``-call
+      on succes.
+    """
+    params = salt.utils.data.filter_falsey(
+        {
+            "SpotFleetRequestConfig": {
+                "AllocationStrategy": allocation_strategy,
+                "OnDemandAllocationStrategy": on_demand_allocation_strategy,
+                "ExcessCapacityTerminationPolicy": excess_capacity_termination_policy,
+                "FulfilledCapacity": fulfilled_capacity,
+                "OnDemandFulfilledCapacity": on_demand_fulfilled_capacity,
+                "IamFleetRole": iam_fleet_role,
+                "LaunchSpecifications": launch_specifications,
+                "LaunchTemplateConfigs": launch_template_configs,
+                "SpotPrice": spot_price,
+                "TargetCapacity": target_capacity,
+                "OnDemandTargetCapacity": on_demand_target_capacity,
+                "OnDemandMaxTotalPrice": on_demand_max_total_price,
+                "SpotMaxTotalPrice": spot_max_total_price,
+                "TerminateInstancesWithExpiration": terminate_instances_with_expiration,
+                "Type": request_type,
+                "ValidFrom": valid_from,
+                "ValidUntil": valid_until,
+                "ReplaceUnhealthyInstances": replace_unhealthy_instances,
+                "InstanceInterruptionBehavior": instance_interruption_behavior,
+                "LoadBalancersConfig": load_balancers_config,
+                "InstancePoolsToUseCount": instance_pools_to_use_count,
+            },
+        }
+    )
+    params.update(
+        {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](
+        __utils__["boto3.create_resource"],
+        "spot_fleet_request",
+        boto_function_name="request_spot_fleet",
+        params=params,
+        tags=tags,
+        wait_until_state="fulfilled" if blocking else None,
+        client=client,
+    )
+
+
+def request_spot_instances(
+    availability_zone_group=None,
+    block_duration_minutes=None,
+    instance_count=None,
+    launch_group=None,
+    launch_specification=None,
+    spot_price=None,
+    request_type=None,
+    valid_from=None,
+    valid_until=None,
+    tags=None,
+    instance_interruption_behavior=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Creates a Spot Instance request.
+
+    :param str availability_zone_group: The user-specified name for a logical grouping
+      of requests. When you specify an Availability Zone group in a Spot Instance
+      request, all Spot Instances in the request are launched in the same Availability
+      Zone. Instance proximity is maintained with this parameter, but the choice
+      of Availability Zone is not. The group applies only to requests for Spot
+      Instances of the same instance type. Any additional Spot Instance requests
+      that are specified with the same Availability Zone group name are launched
+      in that same Availability Zone, as long as at least one instance from the
+      group is still active.
+      If there is no active instance running in the Availability Zone group that
+      you specify for a new Spot Instance request (all instances are terminated,
+      the request is expired, or the maximum price you specified falls below current
+      Spot price), then Amazon EC2 launches the instance in any Availability Zone
+      where the constraint can be met. Consequently, the subsequent set of Spot
+      Instances could be placed in a different zone from the original request,
+      even if you specified the same Availability Zone group.
+      Default: Instances are launched in any available Availability Zone.
+    :param int block_duration_minutes: The required duration for the Spot Instances
+      (also known as Spot blocks), in minutes. This value must be a multiple of
+      60 (60, 120, 180, 240, 300, or 360).
+      The duration period starts as soon as your Spot Instance receives its instance
+      ID. At the end of the duration period, Amazon EC2 marks the Spot Instance
+      for termination and provides a Spot Instance termination notice, which gives
+      the instance a two-minute warning before it terminates.
+      You can't specify an Availability Zone group or a launch group if you specify
+      a duration.
+    :param int instance_count: The maximum number of Spot Instances to launch.
+      Default: 1
+    :param str launch_group: The instance launch group. Launch groups are Spot
+      Instances that launch together and terminate together.
+      Default: Instances are launched and terminated individually
+    :param dict launch_specification: The launch specification. TODO: Fill in details or create a builder.
+    :param str spot_price:  The maximum price per hour that you are willing to
+       pay for a Spot Instance. The default is the On-Demand price.
+    :param str request_type: The Spot Instance request type.
+       Allowed values: one-time, persistent. Default: one-time
+    :param datetime valid_from: The start date of the request. If this is a one-time
+      request, the request becomes active at this date and time and remains active
+      until all instances launch, the request expires, or the request is canceled.
+      If the request is persistent, the request becomes active at this date and
+      time and remains active until it expires or is canceled.
+      The specified start date and time cannot be equal to the current date and
+      time. You must specify a start date and time that occurs after the current
+      date and time.
+    :param datetime valid_until: The end date of the request. If this is a one-time
+      request, the request remains active until all instances launch, the request
+      is canceled, or this date is reached. If the request is persistent, it remains
+      active until it is canceled or this date is reached. The default end date
+      is 7 days from the current date.
+    :param dict tags: The tags to apply to the Spot Instance request.
+    :param str instance_interruption_behavior: The behavior when a Spot Instance
+      is interrupted. Allowed values: hibernate, stop, terminate. Default: terminate.
+    :param bool blocking: Wait until the request has been fulfilled.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``request_spot_instances``-call
+      on succes.
+    """
+    params = salt.utils.data.filter_falsey(
+        {
+            "AvailabilityZoneGroup": availability_zone_group,
+            "BlockDurationMinutes": block_duration_minutes,
+            "InstanceCount": instance_count,
+            "LaunchGroup": launch_group,
+            "LaunchSpecification": launch_specification,
+            "SpotPrice": spot_price,
+            "Type": request_type,
+            "ValidFrom": valid_from,
+            "ValidUntil": valid_until,
+            "InstanceInterruptionBehavior": instance_interruption_behavior,
+        }
+    )
+    params.update(
+        {"ClientToken": hashlib.sha1(json.dumps(params).encode("utf8")).hexdigest()}
+    )
+    client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
+    return __utils__["boto3.handle_response"](
+        __utils__["boto3.create_resource"],
+        "spot_instance_request",
+        boto_function_name="request_spot_instances",
+        params=params,
+        tags=tags,
+        wait_until_state="fulfilled" if blocking else None,
+        client=client,
+    )
+
+
 def revoke_security_group_egress(
     group_id=None,
     group_lookup=None,
@@ -9043,14 +10898,14 @@ def revoke_security_group_egress(
 
     :param str group_id: The ID of the security group to revoke egress rules from.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security group's ID if ``security_group_id`` is not provided.
+      Used to lookup the security group's ID if ``security_group_id`` is not provided.
     :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
-        a destination security group and a CIDR IP address range in the same set
-        of permissions. For the content specifications, see ``authorise_security_group_egress``.
+      a destination security group and a CIDR IP address range in the same set
+      of permissions. For the content specifications, see ``authorise_security_group_egress``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -9105,14 +10960,14 @@ def revoke_security_group_ingress(
 
     :param str group_id: The ID of the security group to revoke egress rules from.
     :param dict group_lookup: Any kwarg that ``lookup_security_group`` accepts.
-        Used to lookup the security group's ID if ``security_group_id`` is not provided.
+      Used to lookup the security group's ID if ``security_group_id`` is not provided.
     :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
-        a destination security group and a CIDR IP address range in the same set
-        of permissions. For the content specifications, see ``authorise_security_group_egress``.
+      a destination security group and a CIDR IP address range in the same set
+      of permissions. For the content specifications, see ``authorise_security_group_egress``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-        with ``True`` on success
+      with ``True`` on success
     """
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -9136,6 +10991,239 @@ def revoke_security_group_ingress(
     return __utils__["boto3.handle_response"](
         client.revoke_security_group_ingress, params
     )
+
+
+@arguments_to_list("instance_ids", "instance_lookups")
+def start_instances(
+    instance_ids=None,
+    instance_lookups=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Starts an Amazon EBS-backed instance that you've previously stopped.
+
+    Instances that use Amazon EBS volumes as their root devices can be quickly
+    stopped and started. When an instance is stopped, the compute resources are
+    released and you are not billed for instance usage. However, your root partition
+    Amazon EBS volume remains and continues to persist your data, and you are charged
+    for Amazon EBS volume usage. You can restart your instance at any time. Every
+    time you start your Windows instance, Amazon EC2 charges you for a full instance
+    hour. If you stop and restart your Windows instance, a new instance hour begins
+    and Amazon EC2 charges you for another full instance hour even if you are still
+    within the same 60-minute period when it was stopped. Every time you start
+    your Linux instance, Amazon EC2 charges a one-minute minimum for instance usage,
+    and thereafter charges per second for instance usage.
+
+    Before stopping an instance, make sure it is in a state from which it can be
+    restarted. Stopping an instance does not preserve data stored in RAM.
+
+    Performing this operation on an instance that uses an instance store as its
+    root device returns an error.
+
+    :param str/list(str) instance_ids: The IDs of the instances.
+    :param dict/lict(dict) instance_lookups: One or more dicts of kwargs that
+      ``lookup_instance`` accepts. Used to lookup any ``instance_ids``
+      if none are provided.
+    :param bool blocking: Wait until all the instances are running.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``start_instances``-call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookups
+            or [{"instance_id": instance_id} for instance_id in instance_ids or []],
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        instance_ids = res["result"]["instance"]
+    params = {"InstanceIds": instance_ids}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.start_instances, params)
+    if "error" in res:
+        return res
+    if blocking:
+        __utils__["boto3.wait_resource"](
+            "instance", "running", resource_id=instance_ids, client=client,
+        )
+    return res
+
+
+@arguments_to_list("instance_ids", "instance_lookups")
+def stop_instances(
+    instance_ids=None,
+    instance_lookups=None,
+    hibernate=None,
+    force=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Stops an Amazon EBS-backed instance.
+
+    You can use the Stop action to hibernate an instance if the instance is enabled
+    for hibernation and it meets the hibernation prerequisites.
+
+    We don't charge usage for a stopped instance, or data transfer fees; however,
+    your root partition Amazon EBS volume remains and continues to persist your
+    data, and you are charged for Amazon EBS volume usage. Every time you start
+    your Windows instance, Amazon EC2 charges you for a full instance hour. If
+    you stop and restart your Windows instance, a new instance hour begins and
+    Amazon EC2 charges you for another full instance hour even if you are still
+    within the same 60-minute period when it was stopped. Every time you start
+    your Linux instance, Amazon EC2 charges a one-minute minimum for instance usage,
+    and thereafter charges per second for instance usage.
+
+    You can't stop or hibernate instance store-backed instances. You can't use
+    the Stop action to hibernate Spot Instances, but you can specify that Amazon
+    EC2 should hibernate Spot Instances when they are interrupted.
+
+    When you stop or hibernate an instance, we shut it down. You can restart your
+    instance at any time. Before stopping or hibernating an instance, make sure
+    it is in a state from which it can be restarted. Stopping an instance does
+    not preserve data stored in RAM, but hibernating an instance does preserve
+    data stored in RAM. If an instance cannot hibernate successfully, a normal
+    shutdown occurs.
+
+    Stopping and hibernating an instance is different to rebooting or terminating
+    it. For example, when you stop or hibernate an instance, the root device and
+    any other devices attached to the instance persist. When you terminate an instance,
+    the root device and any other devices attached during the instance launch are
+    automatically deleted.
+
+    When you stop an instance, we attempt to shut it down forcibly after a short
+    while. If your instance appears stuck in the stopping state after a period
+    of time, there may be an issue with the underlying host computer.
+
+    :param str/list(str) instance_ids: The IDs of the instances.
+    :param dict/lict(dict) instance_lookups: One or more dicts of kwargs that
+      ``lookup_instance`` accepts. Used to lookup any ``instance_ids``
+      if none are provided.
+    :param bool hibernate: Hibernates the instance if the instance was enabled
+      for hibernation at launch. If the instance cannot hibernate successfully,
+      a normal shutdown occurs.
+    :param bool force: Forces the instances to stop. The instances do not have
+      an opportunity to flush file system caches or file system metadata. If you
+      use this option, you must perform file system check and repair procedures.
+      This option is not recommended for Windows instances.
+      Default: ``False``
+    :param bool blocking: Wait until all instances are stopped.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``stop_instances``-call on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookups
+            or [{"instance_id": instance_id} for instance_id in instance_ids or []],
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        instance_ids = res["result"]["instance"]
+    params = salt.utils.data.filter_falsey(
+        {"InstanceIds": instance_ids, "Hibernate": hibernate, "Force": force}
+    )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.stop_instances, params)
+    if "error" in res:
+        return res
+    if blocking:
+        __utils__["boto3.wait_resource"](
+            "instance", "stopped", resource_id=instance_ids, client=client,
+        )
+    return res
+
+
+@arguments_to_list("instance_ids", "instance_lookups")
+def terminate_instances(
+    instance_ids=None,
+    instance_lookups=None,
+    blocking=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
+    Shuts down the specified instances. This operation is idempotent; if you terminate
+    an instance more than once, each call succeeds.
+
+    If you specify multiple instances and the request fails (for example, because
+    of a single incorrect instance ID), none of the instances are terminated.
+
+    Terminated instances remain visible after termination (for approximately one hour).
+
+    By default, Amazon EC2 deletes all EBS volumes that were attached when the
+    instance launched. Volumes attached after instance launch continue running.
+
+    You can stop, start, and terminate EBS-backed instances. You can only terminate
+    instance store-backed instances. What happens to an instance differs if you
+    stop it or terminate it. For example, when you stop an instance, the root device
+    and any other devices attached to the instance persist. When you terminate an
+    instance, any attached EBS volumes with the DeleteOnTermination block device
+    mapping parameter set to true are automatically deleted.
+
+    :param str/list(str) instance_ids: The IDs of the instances.
+      Constraints: Up to 1000 instance IDs. We recommend breaking up this request
+      into smaller batches.
+    :param dict/lict(dict) instance_lookups: One or more dicts of kwargs that
+      ``lookup_instance`` accepts. Used to lookup any ``instance_ids``
+      if none are provided.
+    :param bool blocking: Wait until all instances are terminated.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict containing the result of the boto ``terminate_instances``-call
+      on succes.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": instance_lookups
+            or [{"instance_id": instance_id} for instance_id in instance_ids or []],
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        instance_ids = res["result"]["instance"]
+    params = {"InstanceIds": instance_ids}
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
+    res = __utils__["boto3.handle_response"](client.terminate_instances, params)
+    if "error" in res:
+        return res
+    if blocking:
+        __utils__["boto3.wait_resource"](
+            "instance", "terminated", resource_id=instance_ids, client=client,
+        )
+    return res
 
 
 # This has to be at the end of the file
