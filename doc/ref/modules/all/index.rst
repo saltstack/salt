@@ -52,11 +52,12 @@ execution modules
     beacons
     bigip
     bluez_bluetooth
+    boto3_ec2
     boto3_elasticache
     boto3_elasticsearch
+    boto3_generic
     boto3_route53
     boto3_sns
-    boto3_vpc
     boto_apigateway
     boto_asg
     boto_cfn

@@ -92,6 +92,13 @@ WAITER_CONFIG_GENERATORS = {
             "error_actions": {"InvalidNatGatewayID.NotFound": "success"},
         },
     },
+    "spot_fleet_request": {
+        "fulfilled": {
+            "value_path": "SpotFleetRequestConfigs[].ActivityStatus",
+            "success_values": ["fulfilled"],
+            "failure_values": ["error", "pending_termination"],
+        },
+    },
     "vpc_peering_connection": {
         "pending": {
             "value_path": "VpcPeeringConnections[].Status.Code",
