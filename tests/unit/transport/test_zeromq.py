@@ -539,6 +539,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
+    @skipIf(salt.utils.platform.is_linux(), "Skip on Linux")
     @slowTest
     def test_zeromq_publish_port(self):
         """
@@ -569,6 +570,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             channel.connect()
         assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
+    @skipIf(salt.utils.platform.is_linux(), "Skip on Linux")
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         """
         test AsyncZeroMQPubChannel _decode_messages when
@@ -606,6 +608,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             res = server_channel._decode_messages(message)
         assert res.result() is None
 
+    @skipIf(salt.utils.platform.is_linux(), "Skip on Linux")
     def test_zeromq_zeromq_filtering_decode_message(self):
         """
         test AsyncZeroMQPubChannel _decode_messages
