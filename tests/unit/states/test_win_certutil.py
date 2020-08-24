@@ -30,7 +30,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        add_mock = MagicMock(return_value="Added successfully")
+        add_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -44,7 +44,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher")
+            add_mock.assert_called_once_with(
+                "/path/to/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_add_serial_missing(self):
@@ -61,7 +63,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value=False)
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        add_mock = MagicMock(return_value="Added successfully")
+        add_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -92,7 +94,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456", "ABCDEF"])
-        add_mock = MagicMock(return_value="Added successfully")
+        add_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -123,7 +125,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        add_mock = MagicMock(return_value="Failed")
+        add_mock = MagicMock(return_value=2146885628)
         with patch.dict(
             certutil.__salt__,
             {
@@ -137,7 +139,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            add_mock.assert_called_once_with("/path/to/cert.cer", "TrustedPublisher")
+            add_mock.assert_called_once_with(
+                "/path/to/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_del_serial(self):
@@ -154,7 +158,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456", "ABCDEF"])
-        del_mock = MagicMock(return_value="Removed successfully")
+        del_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -168,7 +172,9 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            del_mock.assert_called_once_with("/tmp/cert.cer", "TrustedPublisher")
+            del_mock.assert_called_once_with(
+                "/tmp/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
 
     def test_del_serial_missing(self):
@@ -185,7 +191,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value=False)
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        del_mock = MagicMock(return_value="Added successfully")
+        del_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -216,7 +222,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456"])
-        del_mock = MagicMock(return_value="Added successfully")
+        del_mock = MagicMock(return_value=0)
         with patch.dict(
             certutil.__salt__,
             {
@@ -247,7 +253,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
         cache_mock = MagicMock(return_value="/tmp/cert.cer")
         get_cert_serial_mock = MagicMock(return_value="ABCDEF")
         get_store_serials_mock = MagicMock(return_value=["123456", "ABCDEF"])
-        del_mock = MagicMock(return_value="Failed")
+        del_mock = MagicMock(return_value=2146885628)
         with patch.dict(
             certutil.__salt__,
             {
@@ -261,5 +267,7 @@ class CertUtilTestCase(TestCase, LoaderModuleMockMixin):
             cache_mock.assert_called_once_with("/path/to/cert.cer", "base")
             get_cert_serial_mock.assert_called_once_with("/tmp/cert.cer")
             get_store_serials_mock.assert_called_once_with("TrustedPublisher")
-            del_mock.assert_called_once_with("/tmp/cert.cer", "TrustedPublisher")
+            del_mock.assert_called_once_with(
+                "/tmp/cert.cer", "TrustedPublisher", retcode=True
+            )
             self.assertEqual(expected, out)
