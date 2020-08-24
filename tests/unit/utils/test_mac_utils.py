@@ -10,6 +10,8 @@ import os
 import plistlib
 import xml.parsers.expat
 
+import salt.modules.cmdmod as cmd
+
 # Import Salt libs
 import salt.utils.mac_utils as mac_utils
 import salt.utils.platform
@@ -19,7 +21,7 @@ from salt.ext import six
 # Import 3rd-party libs
 from salt.ext.six.moves import range
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, call, mock_open, patch
+from tests.support.mock import MagicMock, MockTimedProc, call, mock_open, patch
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
@@ -437,6 +439,71 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             mock_run.assert_has_calls(calls, any_order=True)
 
         self.assertEqual(len(ret), 0)
+
+    def test_bootout_retcode_36_success(self):
+        """
+        Make sure that if we run a `launchctl bootout` cmd and it returns
+        36 that we treat it as a success.
+        """
+        proc = MagicMock(
+            return_value=MockTimedProc(stdout=None, stderr=None, returncode=36)
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                ret = mac_utils.launchctl("bootout", "org.salt.minion")
+        self.assertEqual(ret, True)
+
+    def test_bootout_retcode_99_fail(self):
+        """
+        Make sure that if we run a `launchctl bootout` cmd and it returns
+        something other than 0 or 36 that we treat it as a fail.
+        """
+        error = (
+            "Failed to bootout service:\n"
+            "stdout: failure\n"
+            "stderr: test failure\n"
+            "retcode: 99"
+        )
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b"failure", stderr=b"test failure", returncode=99
+            )
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                try:
+                    mac_utils.launchctl("bootout", "org.salt.minion")
+                except CommandExecutionError as exc:
+                    self.assertEqual(exc.message, error)
+
+    def test_not_bootout_retcode_36_fail(self):
+        """
+        Make sure that if we get a retcode 36 on non bootout cmds
+        that we still get a failure.
+        """
+        error = (
+            "Failed to bootstrap service:\n"
+            "stdout: failure\n"
+            "stderr: test failure\n"
+            "retcode: 36"
+        )
+        proc = MagicMock(
+            return_value=MockTimedProc(
+                stdout=b"failure", stderr=b"test failure", returncode=36
+            )
+        )
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            with patch(
+                "salt.utils.mac_utils.__salt__", {"cmd.run_all": cmd._run_all_quiet}
+            ):
+                try:
+                    mac_utils.launchctl("bootstrap", "org.salt.minion")
+                except CommandExecutionError as exc:
+                    self.assertEqual(exc.message, error)
 
 
 def _get_walk_side_effects(results):
