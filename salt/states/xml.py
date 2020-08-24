@@ -5,6 +5,7 @@ XML Manager
 State management of XML files
 """
 import copy
+import difflib
 import xml.etree.ElementTree as ET
 
 
@@ -135,7 +136,7 @@ def contains_tree(name, fragment, xpath=None):
                 </artists>
 
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     fragment_root = ET.fromstring(fragment)
     tree = ET.parse(name)
@@ -175,7 +176,10 @@ def contains_tree(name, fragment, xpath=None):
     else:
         ret["comment"] = "No XML elements changed"
 
-    tree.write(name)
+    if not __opts__["test"]:
+        tree.write(name)
+        ret.result = True
+
     return ret
 
 
@@ -225,7 +229,7 @@ def contains_fragment(name, fragment, xpath=None, replace=False):
 
     """
 
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     fragment_root = ET.fromstring(fragment)
     tree = ET.parse(name)
@@ -258,8 +262,12 @@ def contains_fragment(name, fragment, xpath=None, replace=False):
             target_parent.insert(position, fragment_root)
             ret["comment"] = "XML replaced old tag."
             ret["changes"][fragment_root.tag] = {
-                "old": ET.tostring(doppelganger),
-                "new": ET.tostring(fragment_root),
+                "diff": "".join(
+                    difflib.unified_diff(
+                        ET.tostring(doppelganger),
+                        ET.tostring(fragment_root),
+                    ),
+                ),
             }
             return ret
 
@@ -268,5 +276,8 @@ def contains_fragment(name, fragment, xpath=None, replace=False):
     ret["comment"] = "XML appended to target."
     ret["changes"][fragment_root.tag] = {"new": ET.tostring(fragment_root)}
 
-    tree.write(name)
+    if not __opts__["test"]:
+        tree.write(name)
+        ret.result = True
+
     return ret
