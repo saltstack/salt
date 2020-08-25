@@ -51,7 +51,6 @@ integration.modules.test_service
 integration.modules.test_ssh
 integration.modules.test_state
 integration.modules.test_status
-integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
