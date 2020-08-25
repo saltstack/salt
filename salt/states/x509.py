@@ -655,7 +655,7 @@ def certificate_managed(
         and "csr" not in kwargs
     ):
         raise salt.exceptions.SaltInvocationError(
-            "public_key or signing_private_key must be specified."
+            "public_key, signing_private_key, or csr must be specified."
         )
 
     if managed_private_key:
