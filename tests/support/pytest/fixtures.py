@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.fixtures
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,15 +165,11 @@ def salt_syndic_master_config(request, salt_factories):
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     else:
         ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
 
     # We need to copy the extension modules into the new master root_dir or
@@ -257,19 +252,15 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
         {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
     ]
 
-    config_overrides = {}
+    config_overrides = {"interface": "0.0.0.0"}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     else:
         ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     ext_pillar.append(
         {
