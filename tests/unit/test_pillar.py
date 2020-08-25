@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
@@ -8,7 +7,6 @@
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function
 
 import os
 import shutil
@@ -28,7 +26,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
-class MockFileclient(object):
+class MockFileclient:
     def __init__(self, cache_file=None, get_state=None, list_states=None):
         if cache_file is not None:
             self.cache_file = lambda *x, **y: cache_file

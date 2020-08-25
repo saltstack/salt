@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use a git repository as a Pillar source
 ---------------------------------------
@@ -388,7 +387,6 @@ Setting ``fallback`` per-remote or global configuration parameter will map non-e
           - fallback: master
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
