@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use a git repository as a Pillar source
 ---------------------------------------
@@ -388,7 +387,6 @@ Setting ``fallback`` per-remote or global configuration parameter will map non-e
           - fallback: master
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import copy
@@ -458,7 +456,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     ret = {}
     merge_strategy = __opts__.get("pillar_source_merging_strategy", "smart")
     merge_lists = __opts__.get("pillar_merge_lists", False)
-    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
+    for pillar_dir, env in git_pillar.pillar_dirs.items():
         # Map env if env == '__env__' before checking the env value
         if env == "__env__":
             env = (
@@ -502,7 +500,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
             pillar_roots.extend(
                 [
                     d
-                    for (d, e) in six.iteritems(git_pillar.pillar_dirs)
+                    for (d, e) in git_pillar.pillar_dirs.items()
                     if env == e and d != pillar_dir
                 ]
             )
