@@ -43,14 +43,14 @@ def _parse_cert(alias, public_cert, return_cert=False):
     ASN1 = OpenSSL.crypto.FILETYPE_ASN1
     PEM = OpenSSL.crypto.FILETYPE_PEM
     cert_data = {}
-    sha1 = public_cert.digest(b"sha1")
+    sha1 = public_cert.digest("sha1")
 
     cert_pem = OpenSSL.crypto.dump_certificate(PEM, public_cert)
-    raw_until = public_cert.get_notAfter()
+    raw_until = public_cert.get_notAfter().decode(__salt_system_encoding__)
     date_until = datetime.strptime(raw_until, "%Y%m%d%H%M%SZ")
     string_until = date_until.strftime("%B %d %Y")
 
-    raw_start = public_cert.get_notBefore()
+    raw_start = public_cert.get_notBefore().decode(__salt_system_encoding__)
     date_start = datetime.strptime(raw_start, "%Y%m%d%H%M%SZ")
     string_start = date_start.strftime("%B %d %Y")
 
@@ -117,7 +117,8 @@ def list(keystore, passphrase, alias=None, return_cert=False):
                 )
 
             # Detect if ASN1 binary, otherwise assume PEM
-            if "\x30" in cert_result[0]:
+            # ASN1 sequence is 30 in hexadecimal (48 in decimal)
+            if cert_result[0] == 48:
                 public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_result)
             else:
                 public_cert = OpenSSL.crypto.load_certificate(PEM, cert_result)
