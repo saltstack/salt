@@ -64,6 +64,7 @@ Fixed
 - Fixed macOS build scripts. (#57973)
 - Fixed Salt-API startup failure. (#57975)
 - Fixed CSR handling in x509 module (#54867)
+- Re-allow x509 to manage a certificate based on a CSR
 
 
 Added
