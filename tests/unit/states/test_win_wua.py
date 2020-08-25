@@ -2,14 +2,7 @@
 Test the win_wua state module
 """
 # Import Python Libs
-import sys
-
-try:
-    from dataclasses import dataclass, field
-
-    HAS_DATACLASSES = True
-except ImportError:
-    HAS_DATACLASSES = False
+from collections import namedtuple
 
 # Import Salt Libs
 import salt.states.win_wua as win_wua
@@ -94,6 +87,14 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {win_wua: {"__opts__": {"test": False}, "__env__": "base"}}
+
+    def setUp(self):
+        # Use named tuples to mock the Update objects returned by the search
+        self.UpdateRecordIdentity = namedtuple("UpdateRecordIdentity", "UpdateID")
+        self.UpdateRecord = namedtuple(
+            "UpdateRecord",
+            ["KBArticleIDs", "Identity", "IsDownloaded", "IsInstalled", "Title"],
+        )
 
     def test_uptodate_no_updates(self):
         """
@@ -216,30 +217,23 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.uptodate(name="NA")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses")
-    @skipIf(sys.version_info < (3, 6), "Does not support variable annotation")
     def test_installed(self):
         """
         Test installed function
         """
 
-        @dataclass(unsafe_hash=True)
-        class UpdateRecord:
-            KBs: list = field(compare=False)
-            ID: str
-            IsDownloaded: bool
-            IsInstalled: bool
-            Title: str
-
         update_search_obj = {
-            UpdateRecord(
-                KBs=["KB4052623"],
-                ID="eac02b09-d745-4891-b80f-400e0e5e4b6d",
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
+                    UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+                ),
                 IsDownloaded=False,
                 IsInstalled=False,
                 Title="Update 2",
             ),
         }
+
         update_search_dict = {
             "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
                 "Downloaded": True,
@@ -358,29 +352,15 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses")
-    @skipIf(sys.version_info < (3, 6), "Does not support variable annotation")
     def test_installed_test_mode(self):
         """
         Test installed function in test mode
         """
 
-        @dataclass(unsafe_hash=True)
-        class UpdateRecordIdentity:
-            UpdateID: str
-
-        @dataclass(unsafe_hash=True)
-        class UpdateRecord:
-            KBArticleIDs: list = field(compare=False)
-            Identity: UpdateRecordIdentity
-            IsDownloaded: bool
-            IsInstalled: bool
-            Title: str
-
         update_search_obj = {
-            UpdateRecord(
-                KBArticleIDs=["4052623"],
-                Identity=UpdateRecordIdentity(
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
                     UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
                 ),
                 IsDownloaded=False,
@@ -430,29 +410,15 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
 
-    @skipIf(not HAS_DATACLASSES, "Test requires dataclasses")
-    @skipIf(sys.version_info < (3, 6), "Does not support variable annotation")
     def test_installed_already_installed(self):
         """
         Test installed function when the update is already installed
         """
 
-        @dataclass(unsafe_hash=True)
-        class UpdateRecordIdentity:
-            UpdateID: str
-
-        @dataclass(unsafe_hash=True)
-        class UpdateRecord:
-            KBArticleIDs: list = field(compare=False)
-            Identity: UpdateRecordIdentity
-            IsDownloaded: bool
-            IsInstalled: bool
-            Title: str
-
         update_search_obj = {
-            UpdateRecord(
-                KBArticleIDs=["4052623"],
-                Identity=UpdateRecordIdentity(
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
                     UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
                 ),
                 IsDownloaded=True,
