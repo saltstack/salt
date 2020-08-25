@@ -88,7 +88,12 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
+from tests.support.helpers import (
+    destructiveTest,
+    requires_system_grains,
+    skip_if_not_root,
+    slowTest,
+)
 from tests.support.unit import skipIf
 
 # Check for requisite components

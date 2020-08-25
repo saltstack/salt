@@ -401,7 +401,6 @@ import salt.utils.versions
 from salt.exceptions import FileserverConfigError
 
 # Import third party libs
-from salt.ext import six
 from salt.pillar import Pillar
 
 PER_REMOTE_OVERRIDES = ("base", "env", "root", "ssl_verify", "refspecs", "fallback")
