@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -10,7 +9,6 @@
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -62,7 +60,7 @@ else:
     )
     if MAYBE_RUN_COVERAGE:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
-        os.environ[str("COVERAGE_PROCESS_START")] = str(COVERAGERC_FILE)
+        os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
 pytest_plugins = ["tempdir", "helpers_namespace"]
@@ -555,8 +553,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{0} ({1} tests)\n".format(group_id, len(items)),
-        yellow=True,
+        "Running test group #{} ({} tests)\n".format(group_id, len(items)), yellow=True,
     )
 
 
@@ -564,7 +561,12 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
-def salt_factories_config():
+def log_server_host(request):
+    return "0.0.0.0"
+
+
+@pytest.fixture(scope="session")
+def salt_factories_config(log_server_host, log_server_port, log_server_level):
     """
     Return a dictionary with the keyworkd arguments for SaltFactoriesManager
     """
@@ -576,6 +578,9 @@ def salt_factories_config():
         "start_timeout": 120
         if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
         else 60,
+        "log_server_host": log_server_host,
+        "log_server_port": log_server_port,
+        "log_server_level": log_server_level,
     }
 
 
@@ -700,7 +705,7 @@ class GrainsMarkEvaluator(MarkEvaluator):
     _cached_grains = None
 
     def _getglobals(self):
-        item_globals = super(GrainsMarkEvaluator, self)._getglobals()
+        item_globals = super()._getglobals()
         if GrainsMarkEvaluator._cached_grains is None:
             sminion = create_sminion()
             GrainsMarkEvaluator._cached_grains = sminion.opts["grains"].copy()
