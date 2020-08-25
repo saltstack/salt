@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 These only test the provider selection and verification logic, they do not init
 any remotes.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -50,7 +48,7 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
             ):
                 self.provider = "mocked"
                 self.fetched = False
-                super(MockedProvider, self).__init__(
+                super().__init__(
                     opts,
                     remote,
                     per_remote_defaults,
@@ -129,7 +127,7 @@ class TestGitFSProvider(TestCase):
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
 
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             with patch.object(
                 role_class, "verify_gitpython", MagicMock(return_value=True)
             ):
@@ -167,7 +165,7 @@ class TestGitFSProvider(TestCase):
             ("git_pillar", salt.utils.gitfs.GitPillar),
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             for provider in salt.utils.gitfs.GIT_PROVIDERS:
                 verify = "verify_gitpython"
                 mock1 = _get_mock(verify, provider)
