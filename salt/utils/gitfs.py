@@ -16,7 +16,6 @@ import shlex
 import shutil
 import stat
 import subprocess
-import sys
 import time
 import weakref
 from datetime import datetime
