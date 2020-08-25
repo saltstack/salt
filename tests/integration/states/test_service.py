@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the service state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
@@ -39,8 +37,6 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.service_name = "org.ntp.ntpd"
             if int(os_release.split(".")[1]) >= 13:
                 self.service_name = "com.apple.AirPlayXPCHelper"
-            self.stopped = ""
-            self.running = "[0-9]"
         elif os_family == "Windows":
             self.service_name = "Spooler"
 
@@ -55,7 +51,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
             self.post_srv_disable = True
 
         if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
-            self.skipTest("{0} is not installed".format(cmd_name))
+            self.skipTest("{} is not installed".format(cmd_name))
 
     def tearDown(self):
         if self.post_srv_disable:
