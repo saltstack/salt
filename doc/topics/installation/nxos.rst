@@ -254,17 +254,28 @@ The ``guestshell`` is an independent CentOS container that does not inherit sett
   export https_proxy=https://proxy.yourdomain.com:<port>
 
 
-STEP 3: Install SaltStack Minion
+STEP 3: Install Python3
+-----------------------
+
+SaltStack no longer provides support for python2 so please use the following ``yum`` commands to install python3 in the guestshell.
+
+.. code:: bash
+
+  yum -y install https://centos7.iuscommunity.org/ius-release.rpm
+  yum -y install python36
+
+
+STEP 4: Install SaltStack Minion
 ---------------------------------
 
 **OPTIONAL: Upgrade the pip installer**
 
-  ``[root@guestshell guestshell]# pip install --upgrade pip``
+  ``[root@guestshell guestshell]# pip3 install --upgrade pip``
 
 
 Install the ``certifi`` python package.
 
-  ``[root@guestshell guestshell]# pip install certifi``
+  ``[root@guestshell guestshell]# pip3 install certifi``
 
 The most current information on installing the SaltStack Minion in a Centos7 environment can be found here_
 
@@ -284,7 +295,7 @@ Install the Salt Minion.
 
   ``[root@guestshell guestshell]# yum install salt-minion``
 
-STEP 4: Configure SaltStack Minion
+STEP 5: Configure SaltStack Minion
 ----------------------------------
 
 Make the following changes to the ``/etc/salt/minion`` configuration file in the NX-OS GuestShell.
@@ -402,4 +413,3 @@ References
 .. _Guestshell_N9k: https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus9000/sw/9-x/programmability/guide/b_Cisco_Nexus_9000_Series_NX-OS_Programmability_Guide_9x/b_Cisco_Nexus_9000_Series_NX-OS_Programmability_Guide_9x_chapter_0100.html
 
 .. _GuestShell_N3k: https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/9_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_9x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_9x_chapter_0101.html
-

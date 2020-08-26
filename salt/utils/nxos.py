@@ -182,7 +182,8 @@ class NxapiClient(object):
         req = self._build_request(type, command_list)
         if self.nxargs["connect_over_uds"]:
             self.connection.request("POST", req["url"], req["payload"], req["headers"])
-            response = self.connection.getresponse()
+            socket_data = self.connection.getresponse()
+            response = json.loads(socket_data.read().decode("utf-8"))
         else:
             response = self.connection(
                 req["url"],
@@ -208,13 +209,12 @@ class NxapiClient(object):
             else:
                 raise NxosError("NX-API Request Not Supported: {}".format(response))
 
-        if isinstance(response, Iterable):
+        if 'dict' in response:
             body = response["dict"]
-        else:
+        elif 'ins_api' in response:
             body = response
-
-        if self.nxargs["connect_over_uds"]:
-            body = json.loads(response.read().decode("utf-8"))
+        else:
+            raise NxosError("Unable to parse response")
 
         # Proceed with caution.  The JSON may not be complete.
         # Don't just return body['ins_api']['outputs']['output'] directly.
