@@ -692,7 +692,6 @@ class IPCMessageSubscriber(IPCClient):
         except StreamClosedError as exc:
             log.trace("Subscriber disconnected from IPC %s", self.socket_path)
             self._read_stream_future = None
-            exc_to_raise = exc
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred in Subscriber while handling stream: %s", exc)
             self._read_stream_future = None
