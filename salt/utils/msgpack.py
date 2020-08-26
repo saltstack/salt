@@ -92,7 +92,7 @@ def _add_msgpack_unpack_kwargs(kwargs):
     """
     Add any msgpack unpack kwargs here.
 
-    max_buffer_size: will make sure the buffer is set to a minimum 
+    max_buffer_size: will make sure the buffer is set to a minimum
     of 100MiB in versions >=6 and <1.0
     """
     assert isinstance(kwargs, dict)
