@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Access Salt's elemental release code-names.
 
@@ -32,15 +31,11 @@ A simple example might be something like the following:
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.versions
 import salt.version
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -170,9 +165,7 @@ def _check_release_cmp(name):
         log.info("Release code name {} was not found.".format(name))
         return None
 
-    current_version = six.text_type(
-        salt.version.SaltStackVersion(*salt.version.__version_info__)
-    )
+    current_version = str(salt.version.SaltStackVersion(*salt.version.__version_info__))
     current_version = current_version.rsplit(".", 1)[0]
     version_cmp = salt.utils.versions.version_cmp(current_version, map_version)
     return version_cmp
