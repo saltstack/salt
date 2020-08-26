@@ -169,7 +169,10 @@ class ServiceModuleTest(ModuleCase):
                 self.assertTrue("error" in disable.lower())
 
         if salt.utils.platform.is_darwin():
-            self.assertFalse(self.run_function("service.disabled", [srv_name]))
+            self.assertEqual(
+                self.run_function("service.disabled", [srv_name]),
+                "ERROR: Service not found: {}".format(srv_name),
+            )
         else:
             self.assertNotIn(srv_name, self.run_function("service.get_disabled"))
 
