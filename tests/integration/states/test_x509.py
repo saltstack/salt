@@ -166,6 +166,32 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "New" in ret[key]["changes"]["Certificate"]
 
     @slowTest
+    def test_proper_cert_comparison(self):
+        # In this SLS we define two certs which have identical content.
+        # The first one is expected to be created.
+        # The second one is expected to be recognized as already present.
+        ret = self.run_function(
+            "state.apply",
+            ["x509.proper_cert_comparison"],
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
+        # check the first generated cert
+        first_key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert first_key in ret
+        assert "changes" in ret[first_key]
+        assert "Certificate" in ret[first_key]["changes"]
+        assert "New" in ret[first_key]["changes"]["Certificate"]
+        # check whether the second defined cert is considered to match the first one
+        second_key = "x509_|-second_test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert second_key in ret
+        assert "changes" in ret[second_key]
+        assert ret[second_key]["changes"] == {}
+
+    @slowTest
     def test_crl_managed(self):
         ret = self.run_function(
             "state.apply", ["x509.crl_managed"], pillar={"tmp_dir": RUNTIME_VARS.TMP}
