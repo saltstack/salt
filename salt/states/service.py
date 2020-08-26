@@ -121,8 +121,8 @@ def _enabled_used_error(ret):
     """
     ret["result"] = False
     ret["comment"] = (
-        'Service {0} uses non-existent option "enabled".  '
-        + 'Perhaps "enable" option was intended?'
+        'Service {} uses non-existent option "enabled".  '
+        'Perhaps "enable" option was intended?'
     ).format(ret["name"])
     return ret
 
@@ -149,7 +149,7 @@ def _enable(name, started, result=True, **kwargs):
     if "service.enable" not in __salt__ or "service.enabled" not in __salt__:
         if started is True:
             ret["comment"] = (
-                "Enable is not available on this minion," " service {} started"
+                "Enable is not available on this minion, service {} started"
             ).format(name)
         elif started is None:
             ret["comment"] = (
@@ -158,7 +158,7 @@ def _enable(name, started, result=True, **kwargs):
             ).format(name)
         else:
             ret["comment"] = (
-                "Enable is not available on this minion," " service {} is dead"
+                "Enable is not available on this minion, service {} is dead"
             ).format(name)
         return ret
 
@@ -167,19 +167,17 @@ def _enable(name, started, result=True, **kwargs):
     if before_toggle_enable_status:
         # Service is enabled
         if started is True:
-            ret["comment"] = (
-                "Service {} is already enabled," " and is running"
-            ).format(name)
+            ret["comment"] = ("Service {} is already enabled, and is running").format(
+                name
+            )
         elif started is None:
             # always be sure in this case to reset the changes dict
             ret["changes"] = {}
             ret["comment"] = (
-                "Service {} is already enabled," " and is in the desired state"
+                "Service {} is already enabled, and is in the desired state"
             ).format(name)
         else:
-            ret["comment"] = ("Service {} is already enabled," " and is dead").format(
-                name
-            )
+            ret["comment"] = "Service {} is already enabled, and is dead".format(name)
         return ret
 
     # Service needs to be enabled
@@ -199,15 +197,15 @@ def _enable(name, started, result=True, **kwargs):
             if before_toggle_enable_status != after_toggle_enable_status:
                 ret["changes"][name] = True
             if started is True:
-                ret["comment"] = (
-                    "Service {} has been enabled," " and is running"
-                ).format(name)
+                ret["comment"] = ("Service {} has been enabled, and is running").format(
+                    name
+                )
             elif started is None:
                 ret["comment"] = (
-                    "Service {} has been enabled," " and is in the desired state"
+                    "Service {} has been enabled, and is in the desired state"
                 ).format(name)
             else:
-                ret["comment"] = ("Service {} has been enabled," " and is dead").format(
+                ret["comment"] = ("Service {} has been enabled, and is dead").format(
                     name
                 )
             return ret
@@ -263,7 +261,7 @@ def _disable(name, started, result=True, **kwargs):
     if "service.disable" not in __salt__ or "service.disabled" not in __salt__:
         if started is True:
             ret["comment"] = (
-                "Disable is not available on this minion," " service {} started"
+                "Disable is not available on this minion, service {} started"
             ).format(name)
         elif started is None:
             ret["comment"] = (
@@ -272,7 +270,7 @@ def _disable(name, started, result=True, **kwargs):
             ).format(name)
         else:
             ret["comment"] = (
-                "Disable is not available on this minion," " service {} is dead"
+                "Disable is not available on this minion, service {} is dead"
             ).format(name)
         return ret
 
@@ -288,19 +286,17 @@ def _disable(name, started, result=True, **kwargs):
     if before_toggle_disable_status:
         # Service is disabled
         if started is True:
-            ret["comment"] = (
-                "Service {} is already disabled," " and is running"
-            ).format(name)
+            ret["comment"] = ("Service {} is already disabled, and is running").format(
+                name
+            )
         elif started is None:
             # always be sure in this case to reset the changes dict
             ret["changes"] = {}
             ret["comment"] = (
-                "Service {} is already disabled," " and is in the desired state"
+                "Service {} is already disabled, and is in the desired state"
             ).format(name)
         else:
-            ret["comment"] = ("Service {} is already disabled," " and is dead").format(
-                name
-            )
+            ret["comment"] = "Service {} is already disabled, and is dead".format(name)
         return ret
 
     # Service needs to be disabled
@@ -319,24 +315,22 @@ def _disable(name, started, result=True, **kwargs):
         if before_toggle_disable_status != after_toggle_disable_status:
             ret["changes"][name] = True
         if started is True:
-            ret["comment"] = ("Service {} has been disabled," " and is running").format(
+            ret["comment"] = ("Service {} has been disabled, and is running").format(
                 name
             )
         elif started is None:
             ret["comment"] = (
-                "Service {} has been disabled," " and is in the desired state"
+                "Service {} has been disabled, and is in the desired state"
             ).format(name)
         else:
-            ret["comment"] = ("Service {} has been disabled," " and is dead").format(
-                name
-            )
+            ret["comment"] = "Service {} has been disabled, and is dead".format(name)
         return ret
 
     # Service failed to be disabled
     ret["result"] = False
     if started is True:
         ret["comment"] = (
-            "Failed when setting service {} to not start" " at boot, and is running"
+            "Failed when setting service {} to not start at boot, and is running"
         ).format(name)
     elif started is None:
         ret["comment"] = (
@@ -441,10 +435,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         if not _available(name, ret):
             if __opts__.get("test"):
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Service {} not present; if created in this state run, it would have been started".format(
-                    name
+                ret["comment"] = (
+                    "Service {} not present; if created in this state run, "
+                    "it would have been started".format(name)
                 )
             return ret
     except CommandExecutionError as exc:
@@ -516,10 +509,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if (macos or windows) and not before_toggle_enable_status:
         # fail if enable isn't set.
         if not enable:
-            ret[
-                "comment"
-            ] = "The service {} is disabled but enable is not True. Set enable to True to successfully start the service.".format(
-                name
+            ret["comment"] = (
+                "The service {} is disabled but enable is not True. Set "
+                "enable to True to successfully start the service.".format(name)
             )
             ret["result"] = False
             return ret
@@ -628,10 +620,9 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         if not _available(name, ret):
             if __opts__.get("test"):
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "Service {} not present; if created in this state run, it would have been stopped".format(
-                    name
+                ret["comment"] = (
+                    "Service {} not present; if created in this state run, "
+                    "it would have been stopped".format(name)
                 )
             else:
                 # A non-available service is OK here, don't let the state fail
