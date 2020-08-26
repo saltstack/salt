@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compendium of generic DNS utilities.
 
@@ -7,7 +6,6 @@ Compendium of generic DNS utilities.
     Some functions in the ``dnsutil`` execution module depend on ``dig``.
 """
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
@@ -17,7 +15,6 @@ import time
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -79,13 +76,13 @@ def hosts_append(hostsfile="/etc/hosts", ip_addr=None, entries=None):
                 host_list.remove(host)
 
     if not host_list:
-        return "No additional hosts were added to {0}".format(hostsfile)
+        return "No additional hosts were added to {}".format(hostsfile)
 
-    append_line = "\n{0} {1}".format(ip_addr, " ".join(host_list))
+    append_line = "\n{} {}".format(ip_addr, " ".join(host_list))
     with salt.utils.files.fopen(hostsfile, "a") as fp_:
         fp_.write(salt.utils.stringutils.to_str(append_line))
 
-    return "The following line was added to {0}:{1}".format(hostsfile, append_line)
+    return "The following line was added to {}:{}".format(hostsfile, append_line)
 
 
 def hosts_remove(hostsfile="/etc/hosts", entries=None):
@@ -108,7 +105,7 @@ def hosts_remove(hostsfile="/etc/hosts", entries=None):
     with salt.utils.files.fopen(hostsfile, "w") as out_file:
         for line in hosts.splitlines():
             if not line or line.strip().startswith("#"):
-                out_file.write(salt.utils.stringutils.to_str("{0}\n".format(line)))
+                out_file.write(salt.utils.stringutils.to_str("{}\n".format(line)))
                 continue
             comps = line.split()
             for host in host_list:
@@ -154,7 +151,7 @@ def parse_zone(zonefile=None, zone=None):
             mode = "multi"
             multi = ""
         if mode == "multi":
-            multi += " {0}".format(line)
+            multi += " {}".format(line)
             if ")" in line:
                 mode = "single"
                 line = multi.replace("(", "").replace(")", "")
@@ -165,27 +162,27 @@ def parse_zone(zonefile=None, zone=None):
         else:
             comps = line.split()
         if "SOA" in line:
-            zonedict['NETWORK'] = 'IN'
-            for network in ['CH', 'CS', 'HS', 'IN']:
+            zonedict["NETWORK"] = "IN"
+            for network in ["CH", "CS", "HS", "IN"]:
                 if network in comps:
-                    zonedict['NETWORK'] = network
+                    zonedict["NETWORK"] = network
                     comps.pop(comps.index(network))
-            if comps[2] == 'SOA':
+            if comps[2] == "SOA":
                 # an optional TTL is present
                 comps.pop(1)
             zonedict["ORIGIN"] = comps[0]
-            zonedict['SOURCE'] = comps[2]
-            zonedict['CONTACT'] = comps[3].replace('.', '@', 1)
-            zonedict['SERIAL'] = comps[4]
-            zonedict['REFRESH'] = _to_seconds(comps[5])
-            zonedict['RETRY'] = _to_seconds(comps[6])
-            zonedict['EXPIRE'] = _to_seconds(comps[7])
-            zonedict['MINTTL'] = _to_seconds(comps[8])
+            zonedict["SOURCE"] = comps[2]
+            zonedict["CONTACT"] = comps[3].replace(".", "@", 1)
+            zonedict["SERIAL"] = comps[4]
+            zonedict["REFRESH"] = _to_seconds(comps[5])
+            zonedict["RETRY"] = _to_seconds(comps[6])
+            zonedict["EXPIRE"] = _to_seconds(comps[7])
+            zonedict["MINTTL"] = _to_seconds(comps[8])
             continue
         if comps[0] == "IN":
             comps.insert(0, zonedict["ORIGIN"])
         if not comps[0].endswith(".") and "NS" not in line:
-            comps[0] = "{0}.{1}".format(comps[0], zonedict["ORIGIN"])
+            comps[0] = "{}.{}".format(comps[0], zonedict["ORIGIN"])
         if comps[2] == "NS":
             zonedict.setdefault("NS", []).append(comps[3])
         elif comps[2] == "MX":
@@ -277,7 +274,7 @@ def A(host, nameserver=None):
             ]
             return addresses
         except socket.gaierror:
-            return "Unable to resolve {0}".format(host)
+            return "Unable to resolve {}".format(host)
 
     return "This function requires dig, which is not currently available"
 
@@ -309,7 +306,7 @@ def AAAA(host, nameserver=None):
             ]
             return addresses
         except socket.gaierror:
-            return "Unable to resolve {0}".format(host)
+            return "Unable to resolve {}".format(host)
 
     return "This function requires dig, which is not currently available"
 
@@ -404,13 +401,13 @@ def serial(zone="", update=False):
     grains = {}
     key = "dnsserial"
     if zone:
-        key += "_{0}".format(zone)
+        key += "_{}".format(zone)
     stored = __salt__["grains.get"](key=key)
     present = time.strftime("%Y%m%d01")
     if not update:
         return stored or present
     if stored and stored >= present:
-        current = six.text_type(int(stored) + 1)
+        current = str(int(stored) + 1)
     else:
         current = present
     __salt__["grains.setval"](key=key, val=current)
