@@ -164,6 +164,21 @@ class TestMsgpack(TestCase):
         for size in sizes:
             self.assertEqual(unpacker.unpack(), {i: i * 2 for i in range(size)})
 
+    def test_max_buffer_size(self):
+        '''
+        Test if max buffer size allows at least 100MiB
+        '''
+        bio = BytesIO()
+        bio.write(salt.utils.msgpack.packb('0' * (100 * 1024 * 1024)))
+        bio.seek(0)
+        unpacker = salt.utils.msgpack.Unpacker(bio)
+        raised = False
+        try:
+            unpacker.unpack()
+        except ValueError:
+            raised = True
+        self.assertFalse(raised)
+
     def test_exceptions(self):
         # Verify that this exception exists
         self.assertTrue(salt.utils.msgpack.exceptions.PackValueError)
