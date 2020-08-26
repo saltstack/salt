@@ -165,17 +165,22 @@ def parse_zone(zonefile=None, zone=None):
         else:
             comps = line.split()
         if "SOA" in line:
-            if comps[1] != "IN":
+            zonedict['NETWORK'] = 'IN'
+            for network in ['CH', 'CS', 'HS', 'IN']:
+                if network in comps:
+                    zonedict['NETWORK'] = network
+                    comps.pop(comps.index(network))
+            if comps[2] == 'SOA':
+                # an optional TTL is present
                 comps.pop(1)
             zonedict["ORIGIN"] = comps[0]
-            zonedict["NETWORK"] = comps[1]
-            zonedict["SOURCE"] = comps[3]
-            zonedict["CONTACT"] = comps[4].replace(".", "@", 1)
-            zonedict["SERIAL"] = comps[5]
-            zonedict["REFRESH"] = _to_seconds(comps[6])
-            zonedict["RETRY"] = _to_seconds(comps[7])
-            zonedict["EXPIRE"] = _to_seconds(comps[8])
-            zonedict["MINTTL"] = _to_seconds(comps[9])
+            zonedict['SOURCE'] = comps[2]
+            zonedict['CONTACT'] = comps[3].replace('.', '@', 1)
+            zonedict['SERIAL'] = comps[4]
+            zonedict['REFRESH'] = _to_seconds(comps[5])
+            zonedict['RETRY'] = _to_seconds(comps[6])
+            zonedict['EXPIRE'] = _to_seconds(comps[7])
+            zonedict['MINTTL'] = _to_seconds(comps[8])
             continue
         if comps[0] == "IN":
             comps.insert(0, zonedict["ORIGIN"])
