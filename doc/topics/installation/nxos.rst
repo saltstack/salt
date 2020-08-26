@@ -285,7 +285,7 @@ Information from the install guide is provided here for convenience.
 
 Run the following commands to install the SaltStack repository and key:
 
-  ``[root@guestshell guestshell]# yum install https://repo.saltstack.com/yum/redhat/salt-repo-latest-2.el7.noarch.rpm``
+  ``[root@guestshell guestshell]# yum install https://repo.saltstack.com/py3/redhat/salt-py3-repo-latest.el7.noarch.rpm``
 
 Run the following command to force yum to revalidate the cache for each repository.
 
