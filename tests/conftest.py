@@ -373,13 +373,8 @@ def pytest_collection_modifyitems(config, items):
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
             for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope in ("function", "class", "module"):
+                if fixturedef.scope != "package":
                     continue
-                try:
-                    node_ids = fixturedef.node_ids
-                except AttributeError:
-                    node_ids = fixturedef.node_ids = set()
-                node_ids.add(item.nodeid)
                 try:
                     fixturedef.finish.__wrapped__
                 except AttributeError:
@@ -387,25 +382,40 @@ def pytest_collection_modifyitems(config, items):
 
                     def wrapper(func, fixturedef):
                         @wraps(func)
-                        def wrapped(self, request):
+                        def wrapped(self, request, nextitem=False):
                             try:
                                 return self._finished
                             except AttributeError:
-                                if self.node_ids:
-                                    if (
-                                        not request.session.shouldfail
-                                        and not request.session.shouldstop
-                                    ):
-                                        log.debug(
-                                            "%s is still going to be used, not terminating it. "
-                                            "Still in use on:\n%s",
-                                            self,
-                                            pprint.pformat(list(self.node_ids)),
-                                        )
-                                        return
+                                if nextitem:
+                                    fpath = pathlib.Path(self.baseid).resolve()
+                                    tpath = pathlib.Path(
+                                        nextitem.fspath.strpath
+                                    ).resolve()
+                                    try:
+                                        tpath.relative_to(fpath)
+                                        # The test module is within the same package that the fixture is
+                                        if (
+                                            not request.session.shouldfail
+                                            and not request.session.shouldstop
+                                        ):
+                                            log.debug(
+                                                "The next test item is still under the fixture package path. "
+                                                "Not terminating %s",
+                                                self,
+                                            )
+                                            return
+                                    except ValueError:
+                                        pass
                                 log.debug("Finish called on %s", self)
                                 try:
                                     return func(request)
+                                except BaseException as exc:  # pylint: disable=broad-except
+                                    pytest.fail(
+                                        "Failed to run finish() on {}: {}".format(
+                                            fixturedef, exc
+                                        ),
+                                        pytrace=True,
+                                    )
                                 finally:
                                     self._finished = True
 
@@ -442,7 +452,7 @@ def pytest_runtest_protocol(item, nextitem):
         if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
         for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope in ("function", "class", "module"):
+            if fixturedef.scope != "package":
                 continue
             used_fixture_defs.append(fixturedef)
     try:
@@ -450,11 +460,7 @@ def pytest_runtest_protocol(item, nextitem):
         yield
     finally:
         for fixturedef in used_fixture_defs:
-            if item.nodeid in fixturedef.node_ids:
-                fixturedef.node_ids.remove(item.nodeid)
-            if not fixturedef.node_ids:
-                # This fixture is not used in any more test functions
-                fixturedef.finish(request)
+            fixturedef.finish(request, nextitem=nextitem)
     del request
     del used_fixture_defs
 
