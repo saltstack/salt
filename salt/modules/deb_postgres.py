@@ -73,7 +73,7 @@ def cluster_create(
         cmd += ["--encoding", encoding]
     if datadir:
         cmd += ["--datadir", datadir]
-    cmd += [version, name]
+    cmd += [six.text_type(version), name]
     # initdb-specific options are passed after '--'
     if allow_group_access or data_checksums or wal_segsize:
         cmd += ["--"]
@@ -147,7 +147,7 @@ def cluster_remove(version, name="main", stop=False):
     cmd = [salt.utils.path.which("pg_dropcluster")]
     if stop:
         cmd += ["--stop"]
-    cmd += [version, name]
+    cmd += [six.text_type(version), name]
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
