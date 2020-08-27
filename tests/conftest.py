@@ -379,7 +379,7 @@ def pytest_collection_modifyitems(config, items):
                                             not request.session.shouldfail
                                             and not request.session.shouldstop
                                         ):
-                                            log.debug(
+                                            log.warning(
                                                 "The next test item is still under the fixture package path. "
                                                 "Not terminating %s",
                                                 self,
@@ -387,7 +387,7 @@ def pytest_collection_modifyitems(config, items):
                                             return
                                     except ValueError:
                                         pass
-                                log.debug("Finish called on %s", self)
+                                log.warning("Finish called on %s", self)
                                 try:
                                     return func(request)
                                 except BaseException as exc:  # pylint: disable=broad-except
