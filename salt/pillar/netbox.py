@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module that adds data to the Pillar structure from a NetBox API.
 
@@ -52,11 +51,8 @@ endpoint: ``devices``
     Specify if you want to fetch devices or virtual-machines.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.http
 from salt._compat import ipaddress
 
