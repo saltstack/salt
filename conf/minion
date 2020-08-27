@@ -42,7 +42,7 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
-# Setting master_type to 'disable' let's you have a running minion (with engines and
+# Setting master_type to 'disable' lets you have a running minion (with engines and
 # beacons) without a master connection
 # master_type: str
 
@@ -117,6 +117,13 @@
 # minion to lose connection with the master. To turn off minion id caching,
 # set this config to ``False``.
 #minion_id_caching: True
+
+# Convert minion id to lowercase when it is being generated. Helpful when some
+# hosts get the minion id in uppercase. Cached ids will remain the same and
+# not converted. For example, Windows minions often have uppercase minion
+# names when they are set up but not always. To turn on, set this config to
+# ``True``.
+#minion_id_lowercase: False
 
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a

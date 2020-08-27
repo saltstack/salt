@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Discover all instances of unittest.TestCase in this directory.
 """
 # pylint: disable=file-perms
-
-# Import python libs
-from __future__ import absolute_import, print_function
 
 import collections
 import os
@@ -44,9 +40,6 @@ try:
 except ImportError:
     pass
 
-# Import salt libs
-from salt.ext import six  # isort:skip
-
 try:
     from tests.support.paths import TMP, SYS_TMP_DIR, INTEGRATION_TEST_DIR
     from tests.support.paths import CODE_DIR as SALT_ROOT
@@ -62,7 +55,7 @@ except ImportError as exc:
     import pprint
 
     pprint.pprint(sys.path)
-    six.reraise(*sys.exc_info())
+    raise
 
 from tests.integration import TestDaemon, TestDaemonStartFailed  # isort:skip
 from tests.multimaster import MultimasterTestDaemon  # isort:skip
@@ -71,7 +64,6 @@ import salt.utils.platform  # isort:skip
 if not salt.utils.platform.is_windows():
     import resource
 
-# Import Salt Testing libs
 from tests.support.parser import PNUM, print_header  # isort:skip
 from tests.support.parser.cover import SaltCoverageTestingParser  # isort:skip
 
@@ -87,7 +79,7 @@ try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
 except OSError as err:
-    print("Failed to change directory to salt's source: {0}".format(err))
+    print("Failed to change directory to salt's source: {}".format(err))
 
 # Soft and hard limits on max open filehandles
 MAX_OPEN_FILES = {
@@ -157,15 +149,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         """
         suites = set(TEST_SUITES.keys())
         if not include_unit:
-            suites -= set(["unit"])
+            suites -= {"unit"}
         if not include_cloud_provider:
-            suites -= set(["cloud_provider"])
+            suites -= {"cloud_provider"}
         if not include_proxy:
-            suites -= set(["proxy"])
+            suites -= {"proxy"}
         if not include_kitchen:
-            suites -= set(["kitchen"])
+            suites -= {"kitchen"}
         if not include_multimaster:
-            suites -= set(["multimaster"])
+            suites -= {"multimaster"}
 
         return suites
 
@@ -574,7 +566,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
         # Print out which version of python this test suite is running on
-        print(" * Python Version: {0}".format(" ".join(sys.version.split())))
+        print(" * Python Version: {}".format(" ".join(sys.version.split())))
 
         # Transplant configuration
         TestDaemon.transplant_configs(transport=self.options.transport)
@@ -617,59 +609,59 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 syndic_master_conf = TestDaemon.config("syndic_master")
 
                 print_header(" * Syndic master configuration values (MoM)", top=False)
-                print("interface: {0}".format(syndic_master_conf["interface"]))
-                print("publish port: {0}".format(syndic_master_conf["publish_port"]))
-                print("return port: {0}".format(syndic_master_conf["ret_port"]))
+                print("interface: {}".format(syndic_master_conf["interface"]))
+                print("publish port: {}".format(syndic_master_conf["publish_port"]))
+                print("return port: {}".format(syndic_master_conf["ret_port"]))
                 print("\n")
 
                 print_header(" * Syndic configuration values", top=True)
-                print("interface: {0}".format(syndic_conf["interface"]))
-                print("syndic master: {0}".format(syndic_conf["syndic_master"]))
+                print("interface: {}".format(syndic_conf["interface"]))
+                print("syndic master: {}".format(syndic_conf["syndic_master"]))
                 print(
-                    "syndic master port: {0}".format(syndic_conf["syndic_master_port"])
+                    "syndic master port: {}".format(syndic_conf["syndic_master_port"])
                 )
                 print("\n")
 
                 print_header(" * Master configuration values", top=True)
-                print("interface: {0}".format(master_conf["interface"]))
-                print("publish port: {0}".format(master_conf["publish_port"]))
-                print("return port: {0}".format(master_conf["ret_port"]))
+                print("interface: {}".format(master_conf["interface"]))
+                print("publish port: {}".format(master_conf["publish_port"]))
+                print("return port: {}".format(master_conf["ret_port"]))
                 print("\n")
 
                 print_header(" * Minion configuration values", top=True)
-                print("interface: {0}".format(minion_conf["interface"]))
-                print("master: {0}".format(minion_conf["master"]))
-                print("master port: {0}".format(minion_conf["master_port"]))
+                print("interface: {}".format(minion_conf["interface"]))
+                print("master: {}".format(minion_conf["master"]))
+                print("master port: {}".format(minion_conf["master_port"]))
                 if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(minion_conf["tcp_pull_port"]))
+                    print("tcp pub port: {}".format(minion_conf["tcp_pub_port"]))
+                    print("tcp pull port: {}".format(minion_conf["tcp_pull_port"]))
                 print("\n")
 
                 print_header(" * Sub Minion configuration values", top=True)
-                print("interface: {0}".format(sub_minion_conf["interface"]))
-                print("master: {0}".format(sub_minion_conf["master"]))
-                print("master port: {0}".format(sub_minion_conf["master_port"]))
+                print("interface: {}".format(sub_minion_conf["interface"]))
+                print("master: {}".format(sub_minion_conf["master"]))
+                print("master port: {}".format(sub_minion_conf["master_port"]))
                 if sub_minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(sub_minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(sub_minion_conf["tcp_pull_port"]))
+                    print("tcp pub port: {}".format(sub_minion_conf["tcp_pub_port"]))
+                    print("tcp pull port: {}".format(sub_minion_conf["tcp_pull_port"]))
                 print("\n")
 
                 print_header(" * Proxy Minion configuration values", top=True)
-                print("interface: {0}".format(proxy_conf["interface"]))
-                print("master: {0}".format(proxy_conf["master"]))
-                print("master port: {0}".format(proxy_conf["master_port"]))
+                print("interface: {}".format(proxy_conf["interface"]))
+                print("master: {}".format(proxy_conf["master"]))
+                print("master port: {}".format(proxy_conf["master_port"]))
                 if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(proxy_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(proxy_conf["tcp_pull_port"]))
+                    print("tcp pub port: {}".format(proxy_conf["tcp_pub_port"]))
+                    print("tcp pull port: {}".format(proxy_conf["tcp_pull_port"]))
                 print("\n")
 
                 print_header(
-                    " Your client configuration is at {0}".format(
+                    " Your client configuration is at {}".format(
                         TestDaemon.config_location()
                     )
                 )
                 print(
-                    "To access the minion: salt -c {0} minion test.ping".format(
+                    "To access the minion: salt -c {} minion test.ping".format(
                         TestDaemon.config_location()
                     )
                 )
@@ -700,41 +692,41 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 sub_minion_conf = MultimasterTestDaemon.config("mm_sub_minion")
 
                 print_header(" * Master configuration values", top=True)
-                print("interface: {0}".format(master_conf["interface"]))
-                print("publish port: {0}".format(master_conf["publish_port"]))
-                print("return port: {0}".format(master_conf["ret_port"]))
+                print("interface: {}".format(master_conf["interface"]))
+                print("publish port: {}".format(master_conf["publish_port"]))
+                print("return port: {}".format(master_conf["ret_port"]))
                 print("\n")
 
                 print_header(" * Second master configuration values", top=True)
-                print("interface: {0}".format(sub_master_conf["interface"]))
-                print("publish port: {0}".format(sub_master_conf["publish_port"]))
-                print("return port: {0}".format(sub_master_conf["ret_port"]))
+                print("interface: {}".format(sub_master_conf["interface"]))
+                print("publish port: {}".format(sub_master_conf["publish_port"]))
+                print("return port: {}".format(sub_master_conf["ret_port"]))
                 print("\n")
 
                 print_header(" * Minion configuration values", top=True)
-                print("interface: {0}".format(minion_conf["interface"]))
-                print("masters: {0}".format(", ".join(minion_conf["master"])))
+                print("interface: {}".format(minion_conf["interface"]))
+                print("masters: {}".format(", ".join(minion_conf["master"])))
                 if minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(minion_conf["tcp_pull_port"]))
+                    print("tcp pub port: {}".format(minion_conf["tcp_pub_port"]))
+                    print("tcp pull port: {}".format(minion_conf["tcp_pull_port"]))
                 print("\n")
 
                 print_header(" * Sub Minion configuration values", top=True)
-                print("interface: {0}".format(sub_minion_conf["interface"]))
-                print("masters: {0}".format(", ".join(sub_minion_conf["master"])))
+                print("interface: {}".format(sub_minion_conf["interface"]))
+                print("masters: {}".format(", ".join(sub_minion_conf["master"])))
                 if sub_minion_conf["ipc_mode"] == "tcp":
-                    print("tcp pub port: {0}".format(sub_minion_conf["tcp_pub_port"]))
-                    print("tcp pull port: {0}".format(sub_minion_conf["tcp_pull_port"]))
+                    print("tcp pub port: {}".format(sub_minion_conf["tcp_pub_port"]))
+                    print("tcp pull port: {}".format(sub_minion_conf["tcp_pull_port"]))
                 print("\n")
 
                 print_header(
-                    " Your client configurations are at {0}".format(
+                    " Your client configurations are at {}".format(
                         ", ".join(MultimasterTestDaemon.config_location())
                     )
                 )
                 print("To access minions from different masters use:")
                 for location in MultimasterTestDaemon.config_location():
-                    print("    salt -c {0} minion test.ping".format(location))
+                    print("    salt -c {} minion test.ping".format(location))
 
                 while True:
                     time.sleep(1)
@@ -776,12 +768,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         # Increase limits
         if set_limits:
             print(
-                " * Max open files settings is too low (soft: {0}, hard: {1}) "
+                " * Max open files settings is too low (soft: {}, hard: {}) "
                 "for running the tests".format(prev_soft, prev_hard)
             )
             print(
                 " * Trying to raise the limits to soft: "
-                "{0}, hard: {1}".format(soft, hard)
+                "{}, hard: {}".format(soft, hard)
             )
             try:
                 if salt.utils.platform.is_windows():
@@ -792,10 +784,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             except Exception as err:  # pylint: disable=broad-except
                 print(
                     "ERROR: Failed to raise the max open files settings -> "
-                    "{0}".format(err)
+                    "{}".format(err)
                 )
                 print("Please issue the following command on your console:")
-                print("  ulimit -n {0}".format(soft))
+                print("  ulimit -n {}".format(soft))
                 self.exit()
             finally:
                 print("~" * getattr(self.options, "output_columns", PNUM))
