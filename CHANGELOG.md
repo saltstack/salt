@@ -63,6 +63,7 @@ Fixed
 - Fixed bug with distro version breaking osrelease on Centos 7. (#57781)
 - Fixed macOS build scripts. (#57973)
 - Fixed Salt-API startup failure. (#57975)
+- Fixed CSR handling in x509 module (#54867)
 
 
 Added
