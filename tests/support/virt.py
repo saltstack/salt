@@ -48,6 +48,7 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
                 "LIBVIRT_TLS_PORT": str(self.libvirt_tls_port),
                 "NO_START_MINION": "1",
                 "HOST_UUID": self.host_uuid,
+                "PYTHONDONTWRITEBYTECODE": "1",
             }
         )
         if "ports" not in self.container_run_kwargs:
