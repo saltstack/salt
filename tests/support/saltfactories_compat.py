@@ -452,7 +452,7 @@ class DaemonFactory(SubprocessFactoryBase):
     def _format_callback(self, callback, args, kwargs):
         callback_str = "{}(".format(callback.__name__)
         if args:
-            callback_str += ", ".join(args)
+            callback_str += ", ".join([repr(arg) for arg in args])
         if kwargs:
             callback_str += ", ".join(
                 ["{}={!r}".format(k, v) for (k, v) in kwargs.items()]
@@ -468,16 +468,6 @@ class DaemonFactory(SubprocessFactoryBase):
             log.warning("%s is already running.", self)
             return True
         process_running = False
-        for callback, args, kwargs in self.before_start_callbacks:
-            try:
-                callback(*args, **kwargs)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.info(
-                    "Exception raised when running %s: %s",
-                    self._format_callback(callback, args, kwargs),
-                    exc,
-                    exc_info=True,
-                )
         start_time = time.time()
         start_attempts = max_start_attempts or self.max_start_attempts
         current_attempt = 0
@@ -491,6 +481,16 @@ class DaemonFactory(SubprocessFactoryBase):
             log.info(
                 "Starting %s. Attempt: %d of %d", self, current_attempt, start_attempts
             )
+            for callback, args, kwargs in self.before_start_callbacks:
+                try:
+                    callback(*args, **kwargs)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.info(
+                        "Exception raised when running %s: %s",
+                        self._format_callback(callback, args, kwargs),
+                        exc,
+                        exc_info=True,
+                    )
             current_start_time = time.time()
             start_running_timeout = current_start_time + (
                 start_timeout or self.start_timeout
@@ -511,12 +511,16 @@ class DaemonFactory(SubprocessFactoryBase):
                     log.warning("%s is no longer running", self)
                     self.terminate()
                     break
-                if (
-                    self.run_start_checks(current_start_time, start_running_timeout)
-                    is False
-                ):
-                    time.sleep(1)
-                    continue
+                try:
+                    if (
+                        self.run_start_checks(current_start_time, start_running_timeout)
+                        is False
+                    ):
+                        time.sleep(1)
+                        continue
+                except FactoryNotStarted:
+                    self.terminate()
+                    break
                 log.info(
                     "The %s factory is running after %d attempts. Took %1.2f seconds",
                     self,
@@ -600,11 +604,12 @@ class DaemonFactory(SubprocessFactoryBase):
         checks_start_time = time.time()
         while time.time() <= timeout_at:
             if not self.is_running():
-                log.warning("%s is no longer running", self)
-                return False
+                raise FactoryNotStarted("{} is no longer running".format(self))
             if not check_ports:
                 break
             check_ports -= ports.get_connectable_ports(check_ports)
+            if check_ports:
+                time.sleep(0.5)
         else:
             log.error(
                 "Failed to check ports after %1.2f seconds for %s",
@@ -644,14 +649,18 @@ class DaemonFactory(SubprocessFactoryBase):
         # we have set on listen_ports, terminate those processes.
         found_processes = []
         for process in psutil.process_iter(["connections"]):
-            for connection in process.connections():
-                if connection.status != psutil.CONN_LISTEN:
-                    # We only care about listening services
-                    continue
-                if connection.laddr.port in self.check_ports:
-                    found_processes.append(process)
-                    # We already found one connection, no need to check the others
-                    break
+            try:
+                for connection in process.connections():
+                    if connection.status != psutil.CONN_LISTEN:
+                        # We only care about listening services
+                        continue
+                    if connection.laddr.port in self.check_ports:
+                        found_processes.append(process)
+                        # We already found one connection, no need to check the others
+                        break
+            except psutil.AccessDenied:
+                # We've been denied access to this process connections. Carry on.
+                continue
         if found_processes:
             log.debug(
                 "The following processes were found listening on ports %s: %s",
@@ -946,7 +955,6 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
     def verify_config(cls, config):
         salt.utils.verify.verify_env(
             cls._get_verify_config_entries(config),
-            # running_username(),
             salt.utils.user.get_user(),
             pki_dir=config.get("pki_dir") or "",
             root_dir=config["root_dir"],
@@ -990,7 +998,9 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
         if not super().run_start_checks(started_at, timeout_at):
             return False
         if not self.event_listener:
-            log.debug("No event listener available")
+            log.debug(
+                "The 'event_listener' attribute is not set. Not checking events..."
+            )
             return True
 
         check_events = set(self.get_check_events())
@@ -1000,8 +1010,7 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
         checks_start_time = time.time()
         while time.time() <= timeout_at:
             if not self.is_running():
-                log.info("%s is no longer running", self)
-                return False
+                raise FactoryNotStarted("{} is no longer running".format(self))
             if not check_events:
                 break
             check_events -= self.event_listener.get_events(
