@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 import salt.pillar.netbox as netbox_pillar
 from tests.support.mixins import LoaderModuleMockMixin
@@ -8,6 +6,17 @@ from tests.support.unit import TestCase
 
 
 class NetboxPillarTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            netbox_pillar: {
+                "__env__": "test",
+                "__salt__": {
+                    "pkg.version": Mock(return_value="9999"),
+                    "config.option": Mock(side_effect=lambda key, default: default),
+                },
+            }
+        }
+
     @pytest.mark.parametrize(
         "api_url,app,endpoint,api_token",
         [
@@ -20,7 +29,7 @@ class NetboxPillarTestCase(TestCase, LoaderModuleMockMixin):
             ),
         ],
     )
-    def test_mock_url(api_url, app, endpoint, api_token):
+    def test_mock_url(self, api_url, app, endpoint, api_token):
         http_body = {
             "count": 0,
             "next": "{}/{}/{}/?limit=50&offset=50".format(api_url, app, endpoint),
