@@ -23,7 +23,6 @@ import logging
 import os
 import re
 import socket
-from collections.abc import Iterable
 
 import salt.utils.http
 from salt.exceptions import (
