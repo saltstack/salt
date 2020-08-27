@@ -399,6 +399,7 @@ def _run(
         msg = "Executing command {}{}{} {}{}in directory '{}'{}".format(
             "'" if not isinstance(cmd, list) else "",
             _get_stripped(cmd),
+            "'" if not isinstance(cmd, list) else "",
             "as user '{}' ".format(runas) if runas else "",
             "in group '{}' ".format(group) if group else "",
             cwd,
