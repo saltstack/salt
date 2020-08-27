@@ -33,14 +33,14 @@ class NetboxPillarTestCase(TestCase, LoaderModuleMockMixin):
         http_body = {
             "count": 0,
             "next": "{}/{}/{}/?limit=50&offset=50".format(api_url, app, endpoint),
-            "previous": null,
+            "previous": None,
             "results": [],
         }
 
         query_ret = {"body": http_body, "status": 200}
         with patch("salt.utils.http.query", return_value=query_ret) as http_mock:
             task = netbox_pillar.ext_pillar(
-                mid="minion1",
+                minion_id="minion1",
                 pillar=None,
                 api_url=api_url,
                 api_token=api_token,
