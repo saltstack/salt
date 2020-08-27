@@ -118,6 +118,13 @@
 # set this config to ``False``.
 #minion_id_caching: True
 
+# Convert minion id to lowercase when it is being generated. Helpful when some
+# hosts get the minion id in uppercase. Cached ids will remain the same and
+# not converted. For example, Windows minions often have uppercase minion
+# names when they are set up but not always. To turn on, set this config to
+# ``True``.
+#minion_id_lowercase: False
+
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a
 # FQDN (for instance, Solaris).
