@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for git_pillar
 
@@ -65,7 +64,6 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
@@ -111,7 +109,7 @@ HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 
 def _rand_key_name(length):
-    return "id_rsa_{0}".format(
+    return "id_rsa_{}".format(
         "".join(random.choice(string.ascii_letters) for _ in range(length))
     )
 
@@ -120,7 +118,7 @@ def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
-class GitPythonMixin(object):
+class GitPythonMixin:
     """
     GitPython doesn't support anything fancy in terms of authentication
     options, so all of the tests for GitPython can be re-used via this mixin.
@@ -632,7 +630,7 @@ class GitPythonMixin(object):
 @destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
@@ -647,7 +645,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
@@ -658,7 +656,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
@@ -674,7 +672,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         """
         Create start the webserver
         """
-        super(TestGitPythonAuthenticatedHTTP, cls).setUpClass()
+        super().setUpClass()
         # Override the URL set up in the parent class to encode the
         # username/password into it.
         cls.url = "http://{username}:{password}@127.0.0.1:{port}/repo.git".format(
@@ -694,7 +692,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_SSHD, "sshd not present")
 class TestPygit2SSH(GitPillarSSHTestBase):
@@ -2168,7 +2166,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -2676,7 +2674,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
