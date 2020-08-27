@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     Test win_chcp
 """
 
+# Import Salt libs
+from salt.utils import platform, win_chcp
 
+# Import testing libs
 from tests.support.unit import TestCase, skipIf
-from salt.utils import win_chcp
-from salt.utils import platform
 
 
 @skipIf(not platform.is_windows(), "Windows only tests!")
