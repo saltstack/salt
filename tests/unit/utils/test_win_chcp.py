@@ -14,6 +14,7 @@ class CHCPTest(TestCase):
     """
     Test case for salt.utils.win_chcp
     """
+
     def __init__(self, *args, **kwargs):
         # Stores the initial code page for _reset_code_page()
         # Intentionally does not catch any exception, to find out which that would be.
