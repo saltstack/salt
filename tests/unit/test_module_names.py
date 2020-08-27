@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.test_test_module_name
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
 # Import Python libs
-from __future__ import absolute_import
 
 import fnmatch
 import os
@@ -144,6 +142,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
+            "integration.modules.test_service",
             "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
             "integration.netapi.rest_cherrypy.test_app_pam",
@@ -221,7 +220,7 @@ class BadTestModuleNamesTestCase(TestCase):
 
         def _format_errors(errors):
             msg = (
-                "The following {0} test module(s) could not be matched to a "
+                "The following {} test module(s) could not be matched to a "
                 "source code file:\n\n".format(len(errors))
             )
             msg += "".join(errors)
@@ -258,6 +257,6 @@ class BadTestModuleNamesTestCase(TestCase):
                     # Yep, it is. Carry on!
                     continue
 
-                errors.append("{0} (expected: {1})\n".format(mod_name, relpath))
+                errors.append("{} (expected: {})\n".format(mod_name, relpath))
 
         assert not errors, _format_errors(errors)
