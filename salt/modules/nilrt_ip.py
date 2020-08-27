@@ -280,19 +280,14 @@ def _load_config(section, options, default_value="", filename=INI_FILE):
     if not options:
         return results
     with salt.utils.files.fopen(filename, "r") as config_file:
-        config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
+        config_parser = configparser.RawConfigParser(
+            dict_type=CaseInsensitiveDict, converters={"unquoted": _remove_quotes}
+        )
         config_parser.readfp(config_file)
         for option in options:
-            if six.PY2:
-                results[option] = (
-                    _remove_quotes(config_parser.get(section, option))
-                    if config_parser.has_option(section, option)
-                    else default_value
-                )
-            else:
-                results[option] = _remove_quotes(
-                    config_parser.get(section, option, fallback=default_value)
-                )
+            results[option] = config_parser.getunquoted(
+                section, option, fallback=default_value
+            )
 
     return results
 
