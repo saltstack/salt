@@ -2694,7 +2694,7 @@ def _hw_data(osdata):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
-            "biosversion": __salt_gg_["smbios.get"]("bios-version"),
+            "biosversion": __salt__["smbios.get"]("bios-version"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
