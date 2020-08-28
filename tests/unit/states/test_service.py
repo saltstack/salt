@@ -570,10 +570,15 @@ class ServiceTestCaseFunctional(TestCase, LoaderModuleMockMixin):
             service.dead(self.service_name, enable=False)
             result = service.running(name=self.service_name, enable=True, reload=False)
 
+        if salt.utils.platform.is_windows():
+            comment = "Started Service {}".format(self.service_name)
+        else:
+            comment = "Service {} has been enabled, and is running".format(
+                self.service_name
+            )
         expected = {
             "changes": {self.service_name: True},
-            "comment": "Service {} has been enabled, and is "
-            "running".format(self.service_name),
+            "comment": comment,
             "name": self.service_name,
             "result": True,
         }
