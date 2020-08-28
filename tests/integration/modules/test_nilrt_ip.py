@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for nilirt_ip
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 import shutil
@@ -12,7 +9,6 @@ import time
 import salt.modules.nilrt_ip as ip
 import salt.utils.files
 import salt.utils.platform
-from salt.ext import six
 from salt.ext.six.moves import configparser
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -34,11 +30,9 @@ try:
 except ImportError:
     CaseInsensitiveDict = None
 
-
 INTERFACE_FOR_TEST = "eth1"
 
 
-# pylint: disable=too-many-ancestors
 @skip_if_not_root
 @destructiveTest
 @skipIf(not pyiface, "The python pyiface package is not installed")
@@ -71,7 +65,7 @@ class NilrtIpModuleTest(ModuleCase):
         Get current settings
         """
         # save files from var/lib/connman*
-        super(NilrtIpModuleTest, self).setUp()
+        super().setUp()
         if self.grains["lsb_distrib_id"] == "nilrt":
             shutil.move("/etc/natinst/share/ni-rt.ini", "/tmp/ni-rt.ini")
         else:
@@ -124,21 +118,12 @@ class NilrtIpModuleTest(ModuleCase):
         with salt.utils.files.fopen("/etc/natinst/share/ni-rt.ini", "r") as config_file:
             config_parser = configparser.RawConfigParser(dict_type=CaseInsensitiveDict)
             config_parser.readfp(config_file)
-            if six.PY2:
-                if (
-                    config_parser.has_option("lvrt", "AdditionalNetworkProtocols")
-                    and "ethercat"
-                    in config_parser.get("lvrt", "AdditionalNetworkProtocols").lower()
-                ):
-                    return True
-                return False
-            else:
-                return (
-                    "ethercat"
-                    in config_parser.get(
-                        "lvrt", "AdditionalNetworkProtocols", fallback=""
-                    ).lower()
-                )
+            return (
+                "ethercat"
+                in config_parser.get(
+                    "lvrt", "AdditionalNetworkProtocols", fallback=""
+                ).lower()
+            )
 
     def test_down(self):
         """
