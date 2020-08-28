@@ -1,6 +1,4 @@
-# coding=utf-8
-from __future__ import absolute_import, print_function, unicode_literals
-
+import builtins as exceptions
 import copy
 import json
 import logging
@@ -9,6 +7,7 @@ import sys
 import tarfile
 import time
 from io import BytesIO
+from io import IOBase as file
 
 import salt.cli.caller
 import salt.cli.support
@@ -17,7 +16,6 @@ import salt.cli.support.intfunc
 import salt.cli.support.localrunner
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.ext.six as six
 import salt.output.table_out
 import salt.runner
 import salt.utils.files
@@ -28,18 +26,11 @@ import salt.utils.stringutils
 import salt.utils.verify
 import yaml
 
-if six.PY2:
-    import exceptions
-else:
-    import builtins as exceptions
-    from io import IOBase as file
-
-
 salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)
 
 
-class SupportDataCollector(object):
+class SupportDataCollector:
     """
     Data collector. It behaves just like another outputter,
     except it grabs the data to the archive files.
@@ -383,7 +374,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
                 if not action:
                     continue
                 action_name = next(iter(action))
-                if not isinstance(action[action_name], six.string_types):
+                if not isinstance(action[action_name], str):
                     info, output, conf = self._get_action(action)
                     action_type = self._get_action_type(
                         action

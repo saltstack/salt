@@ -1,10 +1,7 @@
-# coding=utf-8
 """
 Internal functions.
 """
 # Maybe this needs to be a modules in a future?
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 

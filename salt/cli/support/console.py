@@ -1,12 +1,9 @@
-# coding=utf-8
 """
 Collection of tools to report messages to console.
 
 NOTE: This is subject to incorporate other formatting bits
       from all around everywhere and then to be moved to utils.
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -15,7 +12,7 @@ import textwrap
 import salt.utils.color
 
 
-class IndentOutput(object):
+class IndentOutput:
     """
     Paint different indends in different output.
     """
