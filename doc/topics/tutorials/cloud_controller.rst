@@ -120,8 +120,8 @@ on the hypervisor and is bridged to an active network device.
 
 .. note::
 
-    To use more advanced networking in Salt Virt, read the `Salt Virt
-    Networking` document:
+    To use more advanced networking in Salt Virt, read the
+    `Salt Virt Networking` document:
 
     :ref:`Salt Virt Networking <vm-nic-profiles>`
 
@@ -345,6 +345,72 @@ migrate routine:
 .. code-block:: console
 
     salt-run virt.migrate centos <new hypervisor>
+
+The migrate routine supports libvirt URI format to explicitly specify the
+transport protocol (e.g., TCP, TLS, SSH, etc):
+
+.. code-block:: bash
+
+    salt <src> virt.migrate guest qemu+ssh://<dst>/system
+    salt <src> virt.migrate guest qemu+tcp://<dst>/system
+    salt <src> virt.migrate guest qemu+tls://<dst>/system
+
+
+In addition, a number of migration options can be specified:
+
+.. code-block:: bash
+
+    # Disable live migration (i.e., guest vCPUs are paused during migration)
+    salt <src> virt.migrate guest qemu+ssh://<dst>/system live=False
+
+    # Leave the migrated VM in transient state on destination host
+    salt <src> virt.migrate guest qemu+ssh://<dst>/system persistent=False
+
+    # Leave the domain defined on the source host
+    salt <src> virt.migrate guest qemu+ssh://<dst>/system undefinesource=False
+
+    # Enable offline migration (i.e., only copy domain definition to destination host)
+    salt <src> virt.migrate guest qemu+ssh://<dst>/system offline=False
+
+    # Set maximum bandwidth (in MiB/s)
+    salt <src> virt.migrate guest qemu+tls://<dst>/system max_bandwidth=10
+
+    # Set maximum tolerable downtime for live migration (i.e. a number of
+    # milliseconds the VM is allowed to be down at the end of live migration)
+    salt <src> virt.migrate guest qemu+tls://<dst>/system max_downtime=100
+
+    # Set a number of parallel network connections for live migration
+    salt <src> virt.migrate guest qemu+tls://<dst>/system parallel_connections=10
+
+    # Enable compression
+    salt <src> virt.migrate guest qemu+tls://<dst>/system \
+      compressed=True \
+      comp_methods=mt \
+      comp_mt_level=5 \
+      comp_mt_threads=4 \
+      comp_mt_dthreads=4
+
+    salt <src> virt.migrate guest qemu+tls://<dst>/system \
+      compressed=True \
+      comp_methods=xbzrle \
+      comp_xbzrle_cache=1024
+
+    # Migrate non-shared storage
+    # (Full disk copy)
+    salt <src> virt.migrate guest qemu+tls://<dst>/system copy_storage=all
+    # (Incremental copy)
+    salt <src> virt.migrate guest qemu+tls://<dst>/system copy_storage=inc
+
+    # Using post-copy migration
+    salt <src> virt.migrate guest qemu+tls://<dst>/system postcopy=True
+    salt <src> virt.migrate_start_postcopy guest
+
+    # Using post-copy migration with bandwidth limit (MiB/s)
+    salt <src> virt.migrate guest qemu+tls://<dst>/system \
+      postcopy=True \
+      postcopy_bandwidth=1
+    salt <src> virt.migrate_start_postcopy guest
+
 
 VNC Consoles
 ============
