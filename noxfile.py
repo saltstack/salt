@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 noxfile
 ~~~~~~~
@@ -7,7 +6,6 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import glob
@@ -65,7 +63,7 @@ RUNTESTS_LOGFILE = os.path.join(
 )
 
 # Prevent Python from writing bytecode
-os.environ[str("PYTHONDONTWRITEBYTECODE")] = str("1")
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 def find_session_runner(session, name, **kwargs):
@@ -293,7 +291,7 @@ def _install_requirements(session, transport, *extra_requirements):
 def _run_with_coverage(session, *test_cmd):
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
-            "--progress-bar=off", "coverage==5.0.1", silent=PIP_INSTALL_SILENT
+            "--progress-bar=off", "coverage==5.2", silent=PIP_INSTALL_SILENT
         )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
@@ -952,7 +950,15 @@ def _pytest(session, coverage, cmd_args):
         cmd_args.append("--lf")
         if coverage is True:
             _run_with_coverage(
-                session, "python", "-m", "coverage", "run", "-m", "pytest", *cmd_args
+                session,
+                "python",
+                "-m",
+                "coverage",
+                "run",
+                "-m",
+                "pytest",
+                "--showlocals",
+                *cmd_args
             )
         else:
             session.run("python", "-m", "pytest", *cmd_args, env=env)
