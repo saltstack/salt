@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
@@ -10,7 +9,6 @@
     Process handling utilities
 """
 
-from __future__ import absolute_import
 
 import logging
 
@@ -61,7 +59,7 @@ class Salt(ScriptPathMixin, PytestSalt):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Salt, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltCall(ScriptPathMixin, PytestSaltCall):
@@ -70,7 +68,7 @@ class SaltCall(ScriptPathMixin, PytestSaltCall):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltCall, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltKey(ScriptPathMixin, PytestSaltKey):
@@ -79,7 +77,7 @@ class SaltKey(ScriptPathMixin, PytestSaltKey):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltKey, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltRun(ScriptPathMixin, PytestSaltRun):
@@ -88,7 +86,7 @@ class SaltRun(ScriptPathMixin, PytestSaltRun):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltRun, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltProxy(GetSaltRunFixtureMixin, PytestSaltProxy):
@@ -183,8 +181,8 @@ def start_daemon(
                         process.terminate()
                         if attempts >= 3:
                             fail_method(
-                                "The pytest {0}({1}) has failed to confirm running status "
-                                "after {2} attempts".format(
+                                "The pytest {}({}) has failed to confirm running status "
+                                "after {} attempts".format(
                                     daemon_name, daemon_id, attempts
                                 )
                             )
@@ -212,7 +210,7 @@ def start_daemon(
         if process is not None:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
         raise fail_method(
-            "The pytest {0}({1}) has failed to start after {2} attempts".format(
+            "The pytest {}({}) has failed to start after {} attempts".format(
                 daemon_name, daemon_id, attempts - 1
             )
         )
