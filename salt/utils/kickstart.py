@@ -18,7 +18,7 @@ def clean_args(args):
     """
     Cleans up the args that weren't passed in
     """
-    for arg in args:
+    for arg in list(args):
         if not args[arg]:
             del args[arg]
     return args
@@ -970,7 +970,7 @@ def mksls(src, dst=None):
                 elif line.startswith("lang"):
                     ks_opts["lang"] = parse_lang(line)
                 elif line.startswith("logvol"):
-                    if "logvol" not in ks_opts.keys():
+                    if "logvol" not in ks_opts:
                         ks_opts["logvol"] = []
                     ks_opts["logvol"].append(parse_logvol(line))
                 elif line.startswith("logging"):
@@ -982,19 +982,19 @@ def mksls(src, dst=None):
                 elif line.startswith("multipath"):
                     ks_opts["multipath"] = parse_multipath(line)
                 elif line.startswith("network"):
-                    if "network" not in ks_opts.keys():
+                    if "network" not in ks_opts:
                         ks_opts["network"] = []
                     ks_opts["network"].append(parse_network(line))
                 elif line.startswith("nfs"):
                     ks_opts["nfs"] = True
                 elif line.startswith("part ") or line.startswith("partition"):
-                    if "part" not in ks_opts.keys():
+                    if "part" not in ks_opts:
                         ks_opts["part"] = []
                     ks_opts["part"].append(parse_partition(line))
                 elif line.startswith("poweroff"):
                     ks_opts["poweroff"] = True
                 elif line.startswith("raid"):
-                    if "raid" not in ks_opts.keys():
+                    if "raid" not in ks_opts:
                         ks_opts["raid"] = []
                     ks_opts["raid"].append(parse_raid(line))
                 elif line.startswith("reboot"):
@@ -1052,7 +1052,7 @@ def mksls(src, dst=None):
 
             if line.startswith("%packages"):
                 mode = "packages"
-                if "packages" not in ks_opts.keys():
+                if "packages" not in ks_opts:
                     ks_opts["packages"] = {"packages": {}}
 
                 parser = argparse.ArgumentParser()
@@ -1134,11 +1134,11 @@ def mksls(src, dst=None):
 
     # Set timezone
     sls[ks_opts["timezone"]["timezone"]] = {"timezone": ["system"]}
-    if "utc" in ks_opts["timezone"].keys():
+    if "utc" in ks_opts["timezone"]:
         sls[ks_opts["timezone"]["timezone"]]["timezone"].append("utc")
 
     # Set network
-    if "network" in ks_opts.keys():
+    if "network" in ks_opts:
         for interface in ks_opts["network"]:
             device = interface.get("device", None)
             if device is not None:
@@ -1146,17 +1146,17 @@ def mksls(src, dst=None):
                 sls[device] = {"proto": interface["bootproto"]}
                 del interface["bootproto"]
 
-                if "onboot" in interface.keys():
+                if "onboot" in interface:
                     if "no" in interface["onboot"]:
                         sls[device]["enabled"] = False
                     else:
                         sls[device]["enabled"] = True
                     del interface["onboot"]
 
-                if "noipv4" in interface.keys():
+                if "noipv4" in interface:
                     sls[device]["ipv4"] = {"enabled": False}
                     del interface["noipv4"]
-                if "noipv6" in interface.keys():
+                if "noipv6" in interface:
                     sls[device]["ipv6"] = {"enabled": False}
                     del interface["noipv6"]
 
@@ -1175,7 +1175,7 @@ def mksls(src, dst=None):
                 }
 
     # Set selinux
-    if "selinux" in ks_opts.keys():
+    if "selinux" in ks_opts:
         for mode in ks_opts["selinux"]:
             sls[mode] = {"selinux": ["mode"]}
 

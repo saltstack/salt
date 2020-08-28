@@ -12,6 +12,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import skip_if_binaries_missing
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import skipIf
 
 
 # Acl package should be installed to test linux_acl module
@@ -54,9 +55,11 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(LinuxAclModuleTest, self).tearDown()
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_version(self):
         self.assertRegex(self.run_function("acl.version"), r"\d+\.\d+\.\d+")
 
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function("acl.getfacl", arg=[self.myfile])
         user = salt.utils.user.get_user()
