@@ -2,7 +2,7 @@
 
 // Pre-nox pipeline
 runTestSuite(
-    concurrent_builds: 1,
+    concurrent_builds: 3,
     distro_name: 'macosx',
     distro_version: 'catalina',
     env: env,

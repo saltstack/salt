@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-074d73d377bbc9002',
-    concurrent_builds: 1,
+    concurrent_builds: 3,
     distro_name: 'arch',
     distro_version: 'lts',
     env: env,

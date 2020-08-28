@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-00cf3462a2e4e6810',
-    concurrent_builds: 1,
+    concurrent_builds: 3,
     distro_name: 'windows',
     distro_version: '2019',
     env: env,

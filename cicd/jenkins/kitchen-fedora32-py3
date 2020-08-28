@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-07bb012220c11ce44',
-    concurrent_builds: 1,
+    concurrent_builds: 3,
     distro_name: 'fedora',
     distro_version: '32',
     env: env,
