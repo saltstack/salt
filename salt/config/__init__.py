@@ -3365,7 +3365,7 @@ def call_id_function(opts):
         mod_fun = opts["id_function"]
         fun_kwargs = {}
     elif isinstance(opts["id_function"], dict):
-        mod_fun, fun_kwargs = next(opts["id_function"].items())
+        mod_fun, fun_kwargs = next(iter(opts["id_function"].items()))
         if fun_kwargs is None:
             fun_kwargs = {}
     else:
