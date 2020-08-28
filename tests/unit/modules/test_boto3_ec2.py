@@ -197,20 +197,23 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
-            opts, whitelist=["boto", "boto3", "args", "systemd", "path", "platform"]
+            opts,
+            whitelist=["boto", "boto3"],  # , "args", "systemd", "path", "platform"]
         )
-        return {
-            boto3_ec2: {
-                "__utils__": utils,
-                "__salt__": {
-                    "boto3_generic.{}".format(function_name): function
-                    for function_name, function in inspect.getmembers(
-                        boto3_generic, inspect.isfunction
-                    )
-                },
-            },
-            boto3_generic: {"__salt__": salt.loader.raw_mod(opts, "boto3_ec2", None)},
+        wanted_modules = {}
+        for function_name, function in inspect.getmembers(
+            boto3_ec2, inspect.isfunction
+        ):
+            wanted_modules.update({"boto3_ec2.{}".format(function_name): function})
+        for function_name, function in inspect.getmembers(
+            boto3_generic, inspect.isfunction
+        ):
+            wanted_modules.update({"boto3_generic.{}".format(function_name): function})
+        ret = {
+            boto3_ec2: {"__utils__": utils, "__salt__": wanted_modules},
+            boto3_generic: {"__salt__": wanted_modules},
         }
+        return ret
 
     @classmethod
     def setUpClass(cls):
@@ -224,11 +227,9 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
             "egress": True,
         }
         cls.mock_error = {"Error": {"Code": "Mock", "Message": "Mocked error"}}
-        # cls.addCleanup(delattr, cls, 'mock_error')
         cls.mock_errormessage = (
             "An error occurred (Mock) when calling the {} operation: Mocked error"
         )
-        # cls.addCleanup(delattr, cls, 'mock_errormessage')
 
     def setUp(self):
         super().setUp()
@@ -401,7 +402,6 @@ class BotoVpcTestCaseMixin:
         icmp_type=None,
         port_range_from=None,
         port_range_to=None,
-        tags=None,
     ):
         """
         Helper function to create test network acl entry
@@ -1270,18 +1270,10 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
 
         vpc_id = self._create_vpc()
-        subnet_id = self._create_subnet(
-            vpc_id, name="test-subnet", availability_zone="us-east-1a"
+        self._create_subnet(vpc_id, name="test-subnet", availability_zone="us-east-1a")
+        res = boto3_ec2.create_nat_gateway(
+            subnet_lookup={"subnet_name": "test-subnet"}, **salt_conn_parameters
         )
-        with patch.object(
-            moto.ec2.ec2_backend,
-            "describe_subnets",
-            create=True,
-            return_value={"Subnets": [{"SubnetId": subnet_id, "VpcId": vpc_id}]},
-        ):
-            res = boto3_ec2.create_nat_gateway(
-                subnet_lookup={"subnet_name": "test-subnet"}, **salt_conn_parameters
-            )
         self.assertIn("result", res)
         self.assertIn("NatGatewayId", res["result"])
 
