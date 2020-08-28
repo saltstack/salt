@@ -1345,8 +1345,6 @@ def pool_running(
         when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
     :param autostart:
         Whether to start the pool when booting the host. (Default: ``True``)
-    :param start:
-        When ``True``, define and start the pool, otherwise the pool will be left stopped.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
