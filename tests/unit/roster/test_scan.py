@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """
 Test the scan roster.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import socket
 
-# Import Salt Libs
 import salt.roster.scan as scan_
 from tests.support import mixins
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
