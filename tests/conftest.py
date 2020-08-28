@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -10,7 +9,6 @@
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -38,6 +36,7 @@ from salt.serializers import yaml
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.saltfactories_compat import LogServer
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
@@ -62,7 +61,7 @@ else:
     )
     if MAYBE_RUN_COVERAGE:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
-        os.environ[str("COVERAGE_PROCESS_START")] = str(COVERAGERC_FILE)
+        os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
 pytest_plugins = ["tempdir", "helpers_namespace"]
@@ -237,6 +236,33 @@ def pytest_configure(config):
     # "Flag" the slotTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
+    # If PyTest has no logging configured, default to ERROR level
+    levels = [logging.ERROR]
+    logging_plugin = config.pluginmanager.get_plugin("logging-plugin")
+    try:
+        level = logging_plugin.log_cli_handler.level
+        if level is not None:
+            levels.append(level)
+    except AttributeError:
+        # PyTest CLI logging not configured
+        pass
+    try:
+        level = logging_plugin.log_file_level
+        if level is not None:
+            levels.append(level)
+    except AttributeError:
+        # PyTest Log File logging not configured
+        pass
+
+    if logging.NOTSET in levels:
+        # We don't want the NOTSET level on the levels
+        levels.pop(levels.index(logging.NOTSET))
+
+    log_level = logging.getLevelName(min(levels))
+
+    log_server = LogServer(log_level=log_level)
+    config.pluginmanager.register(log_server, "salt-saltfactories-log-server")
+
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
@@ -322,7 +348,7 @@ def pytest_collection_modifyitems(config, items):
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
             for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope == "function":
+                if fixturedef.scope in ("function", "class", "module"):
                     continue
                 try:
                     node_ids = fixturedef.node_ids
@@ -391,7 +417,7 @@ def pytest_runtest_protocol(item, nextitem):
         if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
         for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope == "function":
+            if fixturedef.scope in ("function", "class", "module"):
                 continue
             used_fixture_defs.append(fixturedef)
     try:
@@ -422,6 +448,29 @@ def pytest_runtest_teardown(item, nextitem):
     # We currently have PyTest's log_print setting set to false, if it was
     # set to true, the call bellow would make PyTest not print any logs at all.
     item.catch_log_handler.reset()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionstart(session):
+    log_server = session.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
+    log_server.start()
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session):
+    log_server = session.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
+    log_server.stop()
+
+
+@pytest.fixture(scope="session")
+def log_server():
+    """
+    Just overriding the fixture
+    """
 
 
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
@@ -555,8 +604,7 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{0} ({1} tests)\n".format(group_id, len(items)),
-        yellow=True,
+        "Running test group #{} ({} tests)\n".format(group_id, len(items)), yellow=True,
     )
 
 
@@ -564,10 +612,13 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
-def salt_factories_config():
+def salt_factories_config(request):
     """
     Return a dictionary with the keyworkd arguments for SaltFactoriesManager
     """
+    log_server = request.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
     return {
         "executable": sys.executable,
         "code_dir": str(CODE_DIR),
@@ -576,6 +627,9 @@ def salt_factories_config():
         "start_timeout": 120
         if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
         else 60,
+        "log_server_host": log_server.log_host,
+        "log_server_port": log_server.log_port,
+        "log_server_level": log_server.log_level,
     }
 
 
@@ -682,7 +736,7 @@ def from_filenames_collection_modifyitems(config, items):
     selected = []
     deselected = []
     for item in items:
-        itempath = pathlib.Path(str(item.fspath)).relative_to(CODE_DIR)
+        itempath = pathlib.Path(str(item.fspath)).resolve().relative_to(CODE_DIR)
         if itempath in test_module_paths:
             selected.append(item)
         else:
@@ -700,7 +754,7 @@ class GrainsMarkEvaluator(MarkEvaluator):
     _cached_grains = None
 
     def _getglobals(self):
-        item_globals = super(GrainsMarkEvaluator, self)._getglobals()
+        item_globals = super()._getglobals()
         if GrainsMarkEvaluator._cached_grains is None:
             sminion = create_sminion()
             GrainsMarkEvaluator._cached_grains = sminion.opts["grains"].copy()

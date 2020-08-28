@@ -883,7 +883,7 @@ class SerializerExtension(Extension, object):
 
         unique = ['foo', 'bar']
 
-    .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
+    .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
     '''
 
     tags = {

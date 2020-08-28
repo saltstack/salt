@@ -132,7 +132,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         test archive.extracted with user and group set to "root"
         """
         r_group = "root"
-        if salt.utils.platform.is_darwin():
+        if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
             r_group = "wheel"
         ret = self.run_state(
             "archive.extracted",
