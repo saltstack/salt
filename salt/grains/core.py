@@ -11,7 +11,6 @@ as those returned here
 
 # Import Python libs
 import datetime
-import distro
 import hashlib
 import locale
 import logging
@@ -23,6 +22,8 @@ import sys
 import time
 import uuid
 from errno import EACCES, EPERM
+
+import distro
 
 # Import Salt libs
 import salt.exceptions
@@ -370,7 +371,7 @@ def _bsd_cpudata(osdata):
         cmds["cpu_model"] = "{} -n machdep.cpu.brand_string".format(sysctl)
         cmds["cpu_flags"] = "{} -n machdep.cpu.features".format(sysctl)
 
-    grains = dict([(k, __salt__["cmd.run"](v)) for k, v in cmds.items()])
+    grains = {k: __salt__["cmd.run"](v) for k, v in cmds.items()}
 
     if "cpu_flags" in grains and isinstance(grains["cpu_flags"], str):
         grains["cpu_flags"] = grains["cpu_flags"].split(" ")
@@ -2693,7 +2694,7 @@ def _hw_data(osdata):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
         grains = {
-            "biosversion": __salt__["smbios.get"]("bios-version"),
+            "biosversion": __salt_gg_["smbios.get"]("bios-version"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
