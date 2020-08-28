@@ -43,7 +43,6 @@ from salt.exceptions import (
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.ext import six
 from salt.ext.six.moves import map, range, zip
 from salt.log import LOG_LEVELS
 
@@ -612,7 +611,7 @@ def _run(
     new_kwargs = {
         "cwd": cwd,
         "shell": python_shell,
-        "env": run_env if six.PY3 else salt.utils.data.encode(run_env),
+        "env": run_env,
         "stdin": str(stdin) if stdin is not None else stdin,
         "stdout": stdout,
         "stderr": stderr,
