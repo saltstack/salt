@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import
 
 import copy
 import os
@@ -15,7 +13,6 @@ import salt.utils.crypt
 import salt.utils.event as event
 import salt.utils.process
 from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit
-from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
@@ -504,7 +501,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         io_loop.make_current()
         minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
-        class MockPillarCompiler(object):
+        class MockPillarCompiler:
             def compile_pillar(self):
                 return {}
 
@@ -632,7 +629,7 @@ class MinionAsyncTestCase(
     TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase
 ):
     def setUp(self):
-        super(MinionAsyncTestCase, self).setUp()
+        super().setUp()
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 

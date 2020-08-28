@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for salt.config
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -20,7 +18,6 @@ from salt.exceptions import (
     SaltCloudConfigError,
     SaltConfigurationError,
 )
-from salt.ext import six
 from salt.syspaths import CONFIG_DIR
 from tests.support.helpers import patched_environ, slowTest, with_tempdir, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -59,7 +56,7 @@ PATH = "path/to/some/cloud/conf/file"
 DEFAULT = {"default_include": PATH}
 
 
-class DefaultConfigsBase(object):
+class DefaultConfigsBase:
     @classmethod
     def setUpClass(cls):
         cls.mock_master_default_opts = dict(
@@ -268,9 +265,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_proper_path_joining(self, fpath):
-        temp_config = "root_dir: /\n" "key_logfile: key\n"
+        temp_config = "root_dir: /\nkey_logfile: key\n"
         if salt.utils.platform.is_windows():
-            temp_config = "root_dir: c:\\\n" "key_logfile: key\n"
+            temp_config = "root_dir: c:\\\nkey_logfile: key\n"
         with salt.utils.files.fopen(fpath, "w") as fp_:
             fp_.write(temp_config)
 
@@ -822,7 +819,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         def _count_strings(config):
             if isinstance(config, dict):
-                for key, val in six.iteritems(config):
+                for key, val in config.items():
                     log.debug("counting strings in dict key: %s", key)
                     log.debug("counting strings in dict val: %s", val)
                     _count_strings(key)
@@ -832,8 +829,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 for item in config:
                     _count_strings(item)
             else:
-                if isinstance(config, six.string_types):
-                    if isinstance(config, six.text_type):
+                if isinstance(config, str):
+                    if isinstance(config, str):
                         tally["unicode"] = tally.get("unicode", 0) + 1
                     else:
                         # We will never reach this on PY3
@@ -892,7 +889,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         tally = self._get_tally(salt.config.master_config)
         # pylint: enable=no-value-for-parameter
         non_unicode = tally.get("non_unicode", [])
-        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
+        self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally["unicode"] > 0)
 
     def test_conf_file_strings_are_unicode_for_minion(self):
@@ -1854,7 +1851,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with salt.utils.files.fopen(fpath, "w") as wfh:
             wfh.write(
-                "root_dir: /\n" "key_logfile: key\n" "cachedir: {0}".format(cachedir)
+                "root_dir: /\n" "key_logfile: key\n" "cachedir: {}".format(cachedir)
             )
         config = salt.config.mminion_config(fpath, overrides)
         self.assertEqual(config["__role"], "master")
@@ -1895,7 +1892,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             "salt.config.client_config",
             MagicMock(return_value=self.mock_master_default_opts),
         ):
-            expected = "{0}/var/log/salt/api".format(
+            expected = "{}/var/log/salt/api".format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != "/" else ""
             )
             if salt.utils.platform.is_windows():
@@ -1914,7 +1911,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
             "salt.config.client_config",
             MagicMock(return_value=self.mock_master_default_opts),
         ):
-            expected = "{0}/var/run/salt-api.pid".format(
+            expected = "{}/var/run/salt-api.pid".format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != "/" else ""
             )
             if salt.utils.platform.is_windows():
