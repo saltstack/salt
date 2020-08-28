@@ -6,37 +6,30 @@ stages:
 include:
   - local: 'cicd/kitchen_template.yml'
   - local: 'cicd/kitchen_testruns.yml'
+  - project: "saltstack/pop/cicd/ci-templates"
+    file: "/lint/pre-commit-run-all.yml"
 
-# pre-commit-run-all:
-#   image:
-#     name: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-#     entrypoint: [""]
-#   stage: lint
-#   variables:
-#     PRE_COMMIT_HOME: "${CI_PROJECT_DIR}/pre-commit-cache"
-#   only:
-#     refs:
-#       - merge_requests
-#   cache:
-#     key: pre-commit-cache
-#     paths:
-#       - pre-commit-cache/
-#   script:
-#     - pip3 install pre-commit
-#     - pre-commit run -a -v --color always
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID == null
+
+pre-commit-run-all:
+  stage: lint
 
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
   stage: lint
   tags:
     - saltstack-internal
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
   cache:
     key: nox-lint-cache
     paths:
       - .nox
-  only:
-    refs:
-      - schedules
   script:
     - python --version
     - pip3 install -U nox-py2==2019.6.25
@@ -53,13 +46,14 @@ lint-tests-full:
   stage: lint
   tags:
     - saltstack-internal
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
   cache:
     key: nox-lint-cache
     paths:
       - .nox
-  only:
-    refs:
-      - schedules
   script:
     - python --version
     - pip3 install -U nox-py2==2019.6.25
@@ -76,13 +70,14 @@ docs-build-html:
   stage: test
   tags:
     - saltstack-internal
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
   cache:
     key: nox-docs-cache
     paths:
       - .nox
-  only:
-    refs:
-      - schedules
   script:
     - python --version
     - pip install -U nox-py2==2019.6.25
@@ -94,13 +89,14 @@ docs-build-man-pages:
   stage: test
   tags:
     - saltstack-internal
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
   cache:
     key: nox-docs-cache
     paths:
       - .nox
-  only:
-    refs:
-      - schedules
   script:
     - python --version
     - pip install -U nox-py2==2019.6.25
