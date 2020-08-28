@@ -264,8 +264,7 @@ def contains_fragment(name, fragment, xpath=None, replace=False):
             ret["changes"][fragment_root.tag] = {
                 "diff": "".join(
                     difflib.unified_diff(
-                        ET.tostring(doppelganger),
-                        ET.tostring(fragment_root),
+                        ET.tostring(doppelganger), ET.tostring(fragment_root),
                     ),
                 ),
             }
