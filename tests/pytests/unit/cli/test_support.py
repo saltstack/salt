@@ -5,6 +5,7 @@
 import os
 
 import jinja2
+import pytest
 import salt.cli.support.collector
 import salt.exceptions
 import salt.utils.files
@@ -14,15 +15,9 @@ from salt.cli.support.console import IndentOutput
 from salt.utils.color import get_colors
 from salt.utils.stringutils import to_bytes
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
+from tests.support.unit import TestCase
 
 
-@skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportIndentOutputTestCase(TestCase):
     """
     Unit Tests for the salt-support indent output.
@@ -105,7 +100,6 @@ class SaltSupportIndentOutputTestCase(TestCase):
             step += 5
 
 
-@skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportCollectorTestCase(TestCase):
     """
     Collector tests.
@@ -236,7 +230,6 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.close()
 
 
-@skipIf(not bool(pytest), "Pytest needs to be installed")
 class SaltSupportRunnerTestCase(TestCase):
     """
     Test runner class.
@@ -471,7 +464,6 @@ class SaltSupportRunnerTestCase(TestCase):
             ] == "Overwriting existing archive: {}".format(arch)
 
 
-@skipIf(not bool(pytest), "Pytest needs to be installed")
 class ProfileIntegrityTestCase(TestCase):
     """
     Default profile integrity
