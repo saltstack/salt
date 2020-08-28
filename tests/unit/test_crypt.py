@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import absolute_import
-
 import os
 import shutil
 import tempfile
@@ -19,7 +16,7 @@ try:
 except ImportError:
     HAS_M2 = False
 try:
-    from Cryptodome.PublicKey import RSA  # pylint: disable=unused-import
+    from Cryptodome.PublicKey import RSA
 
     HAS_PYCRYPTO_RSA = True
 except ImportError:
@@ -98,8 +95,8 @@ SIG = (
 class CryptTestCase(TestCase):
     @slowTest
     def test_gen_keys(self):
-        open_priv_wb = MockCall("/keydir{0}keyname.pem".format(os.sep), "wb+")
-        open_pub_wb = MockCall("/keydir{0}keyname.pub".format(os.sep), "wb+")
+        open_priv_wb = MockCall("/keydir{}keyname.pem".format(os.sep), "wb+")
+        open_pub_wb = MockCall("/keydir{}keyname.pub".format(os.sep), "wb+")
 
         with patch.multiple(
             os,
@@ -111,7 +108,7 @@ class CryptTestCase(TestCase):
                 "os.path.isfile", return_value=True
             ):
                 result = crypt.gen_keys("/keydir", "keyname", 2048)
-                assert result == "/keydir{0}keyname.pem".format(os.sep), result
+                assert result == "/keydir{}keyname.pem".format(os.sep), result
                 assert open_priv_wb not in m_open.calls
                 assert open_pub_wb not in m_open.calls
 
@@ -181,7 +178,7 @@ class M2CryptTestCase(TestCase):
                 with patch("os.path.isfile", return_value=True):
                     self.assertEqual(
                         crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_not_called()
                     save_pub.assert_not_called()
@@ -189,13 +186,13 @@ class M2CryptTestCase(TestCase):
                 with patch("os.path.isfile", return_value=False):
                     self.assertEqual(
                         crypt.gen_keys("/keydir", "keyname", 2048),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_called_once_with(
-                        "/keydir{0}keyname.pem".format(os.sep), cipher=None
+                        "/keydir{}keyname.pem".format(os.sep), cipher=None
                     )
                     save_pub.assert_called_once_with(
-                        "/keydir{0}keyname.pub".format(os.sep)
+                        "/keydir{}keyname.pub".format(os.sep)
                     )
 
     @patch("os.umask", MagicMock())
@@ -211,7 +208,7 @@ class M2CryptTestCase(TestCase):
                         crypt.gen_keys(
                             "/keydir", "keyname", 2048, passphrase="password"
                         ),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     save_pem.assert_not_called()
                     save_pub.assert_not_called()
@@ -221,17 +218,17 @@ class M2CryptTestCase(TestCase):
                         crypt.gen_keys(
                             "/keydir", "keyname", 2048, passphrase="password"
                         ),
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                     )
                     callback = save_pem.call_args[1]["callback"]
                     save_pem.assert_called_once_with(
-                        "/keydir{0}keyname.pem".format(os.sep),
+                        "/keydir{}keyname.pem".format(os.sep),
                         cipher="des_ede3_cbc",
                         callback=callback,
                     )
                     self.assertEqual(callback(None), b"password")
                     save_pub.assert_called_once_with(
-                        "/keydir{0}keyname.pub".format(os.sep)
+                        "/keydir{}keyname.pub".format(os.sep)
                     )
 
     def test_sign_message(self):
