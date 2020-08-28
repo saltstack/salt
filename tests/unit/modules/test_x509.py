@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -14,9 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Import Salt Testing Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -36,7 +32,7 @@ except ImportError as import_error:
 
 
 try:
-    import M2Crypto  # pylint: disable=unused-import
+    import M2Crypto
 
     HAS_M2CRYPTO = True
 except ImportError:
@@ -111,7 +107,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
 
-        class FakeSubject(object):
+        class FakeSubject:
             """
             Class for faking x509'th subject.
             """
