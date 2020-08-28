@@ -17,11 +17,13 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime
 
 import attr  # pylint: disable=3rd-party-module-not-gated
+import msgpack
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.config
@@ -31,16 +33,16 @@ import salt.utils.path
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.yaml
+import zmq
 from salt.utils.immutabletypes import freeze
 from saltfactories import CODE_ROOT_DIR
 from saltfactories.exceptions import ProcessNotStarted as FactoryNotStarted
 from saltfactories.exceptions import ProcessTimeout as FactoryTimeout
 from saltfactories.utils import cli_scripts, ports, random_string
-from saltfactories.utils.processes.bases import (
-    Popen,
-    ProcessResult,
-    ShellResult,
+from saltfactories.utils.processes.bases import Popen, ProcessResult, ShellResult
+from saltfactories.utils.processes.helpers import (
     terminate_process,
+    terminate_process_list,
 )
 from tests.support.runtests import RUNTIME_VARS
 
@@ -411,12 +413,20 @@ class DaemonFactory(SubprocessFactoryBase):
     extra_cli_arguments_after_first_start_failure = attr.ib(
         hash=False, default=attr.Factory(list)
     )
+    listen_ports = attr.ib(
+        init=False, repr=False, hash=False, default=attr.Factory(list)
+    )
 
     def __attrs_post_init__(self):
         super().__attrs_post_init__()
         if self.check_ports and not isinstance(self.check_ports, (list, tuple)):
             self.check_ports = [self.check_ports]
+        if self.check_ports:
+            self.listen_ports.extend(self.check_ports)
         self.register_after_start_callback(self._add_factory_to_stats_processes)
+        self.register_after_terminate_callback(
+            self._terminate_processes_matching_listen_ports
+        )
         self.register_after_terminate_callback(
             self._remove_factory_from_stats_processes
         )
@@ -442,7 +452,7 @@ class DaemonFactory(SubprocessFactoryBase):
     def _format_callback(self, callback, args, kwargs):
         callback_str = "{}(".format(callback.__name__)
         if args:
-            callback_str += ", ".join(args)
+            callback_str += ", ".join([repr(arg) for arg in args])
         if kwargs:
             callback_str += ", ".join(
                 ["{}={!r}".format(k, v) for (k, v) in kwargs.items()]
@@ -458,16 +468,6 @@ class DaemonFactory(SubprocessFactoryBase):
             log.warning("%s is already running.", self)
             return True
         process_running = False
-        for callback, args, kwargs in self.before_start_callbacks:
-            try:
-                callback(*args, **kwargs)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.info(
-                    "Exception raised when running %s: %s",
-                    self._format_callback(callback, args, kwargs),
-                    exc,
-                    exc_info=True,
-                )
         start_time = time.time()
         start_attempts = max_start_attempts or self.max_start_attempts
         current_attempt = 0
@@ -481,6 +481,16 @@ class DaemonFactory(SubprocessFactoryBase):
             log.info(
                 "Starting %s. Attempt: %d of %d", self, current_attempt, start_attempts
             )
+            for callback, args, kwargs in self.before_start_callbacks:
+                try:
+                    callback(*args, **kwargs)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.info(
+                        "Exception raised when running %s: %s",
+                        self._format_callback(callback, args, kwargs),
+                        exc,
+                        exc_info=True,
+                    )
             current_start_time = time.time()
             start_running_timeout = current_start_time + (
                 start_timeout or self.start_timeout
@@ -501,12 +511,16 @@ class DaemonFactory(SubprocessFactoryBase):
                     log.warning("%s is no longer running", self)
                     self.terminate()
                     break
-                if (
-                    self.run_start_checks(current_start_time, start_running_timeout)
-                    is False
-                ):
-                    time.sleep(1)
-                    continue
+                try:
+                    if (
+                        self.run_start_checks(current_start_time, start_running_timeout)
+                        is False
+                    ):
+                        time.sleep(1)
+                        continue
+                except FactoryNotStarted:
+                    self.terminate()
+                    break
                 log.info(
                     "The %s factory is running after %d attempts. Took %1.2f seconds",
                     self,
@@ -590,11 +604,12 @@ class DaemonFactory(SubprocessFactoryBase):
         checks_start_time = time.time()
         while time.time() <= timeout_at:
             if not self.is_running():
-                log.warning("%s is no longer running", self)
-                return False
+                raise FactoryNotStarted("{} is no longer running".format(self))
             if not check_ports:
                 break
             check_ports -= ports.get_connectable_ports(check_ports)
+            if check_ports:
+                time.sleep(0.5)
         else:
             log.error(
                 "Failed to check ports after %1.2f seconds for %s",
@@ -626,6 +641,38 @@ class DaemonFactory(SubprocessFactoryBase):
         ):
             display_name = self.get_display_name()
             self.factories_manager.stats_processes.pop(display_name, None)
+
+    def _terminate_processes_matching_listen_ports(self):
+        if not self.listen_ports:
+            return
+        # If any processes were not terminated and are listening on the ports
+        # we have set on listen_ports, terminate those processes.
+        found_processes = []
+        for process in psutil.process_iter(["connections"]):
+            try:
+                for connection in process.connections():
+                    if connection.status != psutil.CONN_LISTEN:
+                        # We only care about listening services
+                        continue
+                    if connection.laddr.port in self.check_ports:
+                        found_processes.append(process)
+                        # We already found one connection, no need to check the others
+                        break
+            except psutil.AccessDenied:
+                # We've been denied access to this process connections. Carry on.
+                continue
+        if found_processes:
+            log.debug(
+                "The following processes were found listening on ports %s: %s",
+                ", ".join([str(port) for port in self.listen_ports]),
+                found_processes,
+            )
+            terminate_process_list(found_processes, kill=True, slow_stop=False)
+        else:
+            log.debug(
+                "No astray processes were found listening on ports: %s",
+                ", ".join([str(port) for port in self.listen_ports]),
+            )
 
     def __enter__(self):
         if not self.is_running():
@@ -908,7 +955,6 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
     def verify_config(cls, config):
         salt.utils.verify.verify_env(
             cls._get_verify_config_entries(config),
-            # running_username(),
             salt.utils.user.get_user(),
             pki_dir=config.get("pki_dir") or "",
             root_dir=config["root_dir"],
@@ -952,7 +998,9 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
         if not super().run_start_checks(started_at, timeout_at):
             return False
         if not self.event_listener:
-            log.debug("No event listener available")
+            log.debug(
+                "The 'event_listener' attribute is not set. Not checking events..."
+            )
             return True
 
         check_events = set(self.get_check_events())
@@ -962,8 +1010,7 @@ class SaltDaemonFactory(SaltFactory, DaemonFactory):
         checks_start_time = time.time()
         while time.time() <= timeout_at:
             if not self.is_running():
-                log.info("%s is no longer running", self)
-                return False
+                raise FactoryNotStarted("{} is no longer running".format(self))
             if not check_events:
                 break
             check_events -= self.event_listener.get_events(
@@ -1855,3 +1902,129 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
             return True
         time.sleep(1)
         return False
+
+
+@attr.s(kw_only=True, slots=True, hash=True)
+class LogServer:
+    log_host = attr.ib(default="0.0.0.0")
+    log_port = attr.ib(default=attr.Factory(ports.get_unused_localhost_port))
+    log_level = attr.ib()
+    running_event = attr.ib(init=False, repr=False, hash=False)
+    process_queue_thread = attr.ib(init=False, repr=False, hash=False)
+
+    def start(self):
+        log.info("Starting log server at %s:%d", self.log_host, self.log_port)
+        self.running_event = threading.Event()
+        self.process_queue_thread = threading.Thread(target=self.process_logs)
+        self.process_queue_thread.start()
+        # Wait for the thread to start
+        if self.running_event.wait(5) is not True:
+            self.running_event.clear()
+            raise RuntimeError("Failed to start the log server")
+        log.info("Log Server Started")
+
+    def stop(self):
+        log.info("Stopping the logging server")
+        address = "tcp://{}:{}".format(self.log_host, self.log_port)
+        log.debug("Stopping the multiprocessing logging queue listener at %s", address)
+        context = zmq.Context()
+        sender = context.socket(zmq.PUSH)
+        sender.connect(address)
+        try:
+            sender.send(msgpack.dumps(None))
+            log.info("Sent sentinel to trigger log server shutdown")
+        finally:
+            sender.close(1000)
+            context.term()
+
+        # Clear the running even, the log process thread know it should stop
+        self.running_event.clear()
+        log.info("Joining the logging server process thread")
+        self.process_queue_thread.join(7)
+        if not self.process_queue_thread.is_alive():
+            log.debug("Stopped the log server")
+        else:
+            log.warning(
+                "The logging server thread is still running. Waiting a little longer..."
+            )
+            self.process_queue_thread.join(5)
+            if not self.process_queue_thread.is_alive():
+                log.debug("Stopped the log server")
+            else:
+                log.warning("The logging server thread is still running...")
+
+    def process_logs(self):
+        address = "tcp://{}:{}".format(self.log_host, self.log_port)
+        context = zmq.Context()
+        puller = context.socket(zmq.PULL)
+        exit_timeout_seconds = 5
+        exit_timeout = None
+        try:
+            puller.bind(address)
+        except zmq.ZMQError as exc:
+            log.exception("Unable to bind to puller at %s", address)
+            return
+        try:
+            self.running_event.set()
+            while True:
+                if not self.running_event.is_set():
+                    if exit_timeout is None:
+                        log.debug(
+                            "Waiting %d seconds to process any remaning log messages "
+                            "before exiting...",
+                            exit_timeout_seconds,
+                        )
+                        exit_timeout = time.time() + exit_timeout_seconds
+
+                    if time.time() >= exit_timeout:
+                        log.debug(
+                            "Unable to process remaining log messages in time. "
+                            "Exiting anyway."
+                        )
+                        break
+                try:
+                    try:
+                        msg = puller.recv(flags=zmq.NOBLOCK)
+                    except zmq.ZMQError as exc:
+                        if exc.errno != zmq.EAGAIN:
+                            raise
+                        time.sleep(0.25)
+                        continue
+                    if msgpack.version >= (0, 5, 2):
+                        record_dict = msgpack.loads(msg, raw=False)
+                    else:
+                        record_dict = msgpack.loads(msg, encoding="utf-8")
+                    if record_dict is None:
+                        # A sentinel to stop processing the queue
+                        log.info("Received the sentinel to shutdown the log server")
+                        break
+                    try:
+                        record_dict["message"]
+                    except KeyError:
+                        # This log record was msgpack dumped from Py2
+                        for key, value in record_dict.copy().items():
+                            skip_update = True
+                            if isinstance(value, bytes):
+                                value = value.decode("utf-8")
+                                skip_update = False
+                            if isinstance(key, bytes):
+                                key = key.decode("utf-8")
+                                skip_update = False
+                            if skip_update is False:
+                                record_dict[key] = value
+                    # Just log everything, filtering will happen on the main process
+                    # logging handlers
+                    record = logging.makeLogRecord(record_dict)
+                    logger = logging.getLogger(record.name)
+                    logger.handle(record)
+                except (EOFError, KeyboardInterrupt, SystemExit) as exc:
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "An exception occurred in the log server processing queue thread: %s",
+                        exc,
+                        exc_info=True,
+                    )
+        finally:
+            puller.close(1)
+            context.term()
