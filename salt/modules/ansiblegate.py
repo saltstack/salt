@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -28,7 +27,6 @@ The timeout is how many seconds Salt should wait for
 any Ansible module to respond.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import importlib
@@ -45,7 +43,6 @@ import salt.utils.stringutils
 import salt.utils.timed_subprocess
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, LoaderError
-from salt.ext import six
 from salt.utils.decorators import depends
 
 try:
@@ -63,7 +60,7 @@ __virtualname__ = "ansible"
 log = logging.getLogger(__name__)
 
 
-class AnsibleModuleResolver(object):
+class AnsibleModuleResolver:
     """
     This class is to resolve all available modules in Ansible.
     """
@@ -111,9 +108,9 @@ class AnsibleModuleResolver(object):
         """
         m_ref = self._modules_map.get(module)
         if m_ref is None:
-            raise LoaderError('Module "{0}" was not found'.format(module))
+            raise LoaderError('Module "{}" was not found'.format(module))
         mod = importlib.import_module(
-            "ansible.modules{0}".format(
+            "ansible.modules{}".format(
                 ".".join([elm.split(".")[0] for elm in m_ref.split(os.path.sep)])
             )
         )
@@ -126,7 +123,7 @@ class AnsibleModuleResolver(object):
         :return:
         """
         if pattern and "*" not in pattern:
-            pattern = "*{0}*".format(pattern)
+            pattern = "*{}*".format(pattern)
         modules = []
         for m_name, m_path in self._modules_map.items():
             m_path = m_path.split(".")[0]
@@ -145,7 +142,7 @@ class AnsibleModuleResolver(object):
         return self
 
 
-class AnsibleModuleCaller(object):
+class AnsibleModuleCaller:
     DEFAULT_TIMEOUT = 1200  # seconds (20 minutes)
     OPT_TIMEOUT_KEY = "ansible_timeout"
 
@@ -168,7 +165,7 @@ class AnsibleModuleCaller(object):
         if not hasattr(module, "main"):
             raise CommandExecutionError(
                 "This module is not callable "
-                '(see "ansible.help {0}")'.format(
+                '(see "ansible.help {}")'.format(
                     module.__name__.replace("ansible.modules.", "")
                 )
             )
@@ -180,7 +177,7 @@ class AnsibleModuleCaller(object):
         js_args = js_args.format(args=salt.utils.json.dumps(kwargs))
 
         proc_out = salt.utils.timed_subprocess.TimedProc(
-            ["echo", "{0}".format(js_args)],
+            ["echo", "{}".format(js_args)],
             stdout=subprocess.PIPE,
             timeout=self.timeout,
         )
@@ -197,11 +194,7 @@ class AnsibleModuleCaller(object):
         try:
             out = salt.utils.json.loads(proc_exc.stdout)
         except ValueError as ex:
-            out = {
-                "Error": (
-                    proc_exc.stderr and (proc_exc.stderr + ".") or six.text_type(ex)
-                )
-            }
+            out = {"Error": (proc_exc.stderr and (proc_exc.stderr + ".") or str(ex))}
             if proc_exc.stdout:
                 out["Given JSON output"] = proc_exc.stdout
             return out
@@ -284,7 +277,7 @@ def help(module=None, *args):
         module = _resolver.load_module(module)
     except (ImportError, LoaderError) as err:
         raise CommandExecutionError(
-            'Module "{0}" is currently not functional on your system.'.format(module)
+            'Module "{}" is currently not functional on your system.'.format(module)
         )
 
     doc = {}
@@ -390,15 +383,15 @@ def playbooks(
     if diff:
         command.append("--diff")
     if isinstance(extra_vars, dict):
-        command.append("--extra-vars='{0}'".format(json.dumps(extra_vars)))
-    elif isinstance(extra_vars, six.text_type) and extra_vars.startswith("@"):
-        command.append("--extra-vars={0}".format(extra_vars))
+        command.append("--extra-vars='{}'".format(json.dumps(extra_vars)))
+    elif isinstance(extra_vars, str) and extra_vars.startswith("@"):
+        command.append("--extra-vars={}".format(extra_vars))
     if flush_cache:
         command.append("--flush-cache")
     if inventory:
-        command.append("--inventory={0}".format(inventory))
+        command.append("--inventory={}".format(inventory))
     if limit:
-        command.append("--limit={0}".format(limit))
+        command.append("--limit={}".format(limit))
     if list_hosts:
         command.append("--list-hosts")
     if list_tags:
@@ -406,25 +399,25 @@ def playbooks(
     if list_tasks:
         command.append("--list-tasks")
     if module_path:
-        command.append("--module-path={0}".format(module_path))
+        command.append("--module-path={}".format(module_path))
     if skip_tags:
-        command.append("--skip-tags={0}".format(skip_tags))
+        command.append("--skip-tags={}".format(skip_tags))
     if start_at_task:
-        command.append("--start-at-task={0}".format(start_at_task))
+        command.append("--start-at-task={}".format(start_at_task))
     if syntax_check:
         command.append("--syntax-check")
     if tags:
-        command.append("--tags={0}".format(tags))
+        command.append("--tags={}".format(tags))
     if playbook_kwargs:
-        for key, value in six.iteritems(playbook_kwargs):
+        for key, value in playbook_kwargs.items():
             key = key.replace("_", "-")
             if value is True:
-                command.append("--{0}".format(key))
-            elif isinstance(value, six.text_type):
-                command.append("--{0}={1}".format(key, value))
+                command.append("--{}".format(key))
+            elif isinstance(value, str):
+                command.append("--{}={}".format(key, value))
             elif isinstance(value, dict):
-                command.append("--{0}={1}".format(key, json.dumps(value)))
-    command.append("--forks={0}".format(forks))
+                command.append("--{}={}".format(key, json.dumps(value)))
+    command.append("--forks={}".format(forks))
     cmd_kwargs = {
         "env": {"ANSIBLE_STDOUT_CALLBACK": "json", "ANSIBLE_RETRY_FILES_ENABLED": "0"},
         "cwd": rundir,
@@ -433,6 +426,6 @@ def playbooks(
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
     retdata = json.loads(ret["stdout"])
-    if ret["retcode"]:
-        __context__["retcode"] = ret["retcode"]
+    if "retcode" in ret:
+        __context__["retcode"] = retdata["retcode"] = ret["retcode"]
     return retdata

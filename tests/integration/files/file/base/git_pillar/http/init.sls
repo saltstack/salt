@@ -7,7 +7,11 @@
   file.managed:
     - source: salt://git_pillar/http/files/nginx.conf
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - makedirs: True
     - template: jinja
@@ -16,7 +20,11 @@
   file.managed:
     - source: salt://git_pillar/http/files/uwsgi.yml
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - makedirs: True
     - template: jinja
@@ -24,14 +32,22 @@
 {{ root_dir }}:
   file.directory:
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 755
 
 {{ git_dir }}/users:
   file.managed:
     - source: salt://git_pillar/http/files/users
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - makedirs: True
     - mode: 644
 
