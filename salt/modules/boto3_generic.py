@@ -13,8 +13,8 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
     """
     Helper function to perform multiple lookups successively.
 
-    :type *args: dict or list(dict)
-    :param *args: One or more entries for attributes of resource
+    :type args: dict or list(dict)
+    :param args: One or more entries for attributes of resource
       types that should be looked up. The types shown are for a single resource.
       Provide a list to allow for multiple resources.
       The dictionary consists of:
@@ -23,9 +23,11 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
           to use. For example: ec2, elb, efs, dynamo_db. For a full listing, see:
           https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/index.html
           Note that not all services are implemented.
-        - name (str): Required. The name of the resource type to retrieve.
+        - name (str): Required. The name of the resource type to retrieve, in snake_case
+          and singular form. For example: ``network_interface``.
         - as (str): Optional. The key to use in the result instead of ``name``.
           Used when multiple different resources of the same name need to be looked up.
+          For example: ``requester_vpc`` and ``peer_vpc``.
         - kwargs (dict or list(dict)): Required. The kwargs to pass to ``lookup_resource``.
           You can pass alternate AWS IAM credentials (region, keyid, key) or profile
           if a specific resource needs to be looked up in another account, as can
@@ -33,11 +35,11 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
           This can also be a list of dicts in order to do multiple lookups for the
           same resource_type. In this case, the returned data will be a dict of
           lists instead of a dict of values.
-          This is used, for example, by :py:func:`accept_vpc_entpoint_connections`.
+          This is used, for example, by :py:func:`accept_vpc_endpoint_connections`.
         - required (bool): Optional. Indication whether the resource lookup must be succesful.
           That is, this resource is a required resource. Default: ``True``
         - result_keys (str/list(str)): Optional. The key(s) to use with salt.utils.data.traverse_dict_and_list
-          to extract the needed data element(s) from the result of :py:func:`_lookup_resource`.
+          to extract the needed data element(s) from the result of ``boto3_{service}.lookup_{name}``.
           Default: UpperCamel(resource_type) + "Id"
 
       For example, ``disassociate_route_table`` needs an AssociationId, which
@@ -46,12 +48,12 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
 
       .. code-block:: python
 
-
-      {
-          'name': 'route_table',
-          'kwargs': {'route_table_name': 'My Name', 'association_subnet_id': 'subnet-1234'},
-          'result_keys': 'RouteTableAssociationId'
-      }
+          {
+              'service': 'ec2',
+              'name': 'route_table',
+              'kwargs': {'route_table_name': 'My Name', 'association_subnet_id': 'subnet-1234'},
+              'result_keys': 'RouteTableAssociationId'
+          }
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -60,13 +62,13 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
 
       .. code-block:: python
 
-      {'result': {``name``: result_value}}
+          {'result': {name: result_value}}
 
       Otherwise, the return structure is:
 
       .. code-block:: python
 
-      {'result': {``name``: {result_key: result_value}}}
+          {'result': {name: {result_key: result_value}}}
 
     :raises: SaltInvocationError if any of the required arguments are missing or incorrect.
     """
@@ -83,6 +85,7 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                     'No "{}" specified in resource #{}.'.format(required_argument, idx)
                 )
         name = item["name"]
+        item_required = item.get("required", True)
         default_result_key = (
             salt.utils.stringutils.snake_to_camel_case(name, uppercamel=True) + "Id"
         )
@@ -96,14 +99,26 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
             lookup_kwargs = [lookup_kwargs]
         for single_lookup_kwargs in lookup_kwargs:
             single_lookup_results = {}
-            if single_lookup_kwargs and not isinstance(single_lookup_kwargs, dict):
-                raise SaltInvocationError(
-                    "lookup kwargs specified is not a dict but: {}".format(
-                        type(single_lookup_kwargs)
-                    )
-                )
             if single_lookup_kwargs is None:
-                single_lookup_kwargs = {}
+                if item_required:
+                    raise SaltInvocationError(
+                        "lookup kwargs is not specified (is None)."
+                    )
+                continue
+            if not isinstance(single_lookup_kwargs, dict):
+                if item_required:
+                    raise SaltInvocationError(
+                        "lookup kwargs specified is not a dict but: {}".format(
+                            type(single_lookup_kwargs)
+                        )
+                    )
+                continue
+            if not any(single_lookup_kwargs.values()):
+                if item_required:
+                    raise SaltInvocationError(
+                        "lookup kwargs does not contain any values."
+                    )
+                continue
             single_lookup_kwargs_uc = {
                 salt.utils.stringutils.snake_to_camel_case(item, uppercamel=True): value
                 for item, value in single_lookup_kwargs.items()
@@ -125,12 +140,13 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                 )
                 lookup_function = __salt__.get(lookup_function_name)
                 if not lookup_function:
-                    if item.get("required", True):
+                    if item_required:
                         raise SaltInvocationError(
                             "The function {} is not available in salt at this moment."
                             "".format(lookup_function_name)
                         )
-                    single_lookup_results = None
+                    continue
+                    # single_lookup_results = None
                 else:
                     conn_kwargs = {
                         "region": single_lookup_kwargs.get("region", region),
@@ -146,7 +162,7 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                     except SaltInvocationError as exc:
                         res = {"error": "{}".format(exc)}
                     log.debug("lookup_resources: res: %s", res)
-                    if "error" in res and item.get("required", True):
+                    if "error" in res and item_required:
                         yield res
                         return
                     single_lookup_results = (
