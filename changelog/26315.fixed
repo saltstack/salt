@@ -1,0 +1,1 @@
+Fix dnsutil.parse_zone SOA record parsing when optional TTL and/or class are absent
