@@ -439,7 +439,13 @@ def describe_resource(
 
 
 def lookup_resource(
-    resource_type, filters=None, tags=None, result_key=None, only_one=True, client=None,
+    resource_type,
+    filters=None,
+    tags=None,
+    result_key=None,
+    only_one=True,
+    client=None,
+    **kwargs,
 ):
     """
     Helper function to deduplicate common code in lookup-functions.
@@ -455,6 +461,7 @@ def lookup_resource(
         be an error if more than one resource is found using the specified filters
         and tags. Default: ``True``.
         Will return a list of results if this is set to ``False``.
+    :param dict kwargs: Additional kwargs to pass to the :py:func:`describe_resource`-function.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -476,7 +483,7 @@ def lookup_resource(
             "No constraints where given when for lookup_{}.".format(resource_type)
         )
     res = describe_resource(
-        resource_type, filters=filters, result_key=result_key, client=client,
+        resource_type, filters=filters, result_key=result_key, client=client, **kwargs
     )
     log.debug("_lookup_resource(%s): res: %s", resource_type, res)
     if "error" in res:
@@ -665,4 +672,14 @@ def wait_resource(
     ) as exc:
         ret["error"] = exc
     ret["result"] = "error" not in ret
+    return ret
+
+
+def bool_to_enable_disable(value):
+    """
+    Helper function to convert a boolean value to ``enable`` or ``disable``.
+    """
+    ret = value
+    if isinstance(value, bool):
+        ret = "enable" if value else "disable"
     return ret
