@@ -679,39 +679,6 @@ def _migrate(dom, dst_uri, **kwargs):
     """
     Migrate the domain object from its current host to the destination
     host given by URI.
-
-    :param dom: domain object to migrate
-    :param dst_uri: destination URI
-    :param kwargs:
-        - live:            Use live migration. Default value is True.
-        - persistent:      Leave the domain persistent on destination host.
-                           Default value is True.
-        - undefinesource:  Undefine the domain on the source host.
-                           Default value is True.
-        - offline:         If set to True it will migrate the domain definition
-                           without starting the domain on destination and without
-                           stopping it on source host. Default value is False.
-        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:    Set maximum tolerable downtime for live-migration.
-                           The value represents a number of milliseconds the guest
-                           is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                           to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - copy_storage:    Migrate non-shared storage. It must be one of the following
-                           values: all (full disk copy) or incremental (Incremental copy)
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:        Username to connect with target host
-        - password:        Password to connect with target host
     """
     flags = 0
     params = {}
@@ -5464,44 +5431,66 @@ def define_vol_xml_path(path, pool=None, **kwargs):
 
 def migrate_non_shared(vm_, target, ssh=False, **kwargs):
     """
-    Attempt to execute non-shared storage "all" migration
+    .. deprecated:: 3002 Use ``virt.migrate`` with ``copy_storage='all'`` instead.
 
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
+    Attempt to execute non-shared full storage migration
 
-        .. deprecated:: 3002
+    Parameters:
+        vm_ (str): Specifies the name of a domain (VM) to migrate.
+        target (str): Specifies the URI to destination libvirt host.
+        ssh (bool): Use transport over an ordinary ssh connection.
 
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
+            .. deprecated:: 3002 Use libvirt URI (``qemu+ssh://``) instead.
 
-        .. versionadded:: 3002
+    Keyword Arguments:
+        live (bool): Use live migration. (default: ``True``)
+
+        persistent (bool):
+            When set to ``True``, libvirt leaves the domain persistent
+            on destination host. (default: ``True``)
+
+        undefinesource (bool):
+            Undefine the domain on the source host.
+            (default: ``True``)
+
+        offline (bool):
+            Migrate only the domain definition without starting the
+            domain on destination, and without stopping it on source host.
+            (default: ``False``)
+
+        max_bandwidth (int): The maximum bandwidth (in MiB/s) that will be used.
+
+        max_downtime (int):
+            Specifies the maximum tolerable downtime for live-migration.
+            The value represents a number of milliseconds the guest is allowed
+            to be down at the end of live migration.
+
+        parallel_connections (int):
+            Specifies the number of parallel network connections to be used to
+            send memory pages to the destination host.
+
+        compressed (bool): Activate compression. (default: ``False``)
+
+        comp_methods (str): Comma-separated list of compression methods. Valid values are:
+
+            - mt
+            - xbzrle
+
+        comp_mt_level (int): Specifies compression level in range from 0 to 9, where
+            1 is maximum speed and 9 is maximum compression.
+
+        comp_mt_threads (int): Set number of compress threads on source host.
+        comp_mt_dthreads (int): Set number of decompress threads on target host.
+        comp_xbzrle_cache (int): Specifies xbzrle compression page cache size (bytes).
+
+        postcopy (bool): Enable the use of post-copy migration.
+
+        postcopy_bandwidth (int):
+            Specifies the maximum bandwidth (MiB/s) allowed in
+            post-copy phase.
+
+        username (str): Username to connect with target host
+        password (str): Password to connect with target host
 
     CLI Example:
 
@@ -5530,44 +5519,66 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
 
 def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
     """
-    Attempt to execute non-shared storage "inc" migration
+    .. deprecated:: 3002 Use ``virt.migrate`` with ``copy_storage='inc'`` instead.
 
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
+    Attempt to execute non-shared storage (incremental) migration
 
-        .. deprecated:: 3002
+    Parameters:
+        vm_ (str): Specifies the name of a domain (VM) to migrate.
+        target (str): Specifies the URI to destination libvirt host.
+        ssh (bool): Use transport over an ordinary ssh connection.
 
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
+            .. deprecated:: 3002 Use libvirt URI (``qemu+ssh://``) instead.
 
-        .. versionadded:: 3002
+    Keyword Arguments:
+        live (bool): Use live migration. (default: ``True``)
+
+        persistent (bool):
+            When set to ``True``, libvirt leaves the domain persistent
+            on destination host. (default: ``True``)
+
+        undefinesource (bool):
+            Undefine the domain on the source host.
+            (default: ``True``)
+
+        offline (bool):
+            Migrate only the domain definition without starting the
+            domain on destination, and without stopping it on source host.
+            (default: ``False``)
+
+        max_bandwidth (int): The maximum bandwidth (in MiB/s) that will be used.
+
+        max_downtime (int):
+            Specifies the maximum tolerable downtime for live-migration.
+            The value represents a number of milliseconds the guest is allowed
+            to be down at the end of live migration.
+
+        parallel_connections (int):
+            Specifies the number of parallel network connections to be used to
+            send memory pages to the destination host.
+
+        compressed (bool): Activate compression. (default: ``False``)
+
+        comp_methods (str): Comma-separated list of compression methods. Valid values are:
+
+            - mt
+            - xbzrle
+
+        comp_mt_level (int): Specifies compression level in range from 0 to 9, where
+            1 is maximum speed and 9 is maximum compression.
+
+        comp_mt_threads (int): Set number of compress threads on source host.
+        comp_mt_dthreads (int): Set number of decompress threads on target host.
+        comp_xbzrle_cache (int): Specifies xbzrle compression page cache size (bytes).
+
+        postcopy (bool): Enable the use of post-copy migration.
+
+        postcopy_bandwidth (int):
+            Specifies the maximum bandwidth (MiB/s) allowed in
+            post-copy phase.
+
+        username (str): Username to connect with target host
+        password (str): Password to connect with target host
 
     CLI Example:
 
@@ -5596,46 +5607,69 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
 
 def migrate(vm_, target, ssh=False, **kwargs):
     """
-    Shared storage migration
+    Migrate VM to another host.
 
-    :param vm_: domain name
-    :param target: target libvirt URI or host name
-    :param ssh: True to connect over ssh
+    Parameters:
+        vm_ (str): Specifies the name of a domain (VM) to migrate.
+        target (str): Specifies the URI to destination libvirt host.
+        ssh (bool): Use transport over an ordinary ssh connection.
 
-       .. deprecated:: 3002
+            .. deprecated:: 3002 Use libvirt URI (``qemu+ssh://``) instead.
 
-    :param kwargs:
-        - live:            Use live migration. Default value is True.
-        - persistent:      Leave the domain persistent on destination host.
-                           Default value is True.
-        - undefinesource:  Undefine the domain on the source host.
-                           Default value is True.
-        - offline:         If set to True it will migrate the domain definition
-                           without starting the domain on destination and without
-                           stopping it on source host. Default value is False.
-        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:    Set maximum tolerable downtime for live-migration.
-                           The value represents a number of milliseconds the guest
-                           is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                           to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - copy_storage:    Migrate non-shared storage. It must be one of the following
-                           values: all (full disk copy) or incremental (Incremental copy)
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:        Username to connect with target host
-        - password:        Password to connect with target host
+    Keyword Arguments:
+        live (bool): Use live migration. (default: ``True``)
 
-        .. versionadded:: 3002
+        persistent (bool):
+            When set to ``True``, libvirt leaves the domain persistent
+            on destination host. (default: ``True``)
+
+        undefinesource (bool):
+            Undefine the domain on the source host.
+            (default: ``True``)
+
+        offline (bool):
+            Migrate only the domain definition without starting the
+            domain on destination, and without stopping it on source host.
+            (default: ``False``)
+
+        max_bandwidth (int): The maximum bandwidth (in MiB/s) that will be used.
+
+        max_downtime (int):
+            Specifies the maximum tolerable downtime for live-migration.
+            The value represents a number of milliseconds the guest is allowed
+            to be down at the end of live migration.
+
+        parallel_connections (int):
+            Specifies the number of parallel network connections to be used to
+            send memory pages to the destination host.
+
+        compressed (bool): Activate compression. (default: ``False``)
+
+        comp_methods (str): Comma-separated list of compression methods. Valid values are:
+
+            - mt
+            - xbzrle
+
+        comp_mt_level (int): Specifies compression level in range from 0 to 9, where
+            1 is maximum speed and 9 is maximum compression.
+
+        comp_mt_threads (int): Set number of compress threads on source host.
+        comp_mt_dthreads (int): Set number of decompress threads on target host.
+        comp_xbzrle_cache (int): Specifies xbzrle compression page cache size (bytes).
+
+        copy_storage (bool): Migrate non-shared storage. Valid values are:
+
+            - all: Full disk copy
+            - incremental: Incremental copy
+
+        postcopy (bool): Enable the use of post-copy migration.
+
+        postcopy_bandwidth (int):
+            Specifies the maximum bandwidth (MiB/s) allowed in
+            post-copy phase.
+
+        username (str): Username to connect with target host
+        password (str): Password to connect with target host
 
     CLI Example:
 
@@ -5686,7 +5720,10 @@ def migrate_start_postcopy(vm_):
     """
     Starts post-copy migration. This function has to be called
     while live migration is in progress and it has been initiated
-    with the `postcopy=True` option.
+    with the ``postcopy=True`` option.
+
+    Parameters:
+        vm_ (str): Specifies the domain (VM) name being migrated.
 
     CLI Example:
 
