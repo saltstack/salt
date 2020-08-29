@@ -186,7 +186,14 @@ def _call_apt(args, scope=True, **kwargs):
     }
     params.update(kwargs)
 
-    return __salt__["cmd.run_all"](cmd, **params)
+    cmd_ret = __salt__["cmd.run_all"](cmd, **params)
+    count = 0
+    while "Could not get lock" in cmd_ret.get("stderr", "") and count < 10:
+        count += 1
+        log.warning("Waiting for dpkg lock release: retrying... %s/100", count)
+        time.sleep(2 ** count)
+        cmd_ret = __salt__["cmd.run_all"](cmd, **params)
+    return cmd_ret
 
 
 def _warn_software_properties(repo):
@@ -1551,7 +1558,6 @@ def _consolidate_repo_sources(sources):
     repos = [s for s in sources.list if not s.invalid]
 
     for repo in repos:
-        repo.uri = repo.uri.rstrip("/")
         # future lint: disable=blacklisted-function
         key = str(
             (
@@ -1568,9 +1574,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(
-                salt.utils.pkg.deb.strip_uri(repo.line)
-            )
+            consolidated[key] = sourceslist.SourceEntry(repo.line)
 
         if repo.file != base_file:
             delete_files.add(repo.file)
@@ -1697,8 +1701,8 @@ def list_repos(**kwargs):
         repo["disabled"] = source.disabled
         repo["dist"] = source.dist
         repo["type"] = source.type
-        repo["uri"] = source.uri.rstrip("/")
-        repo["line"] = salt.utils.pkg.deb.strip_uri(source.line.strip())
+        repo["uri"] = source.uri
+        repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
@@ -1771,10 +1775,7 @@ def get_repo(repo, **kwargs):
             for sub in source:
                 if (
                     sub["type"] == repo_type
-                    and
-                    # strip trailing '/' from repo_uri, it's valid in definition
-                    # but not valid when compared to persisted source
-                    sub["uri"].rstrip("/") == repo_uri.rstrip("/")
+                    and sub["uri"] == repo_uri
                     and sub["dist"] == repo_dist
                 ):
                     if not repo_comps:
@@ -2539,7 +2540,7 @@ def expand_repo_def(**kwargs):
     _check_apt()
 
     sanitized = {}
-    repo = salt.utils.pkg.deb.strip_uri(kwargs["repo"])
+    repo = kwargs["repo"]
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
         dist = __grains__["lsb_distrib_codename"]
         owner_name, ppa_name = repo[4:].split("/", 1)
@@ -2574,7 +2575,7 @@ def expand_repo_def(**kwargs):
     sanitized["disabled"] = source_entry.disabled
     sanitized["dist"] = source_entry.dist
     sanitized["type"] = source_entry.type
-    sanitized["uri"] = source_entry.uri.rstrip("/")
+    sanitized["uri"] = source_entry.uri
     sanitized["line"] = source_entry.line.strip()
     sanitized["architectures"] = getattr(source_entry, "architectures", [])
 
