@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Tests for the cron state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -32,7 +29,10 @@ class CronTest(ModuleCase):
         Teardown
         """
         # Remove cron file
-        self.run_function("cmd.run", cmd="crontab -u test_cron_user -r")
+        if salt.utils.platform.is_freebsd():
+            self.run_function("cmd.run", cmd="crontab -u test_cron_user -rf")
+        else:
+            self.run_function("cmd.run", cmd="crontab -u test_cron_user -r")
 
         # Delete user
         self.run_state("user.absent", name="test_cron_user")
