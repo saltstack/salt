@@ -1,7 +1,54 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
-        <vcpu>{{ cpu }}</vcpu>
+        {%- if cpu %}
+            <vcpu {{ cpu.get('placement', '') }} {{ cpu.get('cpuset', '') }} {{ cpu.get('current', '') }}>{{ cpu.get('maximum', '') }}</vcpu>
+        {%- endif %}
+        {%- if cpu.get('vcpus') %}
+            <vcpus>
+            {%- for vcpu_id in cpu["vcpus"].keys() %}
+            <vcpu id='{{ vcpu_id }}' {{ cpu.vcpus[vcpu_id].get('enabled', '') }} {{ cpu.vcpus[vcpu_id].get('hotpluggable', '') }} {{ cpu.vcpus[vcpu_id].get('order', '') }}/>
+            {%- endfor %}
+            </vcpus>
+        {%- endif %}
+         {%- if cpu %}
+          <cpu {{cpu.get('match', '') }} {{ cpu.get('mode', '') }} {{ cpu.get('check', '') }} >
+            {%- if cpu.model %}
+            <model {{ cpu.model.get('fallback', '') }} {{ cpu.model.get('vendor_id', '') }}>{{ cpu.model.get('name', '') }}</model>
+            {%- endif %}
+            {%- if cpu.vendor %}
+            <vendor>{{ cpu.get('vendor', '') }}</vendor>
+            {%- endif %}
+            {%- if cpu.topology %}
+            <topology {{ cpu.topology.get('sockets', '') }} {{ cpu.topology.get('dies', '') }} {{ cpu.topology.get('cores', '') }} {{ cpu.topology.get('threads', '') }}/>
+            {%- endif %}
+            {%- if cpu.cache %}
+            <cache {{ cpu.cache.get('level', '') }} {{ cpu.cache.get('mode', '') }}/>
+            {%- endif %}
+            {%- if cpu.features %}
+            {%- for k, v in cpu.features.items() %}
+            <feature policy='{{ v }}' name='{{ k }}'/>
+            {%- endfor %}
+            {%- endif %}
+            {%- if cpu.numa %}
+            <numa>
+            {%- for numa_id in cpu.numa.keys() %}
+            {%- if cpu.numa.get(numa_id) %}
+            <cell id='{{ numa_id }}' {{ cpu.numa[numa_id].get('cpus','') }} {{ cpu.numa[numa_id].get('memory', '') }} {{ cpu.numa[numa_id].get('discard', '') }} {{ cpu.numa[numa_id].get('memAccess', '') }}>
+                {%- if cpu.numa[numa_id].distances %}
+                    <distances>
+                    {%- for sibling_id in cpu.numa[numa_id].distances %}
+                    <sibling id='{{ sibling_id }}' value='{{ cpu.numa[numa_id].distances[sibling_id] }}'/>
+                    {%- endfor %}
+                    </distances>
+                {%- endif %}
+            </cell>
+            {%- endif %}
+            {%- endfor %}
+            </numa>
+            {%- endif %}
+          </cpu>
+        {%- endif %}
         {%- if mem.max %}
         <maxMemory {{ mem.get('slots', '') }} unit='KiB'>{{ mem.max }}</maxMemory>
         {%- endif %}
