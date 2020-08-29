@@ -959,16 +959,10 @@ def _gen_xml(
 
     context["mem"] = nesthash()
     if isinstance(mem, int):
-        mem = int(mem) * 1024  # MB
-        context["mem"]["boot"] = str(mem)
-        context["mem"]["current"] = str(mem)
+        context["mem"]["boot"] = mem
+        context["mem"]["current"] = mem
     elif isinstance(mem, dict):
-        for tag, val in mem.items():
-            if val:
-                if tag == "slots":
-                    context["mem"]["slots"] = "{}='{}'".format(tag, val)
-                else:
-                    context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+        context["mem"] = nesthash(mem)
 
     context["cpu"] = nesthash()
     if isinstance(cpu, int):
@@ -1963,10 +1957,10 @@ def init(
 
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         .. code-block:: python
 
@@ -1975,10 +1969,17 @@ def init(
                 'current': 1g,
                 'max': 1g,
                 'slots': 10,
-                'hard_limit': '1024'
-                'soft_limit': '512m'
-                'swap_hard_limit': '1g'
-                'min_guarantee': '512mib'
+                'hard_limit': '1024',
+                'soft_limit': '512m',
+                'swap_hard_limit': '1g',
+                'min_guarantee': '512mib',
+                'hugepages': [{'nodeset': '0-3,^2', 'size': '1g'}, {'nodeset': '2', 'size': '2m'}],
+                'nosharepages': True,
+                'locked': True,
+                'source': 'file',
+                'access': 'shared',
+                'allocation': 'immediate',
+                'discard': True
             }
 
         .. versionchanged:: 3002
@@ -2205,6 +2206,33 @@ def init(
 
     min_guarantee
         the guaranteed minimum memory allocation for the guest
+
+    hugepages
+        memory allocated using ``hugepages`` instead of the normal native page size. It takes a list of
+        dictionaries with ``nodeset`` and ``size`` keys.
+        For example ``"hugepages": [{"nodeset": "1-4,^3", "size": "2m"}, {"nodeset": "3", "size": "1g"}]``.
+
+    nosharepages
+        boolean value to instruct hypervisor to disable shared pages (memory merge, KSM) for this domain
+
+    locked
+        boolean value that allows memory pages belonging to the domain will be locked in host's memory and the host will
+        not be allowed to swap them out, which might be required for some workloads such as real-time.
+
+    source
+        possible values are ``file`` which utilizes file memorybacking, ``anonymous`` by default and ``memfd`` backing.
+        (QEMU/KVM only)
+
+    access
+        specify if the memory is to be ``shared`` or ``private``. This can be overridden per numa node by memAccess.
+
+    allocation
+        specify when to allocate the memory by supplying either ``immediate`` or ``ondemand``.
+
+    discard
+        boolean value to ensure the memory content is discarded just before guest shuts down (or when DIMM module is
+        unplugged). Please note that this is just an optimization and is not guaranteed to work in all cases
+        (e.g. when hypervisor crashes). (QEMU/KVM only)
 
     .. _init-nic-def:
 
@@ -2744,10 +2772,10 @@ def update(
                 ``null`` in sls file instead.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
         is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
@@ -2914,11 +2942,15 @@ def update(
         node.set("memory", str(value))
         node.set("unit", "bytes")
 
+    def _set_size_with_byte_unit(node, value):
+        node.set("size", str(value))
+        node.set("unit", "bytes")
+
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
         # _handle_unit treats bytes as invalid unit for the purpose of consistency
         unit = unit if unit != "bytes" else "b"
-        value = node.get("memory") or node.text
+        value = node.get("memory") or node.get("size") or node.text
         return _handle_unit("{}{}".format(value, unit)) if value else None
 
     def _set_vcpu(node, value):
@@ -3012,6 +3044,42 @@ def update(
             "set": lambda n, v: n.set("dev", v),
             "del": salt.utils.xmlutil.del_attribute("dev"),
         },
+        {
+            "path": "mem:hugepages:{id}:size",
+            "convert": _handle_unit,
+            "xpath": "memoryBacking/hugepages/page[$id]",
+            "get": _get_with_unit,
+            "set": _set_size_with_byte_unit,
+            "del": salt.utils.xmlutil.del_attribute("size", ["unit", "nodeset"]),
+        },
+        {
+            "path": "mem:hugepages:{id}:nodeset",
+            "xpath": "memoryBacking/hugepages/page[$id]",
+            "get": lambda n: n.get("nodeset"),
+            "set": lambda n, v: n.set("nodeset", v),
+            "del": salt.utils.xmlutil.del_attribute("nodeset"),
+        },
+        {"path": "mem:nosharepages", "xpath": "memoryBacking/nosharepages"},
+        {"path": "mem:locked", "xpath": "memoryBacking/locked"},
+        {
+            "path": "mem:source",
+            "xpath": "memoryBacking/source",
+            "get": lambda n: str(n.get("type")) if n.get("type") else None,
+            "set": lambda n, v: n.set("type", str(v)),
+        },
+        {
+            "path": "mem:access",
+            "xpath": "memoryBacking/access",
+            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
+            "set": lambda n, v: n.set("mode", str(v)),
+        },
+        {
+            "path": "mem:allocation",
+            "xpath": "memoryBacking/allocation",
+            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
+            "set": lambda n, v: n.set("mode", str(v)),
+        },
+        {"path": "mem:discard", "xpath": "memoryBacking/discard"},
         {
             "path": "cpu",
             "xpath": "vcpu",
