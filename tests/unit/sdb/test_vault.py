@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the vault SDB module
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.sdb.vault as vault
