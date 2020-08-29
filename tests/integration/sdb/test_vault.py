@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the vault modules
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -202,7 +200,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
                     self.skipTest("unable to login to vault")
             ret = self.run_function(
                 "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
+                cmd="/usr/local/bin/vault policy write testpolicy {}/vault.hcl".format(
                     RUNTIME_VARS.FILES
                 ),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
