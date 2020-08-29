@@ -163,6 +163,7 @@ def clean_node(parent_map, node, ignored=None):
         len(node.attrib.keys() - (ignored or [])) == 0
         and not list(node)
         and not has_text
+        and parent
     ):
         parent.remove(node)
     # Clean parent nodes if needed
