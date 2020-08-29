@@ -509,6 +509,8 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     """
+    _validate_device(device)
+
     if part_type not in {"primary", "logical", "extended"}:
         raise CommandExecutionError("Invalid part_type passed to partition.mkpart")
 
