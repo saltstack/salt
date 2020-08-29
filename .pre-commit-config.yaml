@@ -242,13 +242,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.5-zmq-requirements
         name: Darwin Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --include=pkg/osx/req.txt
-          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -258,13 +257,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.6-zmq-requirements
         name: Darwin Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --include=pkg/osx/req.txt
-          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -274,13 +272,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.7-zmq-requirements
         name: Darwin Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --include=pkg/osx/req.txt
-          - --include=pkg/osx/req_ext.txt
           - --include=pkg/osx/req_pyobjc.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
@@ -290,13 +287,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.8-zmq-requirements
         name: Darwin Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.8
           - --platform=darwin
           - --include=pkg/osx/req.txt
-          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -305,13 +301,12 @@ repos:
       - id: pip-tools-compile
         alias: compile-darwin-py3.9-zmq-requirements
         name: Darwin Py3.9 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.9
           - --platform=darwin
           - --include=pkg/osx/req.txt
-          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -695,6 +690,19 @@ repos:
           - --py-version=3.9
   # <---- Invoke -----------------------------------------------------------------------------------------------------
 
+  - repo: https://github.com/asottile/pyupgrade
+    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
+    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
+    rev: v2.7.2
+    hooks:
+      - id: pyupgrade
+        name: Drop six usage and Py2 support
+        args: [--py3-plus, --keep-mock]
+        exclude: >
+          (?x)^(
+            salt/client/ssh/ssh_py_shim.py
+          )$
+
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
@@ -710,7 +718,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: stable
+    rev: 19.10b0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
@@ -722,6 +730,13 @@ repos:
                 tests/kitchen/.*
             )$
 
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.7.0
+    hooks:
+      - id: blacken-docs
+        args: [--skip-errors]
+        files: ^doc/.*\.rst
+        additional_dependencies: [black==19.10b0]
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master

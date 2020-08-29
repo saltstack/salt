@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 noxfile
 ~~~~~~~
@@ -7,7 +6,6 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import glob
@@ -65,7 +63,29 @@ RUNTESTS_LOGFILE = os.path.join(
 )
 
 # Prevent Python from writing bytecode
-os.environ[str("PYTHONDONTWRITEBYTECODE")] = str("1")
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
+
+def find_session_runner(session, name, **kwargs):
+    for s, _ in session._runner.manifest.list_all_sessions():
+        if name not in s.signatures:
+            continue
+        for signature in s.signatures:
+            for key, value in kwargs.items():
+                param = "{}={!r}".format(key, value)
+                if IS_PY3:
+                    # Under Python2 repr unicode string are always "u" prefixed, ie, u'a string'.
+                    param = param.replace("u'", "'")
+                if param not in signature:
+                    break
+            else:
+                return s
+            continue
+    session.error(
+        "Could not find a nox session by the name {!r} with the following keyword arguments: {!r}".format(
+            name, kwargs
+        )
+    )
 
 
 def _create_ci_directories():
@@ -271,7 +291,7 @@ def _install_requirements(session, transport, *extra_requirements):
 def _run_with_coverage(session, *test_cmd):
     if SKIP_REQUIREMENTS_INSTALL is False:
         session.install(
-            "--progress-bar=off", "coverage==5.0.1", silent=PIP_INSTALL_SILENT
+            "--progress-bar=off", "coverage==5.2", silent=PIP_INSTALL_SILENT
         )
     session.run("coverage", "erase")
     python_path_env_var = os.environ.get("PYTHONPATH") or None
@@ -415,6 +435,9 @@ def _runtests(session, coverage, cmd_args):
 @nox.parametrize("transport", ["zeromq", "tcp"])
 @nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def runtests_parametrized(session, coverage, transport, crypto):
+    """
+    DO NOT CALL THIS NOX SESSION DIRECTLY
+    """
     # Install requirements
     _install_requirements(session, transport, "unittest-xml-reporting==2.5.2")
 
@@ -451,8 +474,12 @@ def runtests(session, coverage):
     runtests.py session with zeromq transport and default crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="zeromq",
         )
     )
 
@@ -464,8 +491,12 @@ def runtests_tcp(session, coverage):
     runtests.py session with TCP transport and default crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto=None, transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="tcp",
         )
     )
 
@@ -477,8 +508,12 @@ def runtests_zeromq(session, coverage):
     runtests.py session with zeromq transport and default crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="zeromq",
         )
     )
 
@@ -490,8 +525,12 @@ def runtests_m2crypto(session, coverage):
     runtests.py session with zeromq transport and m2crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="zeromq",
         )
     )
 
@@ -503,8 +542,12 @@ def runtests_tcp_m2crypto(session, coverage):
     runtests.py session with TCP transport and m2crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='m2crypto', transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="tco",
         )
     )
 
@@ -516,8 +559,12 @@ def runtests_zeromq_m2crypto(session, coverage):
     runtests.py session with zeromq transport and m2crypto
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="zeromq",
         )
     )
 
@@ -529,8 +576,12 @@ def runtests_pycryptodome(session, coverage):
     runtests.py session with zeromq transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="zeromq",
         )
     )
 
@@ -542,8 +593,12 @@ def runtests_tcp_pycryptodome(session, coverage):
     runtests.py session with TCP transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="tcp",
         )
     )
 
@@ -555,8 +610,12 @@ def runtests_zeromq_pycryptodome(session, coverage):
     runtests.py session with zeromq transport and pycryptodome
     """
     session.notify(
-        "runtests-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "runtests-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="zeromq",
         )
     )
 
@@ -564,6 +623,9 @@ def runtests_zeromq_pycryptodome(session, coverage):
 @nox.session(python=_PYTHON_VERSIONS, name="runtests-cloud")
 @nox.parametrize("coverage", [False, True])
 def runtests_cloud(session, coverage):
+    """
+    runtests.py cloud tests session
+    """
     # Install requirements
     _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
 
@@ -584,6 +646,9 @@ def runtests_cloud(session, coverage):
 @nox.session(python=_PYTHON_VERSIONS, name="runtests-tornado")
 @nox.parametrize("coverage", [False, True])
 def runtests_tornado(session, coverage):
+    """
+    runtests.py tornado tests session
+    """
     # Install requirements
     _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
     session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
@@ -598,6 +663,9 @@ def runtests_tornado(session, coverage):
 @nox.parametrize("transport", ["zeromq", "tcp"])
 @nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def pytest_parametrized(session, coverage, transport, crypto):
+    """
+    DO NOT CALL THIS NOX SESSION DIRECTLY
+    """
     # Install requirements
     _install_requirements(session, transport)
 
@@ -640,8 +708,12 @@ def pytest(session, coverage):
     pytest session with zeromq transport and default crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="zeromq",
         )
     )
 
@@ -653,8 +725,12 @@ def pytest_tcp(session, coverage):
     pytest session with TCP transport and default crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto=None, transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="tcp",
         )
     )
 
@@ -666,8 +742,12 @@ def pytest_zeromq(session, coverage):
     pytest session with zeromq transport and default crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto=None, transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto=None,
+            transport="zeromq",
         )
     )
 
@@ -679,8 +759,12 @@ def pytest_m2crypto(session, coverage):
     pytest session with zeromq transport and m2crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="zeromq",
         )
     )
 
@@ -692,8 +776,12 @@ def pytest_tcp_m2crypto(session, coverage):
     pytest session with TCP transport and m2crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='m2crypto', transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="tcp",
         )
     )
 
@@ -705,8 +793,12 @@ def pytest_zeromq_m2crypto(session, coverage):
     pytest session with zeromq transport and m2crypto
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='m2crypto', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="m2crypto",
+            transport="zeromq",
         )
     )
 
@@ -718,8 +810,12 @@ def pytest_pycryptodome(session, coverage):
     pytest session with zeromq transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="zeromq",
         )
     )
 
@@ -731,8 +827,12 @@ def pytest_tcp_pycryptodome(session, coverage):
     pytest session with TCP transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='tcp')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="tcp",
         )
     )
 
@@ -744,8 +844,12 @@ def pytest_zeromq_pycryptodome(session, coverage):
     pytest session with zeromq transport and pycryptodome
     """
     session.notify(
-        "pytest-parametrized-{}(coverage={}, crypto='pycryptodome', transport='zeromq')".format(
-            session.python, coverage
+        find_session_runner(
+            session,
+            "pytest-parametrized-{}".format(session.python),
+            coverage=coverage,
+            crypto="pycryptodome",
+            transport="zeromq",
         )
     )
 
@@ -753,6 +857,9 @@ def pytest_zeromq_pycryptodome(session, coverage):
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-cloud")
 @nox.parametrize("coverage", [False, True])
 def pytest_cloud(session, coverage):
+    """
+    pytest cloud tests session
+    """
     # Install requirements
     _install_requirements(session, "zeromq")
     requirements_file = os.path.join(
@@ -780,6 +887,9 @@ def pytest_cloud(session, coverage):
 @nox.session(python=_PYTHON_VERSIONS, name="pytest-tornado")
 @nox.parametrize("coverage", [False, True])
 def pytest_tornado(session, coverage):
+    """
+    pytest tornado tests session
+    """
     # Install requirements
     _install_requirements(session, "zeromq")
     session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
@@ -840,7 +950,15 @@ def _pytest(session, coverage, cmd_args):
         cmd_args.append("--lf")
         if coverage is True:
             _run_with_coverage(
-                session, "python", "-m", "coverage", "run", "-m", "pytest", *cmd_args
+                session,
+                "python",
+                "-m",
+                "coverage",
+                "run",
+                "-m",
+                "pytest",
+                "--showlocals",
+                *cmd_args
             )
         else:
             session.run("python", "-m", "pytest", *cmd_args, env=env)
@@ -1012,8 +1130,15 @@ def docs(session, compress, update):
     """
     Build Salt's Documentation
     """
-    session.notify("docs-html(compress={})".format(compress))
-    session.notify("docs-man(compress={}, update={})".format(compress, update))
+    session.notify("docs-html-{}(compress={})".format(session.python, compress))
+    session.notify(
+        find_session_runner(
+            session,
+            "docs-man-{}".format(session.python),
+            compress=compress,
+            update=update,
+        )
+    )
 
 
 @nox.session(name="docs-html", python="3")
@@ -1089,11 +1214,19 @@ def _invoke(session):
 
 @nox.session(name="invoke", python="3")
 def invoke(session):
+    """
+    Run an invoke target
+    """
     _invoke(session)
 
 
 @nox.session(name="invoke-pre-commit", python="3")
 def invoke_pre_commit(session):
+    """
+    DO NOT CALL THIS NOX SESSION DIRECTLY
+
+    This session is called from a pre-commit hook
+    """
     if "VIRTUAL_ENV" not in os.environ:
         session.error(
             "This should be running from within a virtualenv and "
