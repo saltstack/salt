@@ -455,10 +455,11 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             "",
             "",
         )
-        self.cmdrun.return_value = ""
-        output = parted.mkpart("/dev/nothinghere", "primary")
-        self.cmdrun.assert_called_once_with(cmd, python_shell=False)
-        assert output == []
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            self.cmdrun.return_value = ""
+            output = parted.mkpart("/dev/nothinghere", "primary")
+            self.cmdrun.assert_called_once_with(cmd, python_shell=False)
+            assert output == []
 
     def test_mkpartfs_to_mkpart(self):
         """Test if mkpart got all arguments from mkpartfs"""
@@ -474,9 +475,10 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             "1",
             "2",
         )
-        self.cmdrun.return_value = ""
-        output = parted.mkpartfs(
-            "/dev/nothinghere", "primary", fs_type="ext3", start="1", end="2"
-        )
-        self.cmdrun.assert_called_once_with(cmd, python_shell=False)
-        assert output == []
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            self.cmdrun.return_value = ""
+            output = parted.mkpartfs(
+                "/dev/nothinghere", "primary", fs_type="ext3", start="1", end="2"
+            )
+            self.cmdrun.assert_called_once_with(cmd, python_shell=False)
+            assert output == []
