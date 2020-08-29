@@ -294,7 +294,8 @@ def defined(
     .. versionadded:: 3001
 
     :param name: name of the virtual machine to run
-    :param cpu: number of CPUs for the virtual machine to create
+    :param cpu: Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology. The structure of the dictionary is documented in :ref:`init-cpu-def`.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
@@ -533,7 +534,12 @@ def running(
     .. versionadded:: 2016.3.0
 
     :param name: name of the virtual machine to run
-    :param cpu: number of CPUs for the virtual machine to create
+    :param cpu: Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to
+        configure cpu model and topology. The structure of the dictionary is documented in :ref:`init-cpu-def`.
+
+        To update any cpu/vcpu element specify the new values to the corresponding tag. To remove any element or
+        attribute,specify ``None`` object. Please note that ``None`` object is mapped to ``null`` in yaml, use ``null``
+        in sls file instead.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
