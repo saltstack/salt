@@ -696,7 +696,7 @@ Return of examples #2 and #3:
 
   [[web01, example.com], [db01, example.com]]
 
-.. _`map filter`: http://jinja.pocoo.org/docs/2.10/templates/#map
+.. _`map filter`: https://jinja.palletsprojects.com/en/2.11.x/templates/#map
 
 
 .. jinja_ref:: is_sorted
@@ -1074,7 +1074,7 @@ Returns:
 ``set_dict_key_value``
 ----------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
 Missing keys will be automatically created if they do not exist.
@@ -1107,7 +1107,7 @@ Example 2:
 ``append_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1141,7 +1141,7 @@ Example 2:
 ``extend_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1174,7 +1174,7 @@ Example 2:
 ``update_dict_key_value``
 -------------------------
 
-..versionadded:: 3000
+.. versionadded:: 3000
 
 Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
 Missing keys will automatically be created if they do not exist.
