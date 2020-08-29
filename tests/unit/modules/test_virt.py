@@ -481,6 +481,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "soft_limit": "512m",
                 "swap_hard_limit": "1g",
                 "min_guarantee": "256m",
+                "hugepages": [
+                    {"nodeset": "", "size": "128m"},
+                    {"nodeset": "0", "size": "256m"},
+                    {"nodeset": "1", "size": "512m"},
+                ],
+                "nosharepages": True,
+                "locked": True,
+                "source": "file",
+                "access": "shared",
+                "allocation": "immediate",
+                "discard": True,
             },
             diskp,
             nicp,
@@ -497,6 +508,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqualUnit(root.find("memtune/soft_limit"), 512 * 1024)
         self.assertEqualUnit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
         self.assertEqualUnit(root.find("memtune/min_guarantee"), 256 * 1024)
+        self.assertEqual(
+            [
+                {"nodeset": page.get("nodeset"), "size": page.get("size")}
+                for page in root.findall("memoryBacking/hugepages/page")
+            ],
+            [
+                {"nodeset": None, "size": str(128 * 1024)},
+                {"nodeset": "0", "size": str(256 * 1024)},
+                {"nodeset": "1", "size": str(512 * 1024)},
+            ],
+        )
+        self.assertIsNotNone(root.find("memoryBacking/nosharepages"))
+        self.assertIsNotNone(root.find("memoryBacking/locked"))
+        self.assertIsNotNone(root.find("memoryBacking/discard"))
+        self.assertEqual(root.find("memoryBacking/source").get("type"), "file")
+        self.assertEqual(root.find("memoryBacking/access").get("mode"), "shared")
+        self.assertEqual(root.find("memoryBacking/allocation").get("mode"), "immediate")
 
     def test_gen_xml_cpu(self):
         """
@@ -2598,6 +2626,45 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("maxMemory").text, str(3096 * 1024 ** 2))
         self.assertEqual(setxml.find("maxMemory").attrib.get("slots"), "10")
 
+        # update memory backing case
+        mem_back = {
+            "hugepages": [
+                {"nodeset": "1-5,4", "size": "1g"},
+                {"nodeset": "4", "size": "2g"},
+            ],
+            "nosharepages": True,
+            "locked": True,
+            "source": "file",
+            "access": "shared",
+            "allocation": "immediate",
+            "discard": True,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", mem=mem_back),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertDictEqual(
+            {
+                p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
+                for p in setxml.findall("memoryBacking/hugepages/page")
+            },
+            {
+                "1-5,4": {"size": str(1024 ** 3), "unit": "bytes"},
+                "4": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+            },
+        )
+        self.assertNotEqual(setxml.find("./memoryBacking/nosharepages"), None)
+        self.assertNotEqual(setxml.find("./memoryBacking/locked"), None)
+        self.assertEqual(setxml.find("./memoryBacking/source").attrib["type"], "file")
+        self.assertEqual(setxml.find("./memoryBacking/access").attrib["mode"], "shared")
+        self.assertNotEqual(setxml.find("./memoryBacking/discard"), None)
+
         # Update disks case
         devattach_mock = MagicMock(return_value=0)
         devdetach_mock = MagicMock(return_value=0)
@@ -4290,6 +4357,102 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(setxml.find("maxMemory"), None)
         self.assertEqual(setxml.find("currentMemory").text, str(int(1 * 1024 ** 2)))
         self.assertEqual(setxml.find("memory").text, str(int(1 * 1024 ** 2)))
+
+    def test_update_exist_memorybacking_params(self):
+        """
+        Test virt.update() with memory backing parameters.
+        """
+        xml_with_memback_params = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_memback_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="KiB">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <memoryBacking>
+                <hugepages>
+                  <page size="2048" unit="KiB"/>
+                  <page size="3145728" nodeset="1-4,3" unit="KiB"/>
+                  <page size="1048576" nodeset="3" unit="KiB"/>
+                </hugepages>
+                <nosharepages/>
+                <locked/>
+                <source type="file"/>
+                <access mode="shared"/>
+                <discard/>
+              </memoryBacking>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("vm_with_memback_param", xml_with_memback_params)
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # update memory backing case
+        mem_back_param = {
+            "hugepages": [
+                {"nodeset": "1-4,3", "size": "1g"},
+                {"nodeset": "3", "size": "2g"},
+            ],
+            "nosharepages": None,
+            "locked": None,
+            "source": "anonymous",
+            "access": "private",
+            "allocation": "ondemand",
+            "discard": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_memback_param", mem=mem_back_param),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertDictEqual(
+            {
+                p.get("nodeset"): {"size": p.get("size"), "unit": p.get("unit")}
+                for p in setxml.findall("memoryBacking/hugepages/page")
+            },
+            {
+                "1-4,3": {"size": str(1024 ** 3), "unit": "bytes"},
+                "3": {"size": str(2 * 1024 ** 3), "unit": "bytes"},
+            },
+        )
+        self.assertEqual(setxml.find("./memoryBacking/nosharepages"), None)
+        self.assertEqual(setxml.find("./memoryBacking/locked"), None)
+        self.assertEqual(
+            setxml.find("./memoryBacking/source").attrib["type"], "anonymous"
+        )
+        self.assertEqual(
+            setxml.find("./memoryBacking/access").attrib["mode"], "private"
+        )
+        self.assertEqual(
+            setxml.find("./memoryBacking/allocation").attrib["mode"], "ondemand"
+        )
+        self.assertEqual(setxml.find("./memoryBacking/discard"), None)
+
+        unchanged_page = {
+            "hugepages": [
+                {"size": "2m"},
+                {"nodeset": "1-4,3", "size": "3g"},
+                {"nodeset": "3", "size": "1g"},
+            ],
+        }
+
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_memback_param", mem=unchanged_page),
+        )
 
     def test_handle_unit(self):
         """
