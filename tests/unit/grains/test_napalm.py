@@ -1,38 +1,36 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.grains.napalm as napalm_grains
+import salt.proxy.napalm as napalm_proxy
 import tests.support.napalm as napalm_test_support
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
-import salt.grains.napalm as napalm_grains  # NOQA
-import salt.proxy.napalm as napalm_proxy  # NOQA
 
-napalm_grains.salt.utils.napalm.is_proxy = MagicMock(return_value=True)
-
-TEST_DEVICE_CACHE = {
-    "DRIVER": napalm_test_support.MockNapalmDevice(),
-    "DRIVER_NAME": "cisco",
-    "OS_VERSION": "1.2.3",
-    "HOSTNAME": "test-device.com",
-    "USERNAME": "admin",
-}
-
-TEST_CACHE = {"result": True, "out": napalm_test_support.TEST_FACTS}
-
-
-@patch("salt.grains.napalm.DEVICE_CACHE", TEST_DEVICE_CACHE)
-@patch("salt.grains.napalm.GRAINS_CACHE", TEST_CACHE)
 class NapalmGrainsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
+        patcher = patch.object(
+            napalm_grains.salt.utils.napalm, "is_proxy", MagicMock(return_value=True)
+        )
+        patcher.start()
+        test_device_cache = {
+            "DRIVER": napalm_test_support.MockNapalmDevice(),
+            "DRIVER_NAME": "cisco",
+            "OS_VERSION": "1.2.3",
+            "HOSTNAME": "test-device.com",
+            "USERNAME": "admin",
+        }
+
+        test_cache = {"result": True, "out": napalm_test_support.TEST_FACTS}
+        patcher = patch("salt.grains.napalm.DEVICE_CACHE", test_device_cache)
+        patcher.start()
+        patcher = patch("salt.grains.napalm.GRAINS_CACHE", test_cache)
+        patcher.start()
+        self.addCleanup(patch.stopall)
         module_globals = {
             "__salt__": {
                 "config.option": MagicMock(

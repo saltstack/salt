@@ -4,6 +4,7 @@ base:
     - sdb
     - include
     - glob_include
+    - packagingtest
   'sub_minion':
     - sdb
     - generic
