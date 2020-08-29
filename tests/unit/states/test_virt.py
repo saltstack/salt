@@ -372,6 +372,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     hypervisor="qemu",
                     seed=False,
                     boot=None,
+                    numatune=None,
                     install=False,
                     start=False,
                     pub_key="/path/to/key.pub",
@@ -488,6 +489,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=False,
                 )
 
@@ -599,6 +601,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -634,6 +637,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -701,6 +705,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     os_type=None,
                     arch=None,
                     boot=None,
+                    numatune=None,
                     disk=None,
                     disks=[{"name": "system", "image": "/path/to/img.qcow2"}],
                     nic=None,
@@ -795,6 +800,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     hypervisor="qemu",
                     seed=False,
                     boot=None,
+                    numatune=None,
                     install=False,
                     start=False,
                     pub_key="/path/to/key.pub",
@@ -943,6 +949,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=False,
                     boot_dev=None,
                 )
@@ -1062,6 +1069,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -1099,6 +1107,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
