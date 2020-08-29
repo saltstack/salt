@@ -952,7 +952,6 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
-        "cpu": str(cpu),
     }
 
     context["mem"] = nesthash()
@@ -967,6 +966,78 @@ def _gen_xml(
                     context["mem"]["slots"] = "{}='{}'".format(tag, val)
                 else:
                     context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+
+    context["cpu"] = nesthash()
+    if isinstance(cpu, int):
+        context["cpu"]["maximum"] = str(cpu)
+    elif isinstance(cpu, dict):
+        # preprocess the cpu context, make attributes directly usable in jinja template.
+        if cpu:
+            context["cpu"]["maximum"] = cpu.get("maximum")
+            for tag in cpu:
+                if cpu.get(tag):
+                    if tag in [
+                        "placement",
+                        "cpuset",
+                        "current",
+                        "match",
+                        "mode",
+                        "check",
+                    ]:
+                        context["cpu"][tag] = "{}='{}'".format(tag, cpu.get(tag))
+                    elif tag == "vcpus":
+                        vcpus_param = cpu.get(tag)
+                        for vcpu_id in vcpus_param:
+                            if vcpus_param.get(vcpu_id):
+                                for k, v in vcpus_param.get(vcpu_id).items():
+                                    if v is not None:
+                                        if k in ["hotpluggable", "enabled"]:
+                                            context["cpu"]["vcpus"][vcpu_id][
+                                                k
+                                            ] = "{}='{}'".format(
+                                                k, "yes" if v else "no"
+                                            )
+                                        else:
+                                            context["cpu"]["vcpus"][vcpu_id][
+                                                k
+                                            ] = "{}='{}'".format(k, v)
+                    elif tag in ["model", "topology", "cache"]:
+                        for k, v in cpu.get(tag).items():
+                            if not (tag == "model" and k == "name"):
+                                if v:
+                                    context["cpu"][tag][k] = "{}='{}'".format(k, v)
+                            else:
+                                if v:
+                                    context["cpu"][tag][k] = v
+                    elif tag == "numa":
+                        numa_param = cpu.get(tag)
+                        for cell_id in numa_param:
+                            if numa_param.get(cell_id):
+                                for k, v in numa_param[cell_id].items():
+                                    if k == "memory":
+                                        if v:
+                                            context["cpu"]["numa"][cell_id][
+                                                k
+                                            ] = "{}='{}'".format(
+                                                k, int(_handle_unit(v) / 1024)
+                                            )
+                                    elif k == "distances":
+                                        if v:
+                                            context["cpu"]["numa"][cell_id][k] = v
+                                    else:
+                                        if v is not None:
+                                            if k == "discard":
+                                                context["cpu"]["numa"][cell_id][
+                                                    k
+                                                ] = "{}='{}'".format(
+                                                    k, "yes" if v else "no"
+                                                )
+                                            else:
+                                                context["cpu"]["numa"][cell_id][
+                                                    k
+                                                ] = "{}='{}'".format(k, v)
+                    else:
+                        context["cpu"][tag] = cpu.get(tag)
 
     if hypervisor in ["qemu", "kvm"]:
         context["numatune"] = numatune if numatune else {}
@@ -1081,7 +1152,6 @@ def _gen_xml(
 
     context["os_type"] = os_type
     context["arch"] = arch
-
     fn_ = "libvirt_domain.jinja"
     try:
         template = JINJA.get_template(fn_)
@@ -1895,7 +1965,65 @@ def init(
     Initialize a new vm
 
     :param name: name of the virtual machine to create
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology. The structure of the dictionary is documented in :ref:`init-cpu-def`.
+
+        .. code-block:: yaml
+
+             cpu:
+               placement: static
+               cpuset: 0-11
+               current: 5
+               maximum: 12
+               vcpus:
+                 0:
+                   enabled: True
+                   hotpluggable: False
+                   order: 1
+                 1:
+                   enabled: False
+                   hotpluggable: True
+               match: minimum
+               mode: custom
+               check: full
+               vendor: Intel
+               model:
+                 name: core2duo
+                 fallback: allow
+                 vendor_id: GenuineIntel
+               topology:
+                 sockets: 1
+                 cores: 12
+                 threads: 1
+               cache:
+                 level: 3
+                 mode: emulate
+               features:
+                 lahf: optional
+                 pcid: require
+               numa:
+                 0:
+                    cpus: 0-3
+                    memory: 1g
+                    discard: True
+                    distances:
+                      0: 10
+                      1: 21
+                      2: 31
+                      3: 41
+                 1:
+                    cpus: 4-6
+                    memory: 1g
+                    memAccess: shared
+                    distances:
+                      0: 21
+                      1: 10
+                      2: 21
+                      3: 31
+
+        .. versionadded:: Aluminium
+
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
@@ -2014,6 +2142,72 @@ def init(
                 'memory': {'mode': 'strict', 'nodeset': '0-11'},
                 'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
             }
+
+    .. _init-cpu-def:
+
+    .. rubric:: cpu parameters definition
+
+    The cpu parameters dictionary can contain the following properties:
+
+    cpuset
+        a comma-separated list of physical CPU numbers that domain process and virtual CPUs can be pinned to by default.
+        eg. ``1-4,^3`` cpuset 3 is excluded.
+
+    current
+        the number of virtual cpus available at startup
+
+    placement
+        indicate the CPU placement mode for domain process. the value can be either ``static`` or ``auto``
+
+    vcpus
+        specify the state of individual vcpu. Possible attribute for each individual vcpu include: ``id``, ``enabled``,
+        ``hotpluggable`` and ``order``. Valid ``ids`` are from 0 to the maximum vCPU count minus 1. ``enabled`` takes
+        boolean values which controls the state of the vcpu. ``hotpluggable`` take boolean value which controls whether
+        given vCPU can be hotplugged and hotunplugged. ``order`` takes an integer value which specifies the order to add
+        the online vCPUs.
+
+    match
+        The cpu attribute ``match`` attribute specifies how strictly the virtual CPU provided to the guest matches the CPU
+        requirements, possible values are ``minimum``, ``exact`` or ``strict``.
+
+    check
+        Optional cpu attribute ``check`` attribute can be used to request a specific way of checking whether the virtual
+        CPU matches the specification, possible values are ``none``, ``partial`` and ``full``.
+
+    mode
+        Optional cpu attribute ``mode`` attribute may be used to make it easier to configure a guest CPU to be as close
+        to host CPU as possible, possible values are ``custom``, ``host-model`` and ``host-passthrough``.
+
+    model
+        specifies CPU model requested by the guest. An optional ``fallback`` attribute can be used to forbid libvirt falls
+        back to the closest model supported by the hypervisor, possible values are ``allow`` or ``forbid``. ``vendor_id``
+        attribute can be used to set the vendor id seen by the guest, the length must be exactly 12 characters long.
+
+    vendor
+        specifies CPU vendor requested by the guest.
+
+    topology
+        specifies requested topology of virtual CPU provided to the guest. Four possible attributes , ``sockets``, ``dies``,
+        ``cores``, and ``threads``, accept non-zero positive integer values. They refer to the number of CPU sockets per
+        NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
+
+    features
+        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
+        ``optional``, ``disable`` or ``forbid``.
+
+    cache
+        describes the virtual CPU cache. Optional attribute ``level`` takes an integer value which describes cache level
+        ``mode`` attribute supported three possible values: ``emulate``, ``passthrough``, ``disable``
+
+    numa
+        specify the guest numa topology. ``cell`` element specifies a NUMA cell or a NUMA node, ``cpus`` specifies the
+        CPU or range of CPUs that are part of the node, ``memory`` specifies the size of the node memory. All cells
+        should have ``id`` attribute in case referring to some cell is necessary in the code. optional attribute
+        ``memAccess`` control whether the memory is to be mapped as ``shared`` or ``private``, ``discard`` attribute which
+        fine tunes the discard feature for given numa node, possible values are ``True`` or ``False``.  ``distances``
+        element define the distance between NUMA cells and ``sibling`` sub-element is used to specify the distance value
+        between sibling NUMA cells.
 
     .. _init-boot-def:
 
@@ -2606,7 +2800,11 @@ def update(
     Update the definition of an existing domain.
 
     :param name: Name of the domain to update
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu: Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to
+                configure cpu model and topology. The structure of the dictionary is documented in :ref:`init-cpu-def`.
+                To update any cpu/vcpu element specify the new values to the corresponding tag. To remove any element or
+                attribute, specify ``None`` object. Please note that ``None`` object is mapped to ``null`` in yaml, use
+                ``null`` in sls file instead.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
@@ -2742,12 +2940,11 @@ def update(
         boot = _handle_remote_boot_params(boot)
         if boot.get("efi", None) is not None:
             need_update = _handle_efi_param(boot, desc)
-
     new_desc = ElementTree.fromstring(
         _gen_xml(
             conn,
             name,
-            cpu or 0,
+            cpu,
             mem or 0,
             all_disks,
             _get_merged_nics(hypervisor, nic_profile, interfaces),
@@ -2760,12 +2957,8 @@ def update(
         )
     )
 
-    # Update the cpu
-    cpu_node = desc.find("vcpu")
-    if cpu and int(cpu_node.text) != cpu:
-        cpu_node.text = str(cpu)
-        cpu_node.set("current", str(cpu))
-        need_update = True
+    def _set_node_text(node, value):
+        node.text = str(value)
 
     def _set_loader(node, value):
         salt.utils.xmlutil.set_node_text(node, value)
@@ -2780,12 +2973,20 @@ def update(
         node.text = str(value)
         node.set("unit", "bytes")
 
+    def _set_mem_with_byte_unit(node, value):
+        node.set("memory", str(value))
+        node.set("unit", "bytes")
+
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
         # _handle_unit treats bytes as invalid unit for the purpose of consistency
         unit = unit if unit != "bytes" else "b"
         value = node.get("memory") or node.text
         return _handle_unit("{}{}".format(value, unit)) if value else None
+
+    def _set_vcpu(node, value):
+        _set_node_text(node, value)
+        node.set("current", str(value))
 
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
 
@@ -2874,6 +3075,177 @@ def update(
             "set": lambda n, v: n.set("dev", v),
             "del": salt.utils.xmlutil.del_attribute("dev"),
         },
+        {
+            "path": "cpu",
+            "xpath": "vcpu",
+            "get": lambda n: int(n.text),
+            "set": _set_vcpu,
+        },
+        {"path": "cpu:maximum", "xpath": "vcpu", "get": lambda n: int(n.text)},
+        {
+            "path": "cpu:placement",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("placement"),
+            "set": lambda n, v: n.set("placement", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("placement"),
+        },
+        {
+            "path": "cpu:cpuset",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("cpuset"),
+            "set": lambda n, v: n.set("cpuset", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpuset"),
+        },
+        {
+            "path": "cpu:current",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("current"),
+            "set": lambda n, v: n.set("current", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("current"),
+        },
+        {
+            "path": "cpu:match",
+            "xpath": "cpu",
+            "get": lambda n: n.get("match"),
+            "set": lambda n, v: n.set("match", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("match"),
+        },
+        {
+            "path": "cpu:mode",
+            "xpath": "cpu",
+            "get": lambda n: n.get("mode"),
+            "set": lambda n, v: n.set("mode", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("mode"),
+        },
+        {
+            "path": "cpu:check",
+            "xpath": "cpu",
+            "get": lambda n: n.get("check"),
+            "set": lambda n, v: n.set("check", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("check"),
+        },
+        {"path": "cpu:model:name", "xpath": "cpu/model"},
+        {
+            "path": "cpu:model:fallback",
+            "xpath": "cpu/model",
+            "get": lambda n: n.get("fallback"),
+            "set": lambda n, v: n.set("fallback", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("fallback"),
+        },
+        {
+            "path": "cpu:model:vendor_id",
+            "xpath": "cpu/model",
+            "get": lambda n: n.get("vendor_id"),
+            "set": lambda n, v: n.set("vendor_id", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("vendor_id"),
+        },
+        {
+            "path": "cpu:vendor",
+            "xpath": "cpu/vendor",
+            "del": salt.utils.xmlutil.del_text,
+        },
+        {
+            "path": "cpu:topology:sockets",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("sockets"),
+            "set": lambda n, v: n.set("sockets", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("sockets"),
+        },
+        {
+            "path": "cpu:topology:cores",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("cores"),
+            "set": lambda n, v: n.set("cores", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cores"),
+        },
+        {
+            "path": "cpu:topology:threads",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("threads"),
+            "set": lambda n, v: n.set("threads", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("threads"),
+        },
+        {
+            "path": "cpu:cache:level",
+            "xpath": "cpu/cache",
+            "get": lambda n: n.get("level"),
+            "set": lambda n, v: n.set("level", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("level"),
+        },
+        {
+            "path": "cpu:cache:mode",
+            "xpath": "cpu/cache",
+            "get": lambda n: n.get("mode"),
+            "set": lambda n, v: n.set("mode", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("mode"),
+        },
+        {
+            "path": "cpu:features:{id}",
+            "xpath": "cpu/feature[@name='$id']",
+            "get": lambda n: n.get("policy"),
+            "set": lambda n, v: n.set("policy", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("policy", ["name"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:enabled",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "convert": lambda v: "yes" if v else "no",
+            "get": lambda n: n.get("enabled"),
+            "set": lambda n, v: n.set("enabled", v),
+            "del": salt.utils.xmlutil.del_attribute("enabled", ["id"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:hotpluggable",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "convert": lambda v: "yes" if v else "no",
+            "get": lambda n: n.get("hotpluggable"),
+            "set": lambda n, v: n.set("hotpluggable", v),
+            "del": salt.utils.xmlutil.del_attribute("hotpluggable", ["id"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:order",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "get": lambda n: int(n.get("order")) if n.get("order") else None,
+            "set": lambda n, v: n.set("order", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("order", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:cpus",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("cpus")) if n.get("cpus") else None,
+            "set": lambda n, v: n.set("cpus", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpus", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:memory",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_mem_with_byte_unit,
+            "del": salt.utils.xmlutil.del_attribute("memory", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:discard",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("discard")) if n.get("discard") else None,
+            "convert": lambda v: "yes" if v else "no",
+            "set": lambda n, v: n.set("discard", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("discard", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:memAccess",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("memAccess")) if n.get("memAccess") else None,
+            "set": lambda n, v: n.set("memAccess", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("memAccess", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:distances:{sid}",
+            "xpath": "cpu/numa/cell[@id='$id']/distances/sibling[@id='$sid']",
+            "get": lambda n: str(n.get("value")) if n.get("value") else None,
+            "set": lambda n, v: n.set("value", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("value", ["id"]),
+        },
     ]
 
     # update NUMA host policy
@@ -2959,7 +3331,6 @@ def update(
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
                         _disk_volume_create(conn, all_disks[idx])
-
             if not test:
                 xml_desc = ElementTree.tostring(desc)
                 log.debug("Update virtual machine definition: %s", xml_desc)

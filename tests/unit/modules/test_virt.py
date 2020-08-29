@@ -498,6 +498,146 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqualUnit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
         self.assertEqualUnit(root.find("memtune/min_guarantee"), 256 * 1024)
 
+    def test_gen_xml_cpu(self):
+        """
+        Test virt._gen_xml() with CPU advanced properties
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {
+                "maximum": 12,
+                "placement": "static",
+                "cpuset": "0-11",
+                "current": 5,
+                "mode": "custom",
+                "match": "minimum",
+                "check": "full",
+                "vendor": "Intel",
+                "model": {
+                    "name": "core2duo",
+                    "fallback": "allow",
+                    "vendor_id": "GenuineIntel",
+                },
+                "cache": {"level": 3, "mode": "emulate"},
+                "features": {"lahf": "optional", "vmx": "require"},
+                "vcpus": {
+                    0: {"enabled": True, "hotpluggable": True},
+                    1: {"enabled": False},
+                },
+            },
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("vcpu").get("current"), "5")
+        self.assertEqual(root.find("vcpu").get("placement"), "static")
+        self.assertEqual(root.find("vcpu").get("cpuset"), "0-11")
+        self.assertEqual(root.find("vcpu").text, "12")
+        self.assertEqual(root.find("cpu").get("match"), "minimum")
+        self.assertEqual(root.find("cpu").get("mode"), "custom")
+        self.assertEqual(root.find("cpu").get("check"), "full")
+        self.assertEqual(root.find("cpu/vendor").text, "Intel")
+        self.assertEqual(root.find("cpu/model").text, "core2duo")
+        self.assertEqual(root.find("cpu/model").get("fallback"), "allow")
+        self.assertEqual(root.find("cpu/model").get("vendor_id"), "GenuineIntel")
+        self.assertEqual(root.find("cpu/cache").get("level"), "3")
+        self.assertEqual(root.find("cpu/cache").get("mode"), "emulate")
+        self.assertEqual(
+            {f.get("name"): f.get("policy") for f in root.findall("cpu/feature")},
+            {"lahf": "optional", "vmx": "require"},
+        )
+        self.assertEqual(
+            {
+                v.get("id"): {
+                    "enabled": v.get("enabled"),
+                    "hotpluggable": v.get("hotpluggable"),
+                }
+                for v in root.findall("vcpus/vcpu")
+            },
+            {
+                "0": {"enabled": "yes", "hotpluggable": "yes"},
+                "1": {"enabled": "no", "hotpluggable": None},
+            },
+        )
+
+    def test_gen_xml_cpu_topology(self):
+        """
+        Test virt._gen_xml() with CPU topology
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {"maximum": 1, "topology": {"sockets": 4, "cores": 16, "threads": 2}},
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("cpu/topology").get("sockets"), "4")
+        self.assertEqual(root.find("cpu/topology").get("cores"), "16")
+        self.assertEqual(root.find("cpu/topology").get("threads"), "2")
+
+    def test_gen_xml_cpu_numa(self):
+        """
+        Test virt._gen_xml() with CPU numa settings
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            {
+                "maximum": 1,
+                "numa": {
+                    0: {
+                        "cpus": "0-3",
+                        "memory": "1g",
+                        "discard": True,
+                        "distances": {0: 10, 1: 20},
+                    },
+                    1: {"cpus": "4-7", "memory": "2g", "distances": {0: 20, 1: 10}},
+                },
+            },
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        cell0 = root.find("cpu/numa/cell[@id='0']")
+        self.assertEqual(cell0.get("cpus"), "0-3")
+        self.assertIsNone(cell0.get("unit"))
+        self.assertEqual(cell0.get("memory"), str(1024 ** 2))
+        self.assertEqual(cell0.get("discard"), "yes")
+        self.assertEqual(
+            {d.get("id"): d.get("value") for d in cell0.findall("distances/sibling")},
+            {"0": "10", "1": "20"},
+        )
+
+        cell1 = root.find("cpu/numa/cell[@id='1']")
+        self.assertEqual(cell1.get("cpus"), "4-7")
+        self.assertIsNone(cell0.get("unit"))
+        self.assertEqual(cell1.get("memory"), str(2 * 1024 ** 2))
+        self.assertFalse("discard" in cell1.keys())
+        self.assertEqual(
+            {d.get("id"): d.get("value") for d in cell1.findall("distances/sibling")},
+            {"0": "20", "1": "10"},
+        )
+
     def test_default_disk_profile_hypervisor_esxi(self):
         """
         Test virt._disk_profile() default ESXi profile
@@ -1938,7 +2078,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ),
         )
 
-        # Update vcpus case
+        # test cpu passed as an integer case
         setvcpus_mock = MagicMock(return_value=0)
         domain_mock.setVcpusFlags = setvcpus_mock
         self.assertEqual(
@@ -1953,7 +2093,268 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("vcpu").text, "2")
         self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+        define_mock.reset_mock()
 
+        # test updating vcpu attribute
+        vcpu = {
+            "placement": "static",
+            "cpuset": "0-11",
+            "current": 5,
+            "maximum": 12,
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=vcpu),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "12")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "static")
+        self.assertEqual(setxml.find("vcpu").attrib["cpuset"], "0-11")
+        self.assertEqual(setxml.find("vcpu").attrib["current"], "5")
+
+        # test adding vcpus elements
+        vcpus = {
+            "vcpus": {
+                "0": {"enabled": True, "hotpluggable": False, "order": 1},
+                "1": {"enabled": False, "hotpluggable": True},
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=vcpus),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["id"], "0")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='0']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["order"], "1")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='1']").attrib["id"], "1")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='1']").attrib["enabled"], "no")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='1']").attrib["hotpluggable"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='1']").attrib.get("order"), None
+        )
+
+        # test adding cpu attribute
+        cpu_atr = {"mode": "custom", "match": "exact", "check": "full"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_atr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib["mode"], "custom")
+        self.assertEqual(setxml.find("cpu").attrib["match"], "exact")
+        self.assertEqual(setxml.find("cpu").attrib["check"], "full")
+
+        # test adding cpu model
+        cpu_model = {
+            "model": {
+                "name": "coreduo",
+                "fallback": "allow",
+                "vendor_id": "Genuine20201",
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_model),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("vendor_id"), "Genuine20201"
+        )
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "allow"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coreduo")
+
+        # test adding cpu vendor
+        cpu_vendor = {"vendor": "Intel"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_vendor),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor").text, "Intel")
+
+        # test adding cpu topology
+        cpu_topology = {"topology": {"sockets": 1, "cores": 12, "threads": 1}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_topology),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("sockets"), "1")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        # test adding cache
+        cpu_cache = {"cache": {"mode": "emulate", "level": 3}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_cache),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), "3")
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("mode"), "emulate")
+
+        # test adding feature
+        cpu_feature = {"features": {"lahf": "optional", "pcid": "disable"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=cpu_feature),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "disable"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf']").attrib.get("policy"), "optional"
+        )
+
+        # test adding numa cell
+        numa_cell = {
+            "numa": {
+                "0": {
+                    "cpus": "0-3",
+                    "memory": "1g",
+                    "discard": True,
+                    "distances": {0: 10, 1: 21, 2: 31, 3: 41},
+                },
+                "1": {
+                    "cpus": "4-6",
+                    "memory": "0.5g",
+                    "discard": False,
+                    "memAccess": "shared",
+                    "distances": {0: 21, 1: 10, 2: 15, 3: 30},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", cpu=numa_cell),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"], "0-3")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"], str(1024 ** 3)
+        )
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "10",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "21",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "31",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "41",
+        )
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"], "4-6")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(1024 ** 3 / 2)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memAccess"], "shared"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "21",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "10",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "30",
+        )
+
+        # Update boot parameter case
         boot = {
             "kernel": "/root/f8-i386-vmlinuz",
             "initrd": "/root/f8-i386-initrd",
@@ -2895,6 +3296,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         define_mock = MagicMock(return_value=True)
         self.mock_conn.defineXML = define_mock
 
+        # test update existing numatune node
         numatune = {
             "memory": {"mode": "preferred", "nodeset": "0-5"},
             "memnodes": {
@@ -3046,6 +3448,671 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("numatune"), None)
+
+    def test_update_existing_cpu_params(self):
+        """
+        Test virt.update() with existing cpu-related parameters.
+        """
+        xml_with_existing_params = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_boot_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement="static" cpuset="0-11" current="3">6</vcpu>
+              <vcpus>
+                <vcpu id="0" enabled="yes" hotpluggable="no" order="1"/>
+                <vcpu id="1" enabled="no" hotpluggable="yes"/>
+                <vcpu id="2" enabled="no" hotpluggable="yes"/>
+                <vcpu id="3" enabled="no" hotpluggable="yes"/>
+                <vcpu id="4" enabled="no" hotpluggable="yes"/>
+                <vcpu id="5" enabled="no" hotpluggable="yes"/>
+                <vcpu id="6" enabled="no" hotpluggable="yes"/>
+                <vcpu id="7" enabled="no" hotpluggable="yes"/>
+                <vcpu id="8" enabled="no" hotpluggable="yes"/>
+                <vcpu id="9" enabled="no" hotpluggable="yes"/>
+                <vcpu id="10" enabled="no" hotpluggable="yes"/>
+                <vcpu id="11" enabled="no" hotpluggable="yes"/>
+              </vcpus>
+              <cpu mode="custom" match="exact" check="full">
+                 <model fallback="allow" vendor_id="Genuine20201">core2duo</model>
+                 <vendor>Intel</vendor>
+                 <topology sockets="2" cores="5" threads="2"/>
+                 <cache level="3" mode="emulate"/>
+                 <feature policy="optional" name="lahf_lm"/>
+                 <feature policy="require" name="pcid"/>
+                 <numa>
+                    <cell id="0" cpus="0-3" memory="1073741824" unit="KiB" discard="no">
+                        <distances>
+                            <sibling id="0" value="10"/>
+                            <sibling id="1" value="21"/>
+                            <sibling id="2" value="31"/>
+                            <sibling id="3" value="41"/>
+                        </distances>
+                    </cell>
+                    <cell id="1" cpus="4-6" memory="1073741824" unit="KiB" memAccess="private">
+                        <distances>
+                            <sibling id="0" value="21"/>
+                            <sibling id="1" value="10"/>
+                            <sibling id="2" value="21"/>
+                            <sibling id="3" value="31"/>
+                        </distances>
+                    </cell>
+                 </numa>
+              </cpu>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+              </domain>
+         """
+        domain_mock = self.set_mock_vm(
+            "vm_with_existing_param", xml_with_existing_params
+        )
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        # test update vcpu with existing attributes case
+        setvcpus_mock = MagicMock(return_value=0)
+        domain_mock.setVcpusFlags = setvcpus_mock
+
+        cpu_attr = {"placement": "static", "cpuset": "0-5", "current": 3, "maximum": 5}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_attr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "5")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "static")
+        self.assertEqual(setxml.find("vcpu").attrib["cpuset"], "0-5")
+        self.assertEqual(setxml.find("vcpu").attrib["current"], "3")
+
+        # test removing vcpu attribute
+        cpu_none = {"placement": "auto", "cpuset": None, "current": 2, "maximum": 5}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpu").text, "5")
+        self.assertEqual(setxml.find("vcpu").attrib["placement"], "auto")
+        self.assertEqual(setxml.find("vcpu").attrib.get("cpuset"), None)
+        self.assertEqual(setxml.find("vcpu").attrib.get("current"), "2")
+
+        # test update individual vcpu with exisiting attributes
+        vcpus = {
+            "vcpus": {
+                "0": {"enabled": False, "hotpluggable": True, "order": 5},
+                "3": {"enabled": True, "hotpluggable": False, "order": 3},
+                "7": {"enabled": True, "hotpluggable": False},
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=vcpus),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["id"], "0")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["enabled"], "no")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='0']").attrib["hotpluggable"], "yes"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']").attrib["order"], "5")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["id"], "3")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["order"], "3")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='7']").attrib["id"], "7")
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='7']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='7']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='7']").attrib.get("order"), None
+        )
+
+        # test removing vcpu element
+        ind_vcpu = {
+            "vcpus": {"3": {"enabled": True, "hotpluggable": False, "order": None}}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=ind_vcpu),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='0']"), None)
+        self.assertEqual(setxml.find("./vcpus/vcpu/[@id='3']").attrib["enabled"], "yes")
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib["hotpluggable"], "no"
+        )
+        self.assertEqual(
+            setxml.find("./vcpus/vcpu/[@id='3']").attrib.get("order"), None
+        )
+
+        # test removing vcpus element
+        vcpus_none = {"vcpus": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=vcpus_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("vcpus"), None)
+
+        # test removing cpu attrbutes
+        cpu_atr_none = {"match": None, "mode": None, "check": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_atr_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib, {})
+
+        cpu_atr_mn = {"match": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_atr_mn),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").attrib.get("match"), None)
+        self.assertEqual(setxml.find("cpu").attrib.get("mode"), "custom")
+        self.assertEqual(setxml.find("cpu").attrib.get("check"), "full")
+
+        # test update existing cpu model
+        cpu_model_none = {"model": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("model"), None)
+
+        cpu_model_atr_none = {
+            "model": {"name": "coresolo", "fallback": "forbid", "vendor_id": None}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("model").attrib.get("vendor_id"), None)
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "forbid"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coresolo")
+
+        cpu_model_atr = {
+            "model": {
+                "name": "coresolo",
+                "fallback": "forbid",
+                "vendor_id": "AuthenticAMD",
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_model_atr),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("fallback"), "forbid"
+        )
+        self.assertEqual(
+            setxml.find("cpu").find("model").attrib.get("vendor_id"), "AuthenticAMD"
+        )
+        self.assertEqual(setxml.find("cpu").find("model").text, "coresolo")
+
+        # test update existing cpu vendor
+        cpu_vendor = {"vendor": "AMD"}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_vendor),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor").text, "AMD")
+
+        cpu_vendor_none = {"vendor": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_vendor_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("vendor"), None)
+
+        # test update exisiting cpu topology
+        cpu_topology = {"topology": {"sockets": 1, "cores": 12, "threads": 1}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("sockets"), "1")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        cpu_topology_atr_none = {
+            "topology": {"sockets": None, "cores": 12, "threads": 1}
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("cpu").find("topology").attrib.get("sockets"), None
+        )
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("cores"), "12")
+        self.assertEqual(setxml.find("cpu").find("topology").attrib.get("threads"), "1")
+
+        cpu_topology_none = {"topology": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_topology_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("topology"), None)
+
+        # test update existing cache
+        cpu_cache = {"cache": {"mode": "passthrough", "level": 2}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), "2")
+        self.assertEqual(
+            setxml.find("cpu").find("cache").attrib.get("mode"), "passthrough"
+        )
+
+        cpu_cache_atr_none = {"cache": {"mode": "passthrough", "level": None}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache").attrib.get("level"), None)
+        self.assertEqual(
+            setxml.find("cpu").find("cache").attrib.get("mode"), "passthrough"
+        )
+
+        cpu_cache_none = {"cache": None}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_cache_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("cpu").find("cache"), None)
+
+        # test update existing feature
+        cpu_feature = {"features": {"lahf_lm": "require", "pcid": "optional"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "optional"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf_lm']").attrib.get("policy"),
+            "require",
+        )
+
+        cpu_feature_atr_none = {"features": {"pcid": "optional", "lahf_lm": "disable"}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='lahf_lm']").attrib.get("policy"),
+            "disable",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/feature[@name='pcid']").attrib.get("policy"), "optional"
+        )
+
+        cpu_feature_none = {"features": {"lahf_lm": None, "pcid": None}}
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=cpu_feature_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./cpu/feature"), None)
+
+        # test update existing numa cell
+        numa_cell = {
+            "numa": {
+                0: {
+                    "cpus": "0-6",
+                    "memory": "512m",
+                    "discard": True,
+                    "distances": {0: 15, 1: 16, 2: 17, 3: 18},
+                },
+                1: {
+                    "cpus": "7-12",
+                    "memory": "2g",
+                    "discard": True,
+                    "memAccess": "shared",
+                    "distances": {0: 23, 1: 24, 2: 25, 3: 26},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=numa_cell),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"], "0-6")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
+            str(512 * 1024 ** 2),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "16",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "17",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "18",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"], "7-12"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(2 * 1024 ** 3)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memAccess"], "shared"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "26",
+        )
+
+        numa_cell_atr_none = {
+            "numa": {
+                "0": {
+                    "cpus": "0-6",
+                    "memory": "512m",
+                    "discard": False,
+                    "distances": {0: 15, 2: 17, 3: 18},
+                },
+                "1": {
+                    "cpus": "7-12",
+                    "memory": "2g",
+                    "discard": True,
+                    "distances": {0: 23, 1: 24, 2: 25},
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                "definition": True,
+                "cpu": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_existing_param", cpu=numa_cell_atr_none),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("./cpu/numa/cell/[@id='0']").attrib["cpus"], "0-6")
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib["memory"],
+            str(512 * 1024 ** 2),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").get("unit"), "bytes",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']").attrib.get("discard"), "no"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "15",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='1']"), None
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "17",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='0']/distances/sibling/[@id='3']").attrib[
+                "value"
+            ],
+            "18",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"], "7-12"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(2 * 1024 ** 3)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"), None
+        )
+
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["cpus"], "7-12"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["memory"],
+            str(int(1024 ** 3 * 2)),
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']").attrib["discard"], "yes"
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='0']").attrib[
+                "value"
+            ],
+            "23",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='1']").attrib[
+                "value"
+            ],
+            "24",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='2']").attrib[
+                "value"
+            ],
+            "25",
+        )
+        self.assertEqual(
+            setxml.find("./cpu/numa/cell/[@id='1']/distances/sibling/[@id='3']"), None,
+        )
 
     def test_update_memtune_params(self):
         """
