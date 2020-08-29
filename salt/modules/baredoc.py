@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Baredoc walks the installed module and state directories and generates
 dictionaries and lists of the function names and their arguments.
@@ -6,7 +5,6 @@ dictionaries and lists of the function names and their arguments.
 .. versionadded:: 3001
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
 
