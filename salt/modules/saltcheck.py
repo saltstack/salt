@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A module for testing the logic of states and highstates
 
@@ -299,7 +298,6 @@ Supported assertions
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -316,7 +314,6 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext import six
 from salt.utils.decorators import memoize
 from salt.utils.json import dumps, loads
 from salt.utils.odict import OrderedDict
@@ -622,7 +619,7 @@ def _is_valid_function(module_name, function):
         functions = __salt__["sys.list_functions"](module_name)
     except salt.exceptions.SaltException:
         functions = ["unable to look up functions"]
-    return "{0}.{1}".format(module_name, function) in functions
+    return "{}.{}".format(module_name, function) in functions
 
 
 def _get_top_states(saltenv="base"):
@@ -635,7 +632,7 @@ def _get_top_states(saltenv="base"):
     return top_states
 
 
-class SaltCheck(object):
+class SaltCheck:
     """
     This class validates and runs the saltchecks
     """
@@ -840,18 +837,18 @@ class SaltCheck(object):
 
         if output_details:
             if assertion_section:
-                assertion_section_repr_title = " {0}".format("assertion_section")
-                assertion_section_repr_value = " {0}".format(assertion_section)
+                assertion_section_repr_title = " {}".format("assertion_section")
+                assertion_section_repr_value = " {}".format(assertion_section)
             else:
                 assertion_section_repr_title = ""
                 assertion_section_repr_value = ""
             value[
-                "module.function [args]{0}".format(assertion_section_repr_title)
-            ] = "{0} {1}{2}".format(
+                "module.function [args]{}".format(assertion_section_repr_title)
+            ] = "{} {}{}".format(
                 mod_and_func, dumps(args), assertion_section_repr_value,
             )
-            value["saltcheck assertion"] = "{0}{1} {2}".format(
-                ("" if expected_return is None else "{0} ".format(expected_return)),
+            value["saltcheck assertion"] = "{}{} {}".format(
+                ("" if expected_return is None else "{} ".format(expected_return)),
                 assertion_desc,
                 ("hidden" if not assert_print_result else module_output),
             )
@@ -963,13 +960,13 @@ class SaltCheck(object):
 
         try:
             if assert_print_result:
-                assert expected == returned, "{0} is not equal to {1}".format(
+                assert expected == returned, "{} is not equal to {}".format(
                     expected, returned
                 )
             else:
                 assert expected == returned, "Result is not equal"
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -980,13 +977,13 @@ class SaltCheck(object):
         result = "Pass"
         try:
             if assert_print_result:
-                assert expected != returned, "{0} is equal to {1}".format(
+                assert expected != returned, "{} is equal to {}".format(
                     expected, returned
                 )
             else:
                 assert expected != returned, "Result is equal"
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -996,9 +993,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert returned is True, "{0} not True".format(returned)
+            assert returned is True, "{} not True".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1010,9 +1007,9 @@ class SaltCheck(object):
         if isinstance(returned, str):
             returned = bool(returned)
         try:
-            assert returned is False, "{0} not False".format(returned)
+            assert returned is False, "{} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1023,13 +1020,13 @@ class SaltCheck(object):
         result = "Pass"
         try:
             if assert_print_result:
-                assert expected in returned, "{0} not found in {1}".format(
+                assert expected in returned, "{} not found in {}".format(
                     expected, returned
                 )
             else:
                 assert expected in returned, "Result not found"
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1040,13 +1037,13 @@ class SaltCheck(object):
         result = "Pass"
         try:
             if assert_print_result:
-                assert expected not in returned, "{0} was found in {1}".format(
+                assert expected not in returned, "{} was found in {}".format(
                     expected, returned
                 )
             else:
                 assert expected not in returned, "Result was found"
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1056,9 +1053,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert expected > returned, "{0} not False".format(returned)
+            assert expected > returned, "{} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1068,9 +1065,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert expected >= returned, "{0} not False".format(returned)
+            assert expected >= returned, "{} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1080,9 +1077,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert expected < returned, "{0} not False".format(returned)
+            assert expected < returned, "{} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1092,9 +1089,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert expected <= returned, "{0} not False".format(returned)
+            assert expected <= returned, "{} not False".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1104,9 +1101,9 @@ class SaltCheck(object):
         """
         result = "Pass"
         try:
-            assert not returned, "{0} is not empty".format(returned)
+            assert not returned, "{} is not empty".format(returned)
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
     @staticmethod
@@ -1118,11 +1115,11 @@ class SaltCheck(object):
         try:
             assert returned, "value is empty"
         except AssertionError as err:
-            result = "Fail: " + six.text_type(err)
+            result = "Fail: " + str(err)
         return result
 
 
-class StateTestLoader(object):
+class StateTestLoader:
     """
     Class loads in test files for a state
     e.g. state_dir/saltcheck-tests/[1.tst, 2.tst, 3.tst]
@@ -1130,7 +1127,7 @@ class StateTestLoader(object):
 
     def __init__(self, saltenv="base"):
         self.path_type = None
-        self.test_files = set([])  # list of file paths
+        self.test_files = set()  # list of file paths
         self.test_dict = OrderedDict()
         self.saltenv = saltenv
         self.saltcheck_test_location = __salt__["config.get"](
@@ -1145,7 +1142,7 @@ class StateTestLoader(object):
         self.test_dict = OrderedDict()
         for myfile in self.test_files:
             self._load_file_salt_rendered(myfile)
-        self.test_files = set([])
+        self.test_files = set()
 
     def _load_file_salt_rendered(self, filepath):
         """
@@ -1202,7 +1199,7 @@ class StateTestLoader(object):
         all_sls_paths = []
 
         # process /patch/to/formula/saltcheck_test_location
-        test_path = "salt://{0}/{1}".format(
+        test_path = "salt://{}/{}".format(
             state_name.replace(".", "/"), self.saltcheck_test_location
         )
         all_sls_paths.append(test_path)
@@ -1210,15 +1207,13 @@ class StateTestLoader(object):
         # process /path/to/saltcheck_test_location
         sls_split = state_name.split(".")
         sls_split.pop()
-        test_path = "salt://{0}/{1}".format(
+        test_path = "salt://{}/{}".format(
             "/".join(sls_split), self.saltcheck_test_location
         )
         all_sls_paths.append(test_path)
 
         state_name_base = state_name.split(".")[0]
-        test_path = "salt://{0}/{1}".format(
-            state_name_base, self.saltcheck_test_location
-        )
+        test_path = "salt://{}/{}".format(state_name_base, self.saltcheck_test_location)
         all_sls_paths.append(test_path)
 
         unique_paths = set(all_sls_paths)
@@ -1262,7 +1257,7 @@ class StateTestLoader(object):
                     cached_copied_files.extend(
                         loads(salt.utils.stringutils.to_unicode(fp.read()))
                     )
-            except IOError:
+            except OSError:
                 # likely attempting to find state.nested.copy when file was sent as just state.copy
                 sls_name_list = sls_name.split(".")
                 sls_root_name = ".".join(sls_name_list[:-1])
@@ -1325,26 +1320,24 @@ class StateTestLoader(object):
                 if not check_all:
                     # in check_all case, tests already added
                     split_sls = low_data["__sls__"].split(".")
-                    sls_path_names = set(
-                        [
-                            os.path.join(
-                                os.sep.join(split_sls),
-                                os.path.normpath(self.saltcheck_test_location),
-                                "init.tst",
-                            ),
-                            os.path.join(
-                                os.sep.join(split_sls[: len(split_sls) - 1]),
-                                os.path.normpath(self.saltcheck_test_location),
-                                "{0}.tst".format(split_sls[-1]),
-                            ),
-                            os.path.join(
-                                split_sls[0],
-                                os.path.normpath(self.saltcheck_test_location),
-                                os.sep.join(split_sls[1:-1]),
-                                "{0}.tst".format(split_sls[-1]),
-                            ),
-                        ]
-                    )
+                    sls_path_names = {
+                        os.path.join(
+                            os.sep.join(split_sls),
+                            os.path.normpath(self.saltcheck_test_location),
+                            "init.tst",
+                        ),
+                        os.path.join(
+                            os.sep.join(split_sls[: len(split_sls) - 1]),
+                            os.path.normpath(self.saltcheck_test_location),
+                            "{}.tst".format(split_sls[-1]),
+                        ),
+                        os.path.join(
+                            split_sls[0],
+                            os.path.normpath(self.saltcheck_test_location),
+                            os.sep.join(split_sls[1:-1]),
+                            "{}.tst".format(split_sls[-1]),
+                        ),
+                    }
                     # for this state, find matching test files and load them
                     cached_copied_files = list(set(cached_copied_files))
                     for this_cached_test_file in cached_copied_files:
