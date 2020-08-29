@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage X509 certificates
 
@@ -7,7 +6,6 @@ Manage X509 certificates
 :depends: M2Crypto
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
 import ctypes
@@ -151,7 +149,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
 
     if x509_ext_ptr is None:
         raise M2Crypto.X509.X509Error(
-            "Cannot create X509_Extension with name '{0}' and value '{1}'".format(
+            "Cannot create X509_Extension with name '{}' and value '{}'".format(
                 name, value
             )
         )
@@ -170,7 +168,7 @@ def _parse_openssl_req(csr_filename):
     """
     if not salt.utils.path.which("openssl"):
         raise salt.exceptions.SaltInvocationError("openssl binary not found in path")
-    cmd = "openssl req -text -noout -in {0}".format(csr_filename)
+    cmd = "openssl req -text -noout -in {}".format(csr_filename)
 
     output = __salt__["cmd.run_stdout"](cmd)
 
@@ -213,7 +211,7 @@ def _parse_openssl_crl(crl_filename):
     """
     if not salt.utils.path.which("openssl"):
         raise salt.exceptions.SaltInvocationError("openssl binary not found in path")
-    cmd = "openssl crl -text -noout -in {0}".format(crl_filename)
+    cmd = "openssl crl -text -noout -in {}".format(crl_filename)
 
     output = __salt__["cmd.run_stdout"](cmd)
 
@@ -298,7 +296,7 @@ def _dec2hex(decval):
     """
     Converts decimal values to nicely formatted hex strings
     """
-    return _pretty_hex("{0:X}".format(decval))
+    return _pretty_hex("{:X}".format(decval))
 
 
 def _isfile(path):
@@ -486,9 +484,9 @@ def get_pem_entry(text, pem_type=None):
                     pem_temp = pem_temp[pem_temp.index("-") :]
         text = "\n".join(pem_fixed)
 
-    errmsg = "PEM text not valid:\n{0}".format(text)
+    errmsg = "PEM text not valid:\n{}".format(text)
     if pem_type:
-        errmsg = "PEM does not contain a single entry of type {0}:\n" "{1}".format(
+        errmsg = "PEM does not contain a single entry of type {}:\n" "{}".format(
             pem_type, text
         )
 
@@ -675,7 +673,7 @@ def read_crl(crl):
     text = get_pem_entry(text, pem_type="X509 CRL")
 
     crltempfile = tempfile.NamedTemporaryFile(delete=True)
-    crltempfile.write(salt.utils.stringutils.to_str(text))
+    crltempfile.write(salt.utils.stringutils.to_bytes(text, encoding="ascii"))
     crltempfile.flush()
     crlparsed = _parse_openssl_crl(crltempfile.name)
     crltempfile.close()
@@ -805,7 +803,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == "CERTIFICATE" and _dhparams:
                 _fp.write(salt.utils.stringutils.to_str(_dhparams))
-    return "PEM written to {0}".format(path)
+    return "PEM written to {}".format(path)
 
 
 def create_private_key(
@@ -1004,7 +1002,7 @@ def create_crl(
 
         if "reason" in rev_item:
             # Same here for OpenSSL bindings and non-unicode strings
-            reason = salt.utils.stringutils.to_str(rev_item["reason"])
+            reason = salt.utils.stringutils.to_bytes(rev_item["reason"])
             rev.set_reason(reason)
 
         crl.add_revoked(rev)
@@ -1074,7 +1072,7 @@ def sign_remote_certificate(argdic, **kwargs):
     if "signing_policy" in argdic:
         signing_policy = _get_signing_policy(argdic["signing_policy"])
         if not signing_policy:
-            return "Signing policy {0} does not exist.".format(argdic["signing_policy"])
+            return "Signing policy {} does not exist.".format(argdic["signing_policy"])
 
         if isinstance(signing_policy, list):
             dict_ = {}
@@ -1086,7 +1084,7 @@ def sign_remote_certificate(argdic, **kwargs):
         if "__pub_id" not in kwargs:
             return "minion sending this request could not be identified"
         if not _match_minions(signing_policy["minions"], kwargs["__pub_id"]):
-            return "{0} not permitted to use signing policy {1}".format(
+            return "{} not permitted to use signing policy {}".format(
                 kwargs["__pub_id"], argdic["signing_policy"]
             )
 
@@ -1110,7 +1108,7 @@ def get_signing_policy(signing_policy_name):
     """
     signing_policy = _get_signing_policy(signing_policy_name)
     if not signing_policy:
-        return "Signing policy {0} does not exist.".format(signing_policy_name)
+        return "Signing policy {} does not exist.".format(signing_policy_name)
     if isinstance(signing_policy, list):
         dict_ = {}
         for item in signing_policy:
@@ -1419,7 +1417,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         if "signing_policy" not in kwargs:
             raise salt.exceptions.SaltInvocationError(
                 "signing_policy must be specified"
-                "if requesting remote certificate from ca_server {0}.".format(ca_server)
+                "if requesting remote certificate from ca_server {}.".format(ca_server)
             )
         if "csr" in kwargs:
             kwargs["csr"] = get_pem_entry(
@@ -1517,7 +1515,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             time = datetime.datetime.strptime(kwargs["not_before"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
-                "not_before: {0} is not in required format {1}".format(
+                "not_before: {} is not in required format {}".format(
                     kwargs["not_before"], fmt
                 )
             )
@@ -1535,7 +1533,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             time = datetime.datetime.strptime(kwargs["not_after"], fmt)
         except:
             raise salt.exceptions.SaltInvocationError(
-                "not_after: {0} is not in required format {1}".format(
+                "not_after: {} is not in required format {}".format(
                     kwargs["not_after"], fmt
                 )
             )
@@ -1628,7 +1626,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {0}: {1}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
             continue
 
         cert.add_ext(ext)
@@ -1649,8 +1647,8 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         public_key=signing_cert,
     ):
         raise salt.exceptions.SaltInvocationError(
-            "signing_private_key: {0} "
-            "does no match signing_cert: {1}".format(
+            "signing_private_key: {} "
+            "does no match signing_cert: {}".format(
                 kwargs["signing_private_key"], kwargs.get("signing_cert", "")
             )
         )
@@ -1790,7 +1788,7 @@ def create_csr(path=None, text=False, **kwargs):
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {0}: {1}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
             continue
 
         extstack.push(ext)
@@ -1892,16 +1890,16 @@ def verify_crl(crl, cert):
     crltext = _text_or_file(crl)
     crltext = get_pem_entry(crltext, pem_type="X509 CRL")
     crltempfile = tempfile.NamedTemporaryFile(delete=True)
-    crltempfile.write(salt.utils.stringutils.to_str(crltext))
+    crltempfile.write(salt.utils.stringutils.to_bytes(crltext, encoding="ascii"))
     crltempfile.flush()
 
     certtext = _text_or_file(cert)
     certtext = get_pem_entry(certtext, pem_type="CERTIFICATE")
     certtempfile = tempfile.NamedTemporaryFile(delete=True)
-    certtempfile.write(salt.utils.stringutils.to_str(certtext))
+    certtempfile.write(salt.utils.stringutils.to_bytes(certtext, encoding="ascii"))
     certtempfile.flush()
 
-    cmd = "openssl crl -noout -in {0} -CAfile {1}".format(
+    cmd = "openssl crl -noout -in {} -CAfile {}".format(
         crltempfile.name, certtempfile.name
     )
 

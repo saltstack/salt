@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+import sys
 
 import pytest
 import salt.modules.ansiblegate as ansible
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import LoaderError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, MockTimedProc, patch
 
 pytestmark = pytest.mark.skipif(
     salt.utils.platform.is_windows(), reason="Not supported on Windows"
@@ -41,7 +41,7 @@ def test_ansible_module_help(resolver):
     :return:
     """
 
-    class Module(object):
+    class Module:
         """
         An ansible module mock.
         """
@@ -63,7 +63,7 @@ description:
     ):
         ret = ansible.help("dummy")
         assert sorted(
-            ret.get('Available sections on module "{0}"'.format(Module().__name__))
+            ret.get('Available sections on module "{}"'.format(Module().__name__))
         ) == ["one", "two"]
         assert ret.get("Description") == "describe the second part"
 
@@ -131,3 +131,76 @@ def test_virtual_function(resolver):
     """
     with patch("salt.modules.ansiblegate.ansible", None):
         assert ansible.__virtual__() == "ansible"
+
+
+def test_ansible_module_call(resolver):
+    """
+    Test Ansible module call from ansible gate module
+    :return:
+    """
+
+    class Module:
+        """
+        An ansible module mock.
+        """
+
+        __name__ = "one.two.three"
+        __file__ = "foofile"
+
+        def main():  # pylint: disable=no-method-argument
+            pass
+
+    ANSIBLE_MODULE_ARGS = '{"ANSIBLE_MODULE_ARGS": ["arg_1", {"kwarg1": "foobar"}]}'
+
+    proc = MagicMock(
+        side_effect=[
+            MockTimedProc(stdout=ANSIBLE_MODULE_ARGS.encode(), stderr=None),
+            MockTimedProc(stdout=b'{"completed": true}', stderr=None),
+        ]
+    )
+
+    with patch.object(ansible, "_resolver", resolver), patch.object(
+        ansible._resolver, "load_module", MagicMock(return_value=Module())
+    ):
+        _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
+            proc.assert_any_call(
+                [sys.executable, "foofile"],
+                stdin=ANSIBLE_MODULE_ARGS,
+                stdout=-1,
+                timeout=1200,
+            )
+            try:
+                proc.assert_any_call(
+                    [
+                        "echo",
+                        '{"ANSIBLE_MODULE_ARGS": {"kwarg1": "foobar", "_raw_params": "arg_1"}}',
+                    ],
+                    stdout=-1,
+                    timeout=1200,
+                )
+            except AssertionError:
+                proc.assert_any_call(
+                    [
+                        "echo",
+                        '{"ANSIBLE_MODULE_ARGS": {"_raw_params": "arg_1", "kwarg1": "foobar"}}',
+                    ],
+                    stdout=-1,
+                    timeout=1200,
+                )
+            assert ret == {"completed": True, "timeout": 1200}
+
+
+def test_ansible_playbooks_return_retcode(resolver):
+    """
+    Test ansible.playbooks execution module function include retcode in the return.
+    :return:
+    """
+    ref_out = {"retcode": 0, "stdout": '{"foo": "bar"}'}
+    cmd_run_all = MagicMock(return_value=ref_out)
+    with patch.dict(ansible.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=True)
+    ):
+        ret = ansible.playbooks("fake-playbook.yml")
+        assert "retcode" in ret
