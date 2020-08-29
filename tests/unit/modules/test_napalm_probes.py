@@ -1,58 +1,63 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.modules.napalm_probes as napalm_probes
 import tests.support.napalm as napalm_test_support
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-import salt.modules.napalm_probes as napalm_probes  # NOQA
-
-
-TEST_PROBES = {
-    "new_probe": {
-        "new_test1": {
-            "probe_type": "icmp-ping",
-            "target": "192.168.0.1",
-            "source": "192.168.0.2",
-            "probe_count": 13,
-            "test_interval": 3,
-        }
-    }
-}
-
-
-TEST_DELETE_PROBES = {"existing_probe": {"existing_test1": {}, "existing_test2": {}}}
-
-
-TEST_SCHEDULE_PROBES = {"test_probe": {"existing_test1": {}, "existing_test2": {}}}
-
-
-def mock_net_load(template, *args, **kwargs):
-    if template == "set_probes":
-        assert kwargs["probes"] == TEST_PROBES
-        return napalm_test_support.TEST_TERM_CONFIG
-    if template == "delete_probes":
-        assert kwargs["probes"] == TEST_DELETE_PROBES
-        return napalm_test_support.TEST_TERM_CONFIG
-    if template == "schedule_probes":
-        assert kwargs["probes"] == TEST_SCHEDULE_PROBES
-        return napalm_test_support.TEST_TERM_CONFIG
-    raise ValueError("incorrect template {0}".format(template))
 
 
 class NapalmProbesModuleTestCase(TestCase, LoaderModuleMockMixin):
+    @classmethod
+    def setUpClass(cls):
+        cls._test_probes = {
+            "new_probe": {
+                "new_test1": {
+                    "probe_type": "icmp-ping",
+                    "target": "192.168.0.1",
+                    "source": "192.168.0.2",
+                    "probe_count": 13,
+                    "test_interval": 3,
+                }
+            }
+        }
+        cls._test_delete_probes = {
+            "existing_probe": {"existing_test1": {}, "existing_test2": {}}
+        }
+        cls._test_schedule_probes = {
+            "test_probe": {"existing_test1": {}, "existing_test2": {}}
+        }
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._test_probes = cls._test_delete_probes = cls._test_schedule_probes = None
+
     def setup_loader_modules(self):
+        patcher = patch(
+            "salt.utils.napalm.get_device",
+            MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        def mock_net_load(template, *args, **kwargs):
+            if template == "set_probes":
+                assert kwargs["probes"] == self._test_probes.copy()
+                return napalm_test_support.TEST_TERM_CONFIG.copy()
+            if template == "delete_probes":
+                assert kwargs["probes"] == self._test_delete_probes.copy()
+                return napalm_test_support.TEST_TERM_CONFIG.copy()
+            if template == "schedule_probes":
+                assert kwargs["probes"] == self._test_schedule_probes.copy()
+                return napalm_test_support.TEST_TERM_CONFIG.copy()
+            raise ValueError("incorrect template {}".format(template))
+
         module_globals = {
             "__salt__": {
-                "config.option": MagicMock(
+                "config.get": MagicMock(
                     return_value={"test": {"driver": "test", "key": "2orgk34kgk34g"}}
                 ),
                 "file.file_exists": napalm_test_support.true,
@@ -67,20 +72,20 @@ class NapalmProbesModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_probes_config(self):
         ret = napalm_probes.config()
-        assert ret["out"] == napalm_test_support.TEST_PROBES_CONFIG
+        assert ret["out"] == napalm_test_support.TEST_PROBES_CONFIG.copy()
 
     def test_probes_results(self):
         ret = napalm_probes.results()
-        assert ret["out"] == napalm_test_support.TEST_PROBES_RESULTS
+        assert ret["out"] == napalm_test_support.TEST_PROBES_RESULTS.copy()
 
     def test_set_probes(self):
-        ret = napalm_probes.set_probes(TEST_PROBES)
+        ret = napalm_probes.set_probes(self._test_probes.copy())
         assert ret["result"] is True
 
     def test_delete_probes(self):
-        ret = napalm_probes.delete_probes(TEST_DELETE_PROBES)
+        ret = napalm_probes.delete_probes(self._test_delete_probes.copy())
         assert ret["result"] is True
 
     def test_schedule_probes(self):
-        ret = napalm_probes.schedule_probes(TEST_SCHEDULE_PROBES)
+        ret = napalm_probes.schedule_probes(self._test_schedule_probes.copy())
         assert ret["result"] is True

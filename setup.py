@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 The setup script for salt
 """
@@ -9,7 +8,6 @@ The setup script for salt
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
-from __future__ import absolute_import, print_function, with_statement
 
 import contextlib
 import distutils.dist
@@ -129,7 +127,6 @@ SALT_ZEROMQ_REQS = os.path.join(
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
 SALT_OSX_REQS = [
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_ext.txt"),
     os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
 ]
 SALT_WINDOWS_REQS = [
@@ -493,7 +490,7 @@ class DownloadWindowsDlls(Command):
                 fdest = dest.format(fname=fname)
                 if not os.path.exists(fdest):
                     log.info(
-                        "Downloading {0}.dll to {1} from {2}".format(fname, fdest, furl)
+                        "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
                     )
                     try:
                         import requests
@@ -508,7 +505,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                             else:
                                 log.error(
-                                    "Failed to download {0}.dll to {1} from {2}".format(
+                                    "Failed to download {}.dll to {} from {}".format(
                                         fname, fdest, furl
                                     )
                                 )
@@ -520,7 +517,7 @@ class DownloadWindowsDlls(Command):
                                 if IS_PY3:
                                     while True:
                                         chunk = req.read(4096)
-                                        if len(chunk) == 0:
+                                        if not chunk:
                                             break
                                         wfh.write(chunk)
                                         wfh.flush()
@@ -533,7 +530,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                         else:
                             log.error(
-                                "Failed to download {0}.dll to {1} from {2}".format(
+                                "Failed to download {}.dll to {} from {}".format(
                                     fname, fdest, furl
                                 )
                             )
@@ -609,7 +606,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
             url = (
-                "https://github.com/saltstack/salt-bootstrap/raw/{0}"
+                "https://github.com/saltstack/salt-bootstrap/raw/{}"
                 "/bootstrap-salt.sh".format(BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION)
             )
             deploy_path = os.path.join(
@@ -617,8 +614,8 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             )
             log.info(
                 "Updating bootstrap-salt.sh."
-                "\n\tSource:      {0}"
-                "\n\tDestination: {1}".format(url, deploy_path)
+                "\n\tSource:      {}"
+                "\n\tDestination: {}".format(url, deploy_path)
             )
 
             try:
@@ -630,7 +627,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 else:
                     log.error(
                         "Failed to update the bootstrap-salt.sh script. HTTP "
-                        "Error code: {0}".format(req.status_code)
+                        "Error code: {}".format(req.status_code)
                     )
             except ImportError:
                 req = urlopen(url)
@@ -640,13 +637,13 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 else:
                     log.error(
                         "Failed to update the bootstrap-salt.sh script. HTTP "
-                        "Error code: {0}".format(req.getcode())
+                        "Error code: {}".format(req.getcode())
                     )
             try:
                 with open(deploy_path, "w") as fp_:
                     fp_.write(script_contents)
-            except (OSError, IOError) as err:
-                log.error("Failed to write the updated script: {0}".format(err))
+            except OSError as err:
+                log.error("Failed to write the updated script: {}".format(err))
 
         # Let's the rest of the build command
         Sdist.run(self)
@@ -682,9 +679,9 @@ class TestCommand(Command):
         self.run_command("build")
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
-        test_cmd = sys.executable + " {0}".format(runner)
+        test_cmd = sys.executable + " {}".format(runner)
         if self.runtests_opts:
-            test_cmd += " {0}".format(self.runtests_opts)
+            test_cmd += " {}".format(self.runtests_opts)
 
         print("running test")
         test_process = Popen(
@@ -705,7 +702,7 @@ class Clean(clean):
         for subdir in ("salt", "tests", "doc"):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, _, _ in os.walk(root):
-                for to_remove_filename in glob.glob("{0}/*.py[oc]".format(dirname)):
+                for to_remove_filename in glob.glob("{}/*.py[oc]".format(dirname)):
                     os.remove(to_remove_filename)
 
 
@@ -1050,8 +1047,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 continue
             if attrname == "salt_version":
                 attrname = "version"
-            if hasattr(self.metadata, "set_{0}".format(attrname)):
-                getattr(self.metadata, "set_{0}".format(attrname))(attrvalue)
+            if hasattr(self.metadata, "set_{}".format(attrname)):
+                getattr(self.metadata, "set_{}".format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
                 try:
                     setattr(self.metadata, attrname, attrvalue)
@@ -1072,8 +1069,12 @@ class SaltDistribution(distutils.dist.Distribution):
         return [
             "Programming Language :: Python",
             "Programming Language :: Cython",
-            "Programming Language :: Python :: 2.6",
-            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
@@ -1134,6 +1135,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(
                 [
+                    "doc/man/salt-api.1",
                     "doc/man/salt-cp.1",
                     "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
@@ -1199,6 +1201,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
+                    "scripts/salt-api",
                     "scripts/salt-cp",
                     "scripts/salt-key",
                     "scripts/salt-minion",
@@ -1245,6 +1248,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
+                    "salt-api = salt.scripts:salt_api",
                     "salt-cp = salt.scripts:salt_cp",
                     "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
@@ -1394,7 +1398,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ("zeromq", "both", "ssh", "none"):
             raise DistutilsArgError(
                 "The value of --salt-transport needs be 'zeromq', "
-                "'both', 'ssh', or 'none' not '{0}'".format(self.salt_transport)
+                "'both', 'ssh', or 'none' not '{}'".format(self.salt_transport)
             )
 
         # Setup our property functions after class initialization and
