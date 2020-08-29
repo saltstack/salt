@@ -1934,6 +1934,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 username=None,
                 password=None,
                 boot=None,
+                numatune=None,
             ),
         )
 
@@ -2100,6 +2101,50 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         with self.assertRaises(SaltInvocationError):
             virt.update("my_vm", mem=invalid_number)
+
+        # Update numatune case
+        numatune = {
+            "memory": {"mode": "strict", "nodeset": 1},
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": 1},
+                1: {"mode": "preferred", "nodeset": 2},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", numatune=numatune),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"), "1"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "1"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='1']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='1']").attrib.get("nodeset"), "2"
+        )
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
@@ -2823,6 +2868,184 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock_boot.call_args[0][0])
         self.assertEqual(setxml.find("os").find("loader"), None)
         self.assertEqual(setxml.find("os").find("nvram"), None)
+
+    def test_update_existing_numatune_params(self):
+        """
+        Test virt.update() with existing numatune parameters.
+        """
+        xml_numatune = """
+            <domain type='kvm' id='8'>
+              <name>vm_with_numatune_param</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <maxMemory slots="12" unit="bytes">1048576</maxMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <numatune>
+                <memory mode="strict" nodeset="0-11"/>
+                <memnode cellid="1" mode="strict" nodeset="3"/>
+                <memnode cellid="3" mode="preferred" nodeset="7"/>
+              </numatune>
+              <os>
+                <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
+              </os>
+            </domain>
+        """
+        domain_mock = self.set_mock_vm("vm_with_numatune_param", xml_numatune)
+        domain_mock.OSType = MagicMock(return_value="hvm")
+        define_mock = MagicMock(return_value=True)
+        self.mock_conn.defineXML = define_mock
+
+        numatune = {
+            "memory": {"mode": "preferred", "nodeset": "0-5"},
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": "4"},
+                3: {"mode": "preferred", "nodeset": "7"},
+                4: {"mode": "strict", "nodeset": "6"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "preferred"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"), "0-5"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "4"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='1']"), None)
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("nodeset"), "7"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='4']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='4']").attrib.get("nodeset"), "6"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='2']"), None)
+
+        numatune_mem_none = {
+            "memory": None,
+            "memnodes": {
+                0: {"mode": "strict", "nodeset": "4"},
+                3: {"mode": "preferred", "nodeset": "7"},
+                4: {"mode": "strict", "nodeset": "6"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_mem_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("numatune").find("memory"), None)
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("mode"), "strict"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='0']").attrib.get("nodeset"), "4"
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("mode"),
+            "preferred",
+        )
+
+        self.assertEqual(
+            setxml.find("./numatune/memnode/[@cellid='3']").attrib.get("nodeset"), "7"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode/[@cellid='2']"), None)
+
+        numatune_mnodes_none = {
+            "memory": {"mode": "preferred", "nodeset": "0-5"},
+            "memnodes": None,
+        }
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_mnodes_none),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("mode"), "preferred"
+        )
+
+        self.assertEqual(
+            setxml.find("numatune").find("memory").attrib.get("nodeset"), "0-5"
+        )
+
+        self.assertEqual(setxml.find("./numatune/memnode"), None)
+
+        numatune_without_change = {
+            "memory": {"mode": "strict", "nodeset": "0-11"},
+            "memnodes": {
+                1: {"mode": "strict", "nodeset": "3"},
+                3: {"mode": "preferred", "nodeset": "7"},
+            },
+        }
+
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm_with_numatune_param", numatune=numatune_without_change),
+        )
+
+        self.assertEqual(
+            {
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update(
+                "vm_with_numatune_param", numatune={"memory": None, "memnodes": None}
+            ),
+        )
+
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("numatune"), None)
 
     def test_update_memtune_params(self):
         """

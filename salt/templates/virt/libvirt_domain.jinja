@@ -27,6 +27,20 @@
             {%- endif %}
         </memtune>
         {%- endif %}
+        {%- if numatune %}
+        <numatune>
+            {%- if 'memory' in numatune and numatune.memory %}
+                <memory mode='{{ numatune.memory.mode }}'
+                    {%- if numatune.memory.nodeset %}nodeset='{{ numatune.memory.nodeset }}'{%- endif %}
+                />
+            {%- endif %}
+            {%- if 'memnodes' in numatune and numatune.memnodes %}
+                {%- for cell_id in numatune['memnodes'] %}
+                <memnode cellid='{{ cell_id }}' mode='{{ numatune.memnodes[cell_id].mode }}' nodeset='{{ numatune.memnodes[cell_id].nodeset }}'/>
+                {%- endfor %}
+            {%- endif %}
+        </numatune>
+        {%- endif %}
         <os {{ boot.os_attrib }}>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% if boot %}

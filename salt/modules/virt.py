@@ -943,6 +943,7 @@ def _gen_xml(
     graphics=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
     **kwargs
 ):
     """
@@ -968,6 +969,7 @@ def _gen_xml(
                     context["mem"][tag] = str(int(_handle_unit(val) / 1024))
 
     if hypervisor in ["qemu", "kvm"]:
+        context["numatune"] = numatune if numatune else {}
         context["controller_model"] = False
     elif hypervisor == "vmware":
         # TODO: make bus and model parameterized, this works for 64-bit Linux
@@ -1886,6 +1888,7 @@ def init(
     arch=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
     **kwargs
 ):
     """
@@ -1996,6 +1999,21 @@ def init(
         Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
 
         By default, the value will ``"hd"``.
+
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: python
+
+            {
+                'memory': {'mode': 'strict', 'nodeset': '0-11'},
+                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+            }
 
     .. _init-boot-def:
 
@@ -2351,6 +2369,7 @@ def init(
             graphics,
             boot,
             boot_dev,
+            numatune,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2578,6 +2597,7 @@ def update(
     graphics=None,
     live=True,
     boot=None,
+    numatune=None,
     test=False,
     boot_dev=None,
     **kwargs
@@ -2660,6 +2680,18 @@ def update(
         By default, the value will ``"hd"``.
 
         .. versionadded:: 3002
+
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
+        for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
+        sls file instead.
+
+        .. versionadded:: Aluminium
 
     :param test: run in dry-run mode if set to True
 
@@ -2843,6 +2875,39 @@ def update(
             "del": salt.utils.xmlutil.del_attribute("dev"),
         },
     ]
+
+    # update NUMA host policy
+    if hypervisor in ["qemu", "kvm"]:
+        params_mapping += [
+            {
+                "path": "numatune:memory:mode",
+                "xpath": "numatune/memory",
+                "get": lambda n: n.get("mode"),
+                "set": lambda n, v: n.set("mode", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("mode"),
+            },
+            {
+                "path": "numatune:memory:nodeset",
+                "xpath": "numatune/memory",
+                "get": lambda n: n.get("nodeset"),
+                "set": lambda n, v: n.set("nodeset", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("nodeset"),
+            },
+            {
+                "path": "numatune:memnodes:{id}:mode",
+                "xpath": "numatune/memnode[@cellid='$id']",
+                "get": lambda n: n.get("mode") if n.get("mode") else None,
+                "set": lambda n, v: n.set("mode", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("mode", ["cellid"]),
+            },
+            {
+                "path": "numatune:memnodes:{id}:nodeset",
+                "xpath": "numatune/memnode[@cellid='$id']",
+                "get": lambda n: str(n.get("nodeset")) if n.get("nodeset") else None,
+                "set": lambda n, v: n.set("nodeset", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("nodeset", ["cellid"]),
+            },
+        ]
 
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
