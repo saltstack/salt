@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for git_pillar
 
@@ -65,7 +64,6 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import random
 import string
@@ -91,12 +89,7 @@ from tests.support.gitfs import (
     GitPillarHTTPTestBase,
     GitPillarSSHTestBase,
 )
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-    skip_if_not_root,
-    slowTest,
-)
+from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -116,7 +109,7 @@ HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
 
 
 def _rand_key_name(length):
-    return "id_rsa_{0}".format(
+    return "id_rsa_{}".format(
         "".join(random.choice(string.ascii_letters) for _ in range(length))
     )
 
@@ -125,7 +118,7 @@ def _windows_or_mac():
     return salt.utils.platform.is_windows() or salt.utils.platform.is_darwin()
 
 
-class GitPythonMixin(object):
+class GitPythonMixin:
     """
     GitPython doesn't support anything fancy in terms of authentication
     options, so all of the tests for GitPython can be re-used via this mixin.
@@ -637,7 +630,7 @@ class GitPythonMixin(object):
 @destructiveTest
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
@@ -652,7 +645,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
@@ -663,7 +656,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
-@skipIf(not HAS_GITPYTHON, "GitPython >= {0} required".format(GITPYTHON_MINVER))
+@skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
@@ -679,7 +672,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         """
         Create start the webserver
         """
-        super(TestGitPythonAuthenticatedHTTP, cls).setUpClass()
+        super().setUpClass()
         # Override the URL set up in the parent class to encode the
         # username/password into it.
         cls.url = "http://{username}:{password}@127.0.0.1:{port}/repo.git".format(
@@ -699,7 +692,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_SSHD, "sshd not present")
 class TestPygit2SSH(GitPillarSSHTestBase):
@@ -715,9 +708,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
     username = USERNAME
     passphrase = PASSWORD
 
-    @requires_system_grains
     @slowTest
-    def test_single_source(self, grains):
+    def test_single_source(self):
         """
         Test using a single ext_pillar repo
         """
@@ -765,10 +757,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -805,9 +793,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_multiple_sources_master_dev_no_merge_lists(self, grains):
+    def test_multiple_sources_master_dev_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -866,10 +853,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -913,9 +896,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_multiple_sources_dev_master_no_merge_lists(self, grains):
+    def test_multiple_sources_dev_master_no_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -974,10 +956,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1021,9 +999,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_multiple_sources_master_dev_merge_lists(self, grains):
+    def test_multiple_sources_master_dev_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -1082,10 +1059,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1129,9 +1102,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_multiple_sources_dev_master_merge_lists(self, grains):
+    def test_multiple_sources_dev_master_merge_lists(self):
         """
         Test using two ext_pillar dirs. Since all git_pillar repos are merged
         into a single dictionary, ordering matters.
@@ -1190,10 +1162,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1237,9 +1205,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_multiple_sources_with_pillarenv(self, grains):
+    def test_multiple_sources_with_pillarenv(self):
         """
         Test using pillarenv to restrict results to those from a single branch
         """
@@ -1293,10 +1260,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1340,9 +1303,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_includes_enabled(self, grains):
+    def test_includes_enabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
         an SLS file from the master branch, so we should see the
@@ -1399,10 +1361,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1446,9 +1404,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_includes_disabled(self, grains):
+    def test_includes_disabled(self):
         """
         Test with git_pillar_includes enabled. The top_only branch references
         an SLS file from the master branch, but since includes are disabled it
@@ -1511,10 +1468,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             """
         )
         self.assertEqual(ret, expected)
-
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
 
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
@@ -1602,9 +1555,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
             },
         )
 
-    @requires_system_grains
     @slowTest
-    def test_root_parameter(self, grains):
+    def test_root_parameter(self):
         """
         Test root parameter
         """
@@ -1652,10 +1604,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1701,9 +1649,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_mountpoint_parameter(self, grains):
+    def test_mountpoint_parameter(self):
         """
         Test mountpoint parameter
         """
@@ -1751,10 +1698,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1800,9 +1743,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_root_and_mountpoint_parameters(self, grains):
+    def test_root_and_mountpoint_parameters(self):
         """
         Test root and mountpoint parameters
         """
@@ -1852,10 +1794,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -1903,9 +1841,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_all_saltenvs(self, grains):
+    def test_all_saltenvs(self):
         """
         Test all_saltenvs parameter.
         """
@@ -1964,10 +1901,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2015,9 +1948,8 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
     @slowTest
-    def test_all_saltenvs_base(self, grains):
+    def test_all_saltenvs_base(self):
         """
         Test all_saltenvs parameter.
         """
@@ -2074,10 +2006,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2123,8 +2051,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-    @requires_system_grains
-    def test_fallback(self, grains):
+    def test_fallback(self):
         """
         Test fallback parameter.
         """
@@ -2185,10 +2112,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
-        if grains["os_family"] == "Debian":
-            # passphrase-protected currently does not work here
-            return
-
         # Test with passphrase-protected key and global credential options
         ret = self.get_pillar(
             """\
@@ -2243,7 +2166,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
@@ -2751,7 +2674,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 @skip_if_not_root
 @skipIf(
     not HAS_PYGIT2,
-    "pygit2 >= {0} and libgit2 >= {1} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
+    "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
