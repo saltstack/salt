@@ -32,7 +32,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
 import saltfactories.utils.compat
-from _pytest.mark.evaluate import MarkEvaluator
 from salt.serializers import yaml
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
 from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
@@ -781,23 +780,6 @@ def from_filenames_collection_modifyitems(config, items):
 
 
 # <---- From Filenames Test Selection --------------------------------------------------------------------------------
-
-# ----- Custom Grains Mark Evaluator -------------------------------------------------------------------------------->
-class GrainsMarkEvaluator(MarkEvaluator):
-    _cached_grains = None
-
-    def _getglobals(self):
-        item_globals = super()._getglobals()
-        if GrainsMarkEvaluator._cached_grains is None:
-            sminion = create_sminion()
-            GrainsMarkEvaluator._cached_grains = sminion.opts["grains"].copy()
-        item_globals["grains"] = GrainsMarkEvaluator._cached_grains.copy()
-        return item_globals
-
-
-# Patch PyTest's skipping MarkEvaluator to use our GrainsMarkEvaluator
-_pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
-# <---- Custom Grains Mark Evaluator ---------------------------------------------------------------------------------
 
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
