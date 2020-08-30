@@ -116,7 +116,6 @@ def contains_tree(name, fragment, xpath=None):
         ensure_tree_exists:
         xml.contains_tree:
             - name: /etc/data.xml # MUST already have valid XML.
-            - resolve: merge
             - fragment: |
                 <people>
                   <artists active="true">
@@ -127,7 +126,6 @@ def contains_tree(name, fragment, xpath=None):
         ensure_attribute_set:
         xml.contains_tree:
             - name: /etc/data.xml
-            - resolve: merge
             - xpath: people
             - fragment: |
                 <artists active="false">  # overwrites 'active=true'
