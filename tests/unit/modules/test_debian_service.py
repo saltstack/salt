@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.debian_service as debian_service
