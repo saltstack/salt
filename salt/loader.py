@@ -71,8 +71,8 @@ if sys.version_info[:2] >= (3, 5):
     try:
         import platform
 
-        PYC_PYIMPL = f".{platform.python_implementation().lower()}-"
-        PYC_PYIMPL_VER = f"{PYC_PYIMPL}{sys.version[:3].replace('.', '')}"
+        PYC_PYIMPL = ".{}-".format(platform.python_implementation().lower())
+        PYC_PYIMPL_VER = "{}{}".format(PYC_PYIMPL, sys.version[:3].replace(".", ""))
     except ImportError:
         PYC_PYIMPL = ""
         PYC_PYIMPL_VER = ""
