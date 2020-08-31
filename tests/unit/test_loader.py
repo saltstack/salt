@@ -701,7 +701,7 @@ class LazyLoaderReloadingTest(TestCase):
             )
         }
 
-        self.assertFalse(self.loader._load_module(test_module_name) is True)
+        self.assertFalse(self.loader._load_module(test_module_name))
 
         self.loader.file_mapping = copy.deepcopy(filemap_save)
 
