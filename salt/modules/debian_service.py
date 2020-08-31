@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Service support for Debian systems (uses update-rc.d and /sbin/service)
 
@@ -8,7 +7,6 @@ Service support for Debian systems (uses update-rc.d and /sbin/service)
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import glob
@@ -39,12 +37,16 @@ def __virtual__():
     """
     Only work on Debian and when systemd isn't running
     """
-    if __grains__["os"] in (
-        "Debian",
-        "Raspbian",
-        "Devuan",
-        "NILinuxRT",
-    ) and not salt.utils.systemd.booted(__context__):
+    if (
+        __grains__["os"]
+        in (
+            "Debian",
+            "Raspbian",
+            "Devuan",
+            "NILinuxRT",
+        )
+        and not salt.utils.systemd.booted(__context__)
+    ):
         return __virtualname__
     else:
         return (
@@ -55,7 +57,7 @@ def __virtual__():
 
 
 def _service_cmd(*args):
-    return "service {0} {1}".format(args[0], " ".join(args[1:]))
+    return "service {} {}".format(args[0], " ".join(args[1:]))
 
 
 def _get_runlevel():
@@ -84,9 +86,9 @@ def get_enabled():
 
         salt '*' service.get_enabled
     """
-    prefix = "/etc/rc[S{0}].d/S".format(_get_runlevel())
+    prefix = "/etc/rc[S{}].d/S".format(_get_runlevel())
     ret = set()
-    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob("{0}*".format(prefix))]:
+    for line in [x.rsplit(os.sep, 1)[-1] for x in glob.glob("{}*".format(prefix))]:
         ret.add(re.split(r"\d+", line)[-1])
     return sorted(ret)
 
@@ -287,7 +289,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     """
-    cmd = "update-rc.d {0} disable".format(name)
+    cmd = "update-rc.d {} disable".format(name)
     return not __salt__["cmd.retcode"](cmd)
 
 
