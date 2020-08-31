@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Library for interacting with Pushover API
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -113,10 +111,10 @@ def validate_sound(sound, token):
                 if _message.get("dict", {}).get("status", "") == 1:
                     sounds = _message.get("dict", {}).get("sounds", "")
                     if sound in sounds:
-                        ret["message"] = "Valid sound {0}.".format(sound)
+                        ret["message"] = "Valid sound {}.".format(sound)
                         ret["res"] = True
                     else:
-                        ret["message"] = "Warning: {0} not a valid sound.".format(sound)
+                        ret["message"] = "Warning: {} not a valid sound.".format(sound)
                         ret["res"] = False
                 else:
                     ret["message"] = "".join(_message.get("dict", {}).get("errors"))
