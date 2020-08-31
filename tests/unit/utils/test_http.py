@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import socket
 from contextlib import closing
@@ -230,6 +228,6 @@ class HTTPGetTestCase(TestCase):
         string and decodes it.
         """
         for backend in ["tornado", "requests", "urllib2"]:
-            ret = http.query(self.get_webserver.url("core.sls"), backend=backend,)
+            ret = http.query(self.get_webserver.url("core.sls"), backend=backend)
             body = ret.get("body", "")
             assert isinstance(body, str)
