@@ -39,6 +39,8 @@ def start(name):
     """
     Start the specified service
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -52,6 +54,8 @@ def start(name):
 def stop(name):
     """
     Stop the specified service
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -67,6 +71,8 @@ def restart(name):
     """
     Restart the named service
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -81,6 +87,8 @@ def reload_(name):
     """
     Reload the named service
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -94,6 +102,8 @@ def reload_(name):
 def force_reload(name):
     """
     Force-reload the named service
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -111,8 +121,7 @@ def status(name, sig=None):
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
 
-    .. versionchanged:: 2018.3.0
-        The service name can now be a glob (e.g. ``salt*``)
+    .. versionadded:: Magnesium
 
     Args:
         name (str): The name of the service to check
@@ -185,6 +194,8 @@ def get_enabled():
     """
     Return a list of service that are enabled on boot
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -197,6 +208,8 @@ def get_enabled():
 def get_disabled():
     """
     Return a set of services that are installed but disabled
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -211,6 +224,8 @@ def available(name):
     """
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -227,6 +242,8 @@ def missing(name):
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -239,6 +256,8 @@ def missing(name):
 def get_all():
     """
     Return all available boot services
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -271,6 +290,8 @@ def enable(name, **kwargs):
     """
     Enable the named service to start at boot
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -284,6 +305,8 @@ def disable(name, **kwargs):
     """
     Disable the named service to start at boot
 
+    .. versionadded:: Magnesium
+
     CLI Example:
 
     .. code-block:: bash
@@ -296,6 +319,8 @@ def disable(name, **kwargs):
 def enabled(name, **kwargs):
     """
     Return True if the named service is enabled, false otherwise
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
@@ -312,6 +337,8 @@ def enabled(name, **kwargs):
 def disabled(name):
     """
     Return True if the named service is enabled, false otherwise
+
+    .. versionadded:: Magnesium
 
     CLI Example:
 
