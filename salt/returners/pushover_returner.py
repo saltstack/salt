@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return salt data via pushover (http://www.pushover.net)
 
@@ -79,7 +78,6 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return pushover --return_kwargs '{"title": "Salt is awesome!"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -242,11 +240,11 @@ def returner(ret):
             )
 
     message = (
-        "id: {0}\r\n"
-        "function: {1}\r\n"
-        "function args: {2}\r\n"
-        "jid: {3}\r\n"
-        "return: {4}\r\n"
+        "id: {}\r\n"
+        "function: {}\r\n"
+        "function args: {}\r\n"
+        "jid: {}\r\n"
+        "return: {}\r\n"
     ).format(
         ret.get("id"),
         ret.get("fun"),
