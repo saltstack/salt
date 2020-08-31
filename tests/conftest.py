@@ -34,6 +34,7 @@ import saltfactories.utils.compat
 from _pytest.mark.evaluate import MarkEvaluator
 from salt.serializers import yaml
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
+from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.saltfactories_compat import LogServer
