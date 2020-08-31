@@ -118,7 +118,7 @@ strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via napalm, netmiko, ntc-templates
-timelib==0.2.4
+timelib==0.2.5
 toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
