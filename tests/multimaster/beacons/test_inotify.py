@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
@@ -26,6 +23,10 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_PYINOTIFY, "pyinotify is not available")
+@skipIf(
+    salt.utils.platform.is_freebsd(),
+    "Skip on FreeBSD, IN_CREATE event is not supported",
+)
 class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the inotify beacon in multimaster environment
