@@ -18,7 +18,6 @@ Full argument reference is available on the Datadog API reference page
 https://docs.datadoghq.com/api/
 """
 
-
 import requests
 
 from salt.exceptions import SaltInvocationError
