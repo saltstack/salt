@@ -62,7 +62,6 @@ try:
 except ImportError:
     HAS_PKG_RESOURCES = False
 
-
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
