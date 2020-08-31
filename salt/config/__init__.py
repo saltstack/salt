@@ -1996,7 +1996,7 @@ def load_config(path, env_var, default_path=None, exit_on_config_errors=True):
         log.error(error)
         if exit_on_config_errors:
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-    except PermissionError:
+    except (PermissionError, FileNotFoundError):
         log.debug("Missing configuration file: %s", path)
 
     return opts
