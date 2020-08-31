@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the function calls to execute command line scripts
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
@@ -110,9 +108,9 @@ def minion_process():
     """
     Start a minion process
     """
+    import salt.cli.daemons
     import salt.utils.platform
     import salt.utils.process
-    import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
 
@@ -182,8 +180,9 @@ def salt_minion():
 
     salt.utils.process.notify_systemd()
 
-    import salt.cli.daemons
     import multiprocessing
+
+    import salt.cli.daemons
 
     # Fix for setuptools generated scripts, so that it will
     # work with multiprocessing fork emulation.
@@ -303,7 +302,12 @@ def proxy_minion_process(queue):
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         # pylint: disable=broad-except
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit,) as exc:
+    except (
+        Exception,
+        SaltClientError,
+        SaltReqTimeoutError,
+        SaltSystemExit,
+    ) as exc:
         # pylint: enable=broad-except
         log.error("Proxy Minion failed to start: ", exc_info=True)
         restart = True
@@ -334,9 +338,10 @@ def salt_proxy():
     """
     Start a proxy minion.
     """
+    import multiprocessing
+
     import salt.cli.daemons
     import salt.utils.platform
-    import multiprocessing
 
     if "" in sys.path:
         sys.path.remove("")
@@ -416,7 +421,7 @@ def salt_key():
         _install_signal_handlers(client)
         client.run()
     except Exception as err:  # pylint: disable=broad-except
-        sys.stderr.write("Error: {0}\n".format(err))
+        sys.stderr.write("Error: {}\n".format(err))
 
 
 def salt_cp():
@@ -572,7 +577,7 @@ def salt_unity():
     if len(sys.argv) < 2:
         msg = "Must pass in a salt command, available commands are:"
         for cmd in avail:
-            msg += "\n{0}".format(cmd)
+            msg += "\n{}".format(cmd)
         print(msg)
         sys.exit(1)
     cmd = sys.argv[1]
@@ -581,9 +586,9 @@ def salt_unity():
         sys.argv[0] = "salt"
         s_fun = salt_main
     else:
-        sys.argv[0] = "salt-{0}".format(cmd)
+        sys.argv[0] = "salt-{}".format(cmd)
         sys.argv.pop(1)
-        s_fun = getattr(sys.modules[__name__], "salt_{0}".format(cmd))
+        s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
     s_fun()
 
 

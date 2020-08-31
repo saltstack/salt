@@ -1,9 +1,7 @@
-# coding=utf-8
 """
 Local Runner
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -32,7 +31,6 @@ State to collect support data from the systems:
         - move: true
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -49,7 +47,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = "support"
 
 
-class SaltSupportState(object):
+class SaltSupportState:
     """
     Salt-support.
     """

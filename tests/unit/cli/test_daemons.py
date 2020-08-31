@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import multiprocessing
@@ -21,7 +19,7 @@ from tests.support.unit import TestCase
 log = logging.getLogger(__name__)
 
 
-class LoggerMock(object):
+class LoggerMock:
     """
     Logger data collector
     """

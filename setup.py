@@ -101,10 +101,9 @@ IS_PY3 = sys.version_info > (3,)
 try:
     # Add the esky bdist target if the module is available
     # may require additional modules depending on platform
-    from esky import bdist_esky
-
     # bbfreeze chosen for its tight integration with distutils
     import bbfreeze
+    from esky import bdist_esky
 
     HAS_ESKY = True
 except ImportError:
@@ -469,9 +468,9 @@ class DownloadWindowsDlls(Command):
 
                 # pylint: enable=no-name-in-module
             else:
-                from pip._internal.utils.logging import (
+                from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
                     indent_log,
-                )  # pylint: disable=no-name-in-module
+                )
         except ImportError:
             # TODO: Impliment indent_log here so we don't require pip
             @contextlib.contextmanager
@@ -493,8 +492,9 @@ class DownloadWindowsDlls(Command):
                         "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
                     )
                     try:
-                        import requests
                         from contextlib import closing
+
+                        import requests
 
                         with closing(requests.get(furl, stream=True)) as req:
                             if req.status_code == 200:

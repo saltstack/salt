@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 import jinja2
+import yaml
+
 import salt.cli.support.collector
 import salt.exceptions
 import salt.utils.files
 import salt.utils.platform
-import yaml
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 from salt.cli.support.console import IndentOutput
 from salt.utils.color import get_colors
@@ -66,7 +65,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         ):
             assert (
                 self.device.write.call_args_list[idx][0][0] == data
-            ), "The result doesn't match the expected data: '{0}' != '{1}'".format(
+            ), "The result doesn't match the expected data: '{}' != '{}'".format(
                 self.device.write.call_args_list[idx][0][0], data
             )
 
@@ -87,7 +86,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
         ):
             assert (
                 self.device.write.call_args_list[idx][0][0] == data
-            ), "The result doesn't match the expected data: '{0}' != '{1}'".format(
+            ), "The result doesn't match the expected data: '{}' != '{}'".format(
                 self.device.write.call_args_list[idx][0][0], data
             )
 

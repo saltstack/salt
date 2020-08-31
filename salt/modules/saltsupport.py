@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Bo Maryniuk <bo@suse.de>
 #
@@ -19,7 +18,6 @@ Module to run salt-support within Salt.
 """
 # pylint: disable=W0231,W0221
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
@@ -44,7 +42,7 @@ __virtualname__ = "support"
 log = logging.getLogger(__name__)
 
 
-class LogCollector(object):
+class LogCollector:
     """
     Output collector.
     """
@@ -307,7 +305,7 @@ class SaltSupportModule(SaltSupport):
 
         try:
             os.unlink(tfn)
-        except (OSError, IOError) as err:
+        except OSError as err:
             log.error(
                 "Cannot remove temporary rsync file {fn}: {err}".format(fn=tfn, err=err)
             )
@@ -340,7 +338,7 @@ class SaltSupportModule(SaltSupport):
             salt '*' support.run pillar=something_special
         """
 
-        class outputswitch(object):
+        class outputswitch:
             """
             Output switcher on context
             """
