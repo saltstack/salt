@@ -464,22 +464,6 @@ def pytest_runtest_protocol(item, nextitem):
     del used_fixture_defs
 
 
-def pytest_runtest_teardown(item, nextitem):
-    """
-    called after ``pytest_runtest_call``.
-
-    :arg nextitem: the scheduled-to-be-next test item (None if no further
-                   test item is scheduled).  This argument can be used to
-                   perform exact teardowns, i.e. calling just enough finalizers
-                   so that nextitem only needs to call setup-functions.
-    """
-    # PyTest doesn't reset the capturing log handler when done with it.
-    # Reset it to free used memory and python objects
-    # We currently have PyTest's log_print setting set to false, if it was
-    # set to true, the call bellow would make PyTest not print any logs at all.
-    item.catch_log_handler.reset()
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionstart(session):
     log_server = session.config.pluginmanager.get_plugin(
