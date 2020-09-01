@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Network Config
 ==============
@@ -19,15 +18,17 @@ Dependencies
 """
 
 # Import Salt libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-import logging
+try:
+    import logging
+except ImportError:
+    HAS_LOGGING = False
+else:
+    HAS_LOGGING = True
+    log = logging.getLogger(__name__)
 
 # import Salt libs
 import salt.utils.napalm
-
-log = logging.getLogger(__name__)
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
@@ -230,7 +231,7 @@ def replace_pattern(
     ret = salt.utils.napalm.default_ret(name)
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __salt__["config.merge"]("test", test)
+    test = test = test or __opts__["test"]
     debug = __salt__["config.merge"]("debug", debug)
     commit = __salt__["config.merge"]("commit", commit)
     replace = __salt__["config.merge"]("replace", replace)  # this might be a bit risky
@@ -829,7 +830,7 @@ def managed(
 
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = __salt__["config.merge"]("test", test)
+    test = test or __opts__["test"]
     debug = __salt__["config.merge"]("debug", debug)
     commit = __salt__["config.merge"]("commit", commit)
     replace = __salt__["config.merge"]("replace", replace)  # this might be a bit risky
