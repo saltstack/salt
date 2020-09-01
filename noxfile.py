@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 noxfile
 ~~~~~~~
@@ -7,7 +6,6 @@ Nox configuration script
 """
 # pylint: disable=resource-leakage,3rd-party-module-not-gated
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import glob
@@ -65,7 +63,7 @@ RUNTESTS_LOGFILE = os.path.join(
 )
 
 # Prevent Python from writing bytecode
-os.environ[str("PYTHONDONTWRITEBYTECODE")] = str("1")
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 def find_session_runner(session, name, **kwargs):
@@ -261,6 +259,16 @@ def _install_requirements(session, transport, *extra_requirements):
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return
+
+    # setuptools 50.0.0 is broken
+    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
+    install_command = [
+        "--progress-bar=off",
+        "-U",
+        "setuptools!=50.0.0",
+    ]
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)
     install_command = [
@@ -952,7 +960,15 @@ def _pytest(session, coverage, cmd_args):
         cmd_args.append("--lf")
         if coverage is True:
             _run_with_coverage(
-                session, "python", "-m", "coverage", "run", "-m", "pytest", *cmd_args
+                session,
+                "python",
+                "-m",
+                "coverage",
+                "run",
+                "-m",
+                "pytest",
+                "--showlocals",
+                *cmd_args
             )
         else:
             session.run("python", "-m", "pytest", *cmd_args, env=env)
