@@ -282,7 +282,7 @@ def set_weight(name, backend, weight=0, socket=DEFAULT_SOCKET_URL):
         salt '*' haproxy.set_weight web1.example.com www 13
     """
     ha_conn = _get_conn(socket)
-    ha_cmd = haproxy.cmds.getWeight(server=name, backend=backend, weight=weight)
+    ha_cmd = haproxy.cmds.setWeight(server=name, backend=backend, weight=weight)
     ha_conn.sendCmd(ha_cmd)
     return get_weight(name, backend, socket=socket)
 
