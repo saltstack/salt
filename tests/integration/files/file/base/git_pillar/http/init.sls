@@ -59,7 +59,7 @@
 
 install-working-setuptools:
   pip.installed:
-    - name: 'setuptools!=50.0.0'
+    - name: 'setuptools<50.0.0'
     - bin_env: {{ venv_dir }}
     - require:
       - virtualenv: {{ venv_dir }}
