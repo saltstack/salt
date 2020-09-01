@@ -259,6 +259,16 @@ def _install_requirements(session, transport, *extra_requirements):
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
         return
+
+    # setuptools 50.0.0 is broken
+    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
+    install_command = [
+        "--progress-bar=off",
+        "-U",
+        "setuptools!=50.0.0",
+    ]
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)
     install_command = [
