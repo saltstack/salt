@@ -11,7 +11,6 @@ import re
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip
 
 ADMIN_CFG = "/etc/kubernetes/admin.conf"
 
@@ -181,7 +180,7 @@ def token_create(
        A human friendly description of how this token is used
 
     groups
-       List of extra groups that this token will authenticate, defaut
+       List of extra groups that this token will authenticate, default
        to ['system:bootstrappers:kubeadm:default-node-token']
 
     ttl
@@ -190,7 +189,7 @@ def token_create(
        is 24h0m0s
 
     usages
-       Describes the ways in wich this token can be used. The default
+       Describes the ways in which this token can be used. The default
        value is ['signing', 'authentication']
 
     kubeconfig
