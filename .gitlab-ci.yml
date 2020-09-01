@@ -10,10 +10,6 @@ include:
     file: "/lint/pre-commit-run-all.yml"
 
 
-workflow:
-  rules:
-    - if: $CI_MERGE_REQUEST_ID == null
-
 testing:
   stage: test
   script:
@@ -32,7 +28,7 @@ testing:
 #     - saltstack-internal
 #   rules:
 #     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-#       when: never
+#       when: always
 #     - when: on_success
 #   cache:
 #     key: nox-lint-cache
