@@ -16,6 +16,10 @@ workflow:
 
 pre-commit-run-all:
   stage: lint
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - when: on_success
 
 lint-salt-full:
   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
