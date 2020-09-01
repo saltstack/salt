@@ -185,7 +185,7 @@ def _get_pip_requirements_file(session, transport, crypto=None):
     if IS_WINDOWS:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-windows.txt".format(transport),
+                "requirements", "static", pydir, "{}-windows.txt".format(transport)
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -262,26 +262,16 @@ def _install_requirements(session, transport, *extra_requirements):
 
     # setuptools 50.0.0 is broken
     # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = [
-        "--progress-bar=off",
-        "-U",
-        "setuptools!=50.0.0",
-    ]
+    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)
-    install_command = [
-        "--progress-bar=off",
-        "-r",
-        requirements_file,
-    ]
+    install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if extra_requirements:
-        install_command = [
-            "--progress-bar=off",
-        ]
+        install_command = ["--progress-bar=off"]
         install_command += list(extra_requirements)
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
