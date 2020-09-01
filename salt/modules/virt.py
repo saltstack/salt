@@ -767,6 +767,62 @@ def _migrate(dom, dst_uri, **kwargs):
         raise CommandExecutionError(err.get_error_message())
 
 
+def _disk_from_pool(conn, pool, pool_xml, volume_name):
+    """
+    Create a disk definition out of the pool XML and volume name.
+    The aim of this function is to replace the volume-based definition when not handled by libvirt.
+    It returns the disk Jinja context to be used when creating the VM
+    """
+    pool_type = pool_xml.get("type")
+    disk_context = {}
+
+    # handle dir, fs and netfs
+    if pool_type in ["dir", "netfs", "fs"]:
+        disk_context["type"] = "file"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["logical", "disk", "iscsi", "scsi"]:
+        disk_context["type"] = "block"
+        disk_context["format"] = "raw"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["rbd", "gluster", "sheepdog"]:
+        # libvirt can't handle rbd, gluster and sheepdog as volumes
+        disk_context["type"] = "network"
+        disk_context["protocol"] = pool_type
+        # Copy the hosts from the pool definition
+        disk_context["hosts"] = [
+            {"name": host.get("name"), "port": host.get("port")}
+            for host in pool_xml.findall(".//host")
+        ]
+        dir_node = pool_xml.find("./source/dir")
+        # Gluster and RBD need pool/volume name
+        name_node = pool_xml.find("./source/name")
+        if name_node is not None:
+            disk_context["volume"] = "{}/{}".format(name_node.text, volume_name)
+        # Copy the authentication if any for RBD
+        auth_node = pool_xml.find("./source/auth")
+        if auth_node is not None:
+            username = auth_node.get("username")
+            secret_node = auth_node.find("./secret")
+            usage = secret_node.get("usage")
+            if not usage:
+                # Get the usage from the UUID
+                uuid = secret_node.get("uuid")
+                usage = conn.secretLookupByUUIDString(uuid).usageID()
+            disk_context["auth"] = {
+                "type": "ceph",
+                "username": username,
+                "usage": usage,
+            }
+
+    return disk_context
+
+
 def _gen_xml(
     conn,
     name,
@@ -872,41 +928,16 @@ def _gen_xml(
         elif disk.get("pool"):
             disk_context["volume"] = disk["filename"]
             # If we had no source_file, then we want a volume
-            pool_xml = ElementTree.fromstring(
-                conn.storagePoolLookupByName(disk["pool"]).XMLDesc()
-            )
+            pool = conn.storagePoolLookupByName(disk["pool"])
+            pool_xml = ElementTree.fromstring(pool.XMLDesc())
             pool_type = pool_xml.get("type")
-            if pool_type in ["rbd", "gluster", "sheepdog"]:
-                # libvirt can't handle rbd, gluster and sheepdog as volumes
-                disk_context["type"] = "network"
-                disk_context["protocol"] = pool_type
-                # Copy the hosts from the pool definition
-                disk_context["hosts"] = [
-                    {"name": host.get("name"), "port": host.get("port")}
-                    for host in pool_xml.findall(".//host")
-                ]
-                dir_node = pool_xml.find("./source/dir")
-                # Gluster and RBD need pool/volume name
-                name_node = pool_xml.find("./source/name")
-                if name_node is not None:
-                    disk_context["volume"] = "{}/{}".format(
-                        name_node.text, disk_context["volume"]
-                    )
-                # Copy the authentication if any for RBD
-                auth_node = pool_xml.find("./source/auth")
-                if auth_node is not None:
-                    username = auth_node.get("username")
-                    secret_node = auth_node.find("./secret")
-                    usage = secret_node.get("usage")
-                    if not usage:
-                        # Get the usage from the UUID
-                        uuid = secret_node.get("uuid")
-                        usage = conn.secretLookupByUUIDString(uuid).usageID()
-                    disk_context["auth"] = {
-                        "type": "ceph",
-                        "username": username,
-                        "usage": usage,
-                    }
+
+            # TODO For Xen VMs convert all pool types (issue #58333)
+            if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
+                disk_context.update(
+                    _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])
+                )
+
             else:
                 if pool_type in ["disk", "logical"]:
                     # The volume format for these types doesn't match the driver format in the VM
@@ -4261,7 +4292,10 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
+            matcher = re.match(
+                "^(?P<pool>[^/]+)/(?P<volume>.*)$",
+                disks[disk]["file"],
+            )
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
