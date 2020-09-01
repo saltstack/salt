@@ -16,8 +16,6 @@ class NetconfigTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        mock_true = MagicMock(return_value=True)
-
         state_loader_globals = {
             "__env__": "base",
             "__salt__": {"net.replace_pattern": net_mod.replace_pattern},
