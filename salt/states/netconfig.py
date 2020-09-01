@@ -231,7 +231,7 @@ def replace_pattern(
     ret = salt.utils.napalm.default_ret(name)
     # the user can override the flags the equivalent CLI args
     # which have higher precedence
-    test = test = test or __opts__["test"]
+    test = test or __opts__["test"]
     debug = __salt__["config.merge"]("debug", debug)
     commit = __salt__["config.merge"]("commit", commit)
     replace = __salt__["config.merge"]("replace", replace)  # this might be a bit risky
