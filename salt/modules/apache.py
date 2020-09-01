@@ -224,9 +224,12 @@ def vhosts():
                 ret[namevhost]["default"]["conf"] = re.sub(r"\(|\)", "", comps[3])
             if comps[0] == "port":
                 ret[namevhost][comps[3]] = {}
+                ret[namevhost][comps[3]]["aliases"] = []
                 ret[namevhost][comps[3]]["vhost"] = comps[3]
                 ret[namevhost][comps[3]]["conf"] = re.sub(r"\(|\)", "", comps[4])
                 ret[namevhost][comps[3]]["port"] = comps[1]
+            if comps[0] == "alias":
+                ret[namevhost][last_host]["aliases"].append(comps[1])
     return ret
 
 
