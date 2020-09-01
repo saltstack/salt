@@ -62,23 +62,6 @@ try:
 except ImportError:
     HAS_PKG_RESOURCES = False
 
-# Construct the string that goes inbetween the module name and the .pyc extension on
-# Python 3.5 and above.  Example: "some_module.cpython-36.pyc".  We need this when
-# several versions of Python access Salt in the same directory.  Otherwise
-# we get tons of "Bad magic number" messages because Salt under Py 3.8 will blindly
-# try to load modules that were converted to .pyc on Py 3.6.
-if sys.version_info[:2] >= (3, 5):
-    try:
-        import platform
-
-        PYC_PYIMPL = ".{}-".format(platform.python_implementation().lower())
-        PYC_PYIMPL_VER = "{}{}".format(PYC_PYIMPL, sys.version[:3].replace(".", ""))
-    except ImportError:
-        PYC_PYIMPL = ""
-        PYC_PYIMPL_VER = ""
-else:
-    PYC_PYIMPL = ""
-    PYC_PYIMPL_VER = ""
 
 log = logging.getLogger(__name__)
 
@@ -1606,11 +1589,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If we were to load a .pyc for another Py version it's not a big problem
         # but the log will get spammed with "Bad Magic Number" messages that
         # can be very misleading if the user is debugging another problem.
-        if PYC_PYIMPL_VER not in fpath and PYC_PYIMPL in fpath:
-            log.trace(
-                "Trying to load %s on %s, returning False.", fpath, PYC_PYIMPL_VER
+        try:
+            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
+                "-"
             )
-            return False
+            if cache_tag_ver not in fpath and implementation_tag in fpath:
+                log.trace(
+                    "Trying to load %s on %s, returning False.",
+                    fpath,
+                    sys.implementation.cache_tag,
+                )
+                return False
+        except AttributeError:
+            # Most likely Py 2.7 or some other Python version we don't really support
+            pass
+
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
         try:
