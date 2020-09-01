@@ -135,7 +135,8 @@ class IPCServer:
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             salt.ext.tornado.netutil.add_accept_handler(
-                self.sock, self.handle_connection,
+                self.sock,
+                self.handle_connection,
             )
         self._started = True
 
@@ -160,7 +161,9 @@ class IPCServer:
                 @salt.ext.tornado.gen.coroutine
                 def return_message(msg):
                     pack = salt.transport.frame.frame_msg_ipc(
-                        msg, header={"mid": header["mid"]}, raw_body=True,
+                        msg,
+                        header={"mid": header["mid"]},
+                        raw_body=True,
                     )
                     yield stream.write(pack)
 
@@ -207,7 +210,9 @@ class IPCServer:
         log.trace("IPCServer: Handling connection " "to address: %s", address)
         try:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
-                stream = IOStream(connection,)
+                stream = IOStream(
+                    connection,
+                )
             self.io_loop.spawn_callback(self.handle_stream, stream)
         except Exception as exc:  # pylint: disable=broad-except
             log.error("IPC streaming error: %s", exc)
@@ -531,7 +536,8 @@ class IPCMessagePublisher:
 
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             salt.ext.tornado.netutil.add_accept_handler(
-                self.sock, self.handle_connection,
+                self.sock,
+                self.handle_connection,
             )
         self._started = True
 
