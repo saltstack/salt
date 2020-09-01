@@ -1,15 +1,10 @@
 """
     :codeauthor: Gareth J. Greenaway <gareth@saltstack.com>
 """
-# Import Python libs
 
 import salt.modules.napalm_network as net_mod
-
-# Import Salt Libs
 import salt.states.netconfig as netconfig
 import salt.utils.files
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
