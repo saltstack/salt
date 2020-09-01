@@ -1724,7 +1724,7 @@ class VirtualEnv:
             self.venv_dir, python=self._get_real_python()
         )
         # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-        self.install("-U", "setuptools!=50.0.0")
+        self.install("-U", "setuptools<50.0.0")
 
 
 @contextmanager
