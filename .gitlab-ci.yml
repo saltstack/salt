@@ -14,95 +14,99 @@ workflow:
   rules:
     - if: $CI_MERGE_REQUEST_ID == null
 
-pre-commit-run-all:
-  stage: lint
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
-    - when: on_success
-
-lint-salt-full:
-  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-  stage: lint
-  tags:
-    - saltstack-internal
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
-    - when: on_success
-  cache:
-    key: nox-lint-cache
-    paths:
-      - .nox
-  script:
-    - python --version
-    - pip3 install -U nox-py2==2019.6.25
-    - nox --version
-    - nox --install-only -e lint-salt
-    - EC=254
-    - export PYLINT_REPORT=pylint-report-salt-full.log
-    - nox -e lint-salt
-    - EC=$?
-    - exit $EC
-
-lint-tests-full:
-  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-  stage: lint
-  tags:
-    - saltstack-internal
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
-    - when: on_success
-  cache:
-    key: nox-lint-cache
-    paths:
-      - .nox
-  script:
-    - python --version
-    - pip3 install -U nox-py2==2019.6.25
-    - nox --version
-    - nox --install-only -e lint-tests
-    - EC=254
-    - export PYLINT_REPORT=pylint-report-tests-full.log
-    - nox -e lint-tests
-    - EC=$?
-    - exit $EC
-
-docs-build-html:
-  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+testing:
   stage: test
-  tags:
-    - saltstack-internal
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
-    - when: on_success
-  cache:
-    key: nox-docs-cache
-    paths:
-      - .nox
   script:
-    - python --version
-    - pip install -U nox-py2==2019.6.25
-    - nox --version
-    - nox -e 'docs-html(compress=True)'
+    - echo "testing"
 
-docs-build-man-pages:
-  image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
-  stage: test
-  tags:
-    - saltstack-internal
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: never
-    - when: on_success
-  cache:
-    key: nox-docs-cache
-    paths:
-      - .nox
-  script:
-    - python --version
-    - pip install -U nox-py2==2019.6.25
-    - nox --version
-    - nox -e 'docs-man(compress=True, update=False)'
+# pre-commit-run-all: stage: lint
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+#       when: never
+#     - when: on_success
+# 
+# lint-salt-full:
+#   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+#   stage: lint
+#   tags:
+#     - saltstack-internal
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+#       when: never
+#     - when: on_success
+#   cache:
+#     key: nox-lint-cache
+#     paths:
+#       - .nox
+#   script:
+#     - python --version
+#     - pip3 install -U nox-py2==2019.6.25
+#     - nox --version
+#     - nox --install-only -e lint-salt
+#     - EC=254
+#     - export PYLINT_REPORT=pylint-report-salt-full.log
+#     - nox -e lint-salt
+#     - EC=$?
+#     - exit $EC
+# 
+# lint-tests-full:
+#   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+#   stage: lint
+#   tags:
+#     - saltstack-internal
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+#       when: never
+#     - when: on_success
+#   cache:
+#     key: nox-lint-cache
+#     paths:
+#       - .nox
+#   script:
+#     - python --version
+#     - pip3 install -U nox-py2==2019.6.25
+#     - nox --version
+#     - nox --install-only -e lint-tests
+#     - EC=254
+#     - export PYLINT_REPORT=pylint-report-tests-full.log
+#     - nox -e lint-tests
+#     - EC=$?
+#     - exit $EC
+# 
+# docs-build-html:
+#   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+#   stage: test
+#   tags:
+#     - saltstack-internal
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+#       when: never
+#     - when: on_success
+#   cache:
+#     key: nox-docs-cache
+#     paths:
+#       - .nox
+#   script:
+#     - python --version
+#     - pip install -U nox-py2==2019.6.25
+#     - nox --version
+#     - nox -e 'docs-html(compress=True)'
+# 
+# docs-build-man-pages:
+#   image: registry.gitlab.com/saltstack/pop/cicd/containers/ubuntu1804:latest
+#   stage: test
+#   tags:
+#     - saltstack-internal
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "schedule"'
+#       when: never
+#     - when: on_success
+#   cache:
+#     key: nox-docs-cache
+#     paths:
+#       - .nox
+#   script:
+#     - python --version
+#     - pip install -U nox-py2==2019.6.25
+#     - nox --version
+#     - nox -e 'docs-man(compress=True, update=False)'
