@@ -198,7 +198,10 @@ MOCK_MODULES = [
 
 MOCK_MODULES_MAPPING = {
     "cherrypy": {"config": mock_decorator_with_params},
-    "ntsecuritycon": {"STANDARD_RIGHTS_REQUIRED": 0, "SYNCHRONIZE": 0,},
+    "ntsecuritycon": {
+        "STANDARD_RIGHTS_REQUIRED": 0,
+        "SYNCHRONIZE": 0,
+    },
     "psutil": {"total": 0},  # Otherwise it will crash Sphinx
 }
 

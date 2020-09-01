@@ -196,7 +196,8 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, {})
         self.assertInSaltComment(
-            "Target file already exists. Not forcing overwrite.", ret,
+            "Target file already exists. Not forcing overwrite.",
+            ret,
         )
 
     @slowTest
@@ -269,7 +270,8 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         # Verify decrypted data
         with salt.utils.files.flopen(decrypted_file, "rb") as _fp:
             self.assertEqual(
-                b"very big secret", _fp.read(),
+                b"very big secret",
+                _fp.read(),
             )
 
         # Test no changes on repeated runs
@@ -356,7 +358,8 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         # Verify decrypted data
         with salt.utils.files.flopen(decrypted_file, "rb") as _fp:
             self.assertEqual(
-                b"secret data", _fp.read(),
+                b"secret data",
+                _fp.read(),
             )
 
     @slowTest
@@ -419,7 +422,8 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
         # Verify contents of decrypted file
         with salt.utils.files.flopen(decrypted_file, "r") as _fp:
             self.assertEqual(
-                "plaintext data", _fp.read(),
+                "plaintext data",
+                _fp.read(),
             )
 
         # Test no changes on repeated runs
@@ -583,7 +587,9 @@ class GPGTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Verify signed data
         ret = self.run_state(
-            "gpg.data_verified", name=signed_file, gnupghome=self.gnupghome,
+            "gpg.data_verified",
+            name=signed_file,
+            gnupghome=self.gnupghome,
         )
         self.assertSaltTrueReturn(ret)
         self.assertInSaltComment("The signature is verified.", ret)

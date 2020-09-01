@@ -118,7 +118,9 @@ def present(
                     trust_keys.extend(list(set(res["fingerprints"])))
                     for fingerprint in res["fingerprints"]:
                         salt.utils.dictupdate.set_dict_key_value(
-                            ret, "changes:old", {fingerprint: None},
+                            ret,
+                            "changes:old",
+                            {fingerprint: None},
                         )
                         salt.utils.dictupdate.update_dict_key_value(
                             ret,
@@ -140,10 +142,14 @@ def present(
                 trust_keys.append(key)
             else:
                 salt.utils.dictupdate.update_dict_key_value(
-                    ret, "changes:old", {key: None},
+                    ret,
+                    "changes:old",
+                    {key: None},
                 )
                 salt.utils.dictupdate.update_dict_key_value(
-                    ret, "changes:new", {key: {} if trust else "present"},
+                    ret,
+                    "changes:new",
+                    {key: {} if trust else "present"},
                 )
                 if __opts__["test"]:
                     ret["result"] = None
@@ -152,7 +158,10 @@ def present(
                     )
                 else:
                     res = __salt__["gpg.receive_keys"](
-                        keyserver=keyserver, keys=key, user=user, gnupghome=gnupghome,
+                        keyserver=keyserver,
+                        keys=key,
+                        user=user,
+                        gnupghome=gnupghome,
                     )
                     if res["result"]:
                         ret["result"] = True
@@ -439,10 +448,14 @@ def data_encrypted(
             return ret
     # Encryption is go
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:old:{}".format(name), None,
+        ret,
+        "changes:old:{}".format(name),
+        None,
     )
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:new:{}".format(name), "encrypted data",
+        ret,
+        "changes:new:{}".format(name),
+        "encrypted data",
     )
     if __opts__["test"]:
         ret["result"] = None
@@ -563,10 +576,14 @@ def data_decrypted(
     # Just check afterwards if the contents were the same and delete changes.
 
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:old:{}".format(name), None,
+        ret,
+        "changes:old:{}".format(name),
+        None,
     )
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:new:{}".format(name), "decrypted data",
+        ret,
+        "changes:new:{}".format(name),
+        "decrypted data",
     )
 
     target_hash = None
@@ -574,7 +591,9 @@ def data_decrypted(
     if __salt__["file.file_exists"](name):
         target_hash = __salt__["file.get_hash"](name)
         salt.utils.dictupdate.set_dict_key_value(
-            ret, "changes:old:{}".format(name), target_hash,
+            ret,
+            "changes:old:{}".format(name),
+            target_hash,
         )
 
     decrypt_kwargs = salt.utils.data.filter_falsey(
@@ -694,10 +713,14 @@ def data_signed(
         return ret
 
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:old:{}".format(name), None,
+        ret,
+        "changes:old:{}".format(name),
+        None,
     )
     salt.utils.dictupdate.set_dict_key_value(
-        ret, "changes:new:{}".format(name), "signature" if detach else "signed data",
+        ret,
+        "changes:new:{}".format(name),
+        "signature" if detach else "signed data",
     )
 
     sign_kwargs = salt.utils.data.filter_falsey(

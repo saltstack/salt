@@ -373,7 +373,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             self.gpgobject, "delete_keys", MagicMock(return_value="not ok")
         ):
-            res = gpg.delete_key(gnupghome=self.gnupghome, keyid="foo",)
+            res = gpg.delete_key(
+                gnupghome=self.gnupghome,
+                keyid="foo",
+            )
         self.assertEqual(
             res,
             {
@@ -401,9 +404,13 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             gpg, "get_key", return_value=None
         ):
-            res = gpg.delete_key(gnupghome=self.gnupghome, keyid="foo",)
+            res = gpg.delete_key(
+                gnupghome=self.gnupghome,
+                keyid="foo",
+            )
         self.assertEqual(
-            res, {"result": False, "message": "Key not available in keychain."},
+            res,
+            {"result": False, "message": "Key not available in keychain."},
         )
 
     def test_delete_key_fail_secret_key_exists(self):
@@ -425,7 +432,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             gpg, "get_secret_key", return_value=get_key_result
         ):
-            res = gpg.delete_key(gnupghome=self.gnupghome, keyid="foo",)
+            res = gpg.delete_key(
+                gnupghome=self.gnupghome,
+                keyid="foo",
+            )
         self.assertEqual(
             res,
             {
@@ -456,7 +466,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             self.gpgobject, "delete_keys", return_value="nah"
         ):
             res = gpg.delete_key(
-                gnupghome=self.gnupghome, keyid="foo", delete_secret=True,
+                gnupghome=self.gnupghome,
+                keyid="foo",
+                delete_secret=True,
             )
         self.assertEqual(
             res,
@@ -533,7 +545,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test creating a key with passphrase from pillar.
         """
         gen_key_result = MagicMock(
-            spec=gnupg.GenKey, fingerprint="27B96AE67417199205303964F38F92D1A7B9196D",
+            spec=gnupg.GenKey,
+            fingerprint="27B96AE67417199205303964F38F92D1A7B9196D",
         )
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(return_value=self.user_mock)}
@@ -558,7 +571,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test creating a key without passphrase for old version of GPG.
         """
         gen_key_result = MagicMock(
-            spec=gnupg.GenKey, fingerprint="27B96AE67417199205303964F38F92D1A7B9196D",
+            spec=gnupg.GenKey,
+            fingerprint="27B96AE67417199205303964F38F92D1A7B9196D",
         )
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(return_value=self.user_mock)}
@@ -610,7 +624,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 passphrase="",
             )
             # Manual induced failure
-            res = gpg.create_key(gnupghome=self.gnupghome, passphrase="foo",)
+            res = gpg.create_key(
+                gnupghome=self.gnupghome,
+                passphrase="foo",
+            )
         self.assertEqual(
             res, {"result": False, "message": "Unable to generate GPG key pair."}
         )
@@ -888,7 +905,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             # Test with list argument
             res_2 = gpg.export_key(keyids=["randomkey"], gnupghome=self.gnupghome)
         self.assertEqual(
-            res_1, {"result": True, "message": export_key_result},
+            res_1,
+            {"result": True, "message": export_key_result},
         )
         self.assertEqual(res_1, res_2)
 
@@ -917,7 +935,8 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 passphrase="secret",
             )
         self.assertEqual(
-            res, {"result": True, "message": export_key_result},
+            res,
+            {"result": True, "message": export_key_result},
         )
 
     def test_trust_key_happy(self):
@@ -936,10 +955,14 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             gpg.__salt__, {"cmd.run_all": MagicMock(side_effect=cmd_run_result)}
         ):
             res = gpg.trust_key(
-                keyid="anything", trust_level="marginally", gnupghome=self.gnupghome,
+                keyid="anything",
+                trust_level="marginally",
+                gnupghome=self.gnupghome,
             )
             res2 = gpg.trust_key(
-                keyid="anything", trust_level="marginally", gnupghome=self.gnupghome,
+                keyid="anything",
+                trust_level="marginally",
+                gnupghome=self.gnupghome,
             )
         self.assertEqual(
             res, {"result": True, "message": "Setting ownership trust to Marginally."}
@@ -1011,7 +1034,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             gpg.__salt__, {"cmd.run_all": MagicMock(return_value=cmd_run_result)}
         ):
             res = gpg.trust_key(
-                keyid="anything", trust_level="fully", gnupghome=self.gnupghome,
+                keyid="anything",
+                trust_level="fully",
+                gnupghome=self.gnupghome,
             )
         self.assertEqual(res, {"result": False, "message": "foobar!"})
 
@@ -1029,7 +1054,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
             self.gpgobject, "trust_keys", return_value=trust_keys_result
         ):
             res = gpg.trust_key(
-                keyid="anything", trust_level="fully", gnupghome=self.gnupghome,
+                keyid="anything",
+                trust_level="fully",
+                gnupghome=self.gnupghome,
             )
         self.assertEqual(res, {"result": False, "message": "because of reasons"})
 
@@ -1038,7 +1065,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test signing a message. Happy paths.
         """
         signed_data = MagicMock(
-            spec=gnupg.Sign, status="signature created", data="Signed X",
+            spec=gnupg.Sign,
+            status="signature created",
+            data="Signed X",
         )
         outputfile = os.path.join(RUNTIME_VARS.TMP, "foobar")
         m_open = mock_open()
@@ -1092,7 +1121,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         """
         inputfile = os.path.join(RUNTIME_VARS.TMP, "foobar")
         signed_data = MagicMock(
-            spec=gnupg.Sign, status="signature created", data="Signed X",
+            spec=gnupg.Sign,
+            status="signature created",
+            data="Signed X",
         )
         m_open = mock_open(read_data="Data to sign")
         with patch.object(
@@ -1117,7 +1148,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test signing a message, pretending we have gnupg < 0.3.7
         """
         signed_data = MagicMock(
-            spec=gnupg.Sign, status="signature created", data="Signed X",
+            spec=gnupg.Sign,
+            status="signature created",
+            data="Signed X",
         )
         outputfile = os.path.join(RUNTIME_VARS.TMP, "foobar")
         m_open = mock_open()
@@ -1143,7 +1176,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         Test signing a message, returning bare result
         """
         signed_data = MagicMock(
-            spec=gnupg.Sign, status="signature created", data="Signed X",
+            spec=gnupg.Sign,
+            status="signature created",
+            data="Signed X",
         )
         outputfile = os.path.join(RUNTIME_VARS.TMP, "foobar")
         m_open = mock_open()
@@ -1573,7 +1608,9 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                 filename="foobar",
             )
             res = gpg.encrypt(
-                passphrase="secret", text="foo", gnupghome=self.gnupghome,
+                passphrase="secret",
+                text="foo",
+                gnupghome=self.gnupghome,
             )
         self.assertEqual(
             res,
@@ -1589,7 +1626,10 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
         """
         m_open = mock_open(read_data="encrypted data")
         decrypted_data = MagicMock(
-            spec=gnupg.Crypt, ok=True, data=b"secret data", status="decryption ok",
+            spec=gnupg.Crypt,
+            ok=True,
+            data=b"secret data",
+            status="decryption ok",
         )
         with patch.object(
             gpg, "_create_gpg", return_value=self.gpgobject

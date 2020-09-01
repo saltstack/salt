@@ -794,13 +794,17 @@ class GpgTestCase(ModuleCase):
         """
         # Verify the key exists in the keychain first
         res = self.run_function(
-            "gpg.get_key", keyid="857C86FCF8A3FB11", gnupghome=self.gnupghome,
+            "gpg.get_key",
+            keyid="857C86FCF8A3FB11",
+            gnupghome=self.gnupghome,
         )
         self.assertEqual(res["fingerprint"], "1B52281BF159856CA76A04F5857C86FCF8A3FB11")
 
         # Test that deleting a private key before deleting a public key fails.
         res = self.run_function(
-            "gpg.delete_key", keyid="857C86FCF8A3FB11", gnupghome=self.gnupghome,
+            "gpg.delete_key",
+            keyid="857C86FCF8A3FB11",
+            gnupghome=self.gnupghome,
         )
         self.assertFalse(res["result"])
         self.assertEqual(
@@ -843,7 +847,8 @@ class GpgTestCase(ModuleCase):
 
     def test_get_fingerprint_from_data(self):
         res = self.run_function(
-            "gpg.get_fingerprint_from_data", keydata=self.secret_key,
+            "gpg.get_fingerprint_from_data",
+            keydata=self.secret_key,
         )
         if salt.utils.versions.version_cmp(GPG_VERSION, "2.1") >= 0:
             self.assertEqual(res, "1B52281BF159856CA76A04F5857C86FCF8A3FB11")
