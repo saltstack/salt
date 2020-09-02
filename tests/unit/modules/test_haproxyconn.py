@@ -57,6 +57,15 @@ class Mockcmds:
         self.weight = weight
         return "server weight"
 
+    def setWeight(self, server, backend, weight=0):
+        """
+        Mock of setWeight method
+        """
+        self.backend = backend
+        self.server = server
+        self.weight = weight
+        return "server weight"
+
     @staticmethod
     def showFrontends():
         """
