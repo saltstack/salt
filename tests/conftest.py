@@ -17,6 +17,7 @@ import pprint
 import re
 import sys
 from functools import partial, wraps
+from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
@@ -41,6 +42,7 @@ from tests.support.saltfactories_compat import LogServer
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
+PYTESTS_DIR = TESTS_DIR / "pytests"
 CODE_DIR = TESTS_DIR.parent
 
 # Change to code checkout directory
@@ -328,6 +330,28 @@ def pytest_report_header():
     return "max open files; soft: {}; hard: {}".format(soft, hard)
 
 
+def pytest_itemcollected(item):
+    """We just collected a test item."""
+    try:
+        pathlib.Path(item.fspath.strpath).resolve().relative_to(PYTESTS_DIR)
+        # Test is under tests/pytests
+        if item.cls and issubclass(item.cls, TestCase):
+            pytest.fail(
+                "The tests under {0!r} MUST NOT use unittest's TestCase class or a subclass of it. "
+                "Please move {1!r} outside of {0!r}".format(
+                    str(PYTESTS_DIR.relative_to(CODE_DIR)), item.nodeid
+                )
+            )
+    except ValueError:
+        # Test is not under tests/pytests
+        if not item.cls or (item.cls and not issubclass(item.cls, TestCase)):
+            pytest.fail(
+                "The test {!r} appears to be written for pytest but it's not under {!r}. Please move it there.".format(
+                    item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
+                )
+            )
+
+
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_collection_modifyitems(config, items):
     """
@@ -549,7 +573,7 @@ def pytest_runtest_setup(item):
     if salt.utils.platform.is_windows():
         unit_tests_paths = (
             str(TESTS_DIR / "unit"),
-            str(TESTS_DIR / "pytests" / "unit"),
+            str(PYTESTS_DIR / "unit"),
         )
         if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
             # Unit tests are whitelisted on windows by default, so, we're only
@@ -657,10 +681,10 @@ def from_filenames_collection_modifyitems(config, items):
         (TESTS_DIR / "integration").relative_to(CODE_DIR),
         (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
         (TESTS_DIR / "unit").relative_to(CODE_DIR),
-        (TESTS_DIR / "pytests" / "e2e").relative_to(CODE_DIR),
-        (TESTS_DIR / "pytests" / "functional").relative_to(CODE_DIR),
-        (TESTS_DIR / "pytests" / "integration").relative_to(CODE_DIR),
-        (TESTS_DIR / "pytests" / "unit").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "e2e").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "functional").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "integration").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "unit").relative_to(CODE_DIR),
     )
 
     test_module_paths = set()
