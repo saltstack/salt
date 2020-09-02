@@ -17,6 +17,7 @@ import pprint
 import re
 import sys
 from functools import partial, wraps
+from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
@@ -31,14 +32,16 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
 import saltfactories.utils.compat
-from _pytest.mark.evaluate import MarkEvaluator
 from salt.serializers import yaml
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
+from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.saltfactories_compat import LogServer
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
+PYTESTS_DIR = TESTS_DIR / "pytests"
 CODE_DIR = TESTS_DIR.parent
 
 # Change to code checkout directory
@@ -235,6 +238,33 @@ def pytest_configure(config):
     # "Flag" the slotTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
+    # If PyTest has no logging configured, default to ERROR level
+    levels = [logging.ERROR]
+    logging_plugin = config.pluginmanager.get_plugin("logging-plugin")
+    try:
+        level = logging_plugin.log_cli_handler.level
+        if level is not None:
+            levels.append(level)
+    except AttributeError:
+        # PyTest CLI logging not configured
+        pass
+    try:
+        level = logging_plugin.log_file_level
+        if level is not None:
+            levels.append(level)
+    except AttributeError:
+        # PyTest Log File logging not configured
+        pass
+
+    if logging.NOTSET in levels:
+        # We don't want the NOTSET level on the levels
+        levels.pop(levels.index(logging.NOTSET))
+
+    log_level = logging.getLevelName(min(levels))
+
+    log_server = LogServer(log_level=log_level)
+    config.pluginmanager.register(log_server, "salt-saltfactories-log-server")
+
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
@@ -299,6 +329,28 @@ def pytest_report_header():
     return "max open files; soft: {}; hard: {}".format(soft, hard)
 
 
+def pytest_itemcollected(item):
+    """We just collected a test item."""
+    try:
+        pathlib.Path(item.fspath.strpath).resolve().relative_to(PYTESTS_DIR)
+        # Test is under tests/pytests
+        if item.cls and issubclass(item.cls, TestCase):
+            pytest.fail(
+                "The tests under {0!r} MUST NOT use unittest's TestCase class or a subclass of it. "
+                "Please move {1!r} outside of {0!r}".format(
+                    str(PYTESTS_DIR.relative_to(CODE_DIR)), item.nodeid
+                )
+            )
+    except ValueError:
+        # Test is not under tests/pytests
+        if not item.cls or (item.cls and not issubclass(item.cls, TestCase)):
+            pytest.fail(
+                "The test {!r} appears to be written for pytest but it's not under {!r}. Please move it there.".format(
+                    item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
+                )
+            )
+
+
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_collection_modifyitems(config, items):
     """
@@ -320,13 +372,8 @@ def pytest_collection_modifyitems(config, items):
             if fixture not in item._fixtureinfo.name2fixturedefs:
                 continue
             for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope == "function":
+                if fixturedef.scope != "package":
                     continue
-                try:
-                    node_ids = fixturedef.node_ids
-                except AttributeError:
-                    node_ids = fixturedef.node_ids = set()
-                node_ids.add(item.nodeid)
                 try:
                     fixturedef.finish.__wrapped__
                 except AttributeError:
@@ -334,25 +381,40 @@ def pytest_collection_modifyitems(config, items):
 
                     def wrapper(func, fixturedef):
                         @wraps(func)
-                        def wrapped(self, request):
+                        def wrapped(self, request, nextitem=False):
                             try:
                                 return self._finished
                             except AttributeError:
-                                if self.node_ids:
-                                    if (
-                                        not request.session.shouldfail
-                                        and not request.session.shouldstop
-                                    ):
-                                        log.debug(
-                                            "%s is still going to be used, not terminating it. "
-                                            "Still in use on:\n%s",
-                                            self,
-                                            pprint.pformat(list(self.node_ids)),
-                                        )
-                                        return
+                                if nextitem:
+                                    fpath = pathlib.Path(self.baseid).resolve()
+                                    tpath = pathlib.Path(
+                                        nextitem.fspath.strpath
+                                    ).resolve()
+                                    try:
+                                        tpath.relative_to(fpath)
+                                        # The test module is within the same package that the fixture is
+                                        if (
+                                            not request.session.shouldfail
+                                            and not request.session.shouldstop
+                                        ):
+                                            log.debug(
+                                                "The next test item is still under the fixture package path. "
+                                                "Not terminating %s",
+                                                self,
+                                            )
+                                            return
+                                    except ValueError:
+                                        pass
                                 log.debug("Finish called on %s", self)
                                 try:
                                     return func(request)
+                                except BaseException as exc:  # pylint: disable=broad-except
+                                    pytest.fail(
+                                        "Failed to run finish() on {}: {}".format(
+                                            fixturedef, exc
+                                        ),
+                                        pytrace=True,
+                                    )
                                 finally:
                                     self._finished = True
 
@@ -389,7 +451,7 @@ def pytest_runtest_protocol(item, nextitem):
         if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
         for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope == "function":
+            if fixturedef.scope != "package":
                 continue
             used_fixture_defs.append(fixturedef)
     try:
@@ -397,29 +459,32 @@ def pytest_runtest_protocol(item, nextitem):
         yield
     finally:
         for fixturedef in used_fixture_defs:
-            if item.nodeid in fixturedef.node_ids:
-                fixturedef.node_ids.remove(item.nodeid)
-            if not fixturedef.node_ids:
-                # This fixture is not used in any more test functions
-                fixturedef.finish(request)
+            fixturedef.finish(request, nextitem=nextitem)
     del request
     del used_fixture_defs
 
 
-def pytest_runtest_teardown(item, nextitem):
-    """
-    called after ``pytest_runtest_call``.
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionstart(session):
+    log_server = session.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
+    log_server.start()
 
-    :arg nextitem: the scheduled-to-be-next test item (None if no further
-                   test item is scheduled).  This argument can be used to
-                   perform exact teardowns, i.e. calling just enough finalizers
-                   so that nextitem only needs to call setup-functions.
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session):
+    log_server = session.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
+    log_server.stop()
+
+
+@pytest.fixture(scope="session")
+def log_server():
     """
-    # PyTest doesn't reset the capturing log handler when done with it.
-    # Reset it to free used memory and python objects
-    # We currently have PyTest's log_print setting set to false, if it was
-    # set to true, the call bellow would make PyTest not print any logs at all.
-    item.catch_log_handler.reset()
+    Just overriding the fixture
+    """
 
 
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
@@ -431,7 +496,7 @@ def pytest_runtest_setup(item):
     """
     Fixtures injection based on markers or test skips based on CLI arguments
     """
-    integration_utils_tests_path = str(CODE_DIR / "tests" / "integration" / "utils")
+    integration_utils_tests_path = str(TESTS_DIR / "integration" / "utils")
     if (
         str(item.fspath).startswith(integration_utils_tests_path)
         and PRE_PYTEST_SKIP_OR_NOT is True
@@ -495,7 +560,11 @@ def pytest_runtest_setup(item):
             )
 
     if salt.utils.platform.is_windows():
-        if not item.fspath.fnmatch(str(CODE_DIR / "tests" / "unit" / "*")):
+        unit_tests_paths = (
+            str(TESTS_DIR / "unit"),
+            str(PYTESTS_DIR / "unit"),
+        )
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -561,15 +630,13 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
-def log_server_host(request):
-    return "0.0.0.0"
-
-
-@pytest.fixture(scope="session")
-def salt_factories_config(log_server_host, log_server_port, log_server_level):
+def salt_factories_config(request):
     """
     Return a dictionary with the keyworkd arguments for SaltFactoriesManager
     """
+    log_server = request.config.pluginmanager.get_plugin(
+        "salt-saltfactories-log-server"
+    )
     return {
         "executable": sys.executable,
         "code_dir": str(CODE_DIR),
@@ -578,9 +645,9 @@ def salt_factories_config(log_server_host, log_server_port, log_server_level):
         "start_timeout": 120
         if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
         else 60,
-        "log_server_host": log_server_host,
-        "log_server_port": log_server_port,
-        "log_server_level": log_server_level,
+        "log_server_host": log_server.log_host,
+        "log_server_port": log_server.log_port,
+        "log_server_level": log_server.log_level,
     }
 
 
@@ -600,13 +667,13 @@ def from_filenames_collection_modifyitems(config, items):
         return
 
     test_categories_paths = (
-        (CODE_DIR / "tests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "multimaster").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "unit").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "e2e").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "functional").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "integration").relative_to(CODE_DIR),
-        (CODE_DIR / "tests" / "pytests" / "unit").relative_to(CODE_DIR),
+        (TESTS_DIR / "integration").relative_to(CODE_DIR),
+        (TESTS_DIR / "multimaster").relative_to(CODE_DIR),
+        (TESTS_DIR / "unit").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "e2e").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "functional").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "integration").relative_to(CODE_DIR),
+        (PYTESTS_DIR / "unit").relative_to(CODE_DIR),
     )
 
     test_module_paths = set()
@@ -624,9 +691,7 @@ def from_filenames_collection_modifyitems(config, items):
             continue
         from_filenames_listing.add(path)
 
-    filename_map = yaml.deserialize(
-        (CODE_DIR / "tests" / "filename_map.yml").read_text()
-    )
+    filename_map = yaml.deserialize((TESTS_DIR / "filename_map.yml").read_text())
     # Let's add the match all rule
     for rule, matches in filename_map.items():
         if rule == "*":
@@ -699,23 +764,6 @@ def from_filenames_collection_modifyitems(config, items):
 
 
 # <---- From Filenames Test Selection --------------------------------------------------------------------------------
-
-# ----- Custom Grains Mark Evaluator -------------------------------------------------------------------------------->
-class GrainsMarkEvaluator(MarkEvaluator):
-    _cached_grains = None
-
-    def _getglobals(self):
-        item_globals = super()._getglobals()
-        if GrainsMarkEvaluator._cached_grains is None:
-            sminion = create_sminion()
-            GrainsMarkEvaluator._cached_grains = sminion.opts["grains"].copy()
-        item_globals["grains"] = GrainsMarkEvaluator._cached_grains.copy()
-        return item_globals
-
-
-# Patch PyTest's skipping MarkEvaluator to use our GrainsMarkEvaluator
-_pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
-# <---- Custom Grains Mark Evaluator ---------------------------------------------------------------------------------
 
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
