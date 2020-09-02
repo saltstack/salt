@@ -15,10 +15,9 @@ from salt.cli.support.console import IndentOutput
 from salt.utils.color import get_colors
 from salt.utils.stringutils import to_bytes
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
 
 
-class SaltSupportIndentOutputTestCase(TestCase):
+class SaltSupportIndentOutputTest:
     """
     Unit Tests for the salt-support indent output.
     """
@@ -100,7 +99,7 @@ class SaltSupportIndentOutputTestCase(TestCase):
             step += 5
 
 
-class SaltSupportCollectorTestCase(TestCase):
+class SaltSupportCollectorTest:
     """
     Collector tests.
     """
@@ -230,7 +229,7 @@ class SaltSupportCollectorTestCase(TestCase):
             self.collector.close()
 
 
-class SaltSupportRunnerTestCase(TestCase):
+class SaltSupportRunnerTest:
     """
     Test runner class.
     """
@@ -464,7 +463,7 @@ class SaltSupportRunnerTestCase(TestCase):
             ] == "Overwriting existing archive: {}".format(arch)
 
 
-class ProfileIntegrityTestCase(TestCase):
+class ProfileIntegrityTest:
     """
     Default profile integrity
     """
