@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 import salt.utils.path
 import salt.utils.platform
@@ -53,7 +49,7 @@ class ServiceModuleTest(ModuleCase):
             salt.utils.path.which(cmd_name) is None
             and not salt.utils.platform.is_windows()
         ):
-            self.skipTest("{0} is not installed".format(cmd_name))
+            self.skipTest("{} is not installed".format(cmd_name))
 
     def tearDown(self):
         post_srv_status = self.run_function("service.status", [self.service_name])
@@ -173,7 +169,10 @@ class ServiceModuleTest(ModuleCase):
                 self.assertTrue("error" in disable.lower())
 
         if salt.utils.platform.is_darwin():
-            self.assertFalse(self.run_function("service.disabled", [srv_name]))
+            self.assertEqual(
+                self.run_function("service.disabled", [srv_name]),
+                "ERROR: Service not found: {}".format(srv_name),
+            )
         else:
             self.assertNotIn(srv_name, self.run_function("service.get_disabled"))
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Advanced Packaging Tool module 'module.aptpkg'
     :platform: Linux
@@ -6,20 +5,12 @@
     versionadded:: 2017.7.0
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import textwrap
 
 import salt.modules.aptpkg as aptpkg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
@@ -153,8 +144,8 @@ Reading state information...
 0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
 """
 
-UNINSTALL = {"tmux": {"new": six.text_type(), "old": "1.8-5"}}
-INSTALL = {"tmux": {"new": "1.8-5", "old": six.text_type()}}
+UNINSTALL = {"tmux": {"new": "", "old": "1.8-5"}}
+INSTALL = {"tmux": {"new": "1.8-5", "old": ""}}
 
 
 def _get_uri(repo):
@@ -167,7 +158,7 @@ def _get_uri(repo):
             return val
 
 
-class MockSourceEntry(object):
+class MockSourceEntry:
     def __init__(self, uri, source_type, line, invalid, file=None):
         self.uri = uri
         self.type = source_type
@@ -181,7 +172,7 @@ class MockSourceEntry(object):
         return line.split()
 
 
-class MockSourceList(object):
+class MockSourceList:
     def __init__(self):
         self.list = []
 
@@ -870,8 +861,8 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
                     username="Darth Vader",
                 )  # pylint: disable=W0106
 
-                # We should sleep 4 times
-                self.assertEqual(sleep_mock.call_count, 4)
+                # We should have sleept at least 4 times
+                assert sleep_mock.call_count >= 4
 
                 # We should attempt to call the cmd 5 times
                 self.assertEqual(cmd_mock.call_count, 5)
