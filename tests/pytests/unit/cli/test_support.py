@@ -9,7 +9,7 @@ import pytest
 import salt.cli.support.collector
 import salt.exceptions
 import salt.utils.files
-import yaml
+import salt.utils.yamlloader
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 from salt.cli.support.console import IndentOutput
 from salt.utils.color import get_colors
@@ -17,27 +17,22 @@ from salt.utils.stringutils import to_bytes
 from tests.support.mock import MagicMock, patch
 
 
-class SaltSupportIndentOutputTest:
+class TestSaltSupportIndentOutput:
     """
     Unit Tests for the salt-support indent output.
     """
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def init(self):
         """
         Setup test
         :return:
         """
-
         self.message = "Stubborn processes on dumb terminal"
         self.device = MagicMock()
         self.iout = IndentOutput(device=self.device)
         self.colors = get_colors()
-
-    def tearDown(self):
-        """
-        Remove instances after test run
-        :return:
-        """
+        yield
         del self.message
         del self.device
         del self.iout
@@ -99,12 +94,13 @@ class SaltSupportIndentOutputTest:
             step += 5
 
 
-class SaltSupportCollectorTest:
+class TestSaltSupportCollector:
     """
     Collector tests.
     """
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def init(self):
         """
         Setup the test case
         :return:
@@ -112,12 +108,7 @@ class SaltSupportCollectorTest:
         self.archive_path = "/highway/to/hell"
         self.output_device = MagicMock()
         self.collector = SupportDataCollector(self.archive_path, self.output_device)
-
-    def tearDown(self):
-        """
-        Tear down the test case elements
-        :return:
-        """
+        yield
         del self.collector
         del self.archive_path
         del self.output_device
@@ -229,12 +220,13 @@ class SaltSupportCollectorTest:
             self.collector.close()
 
 
-class SaltSupportRunnerTest:
+class TestSaltSupportRunner:
     """
     Test runner class.
     """
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def init(self):
         """
         Set up test suite.
         :return:
@@ -245,13 +237,7 @@ class SaltSupportRunnerTest:
         self.runner.collector = SupportDataCollector(
             self.archive_path, self.output_device
         )
-
-    def tearDown(self):
-        """
-        Tear down.
-
-        :return:
-        """
+        yield
         del self.archive_path
         del self.output_device
         del self.runner
@@ -463,12 +449,13 @@ class SaltSupportRunnerTest:
             ] == "Overwriting existing archive: {}".format(arch)
 
 
-class ProfileIntegrityTest:
+class TestProfileIntegrity:
     """
     Default profile integrity
     """
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def init(self):
         """
         Set up test suite.
 
@@ -480,13 +467,7 @@ class ProfileIntegrityTest:
         )
         for profile in os.listdir(profiles):
             self.profiles[profile.split(".")[0]] = os.path.join(profiles, profile)
-
-    def tearDown(self):
-        """
-        Tear down test suite.
-
-        :return:
-        """
+        yield
         del self.profiles
 
     def _render_template_to_yaml(self, name, *args, **kwargs):
@@ -496,7 +477,7 @@ class ProfileIntegrityTest:
         """
         with salt.utils.files.fopen(self.profiles[name]) as t_fh:
             template = t_fh.read()
-        return yaml.load(
+        return salt.utils.yamlloader.load(
             jinja2.Environment().from_string(template).render(*args, **kwargs)
         )
 
@@ -509,7 +490,7 @@ class ProfileIntegrityTest:
         for t_name in ["default", "jobs-active", "jobs-last", "network", "postgres"]:
             with salt.utils.files.fopen(self.profiles[t_name]) as ref:
                 try:
-                    yaml.load(ref)
+                    salt.utils.yamlloader.load(ref)
                     parsed = True
                 except Exception:  # pylint: disable=broad-except
                     parsed = False
