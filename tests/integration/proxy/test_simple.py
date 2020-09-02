@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
 
 
 class ProxyMinionSimpleTestCase(ModuleCase):
@@ -77,12 +76,14 @@ class ProxyMinionSimpleTestCase(ModuleCase):
         self.assertEqual(ret["kernel"], "proxy")
         self.assertEqual(ret["kernelrelease"], "proxy")
 
+    @pytest.mark.skip_on_darwin(reason=PRE_PYTEST_SKIP_REASON)
     def test_state_apply(self):
         ret = self.run_function("state.apply", ["core"], minion_tgt="proxytest")
         for key, value in ret.items():
             self.assertTrue(value["result"])
 
     @slowTest
+    @pytest.mark.skip_on_darwin(reason=PRE_PYTEST_SKIP_REASON)
     def test_state_highstate(self):
         ret = self.run_function("state.highstate", minion_tgt="proxytest")
         for key, value in ret.items():
