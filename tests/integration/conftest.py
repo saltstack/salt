@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.integration.conftest
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,12 +6,10 @@
 """
 # pylint: disable=unused-argument,redefined-outer-name
 
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
 import pytest
-from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 
 log = logging.getLogger(__name__)
 
@@ -33,12 +30,12 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="package")
-def salt_master(request, salt_factories):
+def salt_master(request, salt_factories, salt_master_config):
     return salt_factories.spawn_master(request, "master")
 
 
 @pytest.fixture(scope="package")
-def salt_minion(request, salt_factories, salt_master):
+def salt_minion(request, salt_factories, salt_master, salt_minion_config):
     proc = salt_factories.spawn_minion(request, "minion", master_id="master")
     # Sync All
     salt_call_cli = salt_factories.get_salt_call_cli("minion")
@@ -48,7 +45,7 @@ def salt_minion(request, salt_factories, salt_master):
 
 
 @pytest.fixture(scope="package")
-def salt_sub_minion(request, salt_factories, salt_master):
+def salt_sub_minion(request, salt_factories, salt_master, salt_sub_minion_config):
     proc = salt_factories.spawn_minion(request, "sub_minion", master_id="master")
     # Sync All
     salt_call_cli = salt_factories.get_salt_call_cli("sub_minion")

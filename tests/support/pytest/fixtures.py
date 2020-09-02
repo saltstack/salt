@@ -212,7 +212,7 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
         {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
     ]
 
-    config_overrides = {"interface": "0.0.0.0"}
+    config_overrides = {}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
