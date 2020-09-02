@@ -17,18 +17,11 @@ Dependencies
 .. versionadded:: 2017.7.0
 """
 
-# Import Salt libs
+import logging
 
-try:
-    import logging
-except ImportError:
-    HAS_LOGGING = False
-else:
-    HAS_LOGGING = True
-    log = logging.getLogger(__name__)
-
-# import Salt libs
 import salt.utils.napalm
+
+log = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # state properties
