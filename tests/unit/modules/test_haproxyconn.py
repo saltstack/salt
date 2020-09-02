@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
@@ -14,7 +12,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 
-class Mockcmds(object):
+class Mockcmds:
     """
     Mock of cmds
     """
@@ -74,7 +72,7 @@ class Mockcmds(object):
         return "backend-alpha\n" "backend-beta\n" "backend-gamma"
 
 
-class Mockhaproxy(object):
+class Mockhaproxy:
     """
     Mock of haproxy
     """
@@ -83,7 +81,7 @@ class Mockhaproxy(object):
         self.cmds = Mockcmds()
 
 
-class MockHaConn(object):
+class MockHaConn:
     """
     Mock of HaConn
     """
@@ -146,7 +144,7 @@ class HaproxyConnTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test setting the weight of a given server
         """
-        self.assertTrue(haproxyconn.set_weight("db1.salt.com", "mysql", weight=11))
+        self.assertTrue(haproxyconn.set_weight("db1.salt.com", "mysql", 11))
 
     # 'show_frontends' function tests: 1
 
