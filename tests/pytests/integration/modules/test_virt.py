@@ -73,6 +73,7 @@ def virt_minion_0(
         "root_dir": str(root_dir),
         "id": virt_minion_0_id,
         "open_mode": True,
+        "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
     config = SaltVirtMinionContainerFactory.configure(
@@ -122,6 +123,7 @@ def virt_minion_1(
         "root_dir": str(root_dir),
         "id": virt_minion_1_id,
         "open_mode": True,
+        "transport": salt_master.config["transport"],
     }
     config_overrides = {"user": "root"}
     config = SaltVirtMinionContainerFactory.configure(
