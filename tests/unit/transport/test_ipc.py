@@ -134,7 +134,7 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         evt = threading.Event()
 
         def close_server():
-            if evt.wait(1):
+            if evt.wait(0.001):
                 return
             client1.close()
             self.stop()
