@@ -10,22 +10,21 @@ dependencies of the ``sysutils/salt`` port:
 
 .. code-block:: text
 
-   devel/py-futures
-   devel/py-progressbar
-   net/py-msgpack
-   net/py-zmq
-   security/py-crypto
-   security/py-M2Crypto
-   textproc/py-MarkupSafe
-   textproc/py-yaml
-   www/py-jinja2
-   www/py-requests
-   www/py-tornado
+   devel/py3-progressbar
+   net/py3-msgpack
+   net/py3-zmq
+   security/py3-Cryptodome
+   security/py3-M2Crypto
+   sysutils/py3-distro
+   textproc/py3-MarkupSafe
+   textproc/py3-yaml
+   www/py3-jinja2
+   www/py3-requests
 
 Installation
 ============
 
-To install Salt from the OpenBSD pkg repo, use the command:
+To install Salt from the OpenBSD package repo, use the command:
 
 .. code-block:: bash
 
