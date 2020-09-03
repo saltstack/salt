@@ -1,6 +1,3 @@
-# encoding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import time
@@ -10,21 +7,16 @@ import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
 from tests.support.case import SSHCase
-from tests.support.helpers import (
-    SaveRequestsPostHandler,
-    Webserver,
-    requires_sshd_server,
-    slowTest,
-)
+from tests.support.helpers import SaveRequestsPostHandler, Webserver, slowTest
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import patch
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("salt_sub_minion")
+@pytest.mark.usefixtures("salt_master", "salt_sub_minion")
 class NetapiClientTest(TestCase):
     eauth_creds = {
         "username": "saltdev_auto",
@@ -36,9 +28,7 @@ class NetapiClientTest(TestCase):
         """
         Set up a NetapiClient instance
         """
-        opts = salt.config.client_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
-        )
+        opts = AdaptedConfigurationTestCaseMixin.get_config("client_config").copy()
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
@@ -118,9 +108,7 @@ class NetapiClientTest(TestCase):
 
         self.maxDiff = None
         self.assertTrue(
-            set(["master.pem", "master.pub"]).issubset(
-                set(ret["data"]["return"]["local"])
-            )
+            {"master.pem", "master.pub"}.issubset(set(ret["data"]["return"]["local"]))
         )
 
     @slowTest
@@ -166,7 +154,7 @@ class NetapiClientTest(TestCase):
             ret = self.netapi.run(low)
 
 
-@requires_sshd_server
+@pytest.mark.requires_sshd_server
 class NetapiSSHClientTest(SSHCase):
     eauth_creds = {
         "username": "saltdev_auto",
@@ -178,10 +166,10 @@ class NetapiSSHClientTest(SSHCase):
         """
         Set up a NetapiClient instance
         """
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, "master"))
+        opts = AdaptedConfigurationTestCaseMixin.get_config("client_config").copy()
         self.netapi = salt.netapi.NetapiClient(opts)
 
-        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
         self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
 
         # Initialize salt-ssh
@@ -234,7 +222,7 @@ class NetapiSSHClientTest(SSHCase):
     @slowTest
     def test_ssh_unauthenticated_raw_shell_curl(self):
 
-        fun = "-o ProxyCommand curl {0}".format(self.post_web_root)
+        fun = "-o ProxyCommand curl {}".format(self.post_web_root)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         ret = None
@@ -247,8 +235,8 @@ class NetapiSSHClientTest(SSHCase):
     @slowTest
     def test_ssh_unauthenticated_raw_shell_touch(self):
 
-        badfile = os.path.join(TMP, "badfile.txt")
-        fun = "-o ProxyCommand touch {0}".format(badfile)
+        badfile = os.path.join(RUNTIME_VARS.TMP, "badfile.txt")
+        fun = "-o ProxyCommand touch {}".format(badfile)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         ret = None
@@ -261,8 +249,8 @@ class NetapiSSHClientTest(SSHCase):
     @slowTest
     def test_ssh_authenticated_raw_shell_disabled(self):
 
-        badfile = os.path.join(TMP, "badfile.txt")
-        fun = "-o ProxyCommand touch {0}".format(badfile)
+        badfile = os.path.join(RUNTIME_VARS.TMP, "badfile.txt")
+        fun = "-o ProxyCommand touch {}".format(badfile)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         low.update(self.eauth_creds)

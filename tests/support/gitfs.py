@@ -9,7 +9,7 @@ import shutil
 import tempfile
 import textwrap
 
-import attr  # pylint: disable=3rd-party-module-not-gated
+import attr
 import pytest
 import salt.utils.files
 import salt.utils.path
@@ -18,14 +18,14 @@ import salt.utils.yaml
 from salt.fileserver import gitfs
 from salt.pillar import git_pillar
 from salt.utils.immutabletypes import freeze
+from saltfactories.factories.base import DaemonFactory
+from saltfactories.factories.daemons.sshd import SshdDaemonFactory as _SshdDaemonFactory
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
 from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.saltfactories_compat import DaemonFactory
-from tests.support.saltfactories_compat import SshdDaemonFactory as _SshdDaemonFactory
 
 log = logging.getLogger(__name__)
 
@@ -265,15 +265,11 @@ class NginxDaemon(DaemonFactory):
 
 
 @pytest.fixture(scope="class")
-def ssh_pillar_tests_prep(request, salt_factories, salt_master, salt_minion):
+def ssh_pillar_tests_prep(request, salt_master, salt_minion):
     """
     Stand up an SSHD server to serve up git repos for tests.
     """
-    try:
-        salt_call_cli = salt_minion.get_salt_call_cli()
-        raise RuntimeError("s0undt3ch, it's time to cleanup this spaghetti code!")
-    except AttributeError:
-        salt_call_cli = salt_factories.get_salt_call_cli(salt_minion.config["id"])
+    salt_call_cli = salt_minion.get_salt_call_cli()
 
     sshd_bin = salt.utils.path.which("sshd")
     sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
@@ -321,16 +317,12 @@ def ssh_pillar_tests_prep(request, salt_factories, salt_master, salt_minion):
 
 
 @pytest.fixture(scope="class")
-def webserver_pillar_tests_prep(request, salt_factories, salt_master, salt_minion):
+def webserver_pillar_tests_prep(request, salt_master, salt_minion):
     """
     Stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
     """
-    try:
-        salt_call_cli = salt_minion.get_salt_call_cli()
-        raise RuntimeError("s0undt3ch, it's time to cleanup this spaghetti code!")
-    except AttributeError:
-        salt_call_cli = salt_factories.get_salt_call_cli(salt_minion.config["id"])
+    salt_call_cli = salt_minion.get_salt_call_cli()
 
     root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
     config_dir = os.path.join(root_dir, "config")

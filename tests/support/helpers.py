@@ -39,9 +39,9 @@ import salt.utils.stringutils
 import salt.utils.versions
 from salt.ext import six
 from salt.ext.six.moves import builtins
-from saltfactories.exceptions import ProcessFailed
+from saltfactories.exceptions import FactoryFailure as ProcessFailed
 from saltfactories.utils.ports import get_unused_localhost_port
-from saltfactories.utils.processes.bases import ProcessResult
+from saltfactories.utils.processes import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
@@ -173,6 +173,7 @@ def slowTest(caller):
 
     if RUNTIME_VARS.PYTEST_SESSION:
         setattr(caller, "__slow_test__", True)
+        return caller
 
     if os.environ.get("SLOW_TESTS", "False").lower() == "false":
         reason = "Slow tests are disabled"
@@ -282,27 +283,9 @@ def requires_sshd_server(caller):
             def test_create_user(self):
                 pass
     """
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, "setUp", None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-                self.skipTest("SSH tests are disabled")
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get("SSH_DAEMON_RUNNING", "False").lower() == "false":
-            cls.skipTest("SSH tests are disabled")
-        return caller(cls)
-
-    return wrap
+    raise RuntimeError(
+        "Please replace @requires_sshd_server with @pytest.mark.requires_sshd_server"
+    )
 
 
 class RedirectStdStreams:
@@ -1670,7 +1653,12 @@ class VirtualEnv:
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
         proc = subprocess.run(args, check=False, **kwargs)
-        ret = ProcessResult(proc.returncode, proc.stdout, proc.stderr, proc.args)
+        ret = ProcessResult(
+            exitcode=proc.returncode,
+            stdout=proc.stdout,
+            stderr=proc.stderr,
+            cmdline=proc.args,
+        )
         log.debug(ret)
         if check is True:
             try:

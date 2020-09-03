@@ -1,34 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Test AnsibleGate State Module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libraries
 import os
 import shutil
 import tempfile
 
-# Import salt libraries
+import pytest
 import salt.utils.files
 import salt.utils.path
 import yaml
-
-# Import testing libraries
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    requires_sshd_server,
-    requires_system_grains,
-)
+from tests.support.helpers import destructiveTest, flaky, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import SkipTest, skipIf
 
 
 @destructiveTest
-@requires_sshd_server
+@pytest.mark.requires_sshd_server
 @skipIf(
     not salt.utils.path.which("ansible-playbook"), "ansible-playbook is not installed"
 )
@@ -46,7 +36,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
 
     def setUp(self):
-        priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+        priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
         data = {
             "all": {
                 "hosts": {

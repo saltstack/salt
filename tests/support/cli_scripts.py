@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.cli_scripts
     ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,11 +5,9 @@
     Code to generate Salt CLI scripts for test runs
 """
 
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import os
-import sys
 
 from saltfactories.utils import cli_scripts
 
@@ -34,7 +31,6 @@ def get_script_path(bin_dir, script_name):
         cli_scripts.generate_script(
             bin_dir=bin_dir,
             script_name=script_name,
-            executable=sys.executable,
             code_dir=RUNTIME_VARS.CODE_DIR,
             inject_coverage="COVERAGE_PROCESS_START" in os.environ,
             inject_sitecustomize="COVERAGE_PROCESS_START" in os.environ,
@@ -43,7 +39,7 @@ def get_script_path(bin_dir, script_name):
     return script_path
 
 
-class ScriptPathMixin(object):
+class ScriptPathMixin:
     def get_script_path(self, script_name):
         """
         Return the path to a testing runtime script

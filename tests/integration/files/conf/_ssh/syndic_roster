@@ -1,5 +1,0 @@
-syndic_localhost:
-  host: 127.0.0.1
-  port: 2827
-  mine_functions:
-    test.arg: ['itworked']
