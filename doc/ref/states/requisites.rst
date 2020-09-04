@@ -972,14 +972,14 @@ if the gluster commands return a 0 ret value.
             - name: httpd
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: RedHat'
+                tgt: 'os_family:RedHat'
 
         install apache on debian based distros:
           pkg.latest:
             - name: apache2
             - onlyif:
               - fun: match.grain
-                tgt: 'os_family: Debian'
+                tgt: 'os_family:Debian'
 
     .. code-block:: yaml
 
