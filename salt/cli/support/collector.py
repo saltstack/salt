@@ -235,7 +235,7 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.error(ret)
         except Exception as ex:  # pylint: disable=broad-except
             ret = "Unhandled exception occurred: {}".format(ex)
-            log.debug(ex, exc_info=True)
+            log.debug(ret, exc_info=True)
             self.out.error(ret)
 
         return ret
@@ -254,7 +254,8 @@ class SaltSupport(salt.utils.parsers.SaltSupportOptionParser):
             self.out.error(ret)
         except Exception as ex:  # pylint: disable=broad-except
             ret = "Unhandled exception occurred: {}".format(ex)
-            log.debug(ex, exc_info=True)
+            log.debug(ret, exc_info=True)
+            self.out.error(ret)
 
         return ret
 
