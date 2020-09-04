@@ -108,18 +108,32 @@ WAITER_CONFIG_GENERATORS = {
         },
     },
     "vpc_cidr_block": {
+        "associated": {
+            "value_path": "Vpcs[].CidrBlockAssociationSet[].CidrBlockState.State",
+            "success_values": ["associated"],
+            "failure_values": ["disassociating", "disassociated", "failing", "failed"],
+            "operation": "DescribeVpcs",
+        },
         "disassociated": {
-            "value_path": "Vpcs[].CidrBlockAssociationSet[].CidrBLockState.State",
-            "success_values": ["disassociated"],
-            "failure_values": ["associating", "associated", "failing", "failed"],
+            "value_path": "length(Vpcs[]) == `0`",
+            "success_values": [True],
+            "success_matcher": "path",
+            "failure_values": [],
             "operation": "DescribeVpcs",
         },
     },
     "vpc_ipv6_cidr_block": {
+        "associated": {
+            "value_path": "Vpcs[].Ipv6CidrBlockAssociationSet[].Ipv6CidrBlockState.State",
+            "success_values": ["associated"],
+            "failure_values": ["disassociating", "disassociated", "failing", "failed"],
+            "operation": "DescribeVpcs",
+        },
         "disassociated": {
-            "value_path": "Vpcs[].Ipv6CidrBlockAssociationSet[].Ipv6CidrBLockState.State",
-            "success_values": ["disassociated"],
-            "failure_values": ["associating", "associated", "failing", "failed"],
+            "value_path": "length(Vpcs[]) == `0`",
+            "success_values": [True],
+            "success_matcher": "path",
+            "failure_values": [],
             "operation": "DescribeVpcs",
         },
     },
@@ -189,6 +203,8 @@ def generate_config(
     success_values,
     failure_values,
     error_actions=None,
+    success_matcher="pathAll",
+    failure_matcher="pathAny",
     delay=30,
     max_attempts=60,
     operation=None,
@@ -238,7 +254,7 @@ def generate_config(
     for item in success_values:
         ret["acceptors"].append(
             {
-                "matcher": "pathAll",
+                "matcher": success_matcher,
                 "expected": item,
                 "state": "success",
                 "argument": value_path,
@@ -247,7 +263,7 @@ def generate_config(
     for item in failure_values:
         ret["acceptors"].append(
             {
-                "matcher": "pathAny",
+                "matcher": failure_matcher,
                 "expected": item,
                 "state": "failure",
                 "argument": value_path,
