@@ -1,0 +1,1 @@
+Added ability to specify VPC for ``private_networking`` droplets with salt-cloud

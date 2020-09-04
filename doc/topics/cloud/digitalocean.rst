@@ -59,6 +59,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
         - tag2
         - tag3
 
+``vpc_uuid`` can be provided if using ``private_networking: True``. If not provided, the
+default VPC for the region is used.
+
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
 

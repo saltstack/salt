@@ -366,6 +366,11 @@ def create(vm_):
                 "'private_networking' should be a boolean value."
             )
         kwargs["private_networking"] = private_networking
+        vpc_uuid = config.get_cloud_config_value(
+            "vpc_uuid", vm_, __opts__, search_global=False, default=None,
+        )
+        if vpc_uuid is not None:
+            kwargs["vpc_uuid"] = vpc_uuid
 
     if not private_networking and ssh_interface == "private":
         raise SaltCloudConfigError(
