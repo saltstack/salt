@@ -38,6 +38,7 @@ import logging
 import sys
 from functools import partial
 
+import salt.utils.boto3_waiters
 import salt.utils.data
 import salt.utils.stringutils
 import salt.utils.versions
@@ -342,8 +343,7 @@ def ordered(obj):
 
 
 def json_objs_equal(left, right):
-    """ Compare two parsed JSON objects, given non-ordering in JSON objects
-    """
+    """Compare two parsed JSON objects, given non-ordering in JSON objects"""
     return ordered(left) == ordered(right)
 
 
@@ -380,7 +380,12 @@ def dict_to_boto_filters(filters):
 
 
 def describe_resource(
-    resource_type, ids=None, filters=None, result_key=None, client=None, **kwargs,
+    resource_type,
+    ids=None,
+    filters=None,
+    result_key=None,
+    client=None,
+    **kwargs,
 ):
     """
     Helper function to deduplicate common code in describe-functions.
@@ -589,7 +594,10 @@ def create_resource(
 
 
 def handle_response(
-    primary, params, *args, **kwargs,
+    primary,
+    params,
+    *args,
+    **kwargs,
 ):
     """
     Helper function to deduplicate code when calling another function ``primary``.
@@ -661,8 +669,10 @@ def wait_resource(
         if waiter_name in client.waiter_names:
             waiter = client.get_waiter(resource_type + "_" + desired_state)
         else:
-            waiter = __utils__["boto3_waiters.get_waiter"](
-                client, resource_name=resource_type, desired_state=desired_state,
+            waiter = salt.utils.boto3_waiters.get_waiter(
+                client,
+                resource_name=resource_type,
+                desired_state=desired_state,
             )
         waiter.wait(**params)
     except (
