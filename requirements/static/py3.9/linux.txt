@@ -130,6 +130,7 @@ gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
 hgtools==8.1.1
 idna==2.8                 # via requests
+iniconfig==1.0.1          # via pytest
 ipaddress==1.0.22         # via kubernetes
 isodate==0.6.0            # via msrest
 jaraco.functools==2.0     # via tempora
@@ -167,7 +168,7 @@ pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
 psutil==5.6.1
-py==1.8.0                 # via pytest
+py==1.9.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via pyasn1-modules, rsa
@@ -183,10 +184,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.10.7
+pytest-salt-factories==0.11.4
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==5.4.2 ; sys_platform != "win32"
+pytest==6.0.1
 python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common, botocore, croniter, kubernetes, moto, vcert
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -218,7 +219,6 @@ urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 vcert==0.7.3
 virtualenv==20.0.20
 watchdog==0.9.0
-wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
