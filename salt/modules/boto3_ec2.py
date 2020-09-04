@@ -38,7 +38,6 @@ Be aware that this interacts with Amazon's services, and so may incur charges.
 
 :depends: boto3, botocore
 """
-# Import Python libs
 import functools
 import hashlib
 import inspect
@@ -46,9 +45,9 @@ import itertools
 import json
 import logging
 import sys
-from typing import Any, Dict, Iterable, List, Mapping, Union
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
-# Import Salt libs
 # pylint: disable=3rd-party-module-not-gated
 import salt.utils.compat
 import salt.utils.data
@@ -62,7 +61,6 @@ from salt.utils.versions import LooseVersion
 
 # keep lint from choking on _get_client and _cache_id
 # pylint: disable=E0602
-# Import third party libs
 try:
     import boto3
     import botocore  # pylint: disable=unused-import
@@ -283,127 +281,86 @@ def build_block_device_mapping(
     }
 
 
-@_arguments_to_list(
-    "ipv6_addresses",
-    "private_ip_addresses",
-    "security_group_ids",
-    "security_group_lookups",
-)
-def build_network_interface_config(
-    associate_carrier_ip_address: bool = None,
-    associate_public_ip_address: bool = None,
-    delete_on_termination: bool = None,
+def build_ip_permission(
     description: str = None,
-    device_index: int = None,
-    interface_type: str = None,
-    ipv6_address_count: int = None,
-    ipv6_addresses: Iterable[str] = None,
-    network_interface_id: str = None,
-    network_interface_lookup: Mapping = None,
-    primary_ip_address: str = None,
-    private_ip_addresses: Union[str, Iterable[str]] = None,
-    secondary_private_ip_address_count: int = None,
-    security_group_ids: Union[str, Iterable[str]] = None,
-    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
-    subnet_id: str = None,
-    subnet_lookup: Mapping = None,
+    ip_protocol: str = None,
+    from_port: int = None,
+    to_port: int = None,
+    cidr_block: str = None,
+    prefix_list_id: str = None,
+    prefix_list_lookup: Mapping = None,
+    security_group_id: str = None,
+    security_group_lookup: Mapping = None,
     region: str = None,
     keyid: str = None,
     key: str = None,
     profile: Mapping = None,
 ) -> Dict:
     """
-    Helper function to create a network interface config for use in
-    :py:func:`build_launch_specification` and :py:func:`create_launch_template`.
-    IAM credentials are only required when lookups are performed.
+    Helper function to create an IpPermission dict. Used in
+    :py:func:`authorize_security_group_egress`, :py:func:`authorize_security_group_ingress`,
+    :py:func:`revoke_security_group_egress` and :py:func:`revoke_security_group_ingress`.
 
-    :param bool associate_carrier_ip_address: Associates a Carrier IP address with
-      eth0 for a new network interface.
-      Use this option when you launch an instance in a Wavelength Zone and want
-      to associate a Carrier IP address with the network interface.
-    :param bool associate_public_ip_address: Indicates whether to assign a public
-      IPv4 address to an instance you launch in a VPC. The public IP address can
-      only be assigned to a network interface for eth0, and can only be assigned
-      to a new network interface, not an existing one. You cannot specify more
-      than one network interface in the request. If launching into a default subnet,
-      the default value is ``True``.
-    :param bool delete_on_termination: If set to ``True``, the interface is deleted
-      when the instance is terminated. You can specify ``True`` only if creating
-      a new network interface when launching an instance.
-    :param str description: The description of the network interface. Applies only
-      if creating a network interface when launching an instance.
-    :param int device_index: The position of the network interface in the attachment
-      order. A primary network interface has a device index of 0.
-      If you specify a network interface when launching an instance, you must specify
-      the device index.
-    :param str interface_type: The type of network interface. To create an Elastic
-      Fabric Adapter (EFA), specify ``efa``. If you are not creating an EFA, specify
-      ``interface`` or omit this parameter. Allowed values: ``interface``, ``efa``.
-    :param int ipv6_address_count: A number of IPv6 addresses to assign to the
-      network interface. Amazon EC2 chooses the IPv6 addresses from the range of
-      the subnet. You cannot specify this option and the option to assign specific
-      IPv6 addresses in the same request. You can specify this option if you've
-      specified a minimum number of instances to launch.
-    :type ipv6_addresses: str or list(str)
-    :param ipv6_addresses: One or more IPv6 addresses to assign to the network
-      interface. You cannot specify this option and the option to assign a number
-      of IPv6 addresses in the same request. You cannot specify this option if
-      you've specified a minimum number of instances to launch.
-    :param str network_interface_id: The ID of the network interface.
-      If you are creating a Spot Fleet, omit this parameter because you can’t specify
-      a network interface ID in a launch specification.
-    :param dict network_interface_lookup: Any kwargs that :py:func:`lookup_network_interface`
-      accepts. Used to lookup ``network_interface_id``.
-    :param str primary_ip_address: The primary private IPv4 address of the network
-      interface. Applies only if creating a network interface when launching an
-      instance. You cannot specify this option if you're launching more than one
-      instance in a :py:func:`run_instances` request.
-    :param list(str) private_ip_addresses: One or more private IPv4 addresses to
-      assign to the network interface. Only one private IPv4 address can be designated
-      as primary. Use ``primary_ip_address`` for that. You cannot specify this
-      option if you're launching more than one instance in a :py:func:`run_instances` request.
-    :param int secondary_private_ip_address_count: The number of secondary private
-      IPv4 addresses. You can't specify this option and specify more than one private
-      IP address using the ``private_ip_addresses`` option. You cannot specify
-      this option if you're launching more than one instance in a :py:func:`run_instances`
-      request.
-    :type security_group_ids: str or list(str)
-    :param security_group_ids: The IDs of the security groups for the network interface.
-      Applies only if creating a network interface when launching an instance.
-    :type security_group_lookups: dict or list(dict)
-    :param security_group_lookups: Dict or list of dicts that contain kwargs
-      that :py:func:`lookup_security_group` accepts. Used to lookup ``security_group_ids``.
-    :param str subnet_id: The ID of the subnet associated with the network interface.
-      Applies only if creating a network interface when launching an instance.
-    :param dict subnet_lookup: Any kwargs that :py:func:`lookup_subnet` accepts.
-      Used to lookup ``subnet_id``.
+    Note that the arguments ``cidr_ip``, ``cidr_ipv6``, ``prefix_list_id``, ``prefix_list_lookup``,
+    ``security_group_id`` and ``security_group_lookup`` are used as ``Source`` when
+    used in ``ingress``-functions, and used as ``Target`` when used in ``egress``-functions.
+
+    Also note that you must provide exactly one of either ``cidr_ip``, ``prefix_list_id``,
+    ``prefix_list_lookup``, ``security_group_id`` or ``security_group_lookup``.
+    You will only need to supply IAM credentials if lookups need to be performed.
+
+    :param str description: A description for this rule.
+    :param str ip_protocol: The IP protocol name (tcp, udp, icmp, icmpv6 ) or number.
+      [VPC only] Use -1 to specify all protocols. When authorizing security
+      group rules, specifying -1 or a protocol number other than tcp, udp,
+      icmp, or icmpv6 allows traffic on all ports, regardless of any port range
+      you specify. For tcp, udp, and icmp, you must specify a port range. For
+      icmpv6, the port range is optional; if you omit the port range, traffic
+      for all types and codes is allowed.
+    :param int from_port: The start of port range for the TCP and UDP protocols,
+      or an ICMP/ICMPv6 type number. A value of -1 indicates all ICMP/ICMPv6
+      types. If you specify all ICMP/ICMPv6 types, you must specify all codes.
+    :param int to_port: The end of port range for the TCP and UDP protocols, or
+        an ICMP/ICMPv6 code. A value of -1 indicates all ICMP/ICMPv6 codes.
+        If you specify all ICMP/ICMPv6 types, you must specify all codes.
+    :param str cidr_block: The IPv4 or IPv6 CIDR range for this rule. Use ``/32``
+      (IPv4) or ``/64`` (IPv6) to specify a single IP.
+    :param str prefix_list_id: The ID of the prefix list.
+    :param dict prefix_list_lookup: Any kwargs that :py:func:`lookup_managed_prefix_list`
+      accepts. Used to lookup ``prefix_list_id``.
+    :param str security_group_id: The ID of the security group that references this rule.
+    :param str security_group_lookup: Any kwargs that :py:func:`lookup_security_group`
+      accepts. Used to lookup ``security_group_id``. This can be used to reference
+      security groups in other VPCs or other accounts. You will have to provide
+      alternative credentials in order to perform the lookup in another account.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
-      with dict with structure matching both ``InstanceNetworkInterfaceSpecification``
-      and ``LaunchTemplateInstanceNetworkInterfaceSpecificationRequest`` objects
-      on success.
+      with dict with structure matching an IpPermission object on success.
     """
+    if not salt.utils.data.exactly_one(
+        (
+            cidr_ip,
+            prefix_list_id,
+            prefix_list_lookup,
+            security_group_id,
+            security_group_lookup,
+        )
+    ):
+        raise SaltInvocationError(
+            "You must specify exactly one of cidr_ip, prefix_list_id, prefix_list_lookup, security_group_id, or security_group_lookup."
+        )
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
-            "name": "network_interface",
-            "kwargs": network_interface_lookup
-            or {"network_interface_id": network_interface_id},
-            "required": False,
-        },
-        {
-            "service": "ec2",
             "name": "security_group",
-            "kwargs": security_group_lookups
-            or [{"group_id": group_id} for group_id in security_group_ids or []],
+            "kwargs": security_group_lookup or {"group_id": security_group_id},
             "required": False,
-            "result_keys": "GroupId",
         },
         {
             "service": "ec2",
-            "name": "subnet",
-            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+            "name": "managed_prefix_list",
+            "kwargs": prefix_list_lookup or {"prefix_list_id": prefix_list_id},
             "required": False,
         },
         region=region,
@@ -413,33 +370,63 @@ def build_network_interface_config(
     ) as res:
         if "error" in res:
             return res
-        res = res["result"]
-        network_interface_id = res.get("network_interface")
-        security_group_ids = res.get("security_group")
-        subnet_id = res.get("subnet")
-    return {
-        "result": salt.utils.data.filter_falsey(
+        security_group_id = res["result"].get("security_group")
+        prefix_list_id = res["result"].get("managed_prefix_list")
+    ret = salt.utils.data.filter_falsey(
+        {
+            "FromPort": from_port,
+            "ToPort": to_port,
+            "IpProtocol": ip_protocol,
+        }
+    )
+    if cidr_block:
+        if salt.utils.network.is_ipv6_subnet(cidr_block):
+            ret.update(
+                {
+                    "Ipv6Ranges": [
+                        salt.utils.data.filter_falsey(
+                            {"CidrIpv6": cidr_block, "Description": description}
+                        )
+                    ]
+                }
+            )
+        elif salt.utils.network.is_ipv4_subnet(cidr_block):
+            ret.update(
+                {
+                    "IpRanges": [
+                        salt.utils.data.filter_falsey(
+                            {"CidrIp": cidr_block, "Description": description}
+                        )
+                    ]
+                }
+            )
+        else:
+            raise SaltInvocationError(
+                'The provided cidr_block "{}" is not a valid IPv4 or IPv6 CIDR block.'.format(
+                    cidr_block
+                )
+            )
+    elif prefix_list_id:
+        ret.update(
             {
-                "AssociateCarrierIpAddress": associate_carrier_ip_address,
-                "AssociatePublicIpAddress": associate_public_ip_address,
-                "DeleteOnTermination": delete_on_termination,
-                "Description": description,
-                "DeviceIndex": device_index,
-                "InterfaceType": interface_type,
-                "IPv6AddressCount": ipv6_address_count,
-                "Ipv6Addresses": [{"Ipv6Address": item} for item in ipv6_addresses],
-                "NetworkInterfaceId": network_interface_id,
-                "PrivateIpAddress": primary_ip_address,
-                "PrivateIpAddresses": [
-                    {"PrivateIpAddress": item} for item in private_ip_addresses
-                ],
-                "SecondaryPrivateIpAddressCount": secondary_private_ip_address_count,
-                "Groups": security_group_ids,
-                "SubnetId": subnet_id,
-            },
-            recurse_depth=1,
+                "PrefixListIds": [
+                    salt.utils.data.filter_falsey(
+                        {"PrefixListId": prefix_list_id, "Description": description}
+                    )
+                ]
+            }
         )
-    }
+    elif security_group_id:
+        ret.update(
+            {
+                "UserIdGroupPairs": [
+                    salt.utils.data.filter_falsey(
+                        {"GroupId": security_group_id, "Description": description}
+                    )
+                ]
+            }
+        )
+    return {"result": ret}
 
 
 @_arguments_to_list(
@@ -636,17 +623,176 @@ def build_launch_specification(
     }
 
 
+@_arguments_to_list(
+    "ipv6_addresses",
+    "private_ip_addresses",
+    "security_group_ids",
+    "security_group_lookups",
+)
+def build_network_interface_config(
+    associate_carrier_ip_address: bool = None,
+    associate_public_ip_address: bool = None,
+    delete_on_termination: bool = None,
+    description: str = None,
+    device_index: int = None,
+    interface_type: str = None,
+    ipv6_address_count: int = None,
+    ipv6_addresses: Iterable[str] = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    primary_ip_address: str = None,
+    private_ip_addresses: Union[str, Iterable[str]] = None,
+    secondary_private_ip_address_count: int = None,
+    security_group_ids: Union[str, Iterable[str]] = None,
+    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
+    """
+    Helper function to create a network interface config for use in
+    :py:func:`build_launch_specification` and :py:func:`create_launch_template`.
+    IAM credentials are only required when lookups are performed.
+
+    :param bool associate_carrier_ip_address: Associates a Carrier IP address with
+      eth0 for a new network interface.
+      Use this option when you launch an instance in a Wavelength Zone and want
+      to associate a Carrier IP address with the network interface.
+    :param bool associate_public_ip_address: Indicates whether to assign a public
+      IPv4 address to an instance you launch in a VPC. The public IP address can
+      only be assigned to a network interface for eth0, and can only be assigned
+      to a new network interface, not an existing one. You cannot specify more
+      than one network interface in the request. If launching into a default subnet,
+      the default value is ``True``.
+    :param bool delete_on_termination: If set to ``True``, the interface is deleted
+      when the instance is terminated. You can specify ``True`` only if creating
+      a new network interface when launching an instance.
+    :param str description: The description of the network interface. Applies only
+      if creating a network interface when launching an instance.
+    :param int device_index: The position of the network interface in the attachment
+      order. A primary network interface has a device index of 0.
+      If you specify a network interface when launching an instance, you must specify
+      the device index.
+    :param str interface_type: The type of network interface. To create an Elastic
+      Fabric Adapter (EFA), specify ``efa``. If you are not creating an EFA, specify
+      ``interface`` or omit this parameter. Allowed values: ``interface``, ``efa``.
+    :param int ipv6_address_count: A number of IPv6 addresses to assign to the
+      network interface. Amazon EC2 chooses the IPv6 addresses from the range of
+      the subnet. You cannot specify this option and the option to assign specific
+      IPv6 addresses in the same request. You can specify this option if you've
+      specified a minimum number of instances to launch.
+    :type ipv6_addresses: str or list(str)
+    :param ipv6_addresses: One or more IPv6 addresses to assign to the network
+      interface. You cannot specify this option and the option to assign a number
+      of IPv6 addresses in the same request. You cannot specify this option if
+      you've specified a minimum number of instances to launch.
+    :param str network_interface_id: The ID of the network interface.
+      If you are creating a Spot Fleet, omit this parameter because you can’t specify
+      a network interface ID in a launch specification.
+    :param dict network_interface_lookup: Any kwargs that :py:func:`lookup_network_interface`
+      accepts. Used to lookup ``network_interface_id``.
+    :param str primary_ip_address: The primary private IPv4 address of the network
+      interface. Applies only if creating a network interface when launching an
+      instance. You cannot specify this option if you're launching more than one
+      instance in a :py:func:`run_instances` request.
+    :param list(str) private_ip_addresses: One or more private IPv4 addresses to
+      assign to the network interface. Only one private IPv4 address can be designated
+      as primary. Use ``primary_ip_address`` for that. You cannot specify this
+      option if you're launching more than one instance in a :py:func:`run_instances` request.
+    :param int secondary_private_ip_address_count: The number of secondary private
+      IPv4 addresses. You can't specify this option and specify more than one private
+      IP address using the ``private_ip_addresses`` option. You cannot specify
+      this option if you're launching more than one instance in a :py:func:`run_instances`
+      request.
+    :type security_group_ids: str or list(str)
+    :param security_group_ids: The IDs of the security groups for the network interface.
+      Applies only if creating a network interface when launching an instance.
+    :type security_group_lookups: dict or list(dict)
+    :param security_group_lookups: Dict or list of dicts that contain kwargs
+      that :py:func:`lookup_security_group` accepts. Used to lookup ``security_group_ids``.
+    :param str subnet_id: The ID of the subnet associated with the network interface.
+      Applies only if creating a network interface when launching an instance.
+    :param dict subnet_lookup: Any kwargs that :py:func:`lookup_subnet` accepts.
+      Used to lookup ``subnet_id``.
+
+    :rtype: dict
+    :return: Dict with 'error' key if something went wrong. Contains 'result' key
+      with dict with structure matching both ``InstanceNetworkInterfaceSpecification``
+      and ``LaunchTemplateInstanceNetworkInterfaceSpecificationRequest`` objects
+      on success.
+    """
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "network_interface",
+            "kwargs": network_interface_lookup
+            or {"network_interface_id": network_interface_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "security_group",
+            "kwargs": security_group_lookups
+            or [{"group_id": group_id} for group_id in security_group_ids or []],
+            "required": False,
+            "result_keys": "GroupId",
+        },
+        {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+            "required": False,
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
+        if "error" in res:
+            return res
+        res = res["result"]
+        network_interface_id = res.get("network_interface")
+        security_group_ids = res.get("security_group")
+        subnet_id = res.get("subnet")
+    return {
+        "result": salt.utils.data.filter_falsey(
+            {
+                "AssociateCarrierIpAddress": associate_carrier_ip_address,
+                "AssociatePublicIpAddress": associate_public_ip_address,
+                "DeleteOnTermination": delete_on_termination,
+                "Description": description,
+                "DeviceIndex": device_index,
+                "InterfaceType": interface_type,
+                "IPv6AddressCount": ipv6_address_count,
+                "Ipv6Addresses": [{"Ipv6Address": item} for item in ipv6_addresses],
+                "NetworkInterfaceId": network_interface_id,
+                "PrivateIpAddress": primary_ip_address,
+                "PrivateIpAddresses": [
+                    {"PrivateIpAddress": item} for item in private_ip_addresses
+                ],
+                "SecondaryPrivateIpAddressCount": secondary_private_ip_address_count,
+                "Groups": security_group_ids,
+                "SubnetId": subnet_id,
+            },
+            recurse_depth=1,
+        )
+    }
+
+
 @_arguments_to_list("vpc_endpoint_ids", "vpc_endpoint_lookups")
 def accept_vpc_endpoint_connections(
-    service_id=None,
-    service_lookup=None,
-    vpc_endpoint_ids=None,
-    vpc_endpoint_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_id: str = None,
+    service_lookup: dict = None,
+    vpc_endpoint_ids: Union[str, Iterable[str]] = None,
+    vpc_endpoint_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Accepts one or more interface VPC endpoint connection requests to your VPC
     endpoint service.
@@ -697,13 +843,13 @@ def accept_vpc_endpoint_connections(
 
 
 def accept_vpc_peering_connection(
-    vpc_peering_connection_id=None,
-    vpc_peering_connection_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_peering_connection_id: str = None,
+    vpc_peering_connection_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Accept a VPC peering connection request. To accept a request, the VPC peering
     connection must be in the pending-acceptance state, and you must be the owner
@@ -754,8 +900,13 @@ def accept_vpc_peering_connection(
 
 
 def allocate_address(
-    address=None, public_ipv4_pool=None, region=None, keyid=None, key=None, profile=None
-):
+    address: str = None,
+    public_ipv4_pool: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Allocates an Elastic IP address to your AWS account. After you allocate the
     Elastic IP address you can associate it with an instance or network interface.
@@ -802,20 +953,20 @@ def allocate_address(
 
 
 def associate_address(
-    allocation_id=None,
-    address_lookup=None,
-    instance_id=None,
-    instance_lookup=None,
-    public_ip=None,
-    allow_reassociation=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    private_ip_address=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    allocation_id: str = None,
+    address_lookup: Mapping = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    public_ip: str = None,
+    allow_reassociation: bool = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    private_ip_address: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Associates an Elastic IP address, or carrier IP address (for instances that
     are in subnets in Wavelength Zones) with an instance or a network interface.
@@ -919,15 +1070,15 @@ def associate_address(
 
 
 def associate_dhcp_options(
-    dhcp_options_id=None,
-    dhcp_options_lookup=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    dhcp_options_id: str = None,
+    dhcp_options_lookup: Mapping = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Associates a set of DHCP options (that you've previously created) with the
     specified VPC, or associates no DHCP options with the VPC.
@@ -977,15 +1128,15 @@ def associate_dhcp_options(
 
 
 def associate_route_table(
-    route_table_id=None,
-    route_table_lookup=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Associates a subnet with a route table. The subnet and route table must be
     in the same VPC. This association causes traffic originating from the subnet
@@ -1035,15 +1186,15 @@ def associate_route_table(
 
 
 def associate_subnet_cidr_block(
-    subnet_id=None,
-    subnet_lookup=None,
-    ipv6_cidr_block=None,
-    ipv6_subnet=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    ipv6_cidr_block: str = None,
+    ipv6_subnet: int = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Associates a CIDR block with your subnet. You can only associate a single
     IPv6 CIDR block with your subnet. An IPv6 CIDR block must have a prefix length
@@ -1053,10 +1204,10 @@ def associate_subnet_cidr_block(
     :param dict subnet_lookup: Any kwargs that :py:func:`lookup_subnet` accepts.
       Used to lookup ``subnet_id``.
     :param str ipv6_cidr_block: The IPv6 CIDR block for your subnet. The subnet
-      must have a /64 prefix length. Exclusive with ipv6_subnet.
+      must have a /64 prefix length. Can not be used with ``ipv6_subnet``.
     :param int ipv6_subnet: The IPv6 subnet. This uses an implicit /64 netmask.
       Use this if you don't know the parent subnet and want to extract that
-      from the VPC information. Exclusive with ipv6_cidr_block.
+      from the VPC information. Can not be used with ``ipv6_cidr_block``.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -1065,6 +1216,10 @@ def associate_subnet_cidr_block(
 
     :depends: boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_vpcs, boto3.client('ec2').describe_subnets, boto3.client('ec2').describe_vpcs, boto3.client('ec2').associate_subnet_cidr_block
     """
+    if not salt.utils.data.exactly_one((ipv6_cidr_block, ipv6_subnet)):
+        raise SaltInvocationError(
+            'You must specify exactly one of "ipv6_cidr_block" or "ipv6_subnet".'
+        )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     with __salt__["boto3_generic.lookup_resources"](
         {
@@ -1113,19 +1268,19 @@ def associate_subnet_cidr_block(
 
 
 def associate_vpc_cidr_block(
-    vpc_id=None,
-    vpc_lookup=None,
-    amazon_provided_ipv6_cidr_block=None,
-    cidr_block=None,
-    ipv6_cidr_block_network_border_group=None,
-    ipv6_pool=None,
-    ipv6_cidr_block=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    amazon_provided_ipv6_cidr_block: bool = None,
+    cidr_block: str = None,
+    ipv6_cidr_block_network_border_group: str = None,
+    ipv6_pool: str = None,
+    ipv6_cidr_block: str = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Associates a CIDR block with your VPC. You can associate a secondary IPv4 CIDR
     block, or you can associate an Amazon-provided IPv6 CIDR block. The IPv6 CIDR
@@ -1212,15 +1367,15 @@ def associate_vpc_cidr_block(
 
 
 def attach_internet_gateway(
-    internet_gateway_id=None,
-    internet_gateway_lookup=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    internet_gateway_id: str = None,
+    internet_gateway_lookup: Mapping = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Attaches an internet gateway to a VPC, enabling connectivity between the
     internet and the VPC.
@@ -1255,7 +1410,7 @@ def attach_internet_gateway(
             return res
         res = res["result"]
         params = {
-            "InternetgatewayId": res["internet_gateway"],
+            "InternetGatewayId": res["internet_gateway"],
             "VpcId": res["vpc"],
         }
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
@@ -1263,16 +1418,16 @@ def attach_internet_gateway(
 
 
 def attach_network_interface(
-    device_index,
-    instance_id=None,
-    instance_lookup=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    device_index: int,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Attaches a network interface to an instance.
 
@@ -1316,16 +1471,16 @@ def attach_network_interface(
 
 
 def attach_volume(
-    device,
-    instance_id=None,
-    instance_lookup=None,
-    volume_id=None,
-    volume_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    device: str,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    volume_id: str = None,
+    volume_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Attaches an EBS volume to a running or stopped instance and exposes it to the
     instance with the specified device name.
@@ -1385,15 +1540,15 @@ def attach_volume(
 
 
 def attach_vpn_gateway(
-    vpc_id=None,
-    vpc_lookup=None,
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Attaches a virtual private gateway to a VPC. You can attach one virtual private
     gateway to one VPC at a time.
@@ -1433,15 +1588,16 @@ def attach_vpn_gateway(
     return __utils__["boto3.handle_response"](client.attach_vpn_gateway, params)
 
 
+@_arguments_to_list("ip_permissions")
 def authorize_security_group_egress(
-    group_id=None,
-    group_lookup=None,
-    ip_permissions=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    group_id: str = None,
+    group_lookup: Mapping = None,
+    ip_permissions: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     [VPC only] Adds the specified egress rules to a security group for use witha VPC.
     An outbound rule permits instances to send traffic to the specified IPv4 or
@@ -1459,69 +1615,23 @@ def authorize_security_group_egress(
     :param str group_id: The ID of the security group to add egress rules to.
     :param dict group_lookup: Any kwargs that :py:func:`lookup_security_group`
       accepts. Used to lookup ``security_group_id``.
-    :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
+    :type ip_permissions: dict or list(dict)
+    :param ip_permissions: One or more IP permissions. You can't specify
       a destination security group and a CIDR IP address range in the same set
-      of permissions. These sets consist of:
-
-      - FromPort (int): The start of port range for the TCP and UDP protocols,
-        or an ICMP/ICMPv6 type number. A value of -1 indicates all ICMP/ICMPv6
-        types. If you specify all ICMP/ICMPv6 types, you must specify all codes.
-      - IpProtocol (str): The IP protocol name (tcp, udp, icmp, icmpv6 ) or number.
-        [VPC only] Use -1 to specify all protocols. When authorizing security
-        group rules, specifying -1 or a protocol number other than tcp, udp,
-        icmp, or icmpv6 allows traffic on all ports, regardless of any port range
-        you specify. For tcp, udp, and icmp, you must specify a port range. For
-        icmpv6, the port range is optional; if you omit the port range, traffic
-        for all types and codes is allowed.
-      - IpRanges (list(dict)): The IPv4 ranges. These consist of:
-
-        - CidrIp (str): The IPv4 CIDR range. You can either specify a CIDR range
-          or a source security group, not both. To specify a single IPv4 address,
-          use the /32 prefix length.
-        - Description: A description for the security group rule that references
-          this IPv4 address range.
-      - IPv6Ranges (list(dict)): The IPv6 ranges. These consist of:
-
-        - CidrIpv6 (str): The IPv6 CIDR range. You can either specify a CIDR
-          range or a source security group, not both. To specify a single IPv6
-          address, use the /128 prefix length.
-        - Description (str): A description for the security group rule that references
-          this IPv6 address range.
-      - PrefixListIds (list(dict)): The prefix list IDs. These consist of:
-
-        - Description (str): A description for the security group rule that references
-          this prefix list ID.
-        - PrefixListId (str): The ID of the prefix.
-      - ToPort (int): The end of port range for the TCP and UDP protocols, or
-        an ICMP/ICMPv6 code. A value of -1 indicates all ICMP/ICMPv6 codes.
-        If you specify all ICMP/ICMPv6 types, you must specify all codes.
-      - UserIdGroupPairs (list(dict)): The security group and AWS account ID
-        pairs. These consist of:
-
-        - Description (str): A description for the security group rule that references
-          this user ID group pair.
-        - GroupId (str): The ID of the security group.
-        - GroupName (str): The name of the security group. In a request, use
-          this parameter for a security group in EC2-Classic or a default VPC
-          only. For a security group in a nondefault VPC, use the security group ID.
-          For a referenced security group in another VPC, this value is not returned
-          if the referenced security group is deleted.
-        - PeeringStatus (str): The status of a VPC peering connection, if applicable.
-        - UserId (str): The ID of an AWS account.
-          For a referenced security group in another VPC, the account ID of the
-          referenced security group is returned in the response. If the referenced
-          security group is deleted, this value is not returned.
-          [EC2-Classic] Required when adding or removing rules that reference
-          a security group in another AWS account.
-        - VpcId (str): The ID of the VPC for the referenced security group,
-          if applicable.
-        - VpcPeeringConnectionId (str): The ID of the VPC peering connection,
-          if applicable.
+      of permissions. These dicts can either contain the structure as described
+      `here <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html>`__
+      or contain the kwargs that :py:func:`build_ip_permission` accepts.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
       with ``True`` on success
     """
+    try:
+        ip_permissions = [
+            build_ip_permission(item)["result"] for item in ip_permissions
+        ]
+    except (TypeError, KeyError):
+        pass  # to Boto as-is
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
@@ -1546,15 +1656,16 @@ def authorize_security_group_egress(
     )
 
 
+@_arguments_to_list("ip_permissions")
 def authorize_security_group_ingress(
-    group_id=None,
-    group_lookup=None,
-    ip_permissions=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    group_id: str = None,
+    group_lookup: Mapping = None,
+    ip_permissions: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Adds the specified ingress rules to a security group.
 
@@ -1573,14 +1684,23 @@ def authorize_security_group_ingress(
     :param str group_id: The ID of the security group to add ingress rules to.
     :param dict group_lookup: Any kwargs that :py:func:`lookup_security_group`
       accepts. Used to lookup ``security_group_id``.
-    :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
+    :type ip_permissions: dict or list(dict)
+    :param ip_permissions: One or more IP permissions. You can't specify
       a source security group and a CIDR IP address range in the same set
-      of permissions. For the content specifications, see :py:func:`authorise_security_group_egress`.
+      of permissions. These dicts can either contain the structure as described
+      `here <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html>`__
+      or contain the kwargs that :py:func:`build_ip_permission` accepts.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
       with ``True`` on success
     """
+    try:
+        ip_permissions = [
+            build_ip_permission(item)["result"] for item in ip_permissions
+        ]
+    except (TypeError, KeyError):
+        pass  # to Boto as-is
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
@@ -1607,13 +1727,13 @@ def authorize_security_group_ingress(
 
 @_arguments_to_list("spot_fleet_request_ids")
 def cancel_spot_fleet_requests(
-    spot_fleet_request_ids=None,
-    terminate_instances=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    spot_fleet_request_ids: Union[str, Iterable[str]] = None,
+    terminate_instances: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Cancels the specified Spot Fleet requests.
 
@@ -1646,13 +1766,13 @@ def cancel_spot_fleet_requests(
 
 @_arguments_to_list("spot_instance_request_ids", "spot_instance_request_lookups")
 def cancel_spot_instance_requests(
-    spot_instance_request_ids=None,
-    spot_instance_request_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    spot_instance_request_ids: Union[str, Iterable[str]] = None,
+    spot_instance_request_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Cancels one or more Spot Instance requests.
 
@@ -1697,18 +1817,18 @@ def cancel_spot_instance_requests(
 
 
 def copy_image(
-    name,
-    source_region,
-    source_image_id=None,
-    source_image_lookup=None,
-    description=None,
-    encrypted=None,
-    kms_key_id=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    name: str,
+    source_region: str,
+    source_image_id: str = None,
+    source_image_lookup: Mapping = None,
+    description: str = None,
+    encrypted: bool = None,
+    kms_key_id: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Initiates the copy of an AMI from the specified source Region to the current
     Region. You specify the destination Region by using its endpoint when making
@@ -1784,19 +1904,19 @@ def copy_image(
 
 
 def copy_snapshot(
-    source_region,
-    source_snapshot_id=None,
-    source_snapshot_lookup=None,
-    description=None,
-    encrypted=None,
-    kms_key_id=None,
-    tags=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    source_region: str,
+    source_snapshot_id: str = None,
+    source_snapshot_lookup: Mapping = None,
+    description: str = None,
+    encrypted: bool = None,
+    kms_key_id: str = None,
+    tags: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Copies a point-in-time snapshot of an EBS volume and stores it in Amazon S3.
     You can copy the snapshot within the same Region or from one Region to another.
@@ -1881,17 +2001,17 @@ def copy_snapshot(
 
 
 def create_customer_gateway(
-    bgp_asn,
-    gateway_type,
-    public_ip=None,
-    certificate_arn=None,
-    device_name=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    bgp_asn: int,
+    gateway_type: str,
+    public_ip: str = None,
+    certificate_arn: str = None,
+    device_name: str = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Provides information to AWS about your VPN customer gateway device. The customer
     gateway is the appliance at your end of the VPN connection. (The device on
@@ -1947,18 +2067,19 @@ def create_customer_gateway(
     )
 
 
+@_arguments_to_list("domain_name_servers", "ntp_servers", "netbios_name_servers")
 def create_dhcp_options(
-    domain_name_servers=None,
-    domain_name=None,
-    ntp_servers=None,
-    netbios_name_servers=None,
-    netbios_node_type=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    domain_name_servers: Union[str, Iterable[str]] = None,
+    domain_name: str = None,
+    ntp_servers: Union[str, Iterable[str]] = None,
+    netbios_name_servers: Union[str, Iterable[str]] = None,
+    netbios_node_type: str = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a set of DHCP options for your VPC. After creating the set, you must
     associate it with the VPC, causing all existing and new instances that you
@@ -2024,18 +2145,18 @@ def create_dhcp_options(
 
 @_arguments_to_list("block_device_mappings")
 def create_image(
-    name,
-    instance_id=None,
-    instance_lookup=None,
-    block_device_mappings=None,
-    description=None,
-    no_reboot=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    name: str,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    block_device_mappings: Union[Mapping, Iterable[Mapping]] = None,
+    description: str = None,
+    no_reboot: bool = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that is
     either running or stopped.
@@ -2113,14 +2234,14 @@ def create_image(
 
 
 def create_internet_gateway(
-    vpc_id=None,
-    vpc_lookup=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates an internet gateway for use with a VPC.
     Optionally attaches it to a VPC if it is specified via either ``vpc_id`` or
@@ -2149,7 +2270,7 @@ def create_internet_gateway(
     ret = res
     igw_id = res["result"].get("InternetGatewayId")
     if igw_id and (vpc_id or vpc_lookup):
-        res2 = attach_internet_gateway(
+        res = attach_internet_gateway(
             internet_gateway_id=igw_id,
             vpc_id=vpc_id,
             vpc_lookup=vpc_lookup,
@@ -2158,14 +2279,26 @@ def create_internet_gateway(
             key=key,
             profile=profile,
         )
-        if "error" in res2:
-            ret.update(res2)
+        if "error" in res:
+            ret.update(res)
+        else:
+            # Describe the internet gateway so we can update the attachment information in ret
+            res = describe_internet_gateways(internet_gateway_ids=igw_id, client=client)
+            if "error" in res:
+                ret.update(res)
+            else:
+                ret["result"] = res["result"][0]
     return ret
 
 
 def create_key_pair(
-    key_name, tags=None, region=None, keyid=None, key=None, profile=None
-):
+    key_name: str,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a 2048-bit RSA key pair with the specified name. Amazon EC2 stores
     the public key and displays the private key for you to save to a file. The
@@ -2197,41 +2330,41 @@ def create_key_pair(
 
 @_arguments_to_list("block_device_mappings", "network_interfaces")
 def create_launch_template(
-    launch_template_name,
-    version_description=None,
-    kernel_id=None,
-    ebs_optimized=None,
-    iam_instance_profile=None,
-    block_device_mappings=None,
-    network_interfaces=None,
-    image_id=None,
-    image_lookup=None,
-    instance_type=None,
-    key_name=None,
-    monitoring_enabled=None,
-    placement=None,
-    ram_disk_id=None,
-    disable_api_termination=None,
-    instance_initiated_shutdown_behavior=None,
-    user_data=None,
-    tag_specifications=None,
-    elastic_gpu_type=None,
-    elastic_inference_accelerators=None,
-    security_group_ids=None,
-    security_group_lookups=None,
-    instance_market_options=None,
-    credit_specification=None,
-    cpu_options=None,
-    capacity_reservation_specification=None,
-    license_specifications=None,
-    hibernation_configured=None,
-    metadata_options=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    launch_template_name: str,
+    version_description: str = None,
+    kernel_id: str = None,
+    ebs_optimized: bool = None,
+    iam_instance_profile: Mapping = None,
+    block_device_mappings: Union[Mapping, Iterable[Mapping]] = None,
+    network_interfaces: Union[Mapping, Iterable[Mapping]] = None,
+    image_id: str = None,
+    image_lookup: Mapping = None,
+    instance_type: str = None,
+    key_name: str = None,
+    monitoring_enabled: bool = None,
+    placement: Mapping = None,
+    ram_disk_id: str = None,
+    disable_api_termination: bool = None,
+    instance_initiated_shutdown_behavior: str = None,
+    user_data: str = None,
+    tag_specifications: Mapping = None,
+    elastic_gpu_type: str = None,
+    elastic_inference_accelerators: Iterable[Mapping] = None,
+    security_group_ids: Union[str, Iterable[str]] = None,
+    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    instance_market_options: Mapping = None,
+    credit_specification: str = None,
+    cpu_options: Mapping = None,
+    capacity_reservation_specification: Mapping = None,
+    license_specifications: Iterable[str] = None,
+    hibernation_configured: bool = None,
+    metadata_options: Mapping = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a launch template. A launch template contains the parameters to launch
     an instance. When you launch an instance using RunInstances , you can specify
@@ -2271,7 +2404,7 @@ def create_launch_template(
       to log in.
     :param bool monitoring_enabled: Specify true to enable detailed monitoring.
       Otherwise, basic monitoring is enabled.
-    :param dict placement: The placement for the instance. The dict consiste of:
+    :param dict placement: The placement for the instance. The dict consists of: TODO: builder
 
       - AvailabilityZone (str): The availability zone for the instance.
       - Affinity (str): the affinity setting for an instance on a Dedicated Host.
@@ -2301,7 +2434,7 @@ def create_launch_template(
     :param dict instance_tags: The tags to apply to the resources during launch.
       The specified tags are applied to all instances or volumes that are created
       during launch.
-    :param elastic_gpu_type: The type of Elastic Graphics accelerator to associate
+    :param str elastic_gpu_type: The type of Elastic Graphics accelerator to associate
       with the instance.
     :param list(dict) elastic_inference_accelerators: The elastic inference accelerator
       for the instance. The dict consists of:
@@ -2478,17 +2611,17 @@ def create_launch_template(
 
 
 def create_nat_gateway(
-    subnet_id=None,
-    subnet_lookup=None,
-    allocation_id=None,
-    address_lookup=None,
-    tags=None,
-    blocking=False,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    allocation_id: str = None,
+    address_lookup: Mapping = None,
+    tags: Mapping = None,
+    blocking: bool = False,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a NAT gateway in the specified public subnet. This action creates a
     network interface in the specified subnet with a private IP address from the
@@ -2566,14 +2699,14 @@ def create_nat_gateway(
 
 
 def create_network_acl(
-    vpc_id=None,
-    vpc_lookup=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a network ACL in a VPC. Network ACLs provide an optional layer of security
     (in addition to security groups) for the instances in your VPC.
@@ -2609,22 +2742,22 @@ def create_network_acl(
 
 
 def create_network_acl_entry(
-    protocol,
-    egress,
-    rule_number,
-    rule_action,
-    network_acl_id=None,
-    network_acl_lookup=None,
-    cidr_block=None,
-    icmp_code=None,
-    icmp_type=None,
-    ipv6_cidr_block=None,
-    port_range=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    protocol: str,
+    egress: bool,
+    rule_number: int,
+    rule_action: str,
+    network_acl_id: str = None,
+    network_acl_lookup: Mapping = None,
+    cidr_block: str = None,
+    icmp_code: int = None,
+    icmp_type: int = None,
+    ipv6_cidr_block: str = None,
+    port_range: Tuple[int, int] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates an entry (a rule) in a network ACL with the specified rule number.
     Each network ACL has a set of numbered ingress rules and a separate set of
@@ -2683,7 +2816,7 @@ def create_network_acl_entry(
             raise SaltInvocationError(
                 "port_range must be a list or tuple, not {}".format(type(port_range))
             )
-        elif len(port_range) != 2:
+        if len(port_range) != 2:
             raise SaltInvocationError(
                 "port_range must contain exactly two items, not {}".format(
                     len(port_range)
@@ -2722,24 +2855,25 @@ def create_network_acl_entry(
     return __utils__["boto3.handle_response"](client.create_network_acl_entry, params)
 
 
+@_arguments_to_list("security_group_ids", "security_group_lookups")
 def create_network_interface(
-    subnet_id=None,
-    subnet_lookup=None,
-    description=None,
-    security_group_ids=None,
-    security_group_lookups=None,
-    ipv6_address_count=None,
-    ipv6_addresses=None,
-    primary_private_ip_address=None,
-    secondary_private_ip_address_count=None,
-    secondary_private_ip_addresses=None,
-    interface_type=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    description: str = None,
+    security_group_ids: Union[str, Iterable[str]] = None,
+    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    ipv6_address_count: int = None,
+    ipv6_addresses: Iterable[str] = None,
+    primary_private_ip_address: str = None,
+    secondary_private_ip_address_count: int = None,
+    secondary_private_ip_addresses: Iterable[str] = None,
+    interface_type: str = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a network interface in the specified subnet.
 
@@ -2829,34 +2963,35 @@ def create_network_interface(
 
 
 def create_route(
-    route_table_id=None,
-    route_table_lookup=None,
-    destination_cidr_block=None,
-    destination_ipv6_cidr_block=None,
-    destination_prefix_list_id=None,
-    egress_only_internet_gateway_id=None,
-    egress_only_internet_gateway_lookup=None,
-    internet_gateway_id=None,
-    internet_gateway_lookup=None,
-    instance_id=None,
-    instance_lookup=None,
-    nat_gateway_id=None,
-    nat_gateway_lookup=None,
-    transit_gateway_id=None,
-    transit_gateway_lookup=None,
-    local_gateway_id=None,
-    local_gateway_lookup=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    vpc_peering_connection_id=None,
-    vpc_peering_connection_lookup=None,
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    destination_cidr_block: str = None,
+    destination_ipv6_cidr_block: str = None,
+    destination_prefix_list_id: str = None,
+    destination_prefix_list_lookup: Mapping = None,
+    egress_only_internet_gateway_id: str = None,
+    egress_only_internet_gateway_lookup: Mapping = None,
+    internet_gateway_id: str = None,
+    internet_gateway_lookup: Mapping = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    nat_gateway_id: str = None,
+    nat_gateway_lookup: Mapping = None,
+    transit_gateway_id: str = None,
+    transit_gateway_lookup: Mapping = None,
+    local_gateway_id: str = None,
+    local_gateway_lookup: Mapping = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    vpc_peering_connection_id: str = None,
+    vpc_peering_connection_lookup: Mapping = None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a route in a route table within a VPC.
 
@@ -2884,6 +3019,8 @@ def create_route(
       destination match. Routing decisions are based on the most specific match.
     :param str destination_prefix_list_id: The ID of a prefix list used for the
       destination match.
+    :param dict destination_prefix_list_lookup: Any kwargs that :py:func:`lookup_managed_prefix_list`
+      accepts. Used to lookup ``destination_prefix_list_id``.
     :param str egress_only_internet_gateway_id: [IPv6 traffic only] The ID of an
       egress-only internet gateway.
     :param dict egress_only_internet_gateway_lookup: Any kwargs that
@@ -2942,6 +3079,13 @@ def create_route(
             "name": "internet_gateway",
             "kwargs": internet_gateway_lookup
             or {"internet_gateway_id": internet_gateway_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "managed_prefix_list",
+            "kwargs": destination_prefix_list_lookup
+            or {"prefix_list_id": destination_prefix_list_id},
             "required": False,
         },
         {
@@ -3006,7 +3150,7 @@ def create_route(
                 "RouteTableId": res["route_table"],
                 "DestinationCidrBlock": destination_cidr_block,
                 "DestinationIpv6CidrBlock": destination_ipv6_cidr_block,
-                "DestinationPrefixListId": destination_prefix_list_id,
+                "DestinationPrefixListId": res.get("managed_prefix_list"),
                 "EgressOnlyInternetGatewayId": res.get("egress_only_internet_gateway"),
                 "GatewayId": res.get("internet_gateway", res.get("vpn_gateway")),
                 "InstanceId": res.get("instance"),
@@ -3022,14 +3166,14 @@ def create_route(
 
 
 def create_route_table(
-    vpc_id=None,
-    vpc_lookup=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    tags: Dict = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a route table for the specified VPC. After you create a route table,
     you can add routes and associate the table with a subnet.
@@ -3065,16 +3209,16 @@ def create_route_table(
 
 
 def create_security_group(
-    name,
-    description,
-    vpc_id=None,
-    vpc_lookup=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    name: str,
+    description: str,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a security group.
 
@@ -3142,16 +3286,16 @@ def create_security_group(
 
 
 def create_snapshot(
-    description=None,
-    volume_id=None,
-    volume_lookup=None,
-    tags=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    description: str = None,
+    volume_id: str = None,
+    volume_lookup: Mapping = None,
+    tags: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a snapshot of an EBS volume and stores it in Amazon S3. You can use
     snapshots for backups, to make copies of EBS volumes, and to save data before
@@ -3221,20 +3365,20 @@ def create_snapshot(
 
 
 def create_subnet(
-    cidr_block,
-    vpc_id=None,
-    vpc_lookup=None,
-    ipv6_cidr_block=None,
-    ipv6_subnet=None,
-    availability_zone=None,
-    availability_zone_id=None,
-    tags=None,
-    blocking=False,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    cidr_block: str,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    ipv6_cidr_block: str = None,
+    ipv6_subnet: int = None,
+    availability_zone: str = None,
+    availability_zone_id: str = None,
+    tags: Mapping = None,
+    blocking: bool = False,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a subnet in an existing VPC.
 
@@ -3325,7 +3469,14 @@ def create_subnet(
     )
 
 
-def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=None):
+def create_tags(
+    resource_ids: Union[str, Iterable[str]],
+    tags: Mapping,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Adds or overwrites one or more tags for the specified Amazon EC2 resource or
     resources. Each resource can have a maximum of 50 tags. Each tag consists of
@@ -3355,23 +3506,23 @@ def create_tags(resource_ids, tags, region=None, keyid=None, key=None, profile=N
 
 
 def create_volume(
-    availability_zone,
-    encrypted=None,
-    iops=None,
-    kms_key_id=None,
-    outpost_arn=None,
-    size=None,
-    snapshot_id=None,
-    snapshot_lookup=None,
-    volume_type=None,
-    tags=None,
-    multi_attach_enabled=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    availability_zone: str,
+    encrypted: bool = None,
+    iops: int = None,
+    kms_key_id: str = None,
+    outpost_arn: str = None,
+    size: int = None,
+    snapshot_id: str = None,
+    snapshot_lookup: Mapping = None,
+    volume_type: str = None,
+    tags: Mapping = None,
+    multi_attach_enabled: bool = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates an EBS volume that can be attached to an instance in the same Availability
     Zone. The volume is created in the regional endpoint that you send the HTTP request to.
@@ -3469,17 +3620,17 @@ def create_volume(
 
 
 def create_vpc(
-    cidr_block,
-    amazon_provided_ipv6_cidr_block=None,
-    instance_tenancy=None,
-    ipv6_pool=None,
-    ipv6_cidr_block=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    cidr_block: str,
+    amazon_provided_ipv6_cidr_block: bool = None,
+    instance_tenancy: str = None,
+    ipv6_pool: str = None,
+    ipv6_cidr_block: str = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a VPC with the specified IPv4 CIDR block. The smallest VPC you can
     create uses a /28 netmask (16 IPv4 addresses), and the largest uses a /16
@@ -3543,26 +3694,34 @@ def create_vpc(
     )
 
 
+@_arguments_to_list(
+    "route_table_ids",
+    "route_table_lookups",
+    "security_group_ids",
+    "security_group_lookups",
+    "subnet_ids",
+    "subnet_lookups",
+)
 def create_vpc_endpoint(
-    service_name,
-    vpc_id=None,
-    vpc_lookup=None,
-    vpc_endpoint_type=None,
-    policy_document=None,
-    route_table_ids=None,
-    route_table_lookups=None,
-    subnet_ids=None,
-    subnet_lookups=None,
-    security_group_ids=None,
-    security_group_lookups=None,
-    private_dns_enabled=None,
-    tags=None,
-    blocking=False,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_name: str,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    vpc_endpoint_type: str = None,
+    policy_document: str = None,
+    route_table_ids: Union[str, Iterable[str]] = None,
+    route_table_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    subnet_ids: Union[str, Iterable[str]] = None,
+    subnet_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    security_group_ids: Union[str, Iterable[str]] = None,
+    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    private_dns_enabled: bool = None,
+    tags: Mapping = None,
+    blocking: bool = False,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a VPC endpoint for a specified service. An endpoint enables you to
     create a private connection between your VPC and the service. The service may
@@ -3588,17 +3747,26 @@ def create_vpc_endpoint(
       Used to lookup ``vpc_id``.
     :param str vpc_endpoint_type: The type of endpoint. Allowed values:
       Interface, Gateway. Default: Gateway
-    :param list(str) route_table_ids: [Gateway endpoint] One or more route table IDs.
-    :param list(dict) route_table_lookups: [Gateway endpoint] List of dicts that
+    :param str policy_document: A policy to attach to the endpoint that controls
+      access to the service. The policy must be in valid JSON format. If this parameter
+      is not specified, we attach a default policy that allows full access to the service.
+    :type route_table_ids: str or list(str)
+    :param route_table_ids: [Gateway endpoint] One or more route table IDs.
+    :type route_table_lookups: dict or list(dict)
+    :param route_table_lookups: [Gateway endpoint] List of dicts that
       contain kwargs that :py:func:`lookup_route_table` accepts. Used to lookup
       ``route_table_ids``.
-    :param list(str) subnet_ids: [Interface endpoint] One or more subnets in which
+    :type subnet_ids: str or list(str)
+    :param subnet_ids: [Interface endpoint] One or more subnets in which
       to create an endpoint network interface.
-    :param list(dict) subnet_lookups: [Interface endpoint] List of dicts that
+    :type subnet_lookups: dict or list(dict)
+    :param subnet_lookups: [Interface endpoint] List of dicts that
       contain kwargs that :py:func:`lookup_subnet` accepts. Used to lookup ``subnet_ids``.
-    :param list(str) security_group_ids: [Interface endpoint] The ID of one or
+    :type security_group_ids: str or list(str)
+    :param security_group_ids: [Interface endpoint] The ID of one or
       more security groups to associate with the endpoint network interface.
-    :param list(dict) security_group_lookups: [interface endpoint] List of dicts
+    :type security_group_lookups: dict or list(dict)
+    :param security_group_lookups: [interface endpoint] List of dicts
       that contain kwargs that :py:func:`lookup_security_group` accepts. Used to lookup
       ``security_group_ids``.
     :param bool private_dns_enabled: [Interface endpoint] Indicates whether to
@@ -3680,18 +3848,18 @@ def create_vpc_endpoint(
     )
 
 
-@_arguments_to_list("network_load_balancer_arns")
+@_arguments_to_list("network_load_balancer_arns", "network_load_balancer_lookups")
 def create_vpc_endpoint_service_configuration(
-    network_load_balancer_arns=None,
-    network_load_balancer_lookup=None,
-    acceptance_required=None,
-    private_dns_name=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    network_load_balancer_arns: Union[str, Iterable[str]] = None,
+    network_load_balancer_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    acceptance_required: bool = None,
+    private_dns_name: str = None,
+    tags: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a VPC endpoint service configuration to which service consumers (AWS
     accounts, IAM users, and IAM roles) can connect. Service consumers can create
@@ -3704,7 +3872,8 @@ def create_vpc_endpoint_service_configuration(
     :type network_load_balancer_arns: str or list(str)
     :param network_load_balancer_arns: The Amazon Resource Names
       (ARNs) of one or more Network Load Balancers for your service.
-    :param dict network_load_balancer_lookup: Dict that contains kwargs
+    :type network_load_balancer_lookups: dict or list(dict)
+    :param network_load_balancer_lookups: Dict or list of dict that contains kwargs
       that ``describe_network_load_balancer`` accepts. Used to lookup network
       loadbalancers if ``network_load_balancer_arns`` is not provided.
       Only supported if ``boto3_elb.describe_load_balancers`` exists.
@@ -3720,12 +3889,12 @@ def create_vpc_endpoint_service_configuration(
       with dict containing the result of the boto ``create_vpc_endpoint_service_configuration``-
       call on succes.
     """
-    if network_load_balancer_lookup:
+    if network_load_balancer_lookups:
         with __salt__["boto3_generic.lookup_resources"](
             {
                 "service": "elb",
                 "name": "load_balancer",
-                "kwargs": network_load_balancer_lookup,
+                "kwargs": network_load_balancer_lookups,
                 "result_keys": "LoadBalancerArn",
             },
             region=region,
@@ -3758,17 +3927,17 @@ def create_vpc_endpoint_service_configuration(
 
 
 def create_vpc_peering_connection(
-    requester_vpc_id=None,
-    requester_vpc_lookup=None,
-    peer_vpc_id=None,
-    peer_vpc_lookup=None,
-    peer_owner_id=None,
-    blocking=False,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    requester_vpc_id: str = None,
+    requester_vpc_lookup: Mapping = None,
+    peer_vpc_id: str = None,
+    peer_vpc_lookup: Mapping = None,
+    peer_owner_id: str = None,
+    blocking: bool = False,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Requests a VPC peering connection between two VPCs: a requester VPC that you
     own and an accepter VPC with which to create the connection. The accepter VPC
@@ -3840,39 +4009,39 @@ def create_vpc_peering_connection(
 
 
 def create_vpn_connection(
-    vpn_type,
-    customer_gateway_id=None,
-    customer_gateway_lookup=None,
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
-    transit_gateway_id=None,
-    transit_gateway_lookup=None,
-    enable_acceleration=None,
-    static_routes_only=None,
-    tunnel_inside_ip_version=None,
-    tunnel_inside_cidr=None,
-    tunnel_inside_ipv6_cidr=None,
-    pre_shared_key=None,
-    phase_1_lifetime_seconds=None,
-    phase_2_lifetime_seconds=None,
-    rekey_margin_time_seconds=None,
-    rekey_fuzz_percentage=None,
-    replay_window_size=None,
-    dpd_timeout_seconds=None,
-    phase_1_encryption_algorithms=None,
-    phase_2_encryption_algorithms=None,
-    phase_1_integrity_algorithms=None,
-    phase_2_integrity_algorithms=None,
-    phase_1_dh_group_numbers=None,
-    phase_2_dh_group_numbers=None,
-    ike_versions=None,
-    tags=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpn_type: str,
+    customer_gateway_id: str = None,
+    customer_gateway_lookup: Mapping = None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
+    transit_gateway_id: str = None,
+    transit_gateway_lookup: Mapping = None,
+    enable_acceleration: bool = None,
+    static_routes_only: bool = None,
+    tunnel_inside_ip_version: str = None,
+    tunnel_inside_cidr: str = None,
+    tunnel_inside_ipv6_cidr: str = None,
+    pre_shared_key: str = None,
+    phase_1_lifetime_seconds: int = None,
+    phase_2_lifetime_seconds: int = None,
+    rekey_margin_time_seconds: int = None,
+    rekey_fuzz_percentage: int = None,
+    replay_window_size: int = None,
+    dpd_timeout_seconds: int = None,
+    phase_1_encryption_algorithms: Iterable[str] = None,
+    phase_2_encryption_algorithms: Iterable[str] = None,
+    phase_1_integrity_algorithms: Iterable[str] = None,
+    phase_2_integrity_algorithms: Iterable[str] = None,
+    phase_1_dh_group_numbers: Iterable[int] = None,
+    phase_2_dh_group_numbers: Iterable[int] = None,
+    ike_versions: Iterable[str] = None,
+    tags: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a VPN connection between an existing virtual private gateway or transit
     gateway and a customer gateway. The supported connection type is `ipsec.1`.
@@ -4057,15 +4226,16 @@ def create_vpn_connection(
 
 
 def create_vpn_gateway(
-    vpn_type,
-    availability_zone=None,
-    tags=None,
-    amazon_side_asn=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpn_type: str,
+    availability_zone: str = None,
+    tags: Mapping = None,
+    amazon_side_asn: int = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a virtual private gateway. A virtual private gateway is the endpoint
     on the VPC side of your VPN connection. You can create a virtual private gateway
@@ -4103,21 +4273,22 @@ def create_vpn_gateway(
 
 
 def crud_security_group_rule(
-    operation,
-    group_id=None,
-    group_lookup=None,
-    direction=None,
-    description=None,
-    port_range=None,
-    ip_protocol=None,
-    ip_range=None,
-    prefix_list_id=None,
-    user_id_group_pair=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    operation: str,
+    group_id: str = None,
+    group_lookup: Mapping = None,
+    direction: str = None,
+    description: str = None,
+    port_range: Tuple[int, int] = None,
+    ip_protocol: str = None,
+    ip_range: str = None,
+    prefix_list_id: str = None,
+    prefix_list_lookup: Mapping = None,
+    user_id_group_pair: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Helper function to add/remove/update a single ingress or egress rule to a
     security group. Note that "update" only updates a rule's description as all
@@ -4175,13 +4346,21 @@ def crud_security_group_rule(
                 operation
             )
         )
-    if prefix_list_lookup:
-        res = lookup_managed_prefix_list(
-            region=region, keyid=keyid, key=key, profile=profile, **prefix_list_lookup
-        )
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "managed_prefix_list",
+            "kwargs": prefix_list_lookup or {"prefix_list_id": prefix_list_id},
+            "required": False,
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
         if "error" in res:
             return res
-        prefix_list_id = res["result"]["PrefixListId"]
+        prefix_list_id = res["result"]["managed_prefix_list"]
     if user_id_group_pair and description and "Description" not in user_id_group_pair:
         user_id_group_pair.update({"Description": description})
     rule = salt.utils.data.filter_falsey(
@@ -4228,13 +4407,13 @@ def crud_security_group_rule(
 
 
 def delete_customer_gateway(
-    customer_gateway_id=None,
-    customer_gateway_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    customer_gateway_id: str = None,
+    customer_gateway_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified customer gateway. You must delete the VPN connection
     before you can delete the customer gateway.
@@ -4267,13 +4446,13 @@ def delete_customer_gateway(
 
 
 def delete_dhcp_options(
-    dhcp_options_id=None,
-    dhcp_options_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    dhcp_options_id: str = None,
+    dhcp_options_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified set of DHCP options. You must disassociate the set of
     DHCP options before you can delete it. You can disassociate the set of DHCP
@@ -4309,13 +4488,13 @@ def delete_dhcp_options(
 
 
 def delete_internet_gateway(
-    internet_gateway_id=None,
-    internet_gateway_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    internet_gateway_id: str = None,
+    internet_gateway_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified internet gateway. You must detach the internet gateway
     from the VPC before you can delete it.
@@ -4350,10 +4529,14 @@ def delete_internet_gateway(
 
 
 def delete_key_pair(
-    key_name=None,
-    key_pair_id=None,
-    key_pair_lookup=None,
-):
+    key_name: str = None,
+    key_pair_id: str = None,
+    key_pair_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified key pair, by removing the public key from Amazon EC2.
 
@@ -4391,14 +4574,14 @@ def delete_key_pair(
 
 
 def delete_nat_gateway(
-    nat_gateway_id=None,
-    nat_gateway_lookup=None,
-    blocking=False,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    nat_gateway_id: str = None,
+    nat_gateway_lookup: Mapping = None,
+    blocking: bool = False,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified NAT gateway. Deleting a NAT gateway disassociates its
     Elastic IP address, but does not release the address from your account.
@@ -4447,13 +4630,13 @@ def delete_nat_gateway(
 
 
 def delete_network_acl(
-    network_acl_id=None,
-    network_acl_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    network_acl_id: str = None,
+    network_acl_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified network ACL. You can't delete the ACL if it's associated
     with any subnets. You can't delete the default network ACL.
@@ -4487,15 +4670,15 @@ def delete_network_acl(
 
 
 def delete_network_acl_entry(
-    rule_number,
-    egress,
-    network_acl_id=None,
-    network_acl_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    rule_number: int,
+    egress: bool,
+    network_acl_id: str = None,
+    network_acl_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified ingress or egress entry (rule) from the specified network ACL.
 
@@ -4532,13 +4715,13 @@ def delete_network_acl_entry(
 
 
 def delete_network_interface(
-    network_interface_id=None,
-    network_interface_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified network interface. You must detach the network interface
     before you can delete it.
@@ -4571,15 +4754,15 @@ def delete_network_interface(
 
 
 def delete_route(
-    route_table_id=None,
-    route_table_lookup=None,
-    destination_cidr_block=None,
-    destination_ipv6_cidr_block=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    destination_cidr_block: str = None,
+    destination_ipv6_cidr_block: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified route from the specified route table.
 
@@ -4622,13 +4805,13 @@ def delete_route(
 
 
 def delete_route_table(
-    route_table_id=None,
-    route_table_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified route table. You must disassociate the route table from
     any subnets before you can delete it. You can't delete the main route table.
@@ -4662,14 +4845,14 @@ def delete_route_table(
 
 
 def delete_security_group(
-    group_id=None,
-    group_name=None,
-    group_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    group_id: str = None,
+    group_name: str = None,
+    group_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes a security group.
 
@@ -4711,13 +4894,13 @@ def delete_security_group(
 
 
 def delete_snapshot(
-    snapshot_id=None,
-    snapshot_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    snapshot_id: str = None,
+    snapshot_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified snapshot.
     When you make periodic snapshots of a volume, the snapshots are incremental,
@@ -4758,13 +4941,13 @@ def delete_snapshot(
 
 
 def delete_subnet(
-    subnet_id=None,
-    subnet_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified subnet. You must terminate all running instances in
     the subnet before you can delete the subnet.
@@ -4797,7 +4980,14 @@ def delete_subnet(
     return __utils__["boto3.handle_response"](client.delete_subnet, params)
 
 
-def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None):
+def delete_tags(
+    resources: Union[str, Iterable[str]],
+    tags: Mapping,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified set of tags from the specified set of resources.
 
@@ -4820,14 +5010,14 @@ def delete_tags(resources, tags, region=None, keyid=None, key=None, profile=None
 
 
 def delete_volume(
-    volume_id=None,
-    volume_lookup=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    volume_id: str = None,
+    volume_lookup: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified EBS volume. The volume must be in the available state
     (not attached to an instance).
@@ -4875,8 +5065,13 @@ def delete_volume(
 
 
 def delete_vpc(
-    vpc_id=None, vpc_lookup=None, region=None, keyid=None, key=None, profile=None
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified VPC. You must detach or delete all gateways and resources
     that are associated with the VPC before you can delete it. For example, you
@@ -4910,13 +5105,13 @@ def delete_vpc(
 
 @_arguments_to_list("service_ids", "service_lookups")
 def delete_vpc_endpoint_service_configurations(
-    service_ids=None,
-    service_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_ids: Union[str, Iterable[str]] = None,
+    service_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes one or more VPC endpoint service configurations in your account. Before
     you delete the endpoint service configuration, you must reject any ``Available``
@@ -4962,13 +5157,13 @@ def delete_vpc_endpoint_service_configurations(
 
 @_arguments_to_list("vpc_endpoint_ids", "vpc_endpoint_lookups")
 def delete_vpc_endpoints(
-    vpc_endpoint_ids=None,
-    vpc_endpoint_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_endpoint_ids: Union[str, Iterable[str]] = None,
+    vpc_endpoint_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes one or more specified VPC endpoints. Deleting a gateway endpoint also
     deletes the endpoint routes in the route tables that were associated with the
@@ -5009,13 +5204,13 @@ def delete_vpc_endpoints(
 
 
 def delete_vpc_peering_connection(
-    vpc_peering_connection_id=None,
-    vpc_peering_connection_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_peering_connection_id: str = None,
+    vpc_peering_connection_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes a VPC peering connection. Either the owner of the requester VPC or
     the owner of the accepter VPC can delete the VPC peering connection if it's
@@ -5067,14 +5262,14 @@ def delete_vpc_peering_connection(
 
 
 def delete_vpn_connection(
-    vpn_connection_id=None,
-    vpn_connection_lookup=None,
+    vpn_connection_id: str = None,
+    vpn_connection_lookup: Mapping = None,
     blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified VPN connection.
 
@@ -5128,14 +5323,14 @@ def delete_vpn_connection(
 
 
 def delete_vpn_gateway(
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
     blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deletes the specified virtual private gateway. You must first detach the virtual
     private gateway from the VPC. Note that you don't need to delete the virtual
@@ -5179,8 +5374,13 @@ def delete_vpn_gateway(
 
 
 def deregister_image(
-    image_id=None, image_lookup=None, region=None, keyid=None, key=None, profile=None
-):
+    image_id: str = None,
+    image_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Deregisters the specified AMI. After you deregister an AMI, it can't be used
     to launch new instances; however, it doesn't affect any instances that you've
@@ -5221,13 +5421,13 @@ def deregister_image(
 
 @_arguments_to_list("attributes")
 def describe_account_attributes(
-    attributes=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes attributes of your AWS account. The following are the supported account
     attributes:
@@ -5263,15 +5463,15 @@ def describe_account_attributes(
 
 @_arguments_to_list("public_ips", "allocation_ids")
 def describe_addresses(
-    filters=None,
-    public_ips=None,
-    allocation_ids=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    filters: Mapping = None,
+    public_ips: Union[str, Iterable[str]] = None,
+    allocation_ids: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more Elastic IP addresses.
 
@@ -5300,16 +5500,16 @@ def describe_addresses(
 
 
 def describe_availability_zones(
-    zone_ids=None,
-    zone_names=None,
-    all_availability_zones=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    zone_ids: Iterable[str] = None,
+    zone_names: Iterable[str] = None,
+    all_availability_zones: bool = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the Availability Zones and Local Zones that are available to you.
     If there is an event impacting an Availability Zone or Local Zone, you can
@@ -5347,14 +5547,14 @@ def describe_availability_zones(
 
 @_arguments_to_list("customer_gateway_ids")
 def describe_customer_gateways(
-    customer_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    customer_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your VPN customer gateways.
 
@@ -5385,14 +5585,14 @@ def describe_customer_gateways(
 
 @_arguments_to_list("dhcp_option_ids")
 def describe_dhcp_options(
-    dhcp_option_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    dhcp_option_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your DHCP options sets.
 
@@ -5423,14 +5623,14 @@ def describe_dhcp_options(
 
 @_arguments_to_list("egress_only_internet_gateway_ids")
 def describe_egress_only_internet_gateways(
-    egress_only_internet_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    egress_only_internet_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your egress-only internet gateways.
 
@@ -5460,14 +5660,14 @@ def describe_egress_only_internet_gateways(
 
 @_arguments_to_list("elastic_gpu_ids")
 def describe_elastic_gpus(
-    elastic_gpu_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    elastic_gpu_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the Elastic Graphics accelerator associated with your instances.
 
@@ -5496,14 +5696,14 @@ def describe_elastic_gpus(
 
 @_arguments_to_list("fleet_ids")
 def describe_fleets(
-    fleet_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    fleet_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified EC2 Fleets or all of your EC2 Fleets.
 
@@ -5531,15 +5731,15 @@ def describe_fleets(
 
 @_arguments_to_list("attributes")
 def describe_fpga_image_attribute(
-    attributes=None,
-    fpga_image_id=None,
-    fpga_image_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    fpga_image_id: str = None,
+    fpga_image_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified attribute of the specified Amazon FPGA Image (AFI).
 
@@ -5570,6 +5770,8 @@ def describe_fpga_image_attribute(
             return res
         params = {"FpgaImageId": res["result"]["fpga_image"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -5586,15 +5788,15 @@ def describe_fpga_image_attribute(
 
 @_arguments_to_list("fpga_image_ids", "owners")
 def describe_fpga_images(
-    fpga_image_ids=None,
-    owners=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    fpga_image_ids: Union[str, Iterable[str]] = None,
+    owners: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the Amazon FPGA Images (AFIs) available to you. These include public
     AFIs, private AFIs that you own, and AFIs owned by other AWS accounts for which
@@ -5630,14 +5832,14 @@ def describe_fpga_images(
 
 @_arguments_to_list("host_ids")
 def describe_hosts(
-    host_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    host_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified Dedicated Hosts or all your Dedicated Hosts.
 
@@ -5671,14 +5873,14 @@ def describe_hosts(
 
 @_arguments_to_list("association_ids")
 def describe_iam_instance_profile_associations(
-    association_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    association_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes your IAM instance profile associations.
 
@@ -5707,15 +5909,15 @@ def describe_iam_instance_profile_associations(
 
 @_arguments_to_list("attributes")
 def describe_image_attribute(
-    attributes=None,
-    image_id=None,
-    image_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    image_id: str = None,
+    image_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified attribute(s) of the specified AMI.
 
@@ -5746,6 +5948,8 @@ def describe_image_attribute(
             return res
         params = {"ImageId": res["result"]["image"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -5760,17 +5964,18 @@ def describe_image_attribute(
     return {"result": ret}
 
 
+@_arguments_to_list("image_ids", "executable_users", "owners")
 def describe_images(
-    image_ids=None,
-    filters=None,
-    executable_users=None,
-    owners=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    image_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    executable_users: Union[str, Iterable[str]] = None,
+    owners: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified images (AMIs, AKIs, and ARIs) available to you or all
     of the images available to you.
@@ -5784,16 +5989,19 @@ def describe_images(
     AMI are terminated, specifying the ID of the image results in an error indicating
     that the AMI ID cannot be found.
 
-    :param list(str) image_ids: The image IDs.
+    :type image_ids: str or list(str)
+    :param image_ids: The image IDs.
     :param dict filters: One or more filters. See
       `here <https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_images>`__
       for a complete list.
       Note that the filters can be supplied as a dict with the keys being the
       names of the filter, and the value being either a string or a list of strings.
-    :param list(str) executable_users: Scopes the images by users with explicit
+    :type executable_users: str or list(str)
+    :param executable_users: Scopes the images by users with explicit
       launch permissions. Specify an AWS account ID, ``self`` (the sender of the
       request), or ``all`` (public AMIs).
-    :param list(str) owners: Scopes the results to images with the specified owners.
+    :type owners: str or list(str)
+    :param owners: Scopes the results to images with the specified owners.
       You can specify a combination of AWS account IDs, self , amazon , and aws-marketplace .
       If you omit this parameter, the results include all images for which you
       have launch permissions, regardless of ownership.
@@ -5815,15 +6023,15 @@ def describe_images(
 
 @_arguments_to_list("attributes")
 def describe_instance_attribute(
-    attributes=None,
-    instance_id=None,
-    instance_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more specified attributes of the specified instance.
     Valid attribute values are: ``instance_type``, ``kernel``, ``ramdisk``, ``user_data``,
@@ -5857,6 +6065,8 @@ def describe_instance_attribute(
             return res
         params = {"InstanceId": res["result"]["instance"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -5873,14 +6083,14 @@ def describe_instance_attribute(
 
 @_arguments_to_list("instance_ids")
 def describe_instance_credit_specifications(
-    instance_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the credit option for CPU usage of the specified burstable performance
     instances. The credit options are ``standard`` and ``unlimited``.
@@ -5929,16 +6139,16 @@ def describe_instance_credit_specifications(
 
 @_arguments_to_list("instance_ids", "instance_lookups")
 def describe_instance_status(
-    instance_ids=None,
-    instance_lookups=None,
-    include_all_instances=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    instance_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    include_all_instances: bool = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the status of the specified instances or all of your instances. By
     default, only running instances are described, unless you specifically indicate
@@ -6001,14 +6211,14 @@ def describe_instance_status(
 
 @_arguments_to_list("instance_ids")
 def describe_instances(
-    instance_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified instances or all instances.
 
@@ -6056,14 +6266,14 @@ def describe_instances(
 
 @_arguments_to_list("internet_gateway_ids")
 def describe_internet_gateways(
-    internet_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    internet_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your internet gateways.
 
@@ -6095,14 +6305,14 @@ def describe_internet_gateways(
 
 @_arguments_to_list("pool_ids")
 def describe_ipv6_pools(
-    pool_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    pool_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes your IPv6 address pools.
 
@@ -6131,15 +6341,15 @@ def describe_ipv6_pools(
 
 @_arguments_to_list("launch_template_ids", "launch_template_names")
 def describe_launch_templates(
-    launch_template_ids=None,
-    launch_template_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    launch_template_ids: Union[str, Iterable[str]] = None,
+    launch_template_names: Union[Mapping, Iterable[Mapping]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more launch templates.
 
@@ -6174,15 +6384,15 @@ def describe_launch_templates(
 
 @_arguments_to_list("key_pair_ids", "key_names")
 def describe_key_pairs(
-    key_pair_ids=None,
-    key_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    key_pair_ids: Union[str, Iterable[str]] = None,
+    key_names: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified key pairs or all of your key pairs.
 
@@ -6214,13 +6424,13 @@ def describe_key_pairs(
 
 @_arguments_to_list("local_gateway_route_table_ids")
 def describe_local_gateway_route_tables(
-    local_gateway_route_table_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    local_gateway_route_table_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Describes one or more local gateway route tables. By default, all local gateway
     route tables are described. Alternatively, you can filter the results.
@@ -6251,14 +6461,14 @@ def describe_local_gateway_route_tables(
 
 @_arguments_to_list("local_gateway_ids")
 def describe_local_gateways(
-    local_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    local_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more local gateways. By default, all local gateways are described.
     Alternatively, you can filter the results.
@@ -6289,14 +6499,14 @@ def describe_local_gateways(
 
 @_arguments_to_list("prefix_list_ids")
 def describe_managed_prefix_lists(
-    prefix_list_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    prefix_list_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes your managed prefix lists and any AWS-managed prefix lists.
 
@@ -6329,14 +6539,14 @@ def describe_managed_prefix_lists(
 
 @_arguments_to_list("nat_gateway_ids")
 def describe_nat_gateways(
-    nat_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    nat_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more NAT Gateways.
 
@@ -6367,14 +6577,14 @@ def describe_nat_gateways(
 
 @_arguments_to_list("network_acl_ids")
 def describe_network_acls(
-    network_acl_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    network_acl_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your network ACLs.
 
@@ -6405,15 +6615,15 @@ def describe_network_acls(
 
 @_arguments_to_list("attributes")
 def describe_network_interface_attribute(
-    attributes=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more network interface attributes.
 
@@ -6446,6 +6656,8 @@ def describe_network_interface_attribute(
             return res
         params = {"NetworkInterfaceId": res["result"]["network_interface"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -6461,7 +6673,15 @@ def describe_network_interface_attribute(
 
 
 @_arguments_to_list("network_interface_permission_ids")
-def describe_network_interface_permissions():
+def describe_network_interface_permissions(
+    network_interface_permission_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the permissions for your network interfaces.
 
@@ -6491,14 +6711,14 @@ def describe_network_interface_permissions():
 
 @_arguments_to_list("network_interface_ids")
 def describe_network_interfaces(
-    network_interface_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    network_interface_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your network interfaces.
 
@@ -6527,15 +6747,15 @@ def describe_network_interfaces(
 
 @_arguments_to_list("group_ids", "group_names")
 def describe_placement_groups(
-    group_ids=None,
-    group_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    group_ids: Union[str, Iterable[str]] = None,
+    group_names: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified placement groups or all of your placement groups.
 
@@ -6568,14 +6788,14 @@ def describe_placement_groups(
 
 @_arguments_to_list("pool_ids")
 def describe_public_ipv4_pools(
-    pool_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    pool_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified IPv4 address pools.
 
@@ -6604,14 +6824,14 @@ def describe_public_ipv4_pools(
 
 @_arguments_to_list("region_names")
 def describe_regions(
-    region_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    region_names: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the Regions that are enabled for your account, or all Regions.
 
@@ -6641,14 +6861,14 @@ def describe_regions(
 
 @_arguments_to_list("route_table_ids")
 def describe_route_tables(
-    route_table_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    route_table_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your route tables.
 
@@ -6679,19 +6899,19 @@ def describe_route_tables(
 
 @_arguments_to_list("group_id")
 def describe_security_group_references(
-    group_id=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    group_id: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     [VPC only] Describes the VPCs on the other side of a VPC peering connection
     that are referencing the security groups you've specified in this request.
 
     :type group_id: str or list(str)
-    :param group_id: The IDs of the security gorups in your account.
+    :param group_id: The IDs of the security groups in your account.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -6711,15 +6931,15 @@ def describe_security_group_references(
 
 @_arguments_to_list("group_ids", "group_names")
 def describe_security_groups(
-    group_ids=None,
-    group_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    group_ids: Union[str, Iterable[str]] = None,
+    group_names: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified security groups or all of your security groups.
 
@@ -6755,7 +6975,16 @@ def describe_security_groups(
 
 
 @_arguments_to_list("attributes")
-def describe_snapshot_attribute():
+def describe_snapshot_attribute(
+    attributes: Union[str, Iterable[str]] = None,
+    snapshot_id: str = None,
+    snapshot_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+):
     """
     Describes one or more attributes of the specified snapshot.
 
@@ -6786,6 +7015,8 @@ def describe_snapshot_attribute():
             return res
         params = {"SnapshotId": res["result"]["snapshot"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -6800,18 +7031,18 @@ def describe_snapshot_attribute():
     return {"result": ret}
 
 
-@_arguments_to_list("snapshot_ids", "owner_ids")
+@_arguments_to_list("snapshot_ids", "owner_ids", "restorable_by_user_ids")
 def describe_snapshots(
-    snapshot_ids=None,
-    owner_ids=None,
-    restorable_by_user_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    snapshot_ids: Union[str, Iterable[str]] = None,
+    owner_ids: Union[str, Iterable[str]] = None,
+    restorable_by_user_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified EBS snapshots available to you or all of the EBS snapshots
     available to you.
@@ -6854,10 +7085,12 @@ def describe_snapshots(
     :type snapshot_ids: str or list(str)
     :param snapshot_ids: The snapshot IDs.
       Default: Describes the snapshots for which you have create volume permissions.
-    :param list(str) owner_ids: Scopes the results to snapshots with the specified
-      owners. You can specify a combination of AWS account IDs, ``self``, and ``amazon``.
-    :param list(str) restorable_by_user_ids: The IDs of the AWS accounts that can
-      create volumes from the snapshot.
+    :type owner_ids: str or list(str)
+    :param owner_ids: Scopes the results to snapshots with the specified owners.
+      You can specify a combination of AWS account IDs, ``self``, and ``amazon``.
+    :type restorable_by_user_ids: str or list(str)
+    :param restorable_by_user_ids: The IDs of the AWS accounts that can create
+      volumes from the snapshot.
     :param dict filters: One or more filters. See
       `here <https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.Client.describe_snapshots>`__
       for a complete list.
@@ -6881,13 +7114,13 @@ def describe_snapshots(
 
 
 def describe_spot_fleet_instances(
-    spot_fleet_request_id,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    spot_fleet_request_id: str,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the running instances for the specified Spot Fleet.
 
@@ -6910,13 +7143,13 @@ def describe_spot_fleet_instances(
 
 @_arguments_to_list("spot_fleet_request_ids")
 def describe_spot_fleet_requests(
-    spot_fleet_request_ids=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    spot_fleet_request_ids: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Mapping:
     """
     Describes your Spot Fleet requests.
 
@@ -6943,14 +7176,14 @@ def describe_spot_fleet_requests(
 
 @_arguments_to_list("spot_instance_request_ids")
 def describe_spot_instance_requests(
-    spot_instance_request_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    spot_instance_request_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified Spot Instance requests.
 
@@ -6987,14 +7220,14 @@ def describe_spot_instance_requests(
 
 
 def describe_stale_security_groups(
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the stale security group rules for security groups in a specified
     VPC. Rules are stale when they reference a deleted security group in a peer
@@ -7028,14 +7261,14 @@ def describe_stale_security_groups(
 
 @_arguments_to_list("subnet_ids")
 def describe_subnets(
-    subnet_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    subnet_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your subnets.
 
@@ -7065,8 +7298,13 @@ def describe_subnets(
 
 
 def describe_tags(
-    filters=None, region=None, keyid=None, key=None, profile=None, client=None
-):
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client=None,
+) -> Dict:
     """
     Describes the specified tags for your EC2 resources.
 
@@ -7087,14 +7325,14 @@ def describe_tags(
 
 @_arguments_to_list("transit_gateway_ids")
 def describe_transit_gateways(
-    transit_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    transit_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more transit gateways. By default, all transit gateways are
     described. Alternatively, you can filter the results.
@@ -7123,7 +7361,16 @@ def describe_transit_gateways(
 
 
 @_arguments_to_list("attributes")
-def describe_volume_attribute():
+def describe_volume_attribute(
+    attributes: Union[str, Iterable[str]] = None,
+    volume_id: str = None,
+    volume_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more attributes of the specified volume.
 
@@ -7154,6 +7401,8 @@ def describe_volume_attribute():
             return res
         params = {"volumeId": res["result"]["volume"]}
     ret = {}
+    if client is None:
+        client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     for attribute in attributes:
         # Well this is nasty. When selecting the attribute for querying, it needs
         # to be lowerCamelCased, but the returned attribute is UpperCamelCased.
@@ -7170,13 +7419,13 @@ def describe_volume_attribute():
 
 @_arguments_to_list("volume_ids")
 def describe_volumes(
-    volume_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    volume_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Describes the specified EBS volumes or all of your EBS volumes.
 
@@ -7205,15 +7454,15 @@ def describe_volumes(
 
 @_arguments_to_list("volume_ids", "volume_lookups")
 def describe_volumes_modifications(
-    volume_ids=None,
-    volume_lookups=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    volume_ids: Union[str, Iterable[str]] = None,
+    volume_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the most recent volume modification request for the specified EBS volumes.
 
@@ -7264,15 +7513,15 @@ def describe_volumes_modifications(
 
 @_arguments_to_list("attributes")
 def describe_vpc_attribute(
-    attributes=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attributes: Union[str, Iterable[str]] = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the specified attribute(s) of the specified VPC.
 
@@ -7317,16 +7566,16 @@ def describe_vpc_attribute(
 
 
 @_arguments_to_list("vpc_ids", "vpc_lookups")
-def desribe_vpc_classic_link(
-    vpc_ids=None,
-    vpc_lookups=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+def describe_vpc_classic_link(
+    vpc_ids: Union[str, Iterable[str]] = None,
+    vpc_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the ClassicLink status of one or more VPCs.
 
@@ -7351,7 +7600,7 @@ def desribe_vpc_classic_link(
         {
             "service": "ec2",
             "name": "vpc",
-            "kwargs": vpc_lookups or [{"vpc_id": vpc_id} for vpc_id in vpc_ids],
+            "kwargs": vpc_lookups or [{"vpc_id": vpc_id} for vpc_id in vpc_ids or []],
         },
         region=region,
         keyid=keyid,
@@ -7360,15 +7609,16 @@ def desribe_vpc_classic_link(
     ) as res:
         if "error" in res:
             return res
+        vpc_ids = res["result"]["vpc"]
         params = salt.utils.data.filter_falsey(
             {
-                "VpcIds": res["result"]["vpc"],
+                "VpcIds": vpc_ids if isinstance(vpc_ids, list) else [vpc_ids],
                 "Filters": __utils__["boto3.dict_to_boto_filters"](filters),
             }
         )
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.handle_result"](
+    return __utils__["boto3.handle_response"](
         client.describe_vpc_classic_link,
         params,
     )
@@ -7376,14 +7626,14 @@ def desribe_vpc_classic_link(
 
 @_arguments_to_list("vpc_ids", "vpc_lookups")
 def describe_vpc_classic_link_dns_support(
-    vpc_ids=None,
-    vpc_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_ids: Union[str, Iterable[str]] = None,
+    vpc_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the ClassicLink DNS support status of one or more VPCs. If enabled,
     the DNS hostname of a linked EC2-Classic instance resolves to its private IP
@@ -7406,7 +7656,7 @@ def describe_vpc_classic_link_dns_support(
         {
             "service": "ec2",
             "name": "vpc",
-            "kwargs": vpc_lookups or [{"vpc_id": vpc_id} for vpc_id in vpc_ids],
+            "kwargs": vpc_lookups or [{"vpc_id": vpc_id} for vpc_id in vpc_ids or []],
         },
         region=region,
         keyid=keyid,
@@ -7415,23 +7665,24 @@ def describe_vpc_classic_link_dns_support(
     ) as res:
         if "error" in res:
             return res
-        params = {"VpcIds": res["result"]["vpc"]}
+        vpc_ids = res["result"]["vpc"]
+        params = {"VpcIds": vpc_ids if isinstance(vpc_ids, list) else [vpc_ids]}
     if client is None:
         client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
-    return __utils__["boto3.handle_result"](
+    return __utils__["boto3.handle_response"](
         client.describe_vpc_classic_link_dns_support,
         params,
     )
 
 
 def describe_vpc_endpoint_connections(
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the VPC endpoint connections to your VPC endpoint services, including
     any endpoints that are pending your acceptance.
@@ -7458,14 +7709,14 @@ def describe_vpc_endpoint_connections(
 
 @_arguments_to_list("service_ids")
 def describe_vpc_endpoint_service_configurations(
-    service_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    service_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the VPC endpoint service configurations in your account (your services).
 
@@ -7494,15 +7745,15 @@ def describe_vpc_endpoint_service_configurations(
 
 
 def describe_vpc_endpoint_service_permissions(
-    service_id=None,
-    service_lookup=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    service_id: str = None,
+    service_lookup: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes the principals (service consumers) that are permitted to discover
     your VPC endpoint service.
@@ -7545,14 +7796,14 @@ def describe_vpc_endpoint_service_permissions(
 
 @_arguments_to_list("service_names")
 def describe_vpc_endpoint_services(
-    service_names=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    service_names: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes available services to which you can create a VPC endpoint.
 
@@ -7581,14 +7832,14 @@ def describe_vpc_endpoint_services(
 
 @_arguments_to_list("vpc_endpoint_ids")
 def describe_vpc_endpoints(
-    vpc_endpoint_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_endpoint_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your VPC endpoints.
 
@@ -7617,14 +7868,14 @@ def describe_vpc_endpoints(
 
 @_arguments_to_list("vpc_peering_connection_ids")
 def describe_vpc_peering_connections(
-    vpc_peering_connection_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_peering_connection_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your VPC peering connections.
 
@@ -7656,14 +7907,14 @@ def describe_vpc_peering_connections(
 
 @_arguments_to_list("vpc_ids")
 def describe_vpcs(
-    vpc_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your VPCs.
 
@@ -7693,13 +7944,13 @@ def describe_vpcs(
 
 @_arguments_to_list("vpn_connection_ids")
 def describe_vpn_connections(
-    vpn_connection_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpn_connection_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> str:
     """
     Describes one or more of your VPN connections.
 
@@ -7728,14 +7979,14 @@ def describe_vpn_connections(
 
 @_arguments_to_list("vpn_gateway_ids")
 def describe_vpn_gateways(
-    vpn_gateway_ids=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpn_gateway_ids: Union[str, Iterable[str]] = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of your virtual private gateways.
 
@@ -7760,15 +8011,15 @@ def describe_vpn_gateways(
 
 
 def detach_internet_gateway(
-    internet_gateway_id=None,
-    internet_gateway_lookup=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    internet_gateway_id: str = None,
+    internet_gateway_lookup: Mapping = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Detaches an internet gateway from a VPC, disabling connectivity between the
     internet and the VPC. The VPC must not contain any running instances with
@@ -7822,14 +8073,15 @@ def detach_internet_gateway(
 
 
 def detach_network_interface(
-    attachment_id=None,
-    network_interface_lookup=None,
-    force=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    attachment_id: str = None,
+    network_interface_lookup: Mapping = None,
+    force: bool = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Detaches a network interface from an instance.
 
@@ -7846,6 +8098,7 @@ def detach_network_interface(
       might not get updated. This means that the attributes associated with the
       detached network interface might still be visible. The instance metadata
       will get updated when you stop and start the instance.
+    :param bool blocking: Wait until the network interface becomes available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -7857,7 +8110,7 @@ def detach_network_interface(
                 "service": "ec2",
                 "name": "network_interface",
                 "kwargs": network_interface_lookup,
-                "result_keys": "Attachment:AttachmentId",
+                "result_keys": ["NetworkInterfaceId", "Attachment:AttachmentId"],
             },
             region=region,
             keyid=keyid,
@@ -7866,26 +8119,43 @@ def detach_network_interface(
         ) as res:
             if "error" in res:
                 return res
-            attachment_id = res["result"]["network_interface"]
+            res = res["result"]["network_interface"]
+            attachment_id = res["Attachment:AttachmentId"]
+            network_interface_id = res["NetworkInterfaceId"]
     params = salt.utils.data.filter_falsey(
         {"AttachmentId": attachment_id, "Force": force}
     )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.handle_response"](client.detach_network_interface, params)
+    res = __utils__["boto3.handle_response"](client.detach_network_interface, params)
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "network_interface",
+            "available",
+            params={
+                "NetworkInterfaceIds": [network_interface_id],
+            },
+            client=client,
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
 def detach_volume(
-    volume_id=None,
-    volume_lookup=None,
-    instance_id=None,
-    instance_lookup=None,
-    device=None,
-    force=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    volume_id: str = None,
+    volume_lookup: Mapping = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    device: str = None,
+    force: bool = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Detaches an EBS volume from an instance. Make sure to unmount any file systems
     on the device within your operating system before detaching the volume. Failure
@@ -7913,6 +8183,7 @@ def detach_volume(
       a failed instance. The instance won't have an opportunity to flush file system
       caches or file system metadata. If you use this option, you must perform
       file system check and repair procedures.
+    :param bool blocking: Wait until the volume becomes available.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -7947,20 +8218,34 @@ def detach_volume(
             }
         )
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    return __utils__["boto3.handle_response"](client.detach_volume, params)
+    res = __utils__["boto3.handle_response"](client.detach_volume, params)
+    if "error" in res:
+        return res
+    if blocking:
+        ret = __utils__["boto3.wait_resource"](
+            "volume",
+            "available",
+            params={
+                "VolumeIds": [volume_id],
+            },
+            client=client,
+        )
+    else:
+        ret = {"result": True}
+    return ret
 
 
 def detach_vpn_gateway(
-    vpc_id=None,
-    vpc_lookup=None,
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Detaches a virtual private gateway from a VPC. You do this if you're planning
     to turn off the VPC and not use it anymore. You can confirm a virtual private
@@ -8024,13 +8309,13 @@ def detach_vpn_gateway(
 
 
 def disable_vpc_classic_link(
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Disables ClassicLink for a VPC. You cannot disable ClassicLink for a VPC that
     has EC2-Classic instances linked to it.
@@ -8061,13 +8346,13 @@ def disable_vpc_classic_link(
 
 
 def disable_vpc_classic_link_dns_support(
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Disables ClassicLink DNS support for a VPC. If disabled, DNS hostnames resolve
     to public IP addresses when addressed between a linked EC2-Classic instance
@@ -8101,14 +8386,14 @@ def disable_vpc_classic_link_dns_support(
 
 
 def disassociate_address(
-    association_id=None,
-    address_lookup=None,
-    public_ip=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    association_id: str = None,
+    address_lookup: Mapping = None,
+    public_ip: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Disassociates an Elastic IP address from the instance or network interface
     it's associated with.
@@ -8144,16 +8429,16 @@ def disassociate_address(
 
 
 def disassociate_route_table(
-    association_id=None,
-    route_table_id=None,
-    route_table_lookup=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    association_id: str = None,
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Disassociates a subnet from a route table. You can either specify an
     association_id, or (route_table and subnet).
@@ -8231,15 +8516,15 @@ def disassociate_route_table(
 
 
 def disassociate_subnet_cidr_block(
-    association_id=None,
-    ipv6_cidr_block=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
+    association_id: str = None,
+    ipv6_cidr_block: str = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
 ):
     """
     Disassociates a CIDR block from a subnet. Currently, you can disassociate an
@@ -8281,7 +8566,7 @@ def disassociate_subnet_cidr_block(
             current_ipv6_association = res["result"]["subnet"]
         if not current_ipv6_association:
             return {
-                "error": "The subnet specified does not have an IPv6 CIDR block association"
+                "error": "The subnet specified does not have an IPv6 CIDR block association."
             }
         current_associated_ipv6_cidr_block = [
             item
@@ -8314,14 +8599,14 @@ def disassociate_subnet_cidr_block(
 
 
 def disassociate_vpc_cidr_block(
-    association_id=None,
-    vpc_lookup=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    association_id: str = None,
+    vpc_lookup: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Disassociates a CIDR block from a VPC. To disassociate the CIDR block, you
     must specify its association ID. You can get the association ID by using
@@ -8348,85 +8633,103 @@ def disassociate_vpc_cidr_block(
     # whether that's an IPv4 CIDR block or an IPv6 CIDR block ...
     if association_id is None:
         if not vpc_lookup:
-            raise SaltInvocationError("vpc_lookup is required.")
-        if "cidr_block" not in vpc_lookup and "ipv6_cidr_block" not in vpc_lookup:
-            raise SaltinvocationError(
-                'vpc_lookup must contain an entry for either "cidr_block" or "ipv6_cidr_block".'
+            raise SaltInvocationError(
+                'When not providing an association_id, the argument "vpc_lookup" is required.'
             )
-        else:
-            cidr_block_type = "ipv6" if "ipv6_cidr_block" in vpc_lookup else ""
+        if "cidr_block" not in vpc_lookup and "ipv6_cidr_block" not in vpc_lookup:
+            raise SaltInvocationError(
+                'The argument vpc_lookup must contain an entry for either "cidr_block" or "ipv6_cidr_block".'
+            )
+        cidr_block_type = "ipv6" if "ipv6_cidr_block" in vpc_lookup else ""
     # ... So we will have to lookup both ...
-    with __salt__["boto3_generic.lookup_resources"](
-        {
-            "service": "ec2",
-            "name": "vpc",
-            "kwargs": vpc_lookup
-            or {"cidr-block-association.association-id": association_id},
-            "result_keys": "CidrBlockAssociationSet",
-            "required": False,
-        },
-        {
-            "service": "ec2",
-            "name": "vpc",
-            "as": "vpc6",
-            "kwargs": {"ipv6-cidr-block-association.association-id": association_id},
-            "result_keys": "Ipv6CidrBlockAssociationSet",
-            "required": False,
-        },
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-    ) as res:
-        if "error" in res:
-            return res
-        res = res["result"]
-        # ... And figure out which one it was ...
-        if association_id:
-            matching_ipv4_cidr_blocks = [
-                item for item in res["vpc"] if item["AssociationId"] == association_id
-            ]
-            matching_ipv6_cidr_blocks = [
-                item for item in res["vpc6"] if item["AssociationId"] == association_id
-            ]
-            if not any((matching_ipv4_cidr_blocks, matching_ipv6_cidr_blocks)):
-                raise SaltInvocationError(
-                    "No VPC found with matching associated IPv4 or IPv6 CIDR blocks."
-                )
-        else:
-            matching_ipv4_cidr_blocks = [
-                item
-                for item in res["vpc"]
-                if item["CidrBlock"] == vpc_lookup.get("cidr_block")
-            ]
-            matching_ipv6_cidr_blocks = [
-                item
-                for item in res["vpc6"]
-                if item["Ipv6CidrBlock"] == vpc_lookup.get("ipv6_cidr_block")
-            ]
-        cidr_block_type = "ipv6" if matching_ipv6_cidr_blocks else ""
-        res = (
-            res["result"]["vpc6"][0]
-            if matching_ipv6_cidr_blocks
-            else res["result"]["vpc"][0]
-        )
-        association_id = res["vpc{}".format("6" if cidr_block_type else "")][
-            "AssociationId"
-        ]
-        params = {"AssociationId": association_id}
+    if association_id is None or blocking:
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "vpc",
+                "kwargs": vpc_lookup or {"cidr_block_association_id": association_id},
+                "result_keys": "CidrBlockAssociationSet",
+                "required": False,
+            },
+            {
+                "service": "ec2",
+                "name": "vpc",
+                "as": "vpc6",
+                "kwargs": vpc_lookup
+                or {"ipv6_cidr_block_association_id": association_id},
+                "result_keys": "Ipv6CidrBlockAssociationSet",
+                "required": False,
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
+            if "error" in res:
+                return res
+            res = res["result"]
+            log.debug("HERBERT: res: %s", res)
+            # ... And figure out which one it was ...
+            if association_id:
+                matching_ipv4_cidr_blocks = [
+                    item
+                    for item in res["vpc"]
+                    if item["AssociationId"] == association_id
+                ]
+                matching_ipv6_cidr_blocks = [
+                    item
+                    for item in res["vpc6"]
+                    if item["AssociationId"] == association_id
+                ]
+                if not any((matching_ipv4_cidr_blocks, matching_ipv6_cidr_blocks)):
+                    raise SaltInvocationError(
+                        "No VPC found with matching associated IPv4 or IPv6 CIDR blocks."
+                    )
+                cidr_block_type = "ipv6" if matching_ipv6_cidr_blocks else ""
+            elif "cidr_block" in vpc_lookup:
+                if res["vpc"] is None:
+                    return {
+                        "error": 'No IPv4 CIDR block association was found with the information provided in "vpc_lookup".'
+                    }
+                cidr_block_type = ""
+                matching_ipv4_cidr_blocks = [
+                    item
+                    for item in res["vpc"]
+                    if item["CidrBlock"] == vpc_lookup.get("cidr_block")
+                ]
+            elif "ipv6_cidr_block" in vpc_lookup:
+                if res["vpc6"] is None:
+                    return {
+                        "error": 'No IPv6 CIDR block association was found with the information provided in "vpc_lookup".'
+                    }
+                cidr_block_type = "ipv6"
+                matching_ipv6_cidr_blocks = [
+                    item
+                    for item in res["vpc6"]
+                    if item["Ipv6CidrBlock"] == vpc_lookup.get("ipv6_cidr_block")
+                ]
+            res = (
+                matching_ipv6_cidr_blocks[0]
+                if cidr_block_type == "ipv6"
+                else matching_ipv4_cidr_blocks[0]
+            )
+            association_id = res["AssociationId"]
+    params = {"AssociationId": association_id}
     client = _get_client(region=region, keyid=keyid, key=key, profile=profile)
     res = __utils__["boto3.handle_response"](client.disassociate_vpc_cidr_block, params)
     if "error" in res:
         return res
     if blocking:
         # ... All so we can wait for the correct CIDR block to be disassociated.
-        params = __utils__["boto3.dict_to_boto_filters"](
-            {
-                "{}{}cidr-block-association.association_id".format(
-                    cidr_block_type, "-" if cidr_block_type else ""
-                ): association_id
-            }
-        )
+        params = {
+            "Filters": __utils__["boto3.dict_to_boto_filters"](
+                {
+                    "{}{}cidr-block-association.association-id".format(
+                        cidr_block_type, "-" if cidr_block_type else ""
+                    ): association_id
+                }
+            )
+        }
         res = __utils__["boto3.wait_resource"](
             "vpc_{}{}cidr_block".format(
                 cidr_block_type, "_" if cidr_block_type else ""
@@ -8441,13 +8744,13 @@ def disassociate_vpc_cidr_block(
 
 
 def enable_vpc_classic_link(
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Enables a VPC for ClassicLink. You can then link EC2-Classic instances to your
     ClassicLink-enabled VPC to allow communication over private IP addresses. You
@@ -8481,13 +8784,13 @@ def enable_vpc_classic_link(
 
 
 def enable_vpc_classic_link_dns_support(
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Enables a VPC to support DNS hostname resolution for ClassicLink. If enabled,
     the DNS hostname of a linked EC2-Classic instance resolves to its private IP
@@ -8526,10 +8829,10 @@ def import_key_pair(
     key_name,
     public_key_material,
     tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
 ):
     """
     Imports the public key from an RSA key pair that you created with a third-party
@@ -8557,20 +8860,20 @@ def import_key_pair(
 
 
 def lookup_availability_zone(
-    zone_id=None,
-    zone_name=None,
-    group_name=None,
-    message=None,
-    opt_in_status=None,
-    region_name=None,
-    state=None,
-    zone_type=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    zone_id: str = None,
+    zone_name: str = None,
+    group_name: str = None,
+    message: str = None,
+    opt_in_status: str = None,
+    region_name: str = None,
+    state: str = None,
+    zone_type: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single Availability Zone.
     Can also be used to determine if an Availability Zone exists.
@@ -8626,27 +8929,27 @@ def lookup_availability_zone(
 
 
 def lookup_address(
-    allocation_name=None,
-    allocation_id=None,
-    association_id=None,
-    domain=None,
-    instance_id=None,
-    instance_lookup=None,
-    network_border_group=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    network_interface_owner_id=None,
-    private_ip_address=None,
-    public_ip=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    allocation_name: str = None,
+    allocation_id: str = None,
+    association_id: str = None,
+    domain: str = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    network_border_group: str = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    network_interface_owner_id: str = None,
+    private_ip_address: str = None,
+    public_ip: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single Elastic IP.
     Can also be used to determine if an Elastic IP exists.
@@ -8745,21 +9048,21 @@ def lookup_address(
 
 
 def lookup_customer_gateway(
-    customer_gateway_id=None,
-    customer_gateway_name=None,
-    bgp_asn=None,
-    ip_address=None,
-    state=None,
-    gateway_type=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    customer_gateway_id: str = None,
+    customer_gateway_name: str = None,
+    bgp_asn: int = None,
+    ip_address: str = None,
+    state: str = None,
+    gateway_type: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single DHCP options set.
     Can also be used to determine if a DHCP options set exists.
@@ -8769,7 +9072,7 @@ def lookup_customer_gateway(
     :param str customer_gateway_id: ID of the VPN customer gateway.
     :param str customer_gateway_name: The ``Name``-tag of the VPN customer gateway.
       If also specifying ``Name`` in ``tags``, this option takes precedence.
-    :param str bgp_asn: The customer gateway's Border Gateway Protocol (BGP)
+    :param int bgp_asn: The customer gateway's Border Gateway Protocol (BGP)
       Autonomous System Number (ASN).
     :param str ip_address: The IP address of the customer gateway's Internet-routable
       external interface.
@@ -8820,24 +9123,25 @@ def lookup_customer_gateway(
     )
 
 
+@_arguments_to_list("domain_name_servers", "ntp_servers", "netbios_name_servers")
 def lookup_dhcp_options(
-    dhcp_options_id=None,
-    dhcp_options_name=None,
-    domain_name_servers=None,
-    domain_name=None,
-    ntp_servers=None,
-    netbios_name_servers=None,
-    netbios_node_type=None,
-    owner_id=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    dhcp_options_id: str = None,
+    dhcp_options_name: str = None,
+    domain_name_servers: Union[str, Iterable[str]] = None,
+    domain_name: str = None,
+    ntp_servers: Union[str, Iterable[str]] = None,
+    netbios_name_servers: Union[str, Iterable[str]] = None,
+    netbios_node_type: str = None,
+    owner_id: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single DHCP options set.
     Can also be used to determine if a DHCP options set exists.
@@ -8899,16 +9203,16 @@ def lookup_dhcp_options(
 
 
 def lookup_egress_only_internet_gateway(
-    egress_only_internet_gateway_id=None,
-    tag_key=None,
-    tags=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    egress_only_internet_gateway_id: str = None,
+    tag_key: str = None,
+    tags: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single egress only internet gateway.
     Can also be used to determine if an egress only internet gateway exists.
@@ -8947,23 +9251,23 @@ def lookup_egress_only_internet_gateway(
 
 
 def lookup_fpga_image(
-    fpga_image_id=None,
-    fpga_global_image_id=None,
-    name=None,
-    owner_id=None,
-    product_code=None,
-    shell_version=None,
-    state=None,
-    tags=None,
-    tag_key=None,
-    update_time=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    fpga_image_id: str = None,
+    fpga_global_image_id: str = None,
+    name: str = None,
+    owner_id: str = None,
+    product_code: str = None,
+    shell_version: str = None,
+    state: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    update_time: datetime = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single FPGA image.
     Can also be used to determine if an FPGA image exists.
@@ -9026,43 +9330,43 @@ def lookup_fpga_image(
 
 
 def lookup_image(
-    image_id=None,
-    image_name=None,
-    architecture=None,
-    delete_on_termination=None,
-    device_name=None,
-    snapshot_id=None,
-    volume_size=None,
-    volume_type=None,
-    encrypted=None,
-    description=None,
-    ena_support=None,
-    hypervisor=None,
-    image_type=None,
-    is_public=None,
-    kernel_id=None,
-    manifest_location=None,
-    owner_alias=None,
-    owner_id=None,
-    platform=None,
-    product_code=None,
-    product_code_type=None,
-    ramdisk_id=None,
-    root_device_name=None,
-    root_device_type=None,
-    state=None,
-    state_reason_code=None,
-    state_reason_message=None,
-    sriov_net_support=None,
-    tags=None,
-    tag_key=None,
-    virtualization_type=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    client=None,
-):
+    image_id: str = None,
+    image_name: str = None,
+    architecture: str = None,
+    delete_on_termination: bool = None,
+    device_name: str = None,
+    snapshot_id: str = None,
+    volume_size: int = None,
+    volume_type: str = None,
+    encrypted: bool = None,
+    description: str = None,
+    ena_support: bool = None,
+    hypervisor: str = None,
+    image_type: str = None,
+    is_public: bool = None,
+    kernel_id: str = None,
+    manifest_location: str = None,
+    owner_alias: str = None,
+    owner_id: str = None,
+    platform: str = None,
+    product_code: str = None,
+    product_code_type: str = None,
+    ramdisk_id: str = None,
+    root_device_name: str = None,
+    root_device_type: str = None,
+    state: str = None,
+    state_reason_code: str = None,
+    state_reason_message: str = None,
+    sriov_net_support: bool = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    virtualization_type: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single Image.
     Can also be used to determine if an Image exists.
@@ -9174,100 +9478,103 @@ def lookup_image(
 
 
 def lookup_instance(
-    affinity=None,
-    architecture=None,
-    availability_zone=None,
-    block_device_attach_time=None,
-    block_device_delete_on_termination=None,
-    block_device_name=None,
-    block_device_status=None,
-    block_device_volume_id=None,
-    block_device_volume_lookup=None,
-    dns_name=None,
-    group_id=None,
-    group_name=None,
-    hibernation_configured=None,
-    host_id=None,
-    hypervisor=None,
-    iam_instance_profile_arn=None,
-    image_id=None,
-    instance_id=None,
-    instance_lifecycle=None,
-    instance_state_code=None,
-    instance_state_name=None,
-    instance_type=None,
-    instance_group_id=None,
-    instance_group_name=None,
-    ip_address=None,
-    kernel_id=None,
-    key_name=None,
-    launch_index=None,
-    launch_time=None,
-    metadata_http_tokens=None,
-    metadata_http_hop_limit=None,
-    metadata_http_enabled=None,
-    monitoring_state=None,
-    network_interface_addresses_private_ip_address=None,
-    network_interface_addresses_primary=None,
-    network_interface_addresses_association_public_ip=None,
-    network_interface_addresses_association_ip_owner_id=None,
-    network_interface_association_public_ip=None,
-    network_interface_association_ip_owner_id=None,
-    network_interface_association_allocation_id=None,
-    network_interface_association_id=None,
-    network_interface_attachment_id=None,
-    network_interface_attachment_instance_id=None,
-    network_interface_attachment_instance_owner_id=None,
-    network_interface_attachment_device_index=None,
-    network_interface_attachment_status=None,
-    network_interface_attachment_attach_time=None,
-    network_interface_attachment_delete_on_termination=None,
-    network_interface_availability_zone=None,
-    network_interface_description=None,
-    network_interface_group_id=None,
-    network_interface_group_name=None,
-    network_interface_ipv6_address=None,
-    network_interface_mac_address=None,
-    network_interface_id=None,
-    network_interface_owner_id=None,
-    network_interface_private_dns_name=None,
-    network_interface_requester_id=None,
-    network_interface_requester_managed=None,
-    network_interface_status=None,
-    network_interface_source_dest_check=None,
-    network_interface_subnet_id=None,
-    network_interface_vpc_id=None,
-    owner_id=None,
-    placement_group_name=None,
-    placement_partition_number=None,
-    platform=None,
-    private_dns_name=None,
-    private_ip_address=None,
-    product_code=None,
-    product_code_type=None,
-    ramdisk_id=None,
-    reason=None,
-    requester_id=None,
-    reservation_id=None,
-    root_device_name=None,
-    root_device_type=None,
-    source_dest_check=None,
-    spot_instance_request_id=None,
-    state_reason_code=None,
-    state_reason_message=None,
-    subnet_id=None,
-    tags=None,
-    tag_key=None,
-    tenancy=None,
-    virtualization_type=None,
-    vpc_id=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    affinity: str = None,
+    architecture: str = None,
+    availability_zone: str = None,
+    block_device_attach_time: datetime = None,
+    block_device_delete_on_termination: bool = None,
+    block_device_name: str = None,
+    block_device_status: str = None,
+    block_device_volume_id: str = None,
+    block_device_volume_lookup: Mapping = None,
+    dns_name: str = None,
+    group_id: str = None,
+    group_name: str = None,
+    hibernation_configured: bool = None,
+    host_id: str = None,
+    hypervisor: str = None,
+    iam_instance_profile_arn: str = None,
+    image_id: str = None,
+    image_lookup: Mapping = None,
+    instance_id: str = None,
+    instance_lifecycle: str = None,
+    instance_state_code: int = None,
+    instance_state_name: str = None,
+    instance_type: str = None,
+    instance_group_id: str = None,
+    instance_group_name: str = None,
+    ip_address: str = None,
+    kernel_id: str = None,
+    key_name: str = None,
+    launch_index: int = None,
+    launch_time: datetime = None,
+    metadata_http_tokens: str = None,
+    metadata_http_hop_limit: int = None,
+    metadata_http_enabled: bool = None,
+    monitoring_state: bool = None,
+    network_interface_addresses_private_ip_address: str = None,
+    network_interface_addresses_primary: bool = None,
+    network_interface_addresses_association_public_ip: str = None,
+    network_interface_addresses_association_ip_owner_id: str = None,
+    network_interface_association_public_ip: str = None,
+    network_interface_association_ip_owner_id: str = None,
+    network_interface_association_allocation_id: str = None,
+    network_interface_association_id: str = None,
+    network_interface_attachment_id: str = None,
+    network_interface_attachment_instance_id: str = None,
+    network_interface_attachment_instance_owner_id: str = None,
+    network_interface_attachment_device_index: int = None,
+    network_interface_attachment_status: str = None,
+    network_interface_attachment_attach_time: datetime = None,
+    network_interface_attachment_delete_on_termination: bool = None,
+    network_interface_availability_zone: str = None,
+    network_interface_description: str = None,
+    network_interface_group_id: str = None,
+    network_interface_group_name: str = None,
+    network_interface_ipv6_address: str = None,
+    network_interface_mac_address: str = None,
+    network_interface_id: str = None,
+    network_interface_owner_id: str = None,
+    network_interface_private_dns_name: str = None,
+    network_interface_requester_id: str = None,
+    network_interface_requester_managed: bool = None,
+    network_interface_status: str = None,
+    network_interface_source_dest_check: bool = None,
+    network_interface_subnet_id: str = None,
+    network_interface_vpc_id: str = None,
+    owner_id: str = None,
+    placement_group_name: str = None,
+    placement_partition_number: int = None,
+    platform: str = None,
+    private_dns_name: str = None,
+    private_ip_address: str = None,
+    product_code: str = None,
+    product_code_type: str = None,
+    ramdisk_id: str = None,
+    reason: str = None,
+    requester_id: str = None,
+    reservation_id: str = None,
+    root_device_name: str = None,
+    root_device_type: str = None,
+    source_dest_check: bool = None,
+    spot_instance_request_id: str = None,
+    state_reason_code: str = None,
+    state_reason_message: str = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    tenancy: str = None,
+    virtualization_type: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single instance.
     Can also be used to determine if an instance exists.
@@ -9352,7 +9659,7 @@ def lookup_instance(
       to which the network interface is attached.
     :param str network_interface_attachment_instance_owner_id: The owner ID of the
       instance to which the network interface is attached.
-    :param str network_interface_attachment_device_index: The device index to which
+    :param int network_interface_attachment_device_index: The device index to which
       the network interface is attached.
     :param str network_interface_attachment_status: The status of the attachment.
       Allowed values: ``attaching``, ``attached``, ``detaching``, ``detached``.
@@ -9590,21 +9897,21 @@ def lookup_instance(
 
 
 def lookup_internet_gateway(
-    internet_gateway_id=None,
-    internet_gateway_name=None,
-    attachment_state=None,
-    attachment_vpc_id=None,
-    attachment_vpc_lookup=None,
-    owner_id=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    internet_gateway_id: str = None,
+    internet_gateway_name: str = None,
+    attachment_state: str = None,
+    attachment_vpc_id: str = None,
+    attachment_vpc_lookup: Mapping = None,
+    owner_id: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single Internet gateway.
     Can also be used to determine if an Internet gateway exists.
@@ -9678,18 +9985,18 @@ def lookup_internet_gateway(
 
 
 def lookup_key_pair(
-    key_pair_id=None,
-    fingerprint=None,
-    key_name=None,
-    tag_key=None,
-    tags=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    key_pair_id: str = None,
+    fingerprint: str = None,
+    key_name: str = None,
+    tag_key: str = None,
+    tags: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single key pair.
     Can also be used to determine if a key pair exists.
@@ -9738,22 +10045,22 @@ def lookup_key_pair(
 
 
 def lookup_local_gateway(
-    local_gateway_id=None,
-    local_gateway_name=None,
-    route_table_id=None,
-    route_table_lookup=None,
-    association_id=None,
-    virtual_interface_group_id=None,
-    outpost_arn=None,
-    state=None,
-    tags=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    local_gateway_id: str = None,
+    local_gateway_name: str = None,
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    association_id: str = None,
+    virtual_interface_group_id: str = None,
+    outpost_arn: str = None,
+    state: str = None,
+    tags: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single local gateway.
     Can also be used to determine if a local gateway exists.
@@ -9824,16 +10131,16 @@ def lookup_local_gateway(
 
 
 def lookup_managed_prefix_list(
-    owner_id=None,
-    prefix_list_id=None,
-    prefix_list_name=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    owner_id: str = None,
+    prefix_list_id: str = None,
+    prefix_list_name: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single managed prefix list.
     Can also be used to determine if a managed prefix list exists.
@@ -9877,22 +10184,22 @@ def lookup_managed_prefix_list(
 
 
 def lookup_nat_gateway(
-    nat_gateway_id=None,
-    nat_gateway_name=None,
-    state=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    tags=None,
-    tag_key=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    nat_gateway_id: str = None,
+    nat_gateway_name: str = None,
+    state: str = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single NAT gateway.
     Can also be used to determine if a NAT gateway exists.
@@ -9978,34 +10285,34 @@ def lookup_nat_gateway(
 
 
 def lookup_network_acl(
-    network_acl_id=None,
-    network_acl_name=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    association_id=None,
-    association_network_acl_id=None,
-    association_subnet_id=None,
-    association_subnet_lookup=None,
-    default=None,
-    entry_cidr=None,
-    entry_icmp_code=None,
-    entry_icmp_type=None,
-    entry_ipv6_cidr=None,
-    entry_port_range_from=None,
-    entry_port_range_to=None,
-    entry_protocol=None,
-    entry_rule_action=None,
-    entry_rule_number=None,
-    filters=None,
-    owner_id=None,
-    tags=None,
-    tag_key=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    network_acl_id: str = None,
+    network_acl_name: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    association_id: str = None,
+    association_network_acl_id: str = None,
+    association_subnet_id: str = None,
+    association_subnet_lookup: Mapping = None,
+    default: bool = None,
+    entry_cidr: str = None,
+    entry_icmp_code: int = None,
+    entry_icmp_type: int = None,
+    entry_ipv6_cidr: str = None,
+    entry_port_range_from: int = None,
+    entry_port_range_to: int = None,
+    entry_protocol: str = None,
+    entry_rule_action: str = None,
+    entry_rule_number: int = None,
+    filters: Mapping = None,
+    owner_id: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single network ACL.
     Can also be used to determine if a network ACL exists.
@@ -10117,49 +10424,49 @@ def lookup_network_acl(
 
 
 def lookup_network_interface(
-    addresses_private_ip_address=None,
-    addresses_primary=None,
-    addresses_association_public_ip=None,
-    addresses_association_owner_id=None,
-    association_association_id=None,
-    association_allocation_id=None,
-    association_ip_owner_id=None,
-    association_public_ip=None,
-    association_public_dns_name=None,
-    attachment_id=None,
-    attachment_attach_time=None,
-    attachment_delete_on_termination=None,
-    attachment_device_index=None,
-    attachment_instance_id=None,
-    attachment_instance_owner_id=None,
-    attachment_status=None,
-    availability_zone=None,
-    description=None,
-    group_id=None,
-    group_name=None,
-    ipv6_address=None,
-    mac_address=None,
-    network_interface_id=None,
-    owner_id=None,
-    private_ip_address=None,
-    private_dns_name=None,
-    requester_id=None,
-    requester_managed=None,
-    source_dest_check=None,
-    status=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    tags=None,
-    tag_key=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    addresses_private_ip_address: str = None,
+    addresses_primary: bool = None,
+    addresses_association_public_ip: str = None,
+    addresses_association_owner_id: str = None,
+    association_association_id: str = None,
+    association_allocation_id: str = None,
+    association_ip_owner_id: str = None,
+    association_public_ip: str = None,
+    association_public_dns_name: str = None,
+    attachment_id: str = None,
+    attachment_attach_time: datetime = None,
+    attachment_delete_on_termination: bool = None,
+    attachment_device_index: str = None,
+    attachment_instance_id: str = None,
+    attachment_instance_owner_id: str = None,
+    attachment_status: str = None,
+    availability_zone: str = None,
+    description: str = None,
+    group_id: str = None,
+    group_name: str = None,
+    ipv6_address: str = None,
+    mac_address: str = None,
+    network_interface_id: str = None,
+    owner_id: str = None,
+    private_ip_address: str = None,
+    private_dns_name: str = None,
+    requester_id: str = None,
+    requester_managed: bool = None,
+    source_dest_check: bool = None,
+    status: str = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single network interface.
     Can also be used to determine if a network interface exists.
@@ -10315,36 +10622,42 @@ def lookup_network_interface(
 
 
 def lookup_route_table(
-    route_table_id=None,
-    route_table_name=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    association_id=None,
-    association_route_table_id=None,
-    association_subnet_id=None,
-    association_subnet_lookup=None,
-    association_main=None,
-    owner_id=None,
-    route_destination_cidr_block=None,
-    route_destination_ipv6_cidr_block=None,
-    route_destination_prefix_list_id=None,
-    route_egress_only_internet_gateway_id=None,
-    route_gateway_id=None,
-    route_instance_id=None,
-    route_nat_gateway_id=None,
-    route_transit_gateway_id=None,
-    route_origin=None,
-    route_state=None,
-    route_vpc_peering_connection_id=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    route_table_id: str = None,
+    route_table_name: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    association_id: str = None,
+    association_route_table_id: str = None,
+    association_subnet_id: str = None,
+    association_subnet_lookup: Mapping = None,
+    association_main: str = None,
+    owner_id: str = None,
+    route_destination_cidr_block: str = None,
+    route_destination_ipv6_cidr_block: str = None,
+    route_destination_prefix_list_id: str = None,
+    route_destination_prefix_list_lookup: Mapping = None,
+    route_egress_only_internet_gateway_id: str = None,
+    route_egress_only_internet_gateway_lookup: Mapping = None,
+    route_gateway_id: str = None,
+    route_gateway_lookup: Mapping = None,
+    route_instance_id: str = None,
+    route_instance_lookup: Mapping = None,
+    route_nat_gateway_id: str = None,
+    route_nat_gateway_lookup: Mapping = None,
+    route_transit_gateway_id: str = None,
+    route_transit_gateway_lookup: Mapping = None,
+    route_origin: str = None,
+    route_state: str = None,
+    route_vpc_peering_connection_id: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single route table.
     Can also be used to determine if a route table exists.
@@ -10373,13 +10686,28 @@ def lookup_route_table(
       in a route in the route table.
     :param str route_destination_prefix_list_id: The ID (prefix) of the AWS service
       specified in a route in the table.
+    :param dict route_destination_prefix_list_lookup: Any kwargs that :py:fync:`lookup_managed_prefix_list`
+      accepts. Used to lookup ``route_destination_prefix_list_id``.
     :param str route_egress_only_internet_gateway_id:  The ID of an egress-only
       Internet gateway specified in a route in the route table.
+    :param dict route_egress_only_internet_gateway_lookup: Any kwargs that
+      :py:func:`lookup_egress_only_internet_gateway` accepts. Used to lookup
+      ``route_egress_only_internet_gateway_id``.
     :param str route_gateway_id: The ID of a gateway specified in a route in the table.
+    :param dict route_gateway_lookup: Any kwargs that :py:func:`lookup_internet_gateway`
+      or :py:func:`lookup_vpn_gateway` accepts. Used to lookup ``route_gateway_id``.
     :param str route_instance_id: The ID of an instance specified in a route in
       the table.
-    :param str route_nat_gateway_id: The ID of a NAT gateway.
-    :param str route_transit_gateway_id: The ID of a transit gateway.
+    :param dict route_instance_lookup: Any kwargs that :py:func:`lookup_instance`
+      accepts. Used to lookup ``route_instance_id``.
+    :param str route_nat_gateway_id: The ID of a NAT gateway specified in a route
+      in the table.
+    :param dict route_nat_gateway_lookup: Any kwargs that :py:func:`lookup_nat_gateway`
+      accepts. Used to lookup ``route_nat_gateway_id``.
+    :param str route_transit_gateway_id: The ID of a transit gateway specified in
+      a route in the table.
+    :param dict route_transit_gateway_lookup: Any kwargs that :py:func:`lookup_transit_gateway`
+      accepts. Used to lookup ``route_transit_gateway_id``.
     :param str route_origin: Describes how the route was created. ``CreateRouteTable``
       indicates that the route was automatically created when the route table
       was created; ``CreateRoute`` indicates that the route was manually added
@@ -10409,11 +10737,82 @@ def lookup_route_table(
 
     :depends: boto3.client('ec2').describe_route_tables
     """
+    # Amazon decided, in their wisdom, to let ``gateway`` be an IGW *or* a VPN gateway
+    # So we need to look this up manually
+    if route_gateway_id is None and route_gateway_lookup is not None:
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "internet_gateway",
+                "kwargs": route_gateway_lookup
+                or {"internet_gateway_id": route_gateway_id},
+                "required": False,
+            },
+            {
+                "service": "ec2",
+                "name": "vpn_gateway",
+                "kwargs": route_gateway_lookup or {"vpn_gateway_id": route_gateway_id},
+                "required": False,
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
+            if "error" not in res:
+                route_gateway_id = res["result"].get(
+                    "internet_gateway", res["result"].get("vpn_gateway")
+                )
+            if route_gateway_id is None:
+                if "error" in res:
+                    return res
+                return {
+                    "error": (
+                        "route_gateway_lookup was provided, but no single Internet "
+                        "gateway or virtual private gateway matched."
+                    )
+                }
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
             "name": "subnet",
             "kwargs": association_subnet_lookup or {"subnet_id": association_subnet_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "managed_prefix_list",
+            "kwargs": route_destination_prefix_list_lookup
+            or {"prefix_list_id": route_destination_prefix_list_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "egress_only_internet_gateway",
+            "kwargs": route_egress_only_internet_gateway_lookup
+            or {
+                "egress_only_internet_gateway_id": route_egress_only_internet_gateway_id
+            },
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "instance",
+            "kwargs": route_instance_lookup or {"instacce_id": route_instance_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "nat_gateway",
+            "kwargs": route_nat_gateway_lookup
+            or {"nat_gateway_id": route_nat_gateway_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
+            "name": "transit_gateway",
+            "kwargs": route_transit_gateway_lookup
+            or {"transit_gateway_id": route_transit_gateway_id},
             "required": False,
         },
         {
@@ -10431,6 +10830,11 @@ def lookup_route_table(
             return res
         res = res["result"]
         association_subnet_id = res.get("subnet")
+        route_destination_prefix_list_id = res.get("managed_prefix_list")
+        route_egress_only_internet_gateway_id = res.get("egress_only_internet_gateway")
+        route_instance_id = res.get("instance")
+        route_nat_gateway_id = res.get("nat_gateway")
+        route_transit_gateway_id = res.get("transit_gateway")
         vpc_id = res.get("vpc")
     if filters is None:
         filters = {}
@@ -10471,33 +10875,38 @@ def lookup_route_table(
 
 
 def lookup_security_group(
-    group_id=None,
-    group_name=None,
-    description=None,
-    egress_ip_permission_cidr=None,
-    egress_ip_permission_from_port=None,
-    egress_ip_permission_group_id=None,
-    egress_ip_permission_group_name=None,
-    egress_ip_permission_ipv6_cidr=None,
-    egress_ip_permission_prefix_list_id=None,
-    egress_ip_permission_protocol=None,
-    egress_ip_permission_to_port=None,
-    egress_ip_permission_user_id=None,
-    ip_permission_cidr=None,
-    ip_permission_from_port=None,
-    ip_permission_group_id=None,
-    ip_permission_group_name=None,
-    ip_permission_ipv6_cidr=None,
-    ip_permission_prefix_list_id=None,
-    ip_permission_protocol=None,
-    ip_permission_to_port=None,
-    ip_permission_user_id=None,
-    owner_id=None,
-    tags=None,
-    tag_key=None,
-    vpc_id=None,
-    vpc_lookup=None,
-):
+    group_id: str = None,
+    group_name: str = None,
+    description: str = None,
+    egress_ip_permission_cidr: str = None,
+    egress_ip_permission_from_port: int = None,
+    egress_ip_permission_group_id: str = None,
+    egress_ip_permission_group_name: str = None,
+    egress_ip_permission_ipv6_cidr: str = None,
+    egress_ip_permission_prefix_list_id: str = None,
+    egress_ip_permission_protocol: str = None,
+    egress_ip_permission_to_port: int = None,
+    egress_ip_permission_user_id: str = None,
+    ip_permission_cidr: str = None,
+    ip_permission_from_port: int = None,
+    ip_permission_group_id: str = None,
+    ip_permission_group_name: str = None,
+    ip_permission_ipv6_cidr: str = None,
+    ip_permission_prefix_list_id: str = None,
+    ip_permission_protocol: str = None,
+    ip_permission_to_port: int = None,
+    ip_permission_user_id: str = None,
+    owner_id: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single security group.
     Can also be used to determine if a security group exists.
@@ -10620,27 +11029,28 @@ def lookup_security_group(
     )
 
 
+@_arguments_to_list("owner_ids", "restorable_by_user_ids")
 def lookup_snapshot(
-    description=None,
-    encrypted=None,
-    owner_ids=None,
-    progress=None,
-    restorable_by_user_ids=None,
-    snapshot_id=None,
-    start_time=None,
-    status=None,
-    tags=None,
-    tag_key=None,
-    volume_id=None,
-    volume_lookup=None,
-    volume_size=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    description: str = None,
+    encrypted: bool = None,
+    owner_ids: Union[str, Iterable[str]] = None,
+    progress: str = None,
+    restorable_by_user_ids: Union[str, Iterable[str]] = None,
+    snapshot_id: str = None,
+    start_time: datetime = None,
+    status: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    volume_id: str = None,
+    volume_lookup: str = None,
+    volume_size: int = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single snapshot.
     Can also be used to determine if a snapshot exists.
@@ -10725,53 +11135,53 @@ def lookup_snapshot(
 
 
 def lookup_spot_instance_request(
-    availability_zone_group=None,
-    create_time=None,
-    fault_code=None,
-    fault_message=None,
-    instance_id=None,
-    launch_group=None,
-    block_device_delete_on_termination=None,
-    block_device_name=None,
-    block_device_snapshot_id=None,
-    block_device_volume_size=None,
-    block_device_volume_type=None,
-    launch_group_id=None,
-    launch_group_name=None,
-    launch_image_id=None,
-    launch_instance_type=None,
-    launch_kernel_id=None,
-    launch_key_name=None,
-    launch_monitoring_enabled=None,
-    launch_ramdisk_id=None,
-    launched_availability_zone=None,
-    network_interface_addresses_primary=None,
-    network_interface_delete_on_termination=None,
-    network_interface_description=None,
-    network_interface_device_index=None,
-    network_interface_group_id=None,
-    network_interface_id=None,
-    network_interface_private_ip_address=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    product_description=None,
-    spot_instance_request_id=None,
-    spot_price=None,
-    state=None,
-    status_code=None,
-    status_message=None,
-    tags=None,
-    tag_key=None,
-    request_type=None,
-    valid_from=None,
-    valid_until=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    availability_zone_group: str = None,
+    create_time: datetime = None,
+    fault_code: str = None,
+    fault_message: str = None,
+    instance_id: str = None,
+    launch_group: str = None,
+    block_device_delete_on_termination: bool = None,
+    block_device_name: str = None,
+    block_device_snapshot_id: str = None,
+    block_device_volume_size: int = None,
+    block_device_volume_type: str = None,
+    launch_group_id: str = None,
+    launch_group_name: str = None,
+    launch_image_id: str = None,
+    launch_instance_type: str = None,
+    launch_kernel_id: str = None,
+    launch_key_name: str = None,
+    launch_monitoring_enabled: bool = None,
+    launch_ramdisk_id: str = None,
+    launched_availability_zone: str = None,
+    network_interface_addresses_primary: bool = None,
+    network_interface_delete_on_termination: bool = None,
+    network_interface_description: str = None,
+    network_interface_device_index: int = None,
+    network_interface_group_id: str = None,
+    network_interface_id: str = None,
+    network_interface_private_ip_address: str = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    product_description: str = None,
+    spot_instance_request_id: str = None,
+    spot_price: float = None,
+    state: str = None,
+    status_code: int = None,
+    status_message: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    request_type: str = None,
+    valid_from: datetime = None,
+    valid_until: datetime = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single spot instance request.
     Can also be used to determine if a spot instance request exists.
@@ -10924,30 +11334,30 @@ def lookup_spot_instance_request(
 
 
 def lookup_subnet(
-    subnet_id=None,
-    subnet_name=None,
-    subnet_arn=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    availability_zone=None,
-    availability_zone_id=None,
-    available_ip_address_count=None,
-    cidr_block=None,
-    default_for_az=None,
-    ipv6_cidr_block=None,
-    ipv6_cidr_block_association_id=None,
-    ipv6_cidr_block_state=None,
-    owner_id=None,
-    state=None,
-    tag_key=None,
-    tags=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    subnet_id: str = None,
+    subnet_name: str = None,
+    subnet_arn: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    availability_zone: str = None,
+    availability_zone_id: str = None,
+    available_ip_address_count: int = None,
+    cidr_block: str = None,
+    default_for_az: bool = None,
+    ipv6_cidr_block: str = None,
+    ipv6_cidr_block_association_id: str = None,
+    ipv6_cidr_block_state: str = None,
+    owner_id: str = None,
+    state: str = None,
+    tag_key: str = None,
+    tags: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single subnet.
     Can also be used to determine if a subnet exists.
@@ -11029,7 +11439,7 @@ def lookup_subnet(
                 "subnet-id": subnet_id,
                 "subnet-arn": subnet_arn,
                 "tag-key": tag_key,
-                "vpc_id": vpc_id,
+                "vpc-id": vpc_id,
             }
         )
     )
@@ -11044,18 +11454,18 @@ def lookup_subnet(
 
 
 def lookup_tag(
-    tag_key=None,
-    resource_id=None,
-    resource_type=None,
-    tags=None,
-    tag_value=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    tag_key: str = None,
+    resource_id: str = None,
+    resource_type: str = None,
+    tags: Mapping = None,
+    tag_value: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Describes one or more of the tags for your EC2 resources.
 
@@ -11109,24 +11519,24 @@ def lookup_tag(
 
 
 def lookup_transit_gateway(
-    propagation_default_route_table_id=None,
-    amazon_side_asn=None,
-    association_default_route_table_id=None,
-    auto_accept_shared_attachments=None,
-    default_route_table_association=None,
-    default_route_table_propagation=None,
-    dns_support=None,
-    vpn_ecmp_support=None,
-    owner_id=None,
-    state=None,
-    transit_gateway_id=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    propagation_default_route_table_id: str = None,
+    amazon_side_asn: int = None,
+    association_default_route_table_id: str = None,
+    auto_accept_shared_attachments: bool = None,
+    default_route_table_association: bool = None,
+    default_route_table_propagation: bool = None,
+    dns_support: bool = None,
+    vpn_ecmp_support: bool = None,
+    owner_id: str = None,
+    state: str = None,
+    transit_gateway_id: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single transit gateway.
     Can also be used to determine if a transit gateway exists.
@@ -11135,7 +11545,7 @@ def lookup_transit_gateway(
 
     :param str propagation_default_route_table_id: The ID of the default propagation
       route table.
-    :param str amazon_side_asn: The private ASN for the Amazon side of a BGP session.
+    :param int amazon_side_asn: The private ASN for the Amazon side of a BGP session.
     :param str association_default_route_table_id: The ID of the default association
       route table.
     :param bool auto_accept_shared_attachments: Indicates whether there is automatic
@@ -11204,32 +11614,32 @@ def lookup_transit_gateway(
 
 
 def lookup_volume(
-    attach_time=None,
-    delete_on_termination=None,
-    device_name=None,
-    instance_id=None,
-    instance_lookup=None,
-    attachment_status=None,
-    availability_zone=None,
-    create_time=None,
-    encrypted=None,
-    multi_attach_enabled=None,
-    fast_restored=None,
-    size=None,
-    snapshot_id=None,
-    snapshot_lookup=None,
-    status=None,
-    tags=None,
-    tag_key=None,
-    volume_id=None,
-    volume_type=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    attach_time: datetime = None,
+    delete_on_termination: bool = None,
+    device_name: str = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    attachment_status: str = None,
+    availability_zone: str = None,
+    create_time: datetime = None,
+    encrypted: bool = None,
+    multi_attach_enabled: bool = None,
+    fast_restored: bool = None,
+    size: int = None,
+    snapshot_id: str = None,
+    snapshot_lookup: Mapping = None,
+    status: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    volume_id: str = None,
+    volume_type: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single volume.
     Can also be used to determine if a volume exists.
@@ -11332,29 +11742,29 @@ def lookup_volume(
 
 
 def lookup_vpc(
-    vpc_id=None,
-    vpc_name=None,
-    cidr=None,
-    cidr_block=None,
-    cidr_block_association_id=None,
-    cidr_block_state=None,
-    dhcp_options_id=None,
-    ipv6_cidr_block=None,
-    ipv6_cidr_block_pool=None,
-    ipv6_cidr_block_association_id=None,
-    ipv6_cidr_block_state=None,
-    is_default=None,
-    owner_id=None,
-    state=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_id: str = None,
+    vpc_name: str = None,
+    cidr: str = None,
+    cidr_block: str = None,
+    cidr_block_association_id: str = None,
+    cidr_block_state: str = None,
+    dhcp_options_id: str = None,
+    ipv6_cidr_block: str = None,
+    ipv6_cidr_block_pool: str = None,
+    ipv6_cidr_block_association_id: str = None,
+    ipv6_cidr_block_state: str = None,
+    is_default: bool = None,
+    owner_id: str = None,
+    state: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single VPC.
     Can also be used to determine if a VPC exists.
@@ -11442,21 +11852,21 @@ def lookup_vpc(
 
 
 def lookup_vpc_endpoint(
-    vpc_endpoint_id=None,
-    vpc_endpoint_name=None,
-    service_name=None,
-    vpc_id=None,
-    vpc_lookup=None,
-    vpc_endpoint_state=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_endpoint_id: str = None,
+    vpc_endpoint_name: str = None,
+    service_name: str = None,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    vpc_endpoint_state: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single VPC peering connection.
     Can also be used to determine if a VPC peering connection exists.
@@ -11528,15 +11938,15 @@ def lookup_vpc_endpoint(
 
 
 def lookup_vpc_endpoint_service(
-    service_name=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_name: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Helper function to find a single VPC endpoint service.
     Can also be used to determine if a VPC endpoint service exists.
@@ -11579,18 +11989,18 @@ def lookup_vpc_endpoint_service(
 
 
 def lookup_vpc_endpoint_service_configuration(
-    service_name=None,
-    service_id=None,
-    service_state=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    service_name: str = None,
+    service_id: str = None,
+    service_state: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single VPC endpoint service.
     Can also be used to determine if a VPC endpoint service exists.
@@ -11641,28 +12051,28 @@ def lookup_vpc_endpoint_service_configuration(
 
 
 def lookup_vpc_peering_connection(
-    vpc_peering_connection_id=None,
-    vpc_peering_connection_name=None,
-    accepter_vpc_cidr_block=None,
-    accepter_vpc_owner_id=None,
-    accepter_vpc_id=None,
-    accepter_vpc_lookup=None,
-    expiration_time=None,
-    requester_vpc_cidr_block=None,
-    requester_vpc_owner_id=None,
-    requester_vpc_id=None,
-    requester_vpc_lookup=None,
-    status_code=None,
-    status_message=None,
-    tags=None,
-    tag_key=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpc_peering_connection_id: str = None,
+    vpc_peering_connection_name: str = None,
+    accepter_vpc_cidr_block: str = None,
+    accepter_vpc_owner_id: str = None,
+    accepter_vpc_id: str = None,
+    accepter_vpc_lookup: Mapping = None,
+    expiration_time: datetime = None,
+    requester_vpc_cidr_block: str = None,
+    requester_vpc_owner_id: str = None,
+    requester_vpc_id: str = None,
+    requester_vpc_lookup: Mapping = None,
+    status_code: int = None,
+    status_message: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single VPC peering connection.
     Can also be used to determine if a VPC peering connection exists.
@@ -11772,28 +12182,28 @@ def lookup_vpc_peering_connection(
 
 
 def lookup_vpn_connection(
-    customer_gateway_configuration=None,
-    customer_gateway_id=None,
-    customer_gateway_lookup=None,
-    state=None,
-    static_routes_only=None,
-    destination_cidr_block=None,
-    bgp_asn=None,
-    tags=None,
-    tag_key=None,
-    connection_type=None,
-    vpn_connection_id=None,
-    vpn_gateway_id=None,
-    vpn_gateway_lookup=None,
-    transit_gateway_id=None,
-    transit_gateway_lookup=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    customer_gateway_configuration: str = None,
+    customer_gateway_id: str = None,
+    customer_gateway_lookup: Mapping = None,
+    state: str = None,
+    static_routes_only: bool = None,
+    destination_cidr_block: str = None,
+    bgp_asn: int = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    connection_type: str = None,
+    vpn_connection_id: str = None,
+    vpn_gateway_id: str = None,
+    vpn_gateway_lookup: Mapping = None,
+    transit_gateway_id: str = None,
+    transit_gateway_lookup: Mapping = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single vpn connection.
     Can also be used to determine if a vpn connection exists.
@@ -11895,24 +12305,24 @@ def lookup_vpn_connection(
 
 
 def lookup_vpn_gateway(
-    vpn_gateway_id=None,
-    vpn_gateway_name=None,
-    amazon_side_asn=None,
-    attachment_state=None,
-    attachment_vpc_id=None,
-    attachment_vpc_lookup=None,
-    availability_zone=None,
-    state=None,
-    tags=None,
-    tag_key=None,
-    vpn_gateway_type=None,
-    filters=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-    client=None,
-):
+    vpn_gateway_id: str = None,
+    vpn_gateway_name: str = None,
+    amazon_side_asn: int = None,
+    attachment_state: str = None,
+    attachment_vpc_id: str = None,
+    attachment_vpc_lookup: Mapping = None,
+    availability_zone: str = None,
+    state: str = None,
+    tags: Mapping = None,
+    tag_key: str = None,
+    vpn_gateway_type: str = None,
+    filters: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+    client: botocore.client.BaseClient = None,
+) -> Dict:
     """
     Helper function to find a single virtual private gateway.
     Can also be used to determine if a virtual private gateway exists.
@@ -11922,7 +12332,7 @@ def lookup_vpn_gateway(
     :param str vpn_gateway_id: The ID of the virtual private gateway.
     :param str vpn_gateway_name: The ``Name``-tag of the virtual private gateway.
       If also specifying ``Name`` in ``tags``, this option takes precedence.
-    :param str amazon_side_asn: The Autonomous System Number (ASN) for the Amazon
+    :param int amazon_side_asn: The Autonomous System Number (ASN) for the Amazon
       side of the gateway.
     :param str attachment_state: The current state of the attachment between the
       gateway and the VPC. Allowed values: attaching, attached, detaching, detached.
@@ -11995,19 +12405,19 @@ def lookup_vpn_gateway(
 
 @_arguments_to_list("security_group_ids", "security_group_lookups")
 def modify_network_interface_attribute(
-    network_interface_id=None,
-    network_interface_lookup=None,
-    delete_on_termination=None,
-    attachment_id=None,
-    description=None,
-    security_group_ids=None,
-    security_group_lookups=None,
-    source_dest_check=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    delete_on_termination: bool = None,
+    attachment_id: str = None,
+    description: str = None,
+    security_group_ids: Union[str, Iterable[str]] = None,
+    security_group_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    source_dest_check: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the specified network interface attribute. You can use this action
     to attach and detach security groups from an existing EC2 instance.
@@ -12094,15 +12504,15 @@ def modify_network_interface_attribute(
 
 
 def modify_spot_fleet_request(
-    spot_fleet_request_id=None,
-    excess_capacity_termination_policy=None,
-    target_capacity=None,
-    on_demand_target_capacity=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    spot_fleet_request_id: str = None,
+    excess_capacity_termination_policy: str = None,
+    target_capacity: int = None,
+    on_demand_target_capacity: int = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the specified Spot Fleet request.
 
@@ -12159,17 +12569,17 @@ def modify_spot_fleet_request(
 
 
 def modify_subnet_attribute(
-    subnet_id=None,
-    subnet_lookup=None,
-    assign_ipv6_address_on_creation=None,
-    map_public_ip_on_launch=None,
-    map_customer_owned_ip_on_launch=None,
-    customer_owned_ipv4_pool=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    assign_ipv6_address_on_creation: bool = None,
+    map_public_ip_on_launch: bool = None,
+    map_customer_owned_ip_on_launch: bool = None,
+    customer_owned_ipv4_pool: str = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies one or more subnet attributes.
 
@@ -12207,20 +12617,29 @@ def modify_subnet_attribute(
             "Specifying map_customer_owned_ip_on_launch requires specifying "
             "customer_owned_ipv4_pool."
         )
-    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    if subnet_id is None and subnet_lookup is not None:
-        res = lookup_subnet(client=client, **subnet_lookup)
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "subnet",
+            "kwargs": subnet_lookup or {"subnet_id": subnet_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
         if "error" in res:
             return res
-        subnet_id = res["result"]["SubnetId"]
+        subnet_id = res["result"]["subnet"]
     params = salt.utils.data.filter_falsey(
         {
             "AssignIpv6AddressOnCreation": {"Value": assign_ipv6_address_on_creation},
-            "MapPublciIpOnLaunch": {"Value": map_public_ip_on_launch},
+            "MapPublicIpOnLaunch": {"Value": map_public_ip_on_launch},
             "MapCustomerOwnedIpOnLaunch": {"Value": map_customer_owned_ip_on_launch},
         },
         recurse_depth=1,
     )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     for item, value in params.items():
         try:
             client.modify_subnet_attribute(SubnetId=subnet_id, **{item: value})
@@ -12230,15 +12649,15 @@ def modify_subnet_attribute(
 
 
 def modify_vpc_attribute(
-    vpc_id=None,
-    vpc_lookup=None,
-    enable_dns_support=None,
-    enable_dns_hostnames=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    enable_dns_support: bool = None,
+    enable_dns_hostnames: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the specified attribute of the specified VPC.
 
@@ -12265,13 +12684,20 @@ def modify_vpc_attribute(
     :depends boto3.client('ec2').modify_vpc_attribute
     """
     ret = {}
-    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
-    # We're doing the lookup manually here, as we only need to do it once.
-    if vpc_id is None:
-        res = lookup_vpc(client=client, **vpc_lookup)
+    with __salt__["boto3_generic.lookup_resources"](
+        {
+            "service": "ec2",
+            "name": "vpc",
+            "kwargs": vpc_lookup or {"vpc_id": vpc_id},
+        },
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    ) as res:
         if "error" in res:
             return res
-        vpc_id = res["result"]["VpcId"]
+        vpc_id = res["result"]["vpc"]
     params = salt.utils.data.filter_falsey(
         {
             "EnableDnsSupport": {"Value": enable_dns_support},
@@ -12279,6 +12705,7 @@ def modify_vpc_attribute(
         },
         recurse_depth=1,
     )
+    client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     for item, value in params.items():
         try:
             client.modify_vpc_attribute(VpcId=vpc_id, **{item: value})
@@ -12292,18 +12719,18 @@ def modify_vpc_attribute(
     "add_network_load_balancer_arns", "remove_network_load_balancer_arns"
 )
 def modify_vpc_endpoint_service_configuration(
-    service_id=None,
-    service_lookup=None,
-    private_dns_name=None,
-    remove_private_dns_name=None,
-    acceptance_required=None,
-    add_network_load_balancer_arns=None,
-    remove_network_load_balancer_arns=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_id: str = None,
+    service_lookup: Mapping = None,
+    private_dns_name: str = None,
+    remove_private_dns_name: bool = None,
+    acceptance_required: bool = None,
+    add_network_load_balancer_arns: Union[str, Iterable[str]] = None,
+    remove_network_load_balancer_arns: Union[str, Iterable[str]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the attributes of your VPC endpoint service configuration. You can
     change the Network Load Balancers for your service, and you can specify whether
@@ -12363,15 +12790,15 @@ def modify_vpc_endpoint_service_configuration(
 
 
 def modify_vpc_endpoint_service_permissions(
-    service_id=None,
-    service_lookup=None,
-    add_allowed_principals=None,
-    remove_allowed_principals=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    service_id: str = None,
+    service_lookup: Mapping = None,
+    add_allowed_principals: Iterable[str] = None,
+    remove_allowed_principals: Iterable[str] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the permissions for your VPC endpoint service. You can add or remove
     permissions for service consumers (IAM users, IAM roles, and AWS accounts)
@@ -12424,14 +12851,14 @@ def modify_vpc_endpoint_service_permissions(
 
 
 def modify_vpc_tenancy(
-    instance_tenancy,
-    vpc_id=None,
-    vpc_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    instance_tenancy: str,
+    vpc_id: str = None,
+    vpc_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Modifies the instance tenancy attribute of the specified VPC. You can change
     the instance tenancy attribute of a VPC to ``default`` only. You cannot change
@@ -12468,13 +12895,13 @@ def modify_vpc_tenancy(
 
 @_arguments_to_list("instance_ids", "instance_lookups")
 def reboot_instances(
-    instance_ids=None,
-    instance_lookups=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    instance_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Requests a reboot of the specified instances. This operation is asynchronous;
     it only queues a request to reboot the specified instances. The operation succeeds
@@ -12515,25 +12942,25 @@ def reboot_instances(
 
 @_arguments_to_list("block_device_mappings")
 def register_image(
-    name,
-    image_location=None,
-    architecture=None,
-    block_device_mappings=None,
-    description=None,
-    ena_support=None,
-    kernel_id=None,
-    billing_products=None,
-    ramdisk_id=None,
-    root_device_name=None,
-    sriov_net_support=None,
-    virtualization_type=None,
-    tags=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    name: str,
+    image_location: str = None,
+    architecture: str = None,
+    block_device_mappings: Union[Mapping, Iterable[Mapping]] = None,
+    description: str = None,
+    ena_support: bool = None,
+    kernel_id: str = None,
+    billing_products: Iterable[str] = None,
+    ramdisk_id: str = None,
+    root_device_name: str = None,
+    sriov_net_support: bool = None,
+    virtualization_type: str = None,
+    tags: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Registers an AMI. When you're creating an AMI, this is the final step you must
     complete before you can launch an instance from the AMI.
@@ -12649,11 +13076,11 @@ def register_image(
 def reject_vpc_peering_connection(
     vpc_peering_connection_id=None,
     vpc_peering_connection_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Rejects a VPC peering connection request. The VPC peering connection must be
     in the pending-acceptance state. Use :py:func:`describe_vpc_peering_connections`
@@ -12691,13 +13118,13 @@ def reject_vpc_peering_connection(
 
 
 def release_address(
-    address_id=None,
-    address_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    address_id: str = None,
+    address_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Releases the specified Elastic IP address.
 
@@ -12750,16 +13177,16 @@ def release_address(
 
 
 def replace_network_acl_association(
-    association_id=None,
-    network_acl_id=None,
-    network_acl_lookup=None,
-    subnet_id=None,
-    subnet_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    association_id: str = None,
+    network_acl_id: str = None,
+    network_acl_lookup: Mapping = None,
+    subnet_id: str = None,
+    subnet_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Changes which network ACL a subnet is associated with. By default when you
     create a subnet, it's automatically associated with the default network ACL.
@@ -12843,22 +13270,22 @@ def replace_network_acl_association(
 
 
 def replace_network_acl_entry(
-    protocol,
-    egress,
-    rule_number,
-    rule_action,
-    network_acl_id=None,
-    network_acl_lookup=None,
-    cidr_block=None,
-    icmp_type=None,
-    icmp_code=None,
-    ipv6_cidr_block=None,
-    port_range=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    protocol: str,
+    egress: bool,
+    rule_number: int,
+    rule_action: str,
+    network_acl_id: str = None,
+    network_acl_lookup: Mapping = None,
+    cidr_block: str = None,
+    icmp_type: int = None,
+    icmp_code: int = None,
+    ipv6_cidr_block: str = None,
+    port_range: Tuple[int, int] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Replaces an entry (rule) in a network ACL.
 
@@ -12902,7 +13329,7 @@ def replace_network_acl_entry(
             raise SaltInvocationError(
                 "port_range must be a list or tuple, not {}".format(type(port_range))
             )
-        elif len(port_range) != 2:
+        if len(port_range) != 2:
             raise SaltInvocationError(
                 "port_range must contain exactly two items, not {}".format(
                     len(port_range)
@@ -12942,33 +13369,34 @@ def replace_network_acl_entry(
 
 
 def replace_route(
-    route_table_id=None,
-    route_table_lookup=None,
-    destination_cidr_block=None,
-    destination_ipv6_cidr_block=None,
-    destination_prefix_list_id=None,
-    egress_only_internet_gateway_id=None,
-    egress_only_internet_gateway_lookup=None,
-    gateway_id=None,
-    gateway_lookup=None,
-    instance_id=None,
-    instance_lookup=None,
-    local_target=None,
-    nat_gateway_id=None,
-    nat_gateway_lookup=None,
-    transit_gateway_id=None,
-    transit_gateway_lookup=None,
-    local_gateway_id=None,
-    local_gateway_lookup=None,
-    network_interface_id=None,
-    network_interface_lookup=None,
-    vpc_peering_connection_id=None,
-    vpc_peering_connection_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    destination_cidr_block: str = None,
+    destination_ipv6_cidr_block: str = None,
+    destination_prefix_list_id: str = None,
+    destination_prefix_list_lookup: Mapping = None,
+    egress_only_internet_gateway_id: str = None,
+    egress_only_internet_gateway_lookup: Mapping = None,
+    gateway_id: str = None,
+    gateway_lookup: Mapping = None,
+    instance_id: str = None,
+    instance_lookup: Mapping = None,
+    local_target: bool = None,
+    nat_gateway_id: str = None,
+    nat_gateway_lookup: Mapping = None,
+    transit_gateway_id: str = None,
+    transit_gateway_lookup: Mapping = None,
+    local_gateway_id: str = None,
+    local_gateway_lookup: Mapping = None,
+    network_interface_id: str = None,
+    network_interface_lookup: Mapping = None,
+    vpc_peering_connection_id: str = None,
+    vpc_peering_connection_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Replaces an existing route within a route table in a VPC. You must provide
     only one of the following: internet gateway, virtual private gateway, NAT
@@ -12987,14 +13415,16 @@ def replace_route(
       the destination match. The value that you provide must match the CIDR of
       an existing route in the table.
     :param str destination_prefix_list_id: The ID of the prefix list for the route.
+    :param dict destination_prefix_list_lookup: Any kwargs that :py:func:`lookup_managed_prefix_list`
+      accepts. Used to lookup ``destination_prefix_list_id``.
     :param str egress_only_internet_gateway_id: [IPv6 traffic only] The ID of an
       egress-only internet gateway.
     :param dict egress_only_internet_gateway_lookup: Any kwargs that
       :py:func:`lookup_egress_only_internet_gateway` accepts. Used to lookup
       ``egress_only_internet_gateway_id``.
     :param str gateway_id: The ID of an internet gateway or virtual private gateway.
-    :param dict gateway_lookup: Any kwargs that :py:func:`lookup_gateway` accepts.
-      Used to lookup ``gateway_id`` is not provided.
+    :param dict gateway_lookup: Any kwargs that :py:func:`lookup_internet_gateway` or
+      :py:func:`lookup_vpn_gateway` accepts. Used to lookup ``gateway_id`` is not provided.
     :param str instance_id: The ID of a NAT instance in your VPC.
     :param dict instance_lookup: Any kwarg that :py:func:`lookup_instance` accepts.
       Used to lookup ``instance_id``.
@@ -13062,6 +13492,13 @@ def replace_route(
         },
         {
             "service": "ec2",
+            "name": "managed_prefix_list",
+            "kwargs": destination_prefix_list_lookup
+            or {"prefix_list_id": destination_prefix_list_id},
+            "required": False,
+        },
+        {
+            "service": "ec2",
             "name": "egress_only_internet_gateway",
             "kwargs": egress_only_internet_gateway_lookup
             or {"egress_only_internet_gateway_id": egress_only_internet_gateway_id},
@@ -13118,7 +13555,7 @@ def replace_route(
             {
                 "DestinationCidrBlock": destination_cidr_block,
                 "DestinationIpv6CidrBlock": destination_ipv6_cidr_block,
-                "DestinationPrefixListId": destination_prefix_list_id,
+                "DestinationPrefixListId": res.get("managed_prefix_list"),
                 "EgressOnlyInternetGatewayId": res.get("egress_only_internet_gateway"),
                 "GatewayId": gateway_id,
                 "InstanceId": res.get("instance"),
@@ -13136,15 +13573,15 @@ def replace_route(
 
 
 def replace_route_table_association(
-    association_id=None,
-    current_route_table_lookup=None,
-    route_table_id=None,
-    route_table_lookup=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    association_id: str = None,
+    current_route_table_lookup: Mapping = None,
+    route_table_id: str = None,
+    route_table_lookup: Mapping = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Changes the route table associated with a given subnet, internet gateway, or
     virtual private gateway in a VPC. After the operation completes, the subnet
@@ -13213,33 +13650,34 @@ def replace_route_table_association(
 
 @_arguments_to_list("launch_specifications")
 def request_spot_fleet(
-    iam_fleet_role,
-    target_capacity,
-    allocation_strategy=None,
-    on_demand_allocation_strategy=None,
-    excess_capacity_termination_policy=None,
-    fulfilled_capacity=None,
-    on_demand_fulfilled_capacity=None,
-    launch_specifications=None,
-    launch_template_configs=None,
-    spot_price=None,
-    on_demand_target_capacity=None,
-    on_demand_max_total_price=None,
-    spot_max_total_price=None,
-    terminate_instances_with_expiration=None,
-    request_type=None,
-    valid_from=None,
-    valid_until=None,
-    replace_unhealthy_instances=None,
-    instance_interruption_behavior=None,
-    load_balancers_config=None,
-    instance_pools_to_use_count=None,
-    tags=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    iam_fleet_role: str,
+    target_capacity: int,
+    allocation_strategy: str = None,
+    on_demand_allocation_strategy: str = None,
+    excess_capacity_termination_policy: str = None,
+    fulfilled_capacity: float = None,
+    on_demand_fulfilled_capacity: float = None,
+    launch_specifications: Union[Mapping, Iterable[Mapping]] = None,
+    launch_template_configs: Iterable[Mapping] = None,
+    spot_price: str = None,
+    on_demand_target_capacity: int = None,
+    on_demand_max_total_price: str = None,
+    spot_max_total_price: str = None,
+    terminate_instances_with_expiration: bool = None,
+    request_type: str = None,
+    valid_from: datetime = None,
+    valid_until: datetime = None,
+    replace_unhealthy_instances: bool = None,
+    instance_interruption_behavior: str = None,
+    load_balancers_config: Mapping = None,
+    instance_pools_to_use_count: int = None,
+    tags: Mapping = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a Spot Fleet request.
 
@@ -13468,23 +13906,23 @@ def request_spot_fleet(
 
 
 def request_spot_instances(
-    availability_zone_group=None,
-    block_duration_minutes=None,
-    instance_count=None,
-    launch_group=None,
-    launch_specification=None,
-    spot_price=None,
-    request_type=None,
-    valid_from=None,
-    valid_until=None,
-    tags=None,
-    instance_interruption_behavior=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    availability_zone_group: str = None,
+    block_duration_minutes: int = None,
+    instance_count: int = None,
+    launch_group: str = None,
+    launch_specification: Mapping = None,
+    spot_price: str = None,
+    request_type: str = None,
+    valid_from: datetime = None,
+    valid_until: datetime = None,
+    tags: Mapping = None,
+    instance_interruption_behavior: str = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Creates a Spot Instance request.
 
@@ -13584,15 +14022,16 @@ def request_spot_instances(
     )
 
 
+@_arguments_to_list("ip_permissions")
 def revoke_security_group_egress(
-    group_id=None,
-    group_lookup=None,
-    ip_permissions=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    group_id: str = None,
+    group_lookup: Mapping = None,
+    ip_permissions: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     [VPC only] Removes the specified egress rules from a security group for EC2-VPC.
     This action doesn't apply to security groups for use in EC2-Classic. To remove
@@ -13611,14 +14050,23 @@ def revoke_security_group_egress(
     :param str group_id: The ID of the security group to revoke egress rules from.
     :param dict group_lookup: Any kwarg that :py:func:`lookup_security_group` accepts.
       Used to lookup ``security_group_id``.
-    :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
+    :type ip_permissions: dict or list(dict)
+    :param ip_permissions: One or more IP permissions. You can't specify
       a destination security group and a CIDR IP address range in the same set
-      of permissions. For the content specifications, see :py:func:`authorise_security_group_egress`.
+      of permissions. These dicts can either contain the structure as described
+      `here <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html>`__
+      or contain the kwargs that :py:func:`build_ip_permission` accepts.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
       with ``True`` on success
     """
+    try:
+        ip_permissions = [
+            build_ip_permission(item)["result"] for item in ip_permissions
+        ]
+    except (TypeError, KeyError):
+        pass  # to Boto as-is
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
@@ -13643,15 +14091,16 @@ def revoke_security_group_egress(
     )
 
 
+@_arguments_to_list("ip_permissions")
 def revoke_security_group_ingress(
-    group_id=None,
-    group_lookup=None,
-    ip_permissions=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    group_id: str = None,
+    group_lookup: Mapping = None,
+    ip_permissions: Union[Mapping, Iterable[Mapping]] = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Removes the specified ingress rules from a security group. To remove a rule,
     the values that you specify (for example, ports) must match the existing rule's
@@ -13673,14 +14122,23 @@ def revoke_security_group_ingress(
     :param str group_id: The ID of the security group to revoke egress rules from.
     :param dict group_lookup: Any kwarg that :py:func:`lookup_security_group` accepts.
       Used to lookup ``security_group_id``.
-    :param list(dict) ip_permissions: The sets of IP permissions. You can't specify
-      a destination security group and a CIDR IP address range in the same set
-      of permissions. For the content specifications, see :py:func:`authorise_security_group_egress`.
+    :type ip_permissions: dict or list(dict)
+    :param ip_permissions: One or more IP permissions. You can't specify
+      a source security group and a CIDR IP address range in the same set
+      of permissions. These dicts can either contain the structure as described
+      `here <https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html>`__
+      or contain the kwargs that :py:func:`build_ip_permission` accepts.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
       with ``True`` on success
     """
+    try:
+        ip_permissions = [
+            build_ip_permission(item)["result"] for item in ip_permissions
+        ]
+    except (TypeError, KeyError):
+        pass  # to Boto as-is
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
@@ -13707,14 +14165,14 @@ def revoke_security_group_ingress(
 
 @_arguments_to_list("instance_ids", "instance_lookups")
 def start_instances(
-    instance_ids=None,
-    instance_lookups=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    instance_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Starts an Amazon EBS-backed instance that you've previously stopped.
 
@@ -13779,16 +14237,16 @@ def start_instances(
 
 @_arguments_to_list("instance_ids", "instance_lookups")
 def stop_instances(
-    instance_ids=None,
-    instance_lookups=None,
-    hibernate=None,
-    force=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    instance_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    hibernate: bool = None,
+    force: bool = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Stops an Amazon EBS-backed instance.
 
@@ -13879,14 +14337,14 @@ def stop_instances(
 
 @_arguments_to_list("instance_ids", "instance_lookups")
 def terminate_instances(
-    instance_ids=None,
-    instance_lookups=None,
-    blocking=None,
-    region=None,
-    keyid=None,
-    key=None,
-    profile=None,
-):
+    instance_ids: Union[str, Iterable[str]] = None,
+    instance_lookups: Union[Mapping, Iterable[Mapping]] = None,
+    blocking: bool = None,
+    region: str = None,
+    keyid: str = None,
+    key: str = None,
+    profile: Mapping = None,
+) -> Dict:
     """
     Shuts down the specified instances. This operation is idempotent; if you terminate
     an instance more than once, each call succeeds.
