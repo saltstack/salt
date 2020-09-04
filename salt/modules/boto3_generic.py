@@ -84,6 +84,7 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                 raise SaltInvocationError(
                     'No "{}" specified in resource #{}.'.format(required_argument, idx)
                 )
+        log.debug("lookup_resources: item: %s", item)
         name = item["name"]
         item_required = item.get("required", True)
         default_result_key = (
@@ -97,13 +98,16 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
             result_keys = [result_keys]
         if not isinstance(lookup_kwargs, list):
             lookup_kwargs = [lookup_kwargs]
-        for single_lookup_kwargs in lookup_kwargs:
+        for single_lookup_kwargs in lookup_kwargs or [None]:
             single_lookup_results = {}
             if single_lookup_kwargs is None:
                 if item_required:
                     raise SaltInvocationError(
-                        "lookup kwargs is not specified (is None)."
+                        "A {} is required. Please specify either by ID or by lookup kwargs.".format(
+                            name
+                        )
                     )
+                lookup_results[item.get("as", name)] = None
                 continue
             if not isinstance(single_lookup_kwargs, dict):
                 if item_required:
@@ -112,16 +116,22 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                             type(single_lookup_kwargs)
                         )
                     )
+                lookup_results[item.get("as", name)] = None
                 continue
             if not any(single_lookup_kwargs.values()):
                 if item_required:
                     raise SaltInvocationError(
-                        "lookup kwargs does not contain any values."
+                        "A {} is required. Please specify either by ID or by lookup kwargs.".format(
+                            name
+                        )
                     )
+                lookup_results[item.get("as", name)] = None
                 continue
             single_lookup_kwargs_uc = {
-                salt.utils.stringutils.snake_to_camel_case(item, uppercamel=True): value
-                for item, value in single_lookup_kwargs.items()
+                salt.utils.stringutils.snake_to_camel_case(
+                    lookup_kw, uppercamel=True
+                ): value
+                for lookup_kw, value in single_lookup_kwargs.items()
             }
             if set(result_keys) <= set(single_lookup_kwargs_uc.keys()) and all(
                 [single_lookup_kwargs_uc[result_key] for result_key in result_keys]
@@ -161,7 +171,6 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                         res = lookup_function(client=client, **single_lookup_kwargs)
                     except SaltInvocationError as exc:
                         res = {"error": "{}".format(exc)}
-                    log.debug("lookup_resources: res: %s", res)
                     if "error" in res and item_required:
                         yield res
                         return
@@ -179,12 +188,13 @@ def lookup_resources(*args, region=None, keyid=None, key=None, profile=None):
                 if len(result_keys) == 1 and single_lookup_results:
                     single_lookup_results = list(single_lookup_results.values())[0]
                 log.debug(
-                    "lookup_resources(%s):\n" "\t\tkwargs: %s\n" "\t\tresult: %s",
+                    "lookup_resources(%s) as %s:\n" "\t\tkwargs: %s\n" "\t\tresult: %s",
                     name,
+                    item.get("as", name),
                     single_lookup_kwargs,
                     single_lookup_results,
                 )
             lookup_results[item.get("as", name)] = single_lookup_results
     ret["result"] = lookup_results
-    log.debug("_lookup_resources: ret: %s", ret)
+    log.debug("lookup_resources: ret: %s", ret)
     yield ret
