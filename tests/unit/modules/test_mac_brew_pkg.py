@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.mac_brew_pkg as mac_brew
@@ -141,7 +139,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                     "stderr": "",
                     "retcode": 0,
                 }
-            elif cmd == "cask list --versions":
+            elif cmd == "list --cask --versions":
                 result = {
                     "stdout": "macvim 8.1.151\nfont-firacode-nerd-font 2.0.0",
                     "stderr": "",
