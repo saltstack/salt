@@ -13,11 +13,17 @@ The default renderer for SLS files is the YAML renderer.
 What is YAML
 ------------
 
-YAML is a markup language with many powerful features. However, Salt uses
-a small subset of YAML that maps over very commonly used data structures,
-like lists and dictionaries. It is the job of the YAML renderer to take
-the YAML data structure and compile it into a Python data structure for
-use by Salt.
+What does YAML stand for? It's an acronym for *YAML Ain't Markup Language*.
+
+`The Official YAML Website <yaml.org>`_ defines YAML as:
+
+  ...a human friendly data serialization
+  standard for all programming languages.
+
+However, Salt uses a small subset of YAML that maps over very commonly used data
+structures, like lists and dictionaries. It is the job of the YAML renderer to
+take the YAML data structure and compile it into a Python data structure for use
+by Salt.
 
 Defining YAML
 -------------
@@ -117,7 +123,12 @@ Learning more about YAML
 One easy way to learn more about how YAML gets rendered into Python data structures is
 to use an online YAML parser to see the Python output.
 
-One excellent choice for experimenting with YAML parsing is: http://yaml-online-parser.appspot.com/
+Here are some excellent links for experimenting with and referencing YAML: 
+
+* `Online YAML Parser <https://yaml-online-parser.appspot.com/>`_: Convert YAML
+  to JSON or Python data structures.
+* `The Official YAML Specification <https://yaml.org/spec/1.2/spec.html>`_
+* `The Wikipedia page for YAML <https://en.wikipedia.org/wiki/YAML>`_
 
 Templating
 ----------
