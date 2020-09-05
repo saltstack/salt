@@ -95,6 +95,7 @@ from xml.sax import saxutils
 import jinja2.exceptions
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
@@ -1688,10 +1689,10 @@ def _handle_remote_boot_params(orig_boot):
 
 def _handle_efi_param(boot, desc):
     """
-       Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
-       :param boot: The boot parameters passed to the init or update functions.
-       :param desc: The XML description of that domain.
-       :return: A boolean value.
+    Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
+    :param boot: The boot parameters passed to the init or update functions.
+    :param desc: The XML description of that domain.
+    :return: A boolean value.
     """
     efi_value = boot.get("efi", None) if boot else None
     parent_tag = desc.find("os")
@@ -2152,6 +2153,7 @@ def init(
             boot_dev,
             **kwargs
         )
+        log.debug("New virtual machine definition: %s", vm_xml)
         conn.defineXML(vm_xml)
     except libvirt.libvirtError as err:
         conn.close()
@@ -2516,82 +2518,54 @@ def update(
         cpu_node.set("current", str(cpu))
         need_update = True
 
+    def _set_loader(node, value):
+        salt.utils.xmlutil.set_node_text(node, value)
+        if value is not None:
+            node.set("readonly", "yes")
+            node.set("type", "pflash")
+
+    def _set_nvram(node, value):
+        node.set("template", value)
+
+    def _set_with_mib_unit(node, value):
+        node.text = str(value)
+        node.set("unit", "MiB")
+
     # Update the kernel boot parameters
-    boot_tags = ["kernel", "initrd", "cmdline", "loader", "nvram"]
-    parent_tag = desc.find("os")
+    params_mapping = [
+        {"path": "boot:kernel", "xpath": "os/kernel"},
+        {"path": "boot:initrd", "xpath": "os/initrd"},
+        {"path": "boot:cmdline", "xpath": "os/cmdline"},
+        {"path": "boot:loader", "xpath": "os/loader", "set": _set_loader},
+        {"path": "boot:nvram", "xpath": "os/nvram", "set": _set_nvram},
+        # Update the memory, note that libvirt outputs all memory sizes in KiB
+        {
+            "path": "mem",
+            "xpath": "memory",
+            "get": lambda n: int(n.text) / 1024,
+            "set": _set_with_mib_unit,
+        },
+        {
+            "path": "mem",
+            "xpath": "currentMemory",
+            "get": lambda n: int(n.text) / 1024,
+            "set": _set_with_mib_unit,
+        },
+        {
+            "path": "boot_dev:{dev}",
+            "xpath": "os/boot[$dev]",
+            "get": lambda n: n.get("dev"),
+            "set": lambda n, v: n.set("dev", v),
+            "del": salt.utils.xmlutil.del_attribute("dev"),
+        },
+    ]
 
-    for tag in boot_tags:
-        # The Existing Tag...
-        found_tag = parent_tag.find(tag)
-
-        # The new value
-        boot_tag_value = boot.get(tag, None) if boot else None
-
-        # Existing tag is found and values don't match
-        if found_tag is not None and found_tag.text != boot_tag_value:
-            # If the existing tag is found, but the new value is None
-            # remove it. If the existing tag is found, and the new value
-            # doesn't match update it. In either case, mark for update.
-            if boot_tag_value is None and boot is not None and parent_tag is not None:
-                parent_tag.remove(found_tag)
-            else:
-                found_tag.text = boot_tag_value
-
-            # If the existing tag is loader or nvram, we need to update the corresponding attribute
-            if found_tag.tag == "loader" and boot_tag_value is not None:
-                found_tag.set("readonly", "yes")
-                found_tag.set("type", "pflash")
-
-            if found_tag.tag == "nvram" and boot_tag_value is not None:
-                found_tag.set("template", found_tag.text)
-                found_tag.text = None
-
-            need_update = True
-
-        # Existing tag is not found, but value is not None
-        elif found_tag is None and boot_tag_value is not None:
-
-            # Need to check for parent tag, and add it if it does not exist.
-            # Add a subelement and set the value to the new value, and then
-            # mark for update.
-            if parent_tag is not None:
-                child_tag = ElementTree.SubElement(parent_tag, tag)
-            else:
-                new_parent_tag = ElementTree.Element("os")
-                child_tag = ElementTree.SubElement(new_parent_tag, tag)
-
-            child_tag.text = boot_tag_value
-
-            # If the newly created tag is loader or nvram, we need to update the corresponding attribute
-            if child_tag.tag == "loader":
-                child_tag.set("readonly", "yes")
-                child_tag.set("type", "pflash")
-
-            if child_tag.tag == "nvram":
-                child_tag.set("template", child_tag.text)
-                child_tag.text = None
-
-            need_update = True
-
-    # Check the os/boot tags
-    if boot_dev is not None:
-        boot_nodes = parent_tag.findall("boot")
-        old_boot_devs = [node.get("dev") for node in boot_nodes]
-        new_boot_devs = boot_dev.split()
-        if old_boot_devs != new_boot_devs:
-            for boot_node in boot_nodes:
-                parent_tag.remove(boot_node)
-            for dev in new_boot_devs:
-                ElementTree.SubElement(parent_tag, "boot", attrib={"dev": dev})
-            need_update = True
-
-    # Update the memory, note that libvirt outputs all memory sizes in KiB
-    for mem_node_name in ["memory", "currentMemory"]:
-        mem_node = desc.find(mem_node_name)
-        if mem and int(mem_node.text) != mem * 1024:
-            mem_node.text = str(mem)
-            mem_node.set("unit", "MiB")
-            need_update = True
+    data = {k: v for k, v in locals().items() if bool(v)}
+    if boot_dev:
+        data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
+    need_update = need_update or salt.utils.xmlutil.change_xml(
+        desc, data, params_mapping
+    )
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find("devices")
@@ -2638,9 +2612,9 @@ def update(
                         _disk_volume_create(conn, all_disks[idx])
 
             if not test:
-                conn.defineXML(
-                    salt.utils.stringutils.to_str(ElementTree.tostring(desc))
-                )
+                xml_desc = ElementTree.tostring(desc)
+                log.debug("Update virtual machine definition: %s", xml_desc)
+                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -4287,7 +4261,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
