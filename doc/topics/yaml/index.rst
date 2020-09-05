@@ -1,21 +1,32 @@
+.. meta::
+   :description: YAML is a markup language with powerful features. YAML syntax may seem daunting, but there are only 3 simple rules to remember for writing YAML for SLS files.
+   :keywords: yaml, what is yaml, how to use yaml
+
 .. _yaml:
 
-==================
-Understanding YAML
-==================
+==============================
+What is YAML and How To Use It
+==============================
 
-The default renderer for SLS files is the YAML renderer. YAML is a
-markup language with many powerful features. However, Salt uses
+The default renderer for SLS files is the YAML renderer.
+
+What is YAML
+------------
+
+YAML is a markup language with many powerful features. However, Salt uses
 a small subset of YAML that maps over very commonly used data structures,
 like lists and dictionaries. It is the job of the YAML renderer to take
 the YAML data structure and compile it into a Python data structure for
 use by Salt.
 
+Defining YAML
+-------------
+
 Though YAML syntax may seem daunting and terse at first, there are only
 three very simple rules to remember when writing YAML for SLS files.
 
 Rule One: Indentation
----------------------
++++++++++++++++++++++
 
 YAML uses a fixed indentation scheme to represent relationships between
 data layers. Salt requires that the indentation for each level consists
@@ -23,7 +34,7 @@ of exactly two spaces. Do not use tabs.
 
 
 Rule Two: Colons
-----------------
+++++++++++++++++
 
 Python dictionaries are, of course, simply key-value pairs. Users from other
 languages may recognize this data type as hashes or associative arrays.
@@ -74,7 +85,7 @@ And in Python:
     {"first_level_dict_key": {"second_level_dict_key": "value_in_second_level_dict"}}
 
 Rule Three: Dashes
-------------------
+++++++++++++++++++
 
 To represent lists of items, a single dash followed by a space is used. Multiple
 items are a part of the same list as a function of their having the same level of indentation.
@@ -100,8 +111,8 @@ In Python, the above maps to:
 
     {"my_dictionary": ["list_value_one", "list_value_two", "list_value_three"]}
 
-Learning More
--------------
+Learning more about YAML
+------------------------
 
 One easy way to learn more about how YAML gets rendered into Python data structures is
 to use an online YAML parser to see the Python output.
