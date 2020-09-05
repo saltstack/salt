@@ -17,11 +17,10 @@ FreeBSD binary repo
 ===================
 
 
-For Python 2.7 use:
-
 Install Salt on FreeBSD via the official package repository. Salt is packaged
 both as a Python 2.7 or 3.7 version.
 
+For Python 2.7 use:
 
 .. code-block:: bash
 
@@ -29,7 +28,6 @@ both as a Python 2.7 or 3.7 version.
 
 
 For Python 3.7 use:
-
 
 .. code-block:: bash
 
