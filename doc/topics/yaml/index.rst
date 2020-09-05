@@ -15,7 +15,7 @@ What is YAML
 
 What does YAML stand for? It's an acronym for *YAML Ain't Markup Language*.
 
-`The Official YAML Website <yaml.org>`_ defines YAML as:
+`The Official YAML Website <https://yaml.org>`_ defines YAML as:
 
   *...a human friendly data serialization*
   *standard for all programming languages.*
