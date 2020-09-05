@@ -22,11 +22,7 @@ from saltfactories.factories.base import DaemonFactory
 from saltfactories.factories.daemons.sshd import SshdDaemonFactory as _SshdDaemonFactory
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    SKIP_IF_NOT_RUNNING_PYTEST,
-    patched_environ,
-    requires_system_grains,
-)
+from tests.support.helpers import patched_environ, requires_system_grains
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
@@ -390,7 +386,6 @@ def webserver_pillar_tests_prep_authenticated(request, webserver_pillar_tests_pr
     request.cls.ext_opts["password"] = request.cls.password
 
 
-@SKIP_IF_NOT_RUNNING_PYTEST
 class GitTestBase(ModuleCase):
     """
     Base class for all gitfs/git_pillar tests.
