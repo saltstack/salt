@@ -17,8 +17,8 @@ What does YAML stand for? It's an acronym for *YAML Ain't Markup Language*.
 
 `The Official YAML Website <yaml.org>`_ defines YAML as:
 
-  ...a human friendly data serialization
-  standard for all programming languages.
+  *...a human friendly data serialization*
+  *standard for all programming languages.*
 
 However, Salt uses a small subset of YAML that maps over very commonly used data
 structures, like lists and dictionaries. It is the job of the YAML renderer to
