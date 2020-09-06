@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.smtp as smtp
@@ -21,7 +17,7 @@ class SMTPRecipientsRefused(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPRecipientsRefused, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
@@ -31,7 +27,7 @@ class SMTPHeloError(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPHeloError, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
@@ -41,7 +37,7 @@ class SMTPSenderRefused(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPSenderRefused, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
@@ -51,7 +47,7 @@ class SMTPDataError(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPDataError, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
@@ -61,7 +57,7 @@ class SMTPException(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPException, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
@@ -71,11 +67,11 @@ class SMTPAuthenticationError(Exception):
     """
 
     def __init__(self, msg):
-        super(SMTPAuthenticationError, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
-class MockSMTPSSL(object):
+class MockSMTPSSL:
     """
     Mock SMTP_SSL class
     """
@@ -115,7 +111,7 @@ class MockSMTPSSL(object):
         return True
 
 
-class MockSMTP(object):
+class MockSMTP:
     """
     Mock SMTP class
     """
@@ -179,11 +175,11 @@ class MockGaierror(Exception):
     """
 
     def __init__(self, msg):
-        super(MockGaierror, self).__init__(msg)
+        super().__init__(msg)
         self.smtp_error = msg
 
 
-class MockSocket(object):
+class MockSocket:
     """
     Mock Socket class
     """
@@ -192,7 +188,7 @@ class MockSocket(object):
         self.gaierror = MockGaierror
 
 
-class MockSmtplib(object):
+class MockSmtplib:
     """
     Mock smtplib class
     """
@@ -233,7 +229,12 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {smtp: {"socket": MockSocket(), "smtplib": MockSmtplib()}}
+        return {
+            smtp: {
+                "socket": MockSocket(),
+                "smtplib": MockSmtplib(),
+            }
+        }
 
     # 'send_msg' function tests: 1
 
