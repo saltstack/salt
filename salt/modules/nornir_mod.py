@@ -125,7 +125,6 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
 # Import python libs
 import logging
-import sys
 
 # import salt libs
 from salt.exceptions import CommandExecutionError
