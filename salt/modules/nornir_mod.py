@@ -101,7 +101,7 @@ Match only hosts with names in provided list::
 
     salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
     salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
-	
+    
 jumphosts or bastions
 ---------------------
 

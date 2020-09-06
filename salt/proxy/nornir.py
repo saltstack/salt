@@ -96,7 +96,7 @@ Nornir proxy-minion pillar example:
             port: 22
             password: admin
             username: admin
-			
+            
     groups: 
       lab:
         username: nornir
@@ -362,8 +362,8 @@ def _refresh(**kwargs):
 def inventory_data(**kwargs):
     """
     Return Nornir inventory as a dictionary
-	
-	:param Fx: filters to filter hosts
+    
+    :param Fx: filters to filter hosts
     """
     # re-init Nornir
     _refresh()

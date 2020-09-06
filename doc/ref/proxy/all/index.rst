@@ -25,7 +25,7 @@ proxy modules
     marathon
     napalm
     netmiko_px
-	nornir
+    nornir
     nxos
     nxos_api
     panos
