@@ -483,9 +483,10 @@ def lookup_resource(
         filters.update(
             {"tag:{}".format(tag_key): tag_value for tag_key, tag_value in tags.items()}
         )
-    if not filters:
+    log.debug("lookup_resources:\n\t\tkwargs: %s\n\t\tfilters: %s", kwargs, filters)
+    if not filters and not kwargs:
         raise SaltInvocationError(
-            "No constraints where given when for lookup_{}.".format(resource_type)
+            "No constraints where given for lookup_{}.".format(resource_type)
         )
     res = describe_resource(
         resource_type, filters=filters, result_key=result_key, client=client, **kwargs
