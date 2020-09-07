@@ -4490,6 +4490,7 @@ def delete_dhcp_options(
 def delete_internet_gateway(
     internet_gateway_id: str = None,
     internet_gateway_lookup: Mapping = None,
+    detach: bool = None,
     region: str = None,
     keyid: str = None,
     key: str = None,
@@ -4502,6 +4503,7 @@ def delete_internet_gateway(
     :param str internet_gateway_id: The ID of the Internet Gateway.
     :param dict internet_gateway_lookup: Any kwargs that :py:func:`lookup_internet_gateway`
       accepts. Used to lookup ``internet_gateway_id``.
+    :param bool detach: Detach an attached Internet Gateway automatically before deleting.
 
     :rtype: dict
     :return: Dict with 'error' key if something went wrong. Contains 'result' key
@@ -4509,12 +4511,16 @@ def delete_internet_gateway(
 
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').delete_internet_gateway
     """
+    result_keys = ["InternetGatewayId"]
+    if detach:
+        result_keys.append("Attachments")
     with __salt__["boto3_generic.lookup_resources"](
         {
             "service": "ec2",
             "name": "internet_gateway",
             "kwargs": internet_gateway_lookup
             or {"internet_gateway_id": internet_gateway_id},
+            "result_keys": result_keys,
         },
         region=region,
         keyid=keyid,
@@ -4523,7 +4529,22 @@ def delete_internet_gateway(
     ) as res:
         if "error" in res:
             return res
-        params = {"InternetGatewayId": res["result"]["internet_gateway"]}
+        res = res["result"]["internet_gateway"]
+        internet_gateway_id = res["InternetGatewayId"] if len(result_keys) > 1 else res
+        attachments = res["Attachments"] if detach else []
+    if detach and attachments:
+        for attached_vpc_id in [item["VpcId"] for item in attachments]:
+            res = detach_internet_gateway(
+                internet_gateway_id=internet_gateway_id,
+                vpc_id=attached_vpc_id,
+                region=region,
+                keyid=keyid,
+                key=key,
+                profile=profile,
+            )
+            if "error" in res:
+                return res
+    params = {"InternetGatewayId": internet_gateway_id}
     client = _get_client(region=region, key=key, keyid=keyid, profile=profile)
     return __utils__["boto3.handle_response"](client.delete_internet_gateway, params)
 
@@ -8039,7 +8060,7 @@ def detach_internet_gateway(
     :depends: boto3.client('ec2').describe_internet_gateways, boto3.client('ec2').describe_vpcs, boto3.client('ec2').detach_internet_gateway
     """
     with __salt__["boto3_generic.lookup_resources"](
-        {"service": "ec2", "name": vpc, "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
+        {"service": "ec2", "name": "vpc", "kwargs": vpc_lookup or {"vpc_id": vpc_id}},
         region=region,
         keyid=keyid,
         key=key,
@@ -9945,21 +9966,21 @@ def lookup_internet_gateway(
 
     :depends: boto3.client('ec2').describe_internet_gateways
     """
-    with __salt__["boto3_generic.lookup_resources"](
-        {
-            "service": "ec2",
-            "name": "vpc",
-            "kwargs": attachment_vpc_lookup or {"vpc_id": attachment_vpc_id},
-            "required": False,
-        },
-        region=region,
-        keyid=keyid,
-        key=key,
-        profile=profile,
-    ) as res:
-        if "error" in res:
-            return res
-        attachment_vpc_id = res["result"].get("vpc")
+    if attachment_vpc_lookup:
+        with __salt__["boto3_generic.lookup_resources"](
+            {
+                "service": "ec2",
+                "name": "vpc",
+                "kwargs": attachment_vpc_lookup,
+            },
+            region=region,
+            keyid=keyid,
+            key=key,
+            profile=profile,
+        ) as res:
+            if "error" in res:
+                return res
+            attachment_vpc_id = res["result"].get("vpc")
     if filters is None:
         filters = {}
     filters.update(
