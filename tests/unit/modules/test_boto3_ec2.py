@@ -97,7 +97,6 @@ salt_conn_parameters = {
     "keyid": secret_key,
     "profile": {},
 }
-cidr_block = "10.0.0.0/16"
 dhcp_options_parameters = {
     "domain_name": "example.com",
     "domain_name_servers": ["1.2.3.4"],
@@ -114,10 +113,9 @@ def _has_required_boto():
     """
     if not HAS_BOTO:
         return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto_version):
+    if LooseVersion(boto3.__version__) < LooseVersion(required_boto_version):
         return False
-    else:
-        return True
+    return True
 
 
 def _get_boto_version():
@@ -147,12 +145,9 @@ def _has_required_moto():
     Returns True/False boolean depending on if Moto is installed and correct
     version.
     """
-    if not HAS_MOTO:
+    if not HAS_MOTO or _get_moto_version() < LooseVersion(required_moto_version):
         return False
-    else:
-        if _get_moto_version() < LooseVersion(required_moto_version):
-            return False
-        return True
+    return True
 
 
 def _moto_cannot(*args):
@@ -223,12 +218,14 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.cidr_block = "10.0.0.0/16"
+
         cls.network_acl_entry_parameters = {
             "network_acl_id": "fake",
             "rule_number": 100,
             "protocol": "-1",
             "rule_action": "allow",
-            "cidr_block": cidr_block,
+            "cidr_block": cls.cidr_block,
             "egress": True,
         }
         cls.mock_error = {"Error": {"Code": "Mock", "Message": "Mocked error"}}
@@ -267,13 +264,15 @@ class BotoVpcTestCaseMixin:
         }
         self.conn.create_tags(**params)
 
-    def _create_vpc(self, name=None, tags=None, ipv6=None):
+    def _create_vpc(self, name=None, tags=None, cidr_block=None, ipv6=None):
         """
         Helper function to create a test vpc
 
         Note that moto 1.3.14 does not support TagSpecification on create, so we
         will need to call create_tags separately.
         """
+        if cidr_block is None:
+            cidr_block = self.cidr_block
         if not self.conn:
             self.conn = boto3.client("ec2", **boto3_conn_parameters)
         if tags is None:
@@ -479,7 +478,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Test that describe_vpcs without filters returns all VPCs.
         """
-        vpc_id = self._create_vpc()
+        self._create_vpc()
         res = boto3_ec2.describe_vpcs(**salt_conn_parameters)
         self.assertIn("result", res)
         self.assertEqual(len(res["result"]), 2)  # Default VPC and created VPC
@@ -520,11 +519,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         # With moto 0.4.25 through 0.4.30, is_default is set to True.
         # 0.4.24 and older and 0.4.31 and newer, is_default is False
-        if LooseVersion("0.4.25") <= _get_moto_version() < LooseVersion("0.4.31"):
-            is_default = True
-        else:
-            is_default = False
-
+        is_default = (
+            LooseVersion("0.4.25") <= _get_moto_version() < LooseVersion("0.4.31")
+        )
         vpc_id = self._create_vpc(name="test", tags={"test": "testvalue"})
 
         res = boto3_ec2.describe_vpcs(vpc_ids=vpc_id, **salt_conn_parameters)
@@ -532,7 +529,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", res)
         self.assertEqual(len(res["result"]), 1)
         self.assertEqual(res["result"][0]["VpcId"], vpc_id)
-        self.assertEqual(res["result"][0]["CidrBlock"], cidr_block)
+        self.assertEqual(res["result"][0]["CidrBlock"], self.cidr_block)
         self.assertEqual(res["result"][0]["IsDefault"], is_default)
         self.assertEqual(res["result"][0]["State"], "available")
         self.assertEqual(res["result"][0]["DhcpOptionsId"], "dopt-7a8b9c2d")
@@ -559,6 +556,19 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
 
     # lookup_vpc tests
+    @mock_ec2
+    def test_lookup_vpc_without_arguments_raises_error(
+        self,
+    ):
+        """
+        Tests looking up VPC without arguments raises a SaltInvocationError.
+        """
+        with self.assertRaisesRegex(
+            SaltInvocationError,
+            "No constraints where given for lookup_vpc.",
+        ):
+            boto3_ec2.lookup_vpc(**salt_conn_parameters)
+
     @mock_ec2
     @skipIf(*_moto_cannot("create_vpc", "describe_vpcs"))
     def test_lookup_existing_vpc_by_id_returns_it(
@@ -662,19 +672,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual("No vpc found with the specified parameters", res["error"])
 
     @mock_ec2
-    def test_lookup_vpc_without_specifics_raises_salt_invocation_error(
-        self,
-    ):
-        """
-        Tests looking up VPC without arguments raises error.
-        """
-        with self.assertRaisesRegex(
-            SaltInvocationError,
-            "No constraints where given when for lookup_vpc.",
-        ):
-            boto3_ec2.lookup_vpc(**salt_conn_parameters)
-
-    @mock_ec2
     @skipIf(*_moto_cannot("create_vpc", "describe_vpcs"))
     def test_lookup_vpc_resulting_in_multiple_matches_returns_error(
         self,
@@ -698,7 +695,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         tests True VPC created.
         """
-        res = boto3_ec2.create_vpc(cidr_block, **salt_conn_parameters)
+        res = boto3_ec2.create_vpc(self.cidr_block, **salt_conn_parameters)
         self.assertTrue(res["result"])
 
     @mock_ec2
@@ -710,7 +707,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         tests True VPC created.
         """
         res = boto3_ec2.create_vpc(
-            cidr_block, tags={"Name": "test"}, **salt_conn_parameters
+            self.cidr_block, tags={"Name": "test"}, **salt_conn_parameters
         )
         self.assertTrue(res["result"])
 
@@ -725,7 +722,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "moto.ec2.ec2_backend.{}".format(patch_function),
             side_effect=ClientError(self.mock_error, patch_function),
         ):
-            res = boto3_ec2.create_vpc(cidr_block, **salt_conn_parameters)
+            res = boto3_ec2.create_vpc(self.cidr_block, **salt_conn_parameters)
         self.assertEqual(res, {"error": self.mock_errormessage.format(patch_function)})
 
     # delete_vpc tests
@@ -804,7 +801,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests describing a VPC attribute for a non-existing VPC.
         """
-        vpc_id = self._create_vpc()
         res = boto3_ec2.describe_vpc_attribute(
             attributes="enable_dns_support", vpc_id="fake", **salt_conn_parameters
         )
@@ -930,7 +926,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests succesful call to enable_vpc_classic_link targetting the VPC by name.
         """
-        vpc_id = self._create_vpc(name="test")
+        self._create_vpc(name="test")
 
         res = boto3_ec2.enable_vpc_classic_link(
             vpc_lookup={"vpc_name": "test"}, **salt_conn_parameters
@@ -1125,11 +1121,12 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests succesful call to enable_vpc_classic_link_dns_support targetting the VPC by name.
         """
-        vpc_id = self._create_vpc(name="test")
+        self._create_vpc(name="test")
 
         res = boto3_ec2.enable_vpc_classic_link_dns_support(
             vpc_lookup={"vpc_name": "test"}, **salt_conn_parameters
         )
+        self.assertTrue(res)
         # self.assertIn('error', res)  # bug in Moto: doesn't check if classic_link is enabled first.
 
     @mock_ec2
@@ -1422,6 +1419,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc_id = self._create_vpc()
 
         res = boto3_ec2.associate_vpc_cidr_block(vpc_id=vpc_id, **salt_conn_parameters)
+        self.assertTrue(res)
         # self.assertIn('error', res)  # Bug in Moto, doesn't validate required arguments.
 
     @mock_ec2
@@ -1433,8 +1431,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests associate_vpc_cidr_block with a new IPv4 CIDR block to a non-existing VPC.
         Non-blocking variant.
         """
-        vpc_id = self._create_vpc()
-
         res = boto3_ec2.associate_vpc_cidr_block(
             vpc_id="fake", cidr_block="10.1.0.0/16", **salt_conn_parameters
         )
@@ -1693,12 +1689,12 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Non-blocking variant.
         """
         vpc_id = self._create_vpc()
-        association_id = boto3_ec2.associate_vpc_cidr_block(
+        boto3_ec2.associate_vpc_cidr_block(
             vpc_id=vpc_id,
             cidr_block="10.1.0.0/16",
             blocking=True,
             **salt_conn_parameters
-        )["result"]["CidrBlockAssociation"]["AssociationId"]
+        )
 
         res = boto3_ec2.disassociate_vpc_cidr_block(
             vpc_lookup={"vpc_id": vpc_id, "cidr_block": "10.1.0.0/16"},
@@ -1724,12 +1720,12 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Blocking variant.
         """
         vpc_id = self._create_vpc()
-        association_id = boto3_ec2.associate_vpc_cidr_block(
+        boto3_ec2.associate_vpc_cidr_block(
             vpc_id=vpc_id,
             cidr_block="10.1.0.0/16",
             blocking=True,
             **salt_conn_parameters
-        )["result"]["CidrBlockAssociation"]["AssociationId"]
+        )
 
         res = boto3_ec2.disassociate_vpc_cidr_block(
             vpc_lookup={"vpc_id": vpc_id, "cidr_block": "10.1.0.0/16"},
@@ -1877,7 +1873,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests creating a subnet successfully.
         VPC is specified by Name-tag.
         """
-        vpc_id = self._create_vpc(name="test")
+        self._create_vpc(name="test")
 
         res = boto3_ec2.create_subnet(
             cidr_block="10.0.0.0/24",
@@ -2060,7 +2056,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests deleting an existing subnet by Name-tag
         """
         vpc_id = self._create_vpc()
-        subnet_id = self._create_subnet(vpc_id, name="test_subnet")
+        self._create_subnet(vpc_id, name="test_subnet")
 
         res = boto3_ec2.delete_subnet(
             subnet_lookup={"subnet_name": "test_subnet"}, **salt_conn_parameters
@@ -2612,7 +2608,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             internet_gateway_id=igw_id, vpc_id="fake", **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidVpcID.NotFound', res['error'])
+        self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
@@ -2628,7 +2624,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             internet_gateway_id="fake", vpc_id=vpc_id, **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidInternetGatewayID.NotFound', res['error'])
+        self.assertIn("InvalidInternetGatewayID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
@@ -2657,7 +2653,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests attaching a created internet gateway to a VPC (by Name-tag) is succesful.
         """
-        vpc_id = self._create_vpc(name="test_vpc")
+        self._create_vpc(name="test_vpc")
         igw_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)["result"][
             "InternetGatewayId"
         ]
@@ -2679,9 +2675,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests attaching a created internet gateway (by Name-tag) to a VPC (by ID) is succesful.
         """
         vpc_id = self._create_vpc(name="test_vpc")
-        igw_id = boto3_ec2.create_internet_gateway(
+        boto3_ec2.create_internet_gateway(
             tags={"Name": "test_igw"}, **salt_conn_parameters
-        )["result"]["InternetGatewayId"]
+        )
 
         res = boto3_ec2.attach_internet_gateway(
             internet_gateway_lookup={"internet_gateway_name": "test_igw"},
@@ -2690,6 +2686,33 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertIn("result", res)
         self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc", "create_internet_gateway", "attach_internet_gateway"
+        )
+    )
+    def test_attach_internet_gateway_by_id_to_multiple_vpcs_by_id_returns_error(
+        self,
+    ):
+        """
+        Tests attaching a created internet gateway (by ID) to multiple VPCs (by ID) returns error.
+        """
+        vpc1_id = self._create_vpc()
+        vpc2_id = self._create_vpc(cidr_block="10.1.0.0/16")
+        igw_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)["result"][
+            "InternetGatewayId"
+        ]
+        boto3_ec2.attach_internet_gateway(
+            internet_gateway_id=igw_id, vpc_id=vpc1_id, **salt_conn_parameters
+        )
+
+        res = boto3_ec2.attach_internet_gateway(
+            internet_gateway_id=igw_id, vpc_id=vpc2_id, **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("Resource.AlreadyAssociated", res["error"])
 
     # create_and_attach_internet_gateway tests
     @mock_ec2
@@ -2704,7 +2727,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", res)
         self.assertIn("InternetGatewayId", res["result"])
         self.assertIn("error", res)
-        # self.assertIn('InvalidVpcID.NotFound', res['error'])
+        self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(
@@ -2757,6 +2780,567 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(1, len(res["result"]["Attachments"]))
         self.assertIn("VpcId", res["result"]["Attachments"][0])
         self.assertEqual(vpc_id, res["result"]["Attachments"][0]["VpcId"])
+
+    # describe_internet_gateways tests
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_describe_internet_gateways_without_arguments_with_no_igws_returns_empty(
+        self,
+    ):
+        """
+        Test that describe_internet_gateways without arguments returns all (currently none) IGWs.
+        """
+        res = boto3_ec2.describe_internet_gateways(**salt_conn_parameters)
+        self.assertIn("result", res)
+        self.assertEqual([], res["result"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_internet_gateway", "describe_internet_gateways"))
+    def test_describe_internet_gateways_without_arguments_with_three_igws_returns_all(
+        self,
+    ):
+        """
+        Test that describe_internet_gateways without arguments returns all 3 IGWs.
+        """
+        boto3_ec2.create_internet_gateway(**salt_conn_parameters)
+        boto3_ec2.create_internet_gateway(**salt_conn_parameters)
+        boto3_ec2.create_internet_gateway(**salt_conn_parameters)
+
+        res = boto3_ec2.describe_internet_gateways(**salt_conn_parameters)
+        self.assertIn("result", res)
+        self.assertEqual(3, len(res["result"]))
+
+    # lookup_internet_gateway tests
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_without_arguments_raises_error(self):
+        """
+        Test lookup_internet_gateway without arguments raises SaltInvocationError
+        """
+        with self.assertRaisesRegex(
+            SaltInvocationError,
+            "No constraints where given for lookup_internet_gateway.",
+        ):
+            boto3_ec2.lookup_internet_gateway(**salt_conn_parameters)
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_non_existing_internet_gateway_by_id_returns_error(self):
+        """
+        Test lookup_internet_gateway with non-existing IGW by ID.
+        """
+        res = boto3_ec2.lookup_internet_gateway(
+            internet_gateway_id="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_non_existing_internet_gateway_by_name_returns_error(self):
+        """
+        Test lookup_internet_gateway with non-existing IGW by name.
+        """
+        res = boto3_ec2.lookup_internet_gateway(
+            internet_gateway_name="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_non_existing_internet_gateway_by_attachment_state_returns_error(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with non-existing IGW by attachment_state.
+        """
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_state="detached", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_non_existing_internet_gateway_by_attachment_vpc_id_returns_error(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with non-existing IGW by attachment_vpc_id.
+        """
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_vpc_id="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "describe_internet_gateways"))
+    def test_lookup_non_existing_internet_gateway_by_attachment_vpc_lookup_returns_error(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with non-existing IGW by attachment_vpc_lookup.
+        """
+        self._create_vpc(name="test")
+
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_vpc_lookup={"vpc_name": "test"}, **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_id_returns_it(self):
+        """
+        Test lookup_internet_gateway with an IGW by ID returns it.
+        """
+        internet_gateway_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)[
+            "result"
+        ]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            internet_gateway_id=internet_gateway_id, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_tag_returns_it(self):
+        """
+        Test lookup_internet_gateway with an IGW by tag returns it.
+        """
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            tags={"Name": "test"}, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            internet_gateway_name="test", **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_attachment_state_with_detached_igw_returns_it(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with a detached IGW by attachment state returns it.
+        """
+        internet_gateway_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)[
+            "result"
+        ]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_state="detached", **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_attachment_state_with_attached_igw_returns_it(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with an attached IGW by attachment state returns it.
+        """
+        vpc_id = self._create_vpc()
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_state="available", **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_attached_vpc_id_with_attached_igw_returns_it(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with an attached IGW by attached VPC id returns it.
+        """
+        vpc_id = self._create_vpc()
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_vpc_id=vpc_id, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    def test_lookup_internet_gateway_by_attached_vpc_lookup_with_attached_igw_returns_it(
+        self,
+    ):
+        """
+        Test lookup_internet_gateway with an attached IGW by attached VPC id returns it.
+        """
+        vpc_id = self._create_vpc(tags={"foo": "bar"})
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.lookup_internet_gateway(
+            attachment_vpc_lookup={"tags": {"foo": "bar"}}, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("InternetGatewayId", res["result"])
+        self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
+
+    # detach_internet_gateway tests
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_detach_internet_gateway_without_arguments_raises_error(self):
+        """
+        Tests detach_internet_gateway without arguments raises a SaltInvocationError.
+        """
+        with self.assertRaisesRegex(
+            SaltInvocationError,
+            "A vpc is required. Please specify either by ID or by lookup kwargs.",
+        ):
+            boto3_ec2.detach_internet_gateway(**salt_conn_parameters)
+
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_detach_internet_gateway_without_internet_gateway_returns_error(self):
+        """
+        Tests detach_internet_gateway without internet_gateway returns an error.
+        (It will attempt to lookup the IGW by attached vpc if vpc_id or vpc_lookup are specified)
+        """
+        res = boto3_ec2.detach_internet_gateway(vpc_id="fake", **salt_conn_parameters)
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_vpcs", "describe_internet_gateways"))
+    def test_detach_internet_gateway_by_nonexisting_id_from_nonexisting_vpc_by_id_returns_error(
+        self,
+    ):
+        """
+        Tests detach_internet_gateway with non-existing igw and vpc returns error.
+        """
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id="fake", internet_gateway_id="also_fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("InvalidInternetGatewayID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "describe_vpcs", "create_internet_gateway", "detach_internet_gateway"
+        )
+    )
+    def test_detach_internet_gateway_by_id_from_nonexisting_vpc_by_id_returns_error(
+        self,
+    ):
+        """
+        Tests detach_internet_gateway with igw (by ID) and non-existing vpc (by ID) returns error.
+        """
+        igw_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)["result"][
+            "InternetGatewayId"
+        ]
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id="fake", internet_gateway_id=igw_id, **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("Gateway.NotAttached", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "create_internet_gateway", "describe_vpcs"))
+    def test_detach_internet_gateway_by_id_from_nonexisting_vpc_by_lookup_returns_error(
+        self,
+    ):
+        """
+        Tests detach_internet_gateway with igw (by ID) and non-existing vpc (by Lookup) returns error.
+        """
+        igw_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)["result"][
+            "InternetGatewayId"
+        ]
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_lookup={"vpc_name": "test"},
+            internet_gateway_id=igw_id,
+            **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual("No vpc found with the specified parameters", res["error"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc", "create_internet_gateway", "detach_internet_gateway"
+        )
+    )
+    def test_detach_internet_gateway_by_id_from_vpc_by_id_succeeds(self):
+        """
+        Tests detach_internet_gateway with igw (by ID) from existing vpc (by ID) succeeds.
+        """
+        vpc_id = self._create_vpc()
+        igw_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id=vpc_id, internet_gateway_id=igw_id, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "describe_vpcs",
+            "detach_internet_gateway",
+        )
+    )
+    def test_detach_internet_gateway_by_id_from_vpc_by_lookup_succeeds(self):
+        """
+        Tests detach_internet_gateway with igw (by ID) from existing vpc (by lookup) succeeds.
+        """
+        vpc_id = self._create_vpc(name="test")
+        igw_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_lookup={"vpc_name": "test"},
+            internet_gateway_id=igw_id,
+            **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "describe_internet_gateways",
+            "detach_internet_gateway",
+        )
+    )
+    def test_detach_internet_gateway_by_lookup_with_name_from_vpc_by_id_succeeds(self):
+        """
+        Tests detach_internet_gateway with igw (by lookup with name) from existing vpc (by ID) succeeds.
+        """
+        vpc_id = self._create_vpc()
+        boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, tags={"Name": "test"}, **salt_conn_parameters
+        )
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id=vpc_id,
+            internet_gateway_lookup={"internet_gateway_name": "test"},
+            **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "describe_internet_gateways",
+            "detach_internet_gateway",
+            "describe_vpcs",
+        )
+    )
+    def test_detach_internet_gateway_by_lookup_with_attached_vpc_by_name_from_vpc_by_id_succeeds(
+        self,
+    ):
+        """
+        Tests detach_internet_gateway with igw (by lookup with attached vpc by name) from existing vpc (by ID) succeeds.
+        """
+        vpc_id = self._create_vpc(name="test")
+        boto3_ec2.create_internet_gateway(vpc_id=vpc_id, **salt_conn_parameters)
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id=vpc_id,
+            internet_gateway_lookup={"attachment_vpc_lookup": {"vpc_name": "test"}},
+            **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "describe_internet_gateways",
+            "detach_internet_gateway",
+            "describe_vpcs",
+        )
+    )
+    def test_detach_internet_gateway_by_lookup_with_non_existing_attached_vpc_by_name_from_vpc_by_id_returns_error(
+        self,
+    ):
+        """
+        Tests detach_internet_gateway with igw (by lookup with attached vpc by name) from existing vpc (by ID) succeeds.
+        """
+        vpc_id = self._create_vpc(name="test")
+        boto3_ec2.create_internet_gateway(vpc_id=vpc_id, **salt_conn_parameters)
+
+        res = boto3_ec2.detach_internet_gateway(
+            vpc_id=vpc_id,
+            internet_gateway_lookup={
+                "attachment_vpc_lookup": {"vpc_name": "doesnotexist"}
+            },
+            **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual("No vpc found with the specified parameters", res["error"])
+
+    # delete_internet_gateway tests
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_delete_internet_gateway_without_arguments_raises_error(self):
+        """
+        Tests delete_internet_gateway without arguments raising SaltInvocationError.
+        """
+        with self.assertRaisesRegex(
+            SaltInvocationError,
+            "A internet_gateway is required. Please specify either by ID or by lookup kwargs.",
+        ):
+            boto3_ec2.delete_internet_gateway(**salt_conn_parameters)
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("delete_internet_gateway"))
+    def test_delete_internet_gateway_by_nonexisting_id_returns_error(self):
+        """
+        Tests delete_internet_gateway by nonexisting ID returns error.
+        """
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_id="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("InvalidInternetGatewayID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("delete_internet_gateway", "describe_internet_gateways"))
+    def test_delete_internet_gateway_by_nonexisting_lookup_returns_error(self):
+        """
+        Tests delete_internet_gateway by nonexisting lookup returns error.
+        """
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_lookup={"internet_gateway_name": "test"},
+            **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual(
+            "No internet_gateway found with the specified parameters", res["error"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_internet_gateway", "delete_internet_gateway"))
+    def test_delete_non_attached_internet_gateway_with_detach_option_succeeds(self):
+        """
+        Tests that the detach-option does not interfere with deleting a non-attached IGW.
+        """
+        internet_gateway_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)[
+            "result"
+        ]["InternetGatewayId"]
+
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_id=internet_gateway_id, detach=True, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_internet_gateway", "delete_internet_gateway"))
+    def test_delete_internet_gateway_by_id_succeeds(self):
+        """
+        Tests delete_internet_gateway by ID.
+        """
+        internet_gateway_id = boto3_ec2.create_internet_gateway(**salt_conn_parameters)[
+            "result"
+        ]["InternetGatewayId"]
+
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_id=internet_gateway_id, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc", "create_internet_gateway", "delete_internet_gateway"
+        )
+    )
+    def test_delete_attached_internet_gateway_by_id_returns_error(self):
+        """
+        Tests delete_internet_gateway with an attached igw by ID.
+        """
+        vpc_id = self._create_vpc()
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_id=internet_gateway_id, **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("DependencyViolation", res["error"])
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "delete_internet_gateway",
+            "describe_internet_gateways",
+        )
+    )
+    def test_delete_attached_internet_gateway_by_id_with_detach_option_succeeds(self):
+        """
+        Tests delete_internet_gateway with an attached igw by ID.
+        """
+        vpc_id = self._create_vpc()
+        internet_gateway_id = boto3_ec2.create_internet_gateway(
+            vpc_id=vpc_id, **salt_conn_parameters
+        )["result"]["InternetGatewayId"]
+
+        res = boto3_ec2.delete_internet_gateway(
+            internet_gateway_id=internet_gateway_id, detach=True, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertEqual(True, res["result"])
 
 
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
@@ -3487,7 +4071,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         res = boto3_ec2.create_route(
             route_table_id=route_table_id,
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
 
@@ -3503,7 +4087,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         res = boto3_ec2.create_route(
             route_table_id="fake",
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -3522,7 +4106,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         res = boto3_ec2.delete_route(
             route_table_id=route_table_id,
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
         self.assertTrue(res["result"])
@@ -3537,7 +4121,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         res = boto3_ec2.delete_route(
             route_table_id="fake",
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
         self.assertIn("error", res)
@@ -3556,7 +4140,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         res = boto3_ec2.replace_route(
             route_table_id=route_table_id,
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
         self.assertTrue(res["result"])
@@ -3571,7 +4155,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         res = boto3_ec2.replace_route(
             route_table_id="fake",
-            destination_cidr_block=cidr_block,
+            destination_cidr_block=self.cidr_block,
             **salt_conn_parameters
         )
         self.assertIn("error", res)
