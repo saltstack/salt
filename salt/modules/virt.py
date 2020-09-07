@@ -458,6 +458,8 @@ def _get_disks(conn, dom):
     """
     disks = {}
     doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Get the path, pool, volume name of each volume we can
+    all_volumes = _get_all_volumes_paths(conn)
     for elem in doc.findall("devices/disk"):
         source = elem.find("source")
         if source is None:
@@ -470,13 +472,61 @@ def _get_disks(conn, dom):
         extra_properties = None
         if "dev" in target.attrib:
             disk_type = elem.get("type")
+
+            def _get_disk_volume_data(pool_name, volume_name):
+                qemu_target = "{}/{}".format(pool_name, volume_name)
+                pool = conn.storagePoolLookupByName(pool_name)
+                vol = pool.storageVolLookupByName(volume_name)
+                vol_info = vol.info()
+                extra_properties = {
+                    "virtual size": vol_info[1],
+                    "disk size": vol_info[2],
+                }
+
+                backing_files = [
+                    {
+                        "file": node.find("source").get("file"),
+                        "file format": node.find("format").get("type"),
+                    }
+                    for node in elem.findall(".//backingStore[source]")
+                ]
+
+                if backing_files:
+                    # We had the backing files in a flat list, nest them again.
+                    extra_properties["backing file"] = backing_files[0]
+                    parent = extra_properties["backing file"]
+                    for sub_backing_file in backing_files[1:]:
+                        parent["backing file"] = sub_backing_file
+                        parent = sub_backing_file
+
+                else:
+                    # In some cases the backing chain is not displayed by the domain definition
+                    # Try to see if we have some of it in the volume definition.
+                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                    backing_path = vol_desc.find("./backingStore/path")
+                    backing_format = vol_desc.find("./backingStore/format")
+                    if backing_path is not None:
+                        extra_properties["backing file"] = {"file": backing_path.text}
+                        if backing_format is not None:
+                            extra_properties["backing file"][
+                                "file format"
+                            ] = backing_format.get("type")
+                return (qemu_target, extra_properties)
+
             if disk_type == "file":
                 qemu_target = source.get("file", "")
                 if qemu_target.startswith("/dev/zvol/"):
                     disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                     continue
-                # Extract disk sizes, snapshots, backing files
-                if elem.get("device", "disk") != "cdrom":
+
+                if qemu_target in all_volumes.keys():
+                    # If the qemu_target is a known path, output a volume
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
+                elif elem.get("device", "disk") != "cdrom":
+                    # Extract disk sizes, snapshots, backing files
                     try:
                         stdout = subprocess.Popen(
                             [
@@ -498,6 +548,12 @@ def _get_disks(conn, dom):
                         disk.update({"file": "Does not exist"})
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
+                # If the qemu_target is a known path, output a volume
+                if qemu_target in all_volumes.keys():
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
             elif disk_type == "network":
                 qemu_target = source.get("protocol")
                 source_name = source.get("name")
@@ -536,43 +592,9 @@ def _get_disks(conn, dom):
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
-                qemu_target = "{}/{}".format(pool_name, volume_name)
-                pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
-                    }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
-
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
-
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                qemu_target, extra_properties = _get_disk_volume_data(
+                    pool_name, volume_name
+                )
 
             if not qemu_target:
                 continue
@@ -4292,10 +4314,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match(
-                "^(?P<pool>[^/]+)/(?P<volume>.*)$",
-                disks[disk]["file"],
-            )
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
