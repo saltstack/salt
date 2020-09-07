@@ -139,25 +139,49 @@ def make_mock_storage_pool():
             """.format(
             type, source
         )
+        mocked_pool.name.return_value = name
+        mocked_pool.info.return_value = [
+            virt.libvirt.VIR_STORAGE_POOL_RUNNING,
+        ]
+
+        # Append the pool to the listAllStoragePools list
+        all_pools_obj = mocked_conn.listAllStoragePools.return_value
+        if not isinstance(all_pools_obj, list):
+            all_pools_obj = []
+        all_pools_obj.append(mocked_pool)
+        mocked_conn.listAllStoragePools.return_value = all_pools_obj
 
         # Configure the volumes
         if not isinstance(mocked_pool.storageVolLookupByName, MappedResultMock):
             mocked_pool.storageVolLookupByName = MappedResultMock()
         mocked_pool.listVolumes.return_value = volumes
 
+        all_volumes = []
         for volume in volumes:
             mocked_pool.storageVolLookupByName.add(volume)
             mocked_vol = mocked_pool.storageVolLookupByName(volume)
+            vol_path = "/path/to/{}/{}".format(name, volume)
             mocked_vol.XMLDesc.return_value = """
             <volume>
                 <target>
-                    <path>/path/to/{}/{}</path>
+                    <path>{}</path>
                 </target>
             </volume>
             """.format(
-                name, volume
+                vol_path,
             )
+            mocked_vol.path.return_value = vol_path
+            mocked_vol.name.return_value = volume
 
+            mocked_vol.info.return_value = [
+                0,
+                1234567,
+                12345,
+            ]
+            all_volumes.append(mocked_vol)
+
+        # Set the listAllVolumes return_value
+        mocked_pool.listAllVolumes.return_value = all_volumes
         return mocked_pool
 
     return _make_mock_storage_pool
