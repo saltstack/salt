@@ -2611,7 +2611,11 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc", "create_internet_gateway", "attach_internet_gateway"
+        )
+    )
     def test_attach_internet_gateway_by_non_existing_id_to_vpc_by_id_returns_error(
         self,
     ):
@@ -2627,7 +2631,11 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("InvalidInternetGatewayID.NotFound", res["error"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc", "create_internet_gateway", "attach_internet_gateway"
+        )
+    )
     def test_attach_internet_gateway_by_id_to_vpc_by_id_succeeds(
         self,
     ):
@@ -2646,7 +2654,14 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(True, res["result"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "describe_vpcs",
+        )
+    )
     def test_attach_internet_gateway_by_id_to_vpc_by_lookup_succeeds(
         self,
     ):
@@ -2667,7 +2682,14 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(True, res["result"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("create_internet_gateway", "attach_internet_gateway"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "describe_internet_gateways",
+        )
+    )
     def test_attach_internet_gateway_by_lookup_to_vpc_by_id_succeeds(
         self,
     ):
@@ -2761,6 +2783,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "create_internet_gateway",
             "attach_internet_gateway",
             "describe_internet_gateways",
+            "describe_vpcs",
         )
     )
     def test_create_internet_gateway_with_vpc_by_lookup_succeeds(
@@ -2812,7 +2835,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
     # lookup_internet_gateway tests
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(*_moto_cannot())
     def test_lookup_internet_gateway_without_arguments_raises_error(self):
         """
         Test lookup_internet_gateway without arguments raises SaltInvocationError
@@ -2902,7 +2925,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(*_moto_cannot("create_internet_gateway", "describe_internet_gateways"))
     def test_lookup_internet_gateway_by_id_returns_it(self):
         """
         Test lookup_internet_gateway with an IGW by ID returns it.
@@ -2919,7 +2942,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(*_moto_cannot("create_internet_gateway", "describe_internet_gateways"))
     def test_lookup_internet_gateway_by_tag_returns_it(self):
         """
         Test lookup_internet_gateway with an IGW by tag returns it.
@@ -2936,7 +2959,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(*_moto_cannot("create_internet_gateway", "describe_internet_gateways"))
     def test_lookup_internet_gateway_by_attachment_state_with_detached_igw_returns_it(
         self,
     ):
@@ -2955,7 +2978,14 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "describe_internet_gateways",
+        )
+    )
     def test_lookup_internet_gateway_by_attachment_state_with_attached_igw_returns_it(
         self,
     ):
@@ -2975,7 +3005,14 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "describe_internet_gateways",
+        )
+    )
     def test_lookup_internet_gateway_by_attached_vpc_id_with_attached_igw_returns_it(
         self,
     ):
@@ -2995,7 +3032,15 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(internet_gateway_id, res["result"]["InternetGatewayId"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_internet_gateways"))
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "describe_vpcs",
+            "describe_internet_gateways",
+        )
+    )
     def test_lookup_internet_gateway_by_attached_vpc_lookup_with_attached_igw_returns_it(
         self,
     ):
@@ -3028,7 +3073,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             boto3_ec2.detach_internet_gateway(**salt_conn_parameters)
 
     @mock_ec2
-    @skipIf(*_moto_cannot())
+    @skipIf(*_moto_cannot("describe_internet_gateways"))
     def test_detach_internet_gateway_without_internet_gateway_returns_error(self):
         """
         Tests detach_internet_gateway without internet_gateway returns an error.
@@ -3041,7 +3086,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
     @mock_ec2
-    @skipIf(*_moto_cannot("describe_vpcs", "describe_internet_gateways"))
+    @skipIf(*_moto_cannot("detach_internet_gateway"))
     def test_detach_internet_gateway_by_nonexisting_id_from_nonexisting_vpc_by_id_returns_error(
         self,
     ):
@@ -3055,11 +3100,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("InvalidInternetGatewayID.NotFound", res["error"])
 
     @mock_ec2
-    @skipIf(
-        *_moto_cannot(
-            "describe_vpcs", "create_internet_gateway", "detach_internet_gateway"
-        )
-    )
+    @skipIf(*_moto_cannot("detach_internet_gateway"))
     def test_detach_internet_gateway_by_id_from_nonexisting_vpc_by_id_returns_error(
         self,
     ):
@@ -3077,7 +3118,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("Gateway.NotAttached", res["error"])
 
     @mock_ec2
-    @skipIf(*_moto_cannot("create_vpc", "create_internet_gateway", "describe_vpcs"))
+    @skipIf(*_moto_cannot("create_internet_gateway", "describe_vpcs"))
     def test_detach_internet_gateway_by_id_from_nonexisting_vpc_by_lookup_returns_error(
         self,
     ):
@@ -3099,7 +3140,10 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     @skipIf(
         *_moto_cannot(
-            "create_vpc", "create_internet_gateway", "detach_internet_gateway"
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "detach_internet_gateway",
         )
     )
     def test_detach_internet_gateway_by_id_from_vpc_by_id_succeeds(self):
@@ -3122,6 +3166,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         *_moto_cannot(
             "create_vpc",
             "create_internet_gateway",
+            "attach_internet_gateway",
             "describe_vpcs",
             "detach_internet_gateway",
         )
@@ -3148,6 +3193,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         *_moto_cannot(
             "create_vpc",
             "create_internet_gateway",
+            "attach_internet_gateway",
             "describe_internet_gateways",
             "detach_internet_gateway",
         )
@@ -3174,6 +3220,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         *_moto_cannot(
             "create_vpc",
             "create_internet_gateway",
+            "attach_internet_gateway",
             "describe_internet_gateways",
             "detach_internet_gateway",
             "describe_vpcs",
@@ -3201,6 +3248,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         *_moto_cannot(
             "create_vpc",
             "create_internet_gateway",
+            "attach_internet_gateway",
             "describe_internet_gateways",
             "detach_internet_gateway",
             "describe_vpcs",
@@ -3300,7 +3348,10 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2
     @skipIf(
         *_moto_cannot(
-            "create_vpc", "create_internet_gateway", "delete_internet_gateway"
+            "create_vpc",
+            "create_internet_gateway",
+            "attach_internet_gateway",
+            "delete_internet_gateway",
         )
     )
     def test_delete_attached_internet_gateway_by_id_returns_error(self):
@@ -3323,7 +3374,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         *_moto_cannot(
             "create_vpc",
             "create_internet_gateway",
+            "attach_internet_gateway",
             "delete_internet_gateway",
+            "detach_internet_gateway",
             "describe_internet_gateways",
         )
     )
@@ -3778,7 +3831,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         with self.assertRaisesRegex(
             SaltInvocationError,
-            "No constraints where given when for lookup_network_acl.",
+            "No constraints where given for lookup_network_acl.",
         ):
             boto3_ec2.lookup_network_acl(**salt_conn_parameters)
 
