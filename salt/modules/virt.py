@@ -6813,29 +6813,33 @@ def _is_valid_volume(vol):
 
 def _get_all_volumes_paths(conn):
     """
-    Extract the path and backing stores path of all volumes.
+    Extract the path, name, pool name and backing stores path of all volumes.
 
     :param conn: libvirt connection to use
     """
-    volumes = [
-        vol
-        for l in [
-            obj.listAllVolumes()
-            for obj in conn.listAllStoragePools()
-            if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
-        ]
-        for vol in l
+    pools = [
+        pool
+        for pool in conn.listAllStoragePools()
+        if pool.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
     ]
-    return {
-        vol.path(): [
-            path.text
-            for path in ElementTree.fromstring(vol.XMLDesc()).findall(
-                ".//backingStore/path"
-            )
-        ]
-        for vol in volumes
-        if _is_valid_volume(vol)
-    }
+    volumes = {}
+    for pool in pools:
+        pool_volumes = {
+            volume.path(): {
+                "pool": pool.name(),
+                "name": volume.name(),
+                "backing_stores": [
+                    path.text
+                    for path in ElementTree.fromstring(volume.XMLDesc()).findall(
+                        ".//backingStore/path"
+                    )
+                ],
+            }
+            for volume in pool.listAllVolumes()
+            if _is_valid_volume(volume)
+        }
+        volumes.update(pool_volumes)
+    return volumes
 
 
 def volume_infos(pool=None, volume=None, **kwargs):
@@ -6906,8 +6910,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
             if vol.path():
                 as_backing_store = {
                     path
-                    for (path, all_paths) in backing_stores.items()
-                    if vol.path() in all_paths
+                    for (path, volume) in backing_stores.items()
+                    if vol.path() in volume.get("backing_stores")
                 }
                 used_by = [
                     vm_name
