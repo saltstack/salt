@@ -71,12 +71,57 @@ The calls not using the libvirt connection setup are:
 - `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
 - `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
+Units
+==========
+.. _virt-units:
+.. rubric:: Units specification
+.. versionadded:: Magnesium
+
+The string should contain a number optionally followed
+by a unit. The number may have a decimal fraction. If
+the unit is not given then MiB are set by default.
+Units can optionally be given in IEC style (such as MiB),
+although the standard single letter style (such as M) is
+more convenient.
+
+Valid units include:
+
+========== =====    ==========  ==========  ======
+Standard   IEC      Standard    IEC
+  Unit     Unit     Name        Name        Factor
+========== =====    ==========  ==========  ======
+    B               Bytes                   1
+    K       KiB     Kilobytes   Kibibytes   2**10
+    M       MiB     Megabytes   Mebibytes   2**20
+    G       GiB     Gigabytes   Gibibytes   2**30
+    T       TiB     Terabytes   Tebibytes   2**40
+    P       PiB     Petabytes   Pebibytes   2**50
+    E       EiB     Exabytes    Exbibytes   2**60
+    Z       ZiB     Zettabytes  Zebibytes   2**70
+    Y       YiB     Yottabytes  Yobibytes   2**80
+========== =====    ==========  ==========  ======
+
+Additional decimal based units:
+
+======  =======
+Unit     Factor
+======  =======
+KB      10**3
+MB      10**6
+GB      10**9
+TB      10**12
+PB      10**15
+EB      10**18
+ZB      10**21
+YB      10**24
+======  =======
 """
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
 
 import base64
+import collections
 import copy
 import datetime
 import logging
@@ -841,6 +886,39 @@ def _disk_from_pool(conn, pool, pool_xml, volume_name):
     return disk_context
 
 
+def _handle_unit(s, def_unit="m"):
+    """
+    Handle the unit conversion, return the value in bytes
+    """
+    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
+    value = m.group("value")
+    # default unit
+    unit = m.group("unit").lower() or def_unit
+    try:
+        value = int(value)
+    except ValueError:
+        try:
+            value = float(value)
+        except ValueError:
+            raise SaltInvocationError("invalid number")
+    # flag for base ten
+    dec = False
+    if re.match(r"[kmgtpezy]b$", unit):
+        dec = True
+    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
+        raise SaltInvocationError("invalid units")
+    p = "bkmgtpezy".index(unit[0])
+    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
+    return int(value)
+
+
+def nesthash():
+    """
+    create default dict that allows arbitrary level of nesting
+    """
+    return collections.defaultdict(nesthash)
+
+
 def _gen_xml(
     conn,
     name,
@@ -859,13 +937,25 @@ def _gen_xml(
     """
     Generate the XML string to define a libvirt VM
     """
-    mem = int(mem) * 1024  # MB
     context = {
         "hypervisor": hypervisor,
         "name": name,
         "cpu": str(cpu),
-        "mem": str(mem),
     }
+
+    context["mem"] = nesthash()
+    if isinstance(mem, int):
+        mem = int(mem) * 1024  # MB
+        context["mem"]["boot"] = str(mem)
+        context["mem"]["current"] = str(mem)
+    elif isinstance(mem, dict):
+        for tag, val in mem.items():
+            if val:
+                if tag == "slots":
+                    context["mem"]["slots"] = "{}='{}'".format(tag, val)
+                else:
+                    context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+
     if hypervisor in ["qemu", "kvm"]:
         context["controller_model"] = False
     elif hypervisor == "vmware":
@@ -985,7 +1075,6 @@ def _gen_xml(
     except jinja2.exceptions.TemplateNotFound:
         log.error("Could not load template %s", fn_)
         return ""
-
     return template.render(**context)
 
 
@@ -1793,7 +1882,28 @@ def init(
 
     :param name: name of the virtual machine to create
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+        contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
+        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
+        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
+        an integer.
+
+        .. code-block:: python
+
+            {
+                'boot': 1g,
+                'current': 1g,
+                'max': 1g,
+                'slots': 10,
+                'hard_limit': '1024'
+                'soft_limit': '512m'
+                'swap_hard_limit': '1g'
+                'min_guarantee': '512mib'
+            }
+
+        .. versionchanged:: Magnesium
+
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
                 If set to ``None``, no profile will be used.
@@ -1905,6 +2015,36 @@ def init(
        A boolean value.
 
        .. versionadded:: sodium
+
+    .. _init-mem-def:
+
+    .. rubric:: Memory parameter definition
+
+    Memory parameter can contain the following properties:
+
+    boot
+        The maximum allocation of memory for the guest at boot time
+
+    current
+        The actual allocation of memory for the guest
+
+    max
+        The run time maximum memory allocation of the guest
+
+    slots
+         specifies the number of slots available for adding memory to the guest
+
+    hard_limit
+        the maximum memory the guest can use
+
+    soft_limit
+        memory limit to enforce during memory contention
+
+    swap_hard_limit
+        the maximum memory plus swap the guest can use
+
+    min_guarantee
+        the guaranteed minimum memory allocation for the guest
 
     .. _init-nic-def:
 
@@ -2436,7 +2576,24 @@ def update(
 
     :param name: Name of the domain to update
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+        contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
+        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
+        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
+        an integer.
+
+        To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
+        is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
+
+        .. code-block:: yaml
+
+            - mem:
+                hard_limit: null
+                soft_limit: null
+
+        .. versionchanged:: Magnesium
+
     :param disk_profile: disk profile to use
     :param disks:
         Disk definitions as documented in the :func:`init` function.
@@ -2576,9 +2733,16 @@ def update(
     def _set_nvram(node, value):
         node.set("template", value)
 
-    def _set_with_mib_unit(node, value):
+    def _set_with_byte_unit(node, value):
         node.text = str(value)
-        node.set("unit", "MiB")
+        node.set("unit", "bytes")
+
+    def _get_with_unit(node):
+        unit = node.get("unit", "KiB")
+        # _handle_unit treats bytes as invalid unit for the purpose of consistency
+        unit = unit if unit != "bytes" else "b"
+        value = node.get("memory") or node.text
+        return _handle_unit("{}{}".format(value, unit)) if value else None
 
     # Update the kernel boot parameters
     params_mapping = [
@@ -2591,14 +2755,72 @@ def update(
         {
             "path": "mem",
             "xpath": "memory",
-            "get": lambda n: int(n.text) / 1024,
-            "set": _set_with_mib_unit,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
         },
         {
             "path": "mem",
             "xpath": "currentMemory",
-            "get": lambda n: int(n.text) / 1024,
-            "set": _set_with_mib_unit,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:max",
+            "convert": _handle_unit,
+            "xpath": "maxMemory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:boot",
+            "convert": _handle_unit,
+            "xpath": "memory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:current",
+            "convert": _handle_unit,
+            "xpath": "currentMemory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:slots",
+            "xpath": "maxMemory",
+            "get": lambda n: n.get("slots"),
+            "set": lambda n, v: n.set("slots", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("slots", ["unit"]),
+        },
+        {
+            "path": "mem:hard_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/hard_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:soft_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/soft_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:swap_hard_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/swap_hard_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:min_guarantee",
+            "convert": _handle_unit,
+            "xpath": "memtune/min_guarantee",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
         },
         {
             "path": "boot_dev:{dev}",
@@ -2684,11 +2906,15 @@ def update(
                     }
                 )
             if mem:
+                if isinstance(mem, dict):
+                    mem = str(_handle_unit(mem.get("current", 0)))
+                elif isinstance(mem, int):
+                    mem = str(mem * 1024)
                 commands.append(
                     {
                         "device": "mem",
                         "cmd": "setMemoryFlags",
-                        "args": [mem * 1024, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                        "args": [mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
                     }
                 )
 

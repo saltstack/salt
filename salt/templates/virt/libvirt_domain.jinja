@@ -2,9 +2,32 @@
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
-        <memory unit='KiB'>{{ mem }}</memory>
-        <currentMemory unit='KiB'>{{ mem }}</currentMemory>
-        <os {{boot.os_attrib}}>
+        {%- if mem.max %}
+        <maxMemory {{ mem.slots }} unit='KiB'> {{ mem.max }}</maxMemory>
+        {%- endif %}
+        {%- if mem.boot %}
+        <memory unit='KiB'>{{ mem.boot }}</memory>
+        {%- endif %}
+        {%- if mem.current %}
+        <currentMemory unit='KiB'>{{ mem.current }}</currentMemory>
+        {%- endif %}
+        {%- if mem %}
+        <memtune>
+            {%- if 'hard_limit' in mem and mem.hard_limit %}
+                <hard_limit unit="KiB">{{ mem.hard_limit }}</hard_limit>
+            {%- endif %}
+            {%- if 'soft_limit' in mem and mem.soft_limit %}
+                <soft_limit unit="KiB">{{ mem.soft_limit }}</soft_limit>
+            {%- endif %}
+            {%- if 'swap_hard_limit' in mem and mem.swap_hard_limit %}
+                <swap_hard_limit unit="KiB">{{ mem.swap_hard_limit }}</swap_hard_limit>
+            {%- endif %}
+            {%- if 'min_guarantee' in mem and mem.min_guarantee %}
+                <min_guarantee unit="KiB">{{ mem.min_guarantee }}</min_guarantee>
+            {%- endif %}
+        </memtune>
+        {%- endif %}
+        <os {{ boot.os_attrib }}>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% if boot %}
                   {% if 'kernel' in boot %}
