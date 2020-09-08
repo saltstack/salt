@@ -88,6 +88,7 @@ class Schedule:
         standalone=False,
         new_instance=False,
         utils=None,
+        _subprocess_list=None,
     ):
         """
         Only create one instance of Schedule
@@ -107,6 +108,7 @@ class Schedule:
                 proxy=proxy,
                 standalone=standalone,
                 utils=utils,
+                _subprocess_list=_subprocess_list,
             )
             if new_instance is True:
                 return instance
@@ -127,6 +129,7 @@ class Schedule:
         standalone=False,
         new_instance=False,
         utils=None,
+        _subprocess_list=None,
     ):
         pass
 
