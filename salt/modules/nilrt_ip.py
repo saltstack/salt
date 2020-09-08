@@ -278,7 +278,7 @@ def _load_config(section, options, default_value="", filename=INI_FILE):
         config_parser = configparser.RawConfigParser(
             dict_type=CaseInsensitiveDict, converters={"unquoted": _remove_quotes}
         )
-        config_parser.readfp(config_file)
+        config_parser.read_file(config_file)
         for option in options:
             results[option] = config_parser.getunquoted(
                 section, option, fallback=default_value
