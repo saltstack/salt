@@ -1847,16 +1847,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "cmdline": "console=ttyS0 ks=http://example.com/f8-i386/os/",
         }
 
-        boot_uefi = {
-            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
-            "nvram": "/usr/share/OVMF/OVMF_VARS.ms.fd",
-        }
-
-        invalid_boot = {
-            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
-            "initrd": "/root/f8-i386-initrd",
-        }
-
         # Update boot devices case
         define_mock.reset_mock()
         self.assertEqual(
@@ -1910,6 +1900,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "console=ttyS0 ks=http://example.com/f8-i386/os/",
         )
 
+        boot_uefi = {
+            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+            "nvram": "/usr/share/OVMF/OVMF_VARS.ms.fd",
+        }
+
         self.assertEqual(
             {
                 "definition": True,
@@ -1939,6 +1934,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find("os").attrib.get("firmware"), "efi")
+
+        invalid_boot = {
+            "loader": "/usr/share/OVMF/OVMF_CODE.fd",
+            "initrd": "/root/f8-i386-initrd",
+        }
 
         with self.assertRaises(SaltInvocationError):
             virt.update("my_vm", boot=invalid_boot)
@@ -2435,6 +2435,43 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 salt.utils.xmlutil.to_dict(ET.fromstring(disk), True)
                 for disk in ret["disk"]["updated"]
             ],
+        )
+
+    def test_update_xen_boot_params(self):
+        """
+        Test virt.update() a Xen definition no boot parameter.
+        """
+        root_dir = os.path.join(salt.syspaths.ROOT_DIR, "srv", "salt-images")
+        xml_boot = """
+            <domain type='xen' id='8'>
+              <name>vm</name>
+              <memory unit='KiB'>1048576</memory>
+              <currentMemory unit='KiB'>1048576</currentMemory>
+              <vcpu placement='auto'>1</vcpu>
+              <os>
+                <type arch='x86_64' machine='xenfv'>hvm</type>
+                <loader type='rom'>/usr/lib/xen/boot/hvmloader</loader>
+              </os>
+            </domain>
+        """
+        domain_mock_boot = self.set_mock_vm("vm", xml_boot)
+        domain_mock_boot.OSType = MagicMock(return_value="hvm")
+        define_mock_boot = MagicMock(return_value=True)
+        define_mock_boot.setVcpusFlags = MagicMock(return_value=0)
+        self.mock_conn.defineXML = define_mock_boot
+        self.assertEqual(
+            {
+                "cpu": False,
+                "definition": True,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("vm", cpu=2),
+        )
+        setxml = ET.fromstring(define_mock_boot.call_args[0][0])
+        self.assertEqual(setxml.find("os").find("loader").attrib.get("type"), "rom")
+        self.assertEqual(
+            setxml.find("os").find("loader").text, "/usr/lib/xen/boot/hvmloader"
         )
 
     def test_update_existing_boot_params(self):

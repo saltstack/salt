@@ -919,6 +919,21 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
               args:
                 - mysql-server-5.7
 
+    .. versionchanged:: sodium
+      For modules which return a deeper data structure, the ``get_return`` key can
+      be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - unless:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  not-existing
+              get_return: res
+
 .. _onlyif-requisite:
 
 onlyif
@@ -991,6 +1006,22 @@ if the gluster commands return a 0 ret value.
               args:
                 - /etc/crontab
                 - 'entry1'
+
+.. versionchanged:: sodium
+    For modules which return a deeper data structure, the ``get_return`` key can
+    be used to access results.
+
+    .. code-block:: yaml
+
+      test:
+        test.nop:
+          - name: foo
+          - onlyif:
+            - fun: consul.get
+              consul_url: http://127.0.0.1:8500
+              key:  does-exist
+              get_return: res
+
 
 .. _creates-requisite:
 
