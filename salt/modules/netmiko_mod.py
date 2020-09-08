@@ -185,6 +185,7 @@ outside a ``netmiko`` Proxy, e.g.:
 # Import python stdlib
 import logging
 
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import Salt libs
@@ -229,7 +230,13 @@ def __virtual__():
             False,
             "The netmiko execution module requires netmiko library to be installed.",
         )
-    return __virtualname__
+    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "netmiko":
+        return __virtualname__
+    else:
+        return (
+            False,
+            "Not a proxy or a proxy of type netmiko.",
+        )
 
 
 # -----------------------------------------------------------------------------
