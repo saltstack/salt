@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Salt module to manage RAID arrays with mdadm
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 # Import python libs
@@ -150,7 +147,7 @@ def destroy(device):
         cfg_file = "/etc/mdadm.conf"
 
     try:
-        __salt__["file.replace"](cfg_file, "ARRAY {0} .*".format(device), "")
+        __salt__["file.replace"](cfg_file, "ARRAY {} .*".format(device), "")
     except SaltInvocationError:
         pass
 
@@ -237,16 +234,16 @@ def create(name, level, devices, metadata="default", test_mode=False, **kwargs):
 
     for key in kwargs:
         if not key.startswith("__"):
-            opts.append("--{0}".format(key))
+            opts.append("--{}".format(key))
             if kwargs[key] is not True:
-                opts.append(six.text_type(kwargs[key]))
+                opts.append(str(kwargs[key]))
         if key == "spare-devices":
             raid_devices -= int(kwargs[key])
 
     cmd = (
-        ["mdadm", "-C", name, "-R", "-v", "-l", six.text_type(level)]
+        ["mdadm", "-C", name, "-R", "-v", "-l", str(level)]
         + opts
-        + ["-e", six.text_type(metadata), "-n", six.text_type(raid_devices)]
+        + ["-e", str(metadata), "-n", str(raid_devices)]
         + devices
     )
 
@@ -282,7 +279,7 @@ def save_config():
         buggy_ubuntu_tags = ["name", "metadata"]
         for i, elem in enumerate(scan):
             for bad_tag in buggy_ubuntu_tags:
-                pattern = r"\s{0}=\S+".format(re.escape(bad_tag))
+                pattern = r"\s{}=\S+".format(re.escape(bad_tag))
                 pattern = re.compile(pattern, flags=re.I)
                 scan[i] = re.sub(pattern, "", scan[i])
 
@@ -292,7 +289,7 @@ def save_config():
         cfg_file = "/etc/mdadm.conf"
 
     try:
-        vol_d = dict([(line.split()[1], line) for line in scan])
+        vol_d = {line.split()[1]: line for line in scan}
         for vol in vol_d:
             pattern = _VOL_REGEX_PATTERN_MATCH.format(re.escape(vol))
             __salt__["file.replace"](
@@ -342,12 +339,12 @@ def assemble(name, devices, test_mode=False, **kwargs):
     opts = []
     for key in kwargs:
         if not key.startswith("__"):
-            opts.append("--{0}".format(key))
+            opts.append("--{}".format(key))
             if kwargs[key] is not True:
                 opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         devices = devices.split(",")
 
     cmd = ["mdadm", "-A", name, "-v"] + opts + devices
@@ -375,7 +372,7 @@ def examine(device, quiet=False):
         salt '*' raid.examine '/dev/sda1'
     """
     res = __salt__["cmd.run_stdout"](
-        "mdadm -Y -E {0}".format(device), python_shell=False, ignore_retcode=quiet
+        "mdadm -Y -E {}".format(device), python_shell=False, ignore_retcode=quiet
     )
     ret = {}
 
@@ -397,7 +394,7 @@ def add(name, device):
 
     """
 
-    cmd = "mdadm --manage {0} --add {1}".format(name, device)
+    cmd = "mdadm --manage {} --add {1}".format(name, device)
     if __salt__["cmd.retcode"](cmd) == 0:
         return True
     return False
