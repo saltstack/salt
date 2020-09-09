@@ -1584,7 +1584,30 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def _load_module(self, name):
         mod = None
+        log.debug(self.file_mapping)
         fpath, suffix = self.file_mapping[name][:2]
+        # if the fpath has `.cpython-3x` in it, but the running Py version
+        # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
+        # This is for the unusual case where several Python versions share a single
+        # source tree and drop their .pycs in the same __pycache__ folder.
+        # If we were to load a .pyc for another Py version it's not a big problem
+        # but the log will get spammed with "Bad Magic Number" messages that
+        # can be very misleading if the user is debugging another problem.
+        try:
+            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
+                "-"
+            )
+            if cache_tag_ver not in fpath and implementation_tag in fpath:
+                log.trace(
+                    "Trying to load %s on %s, returning False.",
+                    fpath,
+                    sys.implementation.cache_tag,
+                )
+                return False
+        except AttributeError:
+            # Most likely Py 2.7 or some other Python version we don't really support
+            pass
+
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
         try:
