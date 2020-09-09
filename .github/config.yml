@@ -1,0 +1,55 @@
+# Configuration for welcome - https://github.com/behaviorbot/welcome
+# Configuration for new-issue-welcome - https://github.com/behaviorbot/new-issue-welcome
+# Comment to be posted to on first time issues
+newIssueWelcomeComment: >
+  Hi there! Welcome to the Salt Community! Thank you for making your first contribution. We have
+  a lengthy process for issues and PRs. Someone from the Core Team will follow up as soon as
+  possible. In the meantime, here’s some information that may help as you continue your Salt
+  journey.
+
+  Please be sure to review our Code of Conduct. Also, check out some of our community
+  resources including:
+
+    Community Wiki
+    Salt’s Contributor Guide
+    Join our Community Slack
+    IRC on Freenode
+    SaltStack YouTube channel
+    SaltStackInc Twitch channel
+
+  There are lots of ways to get involved in our community. Every month, there are around a dozen
+  opportunities to meet with other contributors and the Salt Core team and collaborate in real
+  time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
+
+  If you have additional questions, email us at core@saltstack.com or reach out directly to the
+  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
+  look forward to doing awesome things with you!
+
+# Comment to be posted to on PRs from first time contributors in your repository
+newPRWelcomeComment: >
+  Hi there! Welcome to the Salt Community! Thank you for making your first contribution. We have
+  a lengthy process for issues and PRs. Someone from the Core Team will follow up as soon as
+  possible. In the meantime, here’s some information that may help as you continue your Salt
+  journey.
+
+  Please be sure to review our Code of Conduct. Also, check out some of our community
+  resources including:
+
+    Community Wiki
+    Salt’s Contributor Guide
+    Join our Community Slack
+    IRC on Freenode
+    SaltStack YouTube channel
+    SaltStackInc Twitch channel
+
+  There are lots of ways to get involved in our community. Every month, there are around a dozen
+  opportunities to meet with other contributors and the Salt Core team and collaborate in real
+  time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
+
+  If you have additional questions, email us at core@saltstack.com or reach out directly to the
+  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
+  look forward to doing awesome things with you!
+
+# Comment to be posted to on pull requests merged by a first time user
+firstPRMergeComment: >
+  Congratulations on your first PR being merged!
