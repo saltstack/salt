@@ -8,6 +8,7 @@ import re
 import subprocess
 
 import salt.loader.context
+import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
 
@@ -42,6 +43,27 @@ def booted(context=None):
         ret = bool(os.stat("/run/systemd/system"))
     except OSError:
         ret = False
+
+    try:
+        context[contextkey] = ret
+    except TypeError:
+        pass
+
+    return ret
+
+
+def offline(context=None):
+    """Return True is systemd is in offline mode"""
+    contextkey = "salt.utils.systemd.offline"
+    if isinstance(context, dict):
+        if contextkey in context:
+            return context[contextkey]
+    elif context is not None:
+        raise SaltInvocationError("context must be a dictionary if passed")
+
+    # Note that there is a difference from SYSTEMD_OFFLINE=1.  Here we
+    # assume that there is no PID 1 to talk with.
+    ret = not booted(context) and salt.utils.path.which("systemctl")
 
     try:
         context[contextkey] = ret
