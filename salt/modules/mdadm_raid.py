@@ -12,7 +12,6 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
