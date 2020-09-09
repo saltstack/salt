@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     tests.multimaster.conftest
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Multimaster PyTest prep routines
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -15,7 +13,6 @@ import pytest
 import salt.utils.files
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
-from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -30,6 +27,7 @@ def salt_mm_master_config(request, salt_factories):
         config_defaults = yaml.deserialize(rfh.read())
 
     config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["transport"] = request.config.getoption("--transport")
 
     config_overrides = {
         "file_roots": {
@@ -97,6 +95,7 @@ def salt_mm_sub_master_config(request, salt_factories, salt_mm_master):
     root_dir = salt_factories._get_root_dir_for_daemon("mm-master")
 
     config_defaults["root_dir"] = root_dir.strpath
+    config_defaults["transport"] = request.config.getoption("--transport")
 
     config_overrides = {
         "file_roots": {
