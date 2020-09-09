@@ -101,9 +101,10 @@ WAITER_CONFIG_GENERATORS = {
     },
     "subnet_ipv6_cidr_block": {
         "disassociated": {
-            "value_path": "Subnets[].Ipv6CidrBlockAssociationSet[].Ipv6CidrBlockState.State",
-            "success_values": ["disassociated"],
-            "failure_values": ["associating", "associated", "failing", "failed"],
+            "value_path": "length(Subnets[]) == `0`",
+            "success_values": [True],
+            "success_matcher": "path",
+            "failure_values": [],
             "operation": "DescribeSubnets",
         },
     },
