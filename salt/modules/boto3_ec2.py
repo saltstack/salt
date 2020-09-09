@@ -8607,16 +8607,21 @@ def disassociate_subnet_cidr_block(
     if "error" in res:
         return res
     if blocking:
-        params = __utils__["boto3.dict_to_boto_filters"](
-            {"ipv6-cidr-block-association.association_id": association_id}
-        )
+        params = {
+            "Filters": __utils__["boto3.dict_to_boto_filters"](
+                {"ipv6-cidr-block-association.association-id": association_id}
+            )
+        }
         __utils__["boto3.wait_resource"](
             "subnet_ipv6_cidr_block",
             "disassociated",
             params=params,
             client=client,
         )
-    return {"result": True}
+        res["result"]["Ipv6CidrBlockAssociation"]["Ipv6CidrBlockState"][
+            "State"
+        ] = "disassociated"
+    return res
 
 
 def disassociate_vpc_cidr_block(
