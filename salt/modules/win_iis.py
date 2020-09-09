@@ -1719,7 +1719,7 @@ def list_vdirs(site, app=_DEFAULT_APP):
         r"'{0}'".format(app),
         "|",
         "Select-Object PhysicalPath, @{ Name = 'name';",
-        r"Expression = { $_.path.Split('/')[-1] } }",
+        r"Expression = { $_.path.Trim('/') } }",
     ]
 
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
