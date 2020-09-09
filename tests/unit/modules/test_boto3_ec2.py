@@ -872,7 +872,8 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertIn("result", new_values)
         # Interestingly enough, this shouldn't be allowed, since enable_dns_hostnames
         # depends on enable_dns_support (it explicitly says so in the function docstring).
-        # Probably a bug in moto :)
+        # This appears to be an inconsistency in AWS, as its own documentation says this is not allowed,
+        # but in practice it is perfectly doable.
         self.assertEqual(
             {"enable_dns_support": False, "enable_dns_hostnames": True},
             new_values["result"],
@@ -1111,29 +1112,12 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             vpc_id="fake", **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidVpcID.NotFound', res['error'])
-
-    @mock_ec2
-    @skipIf(*_moto_cannot("create_vpc", "enable_vpc_classic_link_dns_support"))
-    def test_enable_vpc_classic_link_dns_support_on_existing_vpc_by_id_without_enabling_classic_link_returns_error(
-        self,
-    ):
-        """
-        Tests succesful call to enable_vpc_classic_link_dns_support targetting the VPC by name.
-        """
-        self._create_vpc(name="test")
-
-        res = boto3_ec2.enable_vpc_classic_link_dns_support(
-            vpc_lookup={"vpc_name": "test"}, **salt_conn_parameters
-        )
-        self.assertTrue(res)
-        # self.assertIn('error', res)  # bug in Moto: doesn't check if classic_link is enabled first.
+        self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(
         *_moto_cannot(
             "create_vpc",
-            "enable_vpc_classic_link",
             "enable_vpc_classic_link_dns_support",
         )
     )
@@ -1144,7 +1128,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests succesful call to enable_vpc_classic_link_dns_support targetting the VPC by ID.
         """
         vpc_id = self._create_vpc()
-        boto3_ec2.enable_vpc_classic_link(vpc_id=vpc_id, **salt_conn_parameters)
 
         res = boto3_ec2.enable_vpc_classic_link_dns_support(
             vpc_id=vpc_id, **salt_conn_parameters
@@ -1156,7 +1139,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @skipIf(
         *_moto_cannot(
             "create_vpc",
-            "enable_vpc_classic_link",
             "enable_vpc_classic_link_dns_support",
             "describe_vpcs",
         )
@@ -1167,8 +1149,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests succesful call to enable_vpc_classic_link_dns_support targetting the VPC by name.
         """
-        vpc_id = self._create_vpc(name="test")
-        boto3_ec2.enable_vpc_classic_link(vpc_id=vpc_id, **salt_conn_parameters)
+        self._create_vpc(name="test")
 
         res = boto3_ec2.enable_vpc_classic_link_dns_support(
             vpc_lookup={"vpc_name": "test"}, **salt_conn_parameters
@@ -1335,7 +1316,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             vpc_id="fake", **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidVpcID.NotFound', res['error'])
+        self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(
@@ -1435,7 +1416,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             vpc_id="fake", cidr_block="10.1.0.0/16", **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidVpcID.NotFound', res['error'])
+        self.assertIn("InvalidVpcID.NotFound", res["error"])
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_vpc", "associate_vpc_cidr_block"))
@@ -1994,7 +1975,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertIn("result", res)
         self.assertIn("Ipv6CidrBlockAssociationSet", res["result"])
-        # self.assertEqual(1, len(res['result']['Ipv6CidrBlockAssociationSet']))  # Bug in Moto: doesn't assign provided Ipv6CidrBlock to subnet.
+        self.assertEqual(1, len(res["result"]["Ipv6CidrBlockAssociationSet"]))
 
     # delete_subnet tests
     @mock_ec2
@@ -2017,17 +1998,23 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self,
     ):
         """
-        Tests deleting a subnet that doesn't exist
+        Tests deleting a non-existing subnet by ID returns error.
         """
-        delete_subnet_result = boto3_ec2.delete_subnet(
-            subnet_id="1234", **salt_conn_parameters
+        res = boto3_ec2.delete_subnet(subnet_id="fake", **salt_conn_parameters)
+        self.assertIn("error", res)
+        self.assertIn("InvalidSubnetID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("delete_subnet", "describe_subnets"))
+    def test_delete_subnet_by_lookup_with_non_existing_subnet_returns_error(self):
+        """
+        Tests deleting a non-existing subnet by lookup returns error.
+        """
+        res = boto3_ec2.delete_subnet(
+            subnet_lookup={"subnet_name": "fake"}, **salt_conn_parameters
         )
-        log.debug(
-            "test_that_when_deleting_a_non_existent_subnet_the_delete_vpc_method_returns_false\n"
-            "\t\tres: %s",
-            delete_subnet_result,
-        )
-        self.assertTrue("error" in delete_subnet_result)
+        self.assertIn("error", res)
+        self.assertEqual("No subnet found with the specified parameters", res["error"])
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_vpc", "create_subnet", "delete_subnet"))
@@ -2324,7 +2311,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             subnet_id="fake", ipv6_subnet=1, **salt_conn_parameters
         )
         self.assertIn("error", res)
-        # self.assertIn('InvalidSubnetID.NotFound', res['error'])
+        self.assertEqual("No subnet found with the specified parameters", res["error"])
 
     @mock_ec2
     @skipIf(*_moto_cannot("create_vpc", "create_subnet", "associate_subnet_cidr_block"))
@@ -2334,7 +2321,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests associate_subnet_cidr_block to existing subnet succeeds.
         """
-        vpc_id = self._create_vpc()
+        vpc_id = self._create_vpc(ipv6=True)
         subnet_id = self._create_subnet(vpc_id)
 
         res = boto3_ec2.associate_subnet_cidr_block(
@@ -2352,7 +2339,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests associate_subnet_cidr_block to existing subnet two times fails the 2nd time.
         Since only one IPv6 CIDR block is allowed to be associated with a subnet.
         """
-        vpc_id = self._create_vpc()
+        vpc_id = self._create_vpc(ipv6=True)
         subnet_id = self._create_subnet(vpc_id)
         boto3_ec2.associate_subnet_cidr_block(
             subnet_id=subnet_id, ipv6_subnet=1, **salt_conn_parameters
@@ -2406,13 +2393,12 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         Tests disassociate_subnet_cidr_block on subnet (by ID) that has a different IPv6 CIDR block associated.
         """
-        vpc_id = self._create_vpc()
+        vpc_id = self._create_vpc(ipv6=True)
         subnet_id = self._create_subnet(vpc_id)
         ipv6_cidr_block = boto3_ec2.associate_subnet_cidr_block(
             subnet_id=subnet_id, ipv6_subnet=1, **salt_conn_parameters
-        )["result"]["Ipv6CidrBlockAssociation"]["Ipv6CidrBLock"]
-        ipv6_cidr_block[-6] = "2"
-
+        )["result"]["Ipv6CidrBlockAssociation"]["Ipv6CidrBlock"]
+        ipv6_cidr_block = ipv6_cidr_block.replace("1::/", "2::/")
         res = boto3_ec2.disassociate_subnet_cidr_block(
             subnet_id=subnet_id, ipv6_cidr_block=ipv6_cidr_block, **salt_conn_parameters
         )
@@ -2431,24 +2417,66 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             "disassociate_subnet_cidr_block",
         )
     )
-    def test_disassociate_subnet_cidr_block_on_existing_subnet_by_association_id_succeeds(
+    def test_disassociate_subnet_cidr_block_on_existing_subnet_by_association_id_non_blocking_succeeds(
         self,
     ):
         """
         Tests disassociate_subnet_cidr_block with association_id succeeds.
+        Non-blocking variant.
         """
-        vpc_id = self._create_vpc()
+        vpc_id = self._create_vpc(ipv6=True)
         subnet_id = self._create_subnet(vpc_id)
         association_id = boto3_ec2.associate_subnet_cidr_block(
             subnet_id=subnet_id, ipv6_subnet=1, **salt_conn_parameters
-        )["result"]["Ipv6CidrBLockAssociation"]["AssociationId"]
+        )["result"]["Ipv6CidrBlockAssociation"]["AssociationId"]
 
         res = boto3_ec2.disassociate_subnet_cidr_block(
             association_id, **salt_conn_parameters
         )
         self.assertIn("result", res)
         self.assertIn("Ipv6CidrBlockAssociation", res["result"])
-        self.assertEqual({}, res["result"]["Ipv6CidrBlockAssociation"])
+        self.assertEqual(
+            association_id, res["result"]["Ipv6CidrBlockAssociation"]["AssociationId"]
+        )
+        self.assertEqual(
+            "disassociating",
+            res["result"]["Ipv6CidrBlockAssociation"]["Ipv6CidrBlockState"]["State"],
+        )
+
+    @mock_ec2
+    @skipIf(
+        *_moto_cannot(
+            "create_vpc",
+            "create_subnet",
+            "associate_subnet_cidr_block",
+            "disassociate_subnet_cidr_block",
+        )
+    )
+    def test_disassociate_subnet_cidr_block_on_existing_subnet_by_association_id_blocking_succeeds(
+        self,
+    ):
+        """
+        Tests disassociate_subnet_cidr_block with association_id succeeds.
+        Blocking variant.
+        """
+        vpc_id = self._create_vpc(ipv6=True)
+        subnet_id = self._create_subnet(vpc_id)
+        association_id = boto3_ec2.associate_subnet_cidr_block(
+            subnet_id=subnet_id, ipv6_subnet=1, **salt_conn_parameters
+        )["result"]["Ipv6CidrBlockAssociation"]["AssociationId"]
+
+        res = boto3_ec2.disassociate_subnet_cidr_block(
+            association_id, blocking=True, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("Ipv6CidrBlockAssociation", res["result"])
+        self.assertEqual(
+            association_id, res["result"]["Ipv6CidrBlockAssociation"]["AssociationId"]
+        )
+        self.assertEqual(
+            "disassociated",
+            res["result"]["Ipv6CidrBlockAssociation"]["Ipv6CidrBlockState"]["State"],
+        )
 
     # modify_subnet_attribute tests
     @mock_ec2
@@ -2528,7 +2556,7 @@ class BotoVpcSubnetTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         required_boto_version, _get_boto_version()
     ),
 )
-class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
+class BotoInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     # create_internet_gateway tests
     @mock_ec2
     @skipIf(*_moto_cannot("create_internet_gateway"))
@@ -3405,51 +3433,190 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         required_boto_version, _get_boto_version()
     ),
 )
-class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
+class BotoNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
+    # create_nat_gateway tests
     @mock_ec2
-    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
-    def test_that_when_creating_an_nat_gateway_the_create_nat_gateway_method_returns_true(
-        self,
-    ):
+    @skipIf(*_moto_cannot())
+    def test_create_nat_gateway_without_arguments_raises_error(self):
         """
-        Tests creating an nat gateway successfully (with subnet_id specified)
+        Tests create_nat_gateway without arguments raises SaltInvocationError.
         """
+        with self.assertRaisesRegex(
+            SaltInvocationError,
+            "A subnet is required. Please specify either by ID or by lookup kwargs.",
+        ):
+            boto3_ec2.create_nat_gateway(**salt_conn_parameters)
 
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_create_nat_gateway_with_non_existing_allocation_id_returns_error(self):
+        """
+        Tests create_nat_gateway with a non-existing allocation_id.
+        """
         vpc_id = self._create_vpc()
-        subnet_id = self._create_subnet(vpc_id, availability_zone="us-east-1a")
-        res = boto3_ec2.create_nat_gateway(subnet_id=subnet_id, **salt_conn_parameters)
-        self.assertTrue(res["result"])
+        subnet_id = self._create_subnet(vpc_id=vpc_id)
 
-    @mock_ec2
-    @skipIf(*_moto_cannot("create_nat_gateway"))
-    def test_that_when_creating_an_nat_gateway_with_non_existent_subnet_the_create_nat_gateway_method_returns_an_error(
-        self,
-    ):
-        """
-        Tests that creating an nat gateway for a non-existent subnet fails.
-        """
-
-        ngw_creation_result = boto3_ec2.create_nat_gateway(
-            subnet_id="non-existent-subnet", **salt_conn_parameters
-        )
-        self.assertTrue("error" in ngw_creation_result)
-
-    @mock_ec2
-    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
-    def test_that_when_creating_an_nat_gateway_with_subnet_name_specified_the_create_nat_gateway_method_returns_true(
-        self,
-    ):
-        """
-        Tests creating an nat gateway with subnet name specified.
-        """
-
-        vpc_id = self._create_vpc()
-        self._create_subnet(vpc_id, name="test-subnet", availability_zone="us-east-1a")
         res = boto3_ec2.create_nat_gateway(
-            subnet_lookup={"subnet_name": "test-subnet"}, **salt_conn_parameters
+            subnet_id=subnet_id, allocation_id="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("InvalidAllocationID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_create_nat_gateway_with_non_existing_address_lookup_returns_error(self):
+        """
+        Tests create_nat_gateway with a non-existing address lookup.
+        """
+        vpc_id = self._create_vpc()
+        subnet_id = self._create_subnet(vpc_id=vpc_id)
+
+        res = boto3_ec2.create_nat_gateway(
+            subnet_id=subnet_id,
+            address_lookup={"allocation_name": "fake"},
+            **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertEqual("No address found with the specified parameters", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_create_nat_gateway_with_non_existing_subnet_id_returns_error(self):
+        """
+        Tests create_nat_gateway with a non-existing subnet lookup.
+        """
+        res = boto3_ec2.create_nat_gateway(subnet_id="fake", **salt_conn_parameters)
+        self.assertIn("error", res)
+        self.assertIn("InvalidSubnetID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
+    def test_create_subnet_with_subnet_by_id_and_auto_allocated_address_non_blocking_succeeds(
+        self,
+    ):
+        """
+        Tests create_nat_gateway with subnet specified by ID succeeds.
+        (An address is automatically allocated)
+        Non-blocking call.
+        """
+        vpc_id = self._create_vpc()
+        subnet_id = self._create_subnet(vpc_id)
+
+        res = boto3_ec2.create_nat_gateway(subnet_id=subnet_id, **salt_conn_parameters)
+        self.assertIn("result", res)
+        self.assertIn("NatGatewayId", res["result"])
+        self.assertEqual(vpc_id, res["result"]["VpcId"])
+        self.assertEqual(subnet_id, res["result"]["SubnetId"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
+    def test_create_subnet_with_subnet_by_id_and_auto_allocated_address_blocking_succeeds(
+        self,
+    ):
+        """
+        Tests create_nat_gateway with subnet specified by ID succeeds.
+        (An address is automatically allocated)
+        Blocking call.
+        """
+        vpc_id = self._create_vpc()
+        subnet_id = self._create_subnet(vpc_id)
+
+        res = boto3_ec2.create_nat_gateway(
+            subnet_id=subnet_id, blocking=True, **salt_conn_parameters
         )
         self.assertIn("result", res)
         self.assertIn("NatGatewayId", res["result"])
+        self.assertEqual(vpc_id, res["result"]["VpcId"])
+        self.assertEqual(subnet_id, res["result"]["SubnetId"])
+        self.assertEqual("available", res["result"]["State"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
+    def test_create_subnet_with_subnet_by_id_and_address_by_id_succeeds(
+        self,
+    ):
+        """
+        Tests create_nat_gateway with subnet specified by ID and address specified by ID succeeds.
+        """
+        vpc_id = self._create_vpc()
+        subnet_id = self._create_subnet(vpc_id)
+        allocation_id = boto3_ec2.allocate_address(**salt_conn_parameters)["result"][
+            "AllocationId"
+        ]
+
+        res = boto3_ec2.create_nat_gateway(
+            subnet_id=subnet_id, allocation_id=allocation_id, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("NatGatewayId", res["result"])
+        self.assertEqual(vpc_id, res["result"]["VpcId"])
+        self.assertEqual(subnet_id, res["result"]["SubnetId"])
+        self.assertEqual(
+            allocation_id, res["result"]["NatGatewayAddresses"][0]["AllocationId"]
+        )
+
+    @mock_ec2
+    @skipIf(*_moto_cannot("create_vpc", "create_subnet", "create_nat_gateway"))
+    def test_create_subnet_with_subnet_by_lookup_and_auto_allocated_address_succeeds(
+        self,
+    ):
+        """
+        Tests create_nat_gateway with subnet specified by lookup succeeds.
+        (An address is automatically allocated)
+        """
+        vpc_id = self._create_vpc()
+        subnet_id = self._create_subnet(vpc_id=vpc_id, name="test")
+
+        res = boto3_ec2.create_nat_gateway(
+            subnet_lookup={"subnet_name": "test"}, **salt_conn_parameters
+        )
+        self.assertIn("result", res)
+        self.assertIn("NatGatewayId", res["result"])
+        self.assertEqual(vpc_id, res["result"]["VpcId"])
+        self.assertEqual(subnet_id, res["result"]["SubnetId"])
+
+    # describe_nat_gateways tests
+    @mock_ec2
+    @skipIf(*_moto_cannot("describe_nat_gateways"))
+    def test_describe_nat_gateways_without_arguments_and_no_nat_gateways_returns_empty(
+        self,
+    ):
+        """
+        Tests describe_nat_gateways without arguments returning all available NAT gateways (none)
+        """
+        res = boto3_ec2.describe_nat_gateways(**salt_conn_parameters)
+        self.assertIn("result", res)
+        self.assertEqual([], res["result"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_describe_nat_gateways_with_invalid_id_returns_error(self):
+        """
+        Tests describe_nat_gateways with invalid nat_gateway_id returns error.
+        """
+        res = boto3_ec2.describe_nat_gateways(
+            nat_gateway_ids="fake", **salt_conn_parameters
+        )
+        self.assertIn("error", res)
+        self.assertIn("InvalidNatGatewayID.NotFound", res["error"])
+
+    @mock_ec2
+    @skipIf(*_moto_cannot())
+    def test_describe_nat_gateways_without_arguments_and_nat_gateways_returns_all(self):
+        """
+        Tests describe_nat_gateways without arguments returning all available NAT gateways.
+        """
+        vpc_id = self._create_vpc()
+        subnet1_id = self._create_subnet(vpc_id=vpc_id)
+        subnet2_id = self._create_subnet(vpc_id=vpc_id, cidr_block="10.0.1.0/25")
+        boto3_ec2.create_nat_gateway(subnet_id=subnet1_id, **salt_conn_parameters)
+        boto3_ec2.create_nat_gateway(subnet_id=subnet2_id, **salt_conn_parameters)
+
+        res = boto3_ec2.describe_nat_gateways(**salt_conn_parameters)
+        self.assertIn("result", res)
+        self.assertEqual(2, len(res["result"]))
+        self.assertEqual(subnet1_id, res["result"][0]["SubnetId"])
+        self.assertEqual(subnet2_id, res["result"][1]["SubnetId"])
 
 
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
