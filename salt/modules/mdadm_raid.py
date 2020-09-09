@@ -393,7 +393,7 @@ def add(name, device):
 
     """
 
-    cmd = "mdadm --manage {} --add {1}".format(name, device)
+    cmd = "mdadm --manage {} --add {}".format(name, device)
     if __salt__["cmd.retcode"](cmd) == 0:
         return True
     return False
