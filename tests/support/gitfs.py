@@ -7,6 +7,7 @@ import copy
 import errno
 import logging
 import os
+import pathlib
 import pprint
 import shutil
 import tempfile
@@ -226,7 +227,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                 cls.sshd_proc = start_daemon(
                     cls.sshd_bin,
                     SshdDaemon,
-                    config_dir=cls.sshd_config_dir,
+                    config_dir=pathlib.Path(cls.sshd_config_dir),
                     serve_port=cls.sshd_port,
                 )
                 log.info("%s: sshd started", cls.__name__)
