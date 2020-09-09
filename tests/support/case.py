@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -165,6 +164,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         Execute the runner function and return the return data and output in a dict
         """
         output = kwargs.pop("_output", None)
+        opts_overrides = kwargs.pop("opts_overrides", None)
         ret = {"fun": fun}
 
         # Late import
@@ -173,6 +173,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         import salt.runner
 
         opts = salt.config.client_config(self.get_config_file_path("master"))
+        if opts_overrides:
+            opts.update(opts_overrides)
 
         opts_arg = list(arg)
         if kwargs:
