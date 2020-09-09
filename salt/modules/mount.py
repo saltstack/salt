@@ -194,6 +194,20 @@ def _active_mounts_solaris(ret):
             "fstype": comps[4],
             "opts": _resolve_user_group_names(comps[5].split("/")),
         }
+
+        if ret[comps[2]].get('fstype') == 'nfs':
+            if 'write' in ret[comps[2]].get('opts') and 'read' in ret[comps[2]].get('opts'):
+                opts = ret[comps[2]].get('opts')
+                opts.remove('read')
+                opts.remove('write')
+                opts.append('rw')
+                ret[comps[2]].update({'opts': opts})
+            elif 'read-only' in ret[comps[2]].get('opts'):
+                opts = ret[comps[2]].get('opts')
+                opts.remove('read-only')
+                opts.append('ro')
+                ret[comps[2]].update({'opts': opts})
+
     return ret
 
 
