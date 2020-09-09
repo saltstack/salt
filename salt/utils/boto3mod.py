@@ -571,9 +571,10 @@ def create_resource(
     boto_function = getattr(client, boto_function_name)
     try:
         res = boto_function(**params)
+        resource_id = res[resource_type_uc]["{}Id".format(resource_type_uc)]
         if tags and not support_create_tagging:
             tag_res = client.create_tags(
-                Resources=[res[resource_type_uc]["{}Id".format(resource_type_uc)]],
+                Resources=[resource_id],
                 Tags=boto_tags,
             )
             if "error" in tag_res:
@@ -583,7 +584,9 @@ def create_resource(
             # Add Tags to result description, just like when it _is_ supported.
             ret["Tags"] = boto_tags
         if ret and wait_until_state is not None:
-            res = wait_resource(resource_type, ret, wait_until_state, client=client)
+            res = wait_resource(
+                resource_type, wait_until_state, resource_id=resource_id, client=client
+            )
             if "error" in res:
                 return res
     except (
@@ -665,7 +668,7 @@ def wait_resource(
     if not any((resource_id, params)):
         raise SaltInvocationError("You must specify either resource_id or params.")
     waiter_name = resource_type + "_" + desired_state
-    params = params or {resource_type_cc + "Ids": resource_id}
+    params = params or {resource_type_cc + "Ids": [resource_id]}
     try:
         if waiter_name in client.waiter_names:
             waiter = client.get_waiter(resource_type + "_" + desired_state)
