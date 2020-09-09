@@ -10,12 +10,12 @@ newIssueWelcomeComment: >
   Please be sure to review our Code of Conduct. Also, check out some of our community
   resources including:
 
-    Community Wiki
-    Salt’s Contributor Guide
-    Join our Community Slack
-    IRC on Freenode
-    SaltStack YouTube channel
-    SaltStackInc Twitch channel
+    - [Community Wiki](https://github.com/saltstack/community/wiki)
+    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
+    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
@@ -35,12 +35,12 @@ newPRWelcomeComment: >
   Please be sure to review our Code of Conduct. Also, check out some of our community
   resources including:
 
-    Community Wiki
-    Salt’s Contributor Guide
-    Join our Community Slack
-    IRC on Freenode
-    SaltStack YouTube channel
-    SaltStackInc Twitch channel
+    - [Community Wiki](https://github.com/saltstack/community/wiki)
+    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
+    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
 
   There are lots of ways to get involved in our community. Every month, there are around a dozen
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
@@ -52,4 +52,4 @@ newPRWelcomeComment: >
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >
-  Congratulations on your first PR being merged!
+  Congratulations on your first PR being merged! :tada:
