@@ -30,7 +30,6 @@ limit-inference-results=100
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins=saltpylint.pep8,
-  saltpylint.pep263,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
@@ -685,8 +684,14 @@ allowed-3rd-party-modules=msgpack,
                           setuptools,
                           pytestsalt,
                           saltfactories,
-                          distro
-
+                          distro,
+                          os,
+                          re,
+                          shutil,
+                          copy,
+                          base64,
+                          tempfile,
+                          fnmatch
 
 [EXCEPTIONS]
 

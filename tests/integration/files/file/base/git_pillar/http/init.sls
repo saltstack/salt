@@ -7,7 +7,11 @@
   file.managed:
     - source: salt://git_pillar/http/files/nginx.conf
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - makedirs: True
     - template: jinja
@@ -16,7 +20,11 @@
   file.managed:
     - source: salt://git_pillar/http/files/uwsgi.yml
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
     - makedirs: True
     - template: jinja
@@ -24,14 +32,22 @@
 {{ root_dir }}:
   file.directory:
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 755
 
 {{ git_dir }}/users:
   file.managed:
     - source: salt://git_pillar/http/files/users
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - makedirs: True
     - mode: 644
 
@@ -41,6 +57,13 @@
     {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
     - python: {{ salt.runtests_helpers.get_python_executable() }}
 
+install-working-setuptools:
+  pip.installed:
+    - name: 'setuptools<50.0.0'
+    - bin_env: {{ venv_dir }}
+    - require:
+      - virtualenv: {{ venv_dir }}
+
 uwsgi:
   pip.installed:
     - name: 'uwsgi == 2.0.18'
@@ -49,4 +72,5 @@ uwsgi:
     - env_vars:
         UWSGI_PROFILE: cgi
     - require:
+      - pip: install-working-setuptools
       - virtualenv: {{ venv_dir }}

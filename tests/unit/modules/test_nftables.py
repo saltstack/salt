@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+
+import json
 
 # Import Salt Libs
 import salt.modules.nftables as nftables
@@ -156,6 +156,71 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(nftables, "list_tables", list_tables_mock):
             self.assertListEqual(nftables.get_rules(), [])
 
+    # 'get_rules_json' function tests: 1
+
+    def test_get_rules_json(self):
+        """
+        Test if it return a data structure of the current, in-memory rules
+        """
+        list_rules_return = """
+        {
+          "nftables": [
+            {
+              "table": {
+                "family": "ip",
+                "name": "filter",
+                "handle": 47
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "input",
+                "handle": 1,
+                "type": "filter",
+                "hook": "input",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "forward",
+                "handle": 2,
+                "type": "filter",
+                "hook": "forward",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "output",
+                "handle": 3,
+                "type": "filter",
+                "hook": "output",
+                "prio": 0,
+                "policy": "accept"
+              }
+            }
+          ]
+        }
+        """
+        list_rules_mock = MagicMock(return_value=list_rules_return)
+        expected = json.loads(list_rules_return)["nftables"]
+
+        with patch.dict(nftables.__salt__, {"cmd.run": list_rules_mock}):
+            self.assertListEqual(nftables.get_rules_json(), expected)
+
+        list_rules_mock = MagicMock(return_value=[])
+        with patch.dict(nftables.__salt__, {"cmd.run": list_rules_mock}):
+            self.assertListEqual(nftables.get_rules_json(), [])
+
     # 'save' function tests: 1
 
     def test_save(self):
@@ -164,14 +229,17 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(nftables.__grains__, {"os_family": "Debian"}):
             mock = MagicMock(return_value=False)
-            with patch.dict(nftables.__salt__, {"cmd.run": mock}):
-                with patch.object(salt.utils.files, "fopen", MagicMock(mock_open())):
-                    self.assertEqual(nftables.save(), "#! nft -f\n\n")
+            with patch.dict(nftables.__salt__, {"file.directory_exists": mock}):
+                with patch.dict(nftables.__salt__, {"cmd.run": mock}):
+                    with patch.object(
+                        salt.utils.files, "fopen", MagicMock(mock_open())
+                    ):
+                        self.assertEqual(nftables.save(), "#! nft -f\n\n")
 
-                with patch.object(
-                    salt.utils.files, "fopen", MagicMock(side_effect=IOError)
-                ):
-                    self.assertRaises(CommandExecutionError, nftables.save)
+                    with patch.object(
+                        salt.utils.files, "fopen", MagicMock(side_effect=IOError)
+                    ):
+                        self.assertRaises(CommandExecutionError, nftables.save)
 
     # 'get_rule_handle' function tests: 1
 
@@ -578,14 +646,14 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             MagicMock(return_value={"result": True, "comment": ""}),
         ):
             _expected = {
-                "comment": 'Failed to add rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
                 "result": False,
             }
             self.assertEqual(nftables.append(chain="input", rule=_ru), _expected)
             _expected = {
-                "comment": 'Added rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
                 "result": True,
@@ -652,14 +720,14 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             _expected = {
                 "result": False,
-                "comment": 'Failed to add rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
             }
             self.assertEqual(nftables.insert(chain="input", rule=_ru), _expected)
             _expected = {
                 "result": True,
-                "comment": 'Added rule "{0}" chain input in table filter in family ipv4.'.format(
+                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
                     _ru
                 ),
             }
@@ -778,3 +846,154 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
                 "comment": "Flushed rules from chain input in table filter in family ipv4.",
             }
             self.assertEqual(nftables.flush(table="filter", chain="input"), _expected)
+
+    # 'get_policy' function tests: 1
+
+    def test_get_policy(self):
+        """
+        Test the current policy for the specified table/chain
+        """
+        list_rules_return = """
+        {
+          "nftables": [
+            {
+              "table": {
+                "family": "ip",
+                "name": "filter",
+                "handle": 47
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "input",
+                "handle": 1,
+                "type": "filter",
+                "hook": "input",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "forward",
+                "handle": 2,
+                "type": "filter",
+                "hook": "forward",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "output",
+                "handle": 3,
+                "type": "filter",
+                "hook": "output",
+                "prio": 0,
+                "policy": "accept"
+              }
+            }
+          ]
+        }
+        """
+        expected = json.loads(list_rules_return)
+
+        self.assertEqual(
+            nftables.get_policy(table="filter", chain=None, family="ipv4"),
+            "Error: Chain needs to be specified",
+        )
+
+        with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
+            self.assertEqual(
+                nftables.get_policy(table="filter", chain="input", family="ipv4"),
+                "accept",
+            )
+
+        with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
+            self.assertIsNone(
+                nftables.get_policy(table="filter", chain="missing", family="ipv4")
+            )
+
+    # 'set_policy' function tests: 1
+
+    def test_set_policy(self):
+        """
+        Test set the current policy for the specified table/chain
+        """
+        list_rules_return = """
+        {
+          "nftables": [
+            {
+              "table": {
+                "family": "ip",
+                "name": "filter",
+                "handle": 47
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "input",
+                "handle": 1,
+                "type": "filter",
+                "hook": "input",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "forward",
+                "handle": 2,
+                "type": "filter",
+                "hook": "forward",
+                "prio": 0,
+                "policy": "accept"
+              }
+            },
+            {
+              "chain": {
+                "family": "ip",
+                "table": "filter",
+                "name": "output",
+                "handle": 3,
+                "type": "filter",
+                "hook": "output",
+                "prio": 0,
+                "policy": "accept"
+              }
+            }
+          ]
+        }
+        """
+        expected = json.loads(list_rules_return)["nftables"]
+
+        self.assertEqual(
+            nftables.set_policy(table="filter", chain=None, policy=None, family="ipv4"),
+            "Error: Chain needs to be specified",
+        )
+
+        self.assertEqual(
+            nftables.set_policy(
+                table="filter", chain="input", policy=None, family="ipv4"
+            ),
+            "Error: Policy needs to be specified",
+        )
+
+        mock = MagicMock(return_value={"retcode": 0})
+        with patch.object(nftables, "get_rules_json", MagicMock(return_value=expected)):
+            with patch.dict(nftables.__salt__, {"cmd.run_all": mock}):
+                self.assertTrue(
+                    nftables.set_policy(
+                        table="filter", chain="input", policy="accept", family="ipv4"
+                    )
+                )

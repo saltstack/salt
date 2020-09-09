@@ -9,7 +9,7 @@
 #              /opt/salt
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #     - A valid signing certificate in the login.keychain. Signing Certificates
 #       can be optained from the Apple Developer site.
 #
