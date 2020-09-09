@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os.path
@@ -50,7 +47,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         mac = "080027136977"
         bcast = "255.255.255.255 7"
 
-        class MockSocket(object):
+        class MockSocket:
             def __init__(self, *args, **kwargs):
                 pass
 
@@ -227,6 +224,36 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             network.__utils__, {"network.ip_addrs6": MagicMock(return_value=["A"])}
         ):
             self.assertListEqual(network.ip_addrs6("int", "include"), ["A"])
+
+    def test_ip_addrs6_type(self):
+        """
+        Test for returns a list of IPv6 addresses assigned to the host filtered by type.
+        """
+        ipv6_addrs = ["fe80::f03c:91ff:fef1:21e3", "2600:3c03::f03c:91ff:fef1:21e3"]
+
+        with patch.dict(
+            network.__utils__, {"network.ip_addrs6": MagicMock(return_value=ipv6_addrs)}
+        ):
+            self.assertListEqual(
+                network.ip_addrs6("int", "include"),
+                ["fe80::f03c:91ff:fef1:21e3", "2600:3c03::f03c:91ff:fef1:21e3"],
+            )
+
+        with patch.dict(
+            network.__utils__, {"network.ip_addrs6": MagicMock(return_value=ipv6_addrs)}
+        ):
+            self.assertListEqual(
+                network.ip_addrs6("int", "include", type="public"),
+                ["2600:3c03::f03c:91ff:fef1:21e3"],
+            )
+
+        with patch.dict(
+            network.__utils__, {"network.ip_addrs6": MagicMock(return_value=ipv6_addrs)}
+        ):
+            self.assertListEqual(
+                network.ip_addrs6("int", "include", type="private"),
+                ["fe80::f03c:91ff:fef1:21e3"],
+            )
 
     def test_get_hostname(self):
         """
