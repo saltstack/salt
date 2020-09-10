@@ -104,7 +104,6 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
     def test_proxy_config_default_include(self):
         """
         Tests that when the proxy_config function is called,
