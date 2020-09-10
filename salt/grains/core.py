@@ -292,7 +292,9 @@ def _netbsd_gpu_data():
     gpus = []
     try:
         pcictl = salt.utils.path.which("pcictl")
-        pcictl_out = __salt__["cmd.run"]("{0} pci0 list".format(pcictl)) if pcictl else ""
+        pcictl_out = (
+            __salt__["cmd.run"]("{0} pci0 list".format(pcictl)) if pcictl else ""
+        )
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
