@@ -57,6 +57,13 @@
     {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
     - python: {{ salt.runtests_helpers.get_python_executable() }}
 
+install-working-setuptools:
+  pip.installed:
+    - name: 'setuptools<50.0.0'
+    - bin_env: {{ venv_dir }}
+    - require:
+      - virtualenv: {{ venv_dir }}
+
 uwsgi:
   pip.installed:
     - name: 'uwsgi == 2.0.18'
@@ -65,4 +72,5 @@ uwsgi:
     - env_vars:
         UWSGI_PROFILE: cgi
     - require:
+      - pip: install-working-setuptools
       - virtualenv: {{ venv_dir }}
