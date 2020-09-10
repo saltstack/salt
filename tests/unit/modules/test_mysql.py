@@ -466,7 +466,10 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         mock_grants = [
             "GRANT USAGE ON *.* TO 'testuser'@'%'",
             "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
-            "GRANT SELECT ON `testdb`.`testtabletwo` TO 'testuer'@'%'",
+            "GRANT SELECT(column1,column2) ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT(column1,column2), INSERT(column1,column2) ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT(column1,column2), UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT ON `testdb`.`testtabletwo` TO 'testuser'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
         with patch.object(mysql, "version", return_value="5.6.41"):
@@ -486,6 +489,8 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         mock_grants = [
             "GRANT USAGE ON *.* TO 'testuser'@'%'",
             "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT(column1,column2) ON `testdb`.`testtableone` TO 'testuser'@'%'",
+            "GRANT SELECT(column1,column2), UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
         with patch.object(mysql, "version", return_value="5.6.41"):

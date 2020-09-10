@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.fixtures
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -12,53 +11,13 @@
 import os
 import shutil
 import stat
-import sys
 
 import pytest
 import salt.utils.files
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
+from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
-
-
-def _get_virtualenv_binary_path():
-    try:
-        return _get_virtualenv_binary_path.__virtualenv_binary__
-    except AttributeError:
-        # Under windows we can't seem to properly create a virtualenv off of another
-        # virtualenv, we can on linux but we will still point to the virtualenv binary
-        # outside the virtualenv running the test suite, if that's the case.
-        try:
-            real_prefix = sys.real_prefix
-            # The above attribute exists, this is a virtualenv
-            if salt.utils.platform.is_windows():
-                virtualenv_binary = os.path.join(
-                    real_prefix, "Scripts", "virtualenv.exe"
-                )
-            else:
-                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
-                # from within the virtualenv, we don't want that
-                path = os.environ.get("PATH")
-                if path is not None:
-                    path_items = path.split(os.pathsep)
-                    for item in path_items[:]:
-                        if item.startswith(sys.base_prefix):
-                            path_items.remove(item)
-                    os.environ["PATH"] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.path.which("virtualenv")
-                if path is not None:
-                    # Restore previous environ PATH
-                    os.environ["PATH"] = path
-                if not virtualenv_binary.startswith(real_prefix):
-                    virtualenv_binary = None
-            if virtualenv_binary and not os.path.exists(virtualenv_binary):
-                # It doesn't exist?!
-                virtualenv_binary = None
-        except AttributeError:
-            # We're not running inside a virtualenv
-            virtualenv_binary = None
-        _get_virtualenv_binary_path.__virtualenv_binary__ = virtualenv_binary
-        return virtualenv_binary
 
 
 @pytest.fixture(scope="session")
@@ -166,15 +125,11 @@ def salt_syndic_master_config(request, salt_factories):
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     else:
         ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
 
     # We need to copy the extension modules into the new master root_dir or
@@ -261,15 +216,11 @@ def salt_master_config(request, salt_factories, salt_syndic_master_config):
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
-            {
-                "cmd_yaml": "type {0}".format(
-                    os.path.join(RUNTIME_VARS.FILES, "ext.yaml")
-                )
-            }
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     else:
         ext_pillar.append(
-            {"cmd_yaml": "cat {0}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
         )
     ext_pillar.append(
         {
@@ -375,7 +326,7 @@ def salt_minion_config(request, salt_factories, salt_master_config):
             "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
         },
     }
-    virtualenv_binary = _get_virtualenv_binary_path()
+    virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
     return salt_factories.configure_minion(
@@ -417,7 +368,7 @@ def salt_sub_minion_config(request, salt_factories, salt_master_config):
             "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
         },
     }
-    virtualenv_binary = _get_virtualenv_binary_path()
+    virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
     return salt_factories.configure_minion(
