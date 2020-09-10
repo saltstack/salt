@@ -259,7 +259,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         assert lines[0] == original_lines[0]
         assert lines[2] == original_lines[2]
         # The second line should have the new password hash, and it should have
-        # gotten "fixed" by adding back in the missing hash.
+        # gotten "fixed" by adding another colon.
         fixed = lines[1].split(":")
         assert fixed[:2] == [user, password]
         assert len(fixed) == 9
@@ -300,7 +300,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         assert lines[0] == original_lines[0]
         assert lines[1] == original_lines[1]
         # The third line should have the new password hash, and it should have
-        # gotten "fixed" by adding back in the missing hash.
+        # gotten "fixed" by reducing it to 9 fields instead of 10.
         fixed = lines[2].split(":")
         assert fixed[:2] == [user, password]
         assert len(fixed) == 9
