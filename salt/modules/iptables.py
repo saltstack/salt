@@ -689,7 +689,7 @@ def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
     cmd = "{0} {1} -t {2} -P {3} {4}".format(
         _iptables_cmd(family), wait, table, chain, policy
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -715,7 +715,7 @@ def save(filename=None, family="ipv4"):
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
     cmd = "{0}-save".format(_iptables_cmd(family))
-    ipt = __salt__["cmd.run"](cmd)
+    ipt = __salt__["cmd.run_stdout"](cmd)
 
     # regex out the output if configured with filters
     if _conf_save_filters():
@@ -754,7 +754,7 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
 
     if _has_option("--check", family):
         cmd = "{0} -t {1} -C {2} {3}".format(ipt_cmd, table, chain, rule)
-        out = __salt__["cmd.run"](cmd, output_loglevel="quiet")
+        out = __salt__["cmd.run_stderr"](cmd, output_loglevel="quiet")
     else:
         _chain_name = hex(uuid.getnode())
 
@@ -802,7 +802,7 @@ def check_chain(table="filter", chain=None, family="ipv4"):
         return "Error: Chain needs to be specified"
 
     cmd = "{0}-save -t {1}".format(_iptables_cmd(family), table)
-    out = __salt__["cmd.run"](cmd).find(":{0} ".format(chain))
+    out = __salt__["cmd.run_stdout"](cmd).find(":{0} ".format(chain))
 
     if out != -1:
         out = True
@@ -833,7 +833,7 @@ def new_chain(table="filter", chain=None, family="ipv4"):
 
     wait = "--wait" if _has_option("--wait", family) else ""
     cmd = "{0} {1} -t {2} -N {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -861,7 +861,7 @@ def delete_chain(table="filter", chain=None, family="ipv4"):
 
     wait = "--wait" if _has_option("--wait", family) else ""
     cmd = "{0} {1} -t {2} -X {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
 
     if not out:
         out = True
@@ -901,7 +901,7 @@ def append(table="filter", chain=None, rule=None, family="ipv4"):
     cmd = "{0} {1} -t {2} -A {3} {4}".format(
         _iptables_cmd(family), wait, table, chain, rule
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return not out
 
 
@@ -952,7 +952,7 @@ def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
     cmd = "{0} {1} -t {2} -I {3} {4} {5}".format(
         _iptables_cmd(family), wait, table, chain, position, rule
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -991,7 +991,7 @@ def delete(table, chain=None, position=None, rule=None, family="ipv4"):
     cmd = "{0} {1} -t {2} -D {3} {4}".format(
         _iptables_cmd(family), wait, table, chain, rule
     )
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -1012,7 +1012,7 @@ def flush(table="filter", chain="", family="ipv4"):
 
     wait = "--wait" if _has_option("--wait", family) else ""
     cmd = "{0} {1} -t {2} -F {3}".format(_iptables_cmd(family), wait, table, chain)
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run_stderr"](cmd)
     return out
 
 
@@ -1030,7 +1030,7 @@ def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
             rules = ifile.read()
     elif in_mem:
         cmd = "{0}-save".format(_iptables_cmd(family))
-        rules = __salt__["cmd.run"](cmd)
+        rules = __salt__["cmd.run_stdout"](cmd)
     else:
         raise SaltException("A file was not found to parse")
 
