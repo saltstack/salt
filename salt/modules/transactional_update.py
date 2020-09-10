@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
@@ -78,6 +76,32 @@ def _cmd(cmd, retcode=False):
         raise salt.exceptions.CommandExecutionError(result["stderr"])
 
     return result["stdout"]
+
+
+def transactional():
+    """Check if the system is a transactional system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update transactional
+
+    """
+    return bool(__utils__["path.which"]("transactional-update"))
+
+
+def in_transaction():
+    """Check if Salt is executing while in a transaction
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update in_transaction
+
+    """
+    return transactional() and __salt__["chroot.in_chroot"]()
 
 
 def cleanup(self_update=False):
@@ -523,6 +547,12 @@ def rollback(snapshot=None):
         default snapshot as a base for the next snapshot. Use
         "last" to indicate the last working snapshot done.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update rollback
+
     """
     if (
         snapshot
@@ -538,3 +568,25 @@ def rollback(snapshot=None):
     if snapshot:
         cmd.append(snapshot)
     return _cmd(cmd)
+
+
+def pending_transaction():
+    """Check if there is a pending transaction
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update pending_transaction
+
+    """
+    cmd = ["snapper", "--no-dbus", "list", "--columns", "number"]
+    snapshots = _cmd(cmd)
+
+    # If we are running inside a transaction, we do not have a good
+    # way yet to detect a pending transaction
+    if in_transaction():
+        raise salt.exceptions.CommandExecutionError(
+            "pending_transaction cannot be executed inside a transaction"
+        )
+    return any(snapshot.endswith("+") for snapshot in snapshots)
