@@ -7,7 +7,9 @@ newIssueWelcomeComment: >
   possible. In the meantime, here’s some information that may help as you continue your Salt
   journey.
 
-  Please be sure to review our Code of Conduct. Also, check out some of our community
+  Please be sure to review our [Code of Conduct]
+  (https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Also, check out some of our community
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
@@ -32,7 +34,9 @@ newPRWelcomeComment: >
   possible. In the meantime, here’s some information that may help as you continue your Salt
   journey.
 
-  Please be sure to review our Code of Conduct. Also, check out some of our community
+  Please be sure to review our [Code of Conduct]
+  (https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Also, check out some of our community
   resources including:
 
     - [Community Wiki](https://github.com/saltstack/community/wiki)
