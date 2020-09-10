@@ -293,7 +293,7 @@ def _netbsd_gpu_data():
     try:
         pcictl = salt.utils.path.which("pcictl")
         pcictl_out = (
-            __salt__["cmd.run"]("{0} pci0 list".format(pcictl)) if pcictl else ""
+            __salt__["cmd.run"]("{} pci0 list".format(pcictl)) if pcictl else ""
         )
 
         for line in pcictl_out.splitlines():
@@ -382,7 +382,7 @@ def _bsd_cpudata(osdata):
     if osdata["kernel"] == "NetBSD":
         grains["cpu_flags"] = []
         cmd = salt.utils.path.which("cpuctl")
-        cpuctl_out = __salt__["cmd.run"]("{0} identify 0".format(cmd)) if cmd else ""
+        cpuctl_out = __salt__["cmd.run"]("{} identify 0".format(cmd)) if cmd else ""
         for line in cpuctl_out.splitlines():
             cpu_match = re.match(r"cpu[0-9]:\ features[0-9]?\ .+<(.+)>", line)
             if cpu_match:
