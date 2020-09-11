@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the file state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import os
-import sys
 import tempfile
 import textwrap
 import time
 
 import salt.utils.files
 import salt.utils.platform
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -48,7 +44,7 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
 
-    def test_test_run_simple(self):
+    def test_run_simple_test_true(self):
         """
         cmd.run test interface
         """
@@ -84,7 +80,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                six.reraise(*sys.exc_info())
+                raise
 
         # Create the testfile and release the handle
         fd, self.test_tmp_path = tempfile.mkstemp()
@@ -92,9 +88,9 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                six.reraise(*sys.exc_info())
+                raise
 
-        super(CMDRunRedirectTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         time.sleep(1)
@@ -106,7 +102,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 # As some of the tests create the sls files in the test itself,
                 # And some are using files in the integration test file state tree.
                 pass
-        super(CMDRunRedirectTest, self).tearDown()
+        super().tearDown()
 
     @slowTest
     def test_run_unless(self):
@@ -119,9 +115,9 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 salt.utils.stringutils.to_str(
                     textwrap.dedent(
                         """
-                {0}:
+                {}:
                   cmd.run:
-                    - unless: echo cheese > {1}
+                    - unless: echo cheese > {}
                 """.format(
                             self.test_tmp_path, self.test_file
                         )
@@ -215,7 +211,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
                 salt.utils.stringutils.to_str(
                     textwrap.dedent(
                         """
-                echo test > {0}:
+                echo test > {}:
                   cmd.run
                 """.format(
                             self.test_file
@@ -237,11 +233,11 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.state_name = "run_watch"
         state_filename = self.state_name + ".sls"
         self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
-        super(CMDRunWatchTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         os.remove(self.state_file)
-        super(CMDRunWatchTest, self).tearDown()
+        super().tearDown()
 
     def test_run_watch(self):
         """
