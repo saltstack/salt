@@ -2,8 +2,7 @@ import pytest
 import salt.cli.batch as batch
 import salt.client
 import salt.defaults.exitcodes
-from tests.support.helpers import TstSuiteLoggingHandler
-from tests.support.mock import MagicMock, create_autospec, patch
+from tests.support.mock import create_autospec, patch
 
 
 @pytest.fixture(autouse=True)
@@ -169,3 +168,48 @@ def test_if_minion_return_key_is_None_then_it_should_not_be_added_to_minions_lis
     test_batch = batch.Batch(opts=common_opts)
 
     assert test_batch.minions == []
+
+
+def test_when_minion_fails_and_not_raw_data_with_minion_should_be_returned(
+    capsys, fake_local_client, common_opts
+):
+    common_opts.update({"fun": "nota.real_function", "arg": "whatever", "batch": "42"})
+    fake_local_client.cmd_iter.side_effect = [
+        [{"minions": {"fnord": "whatever"}, "jid": 42}, {"some other minion": "blah"}]
+    ]
+    fake_local_client.cmd_iter_no_block.return_value = (
+        _ for _ in [{"fnord": {"failed": True}}]
+    )
+    test_batch = batch.Batch(opts=common_opts)
+    test_batch.quiet = False
+
+    result = next(test_batch.run())
+
+    assert result == {"fnord": "Minion did not return. [Failed]"}
+
+
+def test_when_not_quiet_mode_and_minion_is_in_down_minion_message_should_be_shown(
+    capsys, fake_local_client, common_opts
+):
+    common_opts.update(
+        {
+            "fun": "nota.real_function",
+            "arg": "whatever",
+            "batch": "42",
+            "extension_modules": "",
+        }
+    )
+    fake_local_client.cmd_iter.side_effect = [
+        [{"minions": {"fnord": "whatever"}, "jid": 42}, {"some other minion": "blah"}]
+    ]
+    fake_local_client.cmd_iter_no_block.return_value = (_ for _ in [])
+    test_batch = batch.Batch(opts=common_opts)
+    test_batch.quiet = False
+
+    with patch("salt.output.display_output", autospec=True):
+        for _ in test_batch.run():
+            pass
+
+    stdout = capsys.readouterr().out
+
+    assert "Minion fnord did not respond. No job will be sent." in stdout
