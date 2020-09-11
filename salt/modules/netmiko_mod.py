@@ -576,7 +576,10 @@ def send_config(
     config_commands = [line for line in file_str.splitlines() if line.strip()]
     kwargs = clean_kwargs(**kwargs)
     if "netmiko.conn" in __proxy__:
-        conn = __proxy__["netmiko.conn"]()
+        if __proxy__["netmiko.conn"]().is_alive():
+            conn = __proxy__["netmiko.conn"]()
+        else:
+            conn, kwargs = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     if commit:
