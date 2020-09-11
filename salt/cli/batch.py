@@ -109,7 +109,7 @@ class Batch:
 
     def run(self):
         """
-        Execute the batch run
+        Execute the batch run, yielding one result at a time.
         """
         args = [
             [],
@@ -121,10 +121,9 @@ class Batch:
         bnum = self.get_bnum()
         # No targets to run
         if not self.minions:
-            return
+            raise StopIteration("No minions matched target")
         to_run = copy.deepcopy(self.minions)
         active = []
-        ret = {}
         iters = []
         # wait the specified time before decide a job is actually done
         bwait = self.opts.get("batch_wait", 0)
@@ -139,8 +138,8 @@ class Batch:
 
         # the minion tracker keeps track of responses and iterators
         # - it removes finished iterators from iters[]
-        # - if a previously detected minion does not respond, its
-        #   added with an empty answer to ret{} once the timeout is reached
+        # - if a previously detected minion does not respond, it's
+        #   added to ret once the timeout is reached
         # - unresponsive minions are removed from active[] to make
         #   sure that the main while loop finishes even with unresp minions
         minion_tracker = {}
@@ -155,6 +154,7 @@ class Batch:
                     )
                 )
 
+        ret = set()
         # Iterate while we still have things to execute
         while len(ret) < len(self.minions):
             next_ = []
@@ -290,14 +290,13 @@ class Batch:
                         "ret": "Minion did not return. [Failed]",
                         "retcode": salt.defaults.exitcodes.EX_GENERIC,
                     }
+
+                ret.add(minion)
                 if self.opts.get("raw"):
-                    ret[minion] = data
                     yield data
                 else:
-                    ret[minion] = data["ret"]
                     yield {minion: data["ret"]}
                 if not self.quiet:
-                    ret[minion] = data["ret"]
                     data[minion] = data.pop("ret")
                     if "out" in data:
                         out = data.pop("out")
