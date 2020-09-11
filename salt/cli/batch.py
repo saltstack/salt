@@ -60,7 +60,7 @@ class Batch:
         fret = set()
         nret = set()
         for ret in ping_gen:
-            if ("minions" and "jid") in ret:
+            if "minions" in ret and "jid" in ret:
                 for minion in ret["minions"]:
                     nret.add(minion)
                 continue
@@ -75,6 +75,7 @@ class Batch:
                     break
                 if m is not None:
                     fret.add(m)
+
         return (list(fret), ping_gen, nret.difference(fret))
 
     def get_bnum(self):
