@@ -1579,6 +1579,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def _load_module(self, name):
         mod = None
+        log.debug(self.file_mapping)
         fpath, suffix = self.file_mapping[name][:2]
         # if the fpath has `.cpython-3x` in it, but the running Py version
         # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
