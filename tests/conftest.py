@@ -16,6 +16,7 @@ import pathlib
 import pprint
 import re
 import shutil
+import ssl
 import stat
 import sys
 import textwrap
@@ -45,6 +46,7 @@ from tests.support.helpers import (
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
+from tests.support.helpers import Webserver
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
 PYTESTS_DIR = TESTS_DIR / "pytests"
@@ -622,6 +624,11 @@ def integration_files_dir(salt_factories):
     Creates the directory if it does not yet exist.
     """
     dirname = salt_factories.root_dir / "integration-files"
+    int_files = os.path.join(
+        salt_factories.code_dir, "tests", "pytests", "integration", "files"
+    )
+    if not os.path.exists(dirname):
+        shutil.copytree(int_files, dirname)
     dirname.mkdir(exist_ok=True)
     return dirname
 
@@ -1317,5 +1324,21 @@ def sminion():
 def grains(sminion):
     return sminion.opts["grains"].copy()
 
+
+@pytest.fixture
+def ssl_webserver(integration_files_dir, scope="module"):
+    """
+    spins up an https webserver.
+    """
+    context = ssl.SSLContext()
+    root_dir = os.path.join(integration_files_dir, "https")
+    context.load_cert_chain(
+        os.path.join(root_dir, "cert.pem"), os.path.join(root_dir, "key.pem")
+    )
+
+    webserver = Webserver(root=integration_files_dir, ssl_opts=context)
+    webserver.start()
+    yield webserver
+    webserver.stop()
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
