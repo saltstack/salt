@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -48,7 +45,7 @@ here
 """
 
 
-class DummyStat(object):
+class DummyStat:
     st_mode = 33188
     st_ino = 115331251
     st_dev = 44
@@ -180,7 +177,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_backup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", backup=fext)
 
@@ -189,7 +186,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nobackup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", backup=False)
 
@@ -480,7 +477,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -523,7 +520,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -601,7 +598,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertNotIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -628,7 +625,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                         os.linesep.join(
                             [
                                 "#-- START BLOCK 2",
-                                "{0}#-- END BLOCK 2".format(new_content),
+                                "{}#-- END BLOCK 2".format(new_content),
                             ]
                         )
                     )
@@ -672,7 +669,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -703,7 +700,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_backup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -723,7 +720,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(os.path.exists(bak_file))
 
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -906,7 +903,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
             result = filemod.grep(self.tfile.name, "Lorem Lorem", "-i -b2")
 
     def test_grep_query_exists_wildcard(self):
-        _file = "{0}*".format(self.tfile.name)
+        _file = "{}*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
 
         self.assertTrue(result, None)
@@ -915,13 +912,13 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stderr"] == "")
 
     def test_grep_file_not_exists_wildcard(self):
-        _file = "{0}-junk*".format(self.tfile.name)
+        _file = "{}-junk*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
 
         self.assertTrue(result, None)
         self.assertFalse(result["retcode"] == 0)
         self.assertFalse(result["stdout"] == "Lorem ipsum dolor sit amet, consectetur")
-        _expected_stderr = "grep: {0}-junk*: No such file or directory".format(
+        _expected_stderr = "grep: {}-junk*: No such file or directory".format(
             self.tfile.name
         )
         self.assertTrue(result["stderr"] == _expected_stderr)
@@ -1007,7 +1004,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             path = tfile.name
             before = "/var/lib/foo"
             after = ""
-            limit = "^{0}".format(before)
+            limit = "^{}".format(before)
 
             filemod.sed(path, before, after, limit=limit)
 
@@ -1292,7 +1289,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         binary2 = b",\x13\x04\xa5\xb0\x12\xdf%"
 
         # pylint: disable=no-self-argument
-        class MockFopen(object):
+        class MockFopen:
             """
             Provides a fake filehandle object that has just enough to run
             readlines() as file.get_diff does. Any significant changes to
@@ -1397,7 +1394,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     """
 
     def setUp(self):
-        class AnyAttr(object):
+        class AnyAttr:
             def __getattr__(self, item):
                 return 0
 
@@ -2291,7 +2288,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 )
             warning_call = _log.warning.call_args_list[0][0]
             warning_log_msg = warning_call[0] % warning_call[1:]
-            self.assertIn("Cannot find text to {0}".format(mode), warning_log_msg)
+            self.assertIn("Cannot find text to {}".format(mode), warning_log_msg)
 
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -2329,7 +2326,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         ]:
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", mode=mode)
-            self.assertIn(err_msg, six.text_type(exc_info.value))
+            self.assertIn(err_msg, str(exc_info.value))
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -2342,8 +2339,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", mode=mode)
             self.assertIn(
-                'Content can only be empty if mode is "delete"',
-                six.text_type(exc_info.value),
+                'Content can only be empty if mode is "delete"', str(exc_info.value),
             )
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
@@ -2358,7 +2354,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.files.fopen", files_fopen):
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", content="test content", mode="insert")
-            self.assertIn('"location" or "before/after"', six.text_type(exc_info.value))
+            self.assertIn('"location" or "before/after"', str(exc_info.value))
 
     @with_tempfile()
     def test_line_insert_after_no_pattern(self, name):
@@ -2879,7 +2875,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         # pylint: disable=W1401
         file_content = os.linesep.join(
             [
-                'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
+                r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
                 'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"',
             ]
         )
@@ -2928,7 +2924,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         # pylint: disable=W1401
         file_content = os.linesep.join(
             [
-                'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
+                r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
                 'EXTRA_GROUPS="dialout"',
                 'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"',
             ]
@@ -2971,7 +2967,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
         # pylint: disable=W1401
         file_content = (
-            'NAME_REGEX="^[a-z][-a-z0-9_]*\$"{}SETGID_HOME=no{}ADD_EXTRA_GROUPS=1{}'
+            r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"{}SETGID_HOME=no{}ADD_EXTRA_GROUPS=1{}'
             'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'.format(
                 os.linesep, os.linesep, os.linesep
             )
@@ -2996,7 +2992,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                         )
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(exc_info.value),
+                str(exc_info.value),
             )
 
     @with_tempfile()
@@ -3171,12 +3167,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                     "cp.cache_file": MagicMock(return_value="/tmp/http.conf"),
                 },
             ):
-                ret = filemod.source_list(
-                    [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
-                )
-                self.assertEqual(
-                    list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
-                )
+                with patch("salt.utils.http.query") as http_query:
+                    http_query.return_value = {}
+                    ret = filemod.source_list(
+                        [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
+                    )
+                    self.assertEqual(
+                        list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
+                    )
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(
@@ -3294,7 +3292,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         patch_exists = patch("os.path.exists", Mock(return_value=True),)
         patch_which = patch("salt.utils.path.which", Mock(return_value="fnord"),)
         with patch_aix, patch_exists, patch_which:
-            super(LsattrTests, self).run(result)
+            super().run(result)
 
     def test_if_lsattr_is_missing_it_should_return_None(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=None),)
@@ -3414,7 +3412,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         patch_exists = patch("os.path.exists", Mock(return_value=True),)
         patch_which = patch("salt.utils.path.which", Mock(return_value="some/tune2fs"),)
         with patch_aix, patch_exists, patch_which:
-            super(ChattrTests, self).run(result)
+            super().run(result)
 
     def test_chattr_version_returns_None_if_no_tune2fs_exists(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=""),)
@@ -3665,7 +3663,7 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
     def test_file_check_perms(self):
         expected_result = (
             {
-                "comment": "The file {0} is set to be changed".format(self.tfile3.name),
+                "comment": "The file {} is set to be changed".format(self.tfile3.name),
                 "changes": {
                     "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
                     "mode": "0644",
