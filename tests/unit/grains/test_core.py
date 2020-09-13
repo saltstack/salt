@@ -726,6 +726,46 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_focal_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.04", "focal"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "focal",
+            "osfullname": "Pop",
+            "osrelease": "20.04",
+            "osrelease_info": (20, 4),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.04", _os_release_map, expectation)
+
+    @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
+    def test_pop_groovy_os_grains(self):
+        """
+        Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
+        """
+        _os_release_map = {
+            "_linux_distribution": ("Pop", "20.10", "groovy"),
+        }
+        expectation = {
+            "os": "Pop",
+            "os_family": "Debian",
+            "oscodename": "groovy",
+            "osfullname": "Pop",
+            "osrelease": "20.10",
+            "osrelease_info": (20, 10),
+            "osmajorrelease": 20,
+            "osfinger": "Pop-20",
+        }
+        self._run_os_grains_tests("pop-20.10", _os_release_map, expectation)
+
     @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
     def test_windows_platform_data(self):
         """
