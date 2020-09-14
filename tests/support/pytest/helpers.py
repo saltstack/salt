@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.helpers
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -249,6 +248,15 @@ def salt_loader_module_functions(module):
         funcname = func_alias.get(func.__name__) or func.__name__
         funcs["{}.{}".format(virtualname, funcname)] = func
     return funcs
+
+
+@pytest.helpers.register
+def remove_stale_minion_key(master, minion_id):
+    key_path = os.path.join(master.config["pki_dir"], "minions", minion_id)
+    if os.path.exists(key_path):
+        os.unlink(key_path)
+    else:
+        log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
 
 
 # Only allow star importing the functions defined in this module

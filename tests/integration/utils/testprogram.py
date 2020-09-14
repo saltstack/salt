@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Classes for starting/stopping/status salt daemons, auxiliary
 scripts, generic commands.
 """
 
-from __future__ import absolute_import
 
 import atexit
 import copy
@@ -28,12 +26,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six.moves import range
-from saltfactories.utils.processes.helpers import (
-    terminate_process,
-    terminate_process_list,
-)
+from saltfactories.utils.processes import terminate_process, terminate_process_list
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -74,12 +67,12 @@ class TestProgramMeta(type):
         dirtree.update(attrs.get("dirtree", []))
         attrs["dirtree"] = dirtree
 
-        return super(TestProgramMeta, mcs).__new__(mcs, name, bases, attrs)
+        return super().__new__(mcs, name, bases, attrs)
 
 
 # pylint: disable=too-many-instance-attributes
 @pytest.mark.windows_whitelisted
-class TestProgram(six.with_metaclass(TestProgramMeta, object)):
+class TestProgram(metaclass=TestProgramMeta):
     """
     Set up an arbitrary executable to run.
 
@@ -89,14 +82,14 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
     empty_config = ""
     config_file = ""
 
-    config_attrs = set(["name", "test_dir", "config_dirs"])
+    config_attrs = {"name", "test_dir", "config_dirs"}
     config_vals = {}
     config_base = ""
     config_dir = os.path.join("etc")
     configs = {}
     config_types = (
         str,
-        six.string_types,
+        (str,),
     )
 
     dirtree = [
@@ -157,7 +150,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         if not self.name:
             if not self.program:
                 raise ValueError(
-                    '"{0}" object must specify "program" parameter'.format(
+                    '"{}" object must specify "program" parameter'.format(
                         self.__class__.__name__
                     )
                 )
@@ -229,7 +222,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 os.makedirs(self._parent_dir)
             elif not os.path.isdir(self._parent_dir):
                 raise ValueError(
-                    'Parent path "{0}" exists but is not a directory'.format(
+                    'Parent path "{}" exists but is not a directory'.format(
                         self._parent_dir
                     )
                 )
@@ -243,9 +236,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         with salt.utils.files.fopen(cpath, "w") as cfo:
             cfg = self.config_stringify(config)
             log.debug(
-                "Writing configuration for {0} to {1}:\n{2}".format(
-                    self.name, cpath, cfg
-                )
+                "Writing configuration for {} to {}:\n{}".format(self.name, cpath, cfg)
             )
             cfo.write(cfg)
             cfo.flush()
@@ -267,7 +258,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
 
     def config_subs(self):
         """Get the substitution values for use to generate the config"""
-        subs = dict([(attr, getattr(self, attr, None)) for attr in self.config_attrs])
+        subs = {attr: getattr(self, attr, None) for attr in self.config_attrs}
         for key, val in self.config_vals.items():
             subs[key] = val.format(**subs)
         return subs
@@ -296,17 +287,17 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         """Create directory structure."""
         subdirs = []
         for branch in self.dirtree:
-            log.debug("checking dirtree: {0}".format(branch))
+            log.debug("checking dirtree: {}".format(branch))
             if not branch:
                 continue
-            if isinstance(branch, six.string_types) and branch[0] == "&":
-                log.debug('Looking up dirtree branch "{0}"'.format(branch))
+            if isinstance(branch, str) and branch[0] == "&":
+                log.debug('Looking up dirtree branch "{}"'.format(branch))
                 try:
                     dirattr = getattr(self, branch[1:], None)
-                    log.debug('dirtree "{0}" => "{1}"'.format(branch, dirattr))
+                    log.debug('dirtree "{}" => "{}"'.format(branch, dirattr))
                 except AttributeError:
                     raise ValueError(
-                        'Unable to find dirtree attribute "{0}" on object "{1}.name = {2}: {3}"'.format(
+                        'Unable to find dirtree attribute "{}" on object "{}.name = {}: {}"'.format(
                             branch, self.__class__.__name__, self.name, dir(self),
                         )
                     )
@@ -314,25 +305,25 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 if not dirattr:
                     continue
 
-                if isinstance(dirattr, six.string_types):
+                if isinstance(dirattr, str):
                     subdirs.append(dirattr)
                 elif hasattr(dirattr, "__iter__"):
                     subdirs.extend(dirattr)
                 else:
                     raise TypeError(
-                        "Branch type of {0} in dirtree is unhandled".format(branch)
+                        "Branch type of {} in dirtree is unhandled".format(branch)
                     )
-            elif isinstance(branch, six.string_types):
+            elif isinstance(branch, str):
                 subdirs.append(branch)
             else:
                 raise TypeError(
-                    "Branch type of {0} in dirtree is unhandled".format(branch)
+                    "Branch type of {} in dirtree is unhandled".format(branch)
                 )
 
         for subdir in subdirs:
             path = self.abs_path(subdir)
             if not os.path.exists(path):
-                log.debug("make_dirtree: {0}".format(path))
+                log.debug("make_dirtree: {}".format(path))
                 os.makedirs(path)
 
     def setup(self, *args, **kwargs):
@@ -435,11 +426,6 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         cmd_env = dict(os.environ)
         cmd_env.update(env_delta)
 
-        if salt.utils.platform.is_windows() and six.PY2:
-            for k, v in cmd_env.items():
-                if isinstance(k, six.text_type) or isinstance(v, six.text_type):
-                    cmd_env[k.encode("ascii")] = v.encode("ascii")
-
         popen_kwargs = {
             "shell": self.shell,
             "stdout": subprocess.PIPE,
@@ -486,7 +472,7 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                     out = process.stdout.read().splitlines()
                     out.extend(
                         [
-                            "Process took more than {0} seconds to complete. "
+                            "Process took more than {} seconds to complete. "
                             "Process Killed!".format(timeout)
                         ]
                     )
@@ -574,10 +560,10 @@ class TestSaltProgramMeta(TestProgramMeta):
     def __new__(mcs, name, bases, attrs):
         if attrs.get("script") is None:
             if "Salt" in name:
-                script = "salt-{0}".format(name.rsplit("Salt", 1)[-1].lower())
+                script = "salt-{}".format(name.rsplit("Salt", 1)[-1].lower())
             if script is None:
                 raise AttributeError(
-                    'Class {0}: Unable to set "script" attribute: class name'
+                    'Class {}: Unable to set "script" attribute: class name'
                     ' must include "Salt" or "script" must be explicitly set.'.format(
                         name
                     )
@@ -599,20 +585,18 @@ class TestSaltProgramMeta(TestProgramMeta):
         configs.update(attrs.get("configs", {}))
         attrs["configs"] = configs
 
-        return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
+        return super().__new__(mcs, name, bases, attrs)
 
 
 @pytest.mark.windows_whitelisted
-class TestSaltProgram(
-    six.with_metaclass(TestSaltProgramMeta, TestProgram, ScriptPathMixin)
-):
+class TestSaltProgram(TestProgram, ScriptPathMixin, metaclass=TestSaltProgramMeta):
     """
     This is like TestProgram but with some functions to run a salt-specific
     auxiliary program.
     """
 
     config_types = (dict,)
-    config_attrs = set(["log_dir", "script_dir"])
+    config_attrs = {"log_dir", "script_dir"}
 
     pub_port = 4505
     ret_port = 4506
@@ -620,7 +604,7 @@ class TestSaltProgram(
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             connect = sock.bind(("localhost", port))
-        except (socket.error, OSError):
+        except OSError:
             # these ports are already in use, use different ones
             pub_port = 4606
             ret_port = 4607
@@ -653,7 +637,7 @@ class TestSaltProgram(
         if len(args) < 2 and "program" not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs["program"] = self.script
-        super(TestSaltProgram, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.program = self.get_script_path(self.script)
 
     def config_merge(self, base, overrides):
@@ -667,7 +651,7 @@ class TestSaltProgram(
         cfg_base = {}
         for key, val in self.config_base.items():
             _val = val
-            if val and isinstance(val, six.string_types) and val[0] == "&":
+            if val and isinstance(val, str) and val[0] == "&":
                 _val = getattr(self, val[1:], None)
                 if _val is None:
                     continue
@@ -676,13 +660,13 @@ class TestSaltProgram(
             cfg = {}
             for key, val in self.configs.get(config, {}).get("map", {}).items():
                 _val = val
-                if val and isinstance(val, six.string_types) and val[0] == "&":
+                if val and isinstance(val, str) and val[0] == "&":
                     _val = getattr(self, val[1:], None)
                     if _val is None:
                         continue
                 cfg[key] = _val
             cfg = self.config_merge(cfg_base, cfg)
-        log.debug("Generated config => {0}".format(cfg))
+        log.debug("Generated config => {}".format(cfg))
         return cfg
 
     def config_stringify(self, config):
@@ -690,7 +674,7 @@ class TestSaltProgram(
         subs = self.config_subs()
         cfg = {}
         for key, val in self.config_get(config).items():
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 cfg[key] = val.format(**subs)
             else:
                 cfg[key] = val
@@ -701,7 +685,7 @@ class TestSaltProgram(
             args = kwargs.setdefault("args", [])
             if "-c" not in args and "--config-dir" not in args:
                 args.extend(["--config-dir", self.abs_path(self.config_dir)])
-        return super(TestSaltProgram, self).run(**kwargs)
+        return super().run(**kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -728,7 +712,7 @@ class TestProgramSaltRun(TestSaltProgram):
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault("config_base", {})
         _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestProgramSaltRun, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -749,14 +733,14 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop("script", self.script)
         self.pid_file = kwargs.pop(
             "pid_file",
-            self.pid_file if self.pid_file else "{0}.pid".format(self.script),
+            self.pid_file if self.pid_file else "{}.pid".format(self.script),
         )
         self.pid_dir = kwargs.pop("pid_dir", self.pid_dir)
         self._shutdown = False
         if not args and "program" not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs["program"] = self.script
-        super(TestDaemon, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def pid_path(self):
@@ -785,7 +769,7 @@ class TestDaemon(TestProgram):
                 return pid
             if endtime < time.time():
                 raise TimeoutError(
-                    'Timeout waiting for "{0}" pid in "{1}"'.format(
+                    'Timeout waiting for "{}" pid in "{}"'.format(
                         self.name, self.abs_path(self.pid_path)
                     )
                 )
@@ -805,55 +789,27 @@ class TestDaemon(TestProgram):
     def find_orphans(self, cmdline):
         """Find orphaned processes matching the specified cmdline"""
         ret = []
-        if six.PY3:
-            cmdline = " ".join(cmdline)
-            for proc in psutils.process_iter():
-                try:
-                    for item in proc.cmdline():
-                        if cmdline in item:
-                            ret.append(proc)
-                except psutils.NoSuchProcess:
-                    # Process exited between when process_iter was invoked and
-                    # when we tried to invoke this instance's cmdline() func.
+        cmdline = " ".join(cmdline)
+        for proc in psutils.process_iter():
+            try:
+                for item in proc.cmdline():
+                    if cmdline in item:
+                        ret.append(proc)
+            except psutils.NoSuchProcess:
+                # Process exited between when process_iter was invoked and
+                # when we tried to invoke this instance's cmdline() func.
+                continue
+            except psutils.AccessDenied:
+                # We might get access denied if not running as root
+                if not salt.utils.platform.is_windows():
+                    pinfo = proc.as_dict(attrs=["pid", "name", "username"])
+                    log.error(
+                        "Unable to access process %s, " "running command %s as user %s",
+                        pinfo["pid"],
+                        pinfo["name"],
+                        pinfo["username"],
+                    )
                     continue
-                except psutils.AccessDenied:
-                    # We might get access denied if not running as root
-                    if not salt.utils.platform.is_windows():
-                        pinfo = proc.as_dict(attrs=["pid", "name", "username"])
-                        log.error(
-                            "Unable to access process %s, "
-                            "running command %s as user %s",
-                            pinfo["pid"],
-                            pinfo["name"],
-                            pinfo["username"],
-                        )
-                        continue
-        else:
-            cmd_len = len(cmdline)
-            for proc in psutils.process_iter():
-                try:
-                    proc_cmdline = proc.cmdline()
-                except psutils.NoSuchProcess:
-                    # Process exited between when process_iter was invoked and
-                    # when we tried to invoke this instance's cmdline() func.
-                    continue
-                except psutils.AccessDenied:
-                    # We might get access denied if not running as root
-                    if not salt.utils.platform.is_windows():
-                        pinfo = proc.as_dict(attrs=["pid", "name", "username"])
-                        log.error(
-                            "Unable to access process %s, "
-                            "running command %s as user %s",
-                            pinfo["pid"],
-                            pinfo["name"],
-                            pinfo["username"],
-                        )
-                        continue
-                if any(
-                    (cmdline == proc_cmdline[n : n + cmd_len])
-                    for n in range(len(proc_cmdline) - cmd_len + 1)
-                ):
-                    ret.append(proc)
         return ret
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10, wait_for_orphans=0):
@@ -890,13 +846,11 @@ class TestDaemon(TestProgram):
 
         # Shutdown if not alreadt shutdown
         self.shutdown()
-        super(TestDaemon, self).cleanup(*args, **kwargs)
+        super().cleanup(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
-class TestSaltDaemon(
-    six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSaltProgram)
-):
+class TestSaltDaemon(TestDaemon, TestSaltProgram, metaclass=TestSaltProgramMeta):
     """
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     """
@@ -913,7 +867,7 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault("config_base", {})
         _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -927,7 +881,7 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault("config_base", {})
         _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltMinion, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -951,7 +905,7 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault("config_base", {})
         _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltSyndic, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -966,14 +920,14 @@ class TestDaemonSaltProxy(TestSaltDaemon):
     def __init__(self, *args, **kwargs):
         cfgb = kwargs.setdefault("config_base", {})
         _ = cfgb.setdefault("user", getpass.getuser())
-        super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def run(self, **kwargs):
         if not kwargs.get("verbatim_args"):
             args = kwargs.setdefault("args", [])
             if "--proxyid" not in args:
                 args.extend(["--proxyid", self.name])
-        return super(TestDaemonSaltProxy, self).run(**kwargs)
+        return super().run(**kwargs)
 
 
 @pytest.mark.windows_whitelisted
@@ -986,14 +940,14 @@ class TestProgramCase(TestCase):
         # Setup for scripts
         if not getattr(self, "_test_dir", None):
             self._test_dir = tempfile.mkdtemp(prefix="salt-testdaemon-")
-        super(TestProgramCase, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
             shutil.rmtree(self._test_dir)
             self._test_dir = None
-        super(TestProgramCase, self).tearDown()
+        super().tearDown()
 
     def assert_exit_status(
         self, status, ex_status, message=None, stdout=None, stderr=None
@@ -1003,13 +957,13 @@ class TestProgramCase(TestCase):
         """
 
         ex_val = getattr(exitcodes, ex_status)
-        _message = "" if not message else " ({0})".format(message)
-        _stdout = "" if not stdout else "\nstdout: {0}".format(stdout)
-        _stderr = "" if not stderr else "\nstderr: {0}".format(stderr)
+        _message = "" if not message else " ({})".format(message)
+        _stdout = "" if not stdout else "\nstdout: {}".format(stdout)
+        _stderr = "" if not stderr else "\nstderr: {}".format(stderr)
         self.assertEqual(
             status,
             ex_val,
-            "Exit status was {0}, must be {1} (salt.default.exitcodes.{2}){3}{4}{5}".format(
+            "Exit status was {}, must be {} (salt.default.exitcodes.{}){}{}{}".format(
                 status, ex_val, ex_status, _message, _stdout, _stderr,
             ),
         )
