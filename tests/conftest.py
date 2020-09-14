@@ -41,12 +41,12 @@ from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
     PRE_PYTEST_SKIP_OR_NOT,
     PRE_PYTEST_SKIP_REASON,
+    Webserver,
     get_virtualenv_binary_path,
 )
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
-from tests.support.helpers import Webserver
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
 PYTESTS_DIR = TESTS_DIR / "pytests"
@@ -1340,5 +1340,6 @@ def ssl_webserver(integration_files_dir, scope="module"):
     webserver.start()
     yield webserver
     webserver.stop()
+
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
