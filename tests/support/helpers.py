@@ -45,7 +45,7 @@ from saltfactories.utils.processes.bases import ProcessResult
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-from tests.support.unit import SkipTest, _id, skip
+from tests.support.unit import SkipTest, _id, skip, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +58,9 @@ PRE_PYTEST_SKIP_REASON = (
 )
 PRE_PYTEST_SKIP = pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+)
+SKIP_IF_NOT_RUNNING_PYTEST = skipIf(
+    RUNTIME_VARS.PYTEST_SESSION is False, "These tests now require running under PyTest"
 )
 
 
