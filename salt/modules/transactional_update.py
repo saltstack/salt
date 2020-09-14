@@ -5,18 +5,35 @@
 :platform:      Linux
 """
 
+import copy
 import logging
+import os
+import sys
+import tempfile
 
+import salt.client.ssh.state
+import salt.client.ssh.wrapper.state
 import salt.exceptions
+import salt.utils.args
+
+__func_alias__ = {"apply_": "apply"}
 
 log = logging.getLogger(__name__)
 
 # Define not exported variables from Salt, so this can be imported as
 # a normal module
 try:
+    __context__
+    __grains__
+    __opts__
+    __pillar__
     __salt__
     __utils__
 except NameError:
+    __context__ = {}
+    __grains__ = {}
+    __opts__ = {}
+    __pillar__ = {}
     __salt__ = {}
     __utils__ = {}
 
@@ -31,7 +48,7 @@ def __virtual__():
         return (False, "Module transactional_update requires a transactional system")
 
 
-def _global_params(self_update, snapshot=None):
+def _global_params(self_update, snapshot=None, quiet=False):
     """Utility function to prepare common global parameters."""
     params = ["--non-interactive", "--drop-if-no-change"]
     if self_update is False:
@@ -40,6 +57,8 @@ def _global_params(self_update, snapshot=None):
         params.extend(["--continue", snapshot])
     elif snapshot:
         params.append("--continue")
+    if quiet:
+        params.append("--quiet")
     return params
 
 
@@ -265,7 +284,7 @@ def run(command, self_update=False, snapshot=None):
 
     """
     cmd = ["transactional-update"]
-    cmd.extend(_global_params(self_update=self_update, snapshot=snapshot))
+    cmd.extend(_global_params(self_update=self_update, snapshot=snapshot, quiet=True))
     cmd.append("run")
     if isinstance(command, str):
         cmd.extend(command.split())
@@ -580,13 +599,332 @@ def pending_transaction():
         salt microos transactional_update pending_transaction
 
     """
-    cmd = ["snapper", "--no-dbus", "list", "--columns", "number"]
-    snapshots = _cmd(cmd)
-
     # If we are running inside a transaction, we do not have a good
     # way yet to detect a pending transaction
     if in_transaction():
         raise salt.exceptions.CommandExecutionError(
             "pending_transaction cannot be executed inside a transaction"
         )
+
+    cmd = ["snapper", "--no-dbus", "list", "--columns", "number"]
+    snapshots = _cmd(cmd)
+
     return any(snapshot.endswith("+") for snapshot in snapshots)
+
+
+def call(function, *args, **kwargs):
+    """Executes a Salt function inside a transaction.
+
+    The chroot does not need to have Salt installed, but Python is
+    required.
+
+    function
+        Salt execution module function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update.call test.ping
+        salt microos transactional_update.call ssh.set_auth_key user key=mykey
+
+    """
+
+    if not function:
+        raise salt.exceptions.CommandExecutionError("Missing function parameter")
+
+    # Generate the salt-thin and create a temporary directory in a
+    # place that the new transaction will have access to, and where we
+    # can untar salt-thin
+    thin_path = __utils__["thin.gen_thin"](
+        __opts__["cachedir"],
+        extra_mods=__salt__["config.option"]("thin_extra_mods", ""),
+        so_mods=__salt__["config.option"]("thin_so_mods", ""),
+    )
+    thin_dest_path = tempfile.mkdtemp(dir=__opts__["cachedir"])
+    # Some bug in Salt is preventing us to use `archive.tar` here. A
+    # AsyncZeroMQReqChannel is not closed at the end of the salt-call,
+    # and makes the client never exit.
+    #
+    # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
+    #
+    stdout = __salt__["cmd.run"](["tar", "xzf", thin_path, "-C", thin_dest_path])
+    if stdout:
+        __utils__["files.rm_rf"](thin_dest_path)
+        return {"result": False, "comment": stdout}
+
+    try:
+        safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        salt_argv = (
+            [
+                "python{}".format(sys.version_info[0]),
+                os.path.join(thin_dest_path, "salt-call"),
+                "--metadata",
+                "--local",
+                "--log-file",
+                os.path.join(thin_dest_path, "log"),
+                "--cachedir",
+                os.path.join(thin_dest_path, "cache"),
+                "--out",
+                "json",
+                "-l",
+                "quiet",
+                "--",
+                function,
+            ]
+            + list(args)
+            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+        )
+        try:
+            ret_stdout = run([str(x) for x in salt_argv], snapshot="continue")
+        except salt.exceptions.CommandExecutionError as e:
+            ret_stdout = e.message
+
+        # Process "real" result in stdout
+        try:
+            data = __utils__["json.find_json"](ret_stdout)
+            local = data.get("local", data)
+            if isinstance(local, dict) and "retcode" in local:
+                __context__["retcode"] = local["retcode"]
+            return local.get("return", data)
+        except (KeyError, ValueError):
+            return {"result": False, "comment": ret_stdout}
+    finally:
+        __utils__["files.rm_rf"](thin_dest_path)
+
+
+def apply_(mods=None, **kwargs):
+    """Apply an state inside a transaction.
+
+    This function will call `transactional_update.highstate` or
+    `transactional_update.sls` based on the arguments passed to this
+    function. It exists as a more intuitive way of applying states.
+
+    For a formal description of the possible parameters accepted in
+    this function, check `state.apply_` documentation.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update.apply
+        salt microos transactional_update.apply stuff
+        salt microos transactional_update.apply stuff pillar='{"foo": "bar"}'
+
+    """
+    if mods:
+        return sls(mods, **kwargs)
+    return highstate(**kwargs)
+
+
+def _create_and_execute_salt_state(chunks, file_refs, test, hash_type):
+    """Create the salt_state tarball, and execute it in a transaction"""
+
+    # Create the tar containing the state pkg and relevant files.
+    salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
+    trans_tar = salt.client.ssh.state.prep_trans_tar(
+        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__
+    )
+    trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
+
+    ret = None
+
+    # Create a temporary directory accesible later by the transaction
+    # where we can move the salt_state.tgz
+    salt_state_path = tempfile.mkdtemp(dir=__opts__["cachedir"])
+    salt_state_path = os.path.join(salt_state_path, "salt_state.tgz")
+    try:
+        salt.utils.files.copyfile(trans_tar, salt_state_path)
+        ret = call(
+            "state.pkg",
+            salt_state_path,
+            test=test,
+            pkg_sum=trans_tar_sum,
+            hash_type=hash_type,
+        )
+    finally:
+        __utils__["files.rm_rf"](salt_state_path)
+
+    return ret
+
+
+def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
+    """Execute the states in one or more SLS files inside a transaction.
+
+    saltenv
+        Specify a salt fileserver environment to be used when applying
+        states
+
+    mods
+        List of states to execute
+
+    test
+        Run states in test-only (dry-run) mode
+
+    exclude
+        Exclude specific states from execution. Accepts a list of sls
+        names, a comma-separated string of sls names, or a list of
+        dictionaries containing ``sls`` or ``id`` keys. Glob-patterns
+        may be used to match multiple states.
+
+    For a formal description of the possible parameters accepted in
+    this function, check `state.sls` documentation.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update.sls stuff pillar='{"foo": "bar"}'
+
+    """
+    # Get a copy of the pillar data, to avoid overwriting the current
+    # pillar, instead the one delegated
+    pillar = copy.deepcopy(__pillar__)
+    pillar.update(kwargs.get("pillar", {}))
+
+    # Clone the options data and apply some default values. May not be
+    # needed, as this module just delegate
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    st_ = salt.client.ssh.state.SSHHighState(
+        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
+    )
+
+    if isinstance(mods, str):
+        mods = mods.split(",")
+
+    high_data, errors = st_.render_highstate({saltenv: mods})
+    if exclude:
+        if isinstance(exclude, str):
+            exclude = exclude.split(",")
+        if "__exclude__" in high_data:
+            high_data["__exclude__"].extend(exclude)
+        else:
+            high_data["__exclude__"] = exclude
+
+    high_data, ext_errors = st_.state.reconcile_extend(high_data)
+    errors += ext_errors
+    errors += st_.state.verify_high(high_data)
+    if errors:
+        return errors
+
+    high_data, req_in_errors = st_.state.requisite_in(high_data)
+    errors += req_in_errors
+    if errors:
+        return errors
+
+    high_data = st_.state.apply_exclude(high_data)
+
+    # Compile and verify the raw chunks
+    chunks = st_.state.compile_high_data(high_data)
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+        chunks,
+        salt.client.ssh.wrapper.state._merge_extra_filerefs(
+            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+        ),
+    )
+
+    hash_type = opts["hash_type"]
+    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
+
+
+def highstate(**kwargs):
+    """Retrieve the state data from the salt master for this minion and
+    execute it inside a transaction.
+
+    For a formal description of the possible parameters accepted in
+    this function, check `state.highstate` documentation.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update.highstate
+        salt microos transactional_update.highstate pillar='{"foo": "bar"}'
+
+    """
+    # Get a copy of the pillar data, to avoid overwriting the current
+    # pillar, instead the one delegated
+    pillar = copy.deepcopy(__pillar__)
+    pillar.update(kwargs.get("pillar", {}))
+
+    # Clone the options data and apply some default values. May not be
+    # needed, as this module just delegate
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    st_ = salt.client.ssh.state.SSHHighState(
+        opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
+    )
+
+    # Compile and verify the raw chunks
+    chunks = st_.compile_low_chunks()
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+        chunks,
+        salt.client.ssh.wrapper.state._merge_extra_filerefs(
+            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+        ),
+    )
+    # Check for errors
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            __context__["retcode"] = 1
+            return chunks
+
+    test = kwargs.pop("test", False)
+    hash_type = opts["hash_type"]
+    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
+
+
+def single(fun, name, test=None, **kwargs):
+    """Execute a single state function with the named kwargs, returns
+    False if insufficient data is sent to the command
+
+    By default, the values of the kwargs will be parsed as YAML. So,
+    you can specify lists values, or lists of single entry key-value
+    maps, as you would in a YAML salt file. Alternatively, JSON format
+    of keyword values is also supported.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update.single pkg.installed name=emacs
+
+    """
+    # Get a copy of the pillar data, to avoid overwriting the current
+    # pillar, instead the one delegated
+    pillar = copy.deepcopy(__pillar__)
+    pillar.update(kwargs.get("pillar", {}))
+
+    # Clone the options data and apply some default values. May not be
+    # needed, as this module just delegate
+    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    st_ = salt.client.ssh.state.SSHState(opts, pillar)
+
+    # state.fun -> [state, fun]
+    comps = fun.split(".")
+    if len(comps) < 2:
+        __context__["retcode"] = 1
+        return "Invalid function passed"
+
+    # Create the low chunk, using kwargs as a base
+    kwargs.update({"state": comps[0], "fun": comps[1], "__id__": name, "name": name})
+
+    # Verify the low chunk
+    err = st_.verify_data(kwargs)
+    if err:
+        __context__["retcode"] = 1
+        return err
+
+    # Must be a list of low-chunks
+    chunks = [kwargs]
+
+    # Retrieve file refs for the state run, so we can copy relevant
+    # files down to the minion before executing the state
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+        chunks,
+        salt.client.ssh.wrapper.state._merge_extra_filerefs(
+            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+        ),
+    )
+
+    hash_type = opts["hash_type"]
+    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
