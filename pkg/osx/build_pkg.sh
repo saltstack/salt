@@ -9,15 +9,13 @@
 #              /opt/salt
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 2 parameters
 #         $1 : <version> : the version name to give the package (overrides
 #              version of the git repo) (Defaults to the git repo version)
-#         $2 : <python ver> : the version of python that was built (defaults
-#              to 2)
-#         $3 : <package dir> : the staging area for the package defaults to
+#         $2 : <package dir> : the staging area for the package defaults to
 #              /tmp/salt_pkg
 #
 #     Example:
@@ -56,18 +54,11 @@ else
     VERSION=$1
 fi
 
-# Get/Set Python Version
-if [ "$2" == "" ]; then
-    PYVER=2
-else
-    PYVER=$2
-fi
-
 # Get/Set temp directory
-if [ "$3" == "" ]; then
+if [ "$2" == "" ]; then
     PKGDIR=/tmp/salt_pkg
 else
-    PKGDIR=$3
+    PKGDIR=$2
 fi
 
 CPUARCH=`uname -m`
@@ -132,11 +123,8 @@ rm -rdf $PKGDIR/opt/salt/lib/engines
 rm -rdf $PKGDIR/opt/salt/share/aclocal
 rm -rdf $PKGDIR/opt/salt/share/doc
 rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
-if [ "$PYVER" == "2" ]; then
-    rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
-else
-    rm -rdf $PKGDIR/opt/salt/lib/python3.5/test
-fi
+rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
+
 
 echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
@@ -155,22 +143,11 @@ cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 ############################################################################
 echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
 
-if [ "$PYVER" == "2" ]; then
-    TITLE="Salt $VERSION"
-    DESC="Salt $VERSION with Python 2"
-    SEDSTR="s/@PY2@/_py2/g"
-else
-    TITLE="Salt $VERSION (Python 3)"
-    DESC="Salt $VERSION with Python 3"
-    SEDSTR="s/@PY2@//g"
-fi
+TITLE="Salt $VERSION (Python 3)"
+DESC="Salt $VERSION with Python 3"
 
 cd $PKGRESOURCES
 cp distribution.xml.dist distribution.xml
-
-# Select the appropriate welcome text
-# This is only necessary until Sodium, then this can be removed
-sed -E -i '' "$SEDSTR" distribution.xml
 
 SEDSTR="s/@TITLE@/$TITLE/g"
 sed -E -i '' "$SEDSTR" distribution.xml
@@ -179,9 +156,6 @@ SEDSTR="s/@DESC@/$DESC/g"
 sed -E -i '' "$SEDSTR" distribution.xml
 
 SEDSTR="s/@VERSION@/$VERSION/g"
-sed -E -i '' "$SEDSTR" distribution.xml
-
-SEDSTR="s/@PYVER@/$PYVER/g"
 sed -E -i '' "$SEDSTR" distribution.xml
 
 SEDSTR="s/@CPUARCH@/$CPUARCH/g"
@@ -196,10 +170,10 @@ pkgbuild --root=$PKGDIR \
          --scripts=pkg-scripts \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
-         --ownership=recommended salt-src-$VERSION-py$PYVER-$CPUARCH.pkg
+         --ownership=recommended salt-src-$VERSION-py3-$CPUARCH.pkg
 
 productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
-             --package-path=salt-src-$VERSION-py$PYVER-$CPUARCH.pkg \
-             --version=$VERSION salt-$VERSION-py$PYVER-$CPUARCH.pkg
+             --package-path=salt-src-$VERSION-py3-$CPUARCH.pkg \
+             --version=$VERSION salt-$VERSION-py3-$CPUARCH.pkg
 
