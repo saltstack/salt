@@ -248,9 +248,7 @@ class FileModuleTest(ModuleCase):
             "salt://http/httpd.conf",
         ]
         ret = self.run_function("file.source_list", [file_list, "filehash", "base"])
-        self.assertEqual(
-            list(ret), ["file:///tmp/salt-tests-tmpdir/myfile", "filehash"]
-        )
+        self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
     def test_source_list_for_multiple_files_dict_with_missing_files(self):
         file_list = [
@@ -260,9 +258,7 @@ class FileModuleTest(ModuleCase):
             {"salt://http/httpd.conf": "filehash"},
         ]
         ret = self.run_function("file.source_list", [file_list, "", "base"])
-        self.assertEqual(
-            list(ret), ["file:///tmp/salt-tests-tmpdir/myfile", "filehash"]
-        )
+        self.assertEqual(list(ret), ["file://" + self.myfile, "filehash"])
 
     def test_file_line_changes_format(self):
         """
