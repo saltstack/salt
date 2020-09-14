@@ -458,6 +458,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             self.assertIn("kwargs", data)
             self.assertNotIn("__pub_fun_args", data["kwargs"])
 
+    @skipIf(not salt.utils.platform.is_windows(), "Skip on Non-Windows systems")
     def test_handle_func_check_dicts(self):
         """
         Tests that utils, functions, and returners dicts are not
@@ -482,9 +483,7 @@ class ScheduleTestCase(SchedulerTestsBase):
             "_next_fire_time": datetime.datetime(2018, 11, 21, 14, 8, 53, 903438),
         }
 
-        with patch("salt.utils.process.daemonize"), patch(
-            "sys.platform", "linux2"
-        ), patch("salt.utils.platform.is_windows"):
+        with patch("salt.utils.process.daemonize"):
             # simulate what happens before handle_func is called on Windows
             self.schedule.functions = {}
             self.schedule.returners = {}
