@@ -1,5 +1,5 @@
 '*':
-  - integration.modules.test_sysmod
+  - pytests.integration.modules.test_sysmod
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
