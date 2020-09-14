@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Netmiko Execution Module
 ========================
@@ -182,7 +181,6 @@ outside a ``netmiko`` Proxy, e.g.:
     Minion. If you want to use the :mod:`<salt.proxy.netmiko_px>`, please follow
     the documentation notes for a proper setup.
 """
-from __future__ import absolute_import
 
 # Import python stdlib
 import logging
@@ -190,7 +188,6 @@ import logging
 from salt.exceptions import CommandExecutionError
 
 # Import Salt libs
-from salt.ext import six
 from salt.utils.args import clean_kwargs
 
 # Import third party libs
@@ -253,7 +250,7 @@ def _prepare_connection(**kwargs):
         BaseConnection.__init__
     )
     check_self = netmiko_init_args.pop(0)
-    for karg, warg in six.iteritems(netmiko_kwargs):
+    for karg, warg in netmiko_kwargs.items():
         if karg not in netmiko_init_args:
             if warg is not None:
                 fun_kwargs[karg] = warg
@@ -564,7 +561,7 @@ def send_config(
         if file_str is False:
             raise CommandExecutionError("Source file {} not found".format(config_file))
     elif config_commands:
-        if isinstance(config_commands, (six.string_types, six.text_type)):
+        if isinstance(config_commands, ((str,), str)):
             config_commands = [config_commands]
         file_str = "\n".join(config_commands)
         # unify all the commands in a single file, to render them in a go
