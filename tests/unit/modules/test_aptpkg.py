@@ -9,16 +9,12 @@ import copy
 import logging
 import textwrap
 
+import pytest
 import salt.modules.aptpkg as aptpkg
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase, skipIf
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 log = logging.getLogger(__name__)
 
@@ -852,7 +848,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
             aptpkg.__salt__,
             {"cmd.run_all": cmd_mock, "config.get": MagicMock(return_value=False)},
         ):
-            with patch("time.sleep", MagicMock()) as sleep_mock:
+            with patch("salt.modules.aptpkg.time.sleep", MagicMock()) as sleep_mock:
                 aptpkg._call_apt(
                     ["dpkg", "-l", "python"],
                     python_shell=True,

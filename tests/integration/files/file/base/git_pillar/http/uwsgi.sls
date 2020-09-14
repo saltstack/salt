@@ -3,28 +3,15 @@
 {%- set venv_dir = pillar['git_pillar']['venv_dir'] %}
 {%- set root_dir = pillar['git_pillar']['root_dir'] %}
 
-{{ config_dir }}/nginx.conf:
-  file.managed:
-    - source: salt://git_pillar/http/files/nginx.conf
-    - user: root
-    {% if grains['os_family'] == 'FreeBSD' %}
-    - group: wheel
-    {% else %}
-    - group: root
-    {% endif %}
-    - mode: 644
-    - makedirs: True
-    - template: jinja
-
 {{ config_dir }}/uwsgi.yml:
   file.managed:
     - source: salt://git_pillar/http/files/uwsgi.yml
     - user: root
-    {% if grains['os_family'] == 'FreeBSD' %}
+    {%- if grains['os_family'] == 'FreeBSD' %}
     - group: wheel
-    {% else %}
+    {%- else %}
     - group: root
-    {% endif %}
+    {%- endif %}
     - mode: 644
     - makedirs: True
     - template: jinja
@@ -32,22 +19,22 @@
 {{ root_dir }}:
   file.directory:
     - user: root
-    {% if grains['os_family'] == 'FreeBSD' %}
+    {%- if grains['os_family'] == 'FreeBSD' %}
     - group: wheel
-    {% else %}
+    {%- else %}
     - group: root
-    {% endif %}
+    {%- endif %}
     - mode: 755
 
 {{ git_dir }}/users:
   file.managed:
     - source: salt://git_pillar/http/files/users
     - user: root
-    {% if grains['os_family'] == 'FreeBSD' %}
+    {%- if grains['os_family'] == 'FreeBSD' %}
     - group: wheel
-    {% else %}
+    {%- else %}
     - group: root
-    {% endif %}
+    {%- endif %}
     - makedirs: True
     - mode: 644
 
