@@ -704,7 +704,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     """
 
-    def wait_for_all_jobs(self, minions=("minion", "sub_minion",), sleep=0.3):
+    def wait_for_all_jobs(self, minions=("minion", "sub_minion"), sleep=0.3):
         """
         Wait for all jobs currently running on the list of minions to finish
         """
