@@ -35,6 +35,7 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
+from saltfactories.utils import random_string
 from tests.support.paths import CODE_DIR
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
@@ -89,6 +90,8 @@ class AdaptedConfigurationTestCaseMixin:
         rootdir = config_overrides.get(
             "root_dir", tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         )
+        if not os.path.exists(rootdir):
+            os.makedirs(rootdir)
         conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
         for key in ("cachedir", "pki_dir", "sock_dir"):
             if key not in config_overrides:
@@ -106,7 +109,17 @@ class AdaptedConfigurationTestCaseMixin:
         if config_for in ("master", "client_config"):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == "minion":
-            rdict = salt.config.apply_minion_config(config_overrides, cdict)
+            minion_id = (
+                config_overrides.get("id")
+                or config_overrides.get("minion_id")
+                or cdict.get("id")
+                or cdict.get("minion_id")
+                or random_string("temp-minion-")
+            )
+            config_overrides["minion_id"] = config_overrides["id"] = minion_id
+            rdict = salt.config.apply_minion_config(
+                config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
+            )
 
         verify_env(
             [
@@ -142,7 +155,8 @@ class AdaptedConfigurationTestCaseMixin:
                 )
             elif config_for in ("minion", "sub_minion"):
                 return salt.config.minion_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
+                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
+                    cache_minion_id=False,
                 )
             elif config_for in ("syndic",):
                 return salt.config.syndic_config(
