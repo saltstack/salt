@@ -162,6 +162,9 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         else:
             self.__scope = None
 
+        # For compatibility with python3.9 ipaddress
+        self._scope_id = self.__scope
+
         if sys.version_info.major == 2:
             ipaddress._BaseAddress.__init__(self, address)
             ipaddress._BaseV6.__init__(self, address)
