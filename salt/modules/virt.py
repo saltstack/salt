@@ -75,7 +75,6 @@ The calls not using the libvirt connection setup are:
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-# Import python libs
 
 import base64
 import copy
@@ -91,10 +90,7 @@ import time
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
-# Import third party libs
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -2616,8 +2612,8 @@ def update(
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
         data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
-    need_update = need_update or salt.utils.xmlutil.change_xml(
-        desc, data, params_mapping
+    need_update = (
+        salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
 
     # Update the XML definition with the new disks and diff changes
