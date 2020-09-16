@@ -22,6 +22,7 @@ import salt.utils.gzip_util
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.state
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -224,7 +225,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
 
 
 def get_file(
-    path, dest, saltenv="base", makedirs=False, template=None, gzip=None, **kwargs
+    path, dest, saltenv=None, makedirs=False, template=None, gzip=None, **kwargs
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -270,12 +271,19 @@ def get_file(
     .. note::
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
+
+    If ``saltenv`` is not explicitely defined, the one from minion configuration
+    is used.
     """
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
 
     if not hash_file(path, saltenv):
         return ""
@@ -296,9 +304,7 @@ def envs():
     return _client().envs()
 
 
-def get_template(
-    path, dest, template="jinja", saltenv="base", makedirs=False, **kwargs
-):
+def get_template(path, dest, template="jinja", saltenv=None, makedirs=False, **kwargs):
     """
     Render a file as a template before setting it down.
     Warning, order is not the same as in fileclient.cp for
@@ -318,10 +324,14 @@ def get_template(
         kwargs["grains"] = __grains__
     if "opts" not in kwargs:
         kwargs["opts"] = __opts__
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().get_template(path, dest, template, makedirs, saltenv, **kwargs)
 
 
-def get_dir(path, dest, saltenv="base", template=None, gzip=None, **kwargs):
+def get_dir(path, dest, saltenv=None, template=None, gzip=None, **kwargs):
     """
     Used to recursively copy a directory from the salt master
 
@@ -335,10 +345,15 @@ def get_dir(path, dest, saltenv="base", template=None, gzip=None, **kwargs):
     """
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
+
     return _client().get_dir(path, dest, saltenv, gzip)
 
 
-def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
+def get_url(path, dest="", saltenv=None, makedirs=False, source_hash=None):
     """
     .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
@@ -368,8 +383,8 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             and ``file://`` URLs. The files fetched by ``http://`` and
             ``https://`` will not be cached.
 
-    saltenv : base
-        Salt fileserver environment from which to retrieve the file. Ignored if
+    saltenv : None
+        Salt fileserver envrionment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
     source_hash
@@ -386,6 +401,10 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     if isinstance(dest, str):
         result = _client().get_url(
             path, dest, makedirs, saltenv, source_hash=source_hash
@@ -418,6 +437,10 @@ def get_file_str(path, saltenv="base"):
 
         salt '*' cp.get_file_str salt://my/file
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     fn_ = cache_file(path, saltenv)
     if isinstance(fn_, str):
         try:
@@ -490,6 +513,10 @@ def cache_file(path, saltenv="base", source_hash=None):
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
 
     result = _client().cache_file(path, saltenv, source_hash=source_hash)
     if not result:
@@ -501,7 +528,7 @@ def cache_file(path, saltenv="base", source_hash=None):
     return result
 
 
-def cache_dest(url, saltenv="base"):
+def cache_dest(url, saltenv=None):
     """
     .. versionadded:: Neon
 
@@ -521,10 +548,14 @@ def cache_dest(url, saltenv="base"):
         salt '*' cp.cache_dest salt://my/file
         salt '*' cp.cache_dest salt://my/file saltenv=dev
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().cache_dest(url, saltenv)
 
 
-def cache_files(paths, saltenv="base"):
+def cache_files(paths, saltenv=None):
     """
     Used to gather many files from the Master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
@@ -560,11 +591,15 @@ def cache_files(paths, saltenv="base"):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().cache_files(paths, saltenv)
 
 
 def cache_dir(
-    path, saltenv="base", include_empty=False, include_pat=None, exclude_pat=None
+    path, saltenv=None, include_empty=False, include_pat=None, exclude_pat=None
 ):
     """
     Download and cache everything under a directory from the master
@@ -597,10 +632,14 @@ def cache_dir(
         salt '*' cp.cache_dir salt://path/to/dir
         salt '*' cp.cache_dir salt://path/to/dir include_pat='E@*.py$'
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().cache_dir(path, saltenv, include_empty, include_pat, exclude_pat)
 
 
-def cache_master(saltenv="base"):
+def cache_master(saltenv=None):
     """
     Retrieve all of the files on the master and cache them locally
 
@@ -610,6 +649,10 @@ def cache_master(saltenv="base"):
 
         salt '*' cp.cache_master
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().cache_master(saltenv)
 
 
@@ -640,7 +683,7 @@ def cache_local_file(path):
     return _client().cache_local_file(path)
 
 
-def list_states(saltenv="base"):
+def list_states(saltenv=None):
     """
     List all of the available state modules in an environment
 
@@ -650,10 +693,14 @@ def list_states(saltenv="base"):
 
         salt '*' cp.list_states
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().list_states(saltenv)
 
 
-def list_master(saltenv="base", prefix=""):
+def list_master(saltenv=None, prefix=""):
     """
     List all of the files stored on the master
 
@@ -663,10 +710,14 @@ def list_master(saltenv="base", prefix=""):
 
         salt '*' cp.list_master
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().file_list(saltenv, prefix)
 
 
-def list_master_dirs(saltenv="base", prefix=""):
+def list_master_dirs(saltenv=None, prefix=""):
     """
     List all of the directories stored on the master
 
@@ -676,10 +727,14 @@ def list_master_dirs(saltenv="base", prefix=""):
 
         salt '*' cp.list_master_dirs
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().dir_list(saltenv, prefix)
 
 
-def list_master_symlinks(saltenv="base", prefix=""):
+def list_master_symlinks(saltenv=None, prefix=""):
     """
     List all of the symlinks stored on the master
 
@@ -689,10 +744,14 @@ def list_master_symlinks(saltenv="base", prefix=""):
 
         salt '*' cp.list_master_symlinks
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().symlink_list(saltenv, prefix)
 
 
-def list_minion(saltenv="base"):
+def list_minion(saltenv=None):
     """
     List all of the files cached on the minion
 
@@ -702,10 +761,14 @@ def list_minion(saltenv="base"):
 
         salt '*' cp.list_minion
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().file_local_list(saltenv)
 
 
-def is_cached(path, saltenv="base"):
+def is_cached(path, saltenv=None):
     """
     Returns the full path to a file if it is cached locally on the minion
     otherwise returns a blank string
@@ -716,10 +779,14 @@ def is_cached(path, saltenv="base"):
 
         salt '*' cp.is_cached salt://path/to/file
     """
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
     return _client().is_cached(path, saltenv)
 
 
-def hash_file(path, saltenv="base"):
+def hash_file(path, saltenv=None):
     """
     Return the hash of a file, to get the hash of a file on the
     salt master file server prepend the path with salt://<file on server>
@@ -734,11 +801,15 @@ def hash_file(path, saltenv="base"):
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
 
     return _client().hash_file(path, saltenv)
 
 
-def stat_file(path, saltenv="base", octal=True):
+def stat_file(path, saltenv=None, octal=True):
     """
     Return the permissions of a file, to get the permissions of a file on the
     salt master file server prepend the path with salt://<file on server>
@@ -753,6 +824,10 @@ def stat_file(path, saltenv="base", octal=True):
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
+    if not saltenv:
+        saltenv = salt.utils.state.get_sls_opts(__opts__, **kwargs).get(
+            "saltenv", "base"
+        )
 
     stat = _client().hash_and_stat_file(path, saltenv)[1]
     if stat is None:
