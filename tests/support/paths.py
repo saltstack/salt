@@ -77,6 +77,7 @@ TMP_MM_SUB_CONF_DIR = TMP_MM_SUB_MINION_CONF_DIR = os.path.join(
     TMP_CONF_DIR, "sub-multimaster"
 )
 TMP_PROXY_CONF_DIR = TMP_CONF_DIR
+TMP_SSH_CONF_DIR = TMP_MINION_CONF_DIR
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, "files", "conf")
 PILLAR_DIR = os.path.join(FILES, "pillar")
 TMP_SCRIPT_DIR = os.path.join(TMP, "scripts")
