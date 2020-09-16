@@ -381,27 +381,27 @@ def create(vm_):
     )
 
     num_cpus = config.get_cloud_config_value(
-        'num_cpus', vm_, __opts__, default=None
+        "num_cpus", vm_, __opts__, default=None
     )
 
     memory = config.get_cloud_config_value(
-        'memory', vm_, __opts__, default=None
+        "memory", vm_, __opts__, default=None
     )
 
     serial = config.get_cloud_config_value(
-        'serial', vm_, __opts__, default=None
+        "serial", vm_, __opts__, default=None
     )
 
     autostart = config.get_cloud_config_value(
-        'autostart', vm_, __opts__, default=False
+        "autostart", vm_, __opts__, default=False
     )
 
     disk_name = config.get_cloud_config_value(
-        'disk_name', vm_, __opts__, default='default'
+        "disk_name", vm_, __opts__, default="default"
     )
 
     devices = config.get_cloud_config_value(
-        'devices', vm_, __opts__, default=None
+        "devices", vm_, __opts__, default=None
     )
 
     key_filename = config.get_cloud_config_value(
@@ -461,13 +461,13 @@ def create(vm_):
 
             # Configure number of CPU
             if num_cpus:
-                vcpu_xml = domain_xml.find('./vcpu')
+                vcpu_xml = domain_xml.find("./vcpu")
                 vcpu_xml.text = str(num_cpus)
                 log.debug("Setting CPU number to: %s", num_cpus)
 
             # Configure serial number
             if serial:
-                entry_xml = domain_xml.find('./sysinfo/system/entry')
+                entry_xml = domain_xml.find("./sysinfo/system/entry")
                 entry_xml.text = str(serial)
                 log.debug("Setting Serial to %s", serial)
 
@@ -483,70 +483,70 @@ def create(vm_):
                     else:
                         err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
                         log.error(err_msg)
-                        return {'Error': err_msg}
+                        return {"Error": err_msg}
                 except (TypeError, ValueError):
                     memory_mb = int(memory)
 
-                memory_xml = domain_xml.find('./memory')
+                memory_xml = domain_xml.find("./memory")
                 memory_xml.text = str(memory_mb)
-                memory_xml.set('unit', 'Mib')
-                currentMemory_xml = domain_xml.find('./currentMemory')
+                memory_xml.set("unit", "Mib")
+                currentMemory_xml = domain_xml.find("./currentMemory")
                 currentMemory_xml.text = str(memory_mb)
-                currentMemory_xml.set('unit', 'Mib')
+                currentMemory_xml.set("unit", "Mib")
                 log.debug("Setting memory to: %s MB", memory_mb)
 
             # Configure network interfaces
-            devices_xml = domain_xml.find('./devices')
-            if 'network' in list(devices.keys()):
+            devices_xml = domain_xml.find("./devices")
+            if "network" in list(devices.keys()):
                 # Remove any existing network interface from cloned domain
-                for iface_xml in devices_xml.findall('./interface'):
+                for iface_xml in devices_xml.findall("./interface"):
                     devices_xml.remove(iface_xml)
 
                 # Add new network interfaces to cloned domain
-                for network in sorted(devices['network']):
-                    # Interface type: should be 'bridge' or 'network' (default)
-                    if 'type' in devices['network'][network]:
-                        type = devices['network'][network]['type']
+                for network in sorted(devices["network"]):
+                    # Interface type: should be "bridge" or "network" (default)
+                    if "type" in devices["network"][network]:
+                        type = devices["network"][network]["type"]
                     else:
-                        type = 'network'
+                        type = "network"
 
                     # Add network interface to new domain
-                    devices_xml.append(ElementTree.Element('interface', type=type))
-                    iface_xml = devices_xml.findall('./interface')[-1]
+                    devices_xml.append(ElementTree.Element("interface", type=type))
+                    iface_xml = devices_xml.findall("./interface")[-1]
 
                     # Interface source: should be either the host bridge name or host network name
-                    # (default network name is 'default')
-                    if 'source' in devices['network'][network]:
-                        source = devices['network'][network]['source']
+                    # (default network name is "default")
+                    if "source" in devices["network"][network]:
+                        source = devices["network"][network]["source"]
                     else:
-                        source = 'default'
+                        source = "default"
 
                     # Associate domain network interface to host networking connection
-                    if type == 'bridge':
-                        iface_xml.append(ElementTree.Element('source', bridge=source))
-                    elif type == 'network':
-                        iface_xml.append(ElementTree.Element('source', network=source))
+                    if type == "bridge":
+                        iface_xml.append(ElementTree.Element("source", bridge=source))
+                    elif type == "network":
+                        iface_xml.append(ElementTree.Element("source", network=source))
 
                     # Define the network interface mac address (optional)
-                    if 'mac' in devices['network'][network]:
-                        mac = devices['network'][network]['mac']
-                        iface_xml.append(ElementTree.Element('mac', address=mac))
+                    if "mac" in devices["network"][network]:
+                        mac = devices["network"][network]["mac"]
+                        iface_xml.append(ElementTree.Element("mac", address=mac))
 
                     # Define the network interface model (optional, default: virtio)
-                    if 'model' in devices['network'][network]:
-                        model = devices['network'][network]['model']
+                    if "model" in devices["network"][network]:
+                        model = devices["network"][network]["model"]
                     else:
-                        model = 'virtio'
-                    iface_xml.append(ElementTree.Element('model', type=devices['network'][network]['model']))
+                        model = "virtio"
+                    iface_xml.append(ElementTree.Element("model", type=devices["network"][network]["model"]))
 
                     log.debug("Adding NIC '%s', type '%s', source '%s', model '%s'", network, type, source, model)
 
             else:
                 # Keep existing network interfaces from domain template, just remove mac address
-                for iface_xml in domain_xml.findall("./devices/interface"):
+                for iface_xml in devices_xml.findall("./interface"):
                     iface_xml.remove(iface_xml.find("./mac"))
 
-            for iface_xml in domain_xml.findall('./devices/interface'):
+            for iface_xml in domain_xml.findall("./devices/interface"):
                 # enable IP learning, this might be a default behaviour...
                 # Don't always enable since it can cause problems through libvirt-4.5
                 if (
@@ -594,10 +594,10 @@ def create(vm_):
                         "Non qemu driver disk encountered bailing out."
                     )
 
-                # Create device target name (e.g. 'mydomain-vda')
-                if disk_name != 'default':
-                    dev = disk.find("./target").attrib['dev']
-                    disk_name = disk_name.replace('{name}', name).replace('{dev}', dev)
+                # Create device target name (e.g. "mydomain-vda")
+                if disk_name != "default":
+                    dev = disk.find("./target").attrib["dev"]
+                    disk_name = disk_name.replace("{name}", name).replace("{dev}", dev)
                     log.info("Cloned disk_name is '%s'", disk_name)
 
                 disk_type = driver.attrib.get("type")
@@ -634,63 +634,63 @@ def create(vm_):
                     )
 
             # Add new disks to domain
-            if 'disk' in list(devices.keys()):
+            if "disk" in list(devices.keys()):
                 # Get list of existing storage pools
                 virt_pools = conn.listAllStoragePools()
 
                 # Add new disk to cloned domain
-                for disk in sorted(devices['disk']):
+                for disk in sorted(devices["disk"]):
                     # bus: should be 'scsi' or 'virtio' (default)
-                    if 'bus' in devices['disk'][disk]:
-                        bus = devices['disk'][disk]['bus']
+                    if "bus" in devices["disk"][disk]:
+                        bus = devices["disk"][disk]["bus"]
                     else:
-                        bus = 'virtio'
+                        bus = "virtio"
 
                     # Passthrough device from hypervisor
-                    if 'device' in devices['disk'][disk]:
-                        device = devices['disk'][disk]['device']
+                    if "device" in devices["disk"][disk]:
+                        device = devices["disk"][disk]["device"]
 
-                        if 'shareable' in devices['disk'][disk]:
-                            shareable = devices['disk'][disk]['shareable']
+                        if "shareable" in devices["disk"][disk]:
+                            shareable = devices["disk"][disk]["shareable"]
                         else:
                             shareable = False
 
                         log.debug("Adding passthrough disk '%s' to domain '%s'", device, name)
-                        devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
-                        disk_xml = devices_xml.findall('./disk')[-1]
-                        disk_xml.append(ElementTree.Element('driver', name='qemu', type='raw'))
-                        disk_xml.append(ElementTree.Element('source', file=device))
-                        disk_xml.append(ElementTree.Element('target', dev=disk, bus=bus))
+                        devices_xml.append(ElementTree.Element("disk", type="file", device="disk"))
+                        disk_xml = devices_xml.findall("./disk")[-1]
+                        disk_xml.append(ElementTree.Element("driver", name="qemu", type="raw"))
+                        disk_xml.append(ElementTree.Element("source", file=device))
+                        disk_xml.append(ElementTree.Element("target", dev=disk, bus=bus))
                         if shareable:
-                            disk_xml.append(ElementTree.Element('shareable'))
+                            disk_xml.append(ElementTree.Element("shareable"))
 
                     else:
                         # format: should be 'raw' or 'qcow2' (default)
-                        if 'format' in devices['disk'][disk]:
-                            format = devices['disk'][disk]['format']
+                        if "format" in devices["disk"][disk]:
+                            format = devices["disk"][disk]["format"]
                         else:
-                            format = 'qcow2'
+                            format = "qcow2"
 
-                        # pool: name of the libvirt pool that will contain the new disk (default is 'default')
-                        if 'pool' in devices['disk'][disk]:
-                            pool_name = devices['disk'][disk]['pool']
+                        # pool: name of the libvirt pool that will contain the new disk (default is "default")
+                        if "pool" in devices["disk"][disk]:
+                            pool_name = devices["disk"][disk]["pool"]
                         else:
                             pool_name = "default"
 
                         # size: should be a size in GB (default: 1 GB)
-                        if 'size' in devices['disk'][disk]:
-                            size = devices['disk'][disk]['size']
+                        if "size" in devices["disk"][disk]:
+                            size = devices["disk"][disk]["size"]
                         else:
                             size = 1
 
                         pool = None
                         for p in virt_pools:
-                            if p.name() == devices['disk'][disk]['pool']:
+                            if p.name() == devices["disk"][disk]["pool"]:
                                 pool = p
 
                         if pool:
                             pool_xml = ElementTree.fromstring(pool.XMLDesc())
-                            pool_target = pool_xml.find('./target/path').text
+                            pool_target = pool_xml.find("./target/path").text
 
                             vol_name = name + "-" + disk + "." + format
                             vol_path = pool_target + "/" + vol_name
@@ -721,11 +721,11 @@ def create(vm_):
                                 vol = pool.createXML(vol_xml, libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA)
 
                             log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
-                            devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
-                            disk_xml = devices_xml.findall('./disk')[-1]
-                            disk_xml.append(ElementTree.Element('driver', cache='none', io='native', name='qemu', type=format))
-                            disk_xml.append(ElementTree.Element('source', file=vol_path))
-                            disk_xml.append(ElementTree.Element('target', dev=disk, bus=bus))
+                            devices_xml.append(ElementTree.Element("disk", type="file", device="disk"))
+                            disk_xml = devices_xml.findall("./disk")[-1]
+                            disk_xml.append(ElementTree.Element("driver", cache="none", io="native", name="qemu", type=format))
+                            disk_xml.append(ElementTree.Element("source", file=vol_path))
+                            disk_xml.append(ElementTree.Element("target", dev=disk, bus=bus))
                             pool.refresh()
 
             clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
