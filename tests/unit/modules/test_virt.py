@@ -1142,6 +1142,63 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual("vdb2", source.attrib["volume"])
         self.assertEqual("raw", disk.find("driver").get("type"))
 
+    def test_get_xml_volume_xen_dir(self):
+        """
+        Test virt._gen_xml generating disks for a Xen hypervisor
+        """
+        self.mock_conn.listStoragePools.return_value = ["default"]
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = "<pool type='dir'/>"
+        volume_xml = "<volume><target><path>/path/to/images/hello_system</path></target></volume>"
+        pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = volume_xml
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+        diskp = virt._disk_profile(
+            self.mock_conn,
+            None,
+            "xen",
+            [{"name": "system", "pool": "default"}],
+            "hello",
+        )
+        xml_data = virt._gen_xml(
+            self.mock_conn, "hello", 1, 512, diskp, [], "xen", "hvm", "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        disk = root.findall(".//disk")[0]
+        self.assertEqual(disk.attrib["type"], "file")
+        self.assertEqual(
+            "/path/to/images/hello_system", disk.find("source").attrib["file"]
+        )
+
+    def test_get_xml_volume_xen_block(self):
+        """
+        Test virt._gen_xml generating disks for a Xen hypervisor
+        """
+        self.mock_conn.listStoragePools.return_value = ["default"]
+        pool_mock = MagicMock()
+        pool_mock.listVolumes.return_value = ["vol01"]
+        volume_xml = "<volume><target><path>/dev/to/vol01</path></target></volume>"
+        pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = volume_xml
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        for pool_type in ["logical", "disk", "iscsi", "scsi"]:
+            pool_mock.XMLDesc.return_value = "<pool type='{}'><source><device path='/dev/sda'/></source></pool>".format(
+                pool_type
+            )
+            diskp = virt._disk_profile(
+                self.mock_conn,
+                None,
+                "xen",
+                [{"name": "system", "pool": "default", "source_file": "vol01"}],
+                "hello",
+            )
+            xml_data = virt._gen_xml(
+                self.mock_conn, "hello", 1, 512, diskp, [], "xen", "hvm", "x86_64",
+            )
+            root = ET.fromstring(xml_data)
+            disk = root.findall(".//disk")[0]
+            self.assertEqual(disk.attrib["type"], "block")
+            self.assertEqual("/dev/to/vol01", disk.find("source").attrib["dev"])
+
     def test_gen_xml_cdrom(self):
         """
         Test virt._gen_xml(), generating a cdrom device (different disk type, no source)
@@ -5528,124 +5585,3 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "vol1.qcow2",
                 "/path/to/file",
             )
-
-    def test_get_disks(self):
-        """
-        Test the virt.get_disks function
-        """
-        # test with volumes
-        vm_def = """<domain type='kvm' id='3'>
-          <name>srv01</name>
-          <devices>
-            <disk type='volume' device='disk'>
-              <driver name='qemu' type='qcow2' cache='none' io='native'/>
-              <source pool='default' volume='srv01_system'/>
-              <backingStore/>
-              <target dev='vda' bus='virtio'/>
-              <alias name='virtio-disk0'/>
-              <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
-            </disk>
-            <disk type='volume' device='disk'>
-              <driver name='qemu' type='qcow2' cache='none' io='native'/>
-              <source pool='default' volume='srv01_data'/>
-              <backingStore type='file' index='1'>
-                <format type='qcow2'/>
-                <source file='/var/lib/libvirt/images/vol01'/>
-                <backingStore/>
-              </backingStore>
-              <target dev='vdb' bus='virtio'/>
-              <alias name='virtio-disk1'/>
-              <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-            </disk>
-            <disk type='volume' device='disk'>
-              <driver name='qemu' type='qcow2' cache='none' io='native'/>
-              <source pool='default' volume='vm05_system'/>
-              <backingStore type='file' index='1'>
-                <format type='qcow2'/>
-                <source file='/var/lib/libvirt/images/vm04_system.qcow2'/>
-                <backingStore type='file' index='2'>
-                  <format type='raw'/>
-                  <source file='/var/testsuite-data/disk-image-template.raw'/>
-                  <backingStore/>
-                </backingStore>
-              </backingStore>
-              <target dev='vdc' bus='virtio'/>
-              <alias name='virtio-disk0'/>
-              <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
-            </disk>
-            <disk type='network' device='cdrom'>
-              <driver name='qemu' type='raw' cache='none' io='native'/>
-              <source protocol='http' name='/pub/iso/myimage.iso' query='foo=bar&amp;baz=flurb' index='1'>
-                <host name='dev-srv.tf.local' port='80'/>
-              </source>
-              <target dev='hda' bus='ide'/>
-              <readonly/>
-              <alias name='ide0-0-0'/>
-              <address type='drive' controller='0' bus='0' target='0' unit='0'/>
-            </disk>
-          </devices>
-        </domain>
-        """
-        self.set_mock_vm("srv01", vm_def)
-
-        pool_mock = MagicMock()
-        pool_mock.storageVolLookupByName.return_value.info.return_value = [
-            0,
-            1234567,
-            12345,
-        ]
-        pool_mock.storageVolLookupByName.return_value.XMLDesc.side_effect = [
-            "<volume />",
-            """
-            <volume>
-              <backingStore>
-                <path>/var/lib/libvirt/images/vol01</path>
-                <format type="qcow2"/>
-              </backingStore>
-            </volume>""",
-        ]
-        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
-
-        self.assertDictEqual(
-            virt.get_disks("srv01"),
-            {
-                "vda": {
-                    "type": "disk",
-                    "file": "default/srv01_system",
-                    "file format": "qcow2",
-                    "disk size": 12345,
-                    "virtual size": 1234567,
-                },
-                "vdb": {
-                    "type": "disk",
-                    "file": "default/srv01_data",
-                    "file format": "qcow2",
-                    "disk size": 12345,
-                    "virtual size": 1234567,
-                    "backing file": {
-                        "file": "/var/lib/libvirt/images/vol01",
-                        "file format": "qcow2",
-                    },
-                },
-                "vdc": {
-                    "type": "disk",
-                    "file": "default/vm05_system",
-                    "file format": "qcow2",
-                    "disk size": 12345,
-                    "virtual size": 1234567,
-                    "backing file": {
-                        "file": "/var/lib/libvirt/images/vm04_system.qcow2",
-                        "file format": "qcow2",
-                        "backing file": {
-                            "file": "/var/testsuite-data/disk-image-template.raw",
-                            "file format": "raw",
-                        },
-                    },
-                },
-                "hda": {
-                    "type": "cdrom",
-                    "file format": "raw",
-                    "file": "http://dev-srv.tf.local:80/pub/iso/myimage.iso?foo=bar&baz=flurb",
-                },
-            },
-        )
