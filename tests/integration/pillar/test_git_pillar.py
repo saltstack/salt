@@ -63,15 +63,12 @@ https://github.com/git/git/commit/6bc0cb5
 https://github.com/unbit/uwsgi/commit/ac1e354
 """
 
-# Import Python libs
-
 import random
 import string
 
-# Import Salt libs
+import pytest
 import salt.utils.path
 import salt.utils.platform
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES as VIRTUALENV_NAMES
 from salt.utils.gitfs import (
     GITPYTHON_MINVER,
@@ -81,13 +78,14 @@ from salt.utils.gitfs import (
     PYGIT2_MINVER,
     PYGIT2_VERSION,
 )
-
-# Import Salt Testing libs
-from tests.support.gitfs import (
+from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
     USERNAME,
     GitPillarHTTPTestBase,
     GitPillarSSHTestBase,
+    ssh_pillar_tests_prep,
+    webserver_pillar_tests_prep,
+    webserver_pillar_tests_prep_authenticated,
 )
 from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
 from tests.support.unit import skipIf
@@ -591,6 +589,7 @@ class GitPythonMixin:
             },
         )
 
+    @slowTest
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -632,6 +631,7 @@ class GitPythonMixin:
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.usefixtures("ssh_pillar_tests_prep")
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication
@@ -648,6 +648,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep")
 class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using unauthenticated HTTP
@@ -659,6 +660,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 @skipIf(not HAS_GITPYTHON, "GitPython >= {} required".format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     """
     Test git_pillar with GitPython using authenticated HTTP
@@ -666,25 +668,6 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
     username = USERNAME
     password = PASSWORD
-
-    @classmethod
-    def setUpClass(cls):
-        """
-        Create start the webserver
-        """
-        super().setUpClass()
-        # Override the URL set up in the parent class to encode the
-        # username/password into it.
-        cls.url = "http://{username}:{password}@127.0.0.1:{port}/repo.git".format(
-            username=cls.username, password=cls.password, port=cls.nginx_port
-        )
-        cls.url_extra_repo = "http://{username}:{password}@127.0.0.1:{port}/extra_repo.git".format(
-            username=cls.username, password=cls.password, port=cls.nginx_port
-        )
-        cls.ext_opts["url"] = cls.url
-        cls.ext_opts["url_extra_repo"] = cls.url_extra_repo
-        cls.ext_opts["username"] = cls.username
-        cls.ext_opts["password"] = cls.password
 
 
 @destructiveTest
@@ -695,6 +678,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     "pygit2 >= {} and libgit2 >= {} required".format(PYGIT2_MINVER, LIBGIT2_MINVER),
 )
 @skipIf(not HAS_SSHD, "sshd not present")
+@pytest.mark.usefixtures("ssh_pillar_tests_prep")
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2051,6 +2035,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -2170,6 +2155,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep")
 class TestPygit2HTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2634,6 +2620,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -2678,6 +2665,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 )
 @skipIf(not HAS_NGINX, "nginx not present")
 @skipIf(not HAS_VIRTUALENV, "virtualenv not present")
+@pytest.mark.usefixtures("webserver_pillar_tests_prep_authenticated")
 class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
@@ -2686,7 +2674,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
     possible) in the TestGitPythonSSH class.
     """
 
-    user = USERNAME
+    username = USERNAME
     password = PASSWORD
 
     @slowTest
@@ -2710,7 +2698,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -2733,7 +2721,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -2766,7 +2754,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -2792,11 +2780,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -2829,7 +2817,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -2855,11 +2843,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -2892,7 +2880,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -2918,11 +2906,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -2955,7 +2943,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -2981,11 +2969,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -3013,7 +3001,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3039,11 +3027,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - dev {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -3074,7 +3062,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3100,7 +3088,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3127,7 +3115,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3154,11 +3142,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
               - git:
                 - master {url}:
                   - root: subdir
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - top_only {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                   - env: base
@@ -3196,7 +3184,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_glob: []
             git_pillar_provider: pygit2
             git_pillar_includes: False
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3222,11 +3210,11 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             ext_pillar:
               - git:
                 - master {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - top_only {url}:
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                   - env: base
@@ -3248,7 +3236,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3257,13 +3245,13 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
               - git:
                 - __env__ {url_extra_repo}:
                   - name: gitinfo
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
                 - __env__ {url}:
                   - name: webinfo
                   - mountpoint: nowhere
-                  - user: {user}
+                  - user: {username}
                   - password: {password}
                   - insecure_auth: True
             """
@@ -3294,7 +3282,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3320,7 +3308,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3358,7 +3346,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3385,6 +3373,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             },
         )
 
+    @slowTest
     def test_fallback(self):
         """
         Test fallback parameter.
@@ -3394,7 +3383,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
