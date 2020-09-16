@@ -256,7 +256,7 @@ def _parse_requirements_file(requirements_file):
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
             line = line.strip()
-            if not line or line.startswith(("#", "-r")):
+            if not line or line.startswith(("#", "-r", "--")):
                 continue
             if IS_WINDOWS_PLATFORM:
                 if "libcloud" in line:
