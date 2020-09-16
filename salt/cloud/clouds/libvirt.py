@@ -593,7 +593,6 @@ def create(vm_):
                     raise SaltCloudExecutionFailure(
                         "Non qemu driver disk encountered bailing out."
                     )
-                disk_type = driver.attrib.get("type")
 
                 # Create device target name (e.g. 'mydomain-vda')
                 if disk_name != 'default':
@@ -601,20 +600,21 @@ def create(vm_):
                     disk_name = disk_name.replace('{name}', name).replace('{dev}', dev)
                     log.info("Cloned disk_name is '%s'", disk_name)
 
+                disk_type = driver.attrib.get("type")
                 log.info("disk attributes %s", disk.attrib)
                 if disk_type == "qcow2":
                     source = disk.find("./source").attrib["file"]
                     pool, volume = find_pool_and_volume(conn, source)
                     if clone_strategy == "quick":
                         new_volume = pool.createXML(
-                            create_volume_with_backing_store_xml(volume, disk_name), 0
+                            create_volume_with_backing_store_xml(volume, disk_name), libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
                         )
                     else:
                         new_volume = pool.createXMLFrom(
-                            create_volume_xml(volume, disk_name), volume, 0
+                            create_volume_xml(volume, disk_name), volume, libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
                         )
-                    pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
+                    pool.refresh()
 
                     disk.find("./source").attrib["file"] = new_volume.path()
                 elif disk_type == "raw":
@@ -624,8 +624,8 @@ def create(vm_):
                     new_volume = pool.createXMLFrom(
                         create_volume_xml(volume, disk_name), volume, 0
                     )
-                    pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
+                    pool.refresh()
 
                     disk.find("./source").attrib["file"] = new_volume.path()
                 else:
@@ -708,6 +708,7 @@ def create(vm_):
                                   <target>
                                     <path>""" + vol_path + """</path>
                                     <format type='""" + format + """'/>
+                                    <compat>1.1</compat>
                                     <permissions>
                                        <owner>107</owner>
                                        <group>107</group>
@@ -716,7 +717,8 @@ def create(vm_):
                                      </permissions>
                                   </target>
                                 </volume>"""
-                                vol = pool.createXML(vol_xml, 0)
+                                log.debug("Creating %s", vol_xml)
+                                vol = pool.createXML(vol_xml, libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA)
 
                             log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
                             devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
@@ -983,11 +985,11 @@ def generate_new_name(orig_name, disk_name):
         return "{}-{}".format(orig_name, uuid.uuid1())
 
     name, ext = orig_name.rsplit(".", 1)
+
     if disk_name == "default":
         return "{}-{}.{}".format(name, uuid.uuid1(), ext)
     else:
         return "{}.{}".format(disk_name, ext)
-
 
 def get_domain_volumes(conn, domain):
     volumes = []
