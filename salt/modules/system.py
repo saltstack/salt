@@ -25,7 +25,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.utils.decorators import depends
 
 __virtualname__ = "system"
 
@@ -662,11 +661,11 @@ def set_reboot_required_witnessed():
         try:
             os.makedirs(dir_path)
         except OSError as ex:
-            raise SaltInvocationError('Error creating {0} (-{1}): {2}'
+            raise SaltInvocationError("Error creating {0} (-{1}): {2}"
                                       .format(dir_path, ex.errno, ex.strerror))
 
-        rdict = __salt__['cmd.run_all']('touch {0}'.format(reboot_flag_file))
-        errcode = rdict['retcode']
+        rdict = __salt__["cmd.run_all"]("touch {0}".format(reboot_flag_file))
+        errcode = rdict["retcode"]
 
     return errcode == 0
 
@@ -687,7 +686,7 @@ def get_reboot_required_witnessed():
     """
     reboot_flag_file = "/tmp/salt/reboot_required"
 
-    if __grains__.get("os_family") == "NILInuxRT":
+    if __grains__.get("os_family") == "NILinuxRT":
         reboot_flag_file = "/var/volatile/tmp/salt/reboot_witnessed"
 
     return os.path.exists(reboot_flag_file)
