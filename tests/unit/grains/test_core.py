@@ -1,23 +1,19 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import platform
 import socket
 import textwrap
 
+# Import Salt Libs
 import salt.grains.core as core
 import salt.modules.cmdmod
 import salt.modules.network
 import salt.modules.smbios
-
-# Import Salt Libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.network
@@ -25,8 +21,7 @@ import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
 
-# Import 3rd-party libs
-from salt.ext import six
+# Import Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -228,10 +223,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         empty_mock = MagicMock(return_value={})
 
         orig_import = __import__
-        if six.PY2:
-            built_in = "__builtin__"
-        else:
-            built_in = "builtins"
+        built_in = "builtins"
 
         def _import_mock(name, *args):
             if name == "lsb_release":
@@ -255,7 +247,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             os.path, "exists", path_exists_mock
         ), patch(
-            "{0}.__import__".format(built_in), side_effect=_import_mock
+            "{}.__import__".format(built_in), side_effect=_import_mock
         ), patch.object(
             os.path, "isfile", path_isfile_mock
         ), patch.object(
@@ -307,10 +299,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         os_release_mock = MagicMock(return_value=_os_release_map)
 
         orig_import = __import__
-        if six.PY2:
-            built_in = "__builtin__"
-        else:
-            built_in = "builtins"
+        built_in = "builtins"
 
         def _import_mock(name, *args):
             if name == "lsb_release":
@@ -335,7 +324,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             os.path, "exists", path_exists_mock
         ), patch(
-            "{0}.__import__".format(built_in), side_effect=_import_mock
+            "{}.__import__".format(built_in), side_effect=_import_mock
         ), patch.object(
             os.path, "isfile", MagicMock(return_value=False)
         ), patch.object(
@@ -375,10 +364,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         os_release_mock = MagicMock(return_value=os_release_data)
 
         orig_import = __import__
-        if six.PY2:
-            built_in = "__builtin__"
-        else:
-            built_in = "builtins"
+        built_in = "builtins"
 
         def _import_mock(name, *args):
             if name == "lsb_release":
@@ -406,7 +392,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             os.path, "exists", path_isfile_mock
         ), patch(
-            "{0}.__import__".format(built_in), side_effect=_import_mock
+            "{}.__import__".format(built_in), side_effect=_import_mock
         ), patch.object(
             os.path, "isfile", path_isfile_mock
         ), patch.object(
@@ -432,18 +418,16 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             k: v
             for k, v in os_grains.items()
             if k
-            in set(
-                [
-                    "os",
-                    "os_family",
-                    "osfullname",
-                    "oscodename",
-                    "osfinger",
-                    "osrelease",
-                    "osrelease_info",
-                    "osmajorrelease",
-                ]
-            )
+            in {
+                "os",
+                "os_family",
+                "osfullname",
+                "oscodename",
+                "osfinger",
+                "osrelease",
+                "osrelease_info",
+                "osmajorrelease",
+            }
         }
         self.assertEqual(grains, expectation)
 
@@ -868,9 +852,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 version,
                 versions[caption],
-                "version: {0}\n"
-                "found: {1}\n"
-                "caption: {2}".format(version, versions[caption], caption),
+                "version: {}\n"
+                "found: {}\n"
+                "caption: {}".format(version, versions[caption], caption),
             )
 
         embedded_versions = {
@@ -1000,7 +984,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     ":/docker/",
                     ":/docker-ce/",
                 ):
-                    cgroup_data = "10:memory{0}a_long_sha256sum".format(cgroup_substr)
+                    cgroup_data = "10:memory{}a_long_sha256sum".format(cgroup_substr)
                     log.debug("Testing Docker cgroup substring '%s'", cgroup_substr)
                     with patch(
                         "salt.utils.files.fopen", mock_open(read_data=cgroup_data)
@@ -1171,8 +1155,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         check if ip address in a list is valid
         """
         for val in value:
-            assert isinstance(val, six.string_types)
-            ip_method = "is_ipv{0}".format(ip_v)
+            assert isinstance(val, str)
+            ip_method = "is_ipv{}".format(ip_v)
             self.assertTrue(getattr(salt.utils.network, ip_method)(val))
 
     def _check_empty(self, key, value, empty):
@@ -1181,10 +1165,10 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         if empty is True and value exists assert error
         """
         if not empty and not value:
-            raise Exception("{0} is empty, expecting a value".format(key))
+            raise Exception("{} is empty, expecting a value".format(key))
         elif empty and value:
             raise Exception(
-                "{0} is suppose to be empty. value: {1} \
+                "{} is suppose to be empty. value: {} \
                             exists".format(
                     key, value
                 )
@@ -1465,7 +1449,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                 "pid": 78,
                                 "retcode": 0,
                                 "stderr": "",
-                                "stdout": "\n\n{0}".format(virt),
+                                "stdout": "\n\n{}".format(virt),
                             }
                         )
                     },
@@ -1595,9 +1579,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             core.__salt__, {"cmd.run": MagicMock(return_value=prtdata)}
         ):
             os_grains = core.os_data()
-        grains = {
-            k: v for k, v in os_grains.items() if k in set(["product", "productname"])
-        }
+        grains = {k: v for k, v in os_grains.items() if k in {"product", "productname"}}
         self.assertEqual(grains, expectation)
 
     @patch("os.path.isfile")
@@ -1708,7 +1690,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not core._DATEUTIL_TZ, "Missing dateutil.tz")
     def test_locale_info_unicode_error_tzname(self):
         # UnicodeDecodeError most have the default string encoding
-        unicode_error = UnicodeDecodeError(str("fake"), b"\x00\x00", 1, 2, str("fake"))
+        unicode_error = UnicodeDecodeError("fake", b"\x00\x00", 1, 2, "fake")
 
         # mock datetime.now().tzname()
         # cant just mock now because it is read only
@@ -2025,7 +2007,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("salt.utils.platform.is_proxy")
     def test__hw_data_linux_unicode_error(self, is_proxy, exists):
         def _fopen(*args):
-            class _File(object):
+            class _File:
                 def __enter__(self):
                     return self
 
@@ -2042,8 +2024,15 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.files.fopen", _fopen):
             self.assertEqual(core._hw_data({"kernel": "Linux"}), {})
 
+    @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
+    def test_kernelparams_return_windows(self):
+        """
+        Should return empty dictionary on Windows
+        """
+        self.assertEqual(core.kernelparams(), {})
+
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
-    def test_kernelparams_return(self):
+    def test_kernelparams_return_linux(self):
         expectations = [
             (
                 "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
@@ -2112,9 +2101,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             for device in devices:
                 ret += textwrap.dedent(
                     """
-                                          Class:	{0}
-                                          Vendor:	{1}
-                                          Device:	{2}
+                                          Class:	{}
+                                          Vendor:	{}
+                                          Device:	{}
                                           SVendor:	Evil Corp.
                                           SDevice:	Graphics XXL
                                           Rev:	c1
