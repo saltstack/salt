@@ -303,7 +303,7 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['Scripts3Dir'])".ToLower())))
 Write-Output " ----------------------------------------------------------------"
 Write-Output " - $script_name :: Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
-Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -U pip setuptools<50.0.0" "python pip"
+Start_Process_and_test_exitcode "cmd" "/c $($ini['Settings']['Python3Dir'])\python.exe -m pip --disable-pip-version-check --no-cache-dir install -U pip `"setuptools<50.0.0`"" "python pip"
 
 
 #==============================================================================
