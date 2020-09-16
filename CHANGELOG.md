@@ -6,6 +6,17 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+Salt 3000.5 (2020-09-16)
+========================
+
+Fixed
+-----
+
+- CVE-2020-16804 - Properly validate eauth credentials and tokens along with
+  their ACLs. Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
 Salt 3000.4 (2020-08-18)
 ========================
 
