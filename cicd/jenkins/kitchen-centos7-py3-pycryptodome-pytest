@@ -1,6 +1,7 @@
 @Library('salt@master-1.7') _
 
 runTestSuite(
+    ami_image_id: 'ami-018072d7ecddbe0b7',
     concurrent_builds: 2,
     distro_name: 'centos',
     distro_version: '7',

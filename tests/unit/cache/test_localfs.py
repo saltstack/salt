@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the localfs cache
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import shutil
@@ -296,3 +294,27 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Now test the return of the contains function when key='key'
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
             self.assertTrue(localfs.contains(bank="bank", key="key", cachedir=tmp_dir))
+
+    def test_mix_of_utf8_and_non_utf8_can_be_round_tripped(self):
+
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+
+        data = {
+            # Any unicode, which ideally is invalid ascii.
+            "unicode": "áéí",
+            # Any bytes so long as they're not valid utf-8
+            "bytes": b"\xfe\x99\x00\xff",
+        }
+        bank = "bank"
+        key = "key"
+
+        self.addCleanup(shutil.rmtree, tmp_dir)
+        with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
+            with patch.dict(
+                localfs.__context__, {"serial": salt.payload.Serial("msgpack")}
+            ):
+                localfs.store(bank, key, data, tmp_dir)
+
+                actual = localfs.fetch(bank, key, tmp_dir)
+
+        self.assertEqual(data, actual)
