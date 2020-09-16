@@ -7,6 +7,18 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3001.3 (2020-09-16)
+========================
+
+Fixed
+-----
+
+- CVE-2020-16804 - Properly validate eauth credentials and tokens along with
+  their ACLs. Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+
 Salt 3001.2 (2020-08-18)
 ========================
 
