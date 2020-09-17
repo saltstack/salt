@@ -3434,8 +3434,13 @@ class SyndicManager(MinionBase):
             future, data = self.pub_futures.get(master, (None, None))
             if future is not None:
                 if not future.done():
-                    continue
-                if future.exception():
+                    if master == master_id:
+                        # Targeted master previous send not done yet, call again later
+                        return False
+                    else:
+                        # Fallback master is busy, try the next one
+                        continue
+                elif future.exception():
                     # Previous execution on this master returned an error
                     log.error(
                         "Unable to call %s on %s, trying another...", func, master
