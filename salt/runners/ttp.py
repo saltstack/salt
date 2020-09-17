@@ -160,7 +160,8 @@ Sample template::
 """
 # Import python libs
 import logging
-import sys, traceback
+import sys
+import traceback
 
 log = logging.getLogger(__name__)
 # Import salt modules
@@ -173,8 +174,11 @@ try:
     from ttp import ttp
 
     HAS_TTP = True
+except ModuleNotFoundError:
+    HAS_TTP = False
 except ImportError:
     HAS_TTP = False
+
 __virtualname__ = "ttp"
 
 
@@ -224,7 +228,7 @@ def _elasticsearch_return(data, **kwargs):
                         post_to_elk(salt.utils.json.dumps(i))
             # handle normal named groups case
             elif isinstance(input_res, dict):
-                post_to_elk(salt.utils.json.dumps(item))
+                post_to_elk(salt.utils.json.dumps(input_res))
     # handle per_template case
     elif isinstance(data, dict):
         post_to_elk(salt.utils.json.dumps(data))
