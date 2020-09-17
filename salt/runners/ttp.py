@@ -167,8 +167,6 @@ import traceback
 from salt.client import LocalClient
 from salt.exceptions import CommandExecutionError
 
-client = LocalClient()
-
 # Import third party modules
 try:
     from ttp import ttp
@@ -180,7 +178,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = "ttp"
-
+log = logging.getLogger(__name__)
+client = LocalClient()
 
 def __virtual__():
     """
