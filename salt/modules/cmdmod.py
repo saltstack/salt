@@ -5,7 +5,6 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 """
 
-# Import python libs
 import base64
 import fnmatch
 import functools
@@ -20,7 +19,6 @@ import tempfile
 import time
 import traceback
 
-# Import salt libs
 import salt.grains.extra
 import salt.utils.args
 import salt.utils.data
@@ -67,7 +65,6 @@ __proxyenabled__ = ["*"]
 # Define the module's virtual name
 __virtualname__ = "cmd"
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 DEFAULT_SHELL = salt.grains.extra.shell()["shell"]
@@ -331,8 +328,8 @@ def _run(
             raise CommandExecutionError(msg)
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
-    elif windows_codepage is not None:
-        salt.utils.win_chcp.chcp(windows_codepage)
+    # elif windows_codepage is not None:
+    #    salt.utils.win_chcp.chcp(windows_codepage)
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
@@ -589,6 +586,8 @@ def _run(
             env.setdefault("LC_MEASUREMENT", "C")
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
+        else:
+            cmd = "chcp {} > nul & {}".format(windows_codepage, cmd)
 
     if clean_env:
         run_env = env
