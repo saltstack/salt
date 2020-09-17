@@ -480,7 +480,7 @@ execution modules
     tomcat
     trafficserver
     travisci
-	ttp
+    ttp
     tuned
     twilio_notify
     udev
