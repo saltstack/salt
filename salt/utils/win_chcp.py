@@ -2,72 +2,133 @@
 Functions for working with the codepage on Windows systems
 """
 
-# Import Python libs
 import logging
 import string
 import subprocess
+from contextlib import contextmanager
+
+from salt.exceptions import CodePageError
 
 log = logging.getLogger(__name__)
 
 
-class CodePageError(Exception):
-    pass
-
-
-def chcp(page_id=None, raise_error=False):
+@contextmanager
+def chcp(page_id, raise_error=False):
     """
     Gets or sets the codepage of the shell.
 
     Args:
 
         page_id (str, int):
-            A number representing the codepage. Default is ``None``
+            A number representing the codepage.
 
         raise_error (bool):
             ``True`` will raise an error if the codepage fails to change.
             ``False`` will suppress the error
 
     Returns:
-        str: A number representing the codepage
+        int: A number representing the codepage
 
     Raises:
         CodePageError: On unsuccessful codepage change
     """
-    # check if codepage needs to change
     if page_id is not None:
-        page_id = str(page_id)
-        current_page = chcp()
-        if current_page == page_id:
-            return current_page
+        if not isinstance(page_id, int):
+            page_id = int(page_id)
     else:
-        page_id = ""
+        page_id = get_page_id(raise_error=raise_error)
 
-    # change or get codepage
+    previous_page_id = get_page_id(raise_error=raise_error)
+
+    if page_id and previous_page_id and page_id != previous_page_id:
+        set_code_page = True
+    else:
+        set_code_page = False
+
     try:
-        chcp_process = subprocess.Popen(
-            "chcp.com {}".format(page_id),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-    except FileNotFoundError:
-        log.error("Code Page was not found!")
-        return ""
+        if set_code_page:
+            set_page_id(page_id, raise_error=raise_error)
 
-    # get codepage id
-    chcp_ret = chcp_process.communicate(timeout=10)[0].decode("ascii", "ignore")
-    chcp_ret = "".join([c for c in chcp_ret if c in string.digits])
+        # Subprocesses started from now will use the set code page id
+        yield
+    finally:
+        if set_code_page:
+            # Reset to the old code page
+            set_page_id(previous_page_id, raise_error=raise_error)
 
-    # check if codepage changed
-    if page_id != "":
-        if page_id != chcp_ret:
-            if raise_error:
-                raise CodePageError()
-            else:
-                log.error("Code page failed to change to %s!", page_id)
 
-    # If nothing returned, return the current codepage
-    if chcp_ret == "":
-        chcp_ret = chcp()
+def get_page_id(raise_error=False):
+    """
+    Get the currently set code page on windows
 
-    log.debug("Code page is %s", chcp_ret)
-    return chcp_ret
+    Args:
+
+        raise_error (bool):
+            ``True`` will raise an error if the codepage fails to change.
+            ``False`` will suppress the error
+
+    Returns:
+        int: A number representing the codepage
+
+    Raises:
+        CodePageError: On unsuccessful codepage change
+    """
+    proc = subprocess.run(
+        "chcp.com",
+        timeout=10,
+        universal_newlines=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode != 0:
+        error = "Failed to get the windows code page: {}".format(proc)
+        if raise_error:
+            raise CodePageError(error)
+        else:
+            log.error(error)
+    else:
+        codepage = "".join([char for char in proc.stdout if char in string.digits])
+        if codepage:
+            return int(codepage)
+    return -1
+
+
+def set_page_id(page_id, raise_error=False):
+    """
+    Set the code page on windows
+
+    Args:
+
+        page_id (str, int):
+            A number representing the codepage.
+
+        raise_error (bool):
+            ``True`` will raise an error if the codepage fails to change.
+            ``False`` will suppress the error
+
+    Returns:
+        int: A number representing the codepage
+
+    Raises:
+        CodePageError: On unsuccessful codepage change
+    """
+    proc = subprocess.run(
+        "chcp.com {}".format(page_id),
+        timeout=10,
+        universal_newlines=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if proc.returncode != 0:
+        error = "Failed to set the windows code page: {}".format(proc)
+        if raise_error:
+            raise CodePageError(error)
+        else:
+            log.error(error)
+    else:
+        codepage = "".join([char for char in proc.stdout if char in string.digits])
+        if codepage:
+            return int(codepage)
+    return -1
