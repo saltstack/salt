@@ -715,7 +715,7 @@ def certificate_managed(
             append_file_contents = __salt__["x509.get_pem_entry"](
                 append_file, pem_type="CERTIFICATE"
             )
-            contents += append_file_contents
+            contents += str(append_file_contents)
         except salt.exceptions.SaltInvocationError as e:
             ret["result"] = False
             ret[
