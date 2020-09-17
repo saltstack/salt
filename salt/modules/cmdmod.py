@@ -33,7 +33,6 @@ import salt.utils.timed_subprocess
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
-import salt.utils.win_chcp
 import salt.utils.win_dacl
 import salt.utils.win_reg
 from salt.exceptions import (
@@ -584,6 +583,9 @@ def _run(
             env.setdefault("LC_MEASUREMENT", "C")
             env.setdefault("LC_IDENTIFICATION", "C")
             env.setdefault("LANGUAGE", "C")
+        else:
+            if python_shell:
+                cmd = "chcp {} > nul & {}".format(windows_codepage, cmd)
 
     if clean_env:
         run_env = env
@@ -667,47 +669,24 @@ def _run(
             raise SaltInvocationError("success_retcodes must be a list of integers")
     if not use_vt:
         # This is where the magic happens
-        if salt.utils.platform.is_windows() and windows_codepage is not None:
-            with salt.util.win_chcp.chcp(windows_codepage):
-                try:
-                    proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
-                except OSError as exc:
-                    msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
-                        cmd if output_loglevel is not None else "REDACTED",
-                        new_kwargs,
-                        exc,
-                    )
-                    raise CommandExecutionError(msg)
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
+        except OSError as exc:
+            msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
+                cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
+            )
+            raise CommandExecutionError(msg)
 
-                try:
-                    proc.run()
-                except TimedProcTimeoutError as exc:
-                    ret["stdout"] = str(exc)
-                    ret["stderr"] = ""
-                    ret["retcode"] = None
-                    ret["pid"] = proc.process.pid
-                    # ok return code for timeouts?
-                    ret["retcode"] = 1
-                    return ret
-        else:
-            try:
-                proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
-            except OSError as exc:
-                msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
-                    cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
-                )
-                raise CommandExecutionError(msg)
-
-            try:
-                proc.run()
-            except TimedProcTimeoutError as exc:
-                ret["stdout"] = str(exc)
-                ret["stderr"] = ""
-                ret["retcode"] = None
-                ret["pid"] = proc.process.pid
-                # ok return code for timeouts?
-                ret["retcode"] = 1
-                return ret
+        try:
+            proc.run()
+        except TimedProcTimeoutError as exc:
+            ret["stdout"] = str(exc)
+            ret["stderr"] = ""
+            ret["retcode"] = None
+            ret["pid"] = proc.process.pid
+            # ok return code for timeouts?
+            ret["retcode"] = 1
+            return ret
 
         if output_loglevel != "quiet" and output_encoding is not None:
             log.debug(
