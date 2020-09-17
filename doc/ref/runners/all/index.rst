@@ -50,6 +50,7 @@ runner modules
     survey
     test
     thin
+	ttp
     vault
     venafiapi
     virt
