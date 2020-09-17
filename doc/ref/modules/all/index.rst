@@ -483,7 +483,7 @@ execution modules
     trafficserver
     transactional_update
     travisci
-	ttp
+    ttp
     tuned
     twilio_notify
     udev
