@@ -14,8 +14,8 @@ of the Salt system each have a respective configuration file. The
     :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. Atomic included configuration files can be placed in 
-``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will 
+by default. Atomic included configuration files can be placed in
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will
 not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
@@ -5079,22 +5079,6 @@ check in with their lists of expected minions before giving up.
 .. code-block:: yaml
 
     syndic_wait: 5
-
-.. conf_master:: syndic_forward_all_events
-
-``syndic_forward_all_events``
------------------------------
-
-.. versionadded:: 2017.7.0
-
-Default: ``False``
-
-Option on multi-syndic or single when connected to multiple masters to be able to
-send events to all connected masters.
-
-.. code-block:: yaml
-
-    syndic_forward_all_events: False
 
 
 .. _peer-publish-settings:

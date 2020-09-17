@@ -627,7 +627,6 @@ VALID_OPTS = immutabletypes.freeze(
         # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
         # order if 'ordered' the configured order will be used.
         "syndic_failover": six.string_types,
-        "syndic_forward_all_events": bool,
         "runner_dirs": list,
         "client_acl_verify": bool,
         "publisher_acl": dict,
@@ -1382,7 +1381,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "preserve_minion_cache": False,
         "syndic_master": "masterofmasters",
         "syndic_failover": "random",
-        "syndic_forward_all_events": False,
         "syndic_log_file": os.path.join(salt.syspaths.LOGS_DIR, "syndic"),
         "syndic_pidfile": os.path.join(salt.syspaths.PIDFILE_DIR, "salt-syndic.pid"),
         "outputter_dirs": [],
