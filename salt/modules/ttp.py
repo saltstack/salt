@@ -155,31 +155,18 @@ Sample template::
 """
 # Import python libs
 import logging
-<<<<<<< HEAD
 import sys
 import traceback
 from salt.exceptions import CommandExecutionError
-=======
-import sys, traceback
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
 
 # Import third party modules
 try:
     from ttp import ttp
 
     HAS_TTP = True
-<<<<<<< HEAD
-except ModuleNotFoundError:
-    HAS_TTP = False
 except ImportError:
     HAS_TTP = False
 
-=======
-except ImportError:
-    HAS_TTP = False
-except ModuleNotFoundError:
-    HAS_TTP = False
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
 log = logging.getLogger(__name__)
 
 __virtualname__ = "ttp"
@@ -230,11 +217,7 @@ def _elasticsearch_return(data, **kwargs):
                         post_to_elk(salt.utils.json.dumps(i))
             # handle normal named groups case
             elif isinstance(input_res, dict):
-<<<<<<< HEAD
                 post_to_elk(salt.utils.json.dumps(input_res))
-=======
-                post_to_elk(salt.utils.json.dumps(item))
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
     # handle per_template case
     elif isinstance(data, dict):
         post_to_elk(salt.utils.json.dumps(data))
@@ -245,11 +228,7 @@ def _elasticsearch_return(data, **kwargs):
 # -----------------------------------------------------------------------------
 
 
-<<<<<<< HEAD
 def _get_text_from_run_result(run_results, function_name=None):
-=======
-def _get_text_from_run_result(run_results, **kwargs):
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
     """
     Helper function to extract text from command run results.
 
@@ -257,10 +236,6 @@ def _get_text_from_run_result(run_results, **kwargs):
     """
     results_data = []
     proxytype = __pillar__.get("proxy", {}).get("proxytype", None)
-<<<<<<< HEAD
-=======
-    function_name = kwargs.get("function_name", None)
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
     if function_name == "net.cli":
         # run_results structure is:
         # {"out": {command1: "result1", command2: "result2"}}
@@ -374,26 +349,16 @@ def run(*args, **kwargs):
         template, saltenv=kwargs.pop("saltenv", "base")
     )
     if not template_text:
-<<<<<<< HEAD
         raise CommandExecutionError("Failed to get TTP template '{}'".format(template))
-=======
-        return "Failed to get TTP template '{}'".format(template)
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
     try:
         parser.add_template(template_text)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
-<<<<<<< HEAD
         raise CommandExecutionError(
             "Failed to load TTP template: {}\n{}".format(
                 template,
                 "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
             )
-=======
-        return "Failed to load TTP template: {}\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
         )
     # get inputs load
     input_load = parser.get_input_load()
@@ -407,15 +372,8 @@ def run(*args, **kwargs):
         output = __salt__[function](*arguments, **function_kwargs)
         default_input_data = _get_text_from_run_result(output, function_name=function)
         for template_name, template_inputs in input_load.items():
-<<<<<<< HEAD
             for i in default_input_data:
                 parser.add_input(data=i, template_name=template_name)
-=======
-            [
-                parser.add_input(data=i, template_name=template_name)
-                for i in default_input_data
-            ]
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
     # run inputs if any
     for template_name, template_inputs in input_load.items():
         for inpt_name, input_params in template_inputs.items():
@@ -437,16 +395,10 @@ def run(*args, **kwargs):
         ret = parser.result(**ttp_res_kwargs)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
-<<<<<<< HEAD
         raise CommandExecutionError(
             "Failed to parse output with TTP template '{}'\n\n{}".format(
                 template,
                 "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
             )
-=======
-        return "Failed to parse output with TTP template '{}'\n\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
->>>>>>> 1d9062141f (Added TTP execution and runner modules.)
         )
     return ret
