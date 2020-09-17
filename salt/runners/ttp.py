@@ -163,11 +163,8 @@ import logging
 import sys
 import traceback
 
-log = logging.getLogger(__name__)
 # Import salt modules
 from salt.client import LocalClient
-
-client = LocalClient()
 
 # Import third party modules
 try:
@@ -180,7 +177,8 @@ except ImportError:
     HAS_TTP = False
 
 __virtualname__ = "ttp"
-
+log = logging.getLogger(__name__)
+client = LocalClient()
 
 def __virtual__():
     """
