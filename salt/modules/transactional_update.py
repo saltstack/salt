@@ -1,8 +1,278 @@
-"""
+"""Transactional update
+====================
+
+.. versionadded: TBD
+
+A transactional system, like `MicroOS`_, can present some challenges
+when the user decided to manage it via Salt.
+
+MicroOS provide a read-only rootfs and a tool,
+``transactional-update``, that takes care of the management of the
+system (updating, upgrading, installation or reboot, among others) in
+an atomic way.
+
+Atomicity is the main feature of MicroOS, and to guarantee this
+property, this model leverages ``snapper``, ``zypper``, ``btrfs`` and
+``overlayfs`` to create snapshots that will be updated independently
+of the currently running system, and that are activated after the
+reboot.  This implies, for example, that some changes made on the
+system are not visible until the next reboot, as those changes are
+living in a different snapshot of the file system.
+
+This model presents a lot of problems with the traditional Salt model,
+where the inspections (like 'is this package installed?') are executed
+in order to determine if a subsequent action is required (like
+'install this package').
+
+Lets consider this use case, to see how it works on a traditional
+system, and in a transactional system:
+
+1) Check if ``apache`` is installed
+
+2) If it is not installed, install it
+
+3) Check that a ``vhost`` is configured for ``apache``
+
+4) Make sure that ``apache2.service`` is enabled
+
+5) If the configuration changes, restart ``apache2.service``
+
+In the traditional system everything will work as expected.  The
+system can see if the package is present or not, install it if it
+isn't, and a re-check will shows that is already present.  The same
+will happen to the configuration file in ``/etc/apache2``, that will
+be available as soon the package gets installed.  Salt can inspect the
+current form of this file, and add the missing bits if required.  Salt
+can annotate that a change is present, and restart the service.
+
+In a transactional system we will have multiple issues.  The first one
+is that Salt can only see the content of the snapshot where the system
+booted from.  Later snapshots may contain different content, including
+the presence of ``apache``.  If Salt decides to install ``apache``
+calling ``zypper``, it will fail, as this will try to write into the
+read-only rootfs.  Even if Salt would call ``transactional-update pkg
+install``, the package would only be present in the new transaction
+(snapshot), and will not be found in the currently running system when
+later Salt tries to validate the presence of the package in the
+current one.
+
+Any change in ``/etc`` alone will have also problems, as the changes
+will be alive in a different overlay, only visible after the reboot.
+And, finally, the service can only be enabled and restarted if the
+service file is already present in the current ``/etc``.
+
+
+General strategy
+----------------
+
+``transactional-update`` is the reference tool used for the
+administration of transactional systems.  Newer versions of this tool
+support the execution of random commands in the new transaction, the
+continuation of a transaction, the automatic detection of changes in
+new transactions and the merge of ``/etc`` overlays.
+
+Continue a transaction
+......................
+
+One prerequisite already present is the support for branching from a
+different snapshot than the current one in snapper.
+
+With this feature we can represent in ``transactional-update`` the
+action of creating a transaction snapshot based on one that is planned
+to be the active one after the reboot.  This feature removes a lot of
+user complains (like, for example, losing changes that are stored in a
+transaction not yet activated), but also provide a more simple model
+to work with.
+
+So, for example, if the user have this scenario::
+
+      +-----+  *=====*  +--V--+
+    --| T.1 |--| T.2 |--| T.3 |
+      +-----+  *=====*  +--A--+
+
+where T.2 is the current active one, and T.3 is an snapshot generated
+from T.2 with a new package (``apache2``), and is marked to be the
+active after the reboot.
+
+Previously, if the user (that is still on T.2) created a new
+transaction, maybe for adding a new package (``tomcat``, for example),
+the new T.4 will be based on the content of T.2 again, and not T.3, so
+the new T.4 will have lost the changes of T.3 (i.e. `apache2` will not
+be present in T.4).
+
+With the ``--continue`` parameter, ``transactional-update`` will
+create T.4 based on T.3, and nothing will be lost.
+
+Command execution inside a new transaction
+..........................................
+
+With ``transactional-update run`` we will create a new transaction
+based on the current one (T.2), where we can send interactive commands
+that can modify the new transaction, and as commented, with
+``transactional-update --continue run``, we will create a new
+transaction based on the last created (T.3)
+
+The ``run`` command can execute any application inside the new
+transaction namespace.  This module uses this feature to execute the
+different Salt execution modules, via ``call()``. Or even the full
+``salt-thin`` or ``salt-call`` via ``sls()``, ``apply()``,
+``single()`` or ``highstate``.
+
+``transactional-update`` will drop empty snapshots
+..................................................
+
+The option ``--drop-if-no-change`` is used to detect whether there is
+any change in the file system on the read-only subvolume of the new
+transaction will be added.  If a change is present, the new
+transaction will remain, if not it will be discarded.
+
+For example::
+
+  transactional-update --continue --drop-if-no-change run zypper in apache2"
+
+If we are in the scenario described before, ``apache2`` is already
+present in T.3.  In this case a new transaction, T.4, will be created
+based on T.3, ``zypper`` will detect that the package is already
+present and no change will be produced on T.4.  At the end of the
+execution, ``transactional-update`` will validate that T.3 and T.4 are
+equivalent and T.4 will be discarded.
+
+If the command is::
+
+  transactional-update --continue --drop-if-no-change run zypper in tomcat
+
+the new T.4 will be indeed different from T.3, and will remain after
+the transaction is closed.
+
+With this feature, every time that we call any function of this
+execution module, we will minimize the amount of transaction, while
+maintaining the idempotence so some operations.
+
+Report for pending transaction
+..............................
+
+A change in the system will create a new transaction, that needs to be
+activated via a reboot.  With ``pending_transaction()`` we can check
+if a reboot is needed.  We can execute the reboot using the
+``reboot()`` function, that will follow the plan established by the
+functions of the ``rebootmgr`` execution module.
+
+``/etc`` overlay merge when no new transaction is created
+.........................................................
+
+In a transactional model, ``/etc`` is an overlay file system.  Changes
+done during the update are only present in the new transaction, and so
+will only be available after the reboot.  Or worse, if the transaction
+gets dropped, because there is no change in the ``rootfs``, the
+changes in ``/etc`` will be dropped too!.  This is designed like that
+in order to make the configuration files for the new package available
+only when new package is also available to the user.  So, after the
+reboot.
+
+This makes sense for the case when, for example, ``apache2`` is not
+present in the current transaction, but we installed it.  The new
+snapshot contains the ``apache2`` service, and the configuration files
+in ``/etc`` will be accessible only after the reboot.
+
+But this model presents an issue.  If we use ``transactional-update
+--continue --drop-if-no-change run <command>``, where ``<command>``
+does not make any change in the read-only subvolume, but only in
+``/etc`` (which is also read-write in the running system), the new
+overlay with the changes in ``/etc`` will be dropped together with the
+transaction.
+
+To fix this, ``transactional-update`` will detect that when no change
+has been made on the read-only subvolume, but done in the overlay, the
+transaction will be dropped and the changes in the overlay will be
+merged back into ``/etc`` overlay of the current transaction.
+
+
+Using the execution module
+--------------------------
+
+With this module we can create states that leverage Salt into this
+kind of systems::
+
+  # Install apache (low-level API)
+  salt-call transactional_update.pkg_install apache2
+
+  # We can call any execution module
+  salt-call transactional_update.call pkg.install apache2
+
+  # Or via a state
+  salt-call transactional_update.single pkg.installed name=apache2
+
+  # We can also execute a zypper directly
+  salt-call transactional_update run "zypper in apache2" snapshot="continue"
+
+  # We can reuse SLS states
+  salt-call transactional_update.apply install_and_configure_apache
+
+  # Or apply the full highstate
+  salt-call transactional_update.highstate
+
+  # Is there any change done in the system?
+  salt-call transactional_update pending_transaction
+
+  # If so, reboot via rebootmgr
+  salt-call transactional_update reboot
+
+  # We can enable the service
+  salt-call service.enable apache2
+
+  # If apache2 is available, this will work too
+  salt-call service.restart apache2
+
+
+Fixing some expectations
+------------------------
+
+This module alone is an improvement over the current state, but is
+easy to see some limitations and problems:
+
+Is not a fully transparent approach
+...................................
+
+The user needs to know if the system is transactional or not, as not
+everything can be expressed inside a transaction (for example,
+restarting a service inside transaction is not allowed).
+
+Two step for service restart
+............................
+
+In the ``apache2` example from the beginning we can observe the
+biggest drawback.  If the package ``apache2`` is missing, the new
+module will create a new transaction, will execute ``pkg.install``
+inside the transaction (creating the salt-thin, moving it inside and
+delegating the execution to `transactional-update` CLI as part of the
+full state).  Inside the transaction we can do too the required
+changes in ``/etc`` for adding the new ``vhost``, and we can enable the
+service via systemctl inside the same transaction.
+
+At this point we will not merge the ``/etc`` overlay into the current
+one, and we expect from the user call the ``reboot`` function inside
+this module, in order to activate the new transaction and start the
+``apache2`` service.
+
+In the case that the package is already there, but the configuration
+for the ``vhost`` is required, the new transaction will be dropped and
+the ``/etc`` overlay will be visible in the live system.  Then from
+outside the transaction, via a different call to Salt, we can command
+a restart of the ``apache2`` service.
+
+We can see that in both cases we break the user expectation, where a
+change on the configuration will trigger automatically the restart of
+the associated service.  In a transactional scenario we need two
+different steps: or a reboot, or a restart from outside of the
+transaction.
+
+.. _MicroOS: https://microos.opensuse.org/
+
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
 :platform:      Linux
+
 """
 
 import copy
@@ -19,23 +289,6 @@ import salt.utils.args
 __func_alias__ = {"apply_": "apply"}
 
 log = logging.getLogger(__name__)
-
-# Define not exported variables from Salt, so this can be imported as
-# a normal module
-try:
-    __context__
-    __grains__
-    __opts__
-    __pillar__
-    __salt__
-    __utils__
-except NameError:
-    __context__ = {}
-    __grains__ = {}
-    __opts__ = {}
-    __pillar__ = {}
-    __salt__ = {}
-    __utils__ = {}
 
 
 def __virtual__():
