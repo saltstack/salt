@@ -3,13 +3,30 @@ Functions for working with the codepage on Windows systems
 """
 
 import logging
-import string
-import subprocess
 from contextlib import contextmanager
 
 from salt.exceptions import CodePageError
 
 log = logging.getLogger(__name__)
+
+try:
+    import pywintypes
+    import win32console
+
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
+
+# Although utils are often directly imported, it is also possible to use the loader.
+def __virtual__():
+    """
+    Only load if Win32 Libraries are installed
+    """
+    if not HAS_WIN32:
+        return False, "This utility requires pywin32"
+
+    return "win_chcp"
 
 
 @contextmanager
@@ -32,11 +49,15 @@ def chcp(page_id, raise_error=False):
     Raises:
         CodePageError: On unsuccessful codepage change
     """
-    if page_id is not None:
-        if not isinstance(page_id, int):
+    if not isinstance(page_id, int):
+        try:
             page_id = int(page_id)
-    else:
-        page_id = get_page_id(raise_error=raise_error)
+        except ValueError:
+            error = "The `page_id` needs to be an integer, not {}".format(type(page_id))
+            if raise_error:
+                raise CodePageError(error)
+            log.error(error)
+            return -1
 
     previous_page_id = get_page_id(raise_error=raise_error)
 
@@ -73,25 +94,16 @@ def get_page_id(raise_error=False):
     Raises:
         CodePageError: On unsuccessful codepage change
     """
-    proc = subprocess.run(
-        "chcp.com",
-        timeout=10,
-        universal_newlines=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if proc.returncode != 0:
-        error = "Failed to get the windows code page: {}".format(proc)
+    try:
+        return win32console.GetConsoleCP()
+    except pywintypes.error as exc:
+        _, _, msg = exc.args
+        error = "Failed to get the windows code page: {}".format(msg)
         if raise_error:
             raise CodePageError(error)
         else:
             log.error(error)
-    else:
-        codepage = "".join([char for char in proc.stdout if char in string.digits])
-        if codepage:
-            return int(codepage)
-    return -1
+        return -1
 
 
 def set_page_id(page_id, raise_error=False):
@@ -113,22 +125,23 @@ def set_page_id(page_id, raise_error=False):
     Raises:
         CodePageError: On unsuccessful codepage change
     """
-    proc = subprocess.run(
-        "chcp.com {}".format(page_id),
-        timeout=10,
-        universal_newlines=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if proc.returncode != 0:
-        error = "Failed to set the windows code page: {}".format(proc)
+    if not isinstance(page_id, int):
+        try:
+            page_id = int(page_id)
+        except ValueError:
+            error = "The `page_id` needs to be an integer, not {}".format(type(page_id))
+            if raise_error:
+                raise CodePageError(error)
+            log.error(error)
+            return -1
+    try:
+        win32console.SetConsoleCP(page_id)
+        return get_page_id(raise_error=raise_error)
+    except pywintypes.error as exc:
+        _, _, msg = exc.args
+        error = "Failed to set the windows code page: {}".format(msg)
         if raise_error:
             raise CodePageError(error)
         else:
             log.error(error)
-    else:
-        codepage = "".join([char for char in proc.stdout if char in string.digits])
-        if codepage:
-            return int(codepage)
-    return -1
+        return -1

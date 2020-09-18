@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -141,10 +139,17 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch("salt.modules.cmdmod._is_valid_shell", MagicMock(return_value=True)):
             with patch("salt.utils.platform.is_windows", MagicMock(return_value=True)):
-                with patch.dict(cmdmod.__grains__, {"os": "fake_os"}):
-                    self.assertRaises(
-                        CommandExecutionError, cmdmod._run, "foo", "bar", runas="baz"
-                    )
+                with patch(
+                    "salt.utils.win_chcp.get_page_id", MagicMock(return_value=65001)
+                ):
+                    with patch.dict(cmdmod.__grains__, {"os": "fake_os"}):
+                        self.assertRaises(
+                            CommandExecutionError,
+                            cmdmod._run,
+                            "foo",
+                            "bar",
+                            runas="baz",
+                        )
 
     def test_run_user_not_available(self):
         """
@@ -358,7 +363,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         when bash is the default shell for the selected user
         """
 
-        class _CommandHandler(object):
+        class _CommandHandler:
             """
             Class for capturing cmd
             """
