@@ -1,6 +1,7 @@
 @Library('salt@master-1.7') _
 
 runTestSuite(
+    ami_image_id: 'ami-0acded867073c36c3',
     concurrent_builds: 1,
     distro_name: 'windows',
     distro_version: '2016',
