@@ -441,7 +441,7 @@ have been improved, enhanced and widenened in scope:
   the process. In 2017.7.0 we have introduced the functionality to re-establish
   the connection. One can disable this feature through the
   :conf_proxy:`proxy_keep_alive` option and adjust the polling frequency
-  speciying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
+  specifying a custom value for :conf_proxy:`proxy_keep_alive_interval`,
   in minutes.
 
 New modules:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for git execution module
 
@@ -7,11 +6,10 @@ destructive as a result. If no values are set for user.name or user.email in
 the user's global .gitconfig, then these tests will set one.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-import errno
 import logging
 import os
+import pathlib
 import re
 import shutil
 import subprocess
@@ -23,10 +21,9 @@ import pytest
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform
-from salt.ext import six
 from salt.utils.versions import LooseVersion
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing, slowTest
+from tests.support.helpers import change_cwd, skip_if_binaries_missing, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -48,8 +45,7 @@ def _git_version():
         log.debug("Git not installed")
         return False
     git_version = git_version.strip().split()[-1]
-    if six.PY3:
-        git_version = git_version.decode(__salt_system_encoding__)
+    git_version = git_version.decode(__salt_system_encoding__)
     log.debug("Detected git version: %s", git_version)
     return LooseVersion(git_version)
 
@@ -64,86 +60,76 @@ def _worktrees_supported():
         return False
 
 
-def _makedirs(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:
-        # Don't raise an exception if the directory exists
-        if exc.errno != errno.EEXIST:
-            raise
-
-
 @skip_if_binaries_missing("git")
 @pytest.mark.windows_whitelisted
 class GitModuleTest(ModuleCase):
     def setUp(self):
-        super(GitModuleTest, self).setUp()
-        self.orig_cwd = os.getcwd()
-        self.addCleanup(os.chdir, self.orig_cwd)
+        super().setUp()
         self.repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
+        self.addCleanup(delattr, self, "repo")
         self.files = ("foo", "bar", "baz", "питон")
+        self.addCleanup(delattr, self, "files")
         self.dirs = ("", "qux")
+        self.addCleanup(delattr, self, "dirs")
         self.branches = ("master", "iamanewbranch")
+        self.addCleanup(delattr, self, "branches")
         self.tags = ("git_testing",)
+        self.addCleanup(delattr, self, "tags")
         for dirname in self.dirs:
-            dir_path = os.path.join(self.repo, dirname)
-            _makedirs(dir_path)
+            dir_path = pathlib.Path(self.repo) / dirname
+            dir_path.mkdir(parents=True, exist_ok=True)
             for filename in self.files:
-                with salt.utils.files.fopen(
-                    os.path.join(dir_path, filename), "wb"
-                ) as fp_:
+                with salt.utils.files.fopen(str(dir_path / filename), "wb") as fp_:
                     fp_.write(
-                        "This is a test file named {0}.".format(filename).encode(
-                            "utf-8"
-                        )
+                        "This is a test file named {}.".format(filename).encode("utf-8")
                     )
         # Navigate to the root of the repo to init, stage, and commit
-        os.chdir(self.repo)
-        # Initialize a new git repository
-        subprocess.check_call(["git", "init", "--quiet", self.repo])
+        with change_cwd(self.repo):
+            # Initialize a new git repository
+            subprocess.check_call(["git", "init", "--quiet", self.repo])
 
-        # Set user.name and user.email config attributes if not present
-        for key, value in (
-            ("user.name", "Jenkins"),
-            ("user.email", "qa@saltstack.com"),
-        ):
-            # Check if key is missing
-            keycheck = subprocess.Popen(
-                ["git", "config", "--get", "--global", key],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+            # Set user.name and user.email config attributes if not present
+            for key, value in (
+                ("user.name", "Jenkins"),
+                ("user.email", "qa@saltstack.com"),
+            ):
+                # Check if key is missing
+                keycheck = subprocess.Popen(
+                    ["git", "config", "--get", "--global", key],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                if keycheck.wait() != 0:
+                    # Set the key if it is not present
+                    subprocess.check_call(["git", "config", "--global", key, value])
+
+            subprocess.check_call(["git", "add", "."])
+            subprocess.check_call(
+                ["git", "commit", "--quiet", "--message", "Initial commit"]
             )
-            if keycheck.wait() != 0:
-                # Set the key if it is not present
-                subprocess.check_call(["git", "config", "--global", key, value])
-
-        subprocess.check_call(["git", "add", "."])
-        subprocess.check_call(
-            ["git", "commit", "--quiet", "--message", "Initial commit"]
-        )
-        # Add a tag
-        subprocess.check_call(["git", "tag", "-a", self.tags[0], "-m", "Add tag"])
-        # Checkout a second branch
-        subprocess.check_call(["git", "checkout", "--quiet", "-b", self.branches[1]])
-        # Add a line to the file
-        with salt.utils.files.fopen(self.files[0], "a") as fp_:
-            fp_.write(salt.utils.stringutils.to_str("Added a line\n"))
-        # Commit the updated file
-        subprocess.check_call(
-            [
-                "git",
-                "commit",
-                "--quiet",
-                "--message",
-                "Added a line to " + self.files[0],
-                self.files[0],
-            ]
-        )
-        # Switch back to master
-        subprocess.check_call(["git", "checkout", "--quiet", "master"])
-        # Go back to original cwd
-        os.chdir(self.orig_cwd)
+            # Add a tag
+            subprocess.check_call(["git", "tag", "-a", self.tags[0], "-m", "Add tag"])
+            # Checkout a second branch
+            subprocess.check_call(
+                ["git", "checkout", "--quiet", "-b", self.branches[1]]
+            )
+            # Add a line to the file
+            with salt.utils.files.fopen(self.files[0], "a") as fp_:
+                fp_.write(salt.utils.stringutils.to_str("Added a line\n"))
+            # Commit the updated file
+            subprocess.check_call(
+                [
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "--message",
+                    "Added a line to " + self.files[0],
+                    self.files[0],
+                ]
+            )
+            # Switch back to master
+            subprocess.check_call(["git", "checkout", "--quiet", "master"])
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """
@@ -151,14 +137,7 @@ class GitModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(GitModuleTest, self).run_function(*args, **kwargs)
-        )
-
-    def tearDown(self):
-        for key in ("orig_cwd", "repo", "files", "dirs", "branches", "tags"):
-            delattr(self, key)
-        super(GitModuleTest, self).tearDown()
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
     @slowTest
     def test_add_dir(self):
@@ -167,19 +146,19 @@ class GitModuleTest(ModuleCase):
         """
         newdir = "quux"
         # Change to the repo dir
-        newdir_path = os.path.join(self.repo, newdir)
-        _makedirs(newdir_path)
-        files = [os.path.join(newdir_path, x) for x in self.files]
+        newdir_path = pathlib.Path(self.repo) / newdir
+        newdir_path.mkdir(parents=True, exist_ok=True)
+        files = [str(newdir_path / x) for x in self.files]
         files_relpath = [os.path.join(newdir, x) for x in self.files]
         for path in files:
             with salt.utils.files.fopen(path, "wb") as fp_:
                 fp_.write(
-                    "This is a test file with relative path {0}.\n".format(path).encode(
+                    "This is a test file with relative path {}.\n".format(path).encode(
                         "utf-8"
                     )
                 )
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{0}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted(["add '{}'".format(x) for x in files_relpath]))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
@@ -194,11 +173,11 @@ class GitModuleTest(ModuleCase):
         with salt.utils.files.fopen(file_path, "w") as fp_:
             fp_.write(
                 salt.utils.stringutils.to_str(
-                    "This is a test file named {0}.\n".format(filename)
+                    "This is a test file named {}.\n".format(filename)
                 )
             )
         ret = self.run_function("git.add", [self.repo, filename])
-        self.assertEqual(ret, "add '{0}'".format(filename))
+        self.assertEqual(ret, "add '{}'".format(filename))
 
     @slowTest
     def test_archive(self):
@@ -603,9 +582,7 @@ class GitModuleTest(ModuleCase):
         else:
             self.assertEqual(
                 self.run_function("git.init", [new_repo]).lower(),
-                "Initialized empty Git repository in {0}/.git/".format(
-                    new_repo
-                ).lower(),
+                "Initialized empty Git repository in {}/.git/".format(new_repo).lower(),
             )
 
         shutil.rmtree(new_repo)
@@ -859,7 +836,7 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {0}.".format(filename)
+                        "This is a new file named {}.".format(filename)
                     )
                 )
             # Stage the new file so it shows up as a 'new' file
@@ -872,7 +849,7 @@ class GitModuleTest(ModuleCase):
             with salt.utils.files.fopen(os.path.join(self.repo, filename), "w") as fp_:
                 fp_.write(
                     salt.utils.stringutils.to_str(
-                        "This is a new file named {0}.".format(filename)
+                        "This is a new file named {}.".format(filename)
                     )
                 )
         self.assertEqual(self.run_function("git.status", [self.repo]), changes)
@@ -936,7 +913,7 @@ class GitModuleTest(ModuleCase):
         self.assertTrue(self.run_function("git.worktree_rm", [worktree_path]))
         # Prune the worktrees
         prune_message = (
-            "Removing worktrees/{0}: gitdir file points to non-existent "
+            "Removing worktrees/{}: gitdir file points to non-existent "
             "location".format(worktree_basename)
         )
         # Test dry run output. It should match the same output we get when we
