@@ -19,7 +19,6 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.transport.client
-import salt.transport.zeromq
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
@@ -317,6 +316,8 @@ class BaseCaller:
 
             return ret
         finally:
+            import salt.transport.zeromq
+
             salt.transport.zeromq.AsyncZeroMQReqChannel.force_close_all_instances()
 
 
