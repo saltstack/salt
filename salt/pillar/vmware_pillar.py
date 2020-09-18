@@ -329,10 +329,11 @@ def ext_pillar(minion_id, pillar, **kwargs):  # pylint: disable=W0613
     if "property_types" in kwargs:
         for prop_type in kwargs["property_types"]:
             if isinstance(prop_type, dict):
-                property_types.append(getattr(vim, prop_type.keys()[0]))
-                if isinstance(prop_type[prop_type.keys()[0]], list):
+                next_prop_type_key = next(iter(prop_type))
+                property_types.append(getattr(vim, next_prop_type_key))
+                if isinstance(prop_type[next_prop_type_key], list):
                     pillar_attributes = (
-                        pillar_attributes + prop_type[prop_type.keys()[0]]
+                        pillar_attributes + prop_type[next_prop_type_key]
                     )
                 else:
                     log.warning(

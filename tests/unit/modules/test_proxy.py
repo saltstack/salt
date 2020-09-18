@@ -67,7 +67,7 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_http_proxy_macos_none(self):
         """
-            Test to make sure that we correctly return when theres no proxy set
+            Test to make sure that we correctly return when there's no proxy set
         """
         mock = MagicMock(
             return_value="Enabled: No\nServer:\nPort: 0\nAuthenticated Proxy Enabled: 0"

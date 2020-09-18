@@ -44,7 +44,7 @@ be passed as an argument to the pylint_ program as follows:
     to submit changes. The ``.pylintrc`` file can be used for linting, but the
     ``testing.pylintrc`` is the source of truth when submitting pull requests.
 
-.. _pylint: http://www.pylint.org
+.. _pylint: https://www.pylint.org/
 .. _saltpylint: https://github.com/saltstack/salt-pylint
 
 Variables
@@ -68,8 +68,8 @@ All strings which require formatting should use the `.format` string method:
 
 .. code-block:: python
 
-    data = 'some text'
-    more = '{0} and then some'.format(data)
+    data = "some text"
+    more = "{0} and then some".format(data)
 
 Make sure to use indices or identifiers in the format brackets, since empty
 brackets are not supported by python 2.6.
@@ -84,15 +84,15 @@ When adding a new function or state, where possible try to use a
 
 .. code-block:: python
 
-    def new_func(msg=''):
-        '''
+    def new_func(msg=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
 
         msg : None
             The string to be printed.
-        '''
+        """
         print(msg)
 
 If you are uncertain what version should be used, either consult a core
@@ -109,8 +109,8 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
 
 .. code-block:: python
 
-    def new_func(msg='', signature=''):
-        '''
+    def new_func(msg="", signature=""):
+        """
         .. versionadded:: 0.16.0
 
         Prints what was passed to the function.
@@ -123,9 +123,9 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
         signature : None
             An optional signature.
 
-        .. versionadded 0.17.0
-        '''
-        print('Greetings! {0}\n\n{1}'.format(msg, signature))
+        .. versionadded:: 0.17.0
+        """
+        print("Greetings! {0}\n\n{1}".format(msg, signature))
 
 
 Dictionaries
@@ -135,7 +135,7 @@ Dictionaries should be initialized using `{}` instead of `dict()`.
 
 See here_ for an in-depth discussion of this topic.
 
-.. _here: http://doughellmann.com/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2.html
+.. _here: https://doughellmann.com/blog/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2/
 
 
 Imports
@@ -154,8 +154,9 @@ To say this more directly with an example, this is `GOOD`:
 
     import os
 
+
     def minion_path():
-        path = os.path.join(self.opts['cachedir'], 'minions')
+        path = os.path.join(self.opts["cachedir"], "minions")
         return path
 
 This on the other hand is `DISCOURAGED`:
@@ -164,8 +165,9 @@ This on the other hand is `DISCOURAGED`:
 
     from os.path import join
 
+
     def minion_path():
-        path = join(self.opts['cachedir'], 'minions')
+        path = join(self.opts["cachedir"], "minions")
         return path
 
 The time when this is changed is for importing exceptions, generally directly
@@ -203,7 +205,7 @@ avoided.
     any custom states or modules. However, the practice of avoiding absolute
     imports still applies to all other cases as to avoid a name conflict.
 
-.. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
+.. _`absolute imports`: https://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
 
 
 Code Churn
@@ -214,7 +216,7 @@ PEP 8. Code churn is a leading source of bugs and is **strongly discouraged**.
 While style fixes are encouraged they should be isolated to a single file per
 commit, and the changes should be legitimate, if there are any questions about
 whether a style change is legitimate please reference this document and the
-official PEP 8 (http://legacy.python.org/dev/peps/pep-0008/) document before
+official PEP 8 (https://legacy.python.org/dev/peps/pep-0008/) document before
 changing code. Many claims that a change is PEP 8 have been invalid, please
 double check before committing fixes.
 

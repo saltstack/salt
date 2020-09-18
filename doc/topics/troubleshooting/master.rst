@@ -19,7 +19,7 @@ Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
 `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
-.. _`monit`: http://mmonit.com/monit/
+.. _`monit`: https://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
 .. _`supervisord`: http://supervisord.org/
 
@@ -38,7 +38,7 @@ check that no additional access control system such as `SELinux`_ or
 `AppArmor`_ is blocking Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
+.. _`AppArmor`: https://gitlab.com/apparmor/apparmor/-/wikis/home
 
 Too many open files
 ===================

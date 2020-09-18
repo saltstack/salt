@@ -1,17 +1,29 @@
-# -*- coding: utf-8 -*-
-
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 # Import Salt Libs
 import salt.utils.platform
-import salt.utils.win_system as win_system
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
+
+try:
+    import salt.utils.win_system as win_system
+except Exception as exc:  # pylint: disable=broad-except
+    win_system = exc
+
+
+class WinSystemImportTestCase(TestCase):
+    """
+    Simply importing should not raise an error, especially on Linux
+    """
+
+    def test_import(self):
+        if isinstance(win_system, Exception):
+            raise Exception(
+                "Importing win_system caused traceback: {}".format(win_system)
+            )
 
 
 @skipIf(not salt.utils.platform.is_windows(), "Only test on Windows systems")
@@ -194,15 +206,6 @@ class WinSystemTestCase(TestCase):
         If the PostRebootReporting key exists, should return True
         """
         with patch("salt.utils.win_reg.key_exists", side_effect=[False, True]):
-            self.assertTrue(win_system.get_pending_update())
-
-    def test_get_pending_update_true_3(self):
-        """
-        If the Pending key contains subkeys, should return True
-        """
-        with patch("salt.utils.win_reg.key_exists", side_effect=[False, False]), patch(
-            "salt.utils.win_reg.list_keys", return_value=["subkey"]
-        ):
             self.assertTrue(win_system.get_pending_update())
 
     def test_get_reboot_required_witnessed_false_1(self):

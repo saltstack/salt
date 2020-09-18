@@ -4,7 +4,7 @@
 @echo.
 
 :: Get Passed Parameters
-@echo %0 :: Get Passed Parameters...
+@echo Get Passed Parameters...
 @echo ---------------------------------------------------------------------
 Set "Version="
 Set "Python="
@@ -34,16 +34,17 @@ if "%Version%"=="" (
     for /f "delims=" %%a in ('git describe') do @set "Version=%%a"
 )
 
-:: If Python not defined, Assume Python 2
+:: If Python not defined, Assume Python 3
 if "%Python%"=="" (
-    set Python=2
+    set Python=3
 )
 
-:: Verify valid Python value (2 or 3)
+:: Verify valid Python value (3)
+:: We may need to add Python 4 in the future (delims=34)
 set "x="
-for /f "delims=23" %%i in ("%Python%") do set x=%%i
+for /f "delims=3" %%i in ("%Python%") do set x=%%i
 if Defined x (
-    echo Invalid Python Version specified. Must be 2 or 3. Passed %Python%
+    echo Invalid Python Version specified. Must be 3. Passed %Python%
     goto eof
 )
 @echo.
@@ -51,14 +52,15 @@ if Defined x (
 :: Define Variables
 @echo Defining Variables...
 @echo ----------------------------------------------------------------------
-if %Python%==2 (
-    Set "PyDir=C:\Python27"
-    Set "PyVerMajor=2"
+if %Python%==3 (
+    Set "PyDir=C:\Python37"
+    Set "PyVerMajor=3"
     Set "PyVerMinor=7"
 ) else (
-    Set "PyDir=C:\Python35"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=5"
+    :: Placeholder for future version
+    :: Set "PyDir=C:\Python4"
+    :: Set "PyVerMajor=0"
+    :: Set "PyVerMinor=0"
 )
 
 :: Verify the Python Installation
@@ -132,72 +134,47 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: Skip KB2999226 if on Py3
-If %Python%==2 goto get_vcredist
-
-:: For PY 3, include KB2999226
-@echo Copying KB2999226 to Prerequisites
-@echo ----------------------------------------------------------------------
-:: 64 bit binaries required for AMD64 and x86
-:: Copy down the 64 bit binaries
-set Url60=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.0-KB2999226-x64.msu
-set Name60=Windows6.0-KB2999226-x64.msu
-set Url61=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.1-KB2999226-x64.msu
-set Name61=Windows6.1-KB2999226-x64.msu
-set Url80=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8-RT-KB2999226-x64.msu
-set Name80=Windows8-RT-KB2999226-x64.msu
-set Url81=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8.1-KB2999226-x64.msu
-set Name81=Windows8.1-KB2999226-x64.msu
-@echo - Downloading %Name60%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
-@echo - Downloading %Name61%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
-@echo - Downloading %Name80%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
-@echo - Downloading %Name81%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
-
 :: 32 bit binaries only needed for x86 installer
 :: ProgramFiles(x86) is defined on AMD64 systems
 :: If it's defined, skip the x86 binaries
-If Defined ProgramFiles(x86) goto prereq_end
+If Defined ProgramFiles(x86) goto dependencies_x64
 
-:: Copy down the 32 bit binaries
-set Url60=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.0-KB2999226-x86.msu
-set Name60=Windows6.0-KB2999226-x86.msu
-set Url61=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.1-KB2999226-x86.msu
-set Name61=Windows6.1-KB2999226-x86.msu
-set Url80=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8-RT-KB2999226-x86.msu
-set Name80=Windows8-RT-KB2999226-x86.msu
-set Url81=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8.1-KB2999226-x86.msu
-set Name81=Windows8.1-KB2999226-x86.msu
-@echo - Downloading %Name60%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url60% -file "%PreDir%\%Name60%"
-@echo - Downloading %Name61%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url61% -file "%PreDir%\%Name61%"
-@echo - Downloading %Name80%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url80% -file "%PreDir%\%Name80%"
-@echo - Downloading %Name81%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url81% -file "%PreDir%\%Name81%"
+:dependencies_x86
+@echo.
+@echo Copying VCRedist 2013 X86 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2013.exe
+set Name=vcredist_x86_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
+@echo.
+@echo Copying Universal C Runtimes X86 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt_x86.zip
+set Name=ucrt_x86.zip
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
 goto prereq_end
 
-:: For PY 2, include VCRedist
-:get_vcredist
-@echo Copying VCRedist to Prerequisites
-@echo ----------------------------------------------------------------------
-
-:: Set the location of the vcredist to download
-Set Url64="http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2008_mfc.exe"
-Set Url32="http://repo.saltstack.com/windows/dependencies/32/vcredist_x86_2008_mfc.exe"
-
-:: Check for 64 bit by finding the Program Files (x86) directory
-If Defined ProgramFiles(x86) (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url64%" -file "%PreDir%\vcredist.exe"
-) Else (
-    powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url "%Url32%" -file "%PreDir%\vcredist.exe"
-)
+:: These are only needed on 64bit installer
+:dependencies_x64
 @echo.
+@echo Copying VCRedist 2013 X64 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
+set Name=vcredist_x64_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
+@echo.
+@echo Copying Universal C Runtimes X64 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt_x64.zip
+set Name=ucrt_x64.zip
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
 :prereq_end
 

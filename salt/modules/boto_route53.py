@@ -109,7 +109,7 @@ def _get_split_zone(zone, _conn, private_zone):
 
 
 def _is_retryable_error(exception):
-    return exception.code != "SignatureDoesNotMatch"
+    return exception.code not in ["SignatureDoesNotMatch"]
 
 
 def describe_hosted_zones(

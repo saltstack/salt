@@ -5,12 +5,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.renderers.toml as toml
+import salt.serializers.toml
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not salt.serializers.toml.available, "The 'toml' library is missing")
 class TOMLRendererTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {toml: {}}

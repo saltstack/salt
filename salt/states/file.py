@@ -293,6 +293,7 @@ import sys
 import time
 import traceback
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
 
 # Import salt libs
@@ -317,14 +318,6 @@ from salt.ext.six.moves import zip_longest
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
-
-# pylint: disable=no-name-in-module
-try:
-    from collections import Iterable, Mapping
-except ImportError:
-    from collections.abc import Iterable, Mapping
-# pylint: enable=no-name-in-module
-
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -761,9 +754,19 @@ def _check_directory(
                         fchange["user"] = user
                     if group is not None and group != stats.get("group"):
                         fchange["group"] = group
-                    if file_mode is not None and salt.utils.files.normalize_mode(
-                        file_mode
-                    ) != salt.utils.files.normalize_mode(stats.get("mode")):
+                    smode = salt.utils.files.normalize_mode(stats.get("mode"))
+                    file_mode = salt.utils.files.normalize_mode(file_mode)
+                    if (
+                        file_mode is not None
+                        and file_mode != smode
+                        and (
+                            # Ignore mode for symlinks on linux based systems where we can not
+                            # change symlink file permissions
+                            follow_symlinks
+                            or stats.get("type") != "link"
+                            or not salt.utils.platform.is_linux()
+                        )
+                    ):
                         fchange["mode"] = file_mode
                     if fchange:
                         changes[path] = fchange
@@ -995,7 +998,17 @@ def _check_dir_meta(name, user, group, mode, follow_symlinks=False):
     # Normalize the dir mode
     smode = salt.utils.files.normalize_mode(stats["mode"])
     mode = salt.utils.files.normalize_mode(mode)
-    if mode is not None and mode != smode:
+    if (
+        mode is not None
+        and mode != smode
+        and (
+            # Ignore mode for symlinks on linux based systems where we can not
+            # change symlink file permissions
+            follow_symlinks
+            or stats.get("type") != "link"
+            or not salt.utils.platform.is_linux()
+        )
+    ):
         changes["mode"] = mode
     return changes
 
@@ -1337,16 +1350,18 @@ def _shortcut_check(
     if os.path.isfile(name):
         with salt.utils.winapi.Com():
             shell = win32com.client.Dispatch("WScript.Shell")
-        scut = shell.CreateShortcut(name)
-        state_checks = [scut.TargetPath.lower() == target.lower()]
-        if arguments is not None:
-            state_checks.append(scut.Arguments == arguments)
-        if working_dir is not None:
-            state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
-        if description is not None:
-            state_checks.append(scut.Description == description)
-        if icon_location is not None:
-            state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+            scut = shell.CreateShortcut(name)
+            state_checks = [scut.TargetPath.lower() == target.lower()]
+            if arguments is not None:
+                state_checks.append(scut.Arguments == arguments)
+            if working_dir is not None:
+                state_checks.append(
+                    scut.WorkingDirectory.lower() == working_dir.lower()
+                )
+            if description is not None:
+                state_checks.append(scut.Description == description)
+            if icon_location is not None:
+                state_checks.append(scut.IconLocation.lower() == icon_location.lower())
 
         if not all(state_checks):
             changes["change"] = name
@@ -1534,10 +1549,10 @@ def hardlink(
         return _error(ret, msg)
 
     if __opts__["test"]:
-        presult, pcomment, pchanges = _hardlink_check(name, target, force)
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        tresult, tcomment, tchanges = _hardlink_check(name, target, force)
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     # We use zip_longest here because there's a number of issues in pylint's
@@ -1816,14 +1831,14 @@ def symlink(
             msg += "."
         return _error(ret, msg)
 
-    presult, pcomment, pchanges = _symlink_check(
+    tresult, tcomment, tchanges = _symlink_check(
         name, target, force, user, group, win_owner
     )
 
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             if __opts__["test"]:
-                pcomment += "\n{0} will be created".format(os.path.dirname(name))
+                tcomment += "\n{0} will be created".format(os.path.dirname(name))
             else:
                 try:
                     _makedirs(
@@ -1840,7 +1855,7 @@ def symlink(
                     return _error(ret, "Drive {0} is not mapped".format(exc.message))
         else:
             if __opts__["test"]:
-                pcomment += "\nDirectory {0} for symlink is not present" "".format(
+                tcomment += "\nDirectory {0} for symlink is not present" "".format(
                     os.path.dirname(name)
                 )
             else:
@@ -1852,9 +1867,9 @@ def symlink(
                 )
 
     if __opts__["test"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     if __salt__["file.is_link"](name):
@@ -2096,7 +2111,7 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     """
     name = os.path.expanduser(name)
 
-    ret = {"name": name, "changes": {}, "pchanges": {}, "result": True, "comment": ""}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # Check preconditions
     if not os.path.isabs(name):
@@ -3516,6 +3531,11 @@ def directory(
 
         .. versionadded:: 2014.1.4
 
+        .. versionchanged:: 3001.1
+            If set to False symlinks permissions are ignored on Linux systems
+            because it does not support permissions modification. Symlinks
+            permissions are always 0o777 on Linux.
+
     force
         If the name of the directory exists and is not a directory and
         force is set to False, the state will fail. If force is set to
@@ -3720,7 +3740,7 @@ def directory(
 
     # Check directory?
     if salt.utils.platform.is_windows():
-        presult, pcomment, pchanges = _check_directory_win(
+        tresult, tcomment, tchanges = _check_directory_win(
             name=name,
             win_owner=win_owner,
             win_perms=win_perms,
@@ -3729,7 +3749,7 @@ def directory(
             win_perms_reset=win_perms_reset,
         )
     else:
-        presult, pcomment, pchanges = _check_directory(
+        tresult, tcomment, tchanges = _check_directory(
             name,
             user,
             group,
@@ -3743,14 +3763,14 @@ def directory(
             follow_symlinks,
         )
 
-    if pchanges:
-        ret["changes"].update(pchanges)
+    if tchanges:
+        ret["changes"].update(tchanges)
 
     # Don't run through the reset of the function if there are no changes to be
     # made
     if __opts__["test"] or not ret["changes"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
+        ret["result"] = tresult
+        ret["comment"] = tcomment
         return ret
 
     if not os.path.isdir(name):
@@ -4097,8 +4117,8 @@ def recurse(
         :ref:`backup_mode documentation <file-state-backups>` for more details.
 
     include_pat
-        When copying, include only this pattern from the source. Default
-        is glob match; if prefixed with 'E@', then regexp match.
+        When copying, include only this pattern, or list of patterns, from the
+        source. Default is glob match; if prefixed with 'E@', then regexp match.
         Example:
 
         .. code-block:: text
@@ -4108,9 +4128,19 @@ def recurse(
           - include_pat: E@hello      :: regexp matches 'otherhello',
                                          'hello01' ...
 
+        .. versionchanged:: 3001
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - include_pat:
+                - hello01
+                - hello02
+
     exclude_pat
-        Exclude this pattern from the source when copying. If both
-        `include_pat` and `exclude_pat` are supplied, then it will apply
+        Exclude this pattern, or list of patterns, from the source when copying.
+        If both `include_pat` and `exclude_pat` are supplied, then it will apply
         conditions cumulatively. i.e. first select based on include_pat, and
         then within that result apply exclude_pat.
 
@@ -4124,6 +4154,16 @@ def recurse(
                                                    APPDATA.02,.. for exclusion
           - exclude_pat: E@(APPDATA)|(TEMPDATA) :: regexp matches APPDATA
                                                    or TEMPDATA for exclusion
+
+        .. versionchanged:: 3001
+
+            List patterns are now supported
+
+        .. code-block:: text
+
+            - exclude_pat:
+                - APPDATA.01
+                - APPDATA.02
 
     maxdepth
         When copying, only copy paths which are of depth `maxdepth` from the
@@ -4169,6 +4209,7 @@ def recurse(
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
+
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -4687,7 +4728,7 @@ def line(
 
             The differences are that multiple (and non-matching) lines are
             alloweed between ``before`` and ``after``, if they are
-            sepcified. The line will always be inserted right before
+            specified. The line will always be inserted right before
             ``before``. ``insert`` also allows the use of ``location`` to
             specify that the line should be added at the beginning or end of
             the file.
@@ -4893,7 +4934,7 @@ def line(
         insert before me
 
     With an ensure mode, this will insert ``thrice`` the first time and
-    make no changes for subsequent calls. For someting simple this is
+    make no changes for subsequent calls. For something simple this is
     fine, but if you have instead blocks like this:
 
     .. code-block:: text
@@ -5197,7 +5238,7 @@ def keyvalue(
     """
     Key/Value based editing of a file.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     This function differs from ``file.replace`` in that it is able to search for
     keys, followed by a customizable separator, and replace the value with the
@@ -5240,13 +5281,13 @@ def keyvalue(
         Return with success even if the file is not found (or not readable).
 
     count : 1
-        Number of occurences to allow (and correct), default is 1. Set to -1 to
+        Number of occurrences to allow (and correct), default is 1. Set to -1 to
         replace all, or set to 0 to remove all lines with this key regardsless
         of its value.
 
     .. note::
-        Any additional occurences after ``count`` are removed.
-        A count of -1 will only replace all occurences that are currently
+        Any additional occurrences after ``count`` are removed.
+        A count of -1 will only replace all occurrences that are currently
         uncommented already. Lines commented out will be left alone.
 
     uncomment : None
@@ -5311,7 +5352,6 @@ def keyvalue(
     ret = {
         "name": name,
         "changes": {},
-        "pchanges": {},
         "result": None,
         "comment": "",
     }
@@ -5506,10 +5546,10 @@ def keyvalue(
                 # For some reason, giving an actual diff even in test=True mode
                 # will be seen as both a 'changed' and 'unchanged'. this seems to
                 # match the other modules behaviour though
-                ret["pchanges"]["diff"] = "".join(diff)
+                ret["changes"]["diff"] = "".join(diff)
 
                 # add changes to comments for now as well because of how
-                # stateoutputter seems to handle pchanges etc.
+                # stateoutputter seems to handle changes etc.
                 # See: https://github.com/saltstack/salt/issues/40208
                 ret["comment"] += "\nPredicted diff:\n\r\t\t"
                 ret["comment"] += "\r\t\t".join(diff)
@@ -5559,6 +5599,8 @@ def blockreplace(
     backup=".bak",
     show_changes=True,
     append_newline=None,
+    insert_before_match=None,
+    insert_after_match=None,
 ):
     """
     Maintain an edit in a file in a zone delimited by two line markers
@@ -5684,6 +5726,18 @@ def blockreplace(
     prepend_if_not_found : False
         If markers are not found and this option is set to ``True``, the
         content block will be prepended to the file.
+
+    insert_before_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block before the first found occurrence in the file.
+
+        .. versionadded:: Sodium
+
+    insert_after_match
+        If markers are not found, this parameter can be set to a regex which will
+        insert the block after the first found occurrence in the file.
+
+        .. versionadded:: Sodium
 
     backup
         The file extension to use for a backup of the file if any edit is made.
@@ -5815,6 +5869,8 @@ def blockreplace(
             content=content,
             append_if_not_found=append_if_not_found,
             prepend_if_not_found=prepend_if_not_found,
+            insert_before_match=insert_before_match,
+            insert_after_match=insert_after_match,
             backup=backup,
             dry_run=__opts__["test"],
             show_changes=show_changes,
@@ -7315,7 +7371,7 @@ def copy_(
     return ret
 
 
-def rename(name, source, force=False, makedirs=False):
+def rename(name, source, force=False, makedirs=False, **kwargs):
     """
     If the source file exists on the system, rename it to the named file. The
     named file will not be overwritten if it already exists unless the force
@@ -7513,6 +7569,7 @@ def serialize(
     merge_if_exists=False,
     encoding=None,
     encoding_errors="strict",
+    serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
     **kwargs
@@ -7537,9 +7594,13 @@ def serialize(
 
         .. versionadded:: 2015.8.0
 
-    formatter
+    serializer (or formatter)
         Write the data as this format. See the list of
         :ref:`all-salt.serializers` for supported output formats.
+
+        .. versionchanged:: 3002
+            ``serializer`` argument added as an alternative to ``formatter``.
+            Both are accepted, but using both will result in an error.
 
     encoding
         If specified, then the specified encoding will be used. Otherwise, the
@@ -7604,7 +7665,7 @@ def serialize(
 
            /etc/dummy/package.yaml
              file.serialize:
-               - formatter: yaml
+               - serializer: yaml
                - serializer_opts:
                  - explicit_start: True
                  - default_flow_style: True
@@ -7617,6 +7678,8 @@ def serialize(
         - For **yaml**: `yaml.dump()`_
         - For **json**: `json.dumps()`_
         - For **python**: `pprint.pformat()`_
+        - For **msgpack**: Run ``python -c 'import msgpack; help(msgpack.Packer)'``
+          to see the available options (``encoding``, ``unicode_errors``, etc.)
 
         .. _`yaml.dump()`: https://pyyaml.org/wiki/PyYAMLDocumentation
         .. _`json.dumps()`: https://docs.python.org/2/library/json.html#json.dumps
@@ -7634,7 +7697,7 @@ def serialize(
 
            /etc/dummy/package.yaml
              file.serialize:
-               - formatter: yaml
+               - serializer: yaml
                - serializer_opts:
                  - explicit_start: True
                  - default_flow_style: True
@@ -7673,7 +7736,7 @@ def serialize(
                   express: '>= 1.2.0'
                   optimist: '>= 0.1.0'
                 engine: node 0.4.1
-            - formatter: json
+            - serializer: json
 
     will manage the file ``/etc/dummy/package.json``:
 
@@ -7721,7 +7784,10 @@ def serialize(
             ).format(name)
             return ret
 
-    formatter = kwargs.pop("formatter", "yaml").lower()
+    formatter = kwargs.pop("formatter", None)
+    if serializer and formatter:
+        return _error(ret, "Only one of serializer and formatter are allowed")
+    serializer = str(serializer or formatter or "yaml").lower()
 
     if len([x for x in (dataset, dataset_pillar) if x]) > 1:
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
@@ -7741,13 +7807,16 @@ def serialize(
             )
         group = user
 
-    serializer_name = "{0}.serialize".format(formatter)
-    deserializer_name = "{0}.deserialize".format(formatter)
+    serializer_name = "{0}.serialize".format(serializer)
+    deserializer_name = "{0}.deserialize".format(serializer)
 
     if serializer_name not in __serializers__:
         return {
             "changes": {},
-            "comment": "{0} format is not supported".format(formatter.capitalize()),
+            "comment": (
+                "The {0} serializer could not be found. It either does "
+                "not exist or its prerequisites are not installed.".format(serializer)
+            ),
             "name": name,
             "result": False,
         }
@@ -7767,13 +7836,16 @@ def serialize(
             if deserializer_name not in __serializers__:
                 return {
                     "changes": {},
-                    "comment": "merge_if_exists is not supported for the {0} "
-                    "formatter".format(formatter),
+                    "comment": "merge_if_exists is not supported for the {0} serializer".format(
+                        serializer
+                    ),
                     "name": name,
                     "result": False,
                 }
-
-            with salt.utils.files.fopen(name, "r") as fhr:
+            open_args = "r"
+            if serializer == "plist":
+                open_args += "b"
+            with salt.utils.files.fopen(name, open_args) as fhr:
                 try:
                     existing_data = __serializers__[deserializer_name](
                         fhr, **deserializer_options.get(deserializer_name, {})
@@ -7805,7 +7877,14 @@ def serialize(
         dataset, **serializer_options.get(serializer_name, {})
     )
 
-    contents += "\n"
+    # Insert a newline, but only if the serialized contents are not a
+    # bytestring. If it's a bytestring, it's almost certainly serialized into a
+    # binary format that does not take kindly to additional bytes being foisted
+    # upon it.
+    try:
+        contents += "\n"
+    except TypeError:
+        pass
 
     # Make sure that any leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
@@ -8305,13 +8384,13 @@ def shortcut(
             msg += "."
         return _error(ret, msg)
 
-    presult, pcomment, pchanges = _shortcut_check(
+    tresult, tcomment, tchanges = _shortcut_check(
         name, target, arguments, working_dir, description, icon_location, force, user
     )
     if __opts__["test"]:
-        ret["result"] = presult
-        ret["comment"] = pcomment
-        ret["changes"] = pchanges
+        ret["result"] = tresult
+        ret["comment"] = tcomment
+        ret["changes"] = tchanges
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -8383,74 +8462,77 @@ def shortcut(
     # It won't create the file until calling scut.Save()
     with salt.utils.winapi.Com():
         shell = win32com.client.Dispatch("WScript.Shell")
-    scut = shell.CreateShortcut(name)
+        scut = shell.CreateShortcut(name)
 
-    # The shortcut target will automatically be created with its
-    # canonical capitalization; no way to override it, so ignore case
-    state_checks = [scut.TargetPath.lower() == target.lower()]
-    if arguments is not None:
-        state_checks.append(scut.Arguments == arguments)
-    if working_dir is not None:
-        state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
-    if description is not None:
-        state_checks.append(scut.Description == description)
-    if icon_location is not None:
-        state_checks.append(scut.IconLocation.lower() == icon_location.lower())
+        # The shortcut target will automatically be created with its
+        # canonical capitalization; no way to override it, so ignore case
+        state_checks = [scut.TargetPath.lower() == target.lower()]
+        if arguments is not None:
+            state_checks.append(scut.Arguments == arguments)
+        if working_dir is not None:
+            state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
+        if description is not None:
+            state_checks.append(scut.Description == description)
+        if icon_location is not None:
+            state_checks.append(scut.IconLocation.lower() == icon_location.lower())
 
-    if __salt__["file.file_exists"](name):
-        # The shortcut exists, verify that it matches the desired state
-        if not all(state_checks):
-            # The target is wrong, delete it
-            os.remove(name)
-        else:
-            if _check_shortcut_ownership(name, user):
-                # The shortcut looks good!
-                ret["comment"] = "Shortcut {0} is present and owned by " "{1}".format(
-                    name, user
-                )
+        if __salt__["file.file_exists"](name):
+            # The shortcut exists, verify that it matches the desired state
+            if not all(state_checks):
+                # The target is wrong, delete it
+                os.remove(name)
             else:
-                if _set_shortcut_ownership(name, user):
-                    ret["comment"] = "Set ownership of shortcut {0} to " "{1}".format(
-                        name, user
-                    )
-                    ret["changes"]["ownership"] = "{0}".format(user)
+                if _check_shortcut_ownership(name, user):
+                    # The shortcut looks good!
+                    ret[
+                        "comment"
+                    ] = "Shortcut {0} is present and owned by " "{1}".format(name, user)
                 else:
-                    ret["result"] = False
-                    ret["comment"] += (
-                        "Failed to set ownership of shortcut {0} to "
-                        "{1}".format(name, user)
-                    )
-            return ret
+                    if _set_shortcut_ownership(name, user):
+                        ret[
+                            "comment"
+                        ] = "Set ownership of shortcut {0} to " "{1}".format(name, user)
+                        ret["changes"]["ownership"] = "{0}".format(user)
+                    else:
+                        ret["result"] = False
+                        ret["comment"] += (
+                            "Failed to set ownership of shortcut {0} to "
+                            "{1}".format(name, user)
+                        )
+                return ret
 
-    if not os.path.exists(name):
-        # The shortcut is not present, make it
-        try:
-            scut.TargetPath = target
-            if arguments is not None:
-                scut.Arguments = arguments
-            if working_dir is not None:
-                scut.WorkingDirectory = working_dir
-            if description is not None:
-                scut.Description = description
-            if icon_location is not None:
-                scut.IconLocation = icon_location
-            scut.Save()
-        except (AttributeError, pywintypes.com_error) as exc:
-            ret["result"] = False
-            ret["comment"] = "Unable to create new shortcut {0} -> " "{1}: {2}".format(
-                name, target, exc
-            )
-            return ret
-        else:
-            ret["comment"] = "Created new shortcut {0} -> " "{1}".format(name, target)
-            ret["changes"]["new"] = name
-
-        if not _check_shortcut_ownership(name, user):
-            if not _set_shortcut_ownership(name, user):
+        if not os.path.exists(name):
+            # The shortcut is not present, make it
+            try:
+                scut.TargetPath = target
+                if arguments is not None:
+                    scut.Arguments = arguments
+                if working_dir is not None:
+                    scut.WorkingDirectory = working_dir
+                if description is not None:
+                    scut.Description = description
+                if icon_location is not None:
+                    scut.IconLocation = icon_location
+                scut.Save()
+            except (AttributeError, pywintypes.com_error) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but was unable to set ownership to " "{0}".format(
-                    user
+                ret["comment"] = (
+                    "Unable to create new shortcut {0} -> "
+                    "{1}: {2}".format(name, target, exc)
                 )
+                return ret
+            else:
+                ret["comment"] = "Created new shortcut {0} -> " "{1}".format(
+                    name, target
+                )
+                ret["changes"]["new"] = name
+
+            if not _check_shortcut_ownership(name, user):
+                if not _set_shortcut_ownership(name, user):
+                    ret["result"] = False
+                    ret[
+                        "comment"
+                    ] += ", but was unable to set ownership to " "{0}".format(user)
     return ret
 
 

@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Work with virtual machines managed by libvirt
 
-:depends: libvirt Python module
+:depends:
+    * libvirt Python module
+    * libvirt client
+    * qemu-img
+    * grep
 
 Connection
 ==========
@@ -73,7 +76,6 @@ The calls not using the libvirt connection setup are:
 # of his in the virt func module have been used
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import copy
@@ -87,27 +89,25 @@ import subprocess
 import sys
 import time
 from xml.etree import ElementTree
+from xml.sax import saxutils
 
 # Import third party libs
-import jinja2
 import jinja2.exceptions
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.json
-import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
-import salt.utils.validate.net
-import salt.utils.versions
+import salt.utils.virt
 import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.utils.virt import check_remote, download_remote
+from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 
 try:
     import libvirt  # pylint: disable=import-error
@@ -226,8 +226,8 @@ def __get_conn(**kwargs):
         )
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
-            "Sorry, {0} failed to open a connection to the hypervisor "
-            "software at {1}".format(__grains__["fqdn"], conn_str)
+            "Sorry, {} failed to open a connection to the hypervisor "
+            "software at {}".format(__grains__["fqdn"], conn_str)
         )
     return conn
 
@@ -404,7 +404,7 @@ def _get_nics(dom):
             # driver, source, and match can all have optional attributes
             if re.match("(driver|source|address)", v_node.tag):
                 temp = {}
-                for key, value in six.iteritems(v_node.attrib):
+                for key, value in v_node.attrib.items():
                     temp[key] = value
                 nic[v_node.tag] = temp
             # virtualport needs to be handled separately, to pick up the
@@ -412,7 +412,7 @@ def _get_nics(dom):
             if v_node.tag == "virtualport":
                 temp = {}
                 temp["type"] = v_node.get("type")
-                for key, value in six.iteritems(v_node.attrib):
+                for key, value in v_node.attrib.items():
                     temp[key] = value
                 nic["virtualport"] = temp
         if "mac" not in nic:
@@ -434,7 +434,7 @@ def _get_graphics(dom):
     }
     doc = ElementTree.fromstring(dom.XMLDesc(0))
     for g_node in doc.findall("devices/graphics"):
-        for key, value in six.iteritems(g_node.attrib):
+        for key, value in g_node.attrib.items():
             out[key] = value
     return out
 
@@ -447,65 +447,166 @@ def _get_loader(dom):
     doc = ElementTree.fromstring(dom.XMLDesc(0))
     for g_node in doc.findall("os/loader"):
         out["path"] = g_node.text
-        for key, value in six.iteritems(g_node.attrib):
+        for key, value in g_node.attrib.items():
             out[key] = value
     return out
 
 
-def _get_disks(dom):
+def _get_disks(conn, dom):
     """
     Get domain disks from a libvirt domain object.
     """
     disks = {}
     doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Get the path, pool, volume name of each volume we can
+    all_volumes = _get_all_volumes_paths(conn)
     for elem in doc.findall("devices/disk"):
         source = elem.find("source")
         if source is None:
             continue
         target = elem.find("target")
+        driver = elem.find("driver")
         if target is None:
             continue
+        qemu_target = None
+        extra_properties = None
         if "dev" in target.attrib:
-            qemu_target = source.get("file", "")
-            if not qemu_target:
+            disk_type = elem.get("type")
+
+            def _get_disk_volume_data(pool_name, volume_name):
+                qemu_target = "{}/{}".format(pool_name, volume_name)
+                pool = conn.storagePoolLookupByName(pool_name)
+                vol = pool.storageVolLookupByName(volume_name)
+                vol_info = vol.info()
+                extra_properties = {
+                    "virtual size": vol_info[1],
+                    "disk size": vol_info[2],
+                }
+
+                backing_files = [
+                    {
+                        "file": node.find("source").get("file"),
+                        "file format": node.find("format").get("type"),
+                    }
+                    for node in elem.findall(".//backingStore[source]")
+                ]
+
+                if backing_files:
+                    # We had the backing files in a flat list, nest them again.
+                    extra_properties["backing file"] = backing_files[0]
+                    parent = extra_properties["backing file"]
+                    for sub_backing_file in backing_files[1:]:
+                        parent["backing file"] = sub_backing_file
+                        parent = sub_backing_file
+
+                else:
+                    # In some cases the backing chain is not displayed by the domain definition
+                    # Try to see if we have some of it in the volume definition.
+                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                    backing_path = vol_desc.find("./backingStore/path")
+                    backing_format = vol_desc.find("./backingStore/format")
+                    if backing_path is not None:
+                        extra_properties["backing file"] = {"file": backing_path.text}
+                        if backing_format is not None:
+                            extra_properties["backing file"][
+                                "file format"
+                            ] = backing_format.get("type")
+                return (qemu_target, extra_properties)
+
+            if disk_type == "file":
+                qemu_target = source.get("file", "")
+                if qemu_target.startswith("/dev/zvol/"):
+                    disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
+                    continue
+
+                if qemu_target in all_volumes.keys():
+                    # If the qemu_target is a known path, output a volume
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
+                elif elem.get("device", "disk") != "cdrom":
+                    # Extract disk sizes, snapshots, backing files
+                    try:
+                        stdout = subprocess.Popen(
+                            [
+                                "qemu-img",
+                                "info",
+                                "-U",
+                                "--output",
+                                "json",
+                                "--backing-chain",
+                                qemu_target,
+                            ],
+                            shell=False,
+                            stdout=subprocess.PIPE,
+                        ).communicate()[0]
+                        qemu_output = salt.utils.stringutils.to_str(stdout)
+                        output = _parse_qemu_img_info(qemu_output)
+                        extra_properties = output
+                    except TypeError:
+                        disk.update({"file": "Does not exist"})
+            elif disk_type == "block":
                 qemu_target = source.get("dev", "")
-            if (
-                not qemu_target
-                and "protocol" in source.attrib
-                and "name" in source.attrib
-            ):  # for rbd network
-                qemu_target = "{0}:{1}".format(
-                    source.get("protocol"), source.get("name")
+                # If the qemu_target is a known path, output a volume
+                if qemu_target in all_volumes.keys():
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
+            elif disk_type == "network":
+                qemu_target = source.get("protocol")
+                source_name = source.get("name")
+                if source_name:
+                    qemu_target = "{}:{}".format(qemu_target, source_name)
+
+                # Reverse the magic for the rbd and gluster pools
+                if source.get("protocol") in ["rbd", "gluster"]:
+                    for pool_i in conn.listAllStoragePools():
+                        pool_i_xml = ElementTree.fromstring(pool_i.XMLDesc())
+                        name_node = pool_i_xml.find("source/name")
+                        if name_node is not None and source_name.startswith(
+                            "{}/".format(name_node.text)
+                        ):
+                            qemu_target = "{}{}".format(
+                                pool_i.name(), source_name[len(name_node.text) :]
+                            )
+                            break
+
+                # Reverse the magic for cdroms with remote URLs
+                if elem.get("device", "disk") == "cdrom":
+                    host_node = source.find("host")
+                    if host_node is not None:
+                        hostname = host_node.get("name")
+                        port = host_node.get("port")
+                        qemu_target = urlunparse(
+                            (
+                                source.get("protocol"),
+                                "{}:{}".format(hostname, port) if port else hostname,
+                                source_name,
+                                "",
+                                saxutils.unescape(source.get("query", "")),
+                                "",
+                            )
+                        )
+            elif disk_type == "volume":
+                pool_name = source.get("pool")
+                volume_name = source.get("volume")
+                qemu_target, extra_properties = _get_disk_volume_data(
+                    pool_name, volume_name
                 )
-            elif qemu_target.startswith("/dev/zvol/"):
-                disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
-                continue
+
             if not qemu_target:
                 continue
 
-            disk = {"file": qemu_target, "type": elem.get("device")}
-
-            driver = elem.find("driver")
-            if driver is not None and driver.get("type") == "qcow2":
-                try:
-                    stdout = subprocess.Popen(
-                        [
-                            "qemu-img",
-                            "info",
-                            "-U",
-                            "--output",
-                            "json",
-                            "--backing-chain",
-                            disk["file"],
-                        ],
-                        shell=False,
-                        stdout=subprocess.PIPE,
-                    ).communicate()[0]
-                    qemu_output = salt.utils.stringutils.to_str(stdout)
-                    output = _parse_qemu_img_info(qemu_output)
-                    disk.update(output)
-                except TypeError:
-                    disk.update({"file": "Does not exist"})
+            disk = {
+                "file": qemu_target,
+                "type": elem.get("device"),
+            }
+            if driver is not None and "type" in driver.attrib:
+                disk["file format"] = driver.get("type")
+            if extra_properties:
+                disk.update(extra_properties)
 
             disks[target.get("dev")] = disk
     return disks
@@ -534,29 +635,218 @@ def _libvirt_creds():
     return {"user": user, "group": group}
 
 
-def _get_migrate_command():
+def _migrate(dom, dst_uri, **kwargs):
     """
-    Returns the command shared by the different migration types
+    Migrate the domain object from its current host to the destination
+    host given by URI.
+
+    :param dom: domain object to migrate
+    :param dst_uri: destination URI
+    :param kwargs:
+        - live:            Use live migration. Defalt value is True.
+        - persistent:      Leave the domain persistent on destination host.
+                           Defalt value is True.
+        - undefinesource:  Undefine the domain on the source host.
+                           Defalt value is True.
+        - offline:         If set to True it will migrate the domain definition
+                           without starting the domain on destination and without
+                           stopping it on source host. Defalt value is False.
+        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
+        - max_downtime:    Set maximum tolerable downtime for live-migration.
+                           The value represents a number of milliseconds the guest
+                           is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                           to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
+        - copy_storage:    Migrate non-shared storage. It must be one of the following
+                           values: all (full disk copy) or incremental (Incremental copy)
+        - postcopy:        Enable the use of post-copy migration.
+        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
+        - username:        Username to connect with target host
+        - password:        Password to connect with target host
     """
-    tunnel = __salt__["config.get"]("virt:tunnel")
-    if tunnel:
-        return (
-            "virsh migrate --p2p --tunnelled --live --persistent " "--undefinesource "
+    flags = 0
+    params = {}
+    migrated_state = libvirt.VIR_DOMAIN_RUNNING_MIGRATED
+
+    if kwargs.get("live", True):
+        flags |= libvirt.VIR_MIGRATE_LIVE
+
+    if kwargs.get("persistent", True):
+        flags |= libvirt.VIR_MIGRATE_PERSIST_DEST
+
+    if kwargs.get("undefinesource", True):
+        flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+
+    max_bandwidth = kwargs.get("max_bandwidth")
+    if max_bandwidth:
+        try:
+            bandwidth_value = int(max_bandwidth)
+        except ValueError:
+            raise SaltInvocationError(
+                "Invalid max_bandwidth value: {}".format(max_bandwidth)
+            )
+        dom.migrateSetMaxSpeed(bandwidth_value)
+
+    max_downtime = kwargs.get("max_downtime")
+    if max_downtime:
+        try:
+            downtime_value = int(max_downtime)
+        except ValueError:
+            raise SaltInvocationError(
+                "Invalid max_downtime value: {}".format(max_downtime)
+            )
+        dom.migrateSetMaxDowntime(downtime_value)
+
+    if kwargs.get("offline") is True:
+        flags |= libvirt.VIR_MIGRATE_OFFLINE
+        migrated_state = libvirt.VIR_DOMAIN_RUNNING_UNPAUSED
+
+    if kwargs.get("compressed") is True:
+        flags |= libvirt.VIR_MIGRATE_COMPRESSED
+
+    comp_methods = kwargs.get("comp_methods")
+    if comp_methods:
+        params[libvirt.VIR_MIGRATE_PARAM_COMPRESSION] = comp_methods.split(",")
+
+    comp_options = {
+        "comp_mt_level": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_LEVEL,
+        "comp_mt_threads": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_THREADS,
+        "comp_mt_dthreads": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_MT_DTHREADS,
+        "comp_xbzrle_cache": libvirt.VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
+    }
+
+    for (comp_option, param_key) in comp_options.items():
+        comp_option_value = kwargs.get(comp_option)
+        if comp_option_value:
+            try:
+                params[param_key] = int(comp_option_value)
+            except ValueError:
+                raise SaltInvocationError("Invalid {} value".format(comp_option))
+
+    parallel_connections = kwargs.get("parallel_connections")
+    if parallel_connections:
+        try:
+            params[libvirt.VIR_MIGRATE_PARAM_PARALLEL_CONNECTIONS] = int(
+                parallel_connections
+            )
+        except ValueError:
+            raise SaltInvocationError("Invalid parallel_connections value")
+        flags |= libvirt.VIR_MIGRATE_PARALLEL
+
+    if __salt__["config.get"]("virt:tunnel"):
+        if parallel_connections:
+            raise SaltInvocationError(
+                "Parallel migration isn't compatible with tunneled migration"
+            )
+        flags |= libvirt.VIR_MIGRATE_PEER2PEER
+        flags |= libvirt.VIR_MIGRATE_TUNNELLED
+
+    if kwargs.get("postcopy") is True:
+        flags |= libvirt.VIR_MIGRATE_POSTCOPY
+
+    postcopy_bandwidth = kwargs.get("postcopy_bandwidth")
+    if postcopy_bandwidth:
+        try:
+            postcopy_bandwidth_value = int(postcopy_bandwidth)
+        except ValueError:
+            raise SaltInvocationError("Invalid postcopy_bandwidth value")
+        dom.migrateSetMaxSpeed(
+            postcopy_bandwidth_value,
+            flags=libvirt.VIR_DOMAIN_MIGRATE_MAX_SPEED_POSTCOPY,
         )
-    return "virsh migrate --live --persistent --undefinesource "
+
+    copy_storage = kwargs.get("copy_storage")
+    if copy_storage:
+        if copy_storage == "all":
+            flags |= libvirt.VIR_MIGRATE_NON_SHARED_DISK
+        elif copy_storage in ["inc", "incremental"]:
+            flags |= libvirt.VIR_MIGRATE_NON_SHARED_INC
+        else:
+            raise SaltInvocationError("invalid copy_storage value")
+    try:
+        state = False
+        dst_conn = __get_conn(
+            connection=dst_uri,
+            username=kwargs.get("username"),
+            password=kwargs.get("password"),
+        )
+        new_dom = dom.migrate3(dconn=dst_conn, params=params, flags=flags)
+        if new_dom:
+            state = new_dom.state()
+        dst_conn.close()
+        return state and migrated_state in state
+    except libvirt.libvirtError as err:
+        dst_conn.close()
+        raise CommandExecutionError(err.get_error_message())
 
 
-def _get_target(target, ssh):
+def _disk_from_pool(conn, pool, pool_xml, volume_name):
     """
-    Compute libvirt URL for target migration host.
+    Create a disk definition out of the pool XML and volume name.
+    The aim of this function is to replace the volume-based definition when not handled by libvirt.
+    It returns the disk Jinja context to be used when creating the VM
     """
-    proto = "qemu"
-    if ssh:
-        proto += "+ssh"
-    return " {0}://{1}/{2}".format(proto, target, "system")
+    pool_type = pool_xml.get("type")
+    disk_context = {}
+
+    # handle dir, fs and netfs
+    if pool_type in ["dir", "netfs", "fs"]:
+        disk_context["type"] = "file"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["logical", "disk", "iscsi", "scsi"]:
+        disk_context["type"] = "block"
+        disk_context["format"] = "raw"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["rbd", "gluster", "sheepdog"]:
+        # libvirt can't handle rbd, gluster and sheepdog as volumes
+        disk_context["type"] = "network"
+        disk_context["protocol"] = pool_type
+        # Copy the hosts from the pool definition
+        disk_context["hosts"] = [
+            {"name": host.get("name"), "port": host.get("port")}
+            for host in pool_xml.findall(".//host")
+        ]
+        dir_node = pool_xml.find("./source/dir")
+        # Gluster and RBD need pool/volume name
+        name_node = pool_xml.find("./source/name")
+        if name_node is not None:
+            disk_context["volume"] = "{}/{}".format(name_node.text, volume_name)
+        # Copy the authentication if any for RBD
+        auth_node = pool_xml.find("./source/auth")
+        if auth_node is not None:
+            username = auth_node.get("username")
+            secret_node = auth_node.find("./secret")
+            usage = secret_node.get("usage")
+            if not usage:
+                # Get the usage from the UUID
+                uuid = secret_node.get("uuid")
+                usage = conn.secretLookupByUUIDString(uuid).usageID()
+            disk_context["auth"] = {
+                "type": "ceph",
+                "username": username,
+                "usage": usage,
+            }
+
+    return disk_context
 
 
 def _gen_xml(
+    conn,
     name,
     cpu,
     mem,
@@ -567,6 +857,7 @@ def _gen_xml(
     arch,
     graphics=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -576,8 +867,8 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
-        "cpu": six.text_type(cpu),
-        "mem": six.text_type(mem),
+        "cpu": str(cpu),
+        "mem": str(mem),
     }
     if hypervisor in ["qemu", "kvm"]:
         context["controller_model"] = False
@@ -600,14 +891,16 @@ def _gen_xml(
             graphics = None
     context["graphics"] = graphics
 
-    if "boot_dev" in kwargs:
-        context["boot_dev"] = []
-        for dev in kwargs["boot_dev"].split():
-            context["boot_dev"].append(dev)
-    else:
-        context["boot_dev"] = ["hd"]
+    context["boot_dev"] = boot_dev.split() if boot_dev is not None else ["hd"]
 
     context["boot"] = boot if boot else {}
+
+    # if efi parameter is specified, prepare os_attrib
+    efi_value = context["boot"].get("efi", None) if boot else None
+    if efi_value is True:
+        context["boot"]["os_attrib"] = "firmware='efi'"
+    elif efi_value is not None and type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
 
     if os_type == "xen":
         # Compute the Xen PV boot method
@@ -631,17 +924,52 @@ def _gen_xml(
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
+    targets = []
     for i, disk in enumerate(diskp):
         prefix = disk_bus_map.get(disk["model"], "sd")
         disk_context = {
             "device": disk.get("device", "disk"),
-            "target_dev": "{0}{1}".format(prefix, string.ascii_lowercase[i]),
+            "target_dev": _get_disk_target(targets, len(diskp), prefix),
             "disk_bus": disk["model"],
-            "type": disk["format"],
-            "index": six.text_type(i),
+            "format": disk.get("format", "raw"),
+            "index": str(i),
         }
-        if "source_file" and disk["source_file"]:
-            disk_context["source_file"] = disk["source_file"]
+        targets.append(disk_context["target_dev"])
+        if disk.get("source_file"):
+            url = urlparse(disk["source_file"])
+            if not url.scheme or not url.hostname:
+                disk_context["source_file"] = disk["source_file"]
+                disk_context["type"] = "file"
+            elif url.scheme in ["http", "https", "ftp", "ftps", "tftp"]:
+                disk_context["type"] = "network"
+                disk_context["protocol"] = url.scheme
+                disk_context["volume"] = url.path
+                disk_context["query"] = saxutils.escape(url.query)
+                disk_context["hosts"] = [{"name": url.hostname, "port": url.port}]
+
+        elif disk.get("pool"):
+            disk_context["volume"] = disk["filename"]
+            # If we had no source_file, then we want a volume
+            pool = conn.storagePoolLookupByName(disk["pool"])
+            pool_xml = ElementTree.fromstring(pool.XMLDesc())
+            pool_type = pool_xml.get("type")
+
+            # TODO For Xen VMs convert all pool types (issue #58333)
+            if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
+                disk_context.update(
+                    _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])
+                )
+
+            else:
+                if pool_type in ["disk", "logical"]:
+                    # The volume format for these types doesn't match the driver format in the VM
+                    disk_context["format"] = "raw"
+                disk_context["type"] = "volume"
+                disk_context["pool"] = disk["pool"]
+
+        else:
+            # No source and no pool is a removable device, use file type
+            disk_context["type"] = "file"
 
         if hypervisor in ["qemu", "kvm", "bhyve", "xen"]:
             disk_context["address"] = False
@@ -665,18 +993,28 @@ def _gen_xml(
     return template.render(**context)
 
 
-def _gen_vol_xml(vmname, diskname, disktype, size, pool):
+def _gen_vol_xml(
+    name,
+    size,
+    format=None,
+    allocation=0,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+):
     """
     Generate the XML string to define a libvirt storage volume
     """
     size = int(size) * 1024  # MB
     context = {
-        "name": vmname,
-        "filename": "{0}.{1}".format(diskname, disktype),
-        "volname": diskname,
-        "disktype": disktype,
-        "size": six.text_type(size),
-        "pool": pool,
+        "type": type,
+        "name": name,
+        "target": {"permissions": permissions, "nocow": nocow},
+        "format": format,
+        "size": str(size),
+        "allocation": str(int(allocation) * 1024),
+        "backingStore": backing_store,
     }
     fn_ = "libvirt_volume.jinja"
     try:
@@ -827,31 +1165,29 @@ def _zfs_image_create(
     """
     if not disk_image_name and not disk_size:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " the disk image name or disk size argument".format(disk_name)
         )
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " the disk pool name".format(disk_name)
         )
 
-    destination_fs = os.path.join(pool, "{0}.{1}".format(vm_name, disk_name))
+    destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
     log.debug("Image destination will be %s", destination_fs)
 
     existing_disk = __salt__["zfs.list"](name=pool)
     if "error" in existing_disk:
         raise CommandExecutionError(
-            "Unable to create new disk {0}. {1}".format(
+            "Unable to create new disk {}. {}".format(
                 destination_fs, existing_disk["error"]
             )
         )
     elif destination_fs in existing_disk:
         log.info(
-            "ZFS filesystem {0} already exists. Skipping creation".format(
-                destination_fs
-            )
+            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
         )
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
@@ -874,7 +1210,7 @@ def _zfs_image_create(
         )
 
     blockdevice_path = os.path.join(
-        "/dev/zvol", pool, "{0}.{1}".format(vm_name, disk_name)
+        "/dev/zvol", pool, "{}.{}".format(vm_name, disk_name)
     )
     log.debug("Image path will be %s", blockdevice_path)
     return blockdevice_path
@@ -891,7 +1227,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
 
     if not disk_size and not disk_image:
         raise CommandExecutionError(
-            "Unable to create new disk {0}, please specify"
+            "Unable to create new disk {}, please specify"
             " disk size and/or disk image argument".format(disk["filename"])
         )
 
@@ -915,7 +1251,7 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if create_overlay and qcow2:
                 log.info("Cloning qcow2 image %s using copy on write", sfn)
                 __salt__["cmd.run"](
-                    'qemu-img create -f qcow2 -o backing_file="{0}" "{1}"'.format(
+                    'qemu-img create -f qcow2 -o backing_file="{}" "{}"'.format(
                         sfn, img_dest
                     ).split()
                 )
@@ -928,16 +1264,16 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if disk_size and qcow2:
                 log.debug("Resize qcow2 image to %sM", disk_size)
                 __salt__["cmd.run"](
-                    'qemu-img resize "{0}" {1}M'.format(img_dest, disk_size)
+                    'qemu-img resize "{}" {}M'.format(img_dest, disk_size)
                 )
 
             log.debug("Apply umask and remove exec bit")
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as err:
+        except OSError as err:
             raise CommandExecutionError(
-                "Problem while copying image. {0} - {1}".format(disk_image, err)
+                "Problem while copying image. {} - {}".format(disk_image, err)
             )
 
     else:
@@ -948,13 +1284,13 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             if disk_size:
                 log.debug("Create empty image with size %sM", disk_size)
                 __salt__["cmd.run"](
-                    'qemu-img create -f {0} "{1}" {2}M'.format(
+                    'qemu-img create -f {} "{}" {}M'.format(
                         disk.get("format", "qcow2"), img_dest, disk_size
                     )
                 )
             else:
                 raise CommandExecutionError(
-                    "Unable to create new disk {0},"
+                    "Unable to create new disk {},"
                     " please specify <size> argument".format(img_dest)
                 )
 
@@ -962,15 +1298,88 @@ def _qemu_image_create(disk, create_overlay=False, saltenv="base"):
             mode = (0o0777 ^ mask) & 0o0666
             os.chmod(img_dest, mode)
 
-        except (IOError, OSError) as err:
+        except OSError as err:
             raise CommandExecutionError(
-                "Problem while creating volume {0} - {1}".format(img_dest, err)
+                "Problem while creating volume {} - {}".format(img_dest, err)
             )
 
     return img_dest
 
 
-def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
+def _seed_image(seed_cmd, img_path, name, config, install, pub_key, priv_key):
+    """
+    Helper function to seed an existing image. Note that this doesn't
+    handle volumes.
+    """
+    log.debug("Seeding image")
+    __salt__[seed_cmd](
+        img_path,
+        id_=name,
+        config=config,
+        install=install,
+        pub_key=pub_key,
+        priv_key=priv_key,
+    )
+
+
+def _disk_volume_create(conn, disk, seeder=None, saltenv="base"):
+    """
+    Create a disk volume for use in a VM
+    """
+    if disk.get("overlay_image"):
+        raise SaltInvocationError(
+            "Disk overlay_image property is not supported when creating volumes,"
+            "use backing_store_path and backing_store_format instead."
+        )
+
+    pool = conn.storagePoolLookupByName(disk["pool"])
+
+    # Use existing volume if possible
+    if disk["filename"] in pool.listVolumes():
+        return
+
+    pool_type = ElementTree.fromstring(pool.XMLDesc()).get("type")
+
+    backing_path = disk.get("backing_store_path")
+    backing_format = disk.get("backing_store_format")
+    backing_store = None
+    if (
+        backing_path
+        and backing_format
+        and (disk.get("format") == "qcow2" or pool_type == "logical")
+    ):
+        backing_store = {"path": backing_path, "format": backing_format}
+
+    if backing_store and disk.get("image"):
+        raise SaltInvocationError(
+            "Using a template image with a backing store is not possible, "
+            "choose either of them."
+        )
+
+    vol_xml = _gen_vol_xml(
+        disk["filename"],
+        disk.get("size", 0),
+        format=disk.get("format"),
+        backing_store=backing_store,
+    )
+    _define_vol_xml_str(conn, vol_xml, disk.get("pool"))
+
+    if disk.get("image"):
+        log.debug("Caching disk template image: %s", disk.get("image"))
+        cached_path = __salt__["cp.cache_file"](disk.get("image"), saltenv)
+
+        if seeder:
+            seeder(cached_path)
+        _volume_upload(
+            conn,
+            disk["pool"],
+            disk["filename"],
+            cached_path,
+            sparse=disk.get("format") == "qcow2",
+        )
+
+
+def _disk_profile(conn, profile, hypervisor, disks, vm_name):
     """
     Gather the disk profile from the config or apply the default based
     on the active hypervisor
@@ -1011,17 +1420,12 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
     """
     default = [{"system": {"size": 8192}}]
     if hypervisor == "vmware":
-        overlay = {
-            "format": "vmdk",
-            "model": "scsi",
-            "device": "disk",
-            "pool": "[0] ",
-        }
+        overlay = {"format": "vmdk", "model": "scsi", "device": "disk"}
     elif hypervisor in ["qemu", "kvm"]:
-        overlay = {"format": "qcow2", "device": "disk", "model": "virtio"}
+        overlay = {"device": "disk", "model": "virtio"}
     elif hypervisor == "xen":
-        overlay = {"format": "qcow2", "device": "disk", "model": "xen"}
-    elif hypervisor in ["bhyve"]:
+        overlay = {"device": "disk", "model": "xen"}
+    elif hypervisor == "bhyve":
         overlay = {"format": "raw", "model": "virtio", "sparse_volume": False}
     else:
         overlay = {}
@@ -1046,57 +1450,116 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, **kwargs):
                 else:
                     disklist.append(udisk)
 
+    # Get pool capabilities once to get default format later
+    pool_caps = _pool_capabilities(conn)
+
     for disk in disklist:
+        # Set default model for cdrom devices before the overlay sets the wrong one
+        if disk.get("device", "disk") == "cdrom" and "model" not in disk:
+            disk["model"] = "ide"
+
         # Add the missing properties that have defaults
-        for key, val in six.iteritems(overlay):
+        for key, val in overlay.items():
             if key not in disk:
                 disk[key] = val
 
         # We may have an already computed source_file (i.e. image not created by our module)
-        if "source_file" in disk and disk["source_file"]:
+        if disk.get("source_file") and os.path.exists(disk["source_file"]):
             disk["filename"] = os.path.basename(disk["source_file"])
-        elif "source_file" not in disk:
-            _fill_disk_filename(vm_name, disk, hypervisor, **kwargs)
+            if not disk.get("format"):
+                disk["format"] = (
+                    "qcow2" if disk.get("device", "disk") != "cdrom" else "raw"
+                )
+        elif vm_name and disk.get("device", "disk") == "disk":
+            _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps)
 
     return disklist
 
 
-def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
+def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
     """
     Compute the disk file name and update it in the disk value.
     """
+    # Compute the filename without extension since it may not make sense for some pool types
+    disk["filename"] = "{}_{}".format(vm_name, disk["name"])
+
+    # Compute the source file path
     base_dir = disk.get("pool", None)
     if hypervisor in ["qemu", "kvm", "xen"]:
         # Compute the base directory from the pool property. We may have either a path
         # or a libvirt pool name there.
-        # If the pool is a known libvirt one with a target path, use it as target path
         if not base_dir:
             base_dir = _get_images_dir()
-        else:
-            if not base_dir.startswith("/"):
-                # The pool seems not to be a path, lookup for pool infos
-                infos = pool_info(base_dir, **kwargs)
-                pool = infos[base_dir] if base_dir in infos else None
-                if (
-                    not pool
-                    or not pool["target_path"]
-                    or pool["target_path"].startswith("/dev")
-                ):
-                    raise CommandExecutionError(
-                        "Unable to create new disk {0}, specified pool {1} does not exist "
-                        "or is unsupported".format(disk["name"], base_dir)
-                    )
-                base_dir = pool["target_path"]
 
-    if hypervisor == "bhyve" and vm_name:
-        disk["filename"] = "{0}.{1}".format(vm_name, disk["name"])
+        # If the pool is a known libvirt one, skip the filename since a libvirt volume will be created later
+        if base_dir not in conn.listStoragePools():
+            # For path-based disks, keep the qcow2 default format
+            if not disk.get("format"):
+                disk["format"] = "qcow2"
+            disk["filename"] = "{}.{}".format(disk["filename"], disk["format"])
+            disk["source_file"] = os.path.join(base_dir, disk["filename"])
+        else:
+            if "pool" not in disk:
+                disk["pool"] = base_dir
+            pool_obj = conn.storagePoolLookupByName(base_dir)
+            pool_xml = ElementTree.fromstring(pool_obj.XMLDesc())
+            pool_type = pool_xml.get("type")
+
+            # Disk pools volume names are partition names, they need to be named based on the device name
+            if pool_type == "disk":
+                device = pool_xml.find("./source/device").get("path")
+                all_volumes = pool_obj.listVolumes()
+                if disk.get("source_file") not in all_volumes:
+                    indexes = [
+                        int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
+                    ] or [0]
+                    index = min(
+                        [
+                            idx
+                            for idx in range(1, max(indexes) + 2)
+                            if idx not in indexes
+                        ]
+                    )
+                    disk["filename"] = "{}{}".format(os.path.basename(device), index)
+
+            # Is the user wanting to reuse an existing volume?
+            if disk.get("source_file"):
+                if not disk.get("source_file") in pool_obj.listVolumes():
+                    raise SaltInvocationError(
+                        "{} volume doesn't exist in pool {}".format(
+                            disk.get("source_file"), base_dir
+                        )
+                    )
+                disk["filename"] = disk["source_file"]
+                del disk["source_file"]
+
+            # Get the default format from the pool capabilities
+            if not disk.get("format"):
+                volume_options = (
+                    [
+                        type_caps.get("options", {}).get("volume", {})
+                        for type_caps in pool_caps.get("pool_types")
+                        if type_caps["name"] == pool_type
+                    ]
+                    or [{}]
+                )[0]
+                # Still prefer qcow2 if possible
+                if "qcow2" in volume_options.get("targetFormatType", []):
+                    disk["format"] = "qcow2"
+                else:
+                    disk["format"] = volume_options.get("default_format", None)
+
+    elif hypervisor == "bhyve" and vm_name:
+        disk["filename"] = "{}.{}".format(vm_name, disk["name"])
         disk["source_file"] = os.path.join(
             "/dev/zvol", base_dir or "", disk["filename"]
         )
-    elif vm_name:
-        # Compute the filename and source file properties if possible
-        disk["filename"] = "{0}_{1}.{2}".format(vm_name, disk["name"], disk["format"])
-        disk["source_file"] = os.path.join(base_dir, disk["filename"])
+
+    elif hypervisor in ["esxi", "vmware"]:
+        if not base_dir:
+            base_dir = __salt__["config.get"]("virt:storagepool", "[0] ")
+        disk["filename"] = "{}.{}".format(disk["filename"], disk["format"])
+        disk["source_file"] = "{}{}".format(base_dir, disk["filename"])
 
 
 def _complete_nics(interfaces, hypervisor):
@@ -1144,23 +1607,12 @@ def _complete_nics(interfaces, hypervisor):
         """
         Apply the default overlay to attributes
         """
-        for key, value in six.iteritems(overlays[hypervisor]):
+        for key, value in overlays[hypervisor].items():
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
-    def _assign_mac(attributes, hypervisor):
-        """
-        Compute mac address for NIC depending on hypervisor
-        """
-        if hypervisor in ["qemu", "kvm"]:
-            attributes["mac"] = salt.utils.network.gen_mac(prefix="52:54:00")
-        else:
-            attributes["mac"] = salt.utils.network.gen_mac()
-
     for interface in interfaces:
         _normalize_net_types(interface)
-        if interface.get("mac", None) is None:
-            _assign_mac(interface, hypervisor)
         if hypervisor in overlays:
             _apply_default_overlay(interface)
 
@@ -1182,7 +1634,7 @@ def _nic_profile(profile_name, hypervisor):
         """
         Append dictionary profile data to interfaces list
         """
-        for interface_name, attributes in six.iteritems(profile_dict):
+        for interface_name, attributes in profile_dict.items():
             attributes["name"] = interface_name
             interfaces.append(attributes)
 
@@ -1255,28 +1707,66 @@ def _handle_remote_boot_params(orig_boot):
     new_boot = orig_boot.copy()
     keys = orig_boot.keys()
     cases = [
+        {"efi"},
+        {"kernel", "initrd", "efi"},
+        {"kernel", "initrd", "cmdline", "efi"},
         {"loader", "nvram"},
         {"kernel", "initrd"},
         {"kernel", "initrd", "cmdline"},
-        {"loader", "nvram", "kernel", "initrd"},
-        {"loader", "nvram", "kernel", "initrd", "cmdline"},
+        {"kernel", "initrd", "loader", "nvram"},
+        {"kernel", "initrd", "cmdline", "loader", "nvram"},
     ]
 
     try:
         if keys in cases:
             for key in keys:
-                if orig_boot.get(key) is not None and check_remote(orig_boot.get(key)):
+                if key == "efi" and type(orig_boot.get(key)) == bool:
+                    new_boot[key] = orig_boot.get(key)
+                elif orig_boot.get(key) is not None and salt.utils.virt.check_remote(
+                    orig_boot.get(key)
+                ):
                     if saltinst_dir is None:
                         os.makedirs(CACHE_DIR)
                         saltinst_dir = CACHE_DIR
-                    new_boot[key] = download_remote(orig_boot.get(key), saltinst_dir)
+                    new_boot[key] = salt.utils.virt.download_remote(
+                        orig_boot.get(key), saltinst_dir
+                    )
             return new_boot
         else:
             raise SaltInvocationError(
-                "Invalid boot parameters, (kernel, initrd) or/and (loader, nvram) must be both present"
+                "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
             )
     except Exception as err:  # pylint: disable=broad-except
         raise err
+
+
+def _handle_efi_param(boot, desc):
+    """
+    Checks if boot parameter contains efi boolean value, if so, handles the firmware attribute.
+    :param boot: The boot parameters passed to the init or update functions.
+    :param desc: The XML description of that domain.
+    :return: A boolean value.
+    """
+    efi_value = boot.get("efi", None) if boot else None
+    parent_tag = desc.find("os")
+    os_attrib = parent_tag.attrib
+
+    # newly defined vm without running, loader tag might not be filled yet
+    if efi_value is False and os_attrib != {}:
+        parent_tag.attrib.pop("firmware", None)
+        return True
+
+    # check the case that loader tag might be present. This happens after the vm ran
+    elif type(efi_value) == bool and os_attrib == {}:
+        if efi_value is True and parent_tag.find("loader") is None:
+            parent_tag.set("firmware", "efi")
+        if efi_value is False and parent_tag.find("loader") is not None:
+            parent_tag.remove(parent_tag.find("loader"))
+            parent_tag.remove(parent_tag.find("nvram"))
+        return True
+    elif type(efi_value) != bool:
+        raise SaltInvocationError("Invalid efi value")
+    return False
 
 
 def init(
@@ -1299,6 +1789,7 @@ def init(
     os_type=None,
     arch=None,
     boot=None,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -1364,21 +1855,60 @@ def init(
 
                      .. versionadded:: 2019.2.0
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary. The structure of
+        the dictionary is documented in :ref:`init-boot-def`. If a remote path is provided to kernel or initrd,
+        salt will handle the downloading of the specified remote file and modify the XML accordingly.
+        To boot VM with UEFI, specify loader and nvram path or specify 'efi': ``True`` if your libvirtd version
+        is >= 5.2.0 and QEMU >= 3.0.0.
+
+        .. versionadded:: 3000
 
         .. code-block:: python
 
             {
                 'kernel': '/root/f8-i386-vmlinuz',
                 'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/',
+                'loader': '/usr/share/OVMF/OVMF_CODE.fd',
+                'nvram': '/usr/share/OVMF/OVMF_VARS.ms.fd'
             }
 
-        .. versionadded:: 3000
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+    .. _init-boot-def:
+
+    .. rubric:: Boot parameters definition
+
+    The boot parameters dictionary can contains the following properties:
+
+    kernel
+        The URL or path to the kernel to run the virtual machine with.
+
+    initrd
+        The URL or path to the initrd file to run the virtual machine with.
+
+    cmdline
+        The parameters to pass to the kernel provided in the `kernel` property.
+
+    loader
+        The path to the UEFI binary loader to use.
+
+        .. versionadded:: 3001
+
+    nvram
+        The path to the UEFI data template. The file will be copied when creating the virtual machine.
+
+        .. versionadded:: 3001
+
+    efi
+       A boolean value.
+
+       .. versionadded:: sodium
 
     .. _init-nic-def:
 
@@ -1420,7 +1950,12 @@ def init(
 
     pool
         Path to the folder or name of the pool where disks should be created.
-        (Default: depends on hypervisor)
+        (Default: depends on hypervisor and the virt:storagepool configuration)
+
+        .. versionchanged:: 3001
+
+        If the value contains no '/', it is considered a pool name where to create a volume.
+        Using volumes will be mandatory for some pools types like rdb, iscsi, etc.
 
     model
         One of the disk busses allowed by libvirt (Default: depends on hypervisor)
@@ -1431,14 +1966,38 @@ def init(
         Path to the image to use for the disk. If no image is provided, an empty disk will be created
         (Default: ``None``)
 
+        Note that some pool types do not support uploading an image. This list can evolve with libvirt
+        versions.
+
     overlay_image
         ``True`` to create a QCOW2 disk image with ``image`` as backing file. If ``False``
         the file pointed to by the ``image`` property will simply be copied. (Default: ``False``)
+
+        .. versionchanged:: 3001
+
+        This property is only valid on path-based disks, not on volumes. To create a volume with a
+        backing store, set the ``backing_store_path`` and ``backing_store_format`` properties.
+
+    backing_store_path
+        Path to the backing store image to use. This can also be the name of a volume to use as
+        backing store within the same pool.
+
+        .. versionadded:: 3001
+
+    backing_store_format
+        Image format of the disk or volume to use as backing store. This property is mandatory when
+        using ``backing_store_path`` to avoid `problems <https://libvirt.org/kbase/backing_chains.html#troubleshooting>`_
+
+        .. versionadded:: 3001
 
     source_file
         Absolute path to the disk image to use. Not to be confused with ``image`` parameter. This
         parameter is useful to use disk images that are created outside of this module. Can also
         be ``None`` for devices that have no associated image like cdroms.
+
+        .. versionchanged:: 3001
+
+        For volume disks, this can be the name of a volume already existing in the storage pool.
 
     device
         Type of device of the disk. Can be one of 'disk', 'cdrom', 'floppy' or 'lun'.
@@ -1516,128 +2075,142 @@ def init(
     .. _disk element: https://libvirt.org/formatdomain.html#elementsDisks
     .. _graphics element: https://libvirt.org/formatdomain.html#elementsGraphics
     """
-    caps = capabilities(**kwargs)
-    os_types = sorted({guest["os_type"] for guest in caps["guests"]})
-    arches = sorted({guest["arch"]["name"] for guest in caps["guests"]})
-
-    virt_hypervisor = hypervisor
-    if not virt_hypervisor:
-        # Use the machine types as possible values
-        # Prefer "kvm" over the others if available
-        hypervisors = sorted(
-            {
-                x
-                for y in [guest["arch"]["domains"].keys() for guest in caps["guests"]]
-                for x in y
-            }
-        )
-        virt_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
-
-    # esxi used to be a possible value for the hypervisor: map it to vmware since it"s the same
-    virt_hypervisor = "vmware" if virt_hypervisor == "esxi" else virt_hypervisor
-
-    log.debug("Using hypervisor %s", virt_hypervisor)
-
-    nicp = _get_merged_nics(virt_hypervisor, nic, interfaces)
-
-    # the disks are computed as follows:
-    # 1 - get the disks defined in the profile
-    # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
-    diskp = _disk_profile(disk, virt_hypervisor, disks, name, **kwargs)
-
-    # Create multiple disks, empty or from specified images.
-    for _disk in diskp:
-        log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
-
-        if virt_hypervisor == "vmware":
-            if "image" in _disk:
-                # TODO: we should be copying the image file onto the ESX host
-                raise SaltInvocationError(
-                    "virt.init does not support image "
-                    "template in conjunction with esxi hypervisor"
-                )
-            else:
-                # assume libvirt manages disks for us
-                log.debug("Generating libvirt XML for %s", _disk)
-                vol_xml = _gen_vol_xml(
-                    name, _disk["name"], _disk["format"], _disk["size"], _disk["pool"]
-                )
-                define_vol_xml_str(vol_xml)
-
-        elif virt_hypervisor in ["qemu", "kvm", "xen"]:
-            create_overlay = _disk.get("overlay_image", False)
-            if _disk["source_file"]:
-                if os.path.exists(_disk["source_file"]):
-                    img_dest = _disk["source_file"]
-                else:
-                    img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
-            else:
-                img_dest = None
-
-            # Seed only if there is an image specified
-            if seed and img_dest and _disk.get("image", None):
-                log.debug("Seed command is %s", seed_cmd)
-                __salt__[seed_cmd](
-                    img_dest,
-                    id_=name,
-                    config=kwargs.get("config"),
-                    install=install,
-                    pub_key=pub_key,
-                    priv_key=priv_key,
-                )
-
-        elif hypervisor in ["bhyve"]:
-            img_dest = _zfs_image_create(
-                vm_name=name,
-                pool=_disk.get("pool"),
-                disk_name=_disk.get("name"),
-                disk_size=_disk.get("size"),
-                disk_image_name=_disk.get("image"),
-                hostname_property_name=_disk.get("hostname_property"),
-                sparse_volume=_disk.get("sparse_volume"),
-            )
-
-        else:
-            # Unknown hypervisor
-            raise SaltInvocationError(
-                "Unsupported hypervisor when handling disk image: {0}".format(
-                    virt_hypervisor
-                )
-            )
-
-    log.debug("Generating VM XML")
-    if os_type is None:
-        os_type = "hvm" if "hvm" in os_types else os_types[0]
-    if arch is None:
-        arch = "x86_64" if "x86_64" in arches else arches[0]
-
-    if boot is not None:
-        boot = _handle_remote_boot_params(boot)
-
-    vm_xml = _gen_xml(
-        name,
-        cpu,
-        mem,
-        diskp,
-        nicp,
-        virt_hypervisor,
-        os_type,
-        arch,
-        graphics,
-        boot,
-        **kwargs
-    )
-    conn = __get_conn(**kwargs)
     try:
+        conn = __get_conn(**kwargs)
+        caps = _capabilities(conn)
+        os_types = sorted({guest["os_type"] for guest in caps["guests"]})
+        arches = sorted({guest["arch"]["name"] for guest in caps["guests"]})
+
+        virt_hypervisor = hypervisor
+        if not virt_hypervisor:
+            # Use the machine types as possible values
+            # Prefer 'kvm' over the others if available
+            hypervisors = sorted(
+                {
+                    x
+                    for y in [
+                        guest["arch"]["domains"].keys() for guest in caps["guests"]
+                    ]
+                    for x in y
+                }
+            )
+            if len(hypervisors) == 0:
+                raise SaltInvocationError("No supported hypervisors were found")
+            virt_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
+
+        # esxi used to be a possible value for the hypervisor: map it to vmware since it's the same
+        virt_hypervisor = "vmware" if virt_hypervisor == "esxi" else virt_hypervisor
+
+        log.debug("Using hypervisor %s", virt_hypervisor)
+
+        nicp = _get_merged_nics(virt_hypervisor, nic, interfaces)
+
+        # the disks are computed as follows:
+        # 1 - get the disks defined in the profile
+        # 3 - update the disks from the profile with the ones from the user. The matching key is the name.
+        diskp = _disk_profile(conn, disk, virt_hypervisor, disks, name)
+
+        # Create multiple disks, empty or from specified images.
+        for _disk in diskp:
+            # No need to create an image for cdrom devices
+            if _disk.get("device", "disk") == "cdrom":
+                continue
+
+            log.debug("Creating disk for VM [ %s ]: %s", name, _disk)
+
+            if virt_hypervisor == "vmware":
+                if "image" in _disk:
+                    # TODO: we should be copying the image file onto the ESX host
+                    raise SaltInvocationError(
+                        "virt.init does not support image "
+                        "template in conjunction with esxi hypervisor"
+                    )
+                else:
+                    # assume libvirt manages disks for us
+                    log.debug("Generating libvirt XML for %s", _disk)
+                    volume_name = "{}/{}".format(name, _disk["name"])
+                    filename = "{}.{}".format(volume_name, _disk["format"])
+                    vol_xml = _gen_vol_xml(
+                        filename, _disk["size"], format=_disk["format"]
+                    )
+                    _define_vol_xml_str(conn, vol_xml, pool=_disk.get("pool"))
+
+            elif virt_hypervisor in ["qemu", "kvm", "xen"]:
+
+                def seeder(path):
+                    _seed_image(
+                        seed_cmd,
+                        path,
+                        name,
+                        kwargs.get("config"),
+                        install,
+                        pub_key,
+                        priv_key,
+                    )
+
+                create_overlay = _disk.get("overlay_image", False)
+                format = _disk.get("format")
+                if _disk.get("source_file"):
+                    if os.path.exists(_disk["source_file"]):
+                        img_dest = _disk["source_file"]
+                    else:
+                        img_dest = _qemu_image_create(_disk, create_overlay, saltenv)
+                else:
+                    _disk_volume_create(conn, _disk, seeder if seed else None, saltenv)
+                    img_dest = None
+
+                # Seed only if there is an image specified
+                if seed and img_dest and _disk.get("image", None):
+                    seeder(img_dest)
+
+            elif hypervisor in ["bhyve"]:
+                img_dest = _zfs_image_create(
+                    vm_name=name,
+                    pool=_disk.get("pool"),
+                    disk_name=_disk.get("name"),
+                    disk_size=_disk.get("size"),
+                    disk_image_name=_disk.get("image"),
+                    hostname_property_name=_disk.get("hostname_property"),
+                    sparse_volume=_disk.get("sparse_volume"),
+                )
+
+            else:
+                # Unknown hypervisor
+                raise SaltInvocationError(
+                    "Unsupported hypervisor when handling disk image: {}".format(
+                        virt_hypervisor
+                    )
+                )
+
+        log.debug("Generating VM XML")
+        if os_type is None:
+            os_type = "hvm" if "hvm" in os_types else os_types[0]
+        if arch is None:
+            arch = "x86_64" if "x86_64" in arches else arches[0]
+
+        if boot is not None:
+            boot = _handle_remote_boot_params(boot)
+
+        vm_xml = _gen_xml(
+            conn,
+            name,
+            cpu,
+            mem,
+            diskp,
+            nicp,
+            virt_hypervisor,
+            os_type,
+            arch,
+            graphics,
+            boot,
+            boot_dev,
+            **kwargs
+        )
+        log.debug("New virtual machine definition: %s", vm_xml)
         conn.defineXML(vm_xml)
-    except libvirtError as err:
-        # check if failure is due to this domain already existing
-        if "domain '{}' already exists".format(name) in six.text_type(err):
-            # continue on to seeding
-            log.warning(err)
-        else:
-            conn.close()
-            raise err  # a real error we should report upwards
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(err.get_error_message())
 
     if start:
         log.debug("Starting VM %s", name)
@@ -1664,8 +2237,17 @@ def _disks_equal(disk1, disk2):
         else ElementTree.Element("source")
     )
 
+    source1_dict = xmlutil.to_dict(source1, True)
+    source2_dict = xmlutil.to_dict(source2, True)
+
+    # Remove the index added by libvirt in the source for backing chain
+    if source1_dict:
+        source1_dict.pop("index", None)
+    if source2_dict:
+        source2_dict.pop("index", None)
+
     return (
-        xmlutil.to_dict(source1, True) == xmlutil.to_dict(source2, True)
+        source1_dict == source2_dict
         and target1 is not None
         and target2 is not None
         and target1.get("bus") == target2.get("bus")
@@ -1688,15 +2270,22 @@ def _nics_equal(nic1, nic2):
             "source": nic.find("source").attrib[nic.attrib["type"]]
             if nic.find("source") is not None
             else None,
-            "mac": nic.find("mac").attrib["address"].lower()
-            if nic.find("mac") is not None
-            else None,
             "model": nic.find("model").attrib["type"]
             if nic.find("model") is not None
             else None,
         }
 
-    return _filter_nic(nic1) == _filter_nic(nic2)
+    def _get_mac(nic):
+        return (
+            nic.find("mac").attrib["address"].lower()
+            if nic.find("mac") is not None
+            else None
+        )
+
+    mac1 = _get_mac(nic1)
+    mac2 = _get_mac(nic2)
+    macs_equal = not mac1 or not mac2 or mac1 == mac2
+    return _filter_nic(nic1) == _filter_nic(nic2) and macs_equal
 
 
 def _graphics_equal(gfx1, gfx2):
@@ -1773,6 +2362,21 @@ def _diff_lists(old, new, comparator):
     return diff
 
 
+def _get_disk_target(targets, disks_count, prefix):
+    """
+    Compute the disk target name for a given prefix.
+
+    :param targets: the list of already computed targets
+    :param disks: the number of disks
+    :param prefix: the prefix of the target name, i.e. "hd"
+    """
+    for i in range(disks_count):
+        ret = "{}{}".format(prefix, string.ascii_lowercase[i])
+        if ret not in targets:
+            return ret
+    return None
+
+
 def _diff_disk_lists(old, new):
     """
     Compare disk definitions to extract the changes and fix target devices
@@ -1789,11 +2393,7 @@ def _diff_disk_lists(old, new):
         target_node = disk.find("target")
         target = target_node.get("dev")
         prefix = [item for item in prefixes if target.startswith(item)][0]
-        new_target = [
-            "{0}{1}".format(prefix, string.ascii_lowercase[i])
-            for i in range(len(new))
-            if "{0}{1}".format(prefix, string.ascii_lowercase[i]) not in targets
-        ][0]
+        new_target = _get_disk_target(targets, len(new), prefix)
         target_node.set("dev", new_target)
         targets.append(new_target)
 
@@ -1807,16 +2407,7 @@ def _diff_interface_lists(old, new):
     :param old: list of ElementTree nodes representing the old interfaces
     :param new: list of ElementTree nodes representing the new interfaces
     """
-    diff = _diff_lists(old, new, _nics_equal)
-
-    # Remove duplicated addresses mac addresses and let libvirt generate them for us
-    macs = [nic.find("mac").get("address") for nic in diff["unchanged"]]
-    for nic in diff["new"]:
-        mac = nic.find("mac")
-        if mac.get("address") in macs:
-            nic.remove(mac)
-
-    return diff
+    return _diff_lists(old, new, _nics_equal)
 
 
 def _diff_graphics_lists(old, new):
@@ -1841,6 +2432,7 @@ def update(
     live=True,
     boot=None,
     test=False,
+    boot_dev=None,
     **kwargs
 ):
     """
@@ -1878,29 +2470,36 @@ def update(
     :param password: password to connect with, overriding defaults
 
     :param boot:
-        Specifies kernel for the virtual machine, as well as boot parameters
-        for the virtual machine. This is an optionl parameter, and all of the
-        keys are optional within the dictionary. If a remote path is provided
-        to kernel or initrd, salt will handle the downloading of the specified
-        remote fild, and will modify the XML accordingly.Boot vm with UEFI,
-        loader and nvram can be specified to achieve the goal. To remove any
-        boot parameters, pass an None object to the relevant parameter, for instance: "kernel": None
+        Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
+        This is an optional parameter, all of the keys are optional within the dictionary.
 
-        .. code-block:: python
+        Refer to :ref:`init-boot-def` for the complete boot parameter description.
 
-            {
-                'kernel': '/root/f8-i386-vmlinuz',
-                'initrd': '/root/f8-i386-initrd',
-                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
-                'loader': /usr/share/OVMF/OVMF_CODE.fd
-                'nvram': /usr/share/OVMF/OVMF_VARS.ms.fd
-            }
+        To update any boot parameters, specify the new path for each. To remove any boot parameters, pass ``None`` object,
+        for instance: 'kernel': ``None``. To switch back to BIOS boot, specify ('loader': ``None`` and 'nvram': ``None``)
+        or 'efi': ``False``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
+
+        SLS file Example:
+
+        .. code-block:: yaml
+
+            - boot:
+                loader: null
+                nvram: null
 
         .. versionadded:: 3000
 
+    :param boot_dev:
+        Space separated list of devices to boot from sorted by decreasing priority.
+        Values can be ``hd``, ``fd``, ``cdrom`` or ``network``.
+
+        By default, the value will ``"hd"``.
+
+        .. versionadded:: Magnesium
+
     :param test: run in dry-run mode if set to True
 
-        .. versionadded:: sodium
+        .. versionadded:: 3001
 
     :return:
 
@@ -1931,7 +2530,7 @@ def update(
     """
     status = {
         "definition": False,
-        "disk": {"attached": [], "detached": []},
+        "disk": {"attached": [], "detached": [], "updated": []},
         "interface": {"attached": [], "detached": []},
     }
     conn = __get_conn(**kwargs)
@@ -1941,13 +2540,16 @@ def update(
 
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get("type")
-    all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
+    all_disks = _disk_profile(conn, disk_profile, hypervisor, disks, name)
 
     if boot is not None:
         boot = _handle_remote_boot_params(boot)
+        if boot.get("efi", None) is not None:
+            need_update = _handle_efi_param(boot, desc)
 
     new_desc = ElementTree.fromstring(
         _gen_xml(
+            conn,
             name,
             cpu or 0,
             mem or 0,
@@ -1965,76 +2567,58 @@ def update(
     # Update the cpu
     cpu_node = desc.find("vcpu")
     if cpu and int(cpu_node.text) != cpu:
-        cpu_node.text = six.text_type(cpu)
-        cpu_node.set("current", six.text_type(cpu))
+        cpu_node.text = str(cpu)
+        cpu_node.set("current", str(cpu))
         need_update = True
 
+    def _set_loader(node, value):
+        salt.utils.xmlutil.set_node_text(node, value)
+        if value is not None:
+            node.set("readonly", "yes")
+            node.set("type", "pflash")
+
+    def _set_nvram(node, value):
+        node.set("template", value)
+
+    def _set_with_mib_unit(node, value):
+        node.text = str(value)
+        node.set("unit", "MiB")
+
     # Update the kernel boot parameters
-    boot_tags = ["kernel", "initrd", "cmdline", "loader", "nvram"]
-    parent_tag = desc.find("os")
+    params_mapping = [
+        {"path": "boot:kernel", "xpath": "os/kernel"},
+        {"path": "boot:initrd", "xpath": "os/initrd"},
+        {"path": "boot:cmdline", "xpath": "os/cmdline"},
+        {"path": "boot:loader", "xpath": "os/loader", "set": _set_loader},
+        {"path": "boot:nvram", "xpath": "os/nvram", "set": _set_nvram},
+        # Update the memory, note that libvirt outputs all memory sizes in KiB
+        {
+            "path": "mem",
+            "xpath": "memory",
+            "get": lambda n: int(n.text) / 1024,
+            "set": _set_with_mib_unit,
+        },
+        {
+            "path": "mem",
+            "xpath": "currentMemory",
+            "get": lambda n: int(n.text) / 1024,
+            "set": _set_with_mib_unit,
+        },
+        {
+            "path": "boot_dev:{dev}",
+            "xpath": "os/boot[$dev]",
+            "get": lambda n: n.get("dev"),
+            "set": lambda n, v: n.set("dev", v),
+            "del": salt.utils.xmlutil.del_attribute("dev"),
+        },
+    ]
 
-    # We need to search for each possible subelement, and update it.
-    for tag in boot_tags:
-        # The Existing Tag...
-        found_tag = parent_tag.find(tag)
-
-        # The new value
-        boot_tag_value = boot.get(tag, None) if boot else None
-
-        # Existing tag is found and values don't match
-        if found_tag is not None and found_tag.text != boot_tag_value:
-
-            # If the existing tag is found, but the new value is None
-            # remove it. If the existing tag is found, and the new value
-            # doesn't match update it. In either case, mark for update.
-            if boot_tag_value is None and boot is not None and parent_tag is not None:
-                parent_tag.remove(found_tag)
-            else:
-                found_tag.text = boot_tag_value
-
-            # If the existing tag is loader or nvram, we need to update the corresponding attribute
-            if found_tag.tag == "loader" and boot_tag_value is not None:
-                found_tag.set("readonly", "yes")
-                found_tag.set("type", "pflash")
-
-            if found_tag.tag == "nvram" and boot_tag_value is not None:
-                found_tag.set("template", found_tag.text)
-                found_tag.text = None
-
-            need_update = True
-
-        # Existing tag is not found, but value is not None
-        elif found_tag is None and boot_tag_value is not None:
-
-            # Need to check for parent tag, and add it if it does not exist.
-            # Add a subelement and set the value to the new value, and then
-            # mark for update.
-            if parent_tag is not None:
-                child_tag = ElementTree.SubElement(parent_tag, tag)
-            else:
-                new_parent_tag = ElementTree.Element("os")
-                child_tag = ElementTree.SubElement(new_parent_tag, tag)
-
-            child_tag.text = boot_tag_value
-
-            # If the newly created tag is loader or nvram, we need to update the corresponding attribute
-            if child_tag.tag == "loader":
-                child_tag.set("readonly", "yes")
-                child_tag.set("type", "pflash")
-
-            if child_tag.tag == "nvram":
-                child_tag.set("template", child_tag.text)
-                child_tag.text = None
-
-            need_update = True
-
-    # Update the memory, note that libvirt outputs all memory sizes in KiB
-    for mem_node_name in ["memory", "currentMemory"]:
-        mem_node = desc.find(mem_node_name)
-        if mem and int(mem_node.text) != mem * 1024:
-            mem_node.text = six.text_type(mem)
-            mem_node.set("unit", "MiB")
-            need_update = True
+    data = {k: v for k, v in locals().items() if bool(v)}
+    if boot_dev:
+        data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
+    need_update = need_update or salt.utils.xmlutil.change_xml(
+        desc, data, params_mapping
+    )
 
     # Update the XML definition with the new disks and diff changes
     devices_node = desc.find("devices")
@@ -2053,8 +2637,8 @@ def update(
             if func_locals.get(param, None) is not None
         ]:
             old = devices_node.findall(dev_type)
-            new = new_desc.findall("devices/{0}".format(dev_type))
-            changes[dev_type] = globals()["_diff_{0}_lists".format(dev_type)](old, new)
+            new = new_desc.findall("devices/{}".format(dev_type))
+            changes[dev_type] = globals()["_diff_{}_lists".format(dev_type)](old, new)
             if changes[dev_type]["deleted"] or changes[dev_type]["new"]:
                 for item in old:
                     devices_node.remove(item)
@@ -2064,22 +2648,26 @@ def update(
     # Set the new definition
     if need_update:
         # Create missing disks if needed
-        if changes["disk"]:
-            for idx, item in enumerate(changes["disk"]["sorted"]):
-                source_file = all_disks[idx]["source_file"]
-                if (
-                    item in changes["disk"]["new"]
-                    and source_file
-                    and not os.path.isfile(source_file)
-                    and not test
-                ):
-                    _qemu_image_create(all_disks[idx])
-
         try:
+            if changes["disk"]:
+                for idx, item in enumerate(changes["disk"]["sorted"]):
+                    source_file = all_disks[idx].get("source_file")
+                    # We don't want to create image disks for cdrom devices
+                    if all_disks[idx].get("device", "disk") == "cdrom":
+                        continue
+                    if (
+                        item in changes["disk"]["new"]
+                        and source_file
+                        and not os.path.isfile(source_file)
+                    ):
+                        _qemu_image_create(all_disks[idx])
+                    elif item in changes["disk"]["new"] and not source_file:
+                        _disk_volume_create(conn, all_disks[idx])
+
             if not test:
-                conn.defineXML(
-                    salt.utils.stringutils.to_str(ElementTree.tostring(desc))
-                )
+                xml_desc = ElementTree.tostring(desc)
+                log.debug("Update virtual machine definition: %s", xml_desc)
+                conn.defineXML(salt.utils.stringutils.to_str(xml_desc))
             status["definition"] = True
         except libvirt.libvirtError as err:
             conn.close()
@@ -2089,6 +2677,7 @@ def update(
         # From that point on, failures are not blocking to try to live update as much
         # as possible.
         commands = []
+        removable_changes = []
         if domain.isActive() and live:
             if cpu:
                 commands.append(
@@ -2106,6 +2695,49 @@ def update(
                         "args": [mem * 1024, libvirt.VIR_DOMAIN_AFFECT_LIVE],
                     }
                 )
+
+            # Look for removable device source changes
+            new_disks = []
+            for new_disk in changes["disk"].get("new", []):
+                device = new_disk.get("device", "disk")
+                if device not in ["cdrom", "floppy"]:
+                    new_disks.append(new_disk)
+                    continue
+
+                target_dev = new_disk.find("target").get("dev")
+                matching = [
+                    old_disk
+                    for old_disk in changes["disk"].get("deleted", [])
+                    if old_disk.get("device", "disk") == device
+                    and old_disk.find("target").get("dev") == target_dev
+                ]
+                if not matching:
+                    new_disks.append(new_disk)
+                else:
+                    # libvirt needs to keep the XML exactly as it was before
+                    updated_disk = matching[0]
+                    changes["disk"]["deleted"].remove(updated_disk)
+                    removable_changes.append(updated_disk)
+                    source_node = updated_disk.find("source")
+                    new_source_node = new_disk.find("source")
+                    source_file = (
+                        new_source_node.get("file")
+                        if new_source_node is not None
+                        else None
+                    )
+
+                    updated_disk.set("type", "file")
+                    # Detaching device
+                    if source_node is not None:
+                        updated_disk.remove(source_node)
+
+                    # Attaching device
+                    if source_file:
+                        ElementTree.SubElement(
+                            updated_disk, "source", attrib={"file": source_file}
+                        )
+
+            changes["disk"]["new"] = new_disks
 
             for dev_type in ["disk", "interface"]:
                 for added in changes[dev_type].get("new", []):
@@ -2134,6 +2766,19 @@ def update(
                         }
                     )
 
+        for updated_disk in removable_changes:
+            commands.append(
+                {
+                    "device": "disk",
+                    "cmd": "updateDeviceFlags",
+                    "args": [
+                        salt.utils.stringutils.to_str(
+                            ElementTree.tostring(updated_disk)
+                        )
+                    ],
+                }
+            )
+
         for cmd in commands:
             try:
                 ret = getattr(domain, cmd["cmd"])(*cmd["args"]) if not test else 0
@@ -2141,13 +2786,17 @@ def update(
                 if device_type in ["cpu", "mem"]:
                     status[device_type] = not bool(ret)
                 else:
-                    actions = {"attachDevice": "attached", "detachDevice": "detached"}
+                    actions = {
+                        "attachDevice": "attached",
+                        "detachDevice": "detached",
+                        "updateDeviceFlags": "updated",
+                    }
                     status[device_type][actions[cmd["cmd"]]].append(cmd["args"][0])
 
             except libvirt.libvirtError as err:
                 if "errors" not in status:
                     status["errors"] = []
-                status["errors"].append(six.text_type(err))
+                status["errors"].append(str(err))
 
     conn.close()
     return status
@@ -2276,7 +2925,7 @@ def vm_info(vm_=None, **kwargs):
         salt '*' virt.vm_info
     """
 
-    def _info(dom):
+    def _info(conn, dom):
         """
         Compute the infos of a domain
         """
@@ -2284,7 +2933,7 @@ def vm_info(vm_=None, **kwargs):
         return {
             "cpu": raw[3],
             "cputime": int(raw[4]),
-            "disks": _get_disks(dom),
+            "disks": _get_disks(conn, dom),
             "graphics": _get_graphics(dom),
             "nics": _get_nics(dom),
             "uuid": _get_uuid(dom),
@@ -2300,10 +2949,10 @@ def vm_info(vm_=None, **kwargs):
     info = {}
     conn = __get_conn(**kwargs)
     if vm_:
-        info[vm_] = _info(_get_domain(conn, vm_))
+        info[vm_] = _info(conn, _get_domain(conn, vm_))
     else:
         for domain in _get_domain(conn, iterable=True):
-            info[domain.name()] = _info(domain)
+            info[domain.name()] = _info(conn, domain)
     conn.close()
     return info
 
@@ -2361,7 +3010,7 @@ def _node_info(conn):
     info = {
         "cpucores": raw[6],
         "cpumhz": raw[3],
-        "cpumodel": six.text_type(raw[0]),
+        "cpumodel": str(raw[0]),
         "cpus": raw[2],
         "cputhreads": raw[7],
         "numanodes": raw[4],
@@ -2523,7 +3172,7 @@ def get_disks(vm_, **kwargs):
         salt '*' virt.get_disks <domain>
     """
     conn = __get_conn(**kwargs)
-    disks = _get_disks(_get_domain(conn, vm_))
+    disks = _get_disks(conn, _get_domain(conn, vm_))
     conn.close()
     return disks
 
@@ -2786,13 +3435,12 @@ def get_profiles(hypervisor=None, **kwargs):
     .. code-block:: bash
 
         salt '*' virt.get_profiles
-        salt '*' virt.get_profiles hypervisor=esxi
+        salt '*' virt.get_profiles hypervisor=vmware
     """
-    ret = {}
-
     # Use the machine types as possible values
     # Prefer 'kvm' over the others if available
-    caps = capabilities(**kwargs)
+    conn = __get_conn(**kwargs)
+    caps = _capabilities(conn)
     hypervisors = sorted(
         {
             x
@@ -2800,24 +3448,24 @@ def get_profiles(hypervisor=None, **kwargs):
             for x in y
         }
     )
-    default_hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
+    if len(hypervisors) == 0:
+        raise SaltInvocationError("No supported hypervisors were found")
 
     if not hypervisor:
-        hypervisor = default_hypervisor
+        hypervisor = "kvm" if "kvm" in hypervisors else hypervisors[0]
+
+    ret = {
+        "disk": {"default": _disk_profile(conn, "default", hypervisor, [], None)},
+        "nic": {"default": _nic_profile("default", hypervisor)},
+    }
     virtconf = __salt__["config.get"]("virt", {})
-    for typ in ["disk", "nic"]:
-        _func = getattr(sys.modules[__name__], "_{0}_profile".format(typ))
-        ret[typ] = {
-            "default": _func(
-                "default", hypervisor if hypervisor else default_hypervisor
-            )
-        }
-        if typ in virtconf:
-            ret.setdefault(typ, {})
-            for prf in virtconf[typ]:
-                ret[typ][prf] = _func(
-                    prf, hypervisor if hypervisor else default_hypervisor
-                )
+
+    for profile in virtconf.get("disk", []):
+        ret["disk"][profile] = _disk_profile(conn, profile, hypervisor, [], None)
+
+    for profile in virtconf.get("nic", []):
+        ret["nic"][profile] = _nic_profile(profile, hypervisor)
+
     return ret
 
 
@@ -3099,7 +3747,7 @@ def create_xml_path(path, **kwargs):
             return create_xml_str(
                 salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
@@ -3157,15 +3805,35 @@ def define_xml_path(path, **kwargs):
             return define_xml_str(
                 salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
-def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
+def _define_vol_xml_str(conn, xml, pool=None):  # pylint: disable=redefined-outer-name
+    """
+    Same function than define_vml_xml_str but using an already opened libvirt connection
+    """
+    default_pool = "default" if conn.getType() != "ESX" else "0"
+    poolname = (
+        pool if pool else __salt__["config.get"]("virt:storagepool", default_pool)
+    )
+    pool = conn.storagePoolLookupByName(str(poolname))
+    ret = pool.createXML(xml, 0) is not None
+    return ret
+
+
+def define_vol_xml_str(
+    xml, pool=None, **kwargs
+):  # pylint: disable=redefined-outer-name
     """
     Define a volume based on the XML passed to the function
 
     :param xml: libvirt XML definition of the storage volume
+    :param pool:
+        storage pool name to define the volume in.
+        If defined, this parameter will override the configuration setting.
+
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3183,26 +3851,34 @@ def define_vol_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
         salt '*' virt.define_vol_xml_str <XML in string format>
 
     The storage pool where the disk image will be defined is ``default``
-    unless changed with a configuration like this:
+    unless changed with the pool parameter or a configuration like this:
 
     .. code-block:: yaml
 
         virt:
             storagepool: mine
     """
-    poolname = __salt__["config.get"]("virt:storagepool", "default")
     conn = __get_conn(**kwargs)
-    pool = conn.storagePoolLookupByName(six.text_type(poolname))
-    ret = pool.createXML(xml, 0) is not None
-    conn.close()
+    ret = False
+    try:
+        ret = _define_vol_xml_str(conn, xml, pool=pool)
+    except libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        conn.close()
     return ret
 
 
-def define_vol_xml_path(path, **kwargs):
+def define_vol_xml_path(path, pool=None, **kwargs):
     """
     Define a volume based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the volume
+    :param pool:
+        storage pool name to define the volume in.
+        If defined, this parameter will override the configuration setting.
+
+        .. versionadded:: 3001
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -3223,19 +3899,52 @@ def define_vol_xml_path(path, **kwargs):
     try:
         with salt.utils.files.fopen(path, "r") as fp_:
             return define_vol_xml_str(
-                salt.utils.stringutils.to_unicode(fp_.read()), **kwargs
+                salt.utils.stringutils.to_unicode(fp_.read()), pool=pool, **kwargs
             )
-    except (OSError, IOError):
+    except OSError:
         return False
 
 
-def migrate_non_shared(vm_, target, ssh=False):
+def migrate_non_shared(vm_, target, ssh=False, **kwargs):
     """
     Attempt to execute non-shared storage "all" migration
 
     :param vm_: domain name
     :param target: target libvirt host name
     :param ssh: True to connect over ssh
+
+        .. deprecated:: 3002
+
+    :param kwargs:
+        - live:           Use live migration. Defalt value is True.
+        - persistent:     Leave the domain persistent on destination host.
+                          Defalt value is True.
+        - undefinesource: Undefine the domain on the source host.
+                          Defalt value is True.
+        - offline:        If set to True it will migrate the domain definition
+                          without starting the domain on destination and without
+                          stopping it on source host. Defalt value is False.
+        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
+        - max_downtime:   Set maximum tolerable downtime for live-migration.
+                          The value represents a number of milliseconds the guest
+                          is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                          to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
+        - postcopy:        Enable the use of post-copy migration.
+        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
+        - username:       Username to connect with target host
+        - password:       Password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -3254,21 +3963,54 @@ def migrate_non_shared(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = (
-        _get_migrate_command() + " --copy-storage-all " + vm_ + _get_target(target, ssh)
+    salt.utils.versions.warn_until(
+        "Silicon",
+        "The 'migrate_non_shared' feature has been deprecated. "
+        "Use 'migrate' with copy_storage='all' instead.",
     )
-
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    return migrate(vm_, target, ssh, copy_storage="all", **kwargs)
 
 
-def migrate_non_shared_inc(vm_, target, ssh=False):
+def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
     """
-    Attempt to execute non-shared storage "all" migration
+    Attempt to execute non-shared storage "inc" migration
 
     :param vm_: domain name
     :param target: target libvirt host name
     :param ssh: True to connect over ssh
+
+        .. deprecated:: 3002
+
+    :param kwargs:
+        - live:           Use live migration. Defalt value is True.
+        - persistent:     Leave the domain persistent on destination host.
+                          Defalt value is True.
+        - undefinesource: Undefine the domain on the source host.
+                          Defalt value is True.
+        - offline:        If set to True it will migrate the domain definition
+                          without starting the domain on destination and without
+                          stopping it on source host. Defalt value is False.
+        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
+        - max_downtime:   Set maximum tolerable downtime for live-migration.
+                          The value represents a number of milliseconds the guest
+                          is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                          to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
+        - postcopy:        Enable the use of post-copy migration.
+        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
+        - username:       Username to connect with target host
+        - password:       Password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -3287,27 +4029,65 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = (
-        _get_migrate_command() + " --copy-storage-inc " + vm_ + _get_target(target, ssh)
+    salt.utils.versions.warn_until(
+        "Silicon",
+        "The 'migrate_non_shared_inc' feature has been deprecated. "
+        "Use 'migrate' with copy_storage='inc' instead.",
     )
-
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    return migrate(vm_, target, ssh, copy_storage="inc", **kwargs)
 
 
-def migrate(vm_, target, ssh=False):
+def migrate(vm_, target, ssh=False, **kwargs):
     """
     Shared storage migration
 
     :param vm_: domain name
-    :param target: target libvirt host name
+    :param target: target libvirt URI or host name
     :param ssh: True to connect over ssh
+
+       .. deprecated:: 3002
+
+    :param kwargs:
+        - live:            Use live migration. Defalt value is True.
+        - persistent:      Leave the domain persistent on destination host.
+                           Defalt value is True.
+        - undefinesource:  Undefine the domain on the source host.
+                           Defalt value is True.
+        - offline:         If set to True it will migrate the domain definition
+                           without starting the domain on destination and without
+                           stopping it on source host. Defalt value is False.
+        - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
+        - max_downtime:    Set maximum tolerable downtime for live-migration.
+                           The value represents a number of milliseconds the guest
+                           is allowed to be down at the end of live migration.
+        - parallel_connections: Specify a number of parallel network connections
+                           to be used to send memory pages to the destination host.
+        - compressed:      Activate compression.
+        - comp_methods:    A comma-separated list of compression methods. Supported
+                           methods are "mt" and "xbzrle" and can be  used in any
+                           combination. QEMU defaults to "xbzrle".
+        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
+                           where 1 is maximum speed and 9 is  maximum compression.
+        - comp_mt_threads: Set number of compress threads on source host.
+        - comp_mt_dthreads: Set number of decompress threads on target host.
+        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
+        - copy_storage:    Migrate non-shared storage. It must be one of the following
+                           values: all (full disk copy) or incremental (Incremental copy)
+        - postcopy:        Enable the use of post-copy migration.
+        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
+        - username:        Username to connect with target host
+        - password:        Password to connect with target host
+
+        .. versionadded:: 3002
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.migrate <domain> <target hypervisor>
+        salt '*' virt.migrate <domain> <target hypervisor URI>
+        salt src virt.migrate guest qemu+ssh://dst/system
+        salt src virt.migrate guest qemu+tls://dst/system
+        salt src virt.migrate guest qemu+tcp://dst/system
 
     A tunnel data migration can be performed by setting this in the
     configuration:
@@ -3320,10 +4100,51 @@ def migrate(vm_, target, ssh=False):
     For more details on tunnelled data migrations, report to
     https://libvirt.org/migration.html#transporttunnel
     """
-    cmd = _get_migrate_command() + " " + vm_ + _get_target(target, ssh)
 
-    stdout = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    return salt.utils.stringutils.to_str(stdout)
+    if ssh:
+        salt.utils.versions.warn_until(
+            "Silicon",
+            "The 'ssh' argument has been deprecated and "
+            "will be removed in a future release. "
+            "Use libvirt URI string 'target' instead.",
+        )
+
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+
+    if not urlparse(target).scheme:
+        proto = "qemu"
+        if ssh:
+            proto += "+ssh"
+        dst_uri = "{}://{}/system".format(proto, target)
+    else:
+        dst_uri = target
+
+    ret = _migrate(dom, dst_uri, **kwargs)
+    conn.close()
+    return ret
+
+
+def migrate_start_postcopy(vm_):
+    """
+    Starts post-copy migration. This function has to be called
+    while live migration is in progress and it has been initiated
+    with the `postcopy=True` option.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.migrate_start_postcopy <domain>
+    """
+    conn = __get_conn()
+    dom = _get_domain(conn, vm_)
+    try:
+        dom.migrateStartPostCopy()
+    except libvirt.libvirtError as err:
+        conn.close()
+        raise CommandExecutionError(err.get_error_message())
+    conn.close()
 
 
 def seed_non_shared_migrate(disks, force=False):
@@ -3342,7 +4163,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     """
-    for _, data in six.iteritems(disks):
+    for _, data in disks.items():
         fn_ = data["file"]
         form = data["file format"]
         size = data["virtual size"].split()[1][1:]
@@ -3472,7 +4293,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     """
     conn = __get_conn(**kwargs)
     dom = _get_domain(conn, vm_)
-    disks = _get_disks(dom)
+    disks = _get_disks(conn, dom)
     if (
         VIRT_STATE_NAME_MAP.get(dom.info()[0], "unknown") != "shutdown"
         and dom.destroy() != 0
@@ -3482,15 +4303,28 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
     for disk in disks:
         if not removables and disks[disk]["type"] in ["cdrom", "floppy"]:
             continue
-        elif disks[disk].get("zfs", False):
+        if disks[disk].get("zfs", False):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {0}".format(fs_name))
+            log.info("Destroying VM ZFS volume {}".format(fs_name))
             __salt__["zfs.destroy"](name=fs_name, force=True)
-        else:
+        elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
             directories.add(os.path.dirname(disks[disk]["file"]))
+        else:
+            # We may have a volume to delete here
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
+            if matcher:
+                pool_name = matcher.group("pool")
+                pool = None
+                if pool_name in conn.listStoragePools():
+                    pool = conn.storagePoolLookupByName(pool_name)
+
+                if pool and matcher.group("volume") in pool.listVolumes():
+                    volume = pool.storageVolLookupByName(matcher.group("volume"))
+                    volume.delete()
+
     if dirs:
         for dir_ in directories:
             shutil.rmtree(dir_)
@@ -3527,7 +4361,7 @@ def _is_kvm_hyper():
         with salt.utils.files.fopen("/proc/modules") as fp_:
             if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
-    except IOError:
+    except OSError:
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
@@ -3547,7 +4381,7 @@ def _is_xen_hyper():
         with salt.utils.files.fopen("/proc/modules") as fp_:
             if "xen_" not in salt.utils.stringutils.to_unicode(fp_.read()):
                 return False
-    except (OSError, IOError):
+    except OSError:
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
@@ -3662,7 +4496,7 @@ def vm_cputime(vm_=None, **kwargs):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
             "cputime": int(raw[4]),
-            "cputime_percent": int("{0:.0f}".format(cputime_percent)),
+            "cputime_percent": int("{:.0f}".format(cputime_percent)),
         }
 
     info = {}
@@ -3732,7 +4566,7 @@ def vm_netstats(vm_=None, **kwargs):
             "tx_errs": 0,
             "tx_drop": 0,
         }
-        for attrs in six.itervalues(nics):
+        for attrs in nics.values():
             if "target" in attrs:
                 dev = attrs["target"]
                 stats = dom.interfaceStats(dev)
@@ -4060,7 +4894,7 @@ def revert_snapshot(name, vm_snapshot=None, cleanup=False, **kwargs):
         conn.close()
         raise CommandExecutionError(
             snapshot
-            and 'Snapshot "{0}" not found'.format(vm_snapshot)
+            and 'Snapshot "{}" not found'.format(vm_snapshot)
             or "No more previous snapshots available"
         )
     elif snap.isCurrent():
@@ -4318,6 +5152,20 @@ def _parse_caps_host(host):
     return result
 
 
+def _capabilities(conn):
+    """
+    Return the hypervisor connection capabilities.
+
+    :param conn: opened libvirt connection to use
+    """
+    caps = ElementTree.fromstring(conn.getCapabilities())
+
+    return {
+        "host": _parse_caps_host(caps.find("host")),
+        "guests": [_parse_caps_guest(guest) for guest in caps.findall("guest")],
+    }
+
+
 def capabilities(**kwargs):
     """
     Return the hypervisor connection capabilities.
@@ -4335,13 +5183,13 @@ def capabilities(**kwargs):
         salt '*' virt.capabilities
     """
     conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(conn.getCapabilities())
-    conn.close()
-
-    return {
-        "host": _parse_caps_host(caps.find("host")),
-        "guests": [_parse_caps_guest(guest) for guest in caps.findall("guest")],
-    }
+    try:
+        caps = _capabilities(conn)
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(str(err))
+    finally:
+        conn.close()
+    return caps
 
 
 def _parse_caps_enum(node):
@@ -4433,39 +5281,10 @@ def _parse_caps_loader(node):
     return result
 
 
-def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+def _parse_domain_caps(caps):
     """
-    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
-
-    .. versionadded:: 2019.2.0
-
-    :param emulator: return the capabilities for the given emulator binary
-    :param arch: return the capabilities for the given CPU architecture
-    :param machine: return the capabilities for the given emulated machine type
-    :param domain: return the capabilities for the given virtualization type.
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
-
-    The list of the possible emulator, arch, machine and domain can be found in
-    the host capabilities output.
-
-    If none of the parameters is provided the libvirt default domain capabilities
-    will be returned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
-
+    Parse the XML document of domain capabilities into a structure.
     """
-    conn = __get_conn(**kwargs)
-    caps = ElementTree.fromstring(
-        conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
-    )
-    conn.close()
-
     result = {
         "emulator": caps.find("path").text if caps.find("path") is not None else None,
         "domain": caps.find("domain").text if caps.find("domain") is not None else None,
@@ -4503,6 +5322,98 @@ def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **k
             features = _parse_caps_devices_features(child)
             if features:
                 result["features"] = features
+
+    return result
+
+
+def domain_capabilities(emulator=None, arch=None, machine=None, domain=None, **kwargs):
+    """
+    Return the domain capabilities given an emulator, architecture, machine or virtualization type.
+
+    .. versionadded:: 2019.2.0
+
+    :param emulator: return the capabilities for the given emulator binary
+    :param arch: return the capabilities for the given CPU architecture
+    :param machine: return the capabilities for the given emulated machine type
+    :param domain: return the capabilities for the given virtualization type.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    The list of the possible emulator, arch, machine and domain can be found in
+    the host capabilities output.
+
+    If none of the parameters is provided, the libvirt default one is returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.domain_capabilities arch='x86_64' domain='kvm'
+
+    """
+    conn = __get_conn(**kwargs)
+    result = []
+    try:
+        caps = ElementTree.fromstring(
+            conn.getDomainCapabilities(emulator, arch, machine, domain, 0)
+        )
+        result = _parse_domain_caps(caps)
+    finally:
+        conn.close()
+
+    return result
+
+
+def all_capabilities(**kwargs):
+    """
+    Return the host and domain capabilities in a single call.
+
+    .. versionadded:: 3001
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.all_capabilities
+
+    """
+    conn = __get_conn(**kwargs)
+    result = {}
+    try:
+        host_caps = ElementTree.fromstring(conn.getCapabilities())
+        domains = [
+            [
+                (guest.get("arch", {}).get("name", None), key)
+                for key in guest.get("arch", {}).get("domains", {}).keys()
+            ]
+            for guest in [
+                _parse_caps_guest(guest) for guest in host_caps.findall("guest")
+            ]
+        ]
+        flattened = [pair for item in (x for x in domains) for pair in item]
+        result = {
+            "host": {
+                "host": _parse_caps_host(host_caps.find("host")),
+                "guests": [
+                    _parse_caps_guest(guest) for guest in host_caps.findall("guest")
+                ],
+            },
+            "domains": [
+                _parse_domain_caps(
+                    ElementTree.fromstring(
+                        conn.getDomainCapabilities(None, arch, None, domain)
+                    )
+                )
+                for (arch, domain) in flattened
+            ],
+        }
+    finally:
+        conn.close()
 
     return result
 
@@ -4577,10 +5488,10 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             ]
 
             if not cpu_specs:
-                raise ValueError("Model {0} not found in CPU map".format(cpu_model))
+                raise ValueError("Model {} not found in CPU map".format(cpu_model))
             elif len(cpu_specs) > 1:
                 raise ValueError(
-                    "Multiple models {0} found in CPU map".format(cpu_model)
+                    "Multiple models {} found in CPU map".format(cpu_model)
                 )
 
             cpu_specs = cpu_specs[0]
@@ -4601,7 +5512,7 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
             "vendor": cpu.find("vendor").text,
             "features": [feature.get("name") for feature in cpu.findall("feature")],
         }
-    return cpu.toxml()
+    return ElementTree.tostring(cpu)
 
 
 def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
@@ -4671,14 +5582,14 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     )
     try:
         conn.networkDefineXML(net_xml)
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         log.warning(err)
         conn.close()
         raise err  # a real error we should report upwards
 
     try:
         network = conn.networkLookupByName(name)
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         log.warning(err)
         conn.close()
         raise err  # a real error we should report upwards
@@ -4921,13 +5832,13 @@ def _parse_pools_caps(doc):
         for option_kind in ["pool", "vol"]:
             options = {}
             default_format_node = pool.find(
-                "{0}Options/defaultFormat".format(option_kind)
+                "{}Options/defaultFormat".format(option_kind)
             )
             if default_format_node is not None:
                 options["default_format"] = default_format_node.get("type")
             options_enums = {
                 enum.get("name"): [value.text for value in enum.findall("value")]
-                for enum in pool.findall("{0}Options/enum".format(option_kind))
+                for enum in pool.findall("{}Options/enum".format(option_kind))
             }
             if options_enums:
                 options.update(options_enums)
@@ -4939,6 +5850,172 @@ def _parse_pools_caps(doc):
         return pool_caps
 
     return [_parse_pool_caps(pool) for pool in doc.findall("pool")]
+
+
+def _pool_capabilities(conn):
+    """
+    Return the hypervisor connection storage pool capabilities.
+
+    :param conn: opened libvirt connection to use
+    """
+    has_pool_capabilities = bool(getattr(conn, "getStoragePoolCapabilities", None))
+    if has_pool_capabilities:
+        caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
+        pool_types = _parse_pools_caps(caps)
+    else:
+        # Compute reasonable values
+        all_hypervisors = ["xen", "kvm", "bhyve"]
+        images_formats = [
+            "none",
+            "raw",
+            "dir",
+            "bochs",
+            "cloop",
+            "dmg",
+            "iso",
+            "vpc",
+            "vdi",
+            "fat",
+            "vhd",
+            "ploop",
+            "cow",
+            "qcow",
+            "qcow2",
+            "qed",
+            "vmdk",
+        ]
+        common_drivers = [
+            {
+                "name": "fs",
+                "default_source_format": "auto",
+                "source_formats": [
+                    "auto",
+                    "ext2",
+                    "ext3",
+                    "ext4",
+                    "ufs",
+                    "iso9660",
+                    "udf",
+                    "gfs",
+                    "gfs2",
+                    "vfat",
+                    "hfs+",
+                    "xfs",
+                    "ocfs2",
+                ],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "dir",
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {"name": "iscsi"},
+            {"name": "scsi"},
+            {
+                "name": "logical",
+                "default_source_format": "lvm2",
+                "source_formats": ["unknown", "lvm2"],
+            },
+            {
+                "name": "netfs",
+                "default_source_format": "auto",
+                "source_formats": ["auto", "nfs", "glusterfs", "cifs"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "disk",
+                "default_source_format": "unknown",
+                "source_formats": [
+                    "unknown",
+                    "dos",
+                    "dvh",
+                    "gpt",
+                    "mac",
+                    "bsd",
+                    "pc98",
+                    "sun",
+                    "lvm2",
+                ],
+                "default_target_format": "none",
+                "target_formats": [
+                    "none",
+                    "linux",
+                    "fat16",
+                    "fat32",
+                    "linux-swap",
+                    "linux-lvm",
+                    "linux-raid",
+                    "extended",
+                ],
+            },
+            {"name": "mpath"},
+            {"name": "rbd", "default_target_format": "raw", "target_formats": []},
+            {
+                "name": "sheepdog",
+                "version": 10000,
+                "hypervisors": ["kvm"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {
+                "name": "gluster",
+                "version": 1002000,
+                "hypervisors": ["kvm"],
+                "default_target_format": "raw",
+                "target_formats": images_formats,
+            },
+            {"name": "zfs", "version": 1002008, "hypervisors": ["bhyve"]},
+            {
+                "name": "iscsi-direct",
+                "version": 4007000,
+                "hypervisors": ["kvm", "xen"],
+            },
+        ]
+
+        libvirt_version = conn.getLibVersion()
+        hypervisor = get_hypervisor()
+
+        def _get_backend_output(backend):
+            output = {
+                "name": backend["name"],
+                "supported": (
+                    not backend.get("version") or libvirt_version >= backend["version"]
+                )
+                and hypervisor in backend.get("hypervisors", all_hypervisors),
+                "options": {
+                    "pool": {
+                        "default_format": backend.get("default_source_format"),
+                        "sourceFormatType": backend.get("source_formats"),
+                    },
+                    "volume": {
+                        "default_format": backend.get("default_target_format"),
+                        "targetFormatType": backend.get("target_formats"),
+                    },
+                },
+            }
+
+            # Cleanup the empty members to match the libvirt output
+            for option_kind in ["pool", "volume"]:
+                if not [
+                    value
+                    for value in output["options"][option_kind].values()
+                    if value is not None
+                ]:
+                    del output["options"][option_kind]
+            if not output["options"]:
+                del output["options"]
+
+            return output
+
+        pool_types = [_get_backend_output(backend) for backend in common_drivers]
+
+    return {
+        "computed": not has_pool_capabilities,
+        "pool_types": pool_types,
+    }
 
 
 def pool_capabilities(**kwargs):
@@ -4964,167 +6041,9 @@ def pool_capabilities(**kwargs):
     """
     try:
         conn = __get_conn(**kwargs)
-        has_pool_capabilities = bool(getattr(conn, "getStoragePoolCapabilities", None))
-        if has_pool_capabilities:
-            caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
-            pool_types = _parse_pools_caps(caps)
-        else:
-            # Compute reasonable values
-            all_hypervisors = ["xen", "kvm", "bhyve"]
-            images_formats = [
-                "none",
-                "raw",
-                "dir",
-                "bochs",
-                "cloop",
-                "dmg",
-                "iso",
-                "vpc",
-                "vdi",
-                "fat",
-                "vhd",
-                "ploop",
-                "cow",
-                "qcow",
-                "qcow2",
-                "qed",
-                "vmdk",
-            ]
-            common_drivers = [
-                {
-                    "name": "fs",
-                    "default_source_format": "auto",
-                    "source_formats": [
-                        "auto",
-                        "ext2",
-                        "ext3",
-                        "ext4",
-                        "ufs",
-                        "iso9660",
-                        "udf",
-                        "gfs",
-                        "gfs2",
-                        "vfat",
-                        "hfs+",
-                        "xfs",
-                        "ocfs2",
-                    ],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "dir",
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {"name": "iscsi"},
-                {"name": "scsi"},
-                {
-                    "name": "logical",
-                    "default_source_format": "lvm2",
-                    "source_formats": ["unknown", "lvm2"],
-                },
-                {
-                    "name": "netfs",
-                    "default_source_format": "auto",
-                    "source_formats": ["auto", "nfs", "glusterfs", "cifs"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "disk",
-                    "default_source_format": "unknown",
-                    "source_formats": [
-                        "unknown",
-                        "dos",
-                        "dvh",
-                        "gpt",
-                        "mac",
-                        "bsd",
-                        "pc98",
-                        "sun",
-                        "lvm2",
-                    ],
-                    "default_target_format": "none",
-                    "target_formats": [
-                        "none",
-                        "linux",
-                        "fat16",
-                        "fat32",
-                        "linux-swap",
-                        "linux-lvm",
-                        "linux-raid",
-                        "extended",
-                    ],
-                },
-                {"name": "mpath"},
-                {"name": "rbd", "default_target_format": "raw", "target_formats": []},
-                {
-                    "name": "sheepdog",
-                    "version": 10000,
-                    "hypervisors": ["kvm"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {
-                    "name": "gluster",
-                    "version": 1002000,
-                    "hypervisors": ["kvm"],
-                    "default_target_format": "raw",
-                    "target_formats": images_formats,
-                },
-                {"name": "zfs", "version": 1002008, "hypervisors": ["bhyve"]},
-                {
-                    "name": "iscsi-direct",
-                    "version": 4007000,
-                    "hypervisors": ["kvm", "xen"],
-                },
-            ]
-
-            libvirt_version = conn.getLibVersion()
-            hypervisor = get_hypervisor()
-
-            def _get_backend_output(backend):
-                output = {
-                    "name": backend["name"],
-                    "supported": (
-                        not backend.get("version")
-                        or libvirt_version >= backend["version"]
-                    )
-                    and hypervisor in backend.get("hypervisors", all_hypervisors),
-                    "options": {
-                        "pool": {
-                            "default_format": backend.get("default_source_format"),
-                            "sourceFormatType": backend.get("source_formats"),
-                        },
-                        "volume": {
-                            "default_format": backend.get("default_target_format"),
-                            "targetFormatType": backend.get("target_formats"),
-                        },
-                    },
-                }
-
-                # Cleanup the empty members to match the libvirt output
-                for option_kind in ["pool", "volume"]:
-                    if not [
-                        value
-                        for value in output["options"][option_kind].values()
-                        if value is not None
-                    ]:
-                        del output["options"][option_kind]
-                if not output["options"]:
-                    del output["options"]
-
-                return output
-
-            pool_types = [_get_backend_output(backend) for backend in common_drivers]
+        return _pool_capabilities(conn)
     finally:
         conn.close()
-
-    return {
-        "computed": not has_pool_capabilities,
-        "pool_types": pool_types,
-    }
 
 
 def pool_define(
@@ -5295,7 +6214,7 @@ def pool_define(
             pool = conn.storagePoolDefineXML(pool_xml)
             if start:
                 pool.create()
-    except libvirtError as err:
+    except libvirt.libvirtError as err:
         raise err  # a real error we should report upwards
     finally:
         conn.close()
@@ -5314,15 +6233,19 @@ def _pool_set_secret(
         if secret_type:
             # Get the previously defined secret if any
             secret = None
-            if usage:
-                usage_type = (
-                    libvirt.VIR_SECRET_USAGE_TYPE_CEPH
-                    if secret_type == "ceph"
-                    else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
-                )
-                secret = conn.secretLookupByUsage(usage_type, usage)
-            elif uuid:
-                secret = conn.secretLookupByUUIDString(uuid)
+            try:
+                if usage:
+                    usage_type = (
+                        libvirt.VIR_SECRET_USAGE_TYPE_CEPH
+                        if secret_type == "ceph"
+                        else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                    )
+                    secret = conn.secretLookupByUsage(usage_type, usage)
+                elif uuid:
+                    secret = conn.secretLookupByUUIDString(uuid)
+            except libvirt.libvirtError as err:
+                # For some reason the secret has been removed. Don't fail since we'll recreate it
+                log.info("Secret not found: %s", err.get_error_message())
 
             # Create secret if needed
             if not secret:
@@ -5750,6 +6673,22 @@ def pool_undefine(name, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
+        desc = ElementTree.fromstring(pool.XMLDesc())
+
+        # Is there a secret that we generated and would need to be removed?
+        # Don't remove the other secrets
+        auth_node = desc.find("source/auth")
+        if auth_node is not None:
+            auth_types = {
+                "ceph": libvirt.VIR_SECRET_USAGE_TYPE_CEPH,
+                "iscsi": libvirt.VIR_SECRET_USAGE_TYPE_ISCSI,
+            }
+            secret_type = auth_types[auth_node.get("type")]
+            secret_usage = auth_node.find("secret").get("usage")
+            if secret_type and "pool_{}".format(name) == secret_usage:
+                secret = conn.secretLookupByUsage(secret_type, secret_usage)
+                secret.undefine()
+
         return not bool(pool.undefine())
     finally:
         conn.close()
@@ -5893,29 +6832,33 @@ def _is_valid_volume(vol):
 
 def _get_all_volumes_paths(conn):
     """
-    Extract the path and backing stores path of all volumes.
+    Extract the path, name, pool name and backing stores path of all volumes.
 
     :param conn: libvirt connection to use
     """
-    volumes = [
-        vol
-        for l in [
-            obj.listAllVolumes()
-            for obj in conn.listAllStoragePools()
-            if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
-        ]
-        for vol in l
+    pools = [
+        pool
+        for pool in conn.listAllStoragePools()
+        if pool.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
     ]
-    return {
-        vol.path(): [
-            path.text
-            for path in ElementTree.fromstring(vol.XMLDesc()).findall(
-                ".//backingStore/path"
-            )
-        ]
-        for vol in volumes
-        if _is_valid_volume(vol)
-    }
+    volumes = {}
+    for pool in pools:
+        pool_volumes = {
+            volume.path(): {
+                "pool": pool.name(),
+                "name": volume.name(),
+                "backing_stores": [
+                    path.text
+                    for path in ElementTree.fromstring(volume.XMLDesc()).findall(
+                        ".//backingStore/path"
+                    )
+                ],
+            }
+            for volume in pool.listAllVolumes()
+            if _is_valid_volume(volume)
+        }
+        volumes.update(pool_volumes)
+    return volumes
 
 
 def volume_infos(pool=None, volume=None, **kwargs):
@@ -5967,13 +6910,27 @@ def volume_infos(pool=None, volume=None, **kwargs):
             types = ["file", "block", "dir", "network", "netdir", "ploop"]
             infos = vol.info()
 
+            vol_xml = ElementTree.fromstring(vol.XMLDesc())
+            backing_store_path = vol_xml.find("./backingStore/path")
+            backing_store_format = vol_xml.find("./backingStore/format")
+            backing_store = None
+            if backing_store_path is not None:
+                backing_store = {
+                    "path": backing_store_path.text,
+                    "format": backing_store_format.get("type")
+                    if backing_store_format is not None
+                    else None,
+                }
+
+            format_node = vol_xml.find("./target/format")
+
             # If we have a path, check its use.
             used_by = []
             if vol.path():
                 as_backing_store = {
                     path
-                    for (path, all_paths) in backing_stores.items()
-                    if vol.path() in all_paths
+                    for (path, volume) in backing_stores.items()
+                    if vol.path() in volume.get("backing_stores")
                 }
                 used_by = [
                     vm_name
@@ -5988,6 +6945,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
                 "capacity": infos[1],
                 "allocation": infos[2],
                 "used_by": used_by,
+                "backing_store": backing_store,
+                "format": format_node.get("type") if format_node is not None else None,
             }
 
         pools = [
@@ -6036,3 +6995,215 @@ def volume_delete(pool, volume, **kwargs):
         return not bool(vol.delete())
     finally:
         conn.close()
+
+
+def volume_define(
+    pool,
+    name,
+    size,
+    allocation=0,
+    format=None,
+    type=None,
+    permissions=None,
+    backing_store=None,
+    nocow=False,
+    **kwargs
+):
+    """
+    Create libvirt volume.
+
+    :param pool: name of the pool to create the volume in
+    :param name: name of the volume to define
+    :param size: capacity of the volume to define in MiB
+    :param allocation: allocated size of the volume in MiB. Defaults to 0.
+    :param format:
+        volume format. The allowed values are depending on the pool type.
+        Check the virt.pool_capabilities output for the possible values and the default.
+    :param type:
+        type of the volume. One of file, block, dir, network, netdiri, ploop or None.
+        By default, the type is guessed by libvirt from the pool type.
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param backing_store:
+        dictionary describing a backing file for the volume. It must contain a ``path``
+        property pointing to the base volume and a ``format`` property defining the format
+        of the base volume.
+
+        The base volume format will not be guessed for security reasons and is thus mandatory.
+    :param nocow: disable COW for the volume.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    Volume on ESX:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_define "[local-storage]" myvm/myvm.vmdk vmdk 8192
+
+    QCow2 volume with backing file:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_define default myvm.qcow2 qcow2 8192 \
+                            permissions="{'mode': '0775', 'owner': '123', 'group': '345'"}" \
+                            backing_store="{'path': '/path/to/base.img', 'format': 'raw'}" \
+                            nocow=True
+
+    .. versionadded:: 3001
+    """
+    ret = False
+    try:
+        conn = __get_conn(**kwargs)
+        pool_obj = conn.storagePoolLookupByName(pool)
+        pool_type = ElementTree.fromstring(pool_obj.XMLDesc()).get("type")
+        new_allocation = allocation
+        if pool_type == "logical" and size != allocation:
+            new_allocation = size
+        xml = _gen_vol_xml(
+            name,
+            size,
+            format=format,
+            allocation=new_allocation,
+            type=type,
+            permissions=permissions,
+            backing_store=backing_store,
+            nocow=nocow,
+        )
+        ret = _define_vol_xml_str(conn, xml, pool=pool)
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        conn.close()
+    return ret
+
+
+def _volume_upload(conn, pool, volume, file, offset=0, length=0, sparse=False):
+    """
+    Function performing the heavy duty for volume_upload but using an already
+    opened libvirt connection.
+    """
+
+    def handler(stream, nbytes, opaque):
+        return os.read(opaque, nbytes)
+
+    def holeHandler(stream, opaque):
+        """
+        Taken from the sparsestream.py libvirt-python example.
+        """
+        fd = opaque
+        cur = os.lseek(fd, 0, os.SEEK_CUR)
+
+        try:
+            data = os.lseek(fd, cur, os.SEEK_DATA)
+        except OSError as e:
+            if e.errno != 6:
+                raise e
+            else:
+                data = -1
+        if data < 0:
+            inData = False
+            eof = os.lseek(fd, 0, os.SEEK_END)
+            if eof < cur:
+                raise RuntimeError("Current position in file after EOF: {}".format(cur))
+            sectionLen = eof - cur
+        else:
+            if data > cur:
+                inData = False
+                sectionLen = data - cur
+            else:
+                inData = True
+
+                hole = os.lseek(fd, data, os.SEEK_HOLE)
+                if hole < 0:
+                    raise RuntimeError("No trailing hole")
+
+                if hole == data:
+                    raise RuntimeError("Impossible happened")
+                else:
+                    sectionLen = hole - data
+        os.lseek(fd, cur, os.SEEK_SET)
+        return [inData, sectionLen]
+
+    def skipHandler(stream, length, opaque):
+        return os.lseek(opaque, length, os.SEEK_CUR)
+
+    stream = None
+    fd = None
+    ret = False
+    try:
+        pool_obj = conn.storagePoolLookupByName(pool)
+        vol_obj = pool_obj.storageVolLookupByName(volume)
+
+        stream = conn.newStream()
+        fd = os.open(file, os.O_RDONLY)
+        vol_obj.upload(
+            stream,
+            offset,
+            length,
+            libvirt.VIR_STORAGE_VOL_UPLOAD_SPARSE_STREAM if sparse else 0,
+        )
+        if sparse:
+            stream.sparseSendAll(handler, holeHandler, skipHandler, fd)
+        else:
+            stream.sendAll(handler, fd)
+        ret = True
+    except libvirt.libvirtError as err:
+        raise CommandExecutionError(err.get_error_message())
+    finally:
+        if fd:
+            try:
+                os.close(fd)
+            except OSError as err:
+                if stream:
+                    stream.abort()
+                if ret:
+                    raise CommandExecutionError(
+                        "Failed to close file: {}".format(err.strerror)
+                    )
+        if stream:
+            try:
+                stream.finish()
+            except libvirt.libvirtError as err:
+                if ret:
+                    raise CommandExecutionError(
+                        "Failed to finish stream: {}".format(err.get_error_message())
+                    )
+    return ret
+
+
+def volume_upload(pool, volume, file, offset=0, length=0, sparse=False, **kwargs):
+    """
+    Create libvirt volume.
+
+    :param pool: name of the pool to create the volume in
+    :param name: name of the volume to define
+    :param file: the file to upload to the volume
+    :param offset: where to start writing the data in the volume
+    :param length: amount of bytes to transfer to the volume
+    :param sparse: set to True to preserve data sparsiness.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.volume_upload default myvm.qcow2 /path/to/disk.qcow2
+
+    .. versionadded:: 3001
+    """
+    conn = __get_conn(**kwargs)
+
+    ret = False
+    try:
+        ret = _volume_upload(
+            conn, pool, volume, file, offset=offset, length=length, sparse=sparse
+        )
+    finally:
+        conn.close()
+    return ret

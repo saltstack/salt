@@ -1,32 +1,27 @@
-# encoding: utf-8
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import time
 
-# Import Salt libs
+import pytest
 import salt.config
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError
 from tests.support.case import SSHCase
 from tests.support.helpers import (
+    SKIP_IF_NOT_RUNNING_PYTEST,
     SaveRequestsPostHandler,
     Webserver,
-    requires_sshd_server,
+    slowTest,
 )
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import patch
-
-# Import Salt Testing libs
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.usefixtures("salt_master", "salt_sub_minion")
 class NetapiClientTest(TestCase):
     eauth_creds = {
         "username": "saltdev_auto",
@@ -38,15 +33,13 @@ class NetapiClientTest(TestCase):
         """
         Set up a NetapiClient instance
         """
-        opts = salt.config.client_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
-        )
+        opts = AdaptedConfigurationTestCaseMixin.get_config("client_config").copy()
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
         del self.netapi
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_local(self):
         low = {"client": "local", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -59,7 +52,7 @@ class NetapiClientTest(TestCase):
         ret.pop("proxytest", None)
         self.assertEqual(ret, {"minion": True, "sub_minion": True})
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_local_batch(self):
         low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", "timeout": 300}
         low.update(self.eauth_creds)
@@ -97,7 +90,7 @@ class NetapiClientTest(TestCase):
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel(self):
         low = {"client": "wheel", "fun": "key.list_all"}
         low.update(self.eauth_creds)
@@ -120,12 +113,10 @@ class NetapiClientTest(TestCase):
 
         self.maxDiff = None
         self.assertTrue(
-            set(["master.pem", "master.pub"]).issubset(
-                set(ret["data"]["return"]["local"])
-            )
+            {"master.pem", "master.pub"}.issubset(set(ret["data"]["return"]["local"]))
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
@@ -168,7 +159,8 @@ class NetapiClientTest(TestCase):
             ret = self.netapi.run(low)
 
 
-@requires_sshd_server
+@SKIP_IF_NOT_RUNNING_PYTEST
+@pytest.mark.requires_sshd_server
 class NetapiSSHClientTest(SSHCase):
     eauth_creds = {
         "username": "saltdev_auto",
@@ -180,10 +172,10 @@ class NetapiSSHClientTest(SSHCase):
         """
         Set up a NetapiClient instance
         """
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, "master"))
+        opts = AdaptedConfigurationTestCaseMixin.get_config("client_config").copy()
         self.netapi = salt.netapi.NetapiClient(opts)
 
-        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
         self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
 
         # Initialize salt-ssh
@@ -204,7 +196,7 @@ class NetapiSSHClientTest(SSHCase):
         cls.post_webserver.stop()
         del cls.post_webserver
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ssh(self):
         low = {
             "client": "ssh",
@@ -226,17 +218,17 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret["localhost"]["id"], "localhost")
         self.assertEqual(ret["localhost"]["fun"], "test.ping")
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ssh_unauthenticated(self):
         low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ssh_unauthenticated_raw_shell_curl(self):
 
-        fun = "-o ProxyCommand curl {0}".format(self.post_web_root)
+        fun = "-o ProxyCommand curl {}".format(self.post_web_root)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         ret = None
@@ -246,11 +238,11 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(self.post_web_handler.received_requests, [])
         self.assertEqual(ret, None)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ssh_unauthenticated_raw_shell_touch(self):
 
-        badfile = os.path.join(TMP, "badfile.txt")
-        fun = "-o ProxyCommand touch {0}".format(badfile)
+        badfile = os.path.join(RUNTIME_VARS.TMP, "badfile.txt")
+        fun = "-o ProxyCommand touch {}".format(badfile)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         ret = None
@@ -260,11 +252,11 @@ class NetapiSSHClientTest(SSHCase):
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists("badfile.txt"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_ssh_authenticated_raw_shell_disabled(self):
 
-        badfile = os.path.join(TMP, "badfile.txt")
-        fun = "-o ProxyCommand touch {0}".format(badfile)
+        badfile = os.path.join(RUNTIME_VARS.TMP, "badfile.txt")
+        fun = "-o ProxyCommand touch {}".format(badfile)
         low = {"client": "ssh", "tgt": "localhost", "fun": fun, "raw_shell": True}
 
         low.update(self.eauth_creds)

@@ -2,22 +2,17 @@
 """
 integration tests for mac_xattr
 """
-
-# Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
+from tests.support.helpers import runs_on, skip_if_binaries_missing, slowTest
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
+@runs_on(kernel="Darwin")
+@skip_if_binaries_missing("xattr")
 class MacXattrModuleTest(ModuleCase):
     """
     Validate the mac_xattr module
@@ -32,12 +27,6 @@ class MacXattrModuleTest(ModuleCase):
         """
         Create test file for testing extended attributes
         """
-        if not salt.utils.platform.is_darwin():
-            self.skipTest("Test only available on macOS")
-
-        if not salt.utils.path.which("xattr"):
-            self.skipTest("Test requires xattr binary")
-
         self.run_function("file.touch", [self.test_file])
 
     def tearDown(self):
@@ -47,7 +36,7 @@ class MacXattrModuleTest(ModuleCase):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_list_no_xattr(self):
         """
         Make sure there are no attributes
@@ -64,7 +53,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_write(self):
         """
         Write an attribute
@@ -97,7 +86,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: File not found: {0}".format(self.no_file),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_read(self):
         """
         Test xattr.read
@@ -130,7 +119,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_delete(self):
         """
         Test xattr.delete
@@ -174,7 +163,7 @@ class MacXattrModuleTest(ModuleCase):
             "ERROR: Attribute not found: patrick",
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_clear(self):
         """
         Test xattr.clear
