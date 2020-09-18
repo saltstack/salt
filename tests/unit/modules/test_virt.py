@@ -1143,7 +1143,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.mock_conn.listStoragePools.return_value = ["default"]
         pool_mock = MagicMock()
-        pool_mock.XMLDesc.return_value = "<pool type='dir'/>"
+        pool_mock.XMLDesc.return_value = (
+            "<pool type='dir'><target><path>/path/to/images</path></target></pool>"
+        )
         volume_xml = "<volume><target><path>/path/to/images/hello_system</path></target></volume>"
         pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = volume_xml
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
