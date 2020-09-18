@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Support for the softwareupdate command on MacOS.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -44,7 +42,7 @@ def _get_available(recommended=False, restart=False, shut_down=False):
     cmd = ["softwareupdate", "--list"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    if __grains__["osrelease_info"][1] >= 15:
+    if __grains__["osrelease_info"][0] > 10 or __grains__["osrelease_info"][1] >= 15:
         # Example output:
         # Software Update Tool
         #
@@ -316,7 +314,7 @@ def update(name):
        salt '*' softwareupdate.update <update-name>
     """
     if not update_available(name):
-        raise SaltInvocationError("Update not available: {0}".format(name))
+        raise SaltInvocationError("Update not available: {}".format(name))
 
     cmd = ["softwareupdate", "--install", name]
     salt.utils.mac_utils.execute_return_success(cmd)
@@ -395,7 +393,7 @@ def download(name):
        salt '*' softwareupdate.download <update name>
     """
     if not update_available(name):
-        raise SaltInvocationError("Update not available: {0}".format(name))
+        raise SaltInvocationError("Update not available: {}".format(name))
 
     if name in list_downloads():
         return True
