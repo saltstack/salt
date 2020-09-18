@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
+import time
 
 import salt.config
 import salt.master
 from tests.support.helpers import slowTest
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
@@ -659,3 +658,96 @@ class ClearFuncsTestCase(TestCase):
             "salt.utils.minions.CkMinions.auth_check", MagicMock(return_value=False)
         ):
             self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+
+
+class MaintenanceTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    """
+    TestCase for salt.master.Maintenance class
+    """
+
+    def setUp(self):
+        self.opts = self.get_temp_config("master", git_pillar_update_interval=180)
+        self.main_class = salt.master.Maintenance(self.opts)
+
+    def tearDown(self):
+        del self.main_class
+
+    def test_run_func(self):
+        """
+        Test the run function inside Maintenance class.
+        """
+
+        class MockTime:
+            def __init__(self, max_duration):
+                self._start_time = time.time()
+                self._current_duration = 0
+                self._max_duration = max_duration
+                self._calls = []
+
+            def time(self):
+                return self._start_time + self._current_duration
+
+            def sleep(self, secs):
+                self._calls += [secs]
+                self._current_duration += secs
+                if self._current_duration >= self._max_duration:
+                    raise RuntimeError("Time passes")
+
+        mocked_time = MockTime(60 * 4)
+
+        class MockTimedFunc:
+            def __init__(self):
+                self.call_times = []
+
+            def __call__(self, *args, **kwargs):
+                self.call_times += [mocked_time._current_duration]
+
+        mocked__post_fork_init = MockTimedFunc()
+        mocked_clean_old_jobs = MockTimedFunc()
+        mocked_clean_expired_tokens = MockTimedFunc()
+        mocked_clean_pub_auth = MockTimedFunc()
+        mocked_handle_git_pillar = MockTimedFunc()
+        mocked_handle_schedule = MockTimedFunc()
+        mocked_handle_key_cache = MockTimedFunc()
+        mocked_handle_presence = MockTimedFunc()
+        mocked_handle_key_rotate = MockTimedFunc()
+        mocked_check_max_open_files = MockTimedFunc()
+
+        with patch("salt.master.time", mocked_time), patch(
+            "salt.utils.process", autospec=True
+        ), patch(
+            "salt.master.Maintenance._post_fork_init", mocked__post_fork_init
+        ), patch(
+            "salt.daemons.masterapi.clean_old_jobs", mocked_clean_old_jobs
+        ), patch(
+            "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
+        ), patch(
+            "salt.daemons.masterapi.clean_pub_auth", mocked_clean_pub_auth
+        ), patch(
+            "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
+        ), patch(
+            "salt.master.Maintenance.handle_schedule", mocked_handle_schedule
+        ), patch(
+            "salt.master.Maintenance.handle_key_cache", mocked_handle_key_cache
+        ), patch(
+            "salt.master.Maintenance.handle_presence", mocked_handle_presence
+        ), patch(
+            "salt.master.Maintenance.handle_key_rotate", mocked_handle_key_rotate
+        ), patch(
+            "salt.utils.verify.check_max_open_files", mocked_check_max_open_files
+        ):
+            try:
+                self.main_class.run()
+            except RuntimeError as exc:
+                self.assertEqual(str(exc), "Time passes")
+            self.assertEqual(mocked_time._calls, [60] * 4)
+            self.assertEqual(mocked__post_fork_init.call_times, [0])
+            self.assertEqual(mocked_clean_old_jobs.call_times, [60, 120, 180])
+            self.assertEqual(mocked_clean_expired_tokens.call_times, [60, 120, 180])
+            self.assertEqual(mocked_clean_pub_auth.call_times, [60, 120, 180])
+            self.assertEqual(mocked_handle_git_pillar.call_times, [0, 180])
+            self.assertEqual(mocked_handle_schedule.call_times, [0, 60, 120, 180])
+            self.assertEqual(mocked_handle_key_cache.call_times, [0, 60, 120, 180])
+            self.assertEqual(mocked_handle_presence.call_times, [0, 60, 120, 180])
+            self.assertEqual(mocked_handle_key_rotate.call_times, [0, 60, 120, 180])
+            self.assertEqual(mocked_check_max_open_files.call_times, [0, 60, 120, 180])
