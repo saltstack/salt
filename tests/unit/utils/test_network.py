@@ -265,6 +265,7 @@ class NetworkTestCase(TestCase):
             "2001:0db8:0370:0:a:b:c:d:1234",
             "host name",
             "host name:1234",
+            "10.10.0.3:abcd",
         ]
         for host_port, assertion_value in good_host_ports.items():
             host = port = None
