@@ -1,6 +1,7 @@
 @Library('salt@master-1.7') _
 
 runTestSuite(
+    ami_image_id: 'ami-06cc7becf05c5f01f',
     concurrent_builds: 2,
     distro_name: 'opensuse',
     distro_version: '15',
