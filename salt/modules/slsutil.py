@@ -155,8 +155,8 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
 
         salt '*' slsutil.renderer salt://path/to/file
         salt '*' slsutil.renderer /path/to/file
-        salt '*' slsutil.renderer /path/to/file.jinja 'jinja'
-        salt '*' slsutil.renderer /path/to/file.sls 'jinja|yaml'
+        salt '*' slsutil.renderer /path/to/file.jinja default_renderer='jinja'
+        salt '*' slsutil.renderer /path/to/file.sls default_renderer='jinja|yaml'
         salt '*' slsutil.renderer string='Inline template! {{ saltenv }}'
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     """
