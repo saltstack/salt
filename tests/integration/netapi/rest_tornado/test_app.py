@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import threading
 import time
@@ -8,7 +5,6 @@ import time
 import pytest
 import salt.utils.json
 import salt.utils.stringutils
-from salt.ext import six
 from salt.netapi.rest_tornado import saltnado
 from salt.utils.versions import StrictVersion
 from salt.utils.zeromq import ZMQDefaultLoop as ZMQIOLoop
@@ -38,7 +34,7 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
 @pytest.mark.usefixtures("salt_sub_minion")
 class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
     def setUp(self):
-        super(TestSaltAPIHandler, self).setUp()
+        super().setUp()
         os.environ["ASYNC_TEST_TIMEOUT"] = "300"
 
     def get_app(self):
@@ -459,7 +455,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # one per minion
         self.assertEqual(len(response_obj["return"][0]), 2)
         # check a single grain
-        for minion_id, grains in six.iteritems(response_obj["return"][0]):
+        for minion_id, grains in response_obj["return"][0].items():
             self.assertEqual(minion_id, grains["id"])
 
     @slowTest
@@ -564,7 +560,7 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response = self.wait(timeout=30)
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         try:
-            for jid, ret in six.iteritems(response_obj):
+            for jid, ret in response_obj.items():
                 self.assertIn("Function", ret)
                 self.assertIn("Target", ret)
                 self.assertIn("Target-type", ret)
@@ -576,9 +572,9 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
             raise
 
         # test with a specific JID passed in
-        jid = next(six.iterkeys(response_obj))
+        jid = next(iter(response_obj.keys()))
         self.http_client.fetch(
-            self.get_url("/jobs/{0}".format(jid)),
+            self.get_url("/jobs/{}".format(jid)),
             self.stop,
             method="GET",
             headers={saltnado.AUTH_TOKEN_HEADER: self.token["token"]},
@@ -650,8 +646,7 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.stop()
 
     def on_event(self, event):
-        if six.PY3:
-            event = event.decode("utf-8")
+        event = event.decode("utf-8")
         if self.events_to_fire > 0:
             self.application.event_listener.event.fire_event(
                 {"foo": "bar", "baz": "qux"}, "salt/netapi/test"
