@@ -503,7 +503,7 @@ def fileserver(opts, backends):
         vcs_re = re.compile("^(git|svn|hg)")
         fs_re = re.compile("fs$")
         vcs = []
-        non_vcs = []
+        non_vcs = ['minionfs']
         for back in [fs_re.sub("", x) for x in backends]:
             if vcs_re.match(back):
                 vcs.extend((back, back + "fs"))
