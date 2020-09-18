@@ -75,7 +75,6 @@ The calls not using the libvirt connection setup are:
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-# Import python libs
 
 import base64
 import copy
@@ -91,10 +90,7 @@ import time
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
-# Import third party libs
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -789,6 +785,21 @@ def _migrate(dom, dst_uri, **kwargs):
         raise CommandExecutionError(err.get_error_message())
 
 
+def _get_volume_path(pool, volume_name):
+    """
+    Get the path to a volume. If the volume doesn't exist, compute its path from the pool one.
+    """
+    if volume_name in pool.listVolumes():
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        return volume_xml.find("./target/path").text
+
+    # Get the path from the pool if the volume doesn't exist yet
+    pool_xml = ElementTree.fromstring(pool.XMLDesc())
+    pool_path = pool_xml.find("./target/path").text
+    return pool_path + "/" + volume_name
+
+
 def _disk_from_pool(conn, pool, pool_xml, volume_name):
     """
     Create a disk definition out of the pool XML and volume name.
@@ -801,16 +812,12 @@ def _disk_from_pool(conn, pool, pool_xml, volume_name):
     # handle dir, fs and netfs
     if pool_type in ["dir", "netfs", "fs"]:
         disk_context["type"] = "file"
-        volume = pool.storageVolLookupByName(volume_name)
-        volume_xml = ElementTree.fromstring(volume.XMLDesc())
-        disk_context["source_file"] = volume_xml.find("./target/path").text
+        disk_context["source_file"] = _get_volume_path(pool, volume_name)
 
     elif pool_type in ["logical", "disk", "iscsi", "scsi"]:
         disk_context["type"] = "block"
         disk_context["format"] = "raw"
-        volume = pool.storageVolLookupByName(volume_name)
-        volume_xml = ElementTree.fromstring(volume.XMLDesc())
-        disk_context["source_file"] = volume_xml.find("./target/path").text
+        disk_context["source_file"] = _get_volume_path(pool, volume_name)
 
     elif pool_type in ["rbd", "gluster", "sheepdog"]:
         # libvirt can't handle rbd, gluster and sheepdog as volumes
@@ -954,7 +961,7 @@ def _gen_xml(
             pool_xml = ElementTree.fromstring(pool.XMLDesc())
             pool_type = pool_xml.get("type")
 
-            # TODO For Xen VMs convert all pool types (issue #58333)
+            # For Xen VMs convert all pool types (issue #58333)
             if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
                 disk_context.update(
                     _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])

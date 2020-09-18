@@ -4,7 +4,6 @@ virt execution module unit tests
 
 # pylint: disable=3rd-party-module-not-gated
 
-# Import python libs
 
 import datetime
 import os
@@ -15,16 +14,12 @@ import salt.config
 import salt.modules.config as config
 import salt.modules.virt as virt
 import salt.syspaths
-
-# Import salt libs
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -1148,7 +1143,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.mock_conn.listStoragePools.return_value = ["default"]
         pool_mock = MagicMock()
-        pool_mock.XMLDesc.return_value = "<pool type='dir'/>"
+        pool_mock.XMLDesc.return_value = (
+            "<pool type='dir'><target><path>/path/to/images</path></target></pool>"
+        )
         volume_xml = "<volume><target><path>/path/to/images/hello_system</path></target></volume>"
         pool_mock.storageVolLookupByName.return_value.XMLDesc.return_value = volume_xml
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
