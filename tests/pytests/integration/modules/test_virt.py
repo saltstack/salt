@@ -2,17 +2,13 @@
 Validate the virt module
 """
 import logging
-import pathlib
 from numbers import Number
 from xml.etree import ElementTree
 
 import pytest
 from saltfactories.utils import cli_scripts
 from tests.support.helpers import skip_if_binaries_missing, slowTest
-from tests.support.saltfactories_compat import (
-    ContainerFactory,
-    SaltVirtMinionContainerFactory,
-)
+from tests.support.virt import SaltVirtMinionContainerFactory
 
 docker = pytest.importorskip("docker")
 
@@ -26,7 +22,7 @@ def docker_client():
     urllib3_connectionpool_handler.setLevel(logging.INFO)
     try:
         client = docker.from_env()
-        connectable = ContainerFactory.client_connectable(client)
+        connectable = SaltVirtMinionContainerFactory.client_connectable(client)
         if connectable is not True:  # pragma: no cover
             pytest.skip(connectable)
         client.images.pull("quay.io/rst0git/virt-minion")
@@ -65,10 +61,7 @@ def virt_minion_0(
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    salt_master.id = salt_master.config["id"]
-    root_dir = pathlib.Path(
-        salt_factories._get_root_dir_for_daemon(virt_minion_0_id).strpath
-    )
+    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_0_id)
     config_defaults = {
         "root_dir": str(root_dir),
         "id": virt_minion_0_id,
@@ -102,6 +95,9 @@ def virt_minion_0(
             }
         },
     )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
         yield factory
 
@@ -115,10 +111,7 @@ def virt_minion_1(
     virt_minion_0_id,
     virt_minion_1_id,
 ):
-    salt_master.id = salt_master.config["id"]
-    root_dir = pathlib.Path(
-        salt_factories._get_root_dir_for_daemon(virt_minion_1_id).strpath
-    )
+    root_dir = salt_factories.get_root_dir_for_daemon(virt_minion_1_id)
     config_defaults = {
         "root_dir": str(root_dir),
         "id": virt_minion_1_id,
@@ -152,13 +145,16 @@ def virt_minion_1(
             }
         },
     )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
         yield factory
 
 
 @pytest.fixture(scope="module")
-def salt_cli(salt_factories, salt_master, virt_minion_0, virt_minion_1):
-    return salt_factories.get_salt_cli(salt_master.config["id"])
+def salt_cli(salt_master, virt_minion_0, virt_minion_1):
+    return salt_master.get_salt_cli()
 
 
 @skip_if_binaries_missing("docker")
