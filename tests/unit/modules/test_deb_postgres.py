@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.deb_postgres as deb_postgres
 
@@ -58,14 +55,46 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
 
-    # XXX version should be a string but from cmdline you get a float
-    # def test_cluster_create_with_float(self):
-    #     self.assertRaises(AssertionError, deb_postgres.cluster_create,
-    #                       (9.3,'main',),
-    #                       dict(port='5432',
-    #                            locale='fr_FR',
-    #                            encoding='UTF-8',
-    #                            datadir='/opt/postgresql'))
+    def test_cluster_create_with_initdb_options(self):
+        deb_postgres.cluster_create(
+            "11",
+            "main",
+            port="5432",
+            locale="fr_FR",
+            encoding="UTF-8",
+            datadir="/opt/postgresql",
+            allow_group_access=True,
+            data_checksums=True,
+            wal_segsize="32",
+        )
+        cmdstr = (
+            "/usr/bin/pg_createcluster "
+            "--port 5432 --locale fr_FR --encoding UTF-8 "
+            "--datadir /opt/postgresql "
+            "11 main "
+            "-- "
+            "--allow-group-access "
+            "--data-checksums "
+            "--wal-segsize 32"
+        )
+        self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
+
+    def test_cluster_create_with_float(self):
+        deb_postgres.cluster_create(
+            9.3,
+            "main",
+            port="5432",
+            locale="fr_FR",
+            encoding="UTF-8",
+            datadir="/opt/postgresql",
+        )
+        cmdstr = (
+            "/usr/bin/pg_createcluster "
+            "--port 5432 --locale fr_FR --encoding UTF-8 "
+            "--datadir /opt/postgresql "
+            "9.3 main"
+        )
+        self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
 
 
 class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
@@ -156,6 +185,11 @@ class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
             "/usr/bin/pg_dropcluster 9.3 main", self.cmd_run_all_mock.call_args[0][0]
         )
         deb_postgres.cluster_remove("9.3", "main", stop=True)
+        self.assertEqual(
+            "/usr/bin/pg_dropcluster --stop 9.3 main",
+            self.cmd_run_all_mock.call_args[0][0],
+        )
+        deb_postgres.cluster_remove(9.3, "main", stop=True)
         self.assertEqual(
             "/usr/bin/pg_dropcluster --stop 9.3 main",
             self.cmd_run_all_mock.call_args[0][0],

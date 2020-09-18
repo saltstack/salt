@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -43,31 +42,20 @@
         minion_config_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
 
     .. _`pytest`: http://pytest.org
-    .. _`nose`: https://nose.readthedocs.org
     """
-
-# Import Python modules
-from __future__ import absolute_import, print_function
 
 import logging
 import os
 import shutil
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-
-# Import tests support libs
 import tests.support.paths as paths
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import pwd
 except ImportError:
     import salt.utils.win_functions
-
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +71,7 @@ def this_user():
 
 class RootsDict(dict):
     def merge(self, data):
-        for key, values in six.iteritems(data):
+        for key, values in data.items():
             if key not in self:
                 self[key] = values
                 continue
@@ -123,7 +111,7 @@ def recursive_copytree(source, destination, overwrite=False):
                 shutil.copy2(src_path, dst_path)
 
 
-class RuntimeVars(object):
+class RuntimeVars:
 
     __self_attributes__ = ("_vars", "_locked", "lock")
 
@@ -140,8 +128,7 @@ class RuntimeVars(object):
         self._locked = True
 
     def __iter__(self):
-        for name, value in six.iteritems(self._vars):
-            yield name, value
+        yield from self._vars.items()
 
     def __getattribute__(self, name):
         if name in object.__getattribute__(self, "_vars"):
@@ -151,7 +138,7 @@ class RuntimeVars(object):
     def __setattr__(self, name, value):
         if getattr(self, "_locked", False) is True:
             raise RuntimeError(
-                "After {0} is locked, no additional data can be added to it".format(
+                "After {} is locked, no additional data can be added to it".format(
                     self.__class__.__name__
                 )
             )
@@ -183,6 +170,7 @@ RUNTIME_VARS = RuntimeVars(
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
     TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
+    TMP_MINION_CONF_DIR=paths.TMP_MINION_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "master.d"),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "minion.d"),
     TMP_CONF_PROXY_INCLUDES=os.path.join(paths.TMP_CONF_DIR, "proxy.d"),
@@ -196,12 +184,19 @@ RUNTIME_VARS = RuntimeVars(
     TMP_SUB_MINION_CONF_DIR=paths.TMP_SUB_MINION_CONF_DIR,
     TMP_SYNDIC_MASTER_CONF_DIR=paths.TMP_SYNDIC_MASTER_CONF_DIR,
     TMP_SYNDIC_MINION_CONF_DIR=paths.TMP_SYNDIC_MINION_CONF_DIR,
+    TMP_PROXY_CONF_DIR=paths.TMP_PROXY_CONF_DIR,
     TMP_MM_CONF_DIR=paths.TMP_MM_CONF_DIR,
+    TMP_MM_MINION_CONF_DIR=paths.TMP_MM_MINION_CONF_DIR,
     TMP_MM_SUB_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
+    TMP_MM_SUB_MINION_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
+    TMP_SSH_CONF_DIR=paths.TMP_SSH_CONF_DIR,
     TMP_SCRIPT_DIR=paths.TMP_SCRIPT_DIR,
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
+    TMP_BASEENV_STATE_TREE=paths.TMP_STATE_TREE,
     TMP_PILLAR_TREE=paths.TMP_PILLAR_TREE,
+    TMP_BASEENV_PILLAR_TREE=paths.TMP_PILLAR_TREE,
     TMP_PRODENV_STATE_TREE=paths.TMP_PRODENV_STATE_TREE,
+    TMP_PRODENV_PILLAR_TREE=paths.TMP_PRODENV_PILLAR_TREE,
     SHELL_TRUE_PATH=salt.utils.path.which("true")
     if not salt.utils.platform.is_windows()
     else "cmd /c exit 0 > nul",
@@ -214,6 +209,6 @@ RUNTIME_VARS = RuntimeVars(
     BASE_FILES=paths.BASE_FILES,
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,
-    PYTEST_SESSION=False,
+    PYTEST_SESSION="PYTEST_SESSION" in os.environ,
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------

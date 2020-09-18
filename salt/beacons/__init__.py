@@ -192,7 +192,7 @@ class Beacon(object):
         """
 
         indexes = [index for index, item in enumerate(beacon_config) if label in item]
-        if len(indexes) < 1:
+        if not indexes:
             return -1
         else:
             return indexes[0]

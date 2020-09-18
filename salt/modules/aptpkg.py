@@ -186,7 +186,14 @@ def _call_apt(args, scope=True, **kwargs):
     }
     params.update(kwargs)
 
-    return __salt__["cmd.run_all"](cmd, **params)
+    cmd_ret = __salt__["cmd.run_all"](cmd, **params)
+    count = 0
+    while "Could not get lock" in cmd_ret.get("stderr", "") and count < 10:
+        count += 1
+        log.warning("Waiting for dpkg lock release: retrying... %s/100", count)
+        time.sleep(2 ** count)
+        cmd_ret = __salt__["cmd.run_all"](cmd, **params)
+    return cmd_ret
 
 
 def _warn_software_properties(repo):
@@ -212,10 +219,12 @@ def normalize_name(name):
         salt '*' pkg.normalize_name zsh:amd64
     """
     try:
-        name, arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+        pkgname, pkgarch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
     except ValueError:
-        return name
-    return name
+        pkgname = name
+        pkgarch = __grains__["osarch"]
+
+    return pkgname if pkgarch in (__grains__["osarch"], "any") else name
 
 
 def parse_arch(name):
@@ -270,7 +279,7 @@ def latest_version(*names, **kwargs):
     fromrepo = kwargs.pop("fromrepo", None)
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
 
-    if len(names) == 0:
+    if not names:
         return ""
     ret = {}
     # Initialize the dict with empty strings
@@ -346,7 +355,7 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0, failhard=False):
+def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
     """
     Updates the APT database to latest packages based upon repositories
 
@@ -634,7 +643,7 @@ def install(
     if not fromrepo and repo:
         fromrepo = repo
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     cmd_prefix = []
@@ -664,7 +673,7 @@ def install(
             cmd_prefix.extend(["-o", "DPkg::Options::=--force-confnew"])
         else:
             cmd_prefix.extend(["-o", "DPkg::Options::=--force-confold"])
-        cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
+            cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
         if "install_recommends" in kwargs:
             if not kwargs["install_recommends"]:
                 cmd_prefix.append("--no-install-recommends")
@@ -821,7 +830,7 @@ def install(
         # all_pkgs contains the argument to be passed to apt-get install, which
         # when a specific version is requested will be in the format
         # name=version.  Strip off the '=' if present so we can compare the
-        # held package names against the pacakges we are trying to install.
+        # held package names against the packages we are trying to install.
         targeted_names = [x.split("=")[0] for x in all_pkgs]
         to_unhold = [x for x in hold_pkgs if x in targeted_names]
 
@@ -1114,18 +1123,17 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
     old = list_pkgs()
     if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
-        force_conf = "--force-confnew"
+        dpkg_options = ["--force-confnew"]
     else:
-        force_conf = "--force-confold"
+        dpkg_options = ["--force-confold", "--force-confdef"]
     cmd = [
         "apt-get",
         "-q",
         "-y",
-        "-o",
-        "DPkg::Options::={0}".format(force_conf),
-        "-o",
-        "DPkg::Options::=--force-confdef",
     ]
+    for option in dpkg_options:
+        cmd.append("-o")
+        cmd.append("DPkg::Options::={0}".format(option))
 
     if kwargs.get("force_yes", False):
         cmd.append("--force-yes")
@@ -1455,7 +1463,7 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
     return _get_upgradable(dist_upgrade, **kwargs)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
@@ -1468,7 +1476,7 @@ def upgrade_available(name):
     return latest_version(name) != ""
 
 
-def version_cmp(pkg1, pkg2, ignore_epoch=False):
+def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     """
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
@@ -1550,7 +1558,6 @@ def _consolidate_repo_sources(sources):
     repos = [s for s in sources.list if not s.invalid]
 
     for repo in repos:
-        repo.uri = repo.uri.rstrip("/")
         # future lint: disable=blacklisted-function
         key = str(
             (
@@ -1567,9 +1574,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(
-                salt.utils.pkg.deb.strip_uri(repo.line)
-            )
+            consolidated[key] = sourceslist.SourceEntry(repo.line)
 
         if repo.file != base_file:
             delete_files.add(repo.file)
@@ -1645,7 +1650,35 @@ def list_repo_pkgs(*args, **kwargs):  # pylint: disable=unused-import
     return ret
 
 
-def list_repos():
+def _skip_source(source):
+    """
+    Decide to skip source or not.
+
+    :param source:
+    :return:
+    """
+    if source.invalid:
+        if (
+            source.uri
+            and source.type
+            and source.type in ("deb", "deb-src", "rpm", "rpm-src")
+        ):
+            pieces = source.mysplit(source.line)
+            if pieces[1].strip()[0] == "[":
+                options = pieces.pop(1).strip("[]").split()
+                if len(options) > 0:
+                    log.debug(
+                        "Source %s will be included although is marked invalid",
+                        source.uri,
+                    )
+                    return False
+            return True
+        else:
+            return True
+    return False
+
+
+def list_repos(**kwargs):
     """
     Lists all repos in the sources.list (and sources.lists.d) files
 
@@ -1660,7 +1693,7 @@ def list_repos():
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
-        if source.invalid:
+        if _skip_source(source):
             continue
         repo = {}
         repo["file"] = source.file
@@ -1668,8 +1701,8 @@ def list_repos():
         repo["disabled"] = source.disabled
         repo["dist"] = source.dist
         repo["type"] = source.type
-        repo["uri"] = source.uri.rstrip("/")
-        repo["line"] = salt.utils.pkg.deb.strip_uri(source.line.strip())
+        repo["uri"] = source.uri
+        repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
         repos.setdefault(source.uri, []).append(repo)
     return repos
@@ -1742,10 +1775,7 @@ def get_repo(repo, **kwargs):
             for sub in source:
                 if (
                     sub["type"] == repo_type
-                    and
-                    # strip trailing '/' from repo_uri, it's valid in definition
-                    # but not valid when compared to persisted source
-                    sub["uri"].rstrip("/") == repo_uri.rstrip("/")
+                    and sub["uri"] == repo_uri
                     and sub["dist"] == repo_dist
                 ):
                     if not repo_comps:
@@ -2461,7 +2491,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
     }
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     """
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's package database (not
@@ -2478,7 +2508,7 @@ def file_list(*packages):
     return __salt__["lowpkg.file_list"](*packages)
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     """
     List the files that belong to a package, grouped by package. Not
     specifying any packages will return a list of _every_ file on the system's
@@ -2510,7 +2540,7 @@ def expand_repo_def(**kwargs):
     _check_apt()
 
     sanitized = {}
-    repo = salt.utils.pkg.deb.strip_uri(kwargs["repo"])
+    repo = kwargs["repo"]
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
         dist = __grains__["lsb_distrib_codename"]
         owner_name, ppa_name = repo[4:].split("/", 1)
@@ -2545,7 +2575,7 @@ def expand_repo_def(**kwargs):
     sanitized["disabled"] = source_entry.disabled
     sanitized["dist"] = source_entry.dist
     sanitized["type"] = source_entry.type
-    sanitized["uri"] = source_entry.uri.rstrip("/")
+    sanitized["uri"] = source_entry.uri
     sanitized["line"] = source_entry.line.strip()
     sanitized["architectures"] = getattr(source_entry, "architectures", [])
 
@@ -2754,7 +2784,7 @@ def _resolve_deps(name, pkgs, **kwargs):
     return
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):
     """
     .. versionadded:: 2014.7.0
 

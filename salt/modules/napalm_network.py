@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM Network
 ==============
@@ -20,8 +19,6 @@ Dependencies
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import time
@@ -30,9 +27,6 @@ import salt.utils.files
 import salt.utils.napalm
 import salt.utils.templates
 import salt.utils.versions
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +98,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
     output_dict = dict()
 
-    for key, key_list in six.iteritems(input_dict):
+    for key, key_list in input_dict.items():
         key_list_filtered = _filter_list(key_list, search_key, search_value)
         if key_list_filtered:
             output_dict[key] = key_list_filtered
@@ -203,7 +197,7 @@ def _config_logic(
 
     current_jid = kwargs.get("__pub_jid")
     if not current_jid:
-        current_jid = "{0:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
+        current_jid = "{:%Y%m%d%H%M%S%f}".format(datetime.datetime.now())
 
     loaded_result["already_configured"] = False
 
@@ -613,7 +607,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             file or pillar as ``textfsm_index_file``.
 
     saltenv: ``base``
-        Salt fileserver envrionment from which to retrieve the file.
+        Salt fileserver environment from which to retrieve the file.
         Ignored if ``textfsm_path`` is not a ``salt://`` URL.
 
         .. versionadded:: 2018.3.0
@@ -704,7 +698,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
         **{"commands": list(commands)}
     )
     # thus we can display the output as is
-    # in case of errors, they'll be catched in the proxy
+    # in case of errors, they'll be caught in the proxy
     if not raw_cli_outputs["result"]:
         # Error -> dispaly the output as-is.
         return raw_cli_outputs
@@ -784,11 +778,11 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
             if not processed_cli_output["result"]:
-                log.debug("Apparently this didnt work, returnin the raw output")
+                log.debug("Apparently this did not work, returning the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}.".format(
+                ] += "\nUnable to process the output from {}: {}.".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -812,11 +806,11 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
             log.debug("Processed CLI output:")
             log.debug(processed_cli_output)
             if not processed_cli_output["result"]:
-                log.debug("Apparently this didnt work, returning " "the raw output")
+                log.debug("Apparently this did not work, returning the raw output")
                 processed_command_output = command_output
                 processed_cli_outputs[
                     "comment"
-                ] += "\nUnable to process the output from {0}: {1}".format(
+                ] += "\nUnable to process the output from {}: {}".format(
                     command, processed_cli_output["comment"]
                 )
                 log.error(processed_cli_outputs["comment"])
@@ -825,7 +819,7 @@ def cli(*commands, **kwargs):  # pylint: disable=unused-argument
                 processed_command_output = processed_cli_output["out"]
             else:
                 log.debug(
-                    "Processing %s didnt fail, but didnt return"
+                    "Processing %s did not fail, but did not return"
                     " anything either. Dumping raw.",
                     command,
                 )
@@ -1941,22 +1935,6 @@ def load_template(
     _loaded = {"result": True, "comment": "", "out": None}
     loaded_config = None
     # prechecks
-    deprecated_args = (
-        "template_user",
-        "template_attrs",
-        "template_group",
-        "template_mode",
-    )
-    for deprecated_arg in deprecated_args:
-        if template_vars.get(deprecated_arg):
-            del template_vars[deprecated_arg]
-            salt.utils.versions.warn_until(
-                "Sodium",
-                (
-                    "The '{arg}' argument to 'net.load_template' is deprecated "
-                    "and has been ignored"
-                ).format(arg=deprecated_arg),
-            )
     if template_engine not in salt.utils.templates.TEMPLATE_REGISTRY:
         _loaded.update(
             {
@@ -1982,158 +1960,110 @@ def load_template(
                 )
         file_exists = __salt__["file.file_exists"](template_name)
 
-    if (
-        template_source
-        or file_exists
-        or salt_render
-        or isinstance(template_name, (tuple, list))
-    ):
-        # either inline template
-        # either template in a custom path
-        # either abs path send
-        # either starts with salt:// and
-        # then use Salt render system
-
-        if context is None:
-            context = {}
-        context.update(template_vars)
-        # if needed to render the template send as inline arg
-        if template_source:
-            # render the content
-            _rendered = __salt__["file.apply_template_on_contents"](
-                contents=template_source,
+    if context is None:
+        context = {}
+    context.update(template_vars)
+    # if needed to render the template send as inline arg
+    if template_source:
+        # render the content
+        _rendered = __salt__["file.apply_template_on_contents"](
+            contents=template_source,
+            template=template_engine,
+            context=context,
+            defaults=defaults,
+            saltenv=saltenv,
+        )
+        if not isinstance(_rendered, str):
+            if "result" in _rendered:
+                _loaded["result"] = _rendered["result"]
+            else:
+                _loaded["result"] = False
+            if "comment" in _rendered:
+                _loaded["comment"] = _rendered["comment"]
+            else:
+                _loaded["comment"] = "Error while rendering the template."
+            return _loaded
+    else:
+        # render the file - either local, either remote
+        if not isinstance(template_name, (list, tuple)):
+            template_name = [template_name]
+        if template_hash_name and not isinstance(template_hash_name, (list, tuple)):
+            template_hash_name = [template_hash_name]
+        elif not template_hash_name:
+            template_hash_name = [None] * len(template_name)
+        if (
+            template_hash
+            and isinstance(template_hash, str)
+            and not (
+                template_hash.startswith("salt://")
+                or template_hash.startswith("file://")
+            )
+        ):
+            # If the template hash is passed as string, and it's not a file
+            # (starts with the salt:// or file:// URI), then make it a list
+            # of 1 element (for the iteration below)
+            template_hash = [template_hash]
+        elif (
+            template_hash
+            and isinstance(template_hash, str)
+            and (
+                template_hash.startswith("salt://")
+                or template_hash.startswith("file://")
+            )
+        ):
+            # If the template hash is a file URI, then provide the same value
+            # for each of the templates in the list, as probably they all
+            # share the same hash file, otherwise the user should provide
+            # this as a list
+            template_hash = [template_hash] * len(template_name)
+        elif not template_hash:
+            template_hash = [None] * len(template_name)
+        for tpl_index, tpl_name in enumerate(template_name):
+            tpl_hash = template_hash[tpl_index]
+            tpl_hash_name = template_hash_name[tpl_index]
+            _rand_filename = __salt__["random.hash"](tpl_name, "md5")
+            _temp_file = __salt__["file.join"]("/tmp", _rand_filename)
+            _managed = __salt__["file.get_managed"](
+                name=_temp_file,
+                source=tpl_name,
+                source_hash=tpl_hash,
+                source_hash_name=tpl_hash_name,
+                user=None,
+                group=None,
+                mode=None,
+                attrs=None,
                 template=template_engine,
                 context=context,
                 defaults=defaults,
                 saltenv=saltenv,
+                skip_verify=skip_verify,
             )
-            if not isinstance(_rendered, six.string_types):
-                if "result" in _rendered:
-                    _loaded["result"] = _rendered["result"]
-                else:
-                    _loaded["result"] = False
-                if "comment" in _rendered:
-                    _loaded["comment"] = _rendered["comment"]
-                else:
-                    _loaded["comment"] = "Error while rendering the template."
-                return _loaded
-        else:
-            # render the file - either local, either remote
-            if not isinstance(template_name, (list, tuple)):
-                template_name = [template_name]
-            if template_hash_name and not isinstance(template_hash_name, (list, tuple)):
-                template_hash_name = [template_hash_name]
-            elif not template_hash_name:
-                template_hash_name = [None] * len(template_name)
-            if (
-                template_hash
-                and isinstance(template_hash, six.string_types)
-                and not (
-                    template_hash.startswith("salt://")
-                    or template_hash.startswith("file://")
-                )
-            ):
-                # If the template hash is passed as string, and it's not a file
-                # (starts with the salt:// or file:// URI), then make it a list
-                # of 1 element (for the iteration below)
-                template_hash = [template_hash]
-            elif (
-                template_hash
-                and isinstance(template_hash, six.string_types)
-                and (
-                    template_hash.startswith("salt://")
-                    or template_hash.startswith("file://")
-                )
-            ):
-                # If the template hash is a file URI, then provide the same value
-                # for each of the templates in the list, as probably they all
-                # share the same hash file, otherwise the user should provide
-                # this as a list
-                template_hash = [template_hash] * len(template_name)
-            elif not template_hash:
-                template_hash = [None] * len(template_name)
-            for tpl_index, tpl_name in enumerate(template_name):
-                tpl_hash = template_hash[tpl_index]
-                tpl_hash_name = template_hash_name[tpl_index]
-                _rand_filename = __salt__["random.hash"](tpl_name, "md5")
-                _temp_file = __salt__["file.join"]("/tmp", _rand_filename)
-                _managed = __salt__["file.get_managed"](
-                    name=_temp_file,
-                    source=tpl_name,
-                    source_hash=tpl_hash,
-                    source_hash_name=tpl_hash_name,
-                    user=None,
-                    group=None,
-                    mode=None,
-                    attrs=None,
-                    template=template_engine,
-                    context=context,
-                    defaults=defaults,
-                    saltenv=saltenv,
-                    skip_verify=skip_verify,
-                )
-                if not isinstance(_managed, (list, tuple)) and isinstance(
-                    _managed, six.string_types
-                ):
-                    _loaded["comment"] += _managed
-                    _loaded["result"] = False
-                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+            if not isinstance(_managed, (list, tuple)) and isinstance(_managed, str):
+                _loaded["comment"] += _managed
+                _loaded["result"] = False
+            elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                _loaded["result"] = False
+                _loaded["comment"] += "Error while rendering the template."
+            elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                _loaded["result"] = False
+                _loaded["comment"] += _managed[-1]  # contains the error message
+            if _loaded["result"]:  # all good
+                _temp_tpl_file = _managed[0]
+                _temp_tpl_file_exists = __salt__["file.file_exists"](_temp_tpl_file)
+                if not _temp_tpl_file_exists:
                     _loaded["result"] = False
                     _loaded["comment"] += "Error while rendering the template."
-                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
-                    _loaded["result"] = False
-                    _loaded["comment"] += _managed[-1]  # contains the error message
-                if _loaded["result"]:  # all good
-                    _temp_tpl_file = _managed[0]
-                    _temp_tpl_file_exists = __salt__["file.file_exists"](_temp_tpl_file)
-                    if not _temp_tpl_file_exists:
-                        _loaded["result"] = False
-                        _loaded["comment"] += "Error while rendering the template."
-                        return _loaded
-                    _rendered += __salt__["file.read"](_temp_tpl_file)
-                    __salt__["file.remove"](_temp_tpl_file)
-                else:
-                    return _loaded  # exit
+                    return _loaded
+                _rendered += __salt__["file.read"](_temp_tpl_file)
+                __salt__["file.remove"](_temp_tpl_file)
+            else:
+                return _loaded  # exit
 
-        loaded_config = _rendered
-        if _loaded["result"]:  # all good
-            fun = "load_merge_candidate"
-            if replace:  # replace requested
-                fun = "load_replace_candidate"
-            if salt.utils.napalm.not_always_alive(__opts__):
-                # if a not-always-alive proxy
-                # or regular minion
-                # do not close the connection after loading the config
-                # this will be handled in _config_logic
-                # after running the other features:
-                # compare_config, discard / commit
-                # which have to be over the same session
-                napalm_device["CLOSE"] = False  # pylint: disable=undefined-variable
-            _loaded = salt.utils.napalm.call(
-                napalm_device,  # pylint: disable=undefined-variable
-                fun,
-                **{"config": _rendered}
-            )
-    else:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "Native NAPALM templates support will be removed in the Sodium "
-            "release. Please consider using the Salt rendering pipeline instead."
-            "If you are using the 'netntp', 'netsnmp', or 'netusers' Salt "
-            "State modules, you can ignore this message",
-        )
-        # otherwise, use NAPALM render system, injecting pillar/grains/opts vars
-        load_templates_params = defaults if defaults else {}
-        load_templates_params.update(template_vars)
-        load_templates_params.update(
-            {
-                "template_name": template_name,
-                "template_source": template_source,  # inline template
-                "pillar": __pillar__,  # inject pillar content
-                "grains": __grains__,  # inject grains content
-                "opts": __opts__,  # inject opts content
-            }
-        )
+    loaded_config = _rendered
+    if _loaded["result"]:  # all good
+        fun = "load_merge_candidate"
+        if replace:  # replace requested
+            fun = "load_replace_candidate"
         if salt.utils.napalm.not_always_alive(__opts__):
             # if a not-always-alive proxy
             # or regular minion
@@ -2142,12 +2072,11 @@ def load_template(
             # after running the other features:
             # compare_config, discard / commit
             # which have to be over the same session
-            # so we'll set the CLOSE global explicitly as False
             napalm_device["CLOSE"] = False  # pylint: disable=undefined-variable
         _loaded = salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
-            "load_template",
-            **load_templates_params
+            fun,
+            **{"config": _rendered}
         )
     return _config_logic(
         napalm_device,  # pylint: disable=undefined-variable

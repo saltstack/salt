@@ -15,7 +15,9 @@ systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
 - Salt ssh is considered production ready in version 2014.7.0
-- Python is required on the remote system (unless using the ``-r`` option to send raw ssh commands)
+- Python is required on the remote system (unless using the ``-r`` option to
+  send raw ssh commands).  The python version requirement is the same as that
+  for a standard :ref:`Salt installation <installation-dependencies>`.
 - On many systems, the ``salt-ssh`` executable will be in its own package, usually named
   ``salt-ssh``
 - The Salt SSH system does not supersede the standard Salt communication
@@ -311,3 +313,13 @@ It is recommended that one modify this command a bit by removing the ``-l quiet`
 .. toctree::
 
     roster
+    ssh_ext_alternatives
+
+Different Python Versions
+=========================
+The 3001 release removed python 2 support in Salt. Even though this python 2 support
+is being dropped we have provided multiple ways to work around this with Salt-SSH. You
+can use the following options:
+
+  * :ref:`ssh_pre_flight <ssh_pre_flight>`
+  * :ref:`SSH ext alternatives <ssh-ext-alternatives>`

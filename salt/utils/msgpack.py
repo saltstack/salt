@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Functions to work with MessagePack
 """
 
 # Import Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -44,7 +42,7 @@ else:
         older versions of msgpack do not have PackValueError
         """
 
-    class _exceptions(object):
+    class _exceptions:
         """
         older versions of msgpack do not have an exceptions module
         """
@@ -71,8 +69,23 @@ def _sanitize_msgpack_kwargs(kwargs):
         log.info("removing unsupported `raw` argument from msgpack call")
     if version < (0, 4, 0) and kwargs.pop("use_bin_type", None) is not None:
         log.info("removing unsupported `use_bin_type` argument from msgpack call")
+    if version >= (1, 0, 0) and kwargs.pop("encoding", None) is not None:
+        log.debug("removing unsupported `encoding` argument from msgpack call")
 
     return kwargs
+
+
+def _sanitize_msgpack_unpack_kwargs(kwargs):
+    """
+    Clean up msgpack keyword arguments for unpack operations, based on
+    the version
+    https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst
+    """
+    assert isinstance(kwargs, dict)
+    if version >= (1, 0, 0):
+        kwargs.setdefault("raw", True)
+        kwargs.setdefault("strict_map_key", False)
+    return _sanitize_msgpack_kwargs(kwargs)
 
 
 class Unpacker(msgpack.Unpacker):
@@ -81,7 +94,9 @@ class Unpacker(msgpack.Unpacker):
     """
 
     def __init__(self, *args, **kwargs):
-        msgpack.Unpacker.__init__(self, *args, **_sanitize_msgpack_kwargs(kwargs))
+        msgpack.Unpacker.__init__(
+            self, *args, **_sanitize_msgpack_unpack_kwargs(kwargs)
+        )
 
 
 def pack(o, stream, **kwargs):
@@ -120,7 +135,7 @@ def unpack(stream, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure, if the msgpack is not available.
     """
-    return msgpack.unpack(stream, **_sanitize_msgpack_kwargs(kwargs))
+    return msgpack.unpack(stream, **_sanitize_msgpack_unpack_kwargs(kwargs))
 
 
 def unpackb(packed, **kwargs):
@@ -132,7 +147,7 @@ def unpackb(packed, **kwargs):
     By default, this function uses the msgpack module and falls back to
     msgpack_pure.
     """
-    return msgpack.unpackb(packed, **_sanitize_msgpack_kwargs(kwargs))
+    return msgpack.unpackb(packed, **_sanitize_msgpack_unpack_kwargs(kwargs))
 
 
 # alias for compatibility to simplejson/marshal/pickle.

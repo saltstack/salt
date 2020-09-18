@@ -74,7 +74,7 @@ of the 2015.5 branch:
    back slash is an escape character.
 
    There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
-   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+   The issue is described here: https://github.com/saltstack/salt/issues/46163
 
 """
 from __future__ import absolute_import, print_function, unicode_literals
@@ -87,7 +87,7 @@ import shutil
 import sys
 import tempfile
 
-import pkg_resources
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
 
 # Import Salt libs
 import salt.utils.data
@@ -144,14 +144,29 @@ def _clear_context(bin_env=None):
     __context__.pop(contextkey, None)
 
 
+def _check_bundled():
+    """
+    Gather run-time information to indicate if we are running from source or bundled.
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return True
+    return False
+
+
 def _get_pip_bin(bin_env):
     """
     Locate the pip binary, either from `bin_env` as a virtualenv, as the
     executable itself, or from searching conventional filesystem locations
     """
+    bundled = _check_bundled()
+
     if not bin_env:
-        logger.debug("pip: Using pip from currently-running Python")
-        return [os.path.normpath(sys.executable), "-m", "pip"]
+        if bundled:
+            logger.debug("pip: Using pip from bundled app")
+            return [os.path.normpath(sys.executable), "pip"]
+        else:
+            logger.debug("pip: Using pip from currently-running Python")
+            return [os.path.normpath(sys.executable), "-m", "pip"]
 
     python_bin = "python.exe" if salt.utils.platform.is_windows() else "python"
 
@@ -504,7 +519,7 @@ def install(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 
@@ -683,7 +698,7 @@ def install(
     if error:
         return error
 
-    cur_version = version(bin_env, cwd)
+    cur_version = version(bin_env, cwd, user=user)
 
     if use_wheel:
         min_version = "1.4"
@@ -1050,7 +1065,7 @@ def uninstall(
         ``user@proxy.server:port`` then you will be prompted for a password.
 
         .. note::
-            If the the Minion has a globaly configured proxy - it will be used
+            If the Minion has a globaly configured proxy - it will be used
             even if no proxy was set here. To explicitly disable proxy for pip
             you should pass ``False`` as a value.
 
@@ -1284,7 +1299,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     return packages
 
 
-def version(bin_env=None, cwd=None):
+def version(bin_env=None, cwd=None, user=None):
     """
     .. versionadded:: 0.17.0
 
@@ -1293,11 +1308,16 @@ def version(bin_env=None, cwd=None):
 
     If unable to detect the pip version, returns ``None``.
 
+    .. versionchanged:: 3001.1
+        The ``user`` parameter was added, to allow specifying the user who runs
+        the version command.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.version
+
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
@@ -1311,7 +1331,7 @@ def version(bin_env=None, cwd=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append("--version")
 
-    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, python_shell=False)
+    ret = __salt__["cmd.run_all"](cmd, cwd=cwd, runas=user, python_shell=False)
     if ret["retcode"]:
         raise CommandNotFoundError("Could not find a `pip` binary")
 
@@ -1339,7 +1359,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     cmd = _get_pip_bin(bin_env)
     cmd.extend(["list", "--outdated"])
 
-    pip_version = version(bin_env, cwd)
+    pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = "9.0"
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2=min_version):
@@ -1502,7 +1522,7 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, runas=user, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
     errors = False

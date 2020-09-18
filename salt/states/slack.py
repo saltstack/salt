@@ -93,7 +93,7 @@ def post_message(name, **kwargs):
             enough to be displayed side-by-side with other values.
 
         webhook
-            The identifier of WebHook.
+            The identifier of WebHook (URL or token).
 
         channel
             The channel to use instead of the WebHook default.

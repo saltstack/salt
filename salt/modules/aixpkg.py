@@ -223,9 +223,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         return {}
 
     if pkgs:
-        log.debug(
-            "Removing these fileset(s)/rpm package(s) {0}: {1}".format(name, targets)
-        )
+        log.debug("Removing these fileset(s)/rpm package(s) %s: %s", name, targets)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
@@ -310,9 +308,7 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     if pkgs:
-        log.debug(
-            "Removing these fileset(s)/rpm package(s) {0}: {1}".format(name, targets)
-        )
+        log.debug("Removing these fileset(s)/rpm package(s) %s: %s", name, targets)
 
     errors = []
 
@@ -390,7 +386,7 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 

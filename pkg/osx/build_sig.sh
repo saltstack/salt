@@ -9,7 +9,7 @@
 #              /opt/salt
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #     - A valid signing certificate in the login.keychain. Signing Certificates
 #       can be optained from the Apple Developer site.
 #
@@ -31,13 +31,13 @@
 # Check input parameters
 ############################################################################
 if [ "$1" == "" ]; then
-    echo "Must supply an source package"
+    echo "Must supply a source package"
 else
     INPUT=$1
 fi
 
 if [ "$2" == "" ]; then
-    echo "Must supply an signed package name"
+    echo "Must supply a signed package name"
 else
     OUTPUT=$2
 fi
@@ -48,6 +48,10 @@ fi
 security import "Developer ID Installer.p12" -k ~/Library/Keychains/login.keychain
 
 ############################################################################
-# Signe the package
+# Sign the package
 ############################################################################
 productsign --sign "Developer ID Installer: Salt Stack, Inc. (VK797BMMY4)" $INPUT $OUTPUT
+#
+# codesign --sign "Developer ID Application: Salt Stack, Inc. (XXXXXXXXXX)" $INPUT $OUTPUT
+# https://developer.apple.com/documentation/xcode/notarizing_macos_software_before_distribution?language=objc
+# stapler or altool

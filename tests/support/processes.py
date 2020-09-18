@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
@@ -10,29 +9,38 @@
     Process handling utilities
 """
 
-# Import python libs
-from __future__ import absolute_import
 
 import logging
 
-from pytestsalt.fixtures.daemons import Salt as PytestSalt
-from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
-from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
-from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
-from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
-from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
-from pytestsalt.fixtures.daemons import SaltRun as PytestSaltRun
-from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
-
-# Import pytest-salt libs
-from pytestsalt.utils import (  # pylint: disable=unused-import
+from saltfactories.utils.processes import (  # pylint: disable=unused-import
     collect_child_processes,
     terminate_process,
     terminate_process_list,
 )
+from tests.support.cli_scripts import ScriptPathMixin, get_script_path
+from tests.support.runtests import RUNTIME_VARS
 
-# Import tests support libs
-from tests.support.cli_scripts import ScriptPathMixin
+try:
+    from pytestsalt.fixtures.daemons import Salt as PytestSalt
+    from pytestsalt.fixtures.daemons import SaltCall as PytestSaltCall
+    from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
+    from pytestsalt.fixtures.daemons import SaltMaster as PytestSaltMaster
+    from pytestsalt.fixtures.daemons import SaltMinion as PytestSaltMinion
+    from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
+    from pytestsalt.fixtures.daemons import SaltRun as PytestSaltRun
+    from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
+except ImportError:
+    # If this happens, we are running under pytest which uninstalls pytest-salt due to impatabilites
+    # These imports won't actually work but these classes are only used when running under runtests,
+    # so, we're just making sure we also don't hit NameError's
+    from tests.support.saltfactories_compat import SaltCallCLI as PytestSaltCall
+    from tests.support.saltfactories_compat import SaltCLI as PytestSalt
+    from tests.support.saltfactories_compat import SaltKeyCLI as PytestSaltKey
+    from tests.support.saltfactories_compat import SaltMaster as PytestSaltMaster
+    from tests.support.saltfactories_compat import SaltMinion as PytestSaltMinion
+    from tests.support.saltfactories_compat import SaltProxyMinion as PytestSaltProxy
+    from tests.support.saltfactories_compat import SaltRunCLI as PytestSaltRun
+    from tests.support.saltfactories_compat import SaltSyndic as PytestSaltSyndic
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +60,7 @@ class Salt(ScriptPathMixin, PytestSalt):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Salt, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltCall(ScriptPathMixin, PytestSaltCall):
@@ -61,7 +69,7 @@ class SaltCall(ScriptPathMixin, PytestSaltCall):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltCall, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltKey(ScriptPathMixin, PytestSaltKey):
@@ -70,7 +78,7 @@ class SaltKey(ScriptPathMixin, PytestSaltKey):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltKey, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltRun(ScriptPathMixin, PytestSaltRun):
@@ -79,7 +87,7 @@ class SaltRun(ScriptPathMixin, PytestSaltRun):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SaltRun, self).__init__(None, *args, **kwargs)
+        super().__init__(None, *args, **kwargs)
 
 
 class SaltProxy(GetSaltRunFixtureMixin, PytestSaltProxy):
@@ -137,6 +145,7 @@ def start_daemon(
     log.info("[%s] Starting pytest %s(%s)", daemon_name, daemon_log_prefix, daemon_id)
     attempts = 0
     process = None
+    get_script_path(RUNTIME_VARS.TMP_SCRIPT_DIR, daemon_cli_script_name)
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
         try:
@@ -174,8 +183,8 @@ def start_daemon(
                         process.terminate()
                         if attempts >= 3:
                             fail_method(
-                                "The pytest {0}({1}) has failed to confirm running status "
-                                "after {2} attempts".format(
+                                "The pytest {}({}) has failed to confirm running status "
+                                "after {} attempts".format(
                                     daemon_name, daemon_id, attempts
                                 )
                             )
@@ -203,7 +212,7 @@ def start_daemon(
         if process is not None:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
         raise fail_method(
-            "The pytest {0}({1}) has failed to start after {2} attempts".format(
+            "The pytest {}({}) has failed to start after {} attempts".format(
                 daemon_name, daemon_id, attempts - 1
             )
         )

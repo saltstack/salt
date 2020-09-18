@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Alexandru Bleotu (alexandru.bleotu@morganstanley.com)
@@ -8,17 +7,19 @@
 """
 
 # Import python libs
-from __future__ import absolute_import
 
+import logging
+import os
 import shutil
 import tempfile
-
-import salt.exceptions
+import textwrap
 
 # Import salt libs
+import salt.config
+import salt.exceptions
 import salt.fileclient
-import salt.pillar
 import salt.utils.stringutils
+from salt.utils.files import fopen
 from tests.support.helpers import with_tempdir
 from tests.support.mock import MagicMock, patch
 
@@ -26,8 +27,10 @@ from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
+log = logging.getLogger(__name__)
 
-class MockFileclient(object):
+
+class MockFileclient:
     def __init__(self, cache_file=None, get_state=None, list_states=None):
         if cache_file is not None:
             self.cache_file = lambda *x, **y: cache_file
@@ -867,6 +870,227 @@ sub_with_slashes:
             "test.sub.with.slashes": {"path": "", "dest": sub_with_slashes_sls.name},
         }
 
+    @with_tempdir()
+    def test_relative_include(self, tempdir):
+        join = os.path.join
+        with fopen(join(tempdir, "top.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    base:
+                      '*':
+                        - includer
+                        - simple_includer
+                        - includes.with.more.depth
+                """
+                ),
+                file=f,
+            )
+        includer_dir = join(tempdir, "includer")
+        os.makedirs(includer_dir)
+        with fopen(join(includer_dir, "init.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    include:
+                      - .this
+                      - includer.that
+                """
+                ),
+                file=f,
+            )
+        with fopen(join(includer_dir, "this.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    this:
+                        is all good
+                """
+                ),
+                file=f,
+            )
+        with fopen(join(includer_dir, "that.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    that:
+                        is also all good
+                """
+                ),
+                file=f,
+            )
+
+        with fopen(join(tempdir, "simple_includer.sls"), "w") as simpleincluder:
+            print(
+                textwrap.dedent(
+                    """
+                    include:
+                      - .simple
+                      - super_simple
+                """
+                ),
+                file=simpleincluder,
+            )
+        with fopen(join(tempdir, "simple.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    simple:
+                      simon
+                """
+                ),
+                file=f,
+            )
+        with fopen(join(tempdir, "super_simple.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    super simple:
+                      a caveman
+                """
+                ),
+                file=f,
+            )
+
+        depth_dir = join(tempdir, "includes", "with", "more")
+        os.makedirs(depth_dir)
+        with fopen(join(depth_dir, "depth.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    include:
+                      - .ramble
+                      - includes.with.more.doors
+
+                    mordor:
+                        has dark depths
+                """
+                ),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, "ramble.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    found:
+                        my precious
+                """
+                ),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, "doors.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    mojo:
+                        bad risin'
+                """
+                ),
+                file=f,
+            )
+        opts = {
+            "optimization_order": [0, 1, 2],
+            "renderer": "yaml",
+            "renderer_blacklist": [],
+            "renderer_whitelist": [],
+            "state_top": "top.sls",
+            "pillar_roots": {"base": [tempdir]},
+            "extension_modules": "",
+            "saltenv": "base",
+            "file_roots": [],
+            "file_ignore_regex": None,
+            "file_ignore_glob": None,
+        }
+        grains = {
+            "os": "Ubuntu",
+            "os_family": "Debian",
+            "oscodename": "raring",
+            "osfullname": "Ubuntu",
+            "osrelease": "13.04",
+            "kernel": "Linux",
+        }
+        pillar = salt.pillar.Pillar(opts, grains, "minion", "base")
+        # Make sure that confirm_top.confirm_top returns True
+        pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
+
+        # Act
+        compiled_pillar = pillar.compile_pillar()
+
+        # Assert
+        self.assertEqual(compiled_pillar["this"], "is all good")
+        self.assertEqual(compiled_pillar["that"], "is also all good")
+        self.assertEqual(compiled_pillar["simple"], "simon")
+        self.assertEqual(compiled_pillar["super simple"], "a caveman")
+        self.assertEqual(compiled_pillar["mordor"], "has dark depths")
+        self.assertEqual(compiled_pillar["found"], "my precious")
+        self.assertEqual(compiled_pillar["mojo"], "bad risin'")
+
+    @with_tempdir()
+    def test_missing_include(self, tempdir):
+        opts = {
+            "optimization_order": [0, 1, 2],
+            "renderer": "yaml",
+            "renderer_blacklist": [],
+            "renderer_whitelist": [],
+            "state_top": "top.sls",
+            "pillar_roots": {"base": [tempdir]},
+            "extension_modules": "",
+            "saltenv": "base",
+            "file_roots": [],
+            "file_ignore_regex": None,
+            "file_ignore_glob": None,
+        }
+        grains = {
+            "os": "Ubuntu",
+            "os_family": "Debian",
+            "oscodename": "raring",
+            "osfullname": "Ubuntu",
+            "osrelease": "13.04",
+            "kernel": "Linux",
+        }
+
+        join = os.path.join
+        with fopen(join(tempdir, "top.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    base:
+                      '*':
+                        - simple_include
+                """
+                ),
+                file=f,
+            )
+        include_dir = join(tempdir, "simple_include")
+        os.makedirs(include_dir)
+        with fopen(join(include_dir, "init.sls"), "w") as f:
+            print(
+                textwrap.dedent(
+                    """
+                    include:
+                      - simple_include.missing_include
+                    simple_include: is ok
+                    """
+                ),
+                file=f,
+            )
+
+        pillar = salt.pillar.Pillar(opts, grains, "minion", "base")
+        # Make sure that confirm_top.confirm_top returns True
+        pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
+
+        # Act
+        compiled_pillar = pillar.compile_pillar()
+
+        # Assert
+        self.assertEqual(compiled_pillar["simple_include"], "is ok")
+        self.assertTrue("_errors" in compiled_pillar)
+        self.assertTrue(
+            "simple_include.missing_include" in compiled_pillar["_errors"][0]
+        )
+
 
 @patch("salt.transport.client.ReqChannel.factory", MagicMock())
 class RemotePillarTestCase(TestCase):
@@ -1005,6 +1229,21 @@ class RemotePillarTestCase(TestCase):
             dictkey="pillar",
         )
 
+    def test_pillar_file_client_master_remote(self):
+        """
+        Test condition where local file_client and use_master_when_local option
+        returns a remote file client.
+        """
+        mocked_minion = MagicMock()
+        opts = {
+            "file_client": "local",
+            "use_master_when_local": True,
+            "pillar_cache": None,
+        }
+        pillar = salt.pillar.get_pillar(opts, self.grains, mocked_minion)
+        self.assertEqual(type(pillar), salt.pillar.RemotePillar)
+        self.assertNotEqual(type(pillar), salt.pillar.PillarCache)
+
 
 @patch("salt.transport.client.AsyncReqChannel.factory", MagicMock())
 class AsyncRemotePillarTestCase(TestCase):
@@ -1068,3 +1307,72 @@ class AsyncRemotePillarTestCase(TestCase):
             },
             dictkey="pillar",
         )
+
+
+@patch("salt.transport.client.ReqChannel.factory", MagicMock())
+class PillarCacheTestCase(TestCase):
+    """
+    Tests for instantiating a PillarCache in salt.pillar
+    """
+
+    def setUp(self):
+        self.grains = {}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mock_master_default_opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+        cls.mock_master_default_opts["cachedir"] = tempfile.mkdtemp(
+            dir=RUNTIME_VARS.TMP
+        )
+
+    def tearDown(self):
+        for attr in ("grains",):
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                continue
+
+    def test_compile_pillar(self):
+        self.mock_master_default_opts.update(
+            {"pillar_cache_backend": "disk", "pillar_cache_ttl": 3600}
+        )
+
+        pillar = salt.pillar.PillarCache(
+            self.mock_master_default_opts,
+            self.grains,
+            "mocked_minion",
+            "fake_env",
+            pillarenv="base",
+        )
+
+        with patch("salt.utils.cache.CacheDisk._write", MagicMock()):
+            with patch(
+                "salt.pillar.PillarCache.fetch_pillar",
+                side_effect=[{"foo": "bar"}, {"foo": "baz"}],
+            ):
+                # Run once for pillarenv base
+                ret = pillar.compile_pillar()
+                expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Run a second time for pillarenv base
+                ret = pillar.compile_pillar()
+                expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Change the pillarenv
+                pillar.pillarenv = "dev"
+
+                # Run once for pillarenv dev
+                ret = pillar.compile_pillar()
+                expected_cache = {
+                    "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+                }
+                self.assertEqual(pillar.cache._dict, expected_cache)
+
+                # Run a second time for pillarenv dev
+                ret = pillar.compile_pillar()
+                expected_cache = {
+                    "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
+                }
+                self.assertEqual(pillar.cache._dict, expected_cache)

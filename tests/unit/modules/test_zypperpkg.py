@@ -35,6 +35,9 @@ class ZyppCallMock(object):
         return self
 
     def __call__(self, *args, **kwargs):
+        # If the call is for a configuration modifier, we return self
+        if any(i in kwargs for i in ("no_repo_failure", "systemd_scope", "root")):
+            return self
         return MagicMock(return_value=self.__return_value)()
 
 
@@ -304,9 +307,23 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
             ref_out = {"retcode": 0, "stdout": get_test_data(filename)}
 
-            with patch.dict(
-                zypper.__salt__, {"cmd.run_all": MagicMock(return_value=ref_out)}
-            ):
+            cmd_run_all = MagicMock(return_value=ref_out)
+            mock_call = call(
+                [
+                    "zypper",
+                    "--non-interactive",
+                    "--xmlout",
+                    "--no-refresh",
+                    "--disable-repositories",
+                    "products",
+                    u"-i",
+                ],
+                env={"ZYPP_READONLY_HACK": "1"},
+                output_loglevel="trace",
+                python_shell=False,
+            )
+
+            with patch.dict(zypper.__salt__, {"cmd.run_all": cmd_run_all}):
                 products = zypper.list_products()
                 self.assertEqual(len(products), 7)
                 self.assertIn(
@@ -329,6 +346,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertEqual(
                             test_data[kwd], sorted([prod.get(kwd) for prod in products])
                         )
+                cmd_run_all.assert_has_calls([mock_call])
 
     def test_refresh_db(self):
         """
@@ -346,14 +364,25 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
         run_out = {"stderr": "", "stdout": "\n".join(ref_out), "retcode": 0}
 
-        with patch.dict(
-            zypper.__salt__, {"cmd.run_all": MagicMock(return_value=run_out)}
-        ):
+        zypper_mock = MagicMock(return_value=run_out)
+        call_kwargs = {"output_loglevel": "trace", "python_shell": False, "env": {}}
+        with patch.dict(zypper.__salt__, {"cmd.run_all": zypper_mock}):
             with patch.object(salt.utils.pkg, "clear_rtag", Mock()):
                 result = zypper.refresh_db()
                 self.assertEqual(result.get("openSUSE-Leap-42.1-LATEST"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update"), False)
                 self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"], **call_kwargs
+                )
+                zypper.refresh_db(force=False)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh"], **call_kwargs
+                )
+                zypper.refresh_db(force=True)
+                zypper_mock.assert_called_with(
+                    ["zypper", "--non-interactive", "refresh", "--force"], **call_kwargs
+                )
 
     def test_info_installed(self):
         """
@@ -849,6 +878,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         ):
             pkgs = zypper.list_pkgs(versions_as_list=True)
             self.assertFalse(pkgs.get("gpg-pubkey", False))
+            self.assertTrue("pkg.list_pkgs_None_[]" in zypper.__context__)
             for pkg_name, pkg_version in {
                 "jakarta-commons-discovery": ["0.4-129.686"],
                 "yast2-ftp-server": ["3.1.8-8.1"],
@@ -902,6 +932,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 attr=["epoch", "release", "arch", "install_date_time_t"]
             )
             self.assertFalse(pkgs.get("gpg-pubkey", False))
+            self.assertTrue("pkg.list_pkgs_None_[]" in zypper.__context__)
             for pkg_name, pkg_attr in {
                 "jakarta-commons-discovery": [
                     {
@@ -1091,6 +1122,44 @@ Repository 'DUMMY' not found by its alias, number, or URI.
             list_patches = zypper.list_patches(refresh=False)
             self.assertEqual(len(list_patches), 3)
             self.assertDictEqual(list_patches, PATCHES_RET)
+
+    @patch(
+        "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])
+    )
+    @patch("os.path.getsize", MagicMock(return_value=123456))
+    @patch("os.path.getctime", MagicMock(return_value=1234567890.123456))
+    @patch(
+        "fnmatch.filter",
+        MagicMock(return_value=["/var/cache/zypper/packages/foo/bar/test_package.rpm"]),
+    )
+    def test_list_downloaded_with_kwargs(self):
+        """
+        Test downloaded packages listing.
+
+        :return:
+        """
+        DOWNLOADED_RET = {
+            "test-package": {
+                "1.0": {
+                    "path": "/var/cache/zypper/packages/foo/bar/test_package.rpm",
+                    "size": 123456,
+                    "creation_date_time_t": 1234567890,
+                    "creation_date_time": "2009-02-13T23:31:30",
+                }
+            }
+        }
+
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "lowpkg.bin_pkg_info": MagicMock(
+                    return_value={"name": "test-package", "version": "1.0"}
+                )
+            },
+        ):
+            list_downloaded = zypper.list_downloaded(kw1=True, kw2=False)
+            self.assertEqual(len(list_downloaded), 1)
+            self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
 
     @patch(
         "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])
@@ -1333,6 +1402,44 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 ):
                     zypper.install(advisory_ids=["SUSE-PATCH-XXX"])
 
+    @patch("salt.modules.zypperpkg._systemd_scope", MagicMock(return_value=False))
+    @patch(
+        "salt.modules.zypperpkg.list_products",
+        MagicMock(return_value={"openSUSE": {"installed": False, "summary": "test"}}),
+    )
+    @patch(
+        "salt.modules.zypperpkg.list_pkgs",
+        MagicMock(
+            side_effect=[{"product:openSUSE": "15.2"}, {"product:openSUSE": "15.3"}]
+        ),
+    )
+    def test_install_product_ok(self):
+        """
+        Test successfully product installation.
+        """
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "pkg_resource.parse_targets": MagicMock(
+                    return_value=(["product:openSUSE"], None)
+                )
+            },
+        ):
+            with patch(
+                "salt.modules.zypperpkg.__zypper__.noraise.call", MagicMock()
+            ) as zypper_mock:
+                ret = zypper.install("product:openSUSE", includes=["product"])
+                zypper_mock.assert_called_once_with(
+                    "--no-refresh",
+                    "install",
+                    "--auto-agree-with-licenses",
+                    "--name",
+                    "product:openSUSE",
+                )
+                self.assertDictEqual(
+                    ret, {"product:openSUSE": {"old": "15.2", "new": "15.3"}}
+                )
+
     def test_remove_purge(self):
         """
         Test package removal
@@ -1348,7 +1455,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                     "pico": "0.1.1",
                 }
 
-            def __call__(self):
+            def __call__(self, root=None, includes=None):
                 pkgs = self._pkgs.copy()
                 for target in self._packages:
                     if self._pkgs.get(target):
@@ -1411,9 +1518,12 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{"url": url})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list, [call("ar", url, name)]
+                zypper.__zypper__(root=None).xml.call.call_args_list,
+                [call("ar", url, name)],
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(
+                zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
 
     def test_repo_noadd_nomod_noref(self):
         """
@@ -1437,8 +1547,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 out["comment"],
                 "Specified arguments did not result in modification of repo",
             )
-            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(zypper.__zypper__(root=None).xml.call.call_count == 0)
+            self.assertTrue(
+                zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
 
     def test_repo_noadd_modbaseurl_ref(self):
         """
@@ -1468,10 +1580,11 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 "cache": False,
                 "keeppackages": False,
                 "type": "rpm-md",
+                "root": None,
             }
-            self.assertTrue(zypper.mod_repo.call_count == 2)
-            self.assertTrue(
-                zypper.mod_repo.mock_calls[1] == call(name, **expected_params)
+            self.assertEqual(zypper.mod_repo.call_count, 2)
+            self.assertEqual(
+                zypper.mod_repo.mock_calls[1], call(name, **expected_params)
             )
 
     def test_repo_add_mod_noref(self):
@@ -1489,9 +1602,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{"url": url, "refresh": True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list, [call("ar", url, name)]
+                zypper.__zypper__(root=None).xml.call.call_args_list,
+                [call("ar", url, name)],
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 "mr", "--refresh", name
             )
 
@@ -1512,8 +1626,8 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         )
         with zypper_patcher:
             zypper.mod_repo(name, **{"url": url, "refresh": True})
-            self.assertTrue(zypper.__zypper__.xml.call.call_count == 0)
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            self.assertTrue(zypper.__zypper__(root=None).xml.call.call_count == 0)
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 "mr", "--refresh", name
             )
 
@@ -1533,13 +1647,15 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{"url": url, "gpgautoimport": True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call("ar", url, name),
                     call("--gpg-auto-import-keys", "refresh", name),
                 ],
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(
+                zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
 
     def test_repo_noadd_nomod_ref(self):
         """
@@ -1561,10 +1677,12 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with zypper_patcher:
             zypper.mod_repo(name, **{"url": url, "gpgautoimport": True})
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call("--gpg-auto-import-keys", "refresh", name)],
             )
-            self.assertTrue(zypper.__zypper__.refreshable.xml.call.call_count == 0)
+            self.assertTrue(
+                zypper.__zypper__(root=None).refreshable.xml.call.call_count == 0
+            )
 
     def test_repo_add_mod_ref(self):
         """
@@ -1585,13 +1703,13 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 name, **{"url": url, "refresh": True, "gpgautoimport": True}
             )
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [
                     call("ar", url, name),
                     call("--gpg-auto-import-keys", "refresh", name),
                 ],
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 "--gpg-auto-import-keys", "mr", "--refresh", name
             )
 
@@ -1617,10 +1735,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 name, **{"url": url, "refresh": True, "gpgautoimport": True}
             )
             self.assertEqual(
-                zypper.__zypper__.xml.call.call_args_list,
+                zypper.__zypper__(root=None).xml.call.call_args_list,
                 [call("--gpg-auto-import-keys", "refresh", name)],
             )
-            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+            zypper.__zypper__(root=None).refreshable.xml.call.assert_called_once_with(
                 "--gpg-auto-import-keys", "mr", "--refresh", name
             )
 
@@ -1813,3 +1931,77 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with self.assertRaises(CommandExecutionError):
             for op in [">>", "==", "<<", "+"]:
                 zypper.Wildcard(_zpr)("libzypp", "{0}*.1".format(op))
+
+    @patch("salt.modules.zypperpkg._get_visible_patterns")
+    def test__get_installed_patterns(self, get_visible_patterns):
+        """Test installed patterns in the system"""
+        get_visible_patterns.return_value = {
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
+        }
+
+        salt_mock = {
+            "cmd.run": MagicMock(
+                return_value="""pattern() = package-a
+pattern-visible()
+pattern() = package-c"""
+            ),
+        }
+        with patch.dict("salt.modules.zypperpkg.__salt__", salt_mock):
+            assert zypper._get_installed_patterns() == {
+                "package-a": {"installed": True, "summary": "description a"},
+                "package-c": {"installed": True, "summary": "Non-visible pattern"},
+            }
+
+    @patch("salt.modules.zypperpkg._get_visible_patterns")
+    def test__get_installed_patterns_with_alias(self, get_visible_patterns):
+        """Test installed patterns in the system if they have alias"""
+        get_visible_patterns.return_value = {
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
+        }
+
+        salt_mock = {
+            "cmd.run": MagicMock(
+                return_value="""pattern() = .package-a-alias
+pattern() = package-a
+pattern-visible()
+pattern() = package-c"""
+            ),
+        }
+        with patch.dict("salt.modules.zypperpkg.__salt__", salt_mock):
+            assert zypper._get_installed_patterns() == {
+                "package-a": {"installed": True, "summary": "description a"},
+                "package-c": {"installed": True, "summary": "Non-visible pattern"},
+            }
+
+    @patch("salt.modules.zypperpkg._get_visible_patterns")
+    def test_list_patterns(self, get_visible_patterns):
+        """Test available patterns in the repo"""
+        get_visible_patterns.return_value = {
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
+        }
+        assert zypper.list_patterns() == {
+            "package-a": {"installed": True, "summary": "description a"},
+            "package-b": {"installed": False, "summary": "description b"},
+        }
+
+    def test__clean_cache_empty(self):
+        """Test that an empty cached can be cleaned"""
+        context = {}
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            assert context == {}
+
+    def test__clean_cache_filled(self):
+        """Test that a filled cached can be cleaned"""
+        context = {
+            "pkg.list_pkgs_/mnt_[]": None,
+            "pkg.list_pkgs_/mnt_[patterns]": None,
+            "pkg.list_provides": None,
+            "pkg.other_data": None,
+        }
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            self.assertEqual(zypper.__context__, {"pkg.other_data": None})

@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the docker_container states
 """
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import functools
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 
 # Import Salt Libs
@@ -20,13 +17,12 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
-from salt.ext import six
 from salt.modules.config import DEFAULTS as _config_defaults
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.docker import random_name, with_network
-from tests.support.helpers import destructiveTest, with_tempdir
+from tests.support.helpers import destructiveTest, slowTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -57,6 +53,7 @@ def container_name(func):
 
 
 @destructiveTest
+@skipIf(salt.utils.platform.is_freebsd(), "No Docker on FreeBSD available")
 @skipIf(not salt.utils.path.which("busybox"), "Busybox not installed")
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
@@ -109,12 +106,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             raise Exception("Failed to destroy image")
 
     def run_state(self, function, **kwargs):
-        ret = super(DockerContainerTestCase, self).run_state(function, **kwargs)
+        ret = super().run_state(function, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
     @with_tempdir()
     @container_name
+    @slowTest
     def test_running_with_no_predefined_volume(self, name, bind_dir_host):
         """
         This tests that a container created using the docker_container.running
@@ -135,6 +133,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("/foo" in ret["Config"]["Volumes"])
 
     @container_name
+    @slowTest
     def test_running_with_no_predefined_ports(self, name):
         """
         This tests that a container created using the docker_container.running
@@ -156,6 +155,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(x in ret["NetworkSettings"]["Ports"] for x in expected_ports)
 
     @container_name
+    @slowTest
     def test_running_updated_image_id(self, name):
         """
         This tests the case of an image being changed after the container is
@@ -194,6 +194,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("Container has a new image" in ret["comment"])
 
     @container_name
+    @slowTest
     def test_running_start_false_without_replace(self, name):
         """
         Test that we do not start a container which is stopped, when it is not
@@ -226,6 +227,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @slowTest
     def test_running_no_changes_hostname_network(self, container_name, net):
         """
         Test that changes are not detected when a hostname is specified for a container
@@ -252,6 +254,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
 
     @container_name
+    @slowTest
     def test_running_start_false_with_replace(self, name):
         """
         Test that we do start a container which was previously stopped, even
@@ -285,6 +288,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("state" not in ret["changes"])
 
     @container_name
+    @slowTest
     def test_running_start_true(self, name):
         """
         This tests that we *do* start a container that is stopped, when the
@@ -372,6 +376,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue("'ulimit' is an alias for 'ulimits'" in ret["comment"])
 
     @container_name
+    @slowTest
     def test_running_with_ignore_collisions(self, name):
         """
         This tests that the input tranlation code identifies an argument
@@ -402,6 +407,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(actual, expected)
 
     @container_name
+    @slowTest
     def test_running_with_removed_argument(self, name):
         """
         This tests that removing an argument from a created container will
@@ -437,6 +443,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @slowTest
     def test_running_with_port_bindings(self, name):
         """
         This tests that the ports which are being bound are also exposed, even
@@ -468,6 +475,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(sorted(cinfo["Config"]["ExposedPorts"]), ports + ["9999/tcp"])
 
     @container_name
+    @slowTest
     def test_absent_with_stopped_container(self, name):
         """
         This tests the docker_container.absent state on a stopped container
@@ -492,9 +500,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Nothing should have changed
         self.assertEqual(ret["changes"], {})
         # Ensure that the comment field says the container does not exist
-        self.assertEqual(ret["comment"], "Container '{0}' does not exist".format(name))
+        self.assertEqual(ret["comment"], "Container '{}' does not exist".format(name))
 
     @container_name
+    @slowTest
     def test_absent_with_running_container(self, name):
         """
         This tests the docker_container.absent state and
@@ -533,11 +542,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         # Check that we have a removed container ID in the changes dict
         self.assertTrue("removed" in ret["changes"])
         # The comment should mention that the container was removed
-        self.assertEqual(
-            ret["comment"], "Forcibly removed container '{0}'".format(name)
-        )
+        self.assertEqual(ret["comment"], "Forcibly removed container '{}'".format(name))
 
     @container_name
+    @slowTest
     def test_running_image_name(self, name):
         """
         Ensure that we create the container using the image name instead of ID
@@ -550,6 +558,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["Config"]["Image"], self.image)
 
     @container_name
+    @slowTest
     def test_env_with_running_container(self, name):
         """
         docker_container.running environnment part. Testing issue 39838.
@@ -581,6 +590,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @slowTest
     def test_static_ip_one_network(self, container_name, net):
         """
         Ensure that if a network is created and specified as network_mode, that is the only network, and
@@ -640,11 +650,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             # Fail with a meaningful error
             msg = (
                 "Container does not have the expected network config for "
-                "network {0}".format(net.name)
+                "network {}".format(net.name)
             )
             log.error(msg)
             log.error("Connected networks: %s", connected_networks)
-            self.fail("{0}. See log for more information.".format(msg))
+            self.fail("{}. See log for more information.".format(msg))
 
         # Check that container continued running and didn't immediately exit
         self.assertTrue(inspect_result["State"]["Running"])
@@ -669,13 +679,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
 
         expected = [
-            "Container '{0}' is already configured as specified.".format(container_name)
+            "Container '{}' is already configured as specified.".format(container_name)
         ]
         expected.extend(
             [
-                "Reconnected to network '{0}' with updated configuration.".format(
-                    x.name
-                )
+                "Reconnected to network '{}' with updated configuration.".format(x.name)
                 for x in sorted(nets, key=lambda y: y.name)
             ]
         )
@@ -703,8 +711,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
 
         expected = (
-            "Container '{0}' is already configured as specified. Disconnected "
-            "from network '{1}'.".format(container_name, nets[-1].name)
+            "Container '{}' is already configured as specified. Disconnected "
+            "from network '{}'.".format(container_name, nets[-1].name)
         )
         self.assertEqual(ret["comment"], expected)
 
@@ -724,11 +732,11 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         autoip_keys = _config_defaults["docker.compare_container_networks"]["automatic"]
         autoip_config = {
-            x: y for x, y in six.iteritems(container_netinfo) if x in autoip_keys and y
+            x: y for x, y in container_netinfo.items() if x in autoip_keys and y
         }
 
         expected = {"container": {"Networks": {nets[-1].name: {}}}}
-        for key, val in six.iteritems(autoip_config):
+        for key, val in autoip_config.items():
             expected["container"]["Networks"][nets[-1].name][key] = {
                 "old": None,
                 "new": val,
@@ -736,8 +744,8 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
 
         expected = (
-            "Container '{0}' is already configured as specified. Connected "
-            "to network '{1}'.".format(container_name, nets[-1].name)
+            "Container '{}' is already configured as specified. Connected "
+            "to network '{}'.".format(container_name, nets[-1].name)
         )
         self.assertEqual(ret["comment"], expected)
 
@@ -748,7 +756,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
 
         expected = {"container": {"Networks": {nets[-1].name: {}}}}
-        for key, val in six.iteritems(autoip_config):
+        for key, val in autoip_config.items():
             expected["container"]["Networks"][nets[-1].name][key] = {
                 "old": val,
                 "new": None,
@@ -756,25 +764,28 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
 
         expected = (
-            "Container '{0}' is already configured as specified. Disconnected "
-            "from network '{1}'.".format(container_name, nets[-1].name)
+            "Container '{}' is already configured as specified. Disconnected "
+            "from network '{}'.".format(container_name, nets[-1].name)
         )
         self.assertEqual(ret["comment"], expected)
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @slowTest
     def test_running_ipv4(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="10.247.197.128/27", create=True)
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @slowTest
     def test_running_dual_ipv4(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="fe3f:2180:26:1::/123", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @slowTest
     def test_running_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
@@ -782,6 +793,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network(subnet="fe3f:2180:26:1::/123", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @slowTest
     def test_running_dual_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
@@ -789,11 +801,13 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
     @skipIf(not IPV6_ENABLED, "IPv6 not enabled")
+    @slowTest
     def test_running_mixed_ipv4_and_ipv6(self, container_name, *nets):
         self._test_running(container_name, *nets)
 
     @with_network(subnet="10.247.197.96/27", create=True)
     @container_name
+    @slowTest
     def test_running_explicit_networks(self, container_name, net):
         """
         Ensure that if we use an explicit network configuration, we remove any
@@ -827,9 +841,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         net_changes = ret["changes"]["container"]["Networks"]
 
         self.assertIn(
-            "Container '{0}' is already configured as specified.".format(
-                container_name
-            ),
+            "Container '{}' is already configured as specified.".format(container_name),
             ret["comment"],
         )
 
@@ -839,7 +851,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
 
         for default_network in default_networks:
             self.assertIn(
-                "Disconnected from network '{0}'.".format(default_network),
+                "Disconnected from network '{}'.".format(default_network),
                 ret["comment"],
             )
             self.assertIn(default_network, net_changes)
@@ -847,9 +859,10 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             # paranoid and check the actual connected networks.
             self.assertNotIn(default_network, updated_networks)
 
-        self.assertIn("Connected to network '{0}'.".format(net.name), ret["comment"])
+        self.assertIn("Connected to network '{}'.".format(net.name), ret["comment"])
 
     @container_name
+    @slowTest
     def test_run_with_onlyif(self, name):
         """
         Test docker_container.run with onlyif. The container should not run
@@ -869,11 +882,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
             self.assertFalse(ret["changes"])
-            self.assertTrue(
-                ret["comment"].startswith(
-                    "onlyif command /bin/false returned exit code of"
-                )
-            )
+            self.assertTrue(ret["comment"].startswith("onlyif condition is false"))
             self.run_function("docker.rm", [name], force=True)
 
         for cmd in ("/bin/true", ["/bin/true", "ls /"]):
@@ -894,6 +903,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @slowTest
     def test_run_with_unless(self, name):
         """
         Test docker_container.run with unless. The container should not run
@@ -913,9 +923,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
             self.assertFalse(ret["changes"])
-            self.assertEqual(
-                ret["comment"], "unless command /bin/true returned exit code of 0"
-            )
+            self.assertEqual(ret["comment"], "unless condition is true")
             self.run_function("docker.rm", [name], force=True)
 
         for cmd in ("/bin/false", ["/bin/false", "ls /paththatdoesnotexist"]):
@@ -936,6 +944,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @slowTest
     def test_run_with_creates(self, name):
         """
         Test docker_container.run with creates. The container should not run
@@ -949,7 +958,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
                 os.close(fd)
             except OSError as exc:
                 if exc.errno != errno.EBADF:
-                    six.reraise(*sys.exc_info())
+                    raise
             else:
                 self.addCleanup(os.remove, ret)
                 return ret
@@ -958,22 +967,34 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         good_file1 = _mkstemp()
         good_file2 = _mkstemp()
 
-        for path in (good_file1, [good_file1, good_file2]):
-            log.debug("Trying %s", path)
-            ret = self.run_state(
-                "docker_container.run",
-                name=name,
-                image=self.image,
-                command="whoami",
-                creates=path,
-            )
-            self.assertSaltTrueReturn(ret)
-            ret = ret[next(iter(ret))]
-            self.assertFalse(ret["changes"])
-            self.assertEqual(
-                ret["comment"], "All specified paths in 'creates' argument exist"
-            )
-            self.run_function("docker.rm", [name], force=True)
+        log.debug("Trying %s", good_file1)
+        ret = self.run_state(
+            "docker_container.run",
+            name=name,
+            image=self.image,
+            command="whoami",
+            creates=good_file1,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret["changes"])
+        self.assertEqual(ret["comment"], "{} exists".format(good_file1))
+        self.run_function("docker.rm", [name], force=True)
+
+        path = [good_file1, good_file2]
+        log.debug("Trying %s", path)
+        ret = self.run_state(
+            "docker_container.run",
+            name=name,
+            image=self.image,
+            command="whoami",
+            creates=path,
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret["changes"])
+        self.assertEqual(ret["comment"], "All files in creates exist")
+        self.run_function("docker.rm", [name], force=True)
 
         for path in (bad_file, [good_file1, bad_file]):
             log.debug("Trying %s", path)
@@ -993,6 +1014,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @slowTest
     def test_run_replace(self, name):
         """
         Test the replace and force arguments to make sure they work properly
@@ -1021,7 +1043,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(
             ret["comment"],
-            "Encountered error running container: Container '{0}' exists. "
+            "Encountered error running container: Container '{}' exists. "
             "Run with replace=True to remove the existing container".format(name),
         )
 
@@ -1044,6 +1066,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @slowTest
     def test_run_force(self, name):
         """
         Test the replace and force arguments to make sure they work properly
@@ -1067,7 +1090,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(
             ret["comment"],
-            "Encountered error running container: Container '{0}' exists "
+            "Encountered error running container: Container '{}' exists "
             "and is running. Run with replace=True and force=True to force "
             "removal of the existing container.".format(name),
         )
@@ -1092,6 +1115,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
 
     @container_name
+    @slowTest
     def test_run_failhard(self, name):
         """
         Test to make sure that we fail a state when the container exits with
@@ -1135,6 +1159,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("docker.rm", [name], force=True)
 
     @container_name
+    @slowTest
     def test_run_bg(self, name):
         """
         Test to make sure that if the container is run in the background, we do

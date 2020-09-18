@@ -44,7 +44,7 @@ def present(
     name, password=None, domain=None, server_roles=None, options=None, **kwargs
 ):
     """
-    Checks existance of the named login.
+    Checks existence of the named login.
     If not present, creates the login with the specified roles and options.
 
     name

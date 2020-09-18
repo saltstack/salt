@@ -4,20 +4,16 @@ These only test the provider selection and verification logic, they do not init
 any remotes.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 from time import time
 
-# Import salt libs
 import salt.fileserver.gitfs
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.platform
-
-# Import Salt Testing libs
 import tests.support.paths
 from salt.exceptions import FileserverConfigError
 from tests.support.mock import MagicMock, patch
@@ -36,11 +32,13 @@ if HAS_PYGIT2:
     import pygit2
 
 
-# GLOBALS
-OPTS = {"cachedir": "/tmp/gitfs-test-cache"}
-
-
 class TestGitFSProvider(TestCase):
+    def setUp(self):
+        self.opts = {"cachedir": "/tmp/gitfs-test-cache"}
+
+    def tearDown(self):
+        self.opts = None
+
     def test_provider_case_insensitive(self):
         """
         Ensure that both lowercase and non-lowercase values are supported
@@ -59,11 +57,11 @@ class TestGitFSProvider(TestCase):
                 with patch.object(
                     role_class, "verify_pygit2", MagicMock(return_value=False)
                 ):
-                    args = [OPTS, {}]
+                    args = [self.opts, {}]
                     kwargs = {"init_remotes": False}
                     if role_name == "winrepo":
                         kwargs["cache_root"] = "/tmp/winrepo-dir"
-                    with patch.dict(OPTS, {key: provider}):
+                    with patch.dict(self.opts, {key: provider}):
                         # Try to create an instance with uppercase letters in
                         # provider name. If it fails then a
                         # FileserverConfigError will be raised, so no assert is
@@ -98,15 +96,15 @@ class TestGitFSProvider(TestCase):
                     verify = "verify_pygit2"
                     mock2 = _get_mock(verify, provider)
                     with patch.object(role_class, verify, mock2):
-                        args = [OPTS, {}]
+                        args = [self.opts, {}]
                         kwargs = {"init_remotes": False}
                         if role_name == "winrepo":
                             kwargs["cache_root"] = "/tmp/winrepo-dir"
 
-                        with patch.dict(OPTS, {key: provider}):
+                        with patch.dict(self.opts, {key: provider}):
                             role_class(*args, **kwargs)
 
-                        with patch.dict(OPTS, {key: "foo"}):
+                        with patch.dict(self.opts, {key: "foo"}):
                             # Set the provider name to a known invalid provider
                             # and make sure it raises an exception.
                             self.assertRaises(

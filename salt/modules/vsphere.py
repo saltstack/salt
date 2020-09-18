@@ -186,7 +186,6 @@ connection credentials are used instead of vCenter credentials, the ``host_names
 from __future__ import absolute_import
 
 import datetime
-import inspect
 import logging
 import sys
 from functools import wraps
@@ -402,19 +401,12 @@ def gets_service_instance_via_proxy(fn):
         None, this is a decorator
     """
     fn_name = fn.__name__
-    try:
-        (
-            arg_names,
-            args_name,
-            kwargs_name,
-            default_values,
-            _,
-            _,
-            _,
-        ) = inspect.getfullargspec(fn)
-    except AttributeError:
-        # Fallback to Python 2.7
-        arg_names, args_name, kwargs_name, default_values = inspect.getargspec(fn)
+    (
+        arg_names,
+        args_name,
+        kwargs_name,
+        default_values,
+    ) = salt.utils.args.get_function_argspec(fn)
     default_values = default_values if default_values is not None else []
 
     @wraps(fn)
@@ -2371,7 +2363,7 @@ def system_info(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_datacenters(host, username, password, protocol=None, port=None):
     """
-    Returns a list of datacenters for the the specified host.
+    Returns a list of datacenters for the specified host.
 
     host
         The location of the host.
@@ -2407,7 +2399,7 @@ def list_datacenters(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_clusters(host, username, password, protocol=None, port=None):
     """
-    Returns a list of clusters for the the specified host.
+    Returns a list of clusters for the specified host.
 
     host
         The location of the host.
@@ -2443,7 +2435,7 @@ def list_clusters(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_datastore_clusters(host, username, password, protocol=None, port=None):
     """
-    Returns a list of datastore clusters for the the specified host.
+    Returns a list of datastore clusters for the specified host.
 
     host
         The location of the host.
@@ -2478,7 +2470,7 @@ def list_datastore_clusters(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_datastores(host, username, password, protocol=None, port=None):
     """
-    Returns a list of datastores for the the specified host.
+    Returns a list of datastores for the specified host.
 
     host
         The location of the host.
@@ -2513,7 +2505,7 @@ def list_datastores(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_hosts(host, username, password, protocol=None, port=None):
     """
-    Returns a list of hosts for the the specified VMware environment.
+    Returns a list of hosts for the specified VMware environment.
 
     host
         The location of the host.
@@ -2548,7 +2540,7 @@ def list_hosts(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_resourcepools(host, username, password, protocol=None, port=None):
     """
-    Returns a list of resource pools for the the specified host.
+    Returns a list of resource pools for the specified host.
 
     host
         The location of the host.
@@ -2583,7 +2575,7 @@ def list_resourcepools(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_networks(host, username, password, protocol=None, port=None):
     """
-    Returns a list of networks for the the specified host.
+    Returns a list of networks for the specified host.
 
     host
         The location of the host.
@@ -2618,7 +2610,7 @@ def list_networks(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_vms(host, username, password, protocol=None, port=None):
     """
-    Returns a list of VMs for the the specified host.
+    Returns a list of VMs for the specified host.
 
     host
         The location of the host.
@@ -2653,7 +2645,7 @@ def list_vms(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_folders(host, username, password, protocol=None, port=None):
     """
-    Returns a list of folders for the the specified host.
+    Returns a list of folders for the specified host.
 
     host
         The location of the host.
@@ -2688,7 +2680,7 @@ def list_folders(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_dvs(host, username, password, protocol=None, port=None):
     """
-    Returns a list of distributed virtual switches for the the specified host.
+    Returns a list of distributed virtual switches for the specified host.
 
     host
         The location of the host.
@@ -2723,7 +2715,7 @@ def list_dvs(host, username, password, protocol=None, port=None):
 @ignores_kwargs("credstore")
 def list_vapps(host, username, password, protocol=None, port=None):
     """
-    Returns a list of vApps for the the specified host.
+    Returns a list of vApps for the specified host.
 
     host
         The location of the host.
@@ -5405,7 +5397,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
 @gets_service_instance_via_proxy
 def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     """
-    Returns a list of datastores assign the the storage policies.
+    Returns a list of datastores assign the storage policies.
 
     datastore
         Name of the datastore to assign.
@@ -5799,7 +5791,7 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
                     vsan_spec.dataEfficiencyConfig = vim.vsan.DataEfficiencyConfig()
                 vsan_spec.dataEfficiencyConfig.dedupEnabled = vsan_dict["dedup_enabled"]
         # In all cases we need to configure the vsan on the cluster
-        # directly so not to have a missmatch between vsan_spec and
+        # directly so not to have a mismatch between vsan_spec and
         # cluster_spec
         if not cluster_spec.vsanConfig:
             cluster_spec.vsanConfig = vim.VsanClusterConfigInfo()
@@ -6503,7 +6495,7 @@ def list_hosts_via_proxy(
     hostnames=None, datacenter=None, cluster=None, service_instance=None
 ):
     """
-    Returns a list of hosts for the the specified VMware environment. The list
+    Returns a list of hosts for the specified VMware environment. The list
     of hosts can be filtered by datacenter name and/or cluster name
 
     hostnames
@@ -10948,7 +10940,7 @@ def register_vm(name, datacenter, placement, vmx_path, service_instance=None):
 @gets_service_instance_via_proxy
 def power_on_vm(name, datacenter=None, service_instance=None):
     """
-    Powers on a virtual machine specified by it's name.
+    Powers on a virtual machine specified by its name.
 
     name
         Name of the virtual machine
@@ -10989,7 +10981,7 @@ def power_on_vm(name, datacenter=None, service_instance=None):
 @gets_service_instance_via_proxy
 def power_off_vm(name, datacenter=None, service_instance=None):
     """
-    Powers off a virtual machine specified by it's name.
+    Powers off a virtual machine specified by its name.
 
     name
         Name of the virtual machine

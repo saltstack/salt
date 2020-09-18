@@ -13,6 +13,7 @@ import time
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
@@ -32,7 +33,7 @@ class CacheFactory(object):
 
     @classmethod
     def factory(cls, backend, ttl, *args, **kwargs):
-        log.info("Factory backend: %s", backend)
+        log.debug("Factory backend: %s", backend)
         if backend == "memory":
             return CacheDict(ttl, *args, **kwargs)
         elif backend == "disk":
@@ -161,7 +162,7 @@ class CacheDisk(CacheDict):
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
-        with salt.utils.files.fopen(self._path, "wb+") as fp_:
+        with salt.utils.atomicfile.atomic_open(self._path, "wb+") as fp_:
             cache = {
                 "CacheDisk_data": self._dict,
                 "CacheDisk_cachetime": self._key_cache_time,

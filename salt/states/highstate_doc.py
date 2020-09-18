@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-To be used with proccessors in module `highstate_doc`.
+To be used with processors in module `highstate_doc`.
 """
 
 # Import Python libs
@@ -13,7 +13,7 @@ def note(name, source=None, contents=None, **kwargs):
     """
     Add content to a document generated using `highstate_doc.render`.
 
-    This state does not preform any tasks on the host. It only is used in highstate_doc lowstate proccessers
+    This state does not preform any tasks on the host. It only is used in highstate_doc lowstate processors
     to include extra documents.
 
     .. code-block:: yaml
@@ -26,9 +26,9 @@ def note(name, source=None, contents=None, **kwargs):
                 - contents: |
                     example `highstate_doc.note`
                     ------------------
-                    This state does not do anything to the system! It is only used by a `proccesser`
+                    This state does not do anything to the system! It is only used by a `processor`
                     you can use `requisites` and `order` to move your docs around the rendered file.
-                    .. this message appare aboce the `pkg: somepackage` state.
+                    .. this message appare above the `pkg: somepackage` state.
                 - source: salt://{{tpldir}}/also_include_a_file.md
 
         {{sls}} extra help:

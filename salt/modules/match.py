@@ -5,15 +5,14 @@ The match module allows for match routines to be run and determine target specs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
-
-# Import python libs
 import inspect
 import logging
 import sys
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import SaltException
 from salt.ext import six
 
 __func_alias__ = {"list_": "list"}
@@ -249,7 +248,7 @@ def list_(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers["list_match.match"](tgt, opts=__opts__)
+        return matchers["list_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -279,7 +278,7 @@ def pcre(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers["pcre_match.match"](tgt, opts=__opts__)
+        return matchers["pcre_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
@@ -310,13 +309,20 @@ def glob(tgt, minion_id=None):
     matchers = salt.loader.matchers(opts)
 
     try:
-        return matchers["glob_match.match"](tgt, opts=__opts__)
+        return matchers["glob_match.match"](tgt, opts=opts)
     except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
         return False
 
 
-def filter_by(lookup, tgt_type="compound", minion_id=None, default="default"):
+def filter_by(
+    lookup,
+    tgt_type="compound",
+    minion_id=None,
+    merge=None,
+    merge_lists=False,
+    default="default",
+):
     """
     Return the first match in a dictionary of target patterns
 
@@ -348,6 +354,19 @@ def filter_by(lookup, tgt_type="compound", minion_id=None, default="default"):
     for key in lookup:
         params = (key, minion_id) if minion_id else (key,)
         if expr_funcs[tgt_type](*params):
+            if merge:
+                if not isinstance(merge, Mapping):
+                    raise SaltException(
+                        "filter_by merge argument must be a dictionary."
+                    )
+
+                if lookup[key] is None:
+                    return merge
+                else:
+                    salt.utils.dictupdate.update(
+                        lookup[key], copy.deepcopy(merge), merge_lists=merge_lists
+                    )
+
             return lookup[key]
 
     return lookup.get(default, None)
