@@ -40,7 +40,6 @@ from salt.exceptions import (
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.ext.six.moves import map, range, zip
 from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
@@ -56,7 +55,9 @@ if salt.utils.platform.is_windows():
 
     HAS_WIN_RUNAS = True
 else:
-    from salt.ext.six.moves import shlex_quote as _cmd_quote
+    import shlex
+
+    _cmd_quote = shlex.quote
 
     HAS_WIN_RUNAS = False
 
