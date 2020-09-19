@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-0df0dc774d411107d',
-    concurrent_builds: 1,
+    concurrent_builds: 2,
     distro_name: 'freebsd',
     distro_version: '121',
     env: env,

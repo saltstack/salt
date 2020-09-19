@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-0c9da3934b68eb896',
-    concurrent_builds: 1,
+    concurrent_builds: 2,
     distro_name: 'ubuntu',
     distro_version: '2004',
     env: env,
