@@ -12,11 +12,9 @@ engine configuration for the Salt master.
         - reactor
 
 """
-# Import python libs
 
 import logging
 
-# Import salt libs
 import salt.config
 import salt.syspaths
 import salt.utils.event
@@ -33,14 +31,14 @@ __func_alias__ = {
 }
 
 
-def _reactor_system_available():
+def _reactor_system_available(opts):
     """
     Helper to see if the reactor system is available
     """
-    if __opts__.get("engines", {}):
-        if any([True for engine in __opts__["engines"] if "reactor" in engine]):
+    if opts.get("engines", {}):
+        if any([True for engine in opts["engines"] if "reactor" in engine]):
             return True
-    elif __opts__.get("reactor", {}) and __opts__["reactor"]:
+    elif opts.get("reactor", {}) and opts["reactor"]:
         return True
     return False
 
@@ -55,7 +53,7 @@ def list_(saltenv="base", test=None):
 
         salt-run reactor.list
     """
-    if not _reactor_system_available():
+    if not _reactor_system_available(__opts__):
         raise CommandExecutionError("Reactor system is not running.")
 
     sevent = salt.utils.event.get_event(
@@ -85,7 +83,7 @@ def add(event, reactors, saltenv="base", test=None):
 
         salt-run reactor.add 'salt/cloud/*/destroyed' reactors='/srv/reactor/destroy/*.sls'
     """
-    if not _reactor_system_available():
+    if not _reactor_system_available(__opts__):
         raise CommandExecutionError("Reactor system is not running.")
 
     if isinstance(reactors, string_types):
@@ -120,7 +118,7 @@ def delete(event, saltenv="base", test=None):
 
         salt-run reactor.delete 'salt/cloud/*/destroyed'
     """
-    if not _reactor_system_available():
+    if not _reactor_system_available(__opts__):
         raise CommandExecutionError("Reactor system is not running.")
 
     sevent = salt.utils.event.get_event(
@@ -151,7 +149,7 @@ def is_leader():
 
         salt-run reactor.is_leader
     """
-    if not _reactor_system_available():
+    if not _reactor_system_available(__opts__):
         raise CommandExecutionError("Reactor system is not running.")
 
     sevent = salt.utils.event.get_event(
@@ -180,7 +178,7 @@ def set_leader(value=True):
 
         salt-run reactor.set_leader True
     """
-    if not _reactor_system_available():
+    if not _reactor_system_available(__opts__):
         raise CommandExecutionError("Reactor system is not running.")
 
     sevent = salt.utils.event.get_event(
