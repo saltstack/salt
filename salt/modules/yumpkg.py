@@ -107,6 +107,12 @@ def _strip_headers(output, *args):
     return ret
 
 
+def _get_copr_repo(copr):
+    copr = copr.split(":", 1)[1]
+    copr = copr.split("/", 1)
+    return "copr:copr.fedorainfracloud.org:{}:{}".format(copr[0], copr[1])
+
+
 def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
     """
     Resolve a package name from a line containing the hold expression. If the
@@ -2720,7 +2726,7 @@ def list_repos(basedir=None, **kwargs):
     return repos
 
 
-def get_repo(name, basedir=None, **kwargs):  # pylint: disable=W0613
+def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     """
     Display a repo from <basedir> (default basedir: all dirs in ``reposdir``
     yum option).
@@ -2735,16 +2741,19 @@ def get_repo(name, basedir=None, **kwargs):  # pylint: disable=W0613
     """
     repos = list_repos(basedir)
 
+    if repo.startswith("copr:"):
+        repo = _get_copr_repo(repo)
+
     # Find out what file the repo lives in
     repofile = ""
-    for repo in repos:
-        if repo == name:
-            repofile = repos[repo]["file"]
+    for list_repo in repos:
+        if list_repo == repo:
+            repofile = repos[list_repo]["file"]
 
     if repofile:
         # Return just one repo
         filerepos = _parse_repo_file(repofile)[1]
-        return filerepos[name]
+        return filerepos[repo]
     return {}
 
 
@@ -2764,6 +2773,10 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.del_repo myrepo basedir=/path/to/dir
         salt '*' pkg.del_repo myrepo basedir=/path/to/dir,/path/to/another/dir
     """
+
+    if repo.startswith("copr:"):
+        repo = _get_copr_repo(repo)
+
     # this is so we know which dirs are searched for our error messages below
     basedirs = _normalize_basedir(basedir)
     repos = list_repos(basedirs)
@@ -2856,6 +2869,12 @@ def mod_repo(repo, basedir=None, **kwargs):
             "Only one of 'mirrorlist' and 'baseurl' can be specified"
         )
 
+    use_copr = False
+    if repo.startswith("copr:"):
+        copr_name = repo.split(":", 1)[1]
+        repo = _get_copr_repo(repo)
+        use_copr = True
+
     # Build a list of keys to be deleted
     todelete = []
     # list() of keys because the dict could be shrinking in the for loop.
@@ -2897,20 +2916,47 @@ def mod_repo(repo, basedir=None, **kwargs):
                 "of the following basedir directories exist: {0}".format(basedirs)
             )
 
-        repofile = "{0}/{1}.repo".format(newdir, repo)
+        if use_copr:
+            # Is copr plugin installed?
+            copr_plugin_name = ""
+            if _yum() == "dnf":
+                copr_plugin_name = "dnf-plugins-core"
+            else:
+                copr_plugin_name = "yum-plugin-copr"
 
-        if "name" not in repo_opts:
-            raise SaltInvocationError(
-                "The repo does not exist and needs to be created, but a name "
-                "was not given"
-            )
+            if not __salt__["pkg_resource.version"](copr_plugin_name):
+                raise SaltInvocationError(
+                    "{} must be installed to use COPR".format(copr_plugin_name)
+                )
 
-        if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
-            raise SaltInvocationError(
-                "The repo does not exist and needs to be created, but either "
-                "a baseurl or a mirrorlist needs to be given"
-            )
-        filerepos[repo] = {}
+            # Enable COPR
+            out = _call_yum(["copr", "enable", copr_name, "-y"])
+            if out["retcode"]:
+                raise CommandExecutionError(
+                    "Unable to add COPR '{0}'. '{1}' exited with "
+                    "status {2!s}: '{3}' ".format(
+                        copr_name, _yum(), out["retcode"], out["stderr"]
+                    )
+                )
+            # Repo has been added, update repos list
+            repos = list_repos(basedirs)
+            repofile = repos[repo]["file"]
+            header, filerepos = _parse_repo_file(repofile)
+        else:
+            repofile = "{0}/{1}.repo".format(newdir, repo)
+
+            if "name" not in repo_opts:
+                raise SaltInvocationError(
+                    "The repo does not exist and needs to be created, but a name "
+                    "was not given"
+                )
+
+            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+                raise SaltInvocationError(
+                    "The repo does not exist and needs to be created, but either "
+                    "a baseurl or a mirrorlist needs to be given"
+                )
+            filerepos[repo] = {}
     else:
         # The repo does exist, open its file
         repofile = repos[repo]["file"]
