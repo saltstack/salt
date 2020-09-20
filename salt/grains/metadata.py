@@ -7,7 +7,7 @@ Grains from cloud metadata servers at 169.254.169.254
 :depends: requests
 
 To enable these grains that pull from the http://169.254.169.254/latest
-metadata server set `metadata_server_grains: True`.
+metadata server set `metadata_server_grains: True` in the minion config.
 
 .. code-block:: yaml
 
