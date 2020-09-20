@@ -4,7 +4,7 @@ Grains for iSCSI Qualified Names (IQN).
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set `iscsi_grains: True`.
+To enable these grains set `iscsi_grains: True` in the minion config.
 
 .. code-block:: yaml
 
