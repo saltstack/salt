@@ -4,7 +4,7 @@ Grains for NVMe Qualified Names (NQN).
 
 .. versionadded:: 3000
 
-To enable these grains set `nvme_grains: True`.
+To enable these grains set `nvme_grains: True` in the minion config.
 
 .. code-block:: yaml
 

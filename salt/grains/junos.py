@@ -2,7 +2,7 @@
 """
 Grains for junos.
 NOTE this is a little complicated--junos can only be accessed
-via salt-proxy-minion.Thus, some grains make sense to get them
+via salt-proxy-minion. Thus, some grains make sense to get them
 from the minion (PYTHONPATH), but others don't (ip_interfaces)
 """
 
