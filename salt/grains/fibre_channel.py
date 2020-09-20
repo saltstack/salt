@@ -5,7 +5,7 @@ queries WMI to get the Fibre Channel WWN's available.
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set ``fibre_channel_grains: True``.
+To enable these grains set ``fibre_channel_grains: True`` in the minion config.
 
 .. code-block:: yaml
 
