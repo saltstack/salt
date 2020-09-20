@@ -5,7 +5,6 @@ Connection module for Amazon IoT
 .. versionadded:: 2016.3.0
 
 :depends:
-    - boto
     - boto3
 
 The dependencies listed above can be installed via package or pip.
@@ -69,7 +68,6 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
@@ -91,7 +89,7 @@ def __virtual__():
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.1", botocore_ver="1.4.41")
+    return salt.utils.versions.check_boto_reqs(check_boto=False, boto3_ver="1.2.1", botocore_ver="1.4.41")
 
 
 def __init__(opts):

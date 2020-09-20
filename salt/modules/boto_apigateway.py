@@ -5,7 +5,6 @@ Connection module for Amazon APIGateway
 .. versionadded:: 2016.11.0
 
 :depends:
-  - boto >= 2.8.0
   - boto3 >= 1.2.1
   - botocore >= 1.4.49
 
@@ -98,14 +97,12 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
 
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -122,7 +119,7 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     return salt.utils.versions.check_boto_reqs(
-        boto_ver="2.8.0", boto3_ver="1.2.1", botocore_ver="1.4.49"
+        check_boto=False, boto3_ver="1.2.1", botocore_ver="1.4.49"
     )
 
 

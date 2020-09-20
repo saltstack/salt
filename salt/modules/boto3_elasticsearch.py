@@ -87,7 +87,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.7")
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.7", check_boto=False)
 
 
 def __init__(opts):

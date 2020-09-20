@@ -6,7 +6,6 @@ Connection module for Amazon Lambda
 
 :depends:
 
-- boto
 - boto3
 
 The dependencies listed above can be installed via package or pip.
@@ -102,14 +101,12 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
     from botocore import __version__ as found_botocore_version
 
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -127,7 +124,7 @@ def __virtual__():
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     # botocore version >= 1.5.2 is required due to lambda environment variables
     return salt.utils.versions.check_boto_reqs(
-        boto_ver="2.8.0", boto3_ver="1.2.5", botocore_ver="1.5.2"
+        check_boto=False, boto3_ver="1.2.5", botocore_ver="1.5.2"
     )
 
 

@@ -61,7 +61,6 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
@@ -78,7 +77,7 @@ def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    return salt.utils.versions.check_boto_reqs()
+    return salt.utils.versions.check_boto_reqs(check_boto=False)
 
 
 def __init__(opts):

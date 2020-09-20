@@ -68,13 +68,11 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
 
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -132,7 +130,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.3.1")
+    return salt.utils.versions.check_boto_reqs(check_boto=False, boto3_ver="1.3.1")
 
 
 def __init__(opts):
