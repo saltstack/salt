@@ -15,7 +15,7 @@ Example Usage:
     .. code-block:: python
 
         def __virtual__():
-            __utils__['boto.apply_funcs'](__name__, 'vpc')
+            __utils__['boto3.apply_funcs'](__name__, 'vpc')
 
         def test():
             conn = _get_conn()
@@ -40,16 +40,13 @@ try:
     # pylint: disable=import-error
     import boto
     import boto3
-    import boto.exception
-    import boto3.session
     import botocore  # pylint: disable=W0611
 
     # pylint: enable=import-error
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
-    HAS_BOTO = True
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
-# pylint: enable=import-error
+    HAS_BOTO3 = False
 
 
 log = logging.getLogger(__name__)
@@ -62,10 +59,9 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    has_boto = salt.utils.versions.check_boto_reqs(boto_ver="2.0.0", boto3_ver="1.2.6")
-    if has_boto is True:
+    if salt.utils.versions.check_boto_reqs(boto3_ver="1.2.6"):
         return __virtualname__
-    return has_boto
+    return False
 
 
 def _option(value):
@@ -103,7 +99,7 @@ def _get_profile(service, region, key, keyid, profile):
     if not keyid and _option(service + ".keyid"):
         keyid = _option(service + ".keyid")
 
-    label = "boto_{}:".format(service)
+    label = "boto3_{}:".format(service)
     if keyid:
         hash_string = region + keyid + key
         hash_string = salt.utils.stringutils.to_bytes(hash_string)
@@ -130,7 +126,7 @@ def cache_id(
 
     .. code-block:: python
 
-        __utils__['boto.cache_id']('ec2', 'myinstance',
+        __utils__['boto3.cache_id']('ec2', 'myinstance',
                                    'i-a1b2c3',
                                    profile='custom_profile')
     """
@@ -165,7 +161,7 @@ def cache_id_func(service):
 
     .. code-block:: python
 
-        cache_id = __utils__['boto.cache_id_func']('ec2')
+        cache_id = __utils__['boto3.cache_id_func']('ec2')
         cache_id('myinstance', 'i-a1b2c3')
         instance_id = cache_id('myinstance')
     """
@@ -216,7 +212,7 @@ def get_connection_func(service, module=None):
 
     .. code-block:: python
 
-        get_conn = __utils__['boto.get_connection_func']('ec2')
+        get_conn = __utils__['boto3.get_connection_func']('ec2')
         conn = get_conn()
     """
     return partial(get_connection, service, module=module)
@@ -271,7 +267,7 @@ def assign_funcs(
 
     .. code-block:: python
 
-        _utils__['boto.assign_partials'](__name__, 'ec2')
+        _utils__['boto3.assign_partials'](__name__, 'ec2')
     """
     mod = sys.modules[modname]
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))

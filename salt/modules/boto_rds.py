@@ -60,13 +60,11 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError
 
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
     logging.getLogger("boto3").setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:

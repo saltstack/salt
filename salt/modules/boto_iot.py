@@ -4,7 +4,6 @@ Connection module for Amazon IoT
 .. versionadded:: 2016.3.0
 
 :depends:
-    - boto
     - boto3
 
 The dependencies listed above can be installed via package or pip.
@@ -63,7 +62,6 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
     import boto3
 
     # pylint: enable=unused-import
