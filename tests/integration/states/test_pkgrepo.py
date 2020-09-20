@@ -266,3 +266,61 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
                 os.remove(fn_)
             except OSError:
                 pass
+
+    @requires_salt_states("pkgrepo.absent", "pkgrepo.managed")
+    @requires_system_grains
+    @slowTest
+    def test_pkgrepo_05_copr_with_comments(self, grains):
+        """
+        Test copr
+        """
+        kwargs = {}
+        if grains["os_family"] == "RedHat":
+            if (
+                grains["osfinger"] == "CentOS Linux-7"
+                or grains["osfinger"] == "Amazon Linux-2"
+            ):
+                self.skipTest("copr plugin not installed on Centos 7 CI")
+            kwargs = {
+                "name": "hello-copr",
+                "copr": "mymindstorm/hello",
+                "enabled": False,
+                "comments": ["This is a comment"],
+            }
+        else:
+            self.skipTest(
+                "{}/{} test case needed".format(grains["os_family"], grains["os"])
+            )
+
+        try:
+            # Run the state to add the repo
+            ret = self.run_state("pkgrepo.managed", **kwargs)
+            self.assertSaltTrueReturn(ret)
+
+            # Run again with modified comments
+            kwargs["comments"].append("This is another comment")
+            ret = self.run_state("pkgrepo.managed", **kwargs)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertEqual(
+                ret["changes"],
+                {
+                    "comments": {
+                        "old": ["This is a comment"],
+                        "new": ["This is a comment", "This is another comment"],
+                    }
+                },
+            )
+
+            # Run a third time, no changes should be made
+            ret = self.run_state("pkgrepo.managed", **kwargs)
+            self.assertSaltTrueReturn(ret)
+            ret = ret[next(iter(ret))]
+            self.assertFalse(ret["changes"])
+            self.assertEqual(
+                ret["comment"],
+                "Package repo '{0}' already configured".format(kwargs["name"]),
+            )
+        finally:
+            # Clean up
+            self.run_state("pkgrepo.absent", copr=kwargs["copr"])

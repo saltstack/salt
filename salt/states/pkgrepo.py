@@ -83,6 +83,14 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
     installed. To check if this package is installed, run ``dpkg -l python-apt``.
     ``python-apt`` will need to be manually installed if it is not present.
 
+.. code-block:: yaml
+
+    hello-copr:
+        pkgrepo.managed:
+            - copr: mymindstorm/hello
+        pkg.installed:
+            - name: hello
+
 """
 
 # Import Python libs
@@ -111,7 +119,7 @@ def __virtual__():
     return "pkg.mod_repo" in __salt__
 
 
-def managed(name, ppa=None, **kwargs):
+def managed(name, ppa=None, copr=None, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
@@ -140,6 +148,12 @@ def managed(name, ppa=None, **kwargs):
         argument. If this is passed for a YUM/DNF/Zypper-based distro, then the
         reverse will be passed as ``enabled``. For example passing
         ``disabled=True`` will assume ``enabled=False``.
+
+    copr
+        Fedora and RedHat based distributions only. Use community packages
+        outside of the main package repository.
+
+        .. versionadded:: 3002
 
     humanname
         This is used as the "name" value in the repo file in
@@ -369,6 +383,11 @@ def managed(name, ppa=None, **kwargs):
         )
 
     elif __grains__["os_family"] in ("RedHat", "Suse"):
+        if __grains__["os_family"] in "RedHat":
+            if copr is not None:
+                repo = ":".join(("copr", copr))
+                kwargs["name"] = name
+
         if "humanname" in kwargs:
             kwargs["name"] = kwargs.pop("humanname")
         if "name" not in kwargs:
@@ -550,6 +569,19 @@ def absent(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+    **FEDORA/REDHAT-SPECIFIC OPTIONS**
+
+    copr
+        Use community packages outside of the main package repository.
+
+        .. versionadded:: 3002
+
+        .. code-block:: yaml
+
+            hello-copr:
+                pkgrepo.absent:
+                  - copr: mymindstorm/hello
+
     **UBUNTU-SPECIFIC OPTIONS**
 
     ppa
@@ -595,6 +627,11 @@ def absent(name, **kwargs):
         name = kwargs.pop("ppa")
         if not name.startswith("ppa:"):
             name = "ppa:" + name
+
+    if "copr" in kwargs and __grains__["os_family"] in "RedHat":
+        name = kwargs.pop("copr")
+        if not name.startswith("copr:"):
+            name = "copr:" + name
 
     remove_key = any(kwargs.get(x) is not None for x in ("keyid", "keyid_ppa"))
     if remove_key and "pkg.del_repo_key" not in __salt__:
