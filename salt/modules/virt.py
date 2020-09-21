@@ -458,6 +458,8 @@ def _get_disks(conn, dom):
     """
     disks = {}
     doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Get the path, pool, volume name of each volume we can
+    all_volumes = _get_all_volumes_paths(conn)
     for elem in doc.findall("devices/disk"):
         source = elem.find("source")
         if source is None:
@@ -470,13 +472,61 @@ def _get_disks(conn, dom):
         extra_properties = None
         if "dev" in target.attrib:
             disk_type = elem.get("type")
+
+            def _get_disk_volume_data(pool_name, volume_name):
+                qemu_target = "{}/{}".format(pool_name, volume_name)
+                pool = conn.storagePoolLookupByName(pool_name)
+                vol = pool.storageVolLookupByName(volume_name)
+                vol_info = vol.info()
+                extra_properties = {
+                    "virtual size": vol_info[1],
+                    "disk size": vol_info[2],
+                }
+
+                backing_files = [
+                    {
+                        "file": node.find("source").get("file"),
+                        "file format": node.find("format").get("type"),
+                    }
+                    for node in elem.findall(".//backingStore[source]")
+                ]
+
+                if backing_files:
+                    # We had the backing files in a flat list, nest them again.
+                    extra_properties["backing file"] = backing_files[0]
+                    parent = extra_properties["backing file"]
+                    for sub_backing_file in backing_files[1:]:
+                        parent["backing file"] = sub_backing_file
+                        parent = sub_backing_file
+
+                else:
+                    # In some cases the backing chain is not displayed by the domain definition
+                    # Try to see if we have some of it in the volume definition.
+                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                    backing_path = vol_desc.find("./backingStore/path")
+                    backing_format = vol_desc.find("./backingStore/format")
+                    if backing_path is not None:
+                        extra_properties["backing file"] = {"file": backing_path.text}
+                        if backing_format is not None:
+                            extra_properties["backing file"][
+                                "file format"
+                            ] = backing_format.get("type")
+                return (qemu_target, extra_properties)
+
             if disk_type == "file":
                 qemu_target = source.get("file", "")
                 if qemu_target.startswith("/dev/zvol/"):
                     disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                     continue
-                # Extract disk sizes, snapshots, backing files
-                if elem.get("device", "disk") != "cdrom":
+
+                if qemu_target in all_volumes.keys():
+                    # If the qemu_target is a known path, output a volume
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
+                elif elem.get("device", "disk") != "cdrom":
+                    # Extract disk sizes, snapshots, backing files
                     try:
                         stdout = subprocess.Popen(
                             [
@@ -498,6 +548,12 @@ def _get_disks(conn, dom):
                         disk.update({"file": "Does not exist"})
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
+                # If the qemu_target is a known path, output a volume
+                if qemu_target in all_volumes.keys():
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
             elif disk_type == "network":
                 qemu_target = source.get("protocol")
                 source_name = source.get("name")
@@ -536,43 +592,9 @@ def _get_disks(conn, dom):
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
-                qemu_target = "{}/{}".format(pool_name, volume_name)
-                pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
-                    }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
-
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
-
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                qemu_target, extra_properties = _get_disk_volume_data(
+                    pool_name, volume_name
+                )
 
             if not qemu_target:
                 continue
@@ -767,6 +789,62 @@ def _migrate(dom, dst_uri, **kwargs):
         raise CommandExecutionError(err.get_error_message())
 
 
+def _disk_from_pool(conn, pool, pool_xml, volume_name):
+    """
+    Create a disk definition out of the pool XML and volume name.
+    The aim of this function is to replace the volume-based definition when not handled by libvirt.
+    It returns the disk Jinja context to be used when creating the VM
+    """
+    pool_type = pool_xml.get("type")
+    disk_context = {}
+
+    # handle dir, fs and netfs
+    if pool_type in ["dir", "netfs", "fs"]:
+        disk_context["type"] = "file"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["logical", "disk", "iscsi", "scsi"]:
+        disk_context["type"] = "block"
+        disk_context["format"] = "raw"
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        disk_context["source_file"] = volume_xml.find("./target/path").text
+
+    elif pool_type in ["rbd", "gluster", "sheepdog"]:
+        # libvirt can't handle rbd, gluster and sheepdog as volumes
+        disk_context["type"] = "network"
+        disk_context["protocol"] = pool_type
+        # Copy the hosts from the pool definition
+        disk_context["hosts"] = [
+            {"name": host.get("name"), "port": host.get("port")}
+            for host in pool_xml.findall(".//host")
+        ]
+        dir_node = pool_xml.find("./source/dir")
+        # Gluster and RBD need pool/volume name
+        name_node = pool_xml.find("./source/name")
+        if name_node is not None:
+            disk_context["volume"] = "{}/{}".format(name_node.text, volume_name)
+        # Copy the authentication if any for RBD
+        auth_node = pool_xml.find("./source/auth")
+        if auth_node is not None:
+            username = auth_node.get("username")
+            secret_node = auth_node.find("./secret")
+            usage = secret_node.get("usage")
+            if not usage:
+                # Get the usage from the UUID
+                uuid = secret_node.get("uuid")
+                usage = conn.secretLookupByUUIDString(uuid).usageID()
+            disk_context["auth"] = {
+                "type": "ceph",
+                "username": username,
+                "usage": usage,
+            }
+
+    return disk_context
+
+
 def _gen_xml(
     conn,
     name,
@@ -872,41 +950,16 @@ def _gen_xml(
         elif disk.get("pool"):
             disk_context["volume"] = disk["filename"]
             # If we had no source_file, then we want a volume
-            pool_xml = ElementTree.fromstring(
-                conn.storagePoolLookupByName(disk["pool"]).XMLDesc()
-            )
+            pool = conn.storagePoolLookupByName(disk["pool"])
+            pool_xml = ElementTree.fromstring(pool.XMLDesc())
             pool_type = pool_xml.get("type")
-            if pool_type in ["rbd", "gluster", "sheepdog"]:
-                # libvirt can't handle rbd, gluster and sheepdog as volumes
-                disk_context["type"] = "network"
-                disk_context["protocol"] = pool_type
-                # Copy the hosts from the pool definition
-                disk_context["hosts"] = [
-                    {"name": host.get("name"), "port": host.get("port")}
-                    for host in pool_xml.findall(".//host")
-                ]
-                dir_node = pool_xml.find("./source/dir")
-                # Gluster and RBD need pool/volume name
-                name_node = pool_xml.find("./source/name")
-                if name_node is not None:
-                    disk_context["volume"] = "{}/{}".format(
-                        name_node.text, disk_context["volume"]
-                    )
-                # Copy the authentication if any for RBD
-                auth_node = pool_xml.find("./source/auth")
-                if auth_node is not None:
-                    username = auth_node.get("username")
-                    secret_node = auth_node.find("./secret")
-                    usage = secret_node.get("usage")
-                    if not usage:
-                        # Get the usage from the UUID
-                        uuid = secret_node.get("uuid")
-                        usage = conn.secretLookupByUUIDString(uuid).usageID()
-                    disk_context["auth"] = {
-                        "type": "ceph",
-                        "username": username,
-                        "usage": usage,
-                    }
+
+            # TODO For Xen VMs convert all pool types (issue #58333)
+            if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
+                disk_context.update(
+                    _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])
+                )
+
             else:
                 if pool_type in ["disk", "logical"]:
                     # The volume format for these types doesn't match the driver format in the VM
@@ -4261,7 +4314,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
@@ -6779,29 +6832,33 @@ def _is_valid_volume(vol):
 
 def _get_all_volumes_paths(conn):
     """
-    Extract the path and backing stores path of all volumes.
+    Extract the path, name, pool name and backing stores path of all volumes.
 
     :param conn: libvirt connection to use
     """
-    volumes = [
-        vol
-        for l in [
-            obj.listAllVolumes()
-            for obj in conn.listAllStoragePools()
-            if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
-        ]
-        for vol in l
+    pools = [
+        pool
+        for pool in conn.listAllStoragePools()
+        if pool.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
     ]
-    return {
-        vol.path(): [
-            path.text
-            for path in ElementTree.fromstring(vol.XMLDesc()).findall(
-                ".//backingStore/path"
-            )
-        ]
-        for vol in volumes
-        if _is_valid_volume(vol)
-    }
+    volumes = {}
+    for pool in pools:
+        pool_volumes = {
+            volume.path(): {
+                "pool": pool.name(),
+                "name": volume.name(),
+                "backing_stores": [
+                    path.text
+                    for path in ElementTree.fromstring(volume.XMLDesc()).findall(
+                        ".//backingStore/path"
+                    )
+                ],
+            }
+            for volume in pool.listAllVolumes()
+            if _is_valid_volume(volume)
+        }
+        volumes.update(pool_volumes)
+    return volumes
 
 
 def volume_infos(pool=None, volume=None, **kwargs):
@@ -6872,8 +6929,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
             if vol.path():
                 as_backing_store = {
                     path
-                    for (path, all_paths) in backing_stores.items()
-                    if vol.path() in all_paths
+                    for (path, volume) in backing_stores.items()
+                    if vol.path() in volume.get("backing_stores")
                 }
                 used_by = [
                     vm_name
