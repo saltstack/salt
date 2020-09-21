@@ -650,9 +650,13 @@ def certificate_managed(
             "signing_policy must be specified if ca_server is."
         )
 
-    if "public_key" not in kwargs and "signing_private_key" not in kwargs:
+    if (
+        "public_key" not in kwargs
+        and "signing_private_key" not in kwargs
+        and "csr" not in kwargs
+    ):
         raise salt.exceptions.SaltInvocationError(
-            "public_key or signing_private_key must be specified."
+            "public_key, signing_private_key, or csr must be specified."
         )
 
     if managed_private_key:
