@@ -684,6 +684,27 @@ class LazyLoaderReloadingTest(TestCase):
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
 
+    def test_wrong_bytecode(self):
+        """
+        Checks to make sure we don't even try to load .pyc files that are for a different Python
+        This should pass (the load should fail) all the time because we don't run Salt on Py 3.4 anymore
+        """
+        test_module_name = "test_module.cpython-34"
+        filemap_save = copy.deepcopy(self.loader.file_mapping)
+        self.loader.file_mapping = {
+            test_module_name: (
+                "/temp/path/does/not/matter/here/__pycache__/"
+                + test_module_name
+                + ".pyc",
+                ".pyc",
+                0,
+            )
+        }
+
+        self.assertFalse(self.loader._load_module(test_module_name))
+
+        self.loader.file_mapping = copy.deepcopy(filemap_save)
+
 
 virtual_aliases = ("loadertest2", "loadertest3")
 virtual_alias_module_template = """
