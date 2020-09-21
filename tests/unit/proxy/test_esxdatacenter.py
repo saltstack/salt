@@ -1,25 +1,17 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests for esxdatacenter proxy
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.exceptions
-
-# Import Salt Libs
 import salt.proxy.esxdatacenter as esxdatacenter
 from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import external libs
 try:
     import jsonschema
 
@@ -33,13 +25,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.proxy.esxdatacenter.init"""
 
     def setup_loader_modules(self):
-        return {
-            esxdatacenter: {
-                "__virtual__": MagicMock(return_value="esxdatacenter"),
-                "DETAILS": {},
-                "__pillar__": {},
-            }
-        }
+        return {esxdatacenter: {"DETAILS": {}, "__pillar__": {}}}
 
     def setUp(self):
         self.opts_userpass = {

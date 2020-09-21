@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Tests for cluster related functions in salt.utils.vmware
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
@@ -14,8 +11,6 @@ import ssl
 import sys
 
 import salt.utils.vmware
-
-# Import Salt libraries
 from salt.exceptions import (
     ArgumentValueError,
     CommandExecutionError,
@@ -25,13 +20,8 @@ from salt.exceptions import (
     VMwareRuntimeError,
     VMwareSystemError,
 )
-
-# Import Third Party Libs
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, call, patch
-
-# Import Salt testing libraries
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -59,7 +49,6 @@ if hasattr(ssl, "_create_unverified_context"):
 else:
     ssl_context = "ssl._create_stdlib_context"
 
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 
@@ -536,7 +525,7 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(
                 mock_task, "fake_instance_name", "task_type"
             )
-        self.assertEqual(six.text_type(excinfo.exception), "error exc")
+        self.assertEqual(str(excinfo.exception), "error exc")
 
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -2266,13 +2255,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            salt.utils.vmware: {
-                "__virtual__": MagicMock(return_value="vmware"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {salt.utils.vmware: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_stub = MagicMock(host="fake_host:1000", cookie='ignore"fake_cookie')
@@ -2628,7 +2611,7 @@ class CreateDatacenterTestCase(TestCase):
         self.assertEqual(res, self.mock_dc)
 
 
-class FakeTaskClass(object):
+class FakeTaskClass:
     pass
 
 
@@ -4690,7 +4673,7 @@ class GetDatastoresTestCase(TestCase):
         )
 
     def test_unsupported_reference_type(self):
-        class FakeClass(object):
+        class FakeClass:
             pass
 
         mock_reference = MagicMock(spec=FakeClass)
