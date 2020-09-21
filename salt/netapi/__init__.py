@@ -45,11 +45,15 @@ class NetapiClient(object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.loadauth = salt.auth.LoadAuth(opts)
-        self.key = salt.daemons.masterapi.access_keys(self.opts)
-        minopts = copy.deepcopy(self.opts)
-        minopts["enable_ssh_minions"] = True
-        self.ckminions = salt.utils.minions.CkMinions(minopts)
+        apiopts = copy.deepcopy(self.opts)
+        apiopts["enable_ssh_minions"] = True
+        apiopts["cachedir"] = os.path.join(opts["cachedir"], "saltapi")
+        if not os.path.exists(apiopts["cachedir"]):
+            os.makedirs(apiopts["cachedir"])
+        self.resolver = salt.auth.Resolver(apiopts)
+        self.loadauth = salt.auth.LoadAuth(apiopts)
+        self.key = salt.daemons.masterapi.access_keys(apiopts)
+        self.ckminions = salt.utils.minions.CkMinions(apiopts)
 
     def _is_master_running(self):
         """
