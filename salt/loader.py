@@ -4,8 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-# Import python libs
-
 import functools
 import inspect
 import logging
@@ -20,7 +18,6 @@ import types
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
-# Import salt libs
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
@@ -37,8 +34,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
@@ -1833,22 +1828,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             x: self.loaded_modules.get(x, self.mod_dict_class()) for x in mod_names
         }
 
-        for attr in getattr(mod, "__load__", dir(mod)):
-            if attr.startswith("_"):
-                # private functions are skipped
-                continue
-            func = getattr(mod, attr)
-            if not inspect.isfunction(func) and not isinstance(func, functools.partial):
-                # Not a function!? Skip it!!!
-                continue
-            # Let's get the function name.
-            # If the module has the __func_alias__ attribute, it must be a
-            # dictionary mapping in the form of(key -> value):
-            #   <real-func-name> -> <desired-func-name>
-            #
-            # It default's of course to the found callable attribute name
-            # if no alias is defined.
-            funcname = getattr(mod, "__func_alias__", {}).get(attr, attr)
+        for func_name, func_alias, func in self.loadable_attributes(mod):
+            funcname = func_alias or func_name
             for tgt_mod in mod_names:
                 try:
                     full_funcname = ".".join((tgt_mod, funcname))
@@ -1943,6 +1924,26 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self._load_module(name)
 
             self.loaded = True
+
+    @staticmethod
+    def loadable_attributes(module):
+        for attr in getattr(module, "__load__", dir(module)):
+            if attr.startswith("_"):
+                # private functions are skipped
+                continue
+            func = getattr(module, attr)
+            if not inspect.isfunction(func) and not isinstance(func, functools.partial):
+                # Not a function!? Skip it!!!
+                continue
+            # Let's get the function name.
+            # If the module has the __func_alias__ attribute, it must be a
+            # dictionary mapping in the form of(key -> value):
+            #   <real-func-name> -> <desired-func-name>
+            #
+            # It default's of course to the found callable attribute name
+            # if no alias is defined.
+            alias = getattr(module, "__func_alias__", {}).get(attr)
+            yield attr, alias, func
 
     def reload_modules(self):
         with self._lock:
