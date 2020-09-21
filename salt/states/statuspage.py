@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 StatusPage
 ==========
@@ -18,15 +16,11 @@ In the minion configuration file, the following block is required:
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 # import python std lib
 import time
-
-# import salt
-from salt.ext import six
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -74,11 +68,11 @@ def _clear_dict(endpoint_props):
     """
     Eliminates None entries from the features of the endpoint dict.
     """
-    return dict(
-        (prop_name, prop_val)
-        for prop_name, prop_val in six.iteritems(endpoint_props)
+    return {
+        prop_name: prop_val
+        for prop_name, prop_val in endpoint_props.items()
         if prop_val is not None
-    )
+    }
 
 
 def _ignore_keys(endpoint_props):
@@ -86,11 +80,11 @@ def _ignore_keys(endpoint_props):
     Ignores some keys that might be different without any important info.
     These keys are defined under _DO_NOT_COMPARE_FIELDS.
     """
-    return dict(
-        (prop_name, prop_val)
-        for prop_name, prop_val in six.iteritems(endpoint_props)
+    return {
+        prop_name: prop_val
+        for prop_name, prop_val in endpoint_props.items()
         if prop_name not in _DO_NOT_COMPARE_FIELDS
-    )
+    }
 
 
 def _unique(list_of_dicts):
@@ -108,11 +102,11 @@ def _clear_ignore(endpoint_props):
     """
     Both _clear_dict and _ignore_keys in a single iteration.
     """
-    return dict(
-        (prop_name, prop_val)
-        for prop_name, prop_val in six.iteritems(endpoint_props)
+    return {
+        prop_name: prop_val
+        for prop_name, prop_val in endpoint_props.items()
         if prop_name not in _DO_NOT_COMPARE_FIELDS and prop_val is not None
-    )
+    }
 
 
 def _clear_ignore_list(lst):
@@ -136,11 +130,11 @@ def _update_on_fields(prev_ele, new_ele):
     """
     Return a dict with fields that differ between two dicts.
     """
-    fields_update = dict(
-        (prop_name, prop_val)
-        for prop_name, prop_val in six.iteritems(new_ele)
+    fields_update = {
+        prop_name: prop_val
+        for prop_name, prop_val in new_ele.items()
         if new_ele.get(prop_name) != prev_ele.get(prop_name) or prop_name in _MATCH_KEYS
-    )
+    }
     if len(set(fields_update.keys()) | set(_MATCH_KEYS)) > len(set(_MATCH_KEYS)):
         if "id" not in fields_update:
             # in case of update, the ID is necessary
@@ -256,7 +250,7 @@ def create(
         )
         ret["result"] = None
         ret["changes"][endpoint] = {}
-        for karg, warg in six.iteritems(kwargs):
+        for karg, warg in kwargs.items():
             if warg is None or karg.startswith("__"):
                 continue
             ret["changes"][endpoint][karg] = warg
@@ -293,7 +287,7 @@ def update(
     Update attribute(s) of a specific endpoint.
 
     id
-        The unique ID of the enpoint entry.
+        The unique ID of the endpoint entry.
 
     endpoint: incidents
         Endpoint name.
@@ -333,7 +327,7 @@ def update(
         )
         ret["result"] = None
         ret["changes"][endpoint] = {}
-        for karg, warg in six.iteritems(kwargs):
+        for karg, warg in kwargs.items():
             if warg is None or karg.startswith("__"):
                 continue
             ret["changes"][endpoint][karg] = warg
@@ -491,7 +485,7 @@ def managed(
         )
         return ret
     is_empty = True
-    for endpoint_name, endpoint_expected_config in six.iteritems(config):
+    for endpoint_name, endpoint_expected_config in config.items():
         if endpoint_expected_config:
             is_empty = False
         endpoint_existing_config_ret = __salt__["statuspage.retrieve"](
@@ -517,7 +511,7 @@ def managed(
         )
         return ret
     any_changes = False
-    for endpoint_name, endpoint_diff in six.iteritems(complete_diff):
+    for endpoint_name, endpoint_diff in complete_diff.items():
         if (
             endpoint_diff.get("add")
             or endpoint_diff.get("update")
@@ -536,7 +530,7 @@ def managed(
             }
         )
         return ret
-    for endpoint_name, endpoint_diff in six.iteritems(complete_diff):
+    for endpoint_name, endpoint_diff in complete_diff.items():
         endpoint_sg = endpoint_name[:-1]  # singular
         for new_endpoint in endpoint_diff.get("add"):
             log.debug("Defining new %s %s", endpoint_sg, new_endpoint)
