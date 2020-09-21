@@ -31,6 +31,7 @@ beacon modules
     pkg
     proxy_example
     ps
+    salt_monitor
     salt_proxy
     sensehat
     service
