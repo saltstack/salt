@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Minion side functions for salt-cp
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
 import errno
 import fnmatch
 import logging
 import os
+from urllib.parse import urlparse
 
 import salt.crypt
 import salt.fileclient
@@ -25,10 +23,6 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +64,7 @@ def recv(files, dest):
     It does not work via the CLI.
     """
     ret = {}
-    for path, data in six.iteritems(files):
+    for path, data in files.items():
         if os.path.basename(path) == os.path.basename(dest) and not os.path.isdir(dest):
             final = dest
         elif os.path.isdir(dest):
@@ -84,7 +78,7 @@ def recv(files, dest):
             with salt.utils.files.fopen(final, "w+") as fp_:
                 fp_.write(data)
             ret[final] = True
-        except IOError:
+        except OSError:
             ret[final] = False
 
     return ret
@@ -119,13 +113,13 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     open_mode = "ab" if append else "wb"
     try:
         fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
             return _error(exc.__str__())
         try:
             os.makedirs(os.path.dirname(dest))
-        except (IOError, OSError) as makedirs_exc:
+        except OSError as makedirs_exc:
             # Failed to make directory
             return _error(makedirs_exc.__str__())
         fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
@@ -133,7 +127,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     try:
         # Write the chunk to disk
         fh_.write(salt.utils.gzip_util.uncompress(chunk) if compressed else chunk)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         # Write failed
         return _error(exc.__str__())
     else:
@@ -162,9 +156,9 @@ def _mk_client():
     of the opts dictionary, therefore it's hashed by the
     id of the __opts__ dict
     """
-    if "cp.fileclient_{0}".format(id(__opts__)) not in __context__:
+    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
         __context__[
-            "cp.fileclient_{0}".format(id(__opts__))
+            "cp.fileclient_{}".format(id(__opts__))
         ] = salt.fileclient.get_file_client(__opts__)
 
 
@@ -173,7 +167,7 @@ def _client():
     Return a client, hashed by the list of masters
     """
     _mk_client()
-    return __context__["cp.fileclient_{0}".format(id(__opts__))]
+    return __context__["cp.fileclient_{}".format(id(__opts__))]
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -189,7 +183,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
             "Attempted to render file paths with unavailable engine "
-            "{0}".format(template)
+            "{}".format(template)
         )
 
     kwargs = {}
@@ -219,7 +213,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         if not data["result"]:
             # Failed to render the template
             raise CommandExecutionError(
-                "Failed to render file path with error: {0}".format(data["data"])
+                "Failed to render file path with error: {}".format(data["data"])
             )
         else:
             return data["data"]
@@ -375,7 +369,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             ``https://`` will not be cached.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the file. Ignored if
+        Salt fileserver environment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
     source_hash
@@ -392,7 +386,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     """
-    if isinstance(dest, six.string_types):
+    if isinstance(dest, str):
         result = _client().get_url(
             path, dest, makedirs, saltenv, source_hash=source_hash
         )
@@ -425,11 +419,11 @@ def get_file_str(path, saltenv="base"):
         salt '*' cp.get_file_str salt://my/file
     """
     fn_ = cache_file(path, saltenv)
-    if isinstance(fn_, six.string_types):
+    if isinstance(fn_, str):
         try:
             with salt.utils.files.fopen(fn_, "r") as fp_:
                 return salt.utils.stringutils.to_unicode(fp_.read())
-        except IOError:
+        except OSError:
             return False
     return fn_
 
@@ -473,9 +467,9 @@ def cache_file(path, saltenv="base", source_hash=None):
     path = salt.utils.data.decode(path)
     saltenv = salt.utils.data.decode(saltenv)
 
-    contextkey = "{0}_|-{1}_|-{2}".format("cp.cache_file", path, saltenv)
+    contextkey = "{}_|-{}_|-{}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    path_is_remote = urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -847,7 +841,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                         try:
                             salt.utils.files.rm_rf(path)
                             log.debug("Removing source file '%s'", path)
-                        except IOError:
+                        except OSError:
                             log.error("cp.push failed to remove file '%s'", path)
                             return False
                     return True
