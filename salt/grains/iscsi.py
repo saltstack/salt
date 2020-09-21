@@ -10,7 +10,6 @@ To enable these grains set `iscsi_grains: True` in the minion config.
     iscsi_grains: True
 """
 # Import Python libs
-
 import errno
 import logging
 

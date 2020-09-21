@@ -11,7 +11,6 @@ To enable these grains set ``fibre_channel_grains: True`` in the minion config.
     fibre_channel_grains: True
 """
 # Import Python libs
-
 import glob
 import logging
 

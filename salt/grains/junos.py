@@ -6,7 +6,6 @@ from the minion (PYTHONPATH), but others don't (ip_interfaces)
 """
 
 # Import Python libs
-
 import logging
 
 # Import Salt libs
