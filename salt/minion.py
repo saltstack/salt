@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Routines to set up a minion
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
 import contextlib
 import copy
 import functools
@@ -22,7 +18,6 @@ from binascii import crc32
 from random import randint, shuffle
 from stat import S_IMODE
 
-# Import salt libs
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -31,11 +26,9 @@ import salt.crypt
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.engines
-
-# pylint: enable=no-name-in-module,redefined-builtin
 import salt.ext.tornado
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
 import salt.loader
 import salt.log.setup
 import salt.payload
@@ -77,7 +70,6 @@ from salt.exceptions import (
 )
 
 # Import Salt Libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.template import SLS_ENCODING
@@ -111,7 +103,6 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
-# pylint: enable=import-error
 
 
 log = logging.getLogger(__name__)
@@ -156,13 +147,13 @@ def resolve_dns(opts, fallback=True):
                     import salt.log
 
                     msg = (
-                        "Master hostname: '{0}' not found or not responsive. "
-                        "Retrying in {1} seconds"
+                        "Master hostname: '{}' not found or not responsive. "
+                        "Retrying in {} seconds"
                     ).format(opts["master"], opts["retry_dns"])
                     if salt.log.setup.is_console_configured():
                         log.error(msg)
                     else:
-                        print("WARNING: {0}".format(msg))
+                        print("WARNING: {}".format(msg))
                     time.sleep(opts["retry_dns"])
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
@@ -183,12 +174,12 @@ def resolve_dns(opts, fallback=True):
                 master = unknown_str
             if opts.get("__role") == "syndic":
                 err = (
-                    "Master address: '{0}' could not be resolved. Invalid or unresolveable address. "
+                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
                     "Set 'syndic_master' value in minion config.".format(master)
                 )
             else:
                 err = (
-                    "Master address: '{0}' could not be resolved. Invalid or unresolveable address. "
+                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
                     "Set 'master' value in minion config.".format(master)
                 )
             log.error(err)
@@ -339,7 +330,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     for arg in args:
         if isinstance(arg, dict) and arg.pop("__kwarg__", False) is True:
             # if the arg is a dict with __kwarg__ == True, then its a kwarg
-            for key, val in six.iteritems(arg):
+            for key, val in arg.items():
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -348,7 +339,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    invalid_kwargs.append("{0}={1}".format(key, val))
+                    invalid_kwargs.append("{}={}".format(key, val))
             continue
 
         else:
@@ -356,7 +347,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 1
             ]  # pylint: disable=W0632
             if string_kwarg:
-                if argspec.keywords or next(six.iterkeys(string_kwarg)) in argspec.args:
+                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -364,8 +355,8 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    for key, val in six.iteritems(string_kwarg):
-                        invalid_kwargs.append("{0}={1}".format(key, val))
+                    for key, val in string_kwarg.items():
+                        invalid_kwargs.append("{}={}".format(key, val))
             else:
                 _args.append(arg)
 
@@ -374,8 +365,8 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
-        for key, val in six.iteritems(data):
-            _kwargs["__pub_{0}".format(key)] = val
+        for key, val in data.items():
+            _kwargs["__pub_{}".format(key)] = val
 
     return _args, _kwargs
 
@@ -396,7 +387,7 @@ def eval_master_func(opts):
             # we take whatever the module returns as master address
             opts["master"] = master_mod[mod_fun]()
             # Check for valid types
-            if not isinstance(opts["master"], (six.string_types, list)):
+            if not isinstance(opts["master"], ((str,), list)):
                 raise TypeError
             opts["__master_func_evaluated"] = True
         except KeyError:
@@ -420,7 +411,7 @@ def master_event(type, master=None):
     }
 
     if type == "alive" and master is not None:
-        return "{0}_{1}".format(event_map.get(type), master)
+        return "{}_{}".format(event_map.get(type), master)
 
     return event_map.get(type, None)
 
@@ -432,7 +423,7 @@ def service_name():
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
 
 
-class MinionBase(object):
+class MinionBase:
     def __init__(self, opts):
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
@@ -601,9 +592,7 @@ class MinionBase(object):
                     ):
                         opts["master_failback_interval"] = opts["master_alive_interval"]
                 # if opts['master'] is a str and we have never created opts['master_list']
-                elif isinstance(opts["master"], six.string_types) and (
-                    "master_list" not in opts
-                ):
+                elif isinstance(opts["master"], str) and ("master_list" not in opts):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
                     opts["master"] = [opts["master"]]
@@ -638,7 +627,7 @@ class MinionBase(object):
                     msg = (
                         "master_type set to 'failover' but 'master' "
                         "is not of type list but of type "
-                        "{0}".format(type(opts["master"]))
+                        "{}".format(type(opts["master"]))
                     )
                     log.error(msg)
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
@@ -652,7 +641,7 @@ class MinionBase(object):
                     log.critical(msg)
                     opts["retry_dns"] = 0
             else:
-                msg = "Invalid keyword '{0}' for variable " "'master_type'".format(
+                msg = "Invalid keyword '{}' for variable " "'master_type'".format(
                     opts["master_type"]
                 )
                 log.error(msg)
@@ -817,7 +806,7 @@ class MinionBase(object):
                         self.connected = False
                         if pub_channel:
                             pub_channel.close()
-                        six.reraise(*sys.exc_info())
+                        raise
 
     def _discover_masters(self):
         """
@@ -910,7 +899,7 @@ class SMinion(MinionBase):
         import salt.loader
 
         opts["grains"] = salt.loader.grains(opts)
-        super(SMinion, self).__init__(opts)
+        super().__init__(opts)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
@@ -947,7 +936,7 @@ class SMinion(MinionBase):
                 os.chmod(cache_sls, 0o600)
 
 
-class MasterMinion(object):
+class MasterMinion:
     """
     Create a fully loaded minion function object for generic use on the
     master. What makes this class different is that the pillar is
@@ -1016,7 +1005,7 @@ class MinionManager(MinionBase):
     """
 
     def __init__(self, opts):
-        super(MinionManager, self).__init__(opts)
+        super().__init__(opts)
         self.auth_wait = self.opts["acceptance_wait_time"]
         self.max_auth_wait = self.opts["acceptance_wait_time_max"]
         self.minions = []
@@ -1097,7 +1086,7 @@ class MinionManager(MinionBase):
                 s_opts["auth_timeout"],
                 False,
                 io_loop=self.io_loop,
-                loaded_base_name="salt.loader.{0}".format(s_opts["master"]),
+                loaded_base_name="salt.loader.{}".format(s_opts["master"]),
                 jid_queue=self.jid_queue,
             )
             self.io_loop.spawn_callback(self._connect_minion, minion)
@@ -1134,7 +1123,7 @@ class MinionManager(MinionBase):
                 yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
             except SaltMasterUnresolvableError:
                 err = (
-                    "Master address: '{0}' could not be resolved. Invalid or unresolveable address. "
+                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
                     "Set 'master' value in minion config.".format(minion.opts["master"])
                 )
                 log.error(err)
@@ -1199,7 +1188,7 @@ class Minion(MinionBase):
         Pass in the options dict
         """
         # this means that the parent class doesn't know *which* master we connect to
-        super(Minion, self).__init__(opts)
+        super().__init__(opts)
         self.timeout = timeout
         self.safe = safe
 
@@ -1457,7 +1446,7 @@ class Minion(MinionBase):
         Returns a copy of the opts with key bits stripped out
         """
         mod_opts = {}
-        for key, val in six.iteritems(self.opts):
+        for key, val in self.opts.items():
             if key == "logger":
                 continue
             mod_opts[key] = val
@@ -1596,13 +1585,11 @@ class Minion(MinionBase):
             return
 
         if include_startup_grains:
-            grains_to_add = dict(
-                [
-                    (k, v)
-                    for k, v in six.iteritems(self.opts.get("grains", {}))
-                    if k in self.opts["start_event_grains"]
-                ]
-            )
+            grains_to_add = {
+                k: v
+                for k, v in self.opts.get("grains", {}).items()
+                if k in self.opts["start_event_grains"]
+            }
             load["grains"] = grains_to_add
 
         if sync:
@@ -1663,7 +1650,7 @@ class Minion(MinionBase):
                 if len(self.jid_queue) > self.opts["minion_jid_queue_hwm"]:
                     self.jid_queue.pop(0)
 
-        if isinstance(data["fun"], six.string_types):
+        if isinstance(data["fun"], str):
             if data["fun"] == "sys.reload_modules":
                 (
                     self.functions,
@@ -1726,18 +1713,11 @@ class Minion(MinionBase):
         """
         Return a single context manager for the minion's data
         """
-        if six.PY2:
-            return contextlib.nested(
-                self.functions.context_dict.clone(),
-                self.returners.context_dict.clone(),
-                self.executors.context_dict.clone(),
-            )
-        else:
-            exitstack = contextlib.ExitStack()
-            exitstack.enter_context(self.functions.context_dict.clone())
-            exitstack.enter_context(self.returners.context_dict.clone())
-            exitstack.enter_context(self.executors.context_dict.clone())
-            return exitstack
+        exitstack = contextlib.ExitStack()
+        exitstack.enter_context(self.functions.context_dict.clone())
+        exitstack.enter_context(self.returners.context_dict.clone())
+        exitstack.enter_context(self.executors.context_dict.clone())
+        return exitstack
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
@@ -1783,7 +1763,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
         salt.utils.process.appendproctitle(
-            "{0}._thread_return {1}".format(cls.__name__, data["jid"])
+            "{}._thread_return {}".format(cls.__name__, data["jid"])
         )
 
         sdata = {"pid": os.getpid()}
@@ -1800,12 +1780,11 @@ class Minion(MinionBase):
         )
         allow_missing_funcs = any(
             [
-                minion_instance.executors["{0}.allow_missing_func".format(executor)](
+                minion_instance.executors["{}.allow_missing_func".format(executor)](
                     function_name
                 )
                 for executor in executors
-                if "{0}.allow_missing_func".format(executor)
-                in minion_instance.executors
+                if "{}.allow_missing_func".format(executor) in minion_instance.executors
             ]
         )
         if function_name in minion_instance.functions or allow_missing_funcs is True:
@@ -1848,11 +1827,11 @@ class Minion(MinionBase):
                     func = function_name
                     args, kwargs = data["arg"], data
                 minion_instance.functions.pack["__context__"]["retcode"] = 0
-                if isinstance(executors, six.string_types):
+                if isinstance(executors, str):
                     executors = [executors]
                 elif not isinstance(executors, list) or not executors:
                     raise SaltInvocationError(
-                        "Wrong executors specification: {0}. String or non-empty list expected".format(
+                        "Wrong executors specification: {}. String or non-empty list expected".format(
                             executors
                         )
                     )
@@ -1861,10 +1840,10 @@ class Minion(MinionBase):
                 log.trace("Executors list %s", executors)  # pylint: disable=no-member
 
                 for name in executors:
-                    fname = "{0}.execute".format(name)
+                    fname = "{}.execute".format(name)
                     if fname not in minion_instance.executors:
                         raise SaltInvocationError(
-                            "Executor '{0}' is not available".format(name)
+                            "Executor '{}' is not available".format(name)
                         )
                     return_data = minion_instance.executors[fname](
                         opts, data, func, args, kwargs
@@ -1882,9 +1861,7 @@ class Minion(MinionBase):
                             if not iret:
                                 iret = []
                             iret.append(single)
-                        tag = tagify(
-                            [data["jid"], "prog", opts["id"], six.text_type(ind)], "job"
-                        )
+                        tag = tagify([data["jid"], "prog", opts["id"], str(ind)], "job")
                         event_data = {"return": single}
                         minion_instance._fire_master(event_data, tag)
                         ind += 1
@@ -1911,9 +1888,9 @@ class Minion(MinionBase):
                 ret["retcode"] = retcode
                 ret["success"] = retcode == salt.defaults.exitcodes.EX_OK
             except CommandNotFoundError as exc:
-                msg = "Command required for '{0}' not found".format(function_name)
+                msg = "Command required for '{}' not found".format(function_name)
                 log.debug(msg, exc_info=True)
-                ret["return"] = "{0}: {1}".format(msg, exc)
+                ret["return"] = "{}: {}".format(msg, exc)
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except CommandExecutionError as exc:
@@ -1923,7 +1900,7 @@ class Minion(MinionBase):
                     exc,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
-                ret["return"] = "ERROR: {0}".format(exc)
+                ret["return"] = "ERROR: {}".format(exc)
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except SaltInvocationError as exc:
@@ -1933,11 +1910,11 @@ class Minion(MinionBase):
                     exc,
                     exc_info_on_loglevel=logging.DEBUG,
                 )
-                ret["return"] = "ERROR executing '{0}': {1}".format(function_name, exc)
+                ret["return"] = "ERROR executing '{}': {}".format(function_name, exc)
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except TypeError as exc:
-                msg = "Passed invalid arguments to {0}: {1}\n{2}".format(
+                msg = "Passed invalid arguments to {}: {}\n{}".format(
                     function_name, exc, func.__doc__ or ""
                 )
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
@@ -1950,7 +1927,7 @@ class Minion(MinionBase):
                 salt.utils.error.fire_exception(
                     salt.exceptions.MinionError(msg), opts, job=data
                 )
-                ret["return"] = "{0}: {1}".format(msg, traceback.format_exc())
+                ret["return"] = "{}: {}".format(msg, traceback.format_exc())
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except (KeyboardInterrupt, SystemExit):
@@ -1963,7 +1940,7 @@ class Minion(MinionBase):
                 ret["out"] = "nested"
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
         else:
-            docs = minion_instance.functions["sys.doc"]("{0}*".format(function_name))
+            docs = minion_instance.functions["sys.doc"]("{}*".format(function_name))
             if docs:
                 docs[function_name] = minion_instance.functions.missing_fun_string(
                     function_name
@@ -1975,7 +1952,7 @@ class Minion(MinionBase):
                 )
                 mod_name = function_name.split(".")[0]
                 if mod_name in minion_instance.function_errors:
-                    ret["return"] += " Possible reasons: '{0}'".format(
+                    ret["return"] += " Possible reasons: '{}'".format(
                         minion_instance.function_errors[mod_name]
                     )
             ret["success"] = False
@@ -1999,7 +1976,7 @@ class Minion(MinionBase):
 
         # Add default returners from minion config
         # Should have been coverted to comma-delimited string already
-        if isinstance(opts.get("return"), six.string_types):
+        if isinstance(opts.get("return"), str):
             if data["ret"]:
                 data["ret"] = ",".join((data["ret"], opts["return"]))
             else:
@@ -2007,7 +1984,7 @@ class Minion(MinionBase):
 
         log.debug("minion return: %s", ret)
         # TODO: make a list? Seems odd to split it this late :/
-        if data["ret"] and isinstance(data["ret"], six.string_types):
+        if data["ret"] and isinstance(data["ret"], str):
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]
             if "ret_kwargs" in data:
@@ -2015,7 +1992,7 @@ class Minion(MinionBase):
             ret["id"] = opts["id"]
             for returner in set(data["ret"].split(",")):
                 try:
-                    returner_str = "{0}.returner".format(returner)
+                    returner_str = "{}.returner".format(returner)
                     if returner_str in minion_instance.returners:
                         minion_instance.returners[returner_str](ret)
                     else:
@@ -2040,7 +2017,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
         salt.utils.process.appendproctitle(
-            "{0}._thread_multi_return {1}".format(cls.__name__, data["jid"])
+            "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
         )
 
         sdata = {"pid": os.getpid()}
@@ -2149,7 +2126,7 @@ class Minion(MinionBase):
             for returner in set(data["ret"].split(",")):
                 ret["id"] = opts["id"]
                 try:
-                    minion_instance.returners["{0}.returner".format(returner)](ret)
+                    minion_instance.returners["{}.returner".format(returner)](ret)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("The return failed for job %s: %s", data["jid"], exc)
 
@@ -2164,7 +2141,7 @@ class Minion(MinionBase):
             if os.path.isfile(fn_):
                 try:
                     os.remove(fn_)
-                except (OSError, IOError):
+                except OSError:
                     # The file is gone already
                     pass
         log.info("Returning information for job: %s", jid)
@@ -2183,17 +2160,17 @@ class Minion(MinionBase):
             if "__master_id__" in ret:
                 load["master_id"] = ret["__master_id__"]
             load["return"] = {}
-            for key, value in six.iteritems(ret):
+            for key, value in ret.items():
                 if key.startswith("__"):
                     continue
                 load["return"][key] = value
         else:
             load = {"cmd": ret_cmd, "id": self.opts["id"]}
-            for key, value in six.iteritems(ret):
+            for key, value in ret.items():
                 load[key] = value
 
         if "out" in ret:
-            if isinstance(ret["out"], six.string_types):
+            if isinstance(ret["out"], str):
                 load["out"] = ret["out"]
             else:
                 log.error("Invalid outputter %s. This is likely a bug.", ret["out"])
@@ -2203,7 +2180,7 @@ class Minion(MinionBase):
             except (KeyError, AttributeError, TypeError):
                 pass
             else:
-                if isinstance(oput, six.string_types):
+                if isinstance(oput, str):
                     load["out"] = oput
         if self.opts["cache_jobs"]:
             # Local job cache has been enabled
@@ -2256,7 +2233,7 @@ class Minion(MinionBase):
                 if os.path.isfile(fn_):
                     try:
                         os.remove(fn_)
-                    except (OSError, IOError):
+                    except OSError:
                         # The file is gone already
                         pass
             log.info("Returning information for job: %s", jid)
@@ -2277,17 +2254,17 @@ class Minion(MinionBase):
                     )
                 if "__master_id__" in ret:
                     load["master_id"] = ret["__master_id__"]
-                for key, value in six.iteritems(ret):
+                for key, value in ret.items():
                     if key.startswith("__"):
                         continue
                     load["return"][key] = value
             else:
                 load.update({"id": self.opts["id"]})
-                for key, value in six.iteritems(ret):
+                for key, value in ret.items():
                     load[key] = value
 
             if "out" in ret:
-                if isinstance(ret["out"], six.string_types):
+                if isinstance(ret["out"], str):
                     load["out"] = ret["out"]
                 else:
                     log.error("Invalid outputter %s. This is likely a bug.", ret["out"])
@@ -2297,13 +2274,13 @@ class Minion(MinionBase):
                 except (KeyError, AttributeError, TypeError):
                     pass
                 else:
-                    if isinstance(oput, six.string_types):
+                    if isinstance(oput, str):
                         load["out"] = oput
             if self.opts["cache_jobs"]:
                 # Local job cache has been enabled
                 salt.utils.minion.cache_jobs(self.opts, load["jid"], ret)
 
-        load = {"cmd": ret_cmd, "load": list(six.itervalues(jids))}
+        load = {"cmd": ret_cmd, "load": list(jids.values())}
 
         def timeout_handler(*_):
             log.warning(
@@ -2386,13 +2363,13 @@ class Minion(MinionBase):
         if self.opts["enable_legacy_startup_events"]:
             # Old style event. Defaults to False in 3001 release.
             self._fire_master(
-                "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
+                "Minion {} started at {}".format(self.opts["id"], time.asctime()),
                 "minion_start",
                 include_startup_grains=include_grains,
             )
         # send name spaced event
         self._fire_master(
-            "Minion {0} started at {1}".format(self.opts["id"], time.asctime()),
+            "Minion {} started at {}".format(self.opts["id"], time.asctime()),
             tagify([self.opts["id"], "start"], "minion"),
             include_startup_grains=include_grains,
         )
@@ -2652,14 +2629,14 @@ class Minion(MinionBase):
                 # if the master failback event is not for the top master, raise an exception
                 if data["master"] != self.opts["master_list"][0]:
                     raise SaltException(
-                        "Bad master '{0}' when mine failback is '{1}'".format(
+                        "Bad master '{}' when mine failback is '{}'".format(
                             data["master"], self.opts["master"]
                         )
                     )
                 # if the master failback event is for the current master, raise an exception
                 elif data["master"] == self.opts["master"][0]:
                     raise SaltException(
-                        "Already connected to '{0}'".format(data["master"])
+                        "Already connected to '{}'".format(data["master"])
                     )
 
             if self.connected:
@@ -3096,7 +3073,7 @@ class Minion(MinionBase):
 
         if "tgt_type" in load:
             match_func = self.matchers.get(
-                "{0}_match.match".format(load["tgt_type"]), None
+                "{}_match.match".format(load["tgt_type"]), None
             )
             if match_func is None:
                 return False
@@ -3128,7 +3105,7 @@ class Minion(MinionBase):
                 self.pub_channel.close()
             del self.pub_channel
         if hasattr(self, "periodic_callbacks"):
-            for cb in six.itervalues(self.periodic_callbacks):
+            for cb in self.periodic_callbacks.values():
                 cb.stop()
 
     # pylint: disable=W1701
@@ -3150,7 +3127,7 @@ class Syndic(Minion):
         # force auth_safemode True because Syndic don't support autorestart
         opts["auth_safemode"] = True
         opts["loop_interval"] = 1
-        super(Syndic, self).__init__(opts, **kwargs)
+        super().__init__(opts, **kwargs)
         self.mminion = salt.minion.MasterMinion(opts)
         self.jid_forward_cache = set()
         self.jids = {}
@@ -3208,12 +3185,12 @@ class Syndic(Minion):
         if self.opts["enable_legacy_startup_events"]:
             # Old style event. Defaults to false in 3001 release.
             self._fire_master(
-                "Syndic {0} started at {1}".format(self.opts["id"], time.asctime()),
+                "Syndic {} started at {}".format(self.opts["id"], time.asctime()),
                 "syndic_start",
                 sync=False,
             )
         self._fire_master(
-            "Syndic {0} started at {1}".format(self.opts["id"], time.asctime()),
+            "Syndic {} started at {}".format(self.opts["id"], time.asctime()),
             tagify([self.opts["id"], "start"], "syndic"),
             sync=False,
         )
@@ -3266,7 +3243,7 @@ class Syndic(Minion):
         """
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
-        super(Syndic, self).destroy()
+        super().destroy()
         if hasattr(self, "local"):
             del self.local
 
@@ -3301,7 +3278,7 @@ class SyndicManager(MinionBase):
 
     def __init__(self, opts, io_loop=None):
         opts["loop_interval"] = 1
-        super(SyndicManager, self).__init__(opts)
+        super().__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get("syndic_mode", "sync")
@@ -3559,7 +3536,7 @@ class SyndicManager(MinionBase):
                 jdict["__fun__"] = data.get("fun")
                 jdict["__jid__"] = data["jid"]
                 jdict["__load__"] = {}
-                fstr = "{0}.get_load".format(self.opts["master_job_cache"])
+                fstr = "{}.get_load".format(self.opts["master_job_cache"])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
                 if data["jid"] not in self.jid_forward_cache:
@@ -3608,8 +3585,8 @@ class SyndicManager(MinionBase):
             res = self._return_pub_syndic(self.delayed)
             if res:
                 self.delayed = []
-        for master in list(six.iterkeys(self.job_rets)):
-            values = list(six.itervalues(self.job_rets[master]))
+        for master in list(self.job_rets.keys()):
+            values = list(self.job_rets[master].values())
             res = self._return_pub_syndic(values, master_id=master)
             if res:
                 del self.job_rets[master]
@@ -3789,11 +3766,11 @@ class SProxyMinion(SMinion):
         self.proxy.reload_modules()
 
         if (
-            "{0}.init".format(fq_proxyname) not in self.proxy
-            or "{0}.shutdown".format(fq_proxyname) not in self.proxy
+            "{}.init".format(fq_proxyname) not in self.proxy
+            or "{}.shutdown".format(fq_proxyname) not in self.proxy
         ):
             errmsg = (
-                "Proxymodule {0} is missing an init() or a shutdown() or both. ".format(
+                "Proxymodule {} is missing an init() or a shutdown() or both. ".format(
                     fq_proxyname
                 )
                 + "Check your proxymodule.  Salt-proxy aborted."
@@ -3803,7 +3780,7 @@ class SProxyMinion(SMinion):
             raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
 
         self.module_executors = self.proxy.get(
-            "{0}.module_executors".format(fq_proxyname), lambda: []
+            "{}.module_executors".format(fq_proxyname), lambda: []
         )()
         proxy_init_fn = self.proxy[fq_proxyname + ".init"]
         proxy_init_fn(self.opts)
