@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.loader
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Salt's Loader PyTest Mock Support
 """
-import functools
 import logging
 import sys
 import types
+from collections import deque
 
 import attr  # pylint: disable=3rd-party-module-not-gated
 from tests.support.mock import patch
@@ -19,7 +18,6 @@ log = logging.getLogger(__name__)
 @attr.s(init=True, slots=True, frozen=True)
 class LoaderModuleMock:
 
-    request = attr.ib(init=True)
     setup_loader_modules = attr.ib(init=True)
     salt_dunders = attr.ib(
         init=True,
@@ -44,8 +42,11 @@ class LoaderModuleMock:
             # '__proxy__'
         ),
     )
+    _finalizers = attr.ib(
+        init=False, repr=False, hash=False, default=attr.Factory(deque)
+    )
 
-    def __enter__(self):
+    def start(self):
         module_globals = {dunder: {} for dunder in self.salt_dunders}
         for module, globals_to_mock in self.setup_loader_modules.items():
             log.trace(
@@ -120,14 +121,40 @@ class LoaderModuleMock:
 
             # Be sure to unpatch the module once the test finishes
             self.addfinalizer(cleanup_module_globals, patcher, module_globals)
+
+    def stop(self):
+        while self._finalizers:
+            func, args, kwargs = self._finalizers.popleft()
+            try:
+                func(*args, **kwargs)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to run finalizer %s: %s",
+                    self._format_callback(func, args, kwargs),
+                    exc,
+                    exc_info=True,
+                )
+
+    def addfinalizer(self, func, *args, **kwargs):
+        """
+        Register a function to run when stopping
+        """
+        self._finalizers.append((func, args, kwargs))
+
+    def _format_callback(self, callback, args, kwargs):
+        callback_str = "{}(".format(callback.__name__)
+        if args:
+            callback_str += ", ".join([repr(arg) for arg in args])
+        if kwargs:
+            callback_str += ", ".join(
+                ["{}={!r}".format(k, v) for (k, v) in kwargs.items()]
+            )
+        callback_str += ")"
+        return callback_str
+
+    def __enter__(self):
+        self.start()
         return self
 
     def __exit__(self, *args):
-        pass
-
-    def addfinalizer(self, func, *args, **kwargs):
-        # Compat layer while we still support running the test suite under unittest
-        try:
-            self.request.addfinalizer(functools.partial(func, *args, **kwargs))
-        except AttributeError:
-            self.request.addCleanup(func, *args, **kwargs)
+        self.stop()
