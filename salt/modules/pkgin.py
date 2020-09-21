@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package support for pkgin based systems, inspired from freebsdpkg module
 
@@ -10,8 +9,6 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import os
@@ -24,9 +21,6 @@ import salt.utils.functools
 import salt.utils.path
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError, MinionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 VERSION_MATCH = re.compile(r"pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)")
 log = logging.getLogger(__name__)
@@ -48,7 +42,7 @@ def _check_pkgin():
                 "pkg_info -Q LOCALBASE pkgin", output_loglevel="trace"
             )
             if localbase is not None:
-                ppath = "{0}/bin/pkgin".format(localbase)
+                ppath = "{}/bin/pkgin".format(localbase)
                 if not os.path.exists(ppath):
                     return None
         except CommandExecutionError:
@@ -102,7 +96,7 @@ def __virtual__():
     return (
         False,
         "The pkgin execution module cannot be loaded: only "
-        "available on {0} systems.".format(", ".join(supported)),
+        "available on {} systems.".format(", ".join(supported)),
     )
 
 
@@ -132,7 +126,7 @@ def search(pkg_name, **kwargs):
         return pkglist
 
     if _supports_regex():
-        pkg_name = "^{0}$".format(pkg_name)
+        pkg_name = "^{}$".format(pkg_name)
 
     out = __salt__["cmd.run"]([pkgin, "se", pkg_name], output_loglevel="trace")
     for line in out.splitlines():
@@ -178,7 +172,7 @@ def latest_version(*names, **kwargs):
         cmd_prefix.insert(1, "-p")
     for name in names:
         cmd = copy.deepcopy(cmd_prefix)
-        cmd.append("^{0}$".format(name) if _supports_regex() else name)
+        cmd.append("^{}$".format(name) if _supports_regex() else name)
 
         out = __salt__["cmd.run"](cmd, output_loglevel="trace")
         for line in out.splitlines():
@@ -567,9 +561,9 @@ def remove(name=None, pkgs=None, **kwargs):
         if not ver:
             continue
         if isinstance(ver, list):
-            args.extend(["{0}-{1}".format(param, v) for v in ver])
+            args.extend(["{}-{}".format(param, v) for v in ver])
         else:
-            args.append("{0}-{1}".format(param, ver))
+            args.append("{}-{}".format(param, ver))
 
     if not args:
         return {}
@@ -652,7 +646,7 @@ def file_list(package, **kwargs):
     """
     ret = file_dict(package)
     files = []
-    for pkg_files in six.itervalues(ret["files"]):
+    for pkg_files in ret["files"].values():
         files.extend(pkg_files)
     ret["files"] = files
     return ret
@@ -700,7 +694,7 @@ def normalize_name(pkgs, **kwargs):
 
     .. note::
         Nothing special to do to normalize, just return
-        the original. (We do need it to be comaptible
+        the original. (We do need it to be compatible
         with the pkg_resource provider.)
     """
     return pkgs

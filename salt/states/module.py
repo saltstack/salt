@@ -6,7 +6,7 @@ Execution of Salt modules from within states
 .. note::
 
     There are two styles of calling ``module.run``. **The legacy style will no
-    longer be available starting in the 3001 release.** To opt-in early to the
+    longer be available starting in the 3005 release.** To opt-in early to the
     new style you must add the following to your ``/etc/salt/minion`` config
     file:
 
