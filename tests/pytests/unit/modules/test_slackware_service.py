@@ -12,33 +12,36 @@ import salt.modules.slackware_service as slackware_service
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 
-glob_output = [
-    "/etc/rc.d/rc.S",
-    "/etc/rc.d/rc.M",
-    "/etc/rc.d/rc.lxc",
-    "/etc/rc.d/rc.modules",
-    "/etc/rc.d/rc.ntpd",
-    "/etc/rc.d/rc.rpc",
-    "/etc/rc.d/rc.salt-master",
-    "/etc/rc.d/rc.salt-minion",
-    "/etc/rc.d/rc.something.conf",
-    "/etc/rc.d/rc.sshd",
-]
 
-access_output = [
-    True,
-    True,
-    False,
-    True,
-    False,
-    False,
-]
+@pytest.fixture
+def mocked_rcd():
+    glob_output = [
+        "/etc/rc.d/rc.S",  # system rc file
+        "/etc/rc.d/rc.M",  # system rc file
+        "/etc/rc.d/rc.lxc",  # enabled
+        "/etc/rc.d/rc.modules",  # system rc file
+        "/etc/rc.d/rc.ntpd",  # enabled
+        "/etc/rc.d/rc.rpc",  # disabled
+        "/etc/rc.d/rc.salt-master",  # enabled
+        "/etc/rc.d/rc.salt-minion",  # disabled
+        "/etc/rc.d/rc.something.conf",  # config rc file
+        "/etc/rc.d/rc.sshd",  # disabled
+    ]
 
-services_enabled = ["lxc", "ntpd", "salt-master"]
+    access_output = [
+        True,  # lxc
+        True,  # ntpd
+        False,  # rpc
+        True,  # salt-master
+        False,  # salt-minion
+        False,  # sshd
+    ]
 
-services_disabled = ["rpc", "salt-minion", "sshd"]
+    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
+    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
+    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
 
-services_all = ["lxc", "ntpd", "rpc", "salt-master", "salt-minion", "sshd"]
+    return glob_mock, os_path_exists_mock, os_access_mock
 
 
 @pytest.fixture(autouse=True)
@@ -48,84 +51,97 @@ def setup_loader(request):
         yield loader_mock
 
 
-def test_get_enabled():
+def test_get_all_rc_services_minus_system_and_config_files(mocked_rcd):
     """
-    Test for Return a list of service that are enabled on boot
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert slackware_service.get_enabled() == services_enabled
+    In Slackware, the services are started, stopped, enabled or disabled
+    using rc.service scripts under the /etc/rc.d directory.
 
+    This tests if only service rc scripts are returned by get_alli function.
+    System rc scripts (like rc.M) and configuration rc files (like
+    rc.something.conf) needs to be removed from output. Also, we remove the
+    leading "/etc/rc.d/rc." to output only the service names.
 
-def test_get_disabled():
+    Return list: lxc ntpd rpc salt-master salt-minion sshd
     """
-    Test for Return a set of services that are installed but disabled
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert slackware_service.get_disabled() == services_disabled
-
-
-def test_available_success():
-    """
-    Test for availability of an existent service
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert slackware_service.available("lxc")
-
-
-def test_available_failure():
-    """
-    Test for availability of a non existent service
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert not slackware_service.available("docker")
-
-
-def test_missing_success():
-    """
-    Test if a non existent service is missing
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert slackware_service.missing("docker")
-
-
-def test_missing_failure():
-    """
-    Test if an existent service is missing
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
-    with glob_mock, os_path_exists_mock, os_access_mock:
-        assert not slackware_service.missing("lxc")
-
-
-def test_get_all():
-    """
-    Test for Return all available boot services
-    """
-    glob_mock = patch("glob.glob", autospec=True, return_value=glob_output)
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
+    services_all = ["lxc", "ntpd", "rpc", "salt-master", "salt-minion", "sshd"]
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
     with glob_mock, os_path_exists_mock, os_access_mock:
         assert slackware_service.get_all() == services_all
 
 
-def test_start():
+def test_if_only_executable_rc_files_are_returned_by_get_enabled(mocked_rcd):
+    """
+    In Slackware, the services are enabled at boot by setting the executable
+    bit in their respective rc files.
+
+    This tests if all system rc scripts, configuration rc files and service rc
+    scripts without the executable bit set were filtered out from output.
+
+    Return list: lxc ntpd salt-master
+    """
+    services_enabled = ["lxc", "ntpd", "salt-master"]
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert slackware_service.get_enabled() == services_enabled
+
+
+def test_if_only_not_executable_rc_files_are_returned_by_get_disabled(mocked_rcd):
+    """
+    In Slackware, the services are disabled at boot by unsetting the executable
+    bit in their respective rc files.
+
+    This tests if all system rc scripts, configuration rc files and service rc
+    scripts with the executable bit set were filtered out from output.
+
+    Return list: rpc salt-minion sshd
+    """
+    services_disabled = ["rpc", "salt-minion", "sshd"]
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert slackware_service.get_disabled() == services_disabled
+
+
+def test_if_a_rc_service_file_in_rcd_is_listed_as_available(mocked_rcd):
+    """
+    Test if an existent service rc file with the rc.service name format is
+    present in rc.d directory and returned by "available" function
+    """
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert slackware_service.available("lxc")
+
+
+def test_if_a_rc_service_file_not_in_rcd_is_not_listed_as_available(mocked_rcd):
+    """
+    Test if a non existent service rc file with the rc.service name format is
+    not present in rc.d directory and not returned by "available" function
+    """
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert not slackware_service.available("docker")
+
+
+def test_if_a_rc_service_file_not_in_rcd_is_listed_as_missing(mocked_rcd):
+    """
+    Test if a non existent service rc file with the rc.service name format is
+    not present in rc.d directory and returned by "missing" function
+    """
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert slackware_service.missing("docker")
+
+
+def test_if_a_rc_service_file_in_rcd_is_not_listed_as_missing(mocked_rcd):
+    """
+    Test if an existent service rc file with the rc.service name format is
+    present in rc.d directory and not returned by "missing" function
+    """
+    glob_mock, os_path_exists_mock, os_access_mock = mocked_rcd
+    with glob_mock, os_path_exists_mock, os_access_mock:
+        assert not slackware_service.missing("lxc")
+
+
+def test_service_start():
     """
     Test for Start the specified service
     """
@@ -134,7 +150,7 @@ def test_start():
         assert not slackware_service.start("name")
 
 
-def test_stop():
+def test_service_stop():
     """
     Test for Stop the specified service
     """
@@ -143,7 +159,7 @@ def test_stop():
         assert not slackware_service.stop("name")
 
 
-def test_restart():
+def test_service_restart():
     """
     Test for Restart the named service
     """
@@ -152,7 +168,7 @@ def test_restart():
         assert not slackware_service.restart("name")
 
 
-def test_reload_():
+def test_service_reload_():
     """
     Test for Reload the named service
     """
@@ -161,7 +177,7 @@ def test_reload_():
         assert not slackware_service.reload_("name")
 
 
-def test_force_reload():
+def test_service_force_reload():
     """
     Test for Force-reload the named service
     """
@@ -170,7 +186,7 @@ def test_force_reload():
         assert not slackware_service.force_reload("name")
 
 
-def test_status():
+def test_service_status():
     """
     Test for Return the status for a service
     """
@@ -179,9 +195,13 @@ def test_status():
         assert not slackware_service.status("name")
 
 
-def test_enable():
+def test_if_executable_bit_is_set_when_enable_a_disabled_service():
     """
-    Test for Enable the named service to start at boot
+    In Slackware, the services are enabled at boot by setting the executable
+    bit in their respective rc files.
+
+    This tests if, given a disabled rc file with permissions 0644, we enable it by
+    changing its permissions to 0755
     """
     os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
     os_chmod = MagicMock(autospec=True, return_value=True)
@@ -195,9 +215,13 @@ def test_enable():
         os_chmod.assert_called_with("/etc/rc.d/rc.svc_to_enable", 0o100755)
 
 
-def test_disable():
+def test_if_executable_bit_is_unset_when_disable_an_enabled_service():
     """
-    Test for Disable the named service to start at boot
+    In Slackware, the services are disabled at boot by unsetting the executable
+    bit in their respective rc files.
+
+    This tests if, given an enabled rc file with permissions 0755, we disable it by
+    changing its permissions to 0644
     """
     os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
     os_chmod = MagicMock(autospec=True, return_value=True)
@@ -211,41 +235,27 @@ def test_disable():
         os_chmod.assert_called_with("/etc/rc.d/rc.svc_to_disable", 0o100644)
 
 
-def test_enabled_success():
+def test_if_an_enabled_service_is_not_disabled():
     """
-    Test for Return True if the named service is enabled
+    A service can't be enabled and disabled at same time.
+
+    This tests if a service that returns True to enabled returns False to disabled
     """
     os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
     os_access_mock = patch("os.access", autospec=True, return_value=True)
     with os_path_exists_mock, os_access_mock:
         assert slackware_service.enabled("lxc")
+        assert not slackware_service.disabled("lxc")
 
 
-def test_enabled_failure():
+def test_if_a_disabled_service_is_not_enabled():
     """
-    Test for Return False if the named service is disabled
-    """
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, return_value=False)
-    with os_path_exists_mock, os_access_mock:
-        assert not slackware_service.enabled("rpc")
+    A service can't be enabled and disabled at same time.
 
-
-def test_disabled_success():
-    """
-    Test for Return True if the named service is disabled
+    This tests if a service that returns True to disabled returns False to enabled
     """
     os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
     os_access_mock = patch("os.access", autospec=True, return_value=False)
     with os_path_exists_mock, os_access_mock:
         assert slackware_service.disabled("rpc")
-
-
-def test_disabled_failure():
-    """
-    Test for Return False if the named service is enabled
-    """
-    os_path_exists_mock = patch("os.path.exists", autospec=True, return_value=True)
-    os_access_mock = patch("os.access", autospec=True, return_value=True)
-    with os_path_exists_mock, os_access_mock:
-        assert not slackware_service.disabled("lxc")
+        assert not slackware_service.enabled("rpc")
