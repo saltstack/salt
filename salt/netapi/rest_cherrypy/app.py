@@ -2100,7 +2100,7 @@ class Run(LowDataAdapter):
               ms-3: true
               ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh
+        The /run endpoint can also be used to issue commands using the salt-ssh
         subsystem.
 
         When using salt-ssh, eauth credentials should not be supplied. Instead,
