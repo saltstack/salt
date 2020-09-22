@@ -718,7 +718,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 19.10b0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
@@ -736,7 +736,7 @@ repos:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==20.8b1]
+        additional_dependencies: [black==19.10b0]
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
     rev: master
