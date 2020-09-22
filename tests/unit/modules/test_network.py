@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os.path
 import socket
@@ -42,7 +39,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         result = network.__virtual__()
         expected = (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead."
+            "The network execution module cannot be loaded on Windows: use win_network instead.",
         )
         self.assertEqual(result, expected)
 
@@ -66,7 +63,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         mac = "080027136977"
         bcast = "255.255.255.255 7"
 
-        class MockSocket(object):
+        class MockSocket:
             def __init__(self, *args, **kwargs):
                 pass
 
