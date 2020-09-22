@@ -151,6 +151,21 @@ class x509Test(ModuleCase, SaltReturnAssertsMixin):
         assert "New" in ret[key]["changes"]["Certificate"]
 
     @slowTest
+    def test_cert_signing_based_on_csr(self):
+        ret = self.run_function(
+            "state.apply",
+            ["x509.cert_signing_based_on_csr"],
+            pillar={"tmp_dir": RUNTIME_VARS.TMP},
+        )
+        key = "x509_|-test_crt_|-{}/pki/test.crt_|-certificate_managed".format(
+            RUNTIME_VARS.TMP
+        )
+        assert key in ret
+        assert "changes" in ret[key]
+        assert "Certificate" in ret[key]["changes"]
+        assert "New" in ret[key]["changes"]["Certificate"]
+
+    @slowTest
     def test_crl_managed(self):
         ret = self.run_function(
             "state.apply", ["x509.crl_managed"], pillar={"tmp_dir": RUNTIME_VARS.TMP}

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import copy
@@ -64,7 +62,7 @@ class CaseInsensitiveDict(MutableMapping):
         return self._data[to_lowercase(key)][1]
 
     def __iter__(self):
-        return (item[0] for item in six.itervalues(self._data))
+        return (item[0] for item in self._data.values())
 
     def __eq__(self, rval):
         if not isinstance(rval, Mapping):
@@ -73,20 +71,20 @@ class CaseInsensitiveDict(MutableMapping):
         return dict(self.items_lower()) == dict(CaseInsensitiveDict(rval).items_lower())
 
     def __repr__(self):
-        return repr(dict(six.iteritems(self)))
+        return repr(dict(self.items()))
 
     def items_lower(self):
         """
         Returns a generator iterating over keys and values, with the keys all
         being lowercase.
         """
-        return ((key, val[1]) for key, val in six.iteritems(self._data))
+        return ((key, val[1]) for key, val in self._data.items())
 
     def copy(self):
         """
         Returns a copy of the object
         """
-        return CaseInsensitiveDict(six.iteritems(self._data))
+        return CaseInsensitiveDict(self._data.items())
 
 
 def __change_case(data, attr, preserve_dict_class=False):
@@ -108,7 +106,7 @@ def __change_case(data, attr, preserve_dict_class=False):
                 __change_case(key, attr, preserve_dict_class),
                 __change_case(val, attr, preserve_dict_class),
             )
-            for key, val in six.iteritems(data)
+            for key, val in data.items()
         )
     if isinstance(data, Sequence):
         return data_type(
@@ -138,7 +136,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     """
     ret = {}
-    for key in set((new or {})).union((old or {})):
+    for key in set(new or {}).union(old or {}):
         if key not in old:
             # New key
             ret[key] = {"old": "", "new": new[key]}
@@ -329,7 +327,7 @@ def decode_dict(
     )
     # Make sure we preserve OrderedDicts
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
             key = (
                 decode_tuple(
@@ -585,7 +583,7 @@ def encode_dict(
     # Clean data object before encoding to avoid circular references
     data = _remove_circular_refs(data)
     ret = data.__class__() if preserve_dict_class else {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if isinstance(key, tuple):
             key = (
                 encode_tuple(key, encoding, errors, keep, preserve_dict_class)
@@ -727,10 +725,8 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     # lookup_dict keys
     for each in val if isinstance(val, list) else [val]:
         for key in lookup_dict:
-            test_key = key if isinstance(key, six.string_types) else six.text_type(key)
-            test_each = (
-                each if isinstance(each, six.string_types) else six.text_type(each)
-            )
+            test_key = key if isinstance(key, str) else str(key)
+            test_each = each if isinstance(each, str) else str(each)
             if fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
@@ -869,11 +865,11 @@ def subdict_match(
         # begin with is that (by design) to_unicode will raise a TypeError if a
         # non-string/bytestring/bytearray value is passed.
         try:
-            target = six.text_type(target).lower()
+            target = str(target).lower()
         except UnicodeDecodeError:
             target = salt.utils.stringutils.to_unicode(target).lower()
         try:
-            pattern = six.text_type(pattern).lower()
+            pattern = str(pattern).lower()
         except UnicodeDecodeError:
             pattern = salt.utils.stringutils.to_unicode(pattern).lower()
 
@@ -1015,7 +1011,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     Takes a list of one-element dicts (as found in many SLS schemas) and
     repacks into a single dictionary.
     """
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         try:
             data = salt.utils.yaml.safe_load(data)
         except salt.utils.yaml.parser.ParserError as err:
@@ -1027,7 +1023,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
     if val_cb is None:
         val_cb = lambda x, y: y
 
-    valid_non_dict = (six.string_types, six.integer_types, float)
+    valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):
         for element in data:
             if isinstance(element, valid_non_dict):
@@ -1085,7 +1081,7 @@ def is_list(value):
 
 
 @jinja_filter("is_iter")
-def is_iter(thing, ignore=six.string_types):
+def is_iter(thing, ignore=(str,)):
     """
     Test if an object is iterable, but not a string type.
 
@@ -1142,10 +1138,10 @@ def is_true(value=None):
         pass
 
     # Now check for truthiness
-    if isinstance(value, (six.integer_types, float)):
+    if isinstance(value, ((int,), float)):
         return value > 0
-    if isinstance(value, six.string_types):
-        return six.text_type(value).lower() == "true"
+    if isinstance(value, str):
+        return str(value).lower() == "true"
     return bool(value)
 
 
@@ -1185,7 +1181,7 @@ def simple_types_filter(data):
     if data is None:
         return data
 
-    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
+    simpletypes_keys = ((str,), str, (int,), float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, (list, tuple)):
@@ -1201,7 +1197,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in six.iteritems(data):
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list, tuple)):
@@ -1223,8 +1219,8 @@ def stringify(data):
     for item in data:
         if six.PY2 and isinstance(item, str):
             item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, six.string_types):
-            item = six.text_type(item)
+        elif not isinstance(item, str):
+            item = str(item)
         ret.append(item)
     return ret
 
@@ -1300,7 +1296,7 @@ def filter_falsey(data, recurse_depth=None, ignore_types=()):
 
     if isinstance(data, dict):
         processed_elements = [
-            (key, filter_element(value)) for key, value in six.iteritems(data)
+            (key, filter_element(value)) for key, value in data.items()
         ]
         return type(data)(
             [
@@ -1458,3 +1454,66 @@ def recursive_diff(
     else:
         ret = {} if old == new else {"old": ret_old, "new": ret_new}
     return ret
+
+
+def get_value(obj, path, default=None):
+    """
+    Get the values for a given path.
+
+    :param path:
+        keys of the properties in the tree separated by colons.
+        One segment in the path can be replaced by an id surrounded by curly braces.
+        This will match all items in a list of dictionary.
+
+    :param default:
+        default value to return when no value is found
+
+    :return:
+        a list of dictionaries, with at least the "value" key providing the actual value.
+        If a placeholder was used, the placeholder id will be a key providing the replacement for it.
+        Note that a value that wasn't found in the tree will be an empty list.
+        This ensures we can make the difference with a None value set by the user.
+    """
+    res = [{"value": obj}]
+    if path:
+        key = path[: path.find(":")] if ":" in path else path
+        next_path = path[path.find(":") + 1 :] if ":" in path else None
+
+        if key.startswith("{") and key.endswith("}"):
+            placeholder_name = key[1:-1]
+            # There will be multiple values to get here
+            items = []
+            if obj is None:
+                return res
+            if isinstance(obj, dict):
+                items = obj.items()
+            elif isinstance(obj, list):
+                items = enumerate(obj)
+
+            def _append_placeholder(value_dict, key):
+                value_dict[placeholder_name] = key
+                return value_dict
+
+            values = [
+                [
+                    _append_placeholder(item, key)
+                    for item in get_value(val, next_path, default)
+                ]
+                for key, val in items
+            ]
+
+            # flatten the list
+            values = [y for x in values for y in x]
+            return values
+        elif isinstance(obj, dict):
+            if key not in obj.keys():
+                return [{"value": default}]
+
+            value = obj.get(key)
+            if res is not None:
+                res = get_value(value, next_path, default)
+            else:
+                res = [{"value": value}]
+        else:
+            return [{"value": default if obj is not None else obj}]
+    return res
