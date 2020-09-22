@@ -2,14 +2,12 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
 import logging
 import os
 import platform
 import socket
 import textwrap
 
-# Import Salt Libs
 import salt.grains.core as core
 import salt.modules.cmdmod
 import salt.modules.network
@@ -20,13 +18,10 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
-
-# Import Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import Salt Testing Libs
 try:
     import pytest
 except ImportError as import_error:
@@ -1237,24 +1232,28 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             (10, 1, 6, "", (IP6_ADD1, 0, 0, 0)),
             (10, 3, 0, "", (IP6_ADD2, 0, 0, 0)),
         ]
+        if ip6_empty:
+            getaddrinfo_side_effect = [ip4_mock, ip4_mock, ip6_mock]
+        elif ip4_empty:
+            getaddrinfo_side_effect = [ip4_mock, ip6_mock, ip6_mock]
+        else:
+            getaddrinfo_side_effect = [ip4_mock, ip6_mock]
 
-        with patch.dict(core.__opts__, {"ipv6": False}):
-            with patch.object(
-                salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
-            ):
-                with patch.object(
-                    salt.utils.network,
-                    "ip_addrs6",
-                    MagicMock(return_value=net_ip6_mock),
-                ):
-                    with patch.object(
-                        core.socket, "getaddrinfo", side_effect=[ip4_mock, ip6_mock]
-                    ):
-                        get_fqdn = core.ip_fqdn()
-                        ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
-                        for key in ret_keys:
-                            value = get_fqdn[key]
-                            _check_type(key, value, ip4_empty, ip6_empty)
+        with patch.object(
+            salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
+        ), patch.object(
+            salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
+        ), patch.object(
+            core.socket,
+            "getaddrinfo",
+            side_effect=getaddrinfo_side_effect,
+            autospec=True,
+        ):
+            get_fqdn = core.ip_fqdn()
+            ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
+            for key in ret_keys:
+                value = get_fqdn[key]
+                _check_type(key, value, ip4_empty, ip6_empty)
 
     @skipIf(not salt.utils.platform.is_linux(), "System is not Linux")
     @patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
