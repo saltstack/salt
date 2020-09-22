@@ -4437,7 +4437,7 @@ class GetManagedSchema(marshmallow.Schema):
     source_hash_name = fields.Str(required=True, allow_none=True)
     user = fields.Str(required=True, allow_none=True)
     group = fields.Str(required=True, allow_none=True)
-    mode = fields.FileModeField(required=True, allow_none=True)
+    mode = fields.FileMode(required=True, allow_none=True)
     attrs = fields.Charset("aAcCdDeijPsStTu", allow_none=True)
     saltenv = fields.Str(required=True, allow_none=True)
     context = fields.Dict(required=True, allow_none=True)
