@@ -11,7 +11,6 @@ import salt.utils.args
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
-from tests.support.mock import DEFAULT, patch
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
