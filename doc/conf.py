@@ -293,7 +293,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3000"):
+    if release.startswith("3003"):
+        search_cx = "a70a1a73eef62aecd"  # 3003
+    elif release.startswith("3002"):
+        search_cx = "5026f4f2af0bdbe2d"  # 3002
+    elif release.startswith("3001"):
+        search_cx = "f0e4f298fa32b8a5e"  # 3001
+    elif release.startswith("3000"):
         search_cx = "011515552685726825874:3skhaozjtyn"  # 3000
     elif release.startswith("2019.2"):
         search_cx = "011515552685726825874:huvjhlpptnm"  # 2019.2
@@ -360,13 +366,6 @@ rst_prolog = """\
 .. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
 .. |windownload| raw:: html
 
-     <p>Python2 x86: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
-
-     <p>Python2 AMD64: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
      <p>Python3 x86: <a
      href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
@@ -374,12 +373,6 @@ rst_prolog = """\
      <p>Python3 AMD64: <a
      href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
-
-
-.. |osxdownloadpy2| raw:: html
-
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg"><strong>salt-{release}-py2-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 .. |osxdownloadpy3| raw:: html
 
