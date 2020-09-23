@@ -5350,7 +5350,7 @@ def _load_secedit_data():
     try:
         f_exp = os.path.join(__opts__["cachedir"], "secedit-{}.txt".format(UUID))
         __salt__["cmd.run"](["secedit", "/export", "/cfg", f_exp])
-        with open(f_exp, encoding="utf-16") as fp:
+        with salt.utils.files.fopen(f_exp, encoding="utf-16") as fp:
             secedit_data = fp.readlines()
         return secedit_data
     finally:
@@ -9667,7 +9667,7 @@ def set_(
                             if _pol["Secedit"]["Section"] not in _secedits:
                                 _secedits[_pol["Secedit"]["Section"]] = []
                             _secedits[_pol["Secedit"]["Section"]].append(
-                                " ".join([_pol["Secedit"]["Option"], "=", str(_value),])
+                                " ".join([_pol["Secedit"]["Option"], "=", str(_value)])
                             )
                         elif "NetSH" in _pol:
                             # set value with netsh
