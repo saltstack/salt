@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`David Homolka <david.homolka@ultimum.io>`
 """
 
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libsrestartcheck
 import salt.modules.restartcheck as restartcheck
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
 
 # import salt.utils.files
@@ -329,3 +327,113 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test"))
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test (deleted)"))
         self.assertFalse(restartcheck._valid_deleted_file("/SYSV/test (path inode=1)"))
+
+    def test_nilrt_sysapi_changed_empty_confd(self):
+        """
+        State changed when sysapi experts folder is empty
+        """
+        rs_count_file = "/var/lib/salt/restartcheck_state/sysapi.conf.d.count"
+        experts_dir = "/usr/lib/arm-linux-gnueabi/nisysapi/conf.d/experts/"
+        content = {rs_count_file: "3"}
+        listdir_mock = MagicMock(return_value=[])
+        fopen_mock = mock_open(read_data=content)
+        with patch.object(restartcheck.os.path, "exists", MagicMock(return_value=True)):
+            with patch.dict(restartcheck.__grains__, {"cpuarch": "arm"}):
+                with patch.object(
+                    restartcheck, "_file_changed_nilrt", MagicMock(return_value=False)
+                ):
+                    with patch("salt.utils.files.fopen", fopen_mock):
+                        with patch.object(restartcheck.os, "listdir", listdir_mock):
+                            self.assertTrue(restartcheck._sysapi_changed_nilrt())
+                            listdir_mock.assert_called_once_with(experts_dir)
+
+    def test_nilrt_sysapi_changed_expert_changed(self):
+        """
+        State changed when one sysapi experts got changed
+        """
+        rs_count_file = "/var/lib/salt/restartcheck_state/sysapi.conf.d.count"
+        content = {rs_count_file: "3"}
+        expert_files = ["expert1", "expert2", "expert3"]
+        listdir_mock = MagicMock(return_value=expert_files)
+        fopen_mock = mock_open(read_data=content)
+        file_changed_mock = MagicMock(side_effect=[False, False, True])
+        with patch.object(restartcheck.os.path, "exists", MagicMock(return_value=True)):
+            with patch.dict(restartcheck.__grains__, {"cpuarch": "x64"}):
+                with patch.object(
+                    restartcheck, "_file_changed_nilrt", file_changed_mock
+                ):
+                    with patch("salt.utils.files.fopen", fopen_mock):
+                        with patch.object(restartcheck.os, "listdir", listdir_mock):
+                            self.assertTrue(restartcheck._sysapi_changed_nilrt())
+
+    def test_nilrt_sysapi_no_expert_changed(self):
+        """
+        State changed when no sysapi experts got changed
+        """
+        rs_count_file = "/var/lib/salt/restartcheck_state/sysapi.conf.d.count"
+        content = {rs_count_file: "2"}
+        expert_files = ["expert1", "expert2"]
+        listdir_mock = MagicMock(return_value=expert_files)
+        fopen_mock = mock_open(read_data=content)
+        file_changed_mock = MagicMock(side_effect=[False, False, False])
+        with patch.object(restartcheck.os.path, "exists", MagicMock(return_value=True)):
+            with patch.dict(restartcheck.__grains__, {"cpuarch": "x64"}):
+                with patch.object(
+                    restartcheck, "_file_changed_nilrt", file_changed_mock
+                ):
+                    with patch("salt.utils.files.fopen", fopen_mock):
+                        with patch.object(restartcheck.os, "listdir", listdir_mock):
+                            self.assertFalse(restartcheck._sysapi_changed_nilrt())
+
+    def test_file_changed_nilrt_different_timestamps(self):
+        file_path = "/var/file"
+        timestamp_mock = MagicMock(return_value="2")
+        with patch.object(
+            restartcheck.os.path, "basename", MagicMock(return_value=file_path)
+        ):
+            with patch.object(
+                restartcheck.os.path, "exists", MagicMock(return_value=True)
+            ):
+                with patch.dict(restartcheck.__salt__, {"file.read": timestamp_mock}):
+                    with patch.object(
+                        restartcheck.os.path, "getmtime", MagicMock(return_value="1")
+                    ):
+                        self.assertTrue(restartcheck._file_changed_nilrt(file_path))
+
+    def test_file_changed_nilrt_same_timestamps_different_md5(self):
+        file_path = "/var/file"
+        timestamp_mock = MagicMock(return_value="2")
+        ret_code_mock = MagicMock(return_value=1)
+        with patch.object(
+            restartcheck.os.path, "basename", MagicMock(return_value=file_path)
+        ):
+            with patch.object(
+                restartcheck.os.path, "exists", MagicMock(return_value=True)
+            ):
+                with patch.dict(
+                    restartcheck.__salt__,
+                    {"file.read": timestamp_mock, "cmd.retcode": ret_code_mock},
+                ):
+                    with patch.object(
+                        restartcheck.os.path, "getmtime", MagicMock(return_value="2")
+                    ):
+                        self.assertTrue(restartcheck._file_changed_nilrt(file_path))
+
+    def test_file_changed_nilrt_same_timestamps_same_md5(self):
+        file_path = "/var/file"
+        timestamp_mock = MagicMock(return_value="2")
+        ret_code_mock = MagicMock(return_value=0)
+        with patch.object(
+            restartcheck.os.path, "basename", MagicMock(return_value=file_path)
+        ):
+            with patch.object(
+                restartcheck.os.path, "exists", MagicMock(return_value=True)
+            ):
+                with patch.dict(
+                    restartcheck.__salt__,
+                    {"file.read": timestamp_mock, "cmd.retcode": ret_code_mock},
+                ):
+                    with patch.object(
+                        restartcheck.os.path, "getmtime", MagicMock(return_value="2")
+                    ):
+                        self.assertFalse(restartcheck._file_changed_nilrt(file_path))
