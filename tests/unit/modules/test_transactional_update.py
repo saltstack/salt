@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+
 import salt.modules.transactional_update as tu
 from salt.exceptions import CommandExecutionError
 
@@ -135,6 +136,8 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         """Test commands that only accept global params"""
         for cmd in [
             "cleanup",
+            "cleanup_snapshots",
+            "cleanup_overlays",
             "grub_cfg",
             "bootloader",
             "initrd",
@@ -158,7 +161,9 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
                         "--non-interactive",
                         "--drop-if-no-change",
                         "--no-selfupdate",
-                        cmd.replace("_", "."),
+                        cmd.replace("_", ".")
+                        if cmd.startswith("grub")
+                        else cmd.replace("_", "-"),
                     ]
                 )
 

@@ -377,17 +377,9 @@ def in_transaction():
 
 
 def cleanup(self_update=False):
-    """Mark unused snapshots for snapper removal.
+    """Run both cleanup-snapshots and cleanup-overlays.
 
-    If the current root filesystem is identical to the active root
-    filesystem (means after a reboot, before transactional-update
-    creates a new snapshot with updates), all old snapshots without a
-    cleanup algorithm get a cleanup algorithm set. This is to make
-    sure, that old snapshots will be deleted by snapper. See the
-    section about cleanup algorithms in snapper(8).
-
-    Also removes all unreferenced (and thus unused) /etc overlay
-    directories in /var/lib/overlay.
+    Identical to calling both cleanup-snapshots and cleanup-overlays.
 
     self_update
         Check for newer transactional-update versions.
@@ -402,6 +394,54 @@ def cleanup(self_update=False):
     cmd = ["transactional-update"]
     cmd.extend(_global_params(self_update=self_update))
     cmd.append("cleanup")
+    return _cmd(cmd)
+
+
+def cleanup_snapshots(self_update=False):
+    """Mark unused snapshots for snapper removal.
+
+    If the current root filesystem is identical to the active root
+    filesystem (means after a reboot, before transactional-update
+    creates a new snapshot with updates), all old snapshots without a
+    cleanup algorithm get a cleanup algorithm set. This is to make
+    sure, that old snapshots will be deleted by snapper. See the
+    section about cleanup algorithms in snapper(8).
+
+    self_update
+        Check for newer transactional-update versions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update cleanup_snapshots
+
+    """
+    cmd = ["transactional-update"]
+    cmd.extend(_global_params(self_update=self_update))
+    cmd.append("cleanup-snapshots")
+    return _cmd(cmd)
+
+
+def cleanup_overlays(self_update=False):
+    """Remove unused overlay layers.
+
+    Removes all unreferenced (and thus unused) /etc overlay
+    directories in /var/lib/overlay.
+
+    self_update
+        Check for newer transactional-update versions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt microos transactional_update cleanup_overlays
+
+    """
+    cmd = ["transactional-update"]
+    cmd.extend(_global_params(self_update=self_update))
+    cmd.append("cleanup-overlays")
     return _cmd(cmd)
 
 
