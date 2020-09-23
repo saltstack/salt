@@ -914,17 +914,25 @@ def call(function, *args, **kwargs):
     function
         Salt execution module function
 
+    activate_transaction
+        If at the end of the transaction there is a pending activation
+        (i.e there is a new snaphot in the system), a new reboot will
+        be scheduled (default False)
+
     CLI Example:
 
     .. code-block:: bash
 
         salt microos transactional_update.call test.ping
         salt microos transactional_update.call ssh.set_auth_key user key=mykey
+        salt microos transactional_update.call pkg.install emacs activate_transaction=True
 
     """
 
     if not function:
         raise salt.exceptions.CommandExecutionError("Missing function parameter")
+
+    activate_transaction = kwargs.pop("activate_transaction", False)
 
     # Generate the salt-thin and create a temporary directory in a
     # place that the new transaction will have access to, and where we
@@ -985,6 +993,10 @@ def call(function, *args, **kwargs):
     finally:
         __utils__["files.rm_rf"](thin_dest_path)
 
+        # Check if reboot is needed
+        if activate_transaction and pending_transaction():
+            reboot()
+
 
 def apply_(mods=None, **kwargs):
     """Apply an state inside a transaction.
@@ -996,6 +1008,11 @@ def apply_(mods=None, **kwargs):
     For a formal description of the possible parameters accepted in
     this function, check `state.apply_` documentation.
 
+    activate_transaction
+        If at the end of the transaction there is a pending activation
+        (i.e there is a new snaphot in the system), a new reboot will
+        be scheduled (default False)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1003,6 +1020,7 @@ def apply_(mods=None, **kwargs):
         salt microos transactional_update.apply
         salt microos transactional_update.apply stuff
         salt microos transactional_update.apply stuff pillar='{"foo": "bar"}'
+        salt microos transactional_update.apply stuff activate_transaction=True
 
     """
     if mods:
@@ -1010,7 +1028,9 @@ def apply_(mods=None, **kwargs):
     return highstate(**kwargs)
 
 
-def _create_and_execute_salt_state(chunks, file_refs, test, hash_type):
+def _create_and_execute_salt_state(
+    chunks, file_refs, test, hash_type, activate_transaction
+):
     """Create the salt_state tarball, and execute it in a transaction"""
 
     # Create the tar containing the state pkg and relevant files.
@@ -1034,6 +1054,7 @@ def _create_and_execute_salt_state(chunks, file_refs, test, hash_type):
             test=test,
             pkg_sum=trans_tar_sum,
             hash_type=hash_type,
+            activate_transaction=activate_transaction,
         )
     finally:
         __utils__["files.rm_rf"](salt_state_path)
@@ -1041,7 +1062,9 @@ def _create_and_execute_salt_state(chunks, file_refs, test, hash_type):
     return ret
 
 
-def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
+def sls(
+    mods, saltenv="base", test=None, exclude=None, activate_transaction=False, **kwargs
+):
     """Execute the states in one or more SLS files inside a transaction.
 
     saltenv
@@ -1060,6 +1083,11 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         dictionaries containing ``sls`` or ``id`` keys. Glob-patterns
         may be used to match multiple states.
 
+    activate_transaction
+        If at the end of the transaction there is a pending activation
+        (i.e there is a new snaphot in the system), a new reboot will
+        be scheduled (default False)
+
     For a formal description of the possible parameters accepted in
     this function, check `state.sls` documentation.
 
@@ -1068,6 +1096,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     .. code-block:: bash
 
         salt microos transactional_update.sls stuff pillar='{"foo": "bar"}'
+        salt microos transactional_update.sls stuff activate_transaction=True
 
     """
     # Get a copy of the pillar data, to avoid overwriting the current
@@ -1117,15 +1146,22 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     )
 
     hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
+    return _create_and_execute_salt_state(
+        chunks, file_refs, test, hash_type, activate_transaction
+    )
 
 
-def highstate(**kwargs):
+def highstate(activate_transaction=False, **kwargs):
     """Retrieve the state data from the salt master for this minion and
     execute it inside a transaction.
 
     For a formal description of the possible parameters accepted in
     this function, check `state.highstate` documentation.
+
+    activate_transaction
+        If at the end of the transaction there is a pending activation
+        (i.e there is a new snaphot in the system), a new reboot will
+        be scheduled (default False)
 
     CLI Example:
 
@@ -1133,6 +1169,7 @@ def highstate(**kwargs):
 
         salt microos transactional_update.highstate
         salt microos transactional_update.highstate pillar='{"foo": "bar"}'
+        salt microos transactional_update.highstate activate_transaction=True
 
     """
     # Get a copy of the pillar data, to avoid overwriting the current
@@ -1163,10 +1200,12 @@ def highstate(**kwargs):
 
     test = kwargs.pop("test", False)
     hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
+    return _create_and_execute_salt_state(
+        chunks, file_refs, test, hash_type, activate_transaction
+    )
 
 
-def single(fun, name, test=None, **kwargs):
+def single(fun, name, test=None, activate_transaction=False, **kwargs):
     """Execute a single state function with the named kwargs, returns
     False if insufficient data is sent to the command
 
@@ -1175,11 +1214,17 @@ def single(fun, name, test=None, **kwargs):
     maps, as you would in a YAML salt file. Alternatively, JSON format
     of keyword values is also supported.
 
+    activate_transaction
+        If at the end of the transaction there is a pending activation
+        (i.e there is a new snaphot in the system), a new reboot will
+        be scheduled (default False)
+
     CLI Example:
 
     .. code-block:: bash
 
         salt microos transactional_update.single pkg.installed name=emacs
+        salt microos transactional_update.single pkg.installed name=emacs activate_transaction=True
 
     """
     # Get a copy of the pillar data, to avoid overwriting the current
@@ -1220,4 +1265,6 @@ def single(fun, name, test=None, **kwargs):
     )
 
     hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(chunks, file_refs, test, hash_type)
+    return _create_and_execute_salt_state(
+        chunks, file_refs, test, hash_type, activate_transaction
+    )
