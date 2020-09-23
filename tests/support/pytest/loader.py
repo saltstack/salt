@@ -4,6 +4,7 @@
 
     Salt's Loader PyTest Mock Support
 """
+import functools
 import logging
 import sys
 import types
@@ -22,18 +23,11 @@ class LoaderModuleMock:
     setup_loader_modules = attr.ib(init=True)
     # These dunders should always exist at the module global scope
     salt_module_dunders = attr.ib(
-        init=True, repr=False, kw_only=True, default=("__opts__",),
-    )
-    # These dunders might exist at the module global scope
-    salt_module_dunders_optional = attr.ib(
-        init=True, repr=False, kw_only=True, default=("__proxyenabled__",),
-    )
-    # These dunders should always exist at the function global scope
-    salt_function_dunders = attr.ib(
         init=True,
         repr=False,
         kw_only=True,
         default=(
+            "__opts__",
             "__salt__",
             "__runner__",
             "__context__",
@@ -48,12 +42,12 @@ class LoaderModuleMock:
             "__sdb__",
         ),
     )
-    # These dunders might exist at the function global scope
-    salt_function_dunders_optional = attr.ib(
+    # These dunders might exist at the module global scope
+    salt_module_dunders_optional = attr.ib(
         init=True, repr=False, kw_only=True, default=("__proxy__",),
     )
     # These dunders might exist at the function global scope
-    salt_function_dunder_attributes = attr.ib(
+    salt_module_dunder_attributes = attr.ib(
         init=True,
         repr=False,
         kw_only=True,
@@ -67,6 +61,8 @@ class LoaderModuleMock:
             "__jid_event__",
             # Salt cloud attributes
             "__active_provider_name__",
+            # Proxy Minions
+            "__proxyenabled__",
         ),
     )
     _finalizers = attr.ib(
@@ -75,7 +71,6 @@ class LoaderModuleMock:
 
     def start(self):
         module_globals = {dunder: {} for dunder in self.salt_module_dunders}
-        function_globals = {dunder: {} for dunder in self.salt_function_dunders}
         for module, globals_to_mock in self.setup_loader_modules.items():
             log.trace(
                 "Setting up loader globals for %s; globals: %s", module, globals_to_mock
@@ -90,22 +85,15 @@ class LoaderModuleMock:
                     "The dictionary values returned by setup_loader_modules() "
                     "must be a dictionary, not {}".format(type(globals_to_mock))
                 )
-            for key in module_globals:
-                if not hasattr(module, key):
-                    # Set the dunder name as an attribute on the module if not present
-                    setattr(module, key, {})
-                    # Remove the added attribute after the test finishes
-                    self.addfinalizer(delattr, module, key)
             # Patch sys.modules as the first step
             self._patch_sys_modules(globals_to_mock)
-            # Now we need to first patch the function globals because the salt loader
-            # only loads functions and if the module globals patch a function, that
-            # function won't be loaded.
-            #
-            # So, first we patch the function globals
-            self._patch_function_globals(module, globals_to_mock, function_globals)
-            # And now we can patch the module globals
+            # Now patch the module globals
             self._patch_module_globals(module, globals_to_mock, module_globals)
+            # And now make sure any private functions, or functions which would not be loaded
+            # by the salt loader, don't have access to any dunders
+            self._patch_unloadable_functions_globals(
+                module, globals_to_mock, module_globals
+            )
 
     def stop(self):
         while self._finalizers:
@@ -149,37 +137,40 @@ class LoaderModuleMock:
         self.addfinalizer(patcher.stop)
 
     def _patch_module_globals(self, module, mocks, module_globals):
-        module_globals_skip_keys = (
-            (
-                # sys.modules is addressed on another function
-                "sys.modules",
-            )
-            # Salt function globals are addressed on another function
-            + self.salt_function_dunders
-            + self.salt_function_dunders_optional
-            + self.salt_function_dunder_attributes
-        )
+        # At this stage, module_globals only has the salt dunders in it
+        for key in module_globals:
+            if not hasattr(module, key):
+                # Set the dunder name as an attribute on the module if not present
+                setattr(module, key, {})
+                # Remove the added attribute after the test finishes
+                self.addfinalizer(delattr, module, key)
+
+        salt_dunder_dicts = self.salt_module_dunders + self.salt_module_dunders_optional
+        allowed_salt_dunders = salt_dunder_dicts + self.salt_module_dunder_attributes
         for key in mocks:
-            if key in module_globals_skip_keys:
+            if key == "sys.modules":
+                # sys.modules is addressed on another function
                 continue
 
-            mocked_details = mocks[key]
-            if isinstance(mocked_details, dict) and key.startswith("__"):
-                # A salt dunder
-                if not hasattr(module, key):
-                    # Set the dunder name as an attribute on the module if not present
-                    setattr(module, key, {})
-                    # Remove the added attribute after the test finishes
-                    self.addfinalizer(delattr, module, key)
-                for mock_key, mock_data in mocked_details.items():
-                    module_globals.setdefault(key, {})[mock_key] = mock_data
-            else:
-                if not hasattr(module, key):
-                    # Set the key name as an attribute on the module if not present
-                    setattr(module, key, None)
-                    # Remove the added attribute after the test finishes
-                    self.addfinalizer(delattr, module, key)
-                module_globals[key] = mocked_details
+            if key.startswith("__"):
+                if key in ("__init__", "__virtual__"):
+                    raise RuntimeError(
+                        "No need to patch {!r}. Passed loader module dict: {}".format(
+                            key, self.setup_loader_modules,
+                        )
+                    )
+                elif key not in allowed_salt_dunders:
+                    raise RuntimeError(
+                        "Don't know how to handle {!r}. Passed loader module dict: {}".format(
+                            key, self.setup_loader_modules,
+                        )
+                    )
+
+            if not hasattr(module, key):
+                setattr(module, key, None)
+                # Remove the added attribute after the test finishes
+                self.addfinalizer(delattr, module, key)
+            module_globals[key] = mocks[key]
 
         # Patch the module!
         log.trace("Patching globals for %s; globals: %s", module, module_globals)
@@ -187,49 +178,30 @@ class LoaderModuleMock:
         patcher.start()
         self.addfinalizer(patcher.stop)
 
-    def _patch_function_globals(self, module, mocks, function_globals):
-        function_globals_skip_keys = (
-            (
-                # sys.modules is addressed on another function
-                "sys.modules",
-            )
-            # Module globals are adressed on another function
-            + self.salt_module_dunders
+    def _patch_unloadable_functions_globals(self, module, mocks, module_globals):
+        # Create a copy of the module_globals dictionary without any salt dunders
+        # The module's private function don't have access to it
+        salt_dunders = (
+            self.salt_module_dunders
             + self.salt_module_dunders_optional
+            + self.salt_module_dunder_attributes
         )
-        for key in mocks:
-            if key in function_globals_skip_keys:
+        function_globals = {
+            k: v for (k, v) in module_globals.items() if k not in salt_dunders
+        }
+        for name in dir(module):
+            if name in ("__init__", "__virtual__"):
+                # These are salt loader related functions, skip them
                 continue
-
-            if not key.startswith("__"):
-                # We only patch salt dunders in function globals
+            if not name.startswith("_"):
+                # We are only interested in "private" functions
                 continue
-
-            if (
-                key
-                not in self.salt_function_dunders
-                + self.salt_function_dunders_optional
-                + self.salt_function_dunder_attributes
-            ):
-                raise RuntimeError(
-                    "Don't know how to handle {!r}. Passed loader module dict: {}".format(
-                        key, self.setup_loader_modules,
-                    )
-                )
-
-            mocked_details = mocks[key]
-            if not isinstance(mocked_details, dict):
-                function_globals[key] = mocked_details
+            func = getattr(module, name)
+            if not LazyLoader.loadable_function(func):
+                # Not a function!? Skip it!!!
                 continue
-
-            # If we get passed an empty mocked_details dictionary, we need to at least
-            # add that key to the function globals
-            function_globals.setdefault(key, {})
-
-            for mock_key, mock_data in mocked_details.items():
-                function_globals[key][mock_key] = mock_data
-
-        for name, alias, func in LazyLoader.loadable_attributes(module):
+            if isinstance(func, functools.partial):
+                func = func.func
             if func.__module__ != module.__name__:
                 # Don't patch imported functions.
                 # XXX: This should actually be the default loader behavior
@@ -244,7 +216,6 @@ class LoaderModuleMock:
                         func = func.__wrapped__
                     except AttributeError:
                         break
-            # Patch each LazyLoader loadable attribute!
             log.trace("Patching globals for %s; globals: %s", func, function_globals)
             patcher = patch.dict(func.__globals__, values=function_globals)
             patcher.start()
