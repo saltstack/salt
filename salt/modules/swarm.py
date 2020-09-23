@@ -112,6 +112,12 @@ def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
             )
         )
         salt_return.update({"Comment": output, "Tokens": swarm_tokens()})
+    except docker.errors.APIError as err:
+        salt_return = {}
+        if "This node is already part of a swarm." in err.explanation:
+            salt_return.update({"Comment": err.explanation, "result": False})
+        else:
+            salt_return.update({"Error": str(err.explanation), "result": False})
     except TypeError:
         salt_return = {}
         salt_return.update(
