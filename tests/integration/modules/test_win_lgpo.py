@@ -116,7 +116,9 @@ class WinLgpoTest(ModuleCase):
         )
         secedit_file_content = None
         if secedit_output:
-            with salt.utils.files.fopen(secedit_output_file, encoding="utf-16") as _reader:
+            with salt.utils.files.fopen(
+                secedit_output_file, encoding="utf-16"
+            ) as _reader:
                 secedit_file_content = _reader.read()
         for expected_regex in expected_regexes:
             match = re.search(
