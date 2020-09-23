@@ -319,7 +319,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch(
             "socket.getaddrinfo",
-            MagicMock(side_effect=socket.gaierror("[Errno 11004] getaddrinfo failed")),
+            autospec=True,
+            side_effect=socket.gaierror("[Errno 11004] getaddrinfo failed"),
         ):
             rtn = win_network.connect("test-server", 80)
             assert rtn
