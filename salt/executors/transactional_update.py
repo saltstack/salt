@@ -73,6 +73,12 @@ def execute(opts, data, func, args, kwargs):
 
         salt-call --module-executors='[transactional_update, direct_call]' test.version
 
+    You can also schedule a reboot if needed:
+
+    .. code-block:: bash
+
+        salt-call --module-executors='[transactional_update]' state.sls stuff activate_transaction=True
+
     There are some configuration parameters supported:
 
     .. code-block:: yaml
