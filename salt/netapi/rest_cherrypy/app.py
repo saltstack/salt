@@ -4,6 +4,14 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
 :depends:
     - CherryPy Python module.
 
@@ -2092,7 +2100,7 @@ class Run(LowDataAdapter):
               ms-3: true
               ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh
+        The /run endpoint can also be used to issue commands using the salt-ssh
         subsystem.
 
         When using salt-ssh, eauth credentials should not be supplied. Instead,

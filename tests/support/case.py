@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -24,10 +23,11 @@ import textwrap
 import time
 from datetime import datetime, timedelta
 
+import pytest
 import salt.utils.files
-from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import SKIP_IF_NOT_RUNNING_PYTEST, RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
     AdaptedConfigurationTestCaseMixin,
     SaltClientTestCaseMixin,
@@ -108,14 +108,17 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not roster_file:
             roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
-        arg_str = "{} {} -l{} -i --priv {} --roster-file {} {} localhost {} --out=json".format(
-            " -W" if wipe else "",
-            " -r" if raw else "",
-            log_level,
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
-            roster_file,
-            ssh_opts,
-            arg_str,
+        arg_str = (
+            "{wipe} {raw} -l {log_level} --ignore-host-keys --priv {client_key} --roster-file "
+            "{roster_file} {ssh_opts} localhost {arg_str} --out=json"
+        ).format(
+            wipe=" -W" if wipe else "",
+            raw=" -r" if raw else "",
+            log_level=log_level,
+            client_key=os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key"),
+            roster_file=roster_file,
+            ssh_opts=ssh_opts,
+            arg_str=arg_str,
         )
         ret = self.run_script(
             "salt-ssh",
@@ -165,6 +168,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         Execute the runner function and return the return data and output in a dict
         """
         output = kwargs.pop("_output", None)
+        opts_overrides = kwargs.pop("opts_overrides", None)
         ret = {"fun": fun}
 
         # Late import
@@ -173,6 +177,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         import salt.runner
 
         opts = salt.config.client_config(self.get_config_file_path("master"))
+        if opts_overrides:
+            opts.update(opts_overrides)
 
         opts_arg = list(arg)
         if kwargs:
@@ -451,6 +457,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
             return ret[0] if len(ret) == 1 else tuple(ret)
 
+        log.debug("Running Popen(%r, %r)", cmd, popen_kwargs)
         process = subprocess.Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
@@ -697,7 +704,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     """
 
-    def wait_for_all_jobs(self, minions=("minion", "sub_minion",), sleep=0.3):
+    def wait_for_all_jobs(self, minions=("minion", "sub_minion"), sleep=0.3):
         """
         Wait for all jobs currently running on the list of minions to finish
         """
@@ -929,7 +936,9 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         return orig["minion"]
 
 
-@requires_sshd_server
+@SKIP_IF_NOT_RUNNING_PYTEST
+@pytest.mark.usefixtures("salt_ssh_cli")
+@pytest.mark.requires_sshd_server
 class SSHCase(ShellCase):
     """
     Execute a command via salt-ssh
