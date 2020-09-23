@@ -1,7 +1,6 @@
 import sys
 
 import pytest
-
 import salt.modules.transactional_update as tu
 from salt.exceptions import CommandExecutionError
 
@@ -456,7 +455,7 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
             utils_mock["files.rm_rf"].assert_called_once()
 
     @patch("tempfile.mkdtemp")
-    def test_call_success(self, mkdtemp):
+    def test_call_success_no_reboot(self, mkdtemp):
         """Test transactional_update.chroot when succeed"""
         mkdtemp.return_value = "/var/cache/salt/minion/tmp01"
         utils_mock = {
@@ -504,6 +503,64 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
             utils_mock["files.rm_rf"].assert_called_once()
+
+    @patch("salt.modules.transactional_update.reboot")
+    @patch("salt.modules.transactional_update.pending_transaction")
+    @patch("tempfile.mkdtemp")
+    def test_call_success_reboot(self, mkdtemp, pending_transaction, reboot):
+        """Test transactional_update.chroot when succeed and reboot"""
+        mkdtemp.return_value = "/var/cache/salt/minion/tmp01"
+        pending_transaction.return_value = True
+        utils_mock = {
+            "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
+            "files.rm_rf": MagicMock(),
+            "json.find_json": MagicMock(return_value={"return": "result"}),
+        }
+        opts_mock = {"cachedir": "/var/cache/salt/minion"}
+        salt_mock = {
+            "cmd.run": MagicMock(return_value=""),
+            "config.option": MagicMock(),
+            "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""}),
+        }
+        with patch.dict(tu.__utils__, utils_mock), patch.dict(
+            tu.__opts__, opts_mock
+        ), patch.dict(tu.__salt__, salt_mock):
+            assert (
+                tu.call("transactional_update.dup", activate_transaction=True)
+                == "result"
+            )
+
+            utils_mock["thin.gen_thin"].assert_called_once()
+            salt_mock["config.option"].assert_called()
+            salt_mock["cmd.run"].assert_called_once()
+            salt_mock["cmd.run_all"].assert_called_with(
+                [
+                    "transactional-update",
+                    "--non-interactive",
+                    "--drop-if-no-change",
+                    "--no-selfupdate",
+                    "--continue",
+                    "--quiet",
+                    "run",
+                    "python{}".format(sys.version_info[0]),
+                    "/var/cache/salt/minion/tmp01/salt-call",
+                    "--metadata",
+                    "--local",
+                    "--log-file",
+                    "/var/cache/salt/minion/tmp01/log",
+                    "--cachedir",
+                    "/var/cache/salt/minion/tmp01/cache",
+                    "--out",
+                    "json",
+                    "-l",
+                    "quiet",
+                    "--",
+                    "transactional_update.dup",
+                ]
+            )
+            utils_mock["files.rm_rf"].assert_called_once()
+            pending_transaction.assert_called_once()
+            reboot.assert_called_once()
 
     @patch("tempfile.mkdtemp")
     def test_call_success_parameters(self, mkdtemp):
