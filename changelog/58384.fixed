@@ -1,0 +1,1 @@
+Reactor runner functions will now ensure reactor system is available before attempting to run and error out if it is not available.
