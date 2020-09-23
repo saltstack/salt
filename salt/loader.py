@@ -1932,7 +1932,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # private functions are skipped
                 continue
             func = getattr(module, attr)
-            if not inspect.isfunction(func) and not isinstance(func, functools.partial):
+            if not LazyLoader.loadable_function(func):
                 # Not a function!? Skip it!!!
                 continue
             # Let's get the function name.
@@ -1944,6 +1944,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # if no alias is defined.
             alias = getattr(module, "__func_alias__", {}).get(attr)
             yield attr, alias, func
+
+    @staticmethod
+    def loadable_function(func):
+        if not inspect.isfunction(func) and not isinstance(func, functools.partial):
+            return False
+        return True
 
     def reload_modules(self):
         with self._lock:
