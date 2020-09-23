@@ -4,14 +4,12 @@
 
     Salt's Loader PyTest Mock Support
 """
-import functools
 import logging
 import sys
 import types
 from collections import deque
 
 import attr
-from salt.loader import LazyLoader
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
@@ -85,15 +83,23 @@ class LoaderModuleMock:
                     "The dictionary values returned by setup_loader_modules() "
                     "must be a dictionary, not {}".format(type(globals_to_mock))
                 )
+            for key in self.salt_module_dunders:
+                if not hasattr(module, key):
+                    # Set the dunder name as an attribute on the module if not present
+                    setattr(module, key, {})
+                    # Remove the added attribute after the test finishes
+                    self.addfinalizer(delattr, module, key)
+
             # Patch sys.modules as the first step
             self._patch_sys_modules(globals_to_mock)
+
             # Now patch the module globals
-            self._patch_module_globals(module, globals_to_mock, module_globals)
-            # And now make sure any private functions, or functions which would not be loaded
-            # by the salt loader, don't have access to any dunders
-            self._patch_unloadable_functions_globals(
-                module, globals_to_mock, module_globals
-            )
+            # We actually want to grab a copy of the module globals so that if mocking
+            # multiple modules, and at least one of the modules has a function to path,
+            # the patch only happens on the module it's supposed to patch and not all of them.
+            # It's not a deepcopy because we want to maintain the reference to the salt dunders
+            # added in the start of this function
+            self._patch_module_globals(module, globals_to_mock, module_globals.copy())
 
     def stop(self):
         while self._finalizers:
@@ -137,14 +143,6 @@ class LoaderModuleMock:
         self.addfinalizer(patcher.stop)
 
     def _patch_module_globals(self, module, mocks, module_globals):
-        # At this stage, module_globals only has the salt dunders in it
-        for key in module_globals:
-            if not hasattr(module, key):
-                # Set the dunder name as an attribute on the module if not present
-                setattr(module, key, {})
-                # Remove the added attribute after the test finishes
-                self.addfinalizer(delattr, module, key)
-
         salt_dunder_dicts = self.salt_module_dunders + self.salt_module_dunders_optional
         allowed_salt_dunders = salt_dunder_dicts + self.salt_module_dunder_attributes
         for key in mocks:
@@ -165,8 +163,14 @@ class LoaderModuleMock:
                             key, self.setup_loader_modules,
                         )
                     )
+                elif key in salt_dunder_dicts and not hasattr(module, key):
+                    # Add the key as a dictionary attribute to the module so it can be patched by `patch.dict`'
+                    setattr(module, key, {})
+                    # Remove the added attribute after the test finishes
+                    self.addfinalizer(delattr, module, key)
 
             if not hasattr(module, key):
+                # Set the key as an attribute so it can be patched
                 setattr(module, key, None)
                 # Remove the added attribute after the test finishes
                 self.addfinalizer(delattr, module, key)
@@ -177,49 +181,6 @@ class LoaderModuleMock:
         patcher = patch.multiple(module, **module_globals)
         patcher.start()
         self.addfinalizer(patcher.stop)
-
-    def _patch_unloadable_functions_globals(self, module, mocks, module_globals):
-        # Create a copy of the module_globals dictionary without any salt dunders
-        # The module's private function don't have access to it
-        salt_dunders = (
-            self.salt_module_dunders
-            + self.salt_module_dunders_optional
-            + self.salt_module_dunder_attributes
-        )
-        function_globals = {
-            k: v for (k, v) in module_globals.items() if k not in salt_dunders
-        }
-        for name in dir(module):
-            if name in ("__init__", "__virtual__"):
-                # These are salt loader related functions, skip them
-                continue
-            if not name.startswith("_"):
-                # We are only interested in "private" functions
-                continue
-            func = getattr(module, name)
-            if not LazyLoader.loadable_function(func):
-                # Not a function!? Skip it!!!
-                continue
-            if isinstance(func, functools.partial):
-                func = func.func
-            if func.__module__ != module.__name__:
-                # Don't patch imported functions.
-                # XXX: This should actually be the default loader behavior
-                continue
-            if hasattr(func, "__wrapped__"):
-                log.trace(
-                    "%s is a decorated function. Searching for the undecorated function",
-                    func,
-                )
-                while True:
-                    try:
-                        func = func.__wrapped__
-                    except AttributeError:
-                        break
-            log.trace("Patching globals for %s; globals: %s", func, function_globals)
-            patcher = patch.dict(func.__globals__, values=function_globals)
-            patcher.start()
-            self.addfinalizer(patcher.stop)
 
     def __enter__(self):
         self.start()
