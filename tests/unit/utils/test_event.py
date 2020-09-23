@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -6,7 +5,6 @@
     tests.unit.utils.event_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import os
@@ -21,7 +19,7 @@ import zmq
 import zmq.eventloop.ioloop
 from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
-from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes import terminate_process
 from tests.support.events import eventpublisher_process, eventsender_process
 from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
@@ -49,7 +47,7 @@ class TestSaltEvent(TestCase):
     def assertGotEvent(self, evt, data, msg=None):
         self.assertIsNotNone(evt, msg)
         for key in data:
-            self.assertIn(key, evt, "{0}: Key {1} missing".format(msg, key))
+            self.assertIn(key, evt, "{}: Key {} missing".format(msg, key))
             assertMsg = "{0}: Key {1} value mismatch, {2} != {3}"
             assertMsg = assertMsg.format(msg, key, data[key], evt[key])
             self.assertEqual(data[key], evt[key], assertMsg)
@@ -57,11 +55,11 @@ class TestSaltEvent(TestCase):
     def test_master_event(self):
         me = salt.utils.event.MasterEvent(self.sock_dir, listen=False)
         self.assertEqual(
-            me.puburi, "{0}".format(os.path.join(self.sock_dir, "master_event_pub.ipc"))
+            me.puburi, "{}".format(os.path.join(self.sock_dir, "master_event_pub.ipc"))
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(os.path.join(self.sock_dir, "master_event_pull.ipc")),
+            "{}".format(os.path.join(self.sock_dir, "master_event_pull.ipc")),
         )
 
     def test_minion_event(self):
@@ -72,14 +70,14 @@ class TestSaltEvent(TestCase):
         me = salt.utils.event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pub.ipc".format(id_hash))
+            "{}".format(
+                os.path.join(self.sock_dir, "minion_event_{}_pub.ipc".format(id_hash))
             ),
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pull.ipc".format(id_hash))
+            "{}".format(
+                os.path.join(self.sock_dir, "minion_event_{}_pull.ipc".format(id_hash))
             ),
         )
 
@@ -94,14 +92,14 @@ class TestSaltEvent(TestCase):
         id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
         self.assertEqual(
             me.puburi,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pub.ipc".format(id_hash))
+            "{}".format(
+                os.path.join(self.sock_dir, "minion_event_{}_pub.ipc".format(id_hash))
             ),
         )
         self.assertEqual(
             me.pulluri,
-            "{0}".format(
-                os.path.join(self.sock_dir, "minion_event_{0}_pull.ipc".format(id_hash))
+            "{}".format(
+                os.path.join(self.sock_dir, "minion_event_{}_pull.ipc".format(id_hash))
             ),
         )
 
@@ -270,11 +268,9 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process(self.sock_dir):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             for i in range(500):
-                me.fire_event({"data": "{0}".format(i)}, "testevents")
+                me.fire_event({"data": "{}".format(i)}, "testevents")
                 evt = me.get_event(tag="testevents")
-                self.assertGotEvent(
-                    evt, {"data": "{0}".format(i)}, "Event {0}".format(i)
-                )
+                self.assertGotEvent(evt, {"data": "{}".format(i)}, "Event {}".format(i))
 
     @slowTest
     def test_event_many_backlog(self):
@@ -283,12 +279,10 @@ class TestSaltEvent(TestCase):
             me = salt.utils.event.MasterEvent(self.sock_dir, listen=True)
             # Must not exceed zmq HWM
             for i in range(500):
-                me.fire_event({"data": "{0}".format(i)}, "testevents")
+                me.fire_event({"data": "{}".format(i)}, "testevents")
             for i in range(500):
                 evt = me.get_event(tag="testevents")
-                self.assertGotEvent(
-                    evt, {"data": "{0}".format(i)}, "Event {0}".format(i)
-                )
+                self.assertGotEvent(evt, {"data": "{}".format(i)}, "Event {}".format(i))
 
     # Test the fire_master function. As it wraps the underlying fire_event,
     # we don't need to perform extensive testing.
@@ -312,7 +306,7 @@ class TestAsyncEventPublisher(AsyncTestCase):
         return salt.ext.tornado.ioloop.IOLoop()
 
     def setUp(self):
-        super(TestAsyncEventPublisher, self).setUp()
+        super().setUp()
         self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
         if not os.path.exists(self.sock_dir):
             os.makedirs(self.sock_dir)
