@@ -26,8 +26,6 @@ import time
 import traceback
 
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -49,7 +47,14 @@ import salt.utils.url
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
-from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
+
+# Import salt libs
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltInvocationError,
+    SaltRenderError,
+    SaltReqTimeoutError,
+)
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -2179,11 +2184,13 @@ class State:
             if not name:
                 name = low.get("name", low.get("__id__"))
 
+            # Put the only exception message in case of SaltInvocationError else put the traceback
+            cmt = exc if isinstance(exc, SaltInvocationError) else trb
             ret = {
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": "An exception occurred in this state: {}".format(cmt),
             }
         finally:
             if low.get("__prereq__"):

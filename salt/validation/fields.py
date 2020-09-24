@@ -2,7 +2,13 @@ from collections.abc import Iterable, Mapping
 
 try:
     from marshmallow import ValidationError
-    from marshmallow.fields import Str, Bool, Dict, Field  # pylint: disable=unused-import
+    from marshmallow.fields import (  # pylint: disable=unused-import
+        Str,
+        Bool,
+        Dict,
+        Field,
+        Raw,
+    )
 except ModuleNotFoundError:
     marshmallow = None
 
@@ -27,6 +33,8 @@ class Charset(Field):
         self.charset = set(charset)
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if isinstance(value, (bytes, str)) and all((char in self.charset for char in value)):
+        if isinstance(value, (bytes, str)) and all(
+            (char in self.charset for char in value)
+        ):
             return value
         raise ValidationError("Value must be str or bytes")

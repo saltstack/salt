@@ -170,9 +170,12 @@ class ArgsTestCase(TestCase):
         )
         # Expected extras not dropped if match args/kwargs
         self.assertEqual(
-            salt.utils.args.format_call(foo, dict(one=1, two=2, three=3),
-                                        expected_extra_kws=("one", "two", "three")),
-            {"args": [1], "kwargs": {"two": 2, "three": 3}}
+            salt.utils.args.format_call(
+                foo,
+                dict(one=1, two=2, three=3),
+                expected_extra_kws=("one", "two", "three"),
+            ),
+            {"args": [1], "kwargs": {"two": 2, "three": 3}},
         )
 
     def test_format_call_mimic_typeerror_exceptions(self):

@@ -24,18 +24,34 @@ def validator(schema):
             data = arg_data["kwargs"]
             for name, value in zip(fun_args, args):
                 data[name] = value
-            if aspec.varargs and len(args) > len(fun_args):
-                data[aspec.varargs] = fun_args[len(args) :]
+            if len(args) > len(fun_args):
+                if aspec.varargs:
+                    data[aspec.varargs] = fun_args[len(args) :]
+                else:
+                    # kwargs passed positionally
+                    kws = aspec.args[len(fun_args) :]
+                    for name, value in zip(kws, args[len(fun_args) :]):
+                        data[name] = value
+
             data.update(kwargs)
 
             # Do validate, data may be updated
             try:
                 data = schema().load(data)
             except ValidationError as ex:
-                raise SaltInvocationError(ex)
+                msg = "Arguments validation failed for '{}.{}': ".format(
+                    function.__module__, function.__name__
+                )
+                if isinstance(ex.messages, dict):
+                    for arg, err in ex.messages.items():
+                        msg += "{}: {}".format(arg, ", ".join(err))
+                elif isinstance(ex.messages, list):
+                    for err in ex.messages:
+                        msg += ", ".join(err)
+                raise SaltInvocationError(msg)
             # Extract args and kwargs from data dict
             args = [data.pop(arg) for arg in fun_args]
-            # Call the funciton
+            # Call the function
             return function(*args, **data)
 
         # Set __validator__ attribute to mark the function as self-validated.

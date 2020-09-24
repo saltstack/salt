@@ -318,8 +318,8 @@ from salt.ext.six.moves import zip_longest
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
-
 from salt.validation import fields, validator
+
 try:
     import marshmallow
 except ModuleNotFoundError:
@@ -2247,7 +2247,7 @@ def missing(name, **kwargs):
 
 class ManagedSchema(marshmallow.Schema):
     name = fields.Str(required=True)
-    source = fields.Str()
+    source = fields.Str(allow_none=True)
     source_hash = fields.Str(allow_none=True)
     source_hash_name = fields.Str(allow_none=True)
     keep_source = fields.Bool()
@@ -2264,7 +2264,7 @@ class ManagedSchema(marshmallow.Schema):
     backup = fields.Str(allow_none=True)
     show_changes = fields.Bool()
     create = fields.Bool()
-    contents = fields.StringList(allow_none=True)
+    contents = fields.Raw(allow_none=True)
     tmp_dir = fields.Str()
     tmp_ext = fields.Str()
     contents_pillar = fields.StringList(allow_none=True)
