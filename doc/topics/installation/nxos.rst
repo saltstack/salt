@@ -14,7 +14,7 @@ STEP 1: Verify Platform and Software Version Support
 
 The following platforms and software versions have been certified to work with this version of Salt.
 
-  .. table:: Platform / Software Mininum Requirements
+  .. table:: Platform / Software Minimum Requirements
      :widths: auto
      :align: center
 
