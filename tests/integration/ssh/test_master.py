@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Simple Smoke Tests for Connected SSH minions
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from tests.support.case import SSHCase
 from tests.support.helpers import requires_system_grains, skip_if_not_root, slowTest
@@ -45,16 +43,6 @@ class SSHMasterTestCase(SSHCase):
         self.run_function("service.start", [service])
         ret = self.run_function("service.status", [service])
         self.assertTrue(ret)
-
-    @requires_system_grains
-    @slowTest
-    def test_grains_items(self, grains):
-        os_family = grains["os_family"]
-        ret = self.run_function("grains.items")
-        if os_family == "MacOS":
-            self.assertEqual(ret["kernel"], "Darwin")
-        else:
-            self.assertEqual(ret["kernel"], "Linux")
 
     @slowTest
     def test_state_apply(self):
