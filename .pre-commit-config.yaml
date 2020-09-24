@@ -703,6 +703,19 @@ repos:
             salt/client/ssh/ssh_py_shim.py
           )$
 
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
+    hooks:
+      - id: nox
+        alias: remove-import-comments
+        name: Remove import comments
+        files: .*\.py$
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - imports.remove-comments
+
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
@@ -738,10 +751,10 @@ repos:
         files: ^doc/.*\.rst
         additional_dependencies: [black==19.10b0]
 
-  - repo: https://github.com/saltstack/salt-nox-pre-commit
-    rev: master
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
     hooks:
-      - id: nox-py2
+      - id: nox
         alias: lint-salt
         name: Lint Salt
         files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
@@ -750,10 +763,10 @@ repos:
           - lint-salt-pre-commit
           - --
 
-  - repo: https://github.com/saltstack/salt-nox-pre-commit
-    rev: master
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
     hooks:
-      - id: nox-py2
+      - id: nox
         alias: lint-tests
         name: Lint Tests
         files: ^tests/.*\.py$
@@ -762,10 +775,10 @@ repos:
           - lint-tests-pre-commit
           - --
 
-  - repo: https://github.com/saltstack/salt-nox-pre-commit
-    rev: master
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
     hooks:
-      - id: nox-py2
+      - id: nox
         alias: check-docs
         name: Check Docs
         files: ^(salt/.*\.py|doc/ref/.*\.rst)$
@@ -775,10 +788,10 @@ repos:
           - --
           - docs.check
 
-  - repo: https://github.com/saltstack/salt-nox-pre-commit
-    rev: master
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
     hooks:
-      - id: nox-py2
+      - id: nox
         alias: check-filemap
         name: Check Filename Map Change Matching
         files: ^tests/filename_map\.yml$
