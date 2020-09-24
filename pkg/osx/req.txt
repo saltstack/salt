@@ -27,5 +27,5 @@ pyzmq==19.0.0 ; python_version >= "3.8"
 requests==2.21.0
 setproctitle
 six==1.14.0
-timelib==0.2.4
+timelib==0.2.5
 vultr==1.0.1
