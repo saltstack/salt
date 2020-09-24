@@ -2,14 +2,14 @@ import sys
 
 import pytest
 import salt.modules.transactional_update as tu
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(salt.utils.platform.is_windows(), "Do not run these tests on Windows")
 class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.transactional_update
