@@ -681,11 +681,18 @@ allowed-3rd-party-modules=msgpack,
                           libcloud,
                           zmq,
                           pytest,
+                          attr,
                           setuptools,
                           pytestsalt,
                           saltfactories,
-                          distro
-
+                          distro,
+                          os,
+                          re,
+                          shutil,
+                          copy,
+                          base64,
+                          tempfile,
+                          fnmatch
 
 [EXCEPTIONS]
 
