@@ -5,7 +5,7 @@ Boto3 Common Utils
 Note: This module depends on the dicts packed by the loader and,
 therefore, must be accessed via the loader or from the __utils__ dict.
 
-This module provides common functionality for the boto execution modules.
+This module provides common functionality for the boto3 execution modules.
 The expected usage is to call `apply_funcs` from the `__virtual__` function
 of the module. This will bring properly initilized partials of  `_get_conn`
 and `_cache_id` into the module's namespace.
@@ -38,10 +38,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
-    import boto
     import boto3
-    import boto.exception
-    import boto3.session
     import botocore  # pylint: disable=W0611
 
     # pylint: enable=import-error
@@ -176,11 +173,11 @@ def get_connection(
     service, module=None, region=None, key=None, keyid=None, profile=None
 ):
     """
-    Return a boto connection for the service.
+    Return a boto3 connection for the service.
 
     .. code-block:: python
 
-        conn = __utils__['boto.get_connection']('ec2', profile='custom_profile')
+        conn = __utils__['boto3.get_connection']('ec2', profile='custom_profile')
     """
 
     module = module or service
@@ -191,21 +188,19 @@ def get_connection(
     if cxkey in __context__:
         return __context__[cxkey]
 
-    try:
-        session = boto3.session.Session(
-            aws_access_key_id=keyid, aws_secret_access_key=key, region_name=region
-        )
-        if session is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
-        conn = session.client(module)
-        if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
-    except boto.exception.NoAuthHandlerFound:
-        raise SaltInvocationError(
-            "No authentication credentials found when "
-            "attempting to make boto {} connection to "
-            'region "{}".'.format(service, region)
-        )
+    session = boto3.session.Session(
+        aws_access_key_id=keyid,
+        aws_secret_access_key=key,
+        region_name=region,
+        profile_name=profile,
+    )
+
+    # some services are global and return an empty list
+    available_regions = session.get_available_regions(module)
+    if len(available_regions) > 0 and region not in available_regions:
+        raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+
+    conn = session.client(module)
     __context__[cxkey] = conn
     return conn
 
