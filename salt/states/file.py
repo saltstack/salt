@@ -5730,13 +5730,13 @@ def blockreplace(
         If markers are not found, this parameter can be set to a regex which will
         insert the block before the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     insert_after_match
         If markers are not found, this parameter can be set to a regex which will
         insert the block after the first found occurrence in the file.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     backup
         The file extension to use for a backup of the file if any edit is made.
