@@ -2914,7 +2914,7 @@ def info_installed(*names, **kwargs):
 
         .. versionadded:: 2016.11.3
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2986,7 +2986,7 @@ def list_downloaded(root=None, **kwargs):
     root
         operate on a different root directory.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

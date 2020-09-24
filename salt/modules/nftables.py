@@ -631,7 +631,9 @@ def check_table(table=None, family="ipv4"):
     """
     Check for the existence of a table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nftables.check_table nat
     """
