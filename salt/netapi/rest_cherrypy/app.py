@@ -691,7 +691,7 @@ def salt_api_acl_tool(username, request):
     in order to provide whitelisting for the API similar to the
     master, but over the API.
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         rest_cherrypy:
             api_acl:

@@ -675,7 +675,9 @@ def install(
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Complicated CLI example::
+    Complicated CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install markdown,django \
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True

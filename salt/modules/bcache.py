@@ -54,7 +54,7 @@ def uuid(dev=None):
     Return the bcache UUID of a block device.
     If no device is given, the Cache UUID is returned.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -79,7 +79,7 @@ def attach_(dev=None):
     Attach a backing devices to a cache set
     If no dev is given, all backing devices will be attached.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -136,7 +136,7 @@ def detach(dev=None):
     Detaching a backing device will flush its write cache.
     This should leave the underlying device in a consistent state, but might take a while.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -167,7 +167,7 @@ def start():
     """
     Trigger a start of the full bcache system through udev.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -194,7 +194,7 @@ def stop(dev=None):
         'Stop' on an individual backing device means hard-stop;
         no attempt at flushing will be done and the bcache device will seemingly 'disappear' from the device lists
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -230,7 +230,7 @@ def back_make(dev, cache_mode="writeback", force=False, attach=True, bucket_size
     Create a backing device for attachment to a set.
     Because the block size must be the same, a cache set already needs to exist.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -299,7 +299,7 @@ def cache_make(
     Create BCache cache on a block device.
     If blkdiscard is available the entire device will be properly cleared in advance.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -404,7 +404,7 @@ def config_(dev=None, **kwargs):
 
     If no device is given, operate on the cache set itself.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -450,7 +450,7 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
     """
     Show the full status of the BCache system and optionally all its involved devices
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -499,7 +499,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     """
     Check the state of a single bcache device
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -620,7 +620,7 @@ def super_(dev):
     """
     Read out BCache SuperBlock
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

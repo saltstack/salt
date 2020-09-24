@@ -135,7 +135,7 @@ def package_list():
     List "packages" by executing a command via ssh
     This function is called in response to the salt command
 
-    ..code-block::bash
+    .. code-block::bash
         salt target_minion pkg.list_pkgs
 
     """

@@ -222,7 +222,9 @@ def update(
     """
     Update a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.update table_name region=us-east-1
     """
@@ -269,7 +271,9 @@ def describe(table_name, region=None, key=None, keyid=None, profile=None):
     """
     Describe a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.describe table_name region=us-east-1
     """

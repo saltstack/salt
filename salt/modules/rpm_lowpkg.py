@@ -466,7 +466,7 @@ def diff(package_path, path):
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -507,7 +507,7 @@ def info(*packages, **kwargs):
 
     :return:
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

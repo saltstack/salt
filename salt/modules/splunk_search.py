@@ -218,7 +218,7 @@ def list_all(
     with the prefix; alarms that have the prefix will be skipped. This can be
     used to convert existing alarms to be managed by salt, as follows:
 
-    CLI example:
+    CLI Example:
 
             1. Make a "backup" of all existing searches
                 $ salt-call splunk_search.list_all --out=txt | sed "s/local: //" > legacy_searches.sls

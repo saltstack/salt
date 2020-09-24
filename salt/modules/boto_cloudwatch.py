@@ -81,7 +81,9 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
     """
     Get alarm details. Also can be used to check to see if an alarm exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.get_alarm myalarm region=us-east-1
     """
@@ -152,7 +154,9 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None, profile=None)
             $ salt-call boto_cloudwatch.get_all_alarms --out=txt | sed "s/local: //" > final_alarms.sls
             $ diff final_alarms.sls managed_alarms.sls
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_cloudwatch.get_all_alarms region=us-east-1 --out=txt
     """
@@ -216,7 +220,7 @@ def create_or_update_alarm(
     boto_cloudwatch_alarm.present states which have alarm_actions that
     reference the scaling_policy.
 
-    CLI example:
+    CLI Example:
 
         salt myminion boto_cloudwatch.create_alarm name=myalarm ... region=us-east-1
     """
@@ -289,7 +293,9 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
     Convert a list of strings into actual arns. Converts convenience names such
     as 'scaling_policy:...'
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' convert_to_arn 'scaling_policy:'
     """
