@@ -23,40 +23,40 @@ class IniManageTestCase(TestCase):
     Testing ini_manage exec module.
     """
 
-    TEST_FILE_CONTENT = os.linesep.join(
-        [
-            "# Comment on the first line",
-            "",
-            "# First main option",
-            "option1=main1",
-            "",
-            "# Second main option",
-            "option2=main2",
-            "",
-            "",
-            "[main]",
-            "# Another comment",
-            "test1=value 1",
-            "",
-            "test2=value 2",
-            "",
-            "[SectionB]",
-            "test1=value 1B",
-            "",
-            "# Blank line should be above",
-            "test3 = value 3B",
-            "",
-            "[SectionC]",
-            "# The following option is empty",
-            "empty_option=",
-        ]
-    )
+    TEST_FILE_CONTENT = [
+        "# Comment on the first line",
+        "",
+        "# First main option",
+        "option1=main1",
+        "",
+        "# Second main option",
+        "option2=main2",
+        "",
+        "",
+        "[main]",
+        "# Another comment",
+        "test1=value 1",
+        "",
+        "test2=value 2",
+        "",
+        "[SectionB]",
+        "test1=value 1B",
+        "",
+        "# Blank line should be above",
+        "test3 = value 3B",
+        "",
+        "[SectionC]",
+        "# The following option is empty",
+        "empty_option=",
+    ]
 
     maxDiff = None
 
-    def setUp(self):
+    def setUp(self, linesep=os.linesep):
         self.tfile = tempfile.NamedTemporaryFile(delete=False, mode="w+b")
-        self.tfile.write(salt.utils.stringutils.to_bytes(self.TEST_FILE_CONTENT))
+        self.tfile.write(
+            salt.utils.stringutils.to_bytes(linesep.join(self.TEST_FILE_CONTENT))
+        )
         self.tfile.close()
 
     def tearDown(self):
@@ -214,3 +214,23 @@ class IniManageTestCase(TestCase):
             {"SectionB": {"test3": "this value will be edited two times"}},
         )
         self.test_empty_lines()
+
+    def test_newline_characters(self):
+        """
+        Test newline characters
+        """
+        for c in ["\n", "\r", "\r\n"]:
+            for test in [
+                self.test_get_option,
+                self.test_get_section,
+                self.test_remove_option,
+                self.test_remove_section,
+                self.test_get_ini,
+                self.test_set_option,
+                self.test_empty_value,
+                self.test_empty_lines,
+                self.test_empty_lines_multiple_edits,
+            ]:
+                self.tearDown()
+                self.setUp(c)
+                test()

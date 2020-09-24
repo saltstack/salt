@@ -417,6 +417,7 @@ class _Ini(_Section):
             try:
                 with salt.utils.files.fopen(self.name) as rfh:
                     inicontents = salt.utils.stringutils.to_unicode(rfh.read())
+                    inicontents = os.linesep.join(inicontents.splitlines())
             except OSError as exc:
                 if __opts__["test"] is False:
                     raise CommandExecutionError(
