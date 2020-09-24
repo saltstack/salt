@@ -2500,7 +2500,7 @@ def image_get(
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_get <fingerprint>
     """
@@ -2558,7 +2558,7 @@ def image_get_by_alias(
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_get_by_alias xenial/amd64
     """
@@ -2610,7 +2610,7 @@ def image_delete(image, remote_addr=None, cert=None, key=None, verify_cert=True)
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_delete xenial/amd64
     """
@@ -2680,7 +2680,7 @@ def image_from_simplestreams(
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
     """
@@ -2761,7 +2761,7 @@ def image_from_url(
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
     """
@@ -2842,7 +2842,7 @@ def image_from_file(
 
         CLI Examples:
 
-        ..code-block:: bash
+        .. code-block:: bash
 
             $ salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
     """

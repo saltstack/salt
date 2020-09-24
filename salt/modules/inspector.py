@@ -261,7 +261,7 @@ def delete(all=False, *databases):
 
     ::parameter: all. Default: False. Remove all snapshots, if set to True.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 

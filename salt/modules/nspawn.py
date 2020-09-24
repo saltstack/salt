@@ -751,7 +751,9 @@ def bootstrap_salt(
     minion is running as will be created, otherwise the needed bootstrapping
     tools will need to be available on the host.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nspawn.bootstrap_salt arch1
     """

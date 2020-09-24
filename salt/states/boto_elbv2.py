@@ -108,7 +108,7 @@ def create_target_group(
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
     .. code-block:: yaml
 
         create-target:
@@ -168,7 +168,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
