@@ -703,6 +703,19 @@ repos:
             salt/client/ssh/ssh_py_shim.py
           )$
 
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
+    hooks:
+      - id: nox
+        alias: remove-import-comments
+        name: Remove import comments
+        files: .*\.py$
+        args:
+          - -e
+          - invoke-pre-commit
+          - --
+          - imports.remove-comments
+
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
     hooks:
