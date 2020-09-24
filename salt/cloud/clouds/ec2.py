@@ -1214,21 +1214,28 @@ def get_imageid(vm_):
     )
     if image.startswith('ami-'):
         return image
+    else:
+        return _get_imageid_from_image_name(image)
+
+
+def _get_imageid_from_image_name(image_name):
+    '''
+    Returns most recent 'ami-*' imageId matching image name
+    '''
     # a poor man's cache
-    if not hasattr(get_imageid, 'images'):
-        get_imageid.images = {}
-    elif image in get_imageid.images:
-        return get_imageid.images[image]
+    if not hasattr(_get_imageid_from_image_name, 'images'):
+        _get_imageid_from_image_name.images = {}
+    elif image_name in _get_imageid_from_image_name.images:
+        return _get_imageid_from_image_name.images[image_name]
     params = {'Action': 'DescribeImages',
               'Filter.0.Name': 'name',
-              'Filter.0.Value.0': image}
+              'Filter.0.Value.0': image_name}
     # Query AWS, sort by 'creationDate' and get the last imageId
-    _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
+                      key=lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
                       )[-1]['imageId']
-    get_imageid.images[image] = image_id
+    _get_imageid_from_image_name.images[image_name] = image_id
     return image_id
 
 
@@ -2644,7 +2651,7 @@ def create(vm_=None, call=None):
             vm_['instance_id_list'].append(instance['instanceId'])
 
         vm_['instance_id'] = vm_['instance_id_list'].pop()
-        if len(vm_['instance_id_list']) > 0:
+        if vm_['instance_id_list']:
             # Multiple instances were spun up, get one now, and queue the rest
             queue_instances(vm_['instance_id_list'])
 
@@ -4887,6 +4894,8 @@ def get_password_data(
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_M2 and not HAS_PYCRYPTO:
+        if 'key' in kwargs or 'key_file' in kwargs:
+            log.warn("No crypto library is installed, can not decrypt password")
         return ret
 
     if 'key' not in kwargs:

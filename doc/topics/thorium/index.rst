@@ -346,12 +346,12 @@ event bus, and returns ``True`` if that event's tag matches. For example:
         run_remote_ex:
           local.cmd:
             - tgt: '*'
-            - func: test.ping
+            - func: test.version
             - require:
               - check: salt/foo/*/bar
 
 This formula will look for an event whose tag is ``salt/foo/<anything>/bar`` and
-if it comes in, issue a ``test.ping`` to all minions.
+if it comes in, issue a ``test.version`` to all minions.
 
 
 Register Persistence

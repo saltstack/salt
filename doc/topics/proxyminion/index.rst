@@ -188,7 +188,7 @@ The key thing to remember is the left-most section of the diagram.  Salt's
 nature is to have a minion connect to a master, then the master may control
 the minion.  However, for proxy minions, the target device cannot run a minion.
 
-After the proxy minion is started and initiates its connection to the 'dumb'
+After the proxy minion is started and initiates its connection to the
 device, it connects back to the salt-master and for all intents and purposes
 looks like just another minion to the Salt master.
 
@@ -220,23 +220,23 @@ based on the diagram above:
 .. code-block:: yaml
 
     base:
-      dumbdevice1:
-        - dumbdevice1
-      dumbdevice2:
-        - dumbdevice2
-      dumbdevice3:
-        - dumbdevice3
-      dumbdevice4:
-        - dumbdevice4
-      dumbdevice5:
-        - dumbdevice5
-      dumbdevice6:
-        - dumbdevice6
-      dumbdevice7:
-        - dumbdevice7
+      net-device1:
+        - net-device1
+      net-device2:
+        - net-device2
+      net-device3:
+        - net-device3
+      i2c-device4:
+        - i2c-device4
+      i2c-device5:
+        - i2c-device5
+      433wireless-device6:
+        - 433wireless-device6
+      smsgate-device7:
+        - device7
 
 
-``/srv/pillar/dumbdevice1.sls``
+``/srv/pillar/net-device1.sls``
 
 .. code-block:: yaml
 
@@ -247,7 +247,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice2.sls``
+``/srv/pillar/net-device2.sls``
 
 .. code-block:: yaml
 
@@ -258,7 +258,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice3.sls``
+``/srv/pillar/net-device3.sls``
 
 .. code-block:: yaml
 
@@ -269,7 +269,7 @@ based on the diagram above:
       passwd: letmein
 
 
-``/srv/pillar/dumbdevice4.sls``
+``/srv/pillar/i2c-device4.sls``
 
 .. code-block:: yaml
 
@@ -278,7 +278,7 @@ based on the diagram above:
       i2c_address: 1
 
 
-``/srv/pillar/dumbdevice5.sls``
+``/srv/pillar/i2c-device5.sls``
 
 .. code-block:: yaml
 
@@ -287,7 +287,7 @@ based on the diagram above:
         i2c_address: 2
 
 
-``/srv/pillar/dumbdevice6.sls``
+``/srv/pillar/433wireless-device6.sls``
 
 .. code-block:: yaml
 
@@ -295,7 +295,7 @@ based on the diagram above:
         proxytype: 433mhz_wireless
 
 
-``/srv/pillar/dumbdevice7.sls``
+``/srv/pillar/smsgate-device7.sls``
 
 .. code-block:: yaml
 
@@ -309,18 +309,18 @@ the type of device that the proxy-minion is managing.
 
 In the above example
 
-- dumbdevices 1, 2, and 3 are network switches that have a management
+- net-devices 1, 2, and 3 are network switches that have a management
   interface available at a particular IP address.
 
-- dumbdevices 4 and 5 are very low-level devices controlled over an i2c bus.
+- i2c-devices 4 and 5 are very low-level devices controlled over an i2c bus.
   In this case the devices are physically connected to machine
   'minioncontroller2', and are addressable on the i2c bus at their respective
   i2c addresses.
 
-- dumbdevice6 is a 433 MHz wireless transmitter, also physically connected to
+- 433wireless-device6 is a 433 MHz wireless transmitter, also physically connected to
   minioncontroller2
 
-- dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a
+- smsgate-device7 is an SMS gateway connected to machine minioncontroller3 via a
   serial port.
 
 Because of the way pillar works, each of the salt-proxy processes that fork off the

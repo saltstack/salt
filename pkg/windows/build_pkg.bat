@@ -495,8 +495,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\xfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\xfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\yumpkg.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\yum.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\zabbix.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\zabbix.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\znc.py"^
@@ -601,8 +599,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\vbox_guest.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\vbox_guest.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\virt.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\virt.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\zabbix*"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\zabbix*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\zfs.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\zpool.py"^

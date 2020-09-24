@@ -3,6 +3,8 @@ base:
     - generic
     - blackout
     - sdb
+    - include
+    - glob_include
   'sub_minion':
     - sdb
     - generic

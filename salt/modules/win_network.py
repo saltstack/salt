@@ -32,10 +32,7 @@ try:
     import wmi  # pylint: disable=W0611
 except ImportError:
     HAS_DEPENDENCIES = False
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 # Define the module's virtual name
 __virtualname__ = 'network'

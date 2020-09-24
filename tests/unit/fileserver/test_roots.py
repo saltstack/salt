@@ -153,6 +153,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.file_list_emptydirs({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
 
+    def test_file_list_with_slash(self):
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['foo/bar'] = opts['file_roots']['base']
+        load = {
+                'saltenv': 'foo/bar',
+                }
+        with patch.dict(roots.__opts__, opts):
+            ret = roots.file_list(load)
+        self.assertIn('testfile', ret)
+        self.assertIn(UNICODE_FILENAME, ret)
+
     def test_dir_list(self):
         ret = roots.dir_list({'saltenv': 'base'})
         self.assertIn('empty_dir', ret)
@@ -168,3 +179,20 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
+
+    def test_dynamic_file_roots(self):
+        dyn_root_dir = tempfile.mkdtemp(dir=TMP)
+        top_sls = os.path.join(dyn_root_dir, 'top.sls')
+        with salt.utils.files.fopen(top_sls, 'w') as fp_:
+            fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")
+        dynamo_sls = os.path.join(dyn_root_dir, 'dynamo.sls')
+        with salt.utils.files.fopen(dynamo_sls, 'w') as fp_:
+            fp_.write("foo:\n  test.nop\n")
+        opts = {'file_roots': copy.copy(self.opts['file_roots'])}
+        opts['file_roots']['__env__'] = [dyn_root_dir]
+        with patch.dict(roots.__opts__, opts):
+            ret1 = roots.find_file('dynamo.sls', 'dyn')
+            ret2 = roots.file_list({'saltenv': 'dyn'})
+        self.assertEqual('dynamo.sls', ret1['rel'])
+        self.assertIn('top.sls', ret2)
+        self.assertIn('dynamo.sls', ret2)

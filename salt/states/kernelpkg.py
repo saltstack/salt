@@ -144,8 +144,7 @@ def latest_active(name, at_time=None, **kwargs):  # pylint: disable=unused-argum
 
         if __opts__['test']:
             ret['result'] = None
-            ret['changes'] = {}
-            ret['pchanges'] = {'kernel': {
+            ret['changes'] = {'kernel': {
                 'old': active,
                 'new': latest
             }}

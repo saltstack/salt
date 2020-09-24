@@ -376,11 +376,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test zpool present with non existing pool
         '''
-        ret = {'name': 'myzpool',
-               'result': True,
-               'comment': 'no update needed',
-               'changes': {}}
-
         config = {
             'import': False,
         }
@@ -436,9 +431,35 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ('altroot', '-'),
             ('fragmentation', '0%'),
         ]))
+
+        ret = {'name': 'myzpool',
+               'result': True,
+               'comment': 'no update needed',
+               'changes': {}}
+
         with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
              patch.dict(zpool.__salt__, {'zpool.get': mock_get}), \
              patch.dict(zpool.__utils__, utils_patch):
+            self.assertEqual(
+                zpool.present(
+                    'myzpool',
+                    config=config,
+                    layout=layout,
+                    properties=properties,
+                ),
+                ret,
+            )
+
+        # Run state with test=true
+        ret = {'name': 'myzpool',
+               'result': True,
+               'comment': 'storage pool myzpool is uptodate',
+               'changes': {}}
+
+        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
+             patch.dict(zpool.__salt__, {'zpool.get': mock_get}), \
+             patch.dict(zpool.__utils__, utils_patch), \
+             patch.dict(zpool.__opts__, {"test": True}):
             self.assertEqual(
                 zpool.present(
                     'myzpool',

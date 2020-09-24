@@ -133,7 +133,7 @@ try:
     # Default to `en-US` (1033)
     windll = ctypes.windll.kernel32
     INSTALL_LANGUAGE = locale.windows_locale.get(
-        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
+        windll.GetSystemDefaultUILanguage(), 'en_US').replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
@@ -5083,7 +5083,7 @@ def _findOptionValueAdvAudit(option):
                 field_names = _get_audit_defaults('fieldnames')
                 # If the file doesn't exist anywhere, create it with default
                 # fieldnames
-                __salt__['file.mkdir'](os.path.dirname(f_audit))
+                __salt__['file.makedirs'](f_audit)
                 __salt__['file.write'](f_audit, ','.join(field_names))
 
         audit_settings = {}
@@ -5187,7 +5187,7 @@ def _set_audit_file_data(option, value):
             # Copy the temporary csv file over the existing audit.csv in both
             # locations if a value was written
             __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
-            __salt__['file.mkdir'](os.path.dirname(f_audit_gpo))
+            __salt__['file.makedirs'](f_audit_gpo)
             __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
     finally:
         f_temp.close()
@@ -5605,7 +5605,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                                                        )
                                         ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
-                    valueName = pol_entry[1]
+                    valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
@@ -5857,7 +5857,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1).encode('utf-16-le')
+            this_element_value = struct.pack('I', 1)
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
@@ -5923,18 +5923,18 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
-            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+            if element.attrib.get('explicitValue', 'false').lower() == 'true':
                 if this_element_value is not None:
-                    element_valuenames = this_element_value.keys()
-                    element_values = this_element_value.values()
-            if 'valuePrefix' in element.attrib:
+                    element_valuenames = [str(k) for k in this_element_value.keys()]
+                    element_values = [str(v) for v in this_element_value.values()]
+            elif 'valuePrefix' in element.attrib:
                 # if the valuePrefix attribute exists, the valuenames are <prefix><number>
                 # most prefixes attributes are empty in the admx files, so the valuenames
                 # end up being just numbers
                 if element.attrib['valuePrefix'] != '':
                     if this_element_value is not None:
-                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                              k) for k in element_valuenames]
+                        element_valuenames = ['{0}{1}'.format(
+                            element.attrib['valuePrefix'], k) for k in element_valuenames]
             else:
                 # if there is no valuePrefix attribute, the valuename is the value
                 if element_values is not None:

@@ -14,12 +14,17 @@ import re
 
 # Import Salt libs
 import salt.utils.path
+import salt.modules.cmdmod
 
+__salt__ = {
+    'cmd.run_all': salt.modules.cmdmod.run_all
+}
 log = logging.getLogger(__name__)
 
 
 def get_certs_path():
-    icinga2_output = __salt__['cmd.run_all']([salt.utils.path.which('icinga2'), "--version"], python_shell=False)
+    icinga2_output = __salt__['cmd.run_all']([salt.utils.path.which('icinga2'),
+                                              "--version"], python_shell=False)
     version = re.search(r'r\d+\.\d+', icinga2_output['stdout']).group(0)
     # Return new certs path for icinga2 >= 2.8
     if int(version.split('.')[1]) >= 8:

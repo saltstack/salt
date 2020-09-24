@@ -111,35 +111,72 @@ class MineTest(ModuleCase):
                 ['grains.items']
             )
         )
+        # Smoke testing that grains should now exist in the mine
+        ret_grains = self.run_function(
+            'mine.get',
+            ['minion', 'grains.items']
+        )
+        self.assertEqual(ret_grains['minion']['id'], 'minion')
+        self.assertTrue(
+            self.run_function(
+                'mine.send',
+                ['test.arg', 'foo=bar', 'fnord=roscivs'],
+            )
+        )
+        ret_args = self.run_function(
+            'mine.get',
+            ['minion', 'test.arg']
+        )
+        expected = {
+            'minion': {
+                'args': [],
+                'kwargs': {
+                    'fnord': 'roscivs',
+                    'foo': 'bar',
+                },
+            },
+        }
+        # Smoke testing that test.arg exists in the mine
+        self.assertDictEqual(ret_args, expected)
         self.assertTrue(
             self.run_function(
                 'mine.send',
                 ['test.echo', 'foo']
             )
         )
-        ret_grains = self.run_function(
-            'mine.get',
-            ['minion', 'grains.items']
-        )
-        self.assertEqual(ret_grains['minion']['id'], 'minion')
         ret_echo = self.run_function(
             'mine.get',
             ['minion', 'test.echo']
         )
+        # Smoke testing that we were also able to set test.echo in the mine
         self.assertEqual(ret_echo['minion'], 'foo')
         self.assertTrue(
             self.run_function(
                 'mine.delete',
-                ['grains.items']
+                ['test.arg']
             )
         )
-        ret_grains_deleted = self.run_function(
+        ret_arg_deleted = self.run_function(
             'mine.get',
-            ['minion', 'grains.items']
+            ['minion', 'test.arg']
         )
-        self.assertEqual(ret_grains_deleted.get('minion', None), None)
+        # Now comes the real test - did we obliterate test.arg from the mine?
+        # We could assert this a different way, but there shouldn't be any
+        # other tests that are setting this mine value, so this should
+        # definitely avoid any race conditions.
+        self.assertFalse(
+            ret_arg_deleted.get('minion', {})
+                           .get('kwargs', {})
+                           .get('fnord', None) == 'roscivs',
+            '{} contained "fnord":"roscivs", which should be gone'.format(
+                ret_arg_deleted,
+            )
+        )
         ret_echo_stays = self.run_function(
             'mine.get',
             ['minion', 'test.echo']
         )
+        # Of course, one more health check - we want targeted removal.
+        # This isn't horseshoes or hand grenades - test.arg should go away
+        # but test.echo should still be available.
         self.assertEqual(ret_echo_stays['minion'], 'foo')

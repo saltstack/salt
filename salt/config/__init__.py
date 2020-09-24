@@ -550,6 +550,11 @@ VALID_OPTS = {
     # returner specified by 'event_return'
     'event_return_queue': int,
 
+    # The number of seconds that events can languish in the queue before we flush them.
+    # The goal here is to ensure that if the bus is not busy enough to reach a total
+    # `event_return_queue` events won't get stale.
+    'event_return_queue_max_seconds': int,
+
     # Only forward events to an event returner if it matches one of the tags in this list
     'event_return_whitelist': list,
 
@@ -1968,15 +1973,10 @@ PROVIDER_CONFIG_DEFAULTS = {
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
-def _validate_file_roots(file_roots):
+def _normalize_roots(file_roots):
     '''
-    If the file_roots option has a key that is None then we will error out,
-    just replace it with an empty list
+    Normalize file or pillar roots.
     '''
-    if not isinstance(file_roots, dict):
-        log.warning('The file_roots parameter is not properly formatted,'
-                    ' using defaults')
-        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     for saltenv, dirs in six.iteritems(file_roots):
         normalized_saltenv = six.text_type(saltenv)
         if normalized_saltenv != saltenv:
@@ -1986,6 +1986,30 @@ def _validate_file_roots(file_roots):
         file_roots[normalized_saltenv] = \
                 _expand_glob_path(file_roots[normalized_saltenv])
     return file_roots
+
+
+def _validate_pillar_roots(pillar_roots):
+    '''
+    If the pillar_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(pillar_roots, dict):
+        log.warning('The pillar_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
+    return _normalize_roots(pillar_roots)
+
+
+def _validate_file_roots(file_roots):
+    '''
+    If the file_roots option has a key that is None then we will error out,
+    just replace it with an empty list
+    '''
+    if not isinstance(file_roots, dict):
+        log.warning('The file_roots parameter is not properly formatted,'
+                    ' using defaults')
+        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
+    return _normalize_roots(file_roots)
 
 
 def _expand_glob_path(file_roots):
@@ -2293,14 +2317,15 @@ def include_config(include, orig_path, verbose, exit_on_config_errors=False):
 
         # Catch situation where user typos path in configuration; also warns
         # for empty include directory (which might be by design)
-        if len(glob.glob(path)) == 0:
+        glob_matches = glob.glob(path)
+        if not glob_matches:
             if verbose:
                 log.warning(
                     'Warning parsing configuration file: "include" path/glob '
                     "'%s' matches no files", path
                 )
 
-        for fn_ in sorted(glob.glob(path)):
+        for fn_ in sorted(glob_matches):
             log.debug('Including configuration from \'%s\'', fn_)
             try:
                 opts = _read_conf_file(fn_)
@@ -3799,7 +3824,7 @@ def apply_minion_config(overrides=None,
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
     opts['file_roots'] = _validate_file_roots(opts['file_roots'])
-    opts['pillar_roots'] = _validate_file_roots(opts['pillar_roots'])
+    opts['pillar_roots'] = _validate_pillar_roots(opts['pillar_roots'])
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts['extension_modules'] = (

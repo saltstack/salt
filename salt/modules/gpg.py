@@ -924,7 +924,7 @@ def trust_key(keyid=None,
 
     if user == 'salt':
         homeDir = os.path.join(__salt__['config.get']('config_dir'), 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        cmd.extend(['--homedir', homeDir])
         _user = 'root'
     res = __salt__['cmd.run_all'](cmd,
                                   stdin=stdin,

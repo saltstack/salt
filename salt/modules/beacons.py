@@ -30,18 +30,19 @@ __func_alias__ = {
 
 def list_(return_yaml=True,
           include_pillar=True,
-          include_opts=True):
+          include_opts=True,
+          **kwargs):
     '''
     List the beacons currently configured on the minion
 
     :param return_yaml:    Whether to return YAML formatted output,
-                           default True
+                           default ``True``
 
     :param include_pillar: Whether to include beacons that are
-                           configured in pillar, default is True.
+                           configured in pillar, default is ``True``.
 
     :param include_opts:   Whether to include beacons that are
-                           configured in opts, default is True.
+                           configured in opts, default is ``True``.
 
     :return:               List of currently configured Beacons.
 
@@ -61,7 +62,9 @@ def list_(return_yaml=True,
                                       'include_opts': include_opts},
                                      'manage_beacons')
         if res:
-            event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
+            event_ret = eventer.get_event(
+                tag='/salt/minion/minion_beacons_list_complete',
+                wait=kwargs.get('timeout', 30))
             log.debug('event_ret %s', event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
@@ -82,11 +85,12 @@ def list_(return_yaml=True,
         return {'beacons': {}}
 
 
-def list_available(return_yaml=True):
+def list_available(return_yaml=True, **kwargs):
     '''
     List the beacons currently available on the minion
 
-    :param return_yaml:     Whether to return YAML formatted output, default True
+    :param return_yaml:     Whether to return YAML formatted output, default
+                            ``True``
     :return:                List of currently configured Beacons.
 
     CLI Example:
@@ -102,7 +106,9 @@ def list_available(return_yaml=True):
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
         res = __salt__['event.fire']({'func': 'list_available'}, 'manage_beacons')
         if res:
-            event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_available_complete', wait=30)
+            event_ret = eventer.get_event(
+                tag='/salt/minion/minion_beacons_list_available_complete',
+                wait=kwargs.get('timeout', 30))
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:
@@ -134,17 +140,17 @@ def add(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacons.add ps "[{'salt-master': 'stopped'}, {'apache2': 'stopped'}]"
+        salt '*' beacons.add ps "[{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
            'result': False}
 
-    if name in list_(return_yaml=False):
+    if name in list_(return_yaml=False, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
-    if name not in list_available(return_yaml=False):
+    if name not in list_available(return_yaml=False, **kwargs):
         ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
         return ret
 
@@ -160,7 +166,9 @@ def add(name, beacon_data, **kwargs):
                                           'func': 'validate_beacon'},
                                          'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_validation_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_validation_complete',
+                    wait=kwargs.get('timeout', 30))
                 valid = event_ret['valid']
                 vcomment = event_ret['vcomment']
 
@@ -179,7 +187,9 @@ def add(name, beacon_data, **kwargs):
                                           'beacon_data': beacon_data,
                                           'func': 'add'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_add_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_add_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name in beacons and beacons[name] == beacon_data:
@@ -213,7 +223,7 @@ def modify(name, beacon_data, **kwargs):
     ret = {'comment': '',
            'result': True}
 
-    current_beacons = list_(return_yaml=False)
+    current_beacons = list_(return_yaml=False, **kwargs)
     if name not in current_beacons:
         ret['comment'] = 'Beacon {0} is not configured.'.format(name)
         return ret
@@ -230,7 +240,9 @@ def modify(name, beacon_data, **kwargs):
                                           'func': 'validate_beacon'},
                                          'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_validation_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_validation_complete',
+                    wait=kwargs.get('timeout', 30))
                 valid = event_ret['valid']
                 vcomment = event_ret['vcomment']
 
@@ -274,7 +286,9 @@ def modify(name, beacon_data, **kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'modify'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_modify_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_modify_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name in beacons and beacons[name] == beacon_data:
@@ -318,7 +332,9 @@ def delete(name, **kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_delete_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_delete_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if name not in beacons:
@@ -334,7 +350,7 @@ def delete(name, **kwargs):
     return ret
 
 
-def save():
+def save(**kwargs):
     '''
     Save all beacons on the minion
 
@@ -350,7 +366,7 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    beacons = list_(return_yaml=False, include_pillar=False)
+    beacons = list_(return_yaml=False, include_pillar=False, **kwargs)
 
     # move this file into an configurable opt
     sfn = os.path.join(__opts__['config_dir'],
@@ -367,7 +383,8 @@ def save():
             fp_.write(yaml_out)
         ret['comment'] = 'Beacons saved to {0}.'.format(sfn)
     except (IOError, OSError):
-        ret['comment'] = 'Unable to write to beacons file at {0}. Check permissions.'.format(sfn)
+        ret['comment'] = 'Unable to write to beacons file at {0}. Check ' \
+                         'permissions.'.format(sfn)
         ret['result'] = False
     return ret
 
@@ -376,7 +393,8 @@ def enable(**kwargs):
     '''
     Enable all beacons on the minion
 
-    :return:                Boolean and status message on success or failure of enable.
+    Returns:
+        bool: Boolean and status message on success or failure of enable.
 
     CLI Example:
 
@@ -395,7 +413,9 @@ def enable(**kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'enable'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_enabled_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacons_enabled_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     if 'enabled' in beacons and beacons['enabled']:
@@ -413,7 +433,7 @@ def enable(**kwargs):
 
 def disable(**kwargs):
     '''
-    Disable all beaconsd jobs on the minion
+    Disable all beacons jobs on the minion
 
     :return:                Boolean and status message on success or failure of disable.
 
@@ -434,7 +454,9 @@ def disable(**kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'disable'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_disabled_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacons_disabled_complete',
+                    wait=kwargs.get('timeout', 30))
                 log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
@@ -486,7 +508,7 @@ def enable_beacon(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacon {0} would be enabled.'.format(name)
     else:
-        _beacons = list_(return_yaml=False)
+        _beacons = list_(return_yaml=False, **kwargs)
         if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
@@ -496,7 +518,9 @@ def enable_beacon(name, **kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'enable_beacon', 'name': name}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_enabled_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_enabled_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -542,7 +566,7 @@ def disable_beacon(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacons would be enabled.'
     else:
-        _beacons = list_(return_yaml=False)
+        _beacons = list_(return_yaml=False, **kwargs)
         if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
@@ -552,7 +576,9 @@ def disable_beacon(name, **kwargs):
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'disable_beacon', 'name': name}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_disabled_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_disabled_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -587,20 +613,22 @@ def reset(**kwargs):
     ret = {'comment': [],
            'result': True}
 
-    if 'test' in kwargs and kwargs['test']:
+    if kwargs.get('test'):
         ret['comment'] = 'Beacons would be reset.'
     else:
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'reset'}, 'manage_beacons')
             if res:
-                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_reset_complete', wait=30)
+                event_ret = eventer.get_event(
+                    tag='/salt/minion/minion_beacon_reset_complete',
+                    wait=kwargs.get('timeout', 30))
                 if event_ret and event_ret['complete']:
                     ret['result'] = True
                     ret['comment'] = 'Beacon configuration reset.'
                 else:
                     ret['result'] = False
-                    ret['comment'] = event_ret['comment']
+                    ret['comment'] = 'Something went wrong.'
                 return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system

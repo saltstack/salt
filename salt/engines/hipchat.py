@@ -43,9 +43,8 @@ import os
 
 try:
     import hypchat
-    HAS_HYPCHAT = True
 except ImportError:
-    HAS_HYPCHAT = False
+    hypchat = None
 
 import salt.utils.args
 import salt.utils.event
@@ -59,16 +58,18 @@ import salt.loader
 import salt.output
 from salt.ext import six
 
-
-def __virtual__():
-    return HAS_HYPCHAT
-
-
 log = logging.getLogger(__name__)
 
 _DEFAULT_API_URL = 'https://api.hipchat.com'
 _DEFAULT_SLEEP = 5
 _DEFAULT_MAX_ROOMS = 1000
+
+__virtualname__ = 'hipchat'
+
+
+def __virtual__():
+    return __virtualname__ if hypchat is not None \
+        else (False, 'hypchat is not installed')
 
 
 def _publish_file(token, room, filepath, message='', outputter=None, api_url=None):

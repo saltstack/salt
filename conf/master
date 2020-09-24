@@ -151,7 +151,7 @@
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
 # be set. See various returners in salt/returners for details on required
-# configuration values. (See also, event_return_queue below.)
+# configuration values. (See also, event_return_queue, and event_return_queue_max_seconds below.)
 #
 #event_return: mysql
 
@@ -160,6 +160,12 @@
 # stored in a batched fashion using a single transaction for multiple events.
 # By default, events are not queued.
 #event_return_queue: 0
+
+# In some cases enabling event return queueing can be very helpful, but the bus
+# may not busy enough to flush the queue consistently.  Setting this to a reasonable
+# value (1-30 seconds) will cause the queue to be flushed when the oldest event is older
+# than `event_return_queue_max_seconds` regardless of how many events are in the queue.
+#event_return_queue_max_seconds: 0
 
 # Only return events matching tags in a whitelist, supports glob matches.
 #event_return_whitelist:

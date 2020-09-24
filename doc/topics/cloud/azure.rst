@@ -108,7 +108,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt newinstance test.ping
+    salt newinstance test.version
 
 
 Profile Options
@@ -520,7 +520,7 @@ services. For more information on service certificates, see the following link:
 
 * `Manage Certificates`__
 
-.. __: https://msdn.microsoft.com/en-us/library/azure/gg981929.aspx
+.. __: https://docs.microsoft.com/en-us/azure/cloud-services/cloud-services-certs-create
 
 The following functions are available.
 

@@ -77,6 +77,8 @@ def present(name, auth=None, **kwargs):
            'result': True,
            'comment': ''}
 
+    kwargs = __utils__['args.clean_kwargs'](**kwargs)
+
     __salt__['neutronng.setup_clouds'](auth)
 
     if 'project_name' in kwargs:
@@ -112,7 +114,6 @@ def present(name, auth=None, **kwargs):
         if __opts__['test'] is True:
             ret['result'] = None
             ret['changes'] = kwargs
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security Group rule will be created.'
             return ret
 
@@ -166,10 +167,9 @@ def absent(name, auth=None, **kwargs):
             rule_exists = True
 
     if rule_exists:
-        if __opts__['test'] is True:
+        if __opts__['test']:
             ret['result'] = None
             ret['changes'] = {'id': kwargs['rule_id']}
-            ret['pchanges'] = ret['changes']
             ret['comment'] = 'Security group rule will be deleted.'
             return ret
 

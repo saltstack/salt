@@ -17,6 +17,7 @@ import salt.exceptions
 from salt.utils import thin
 from salt.utils import json
 import salt.utils.stringutils
+import salt.utils.platform
 from salt.utils.stringutils import to_bytes as bts
 from salt.ext.six.moves import range
 
@@ -423,6 +424,8 @@ class SSHThinTestCase(TestCase):
         self.assertIn('The minimum required python version to run salt-ssh is '
                       '"2.6"', str(err.value))
 
+    @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
+            'Dies on Python2 on Windows')
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
     @patch('salt.utils.thin.os.makedirs', MagicMock())
@@ -443,7 +446,8 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
     @patch('salt.utils.thin.os.chdir', MagicMock())
-    @patch('salt.utils.thin.tempfile', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
     @patch('salt.utils.thin.shutil', MagicMock())
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
@@ -482,7 +486,9 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
     @patch('salt.utils.thin.os.chdir', MagicMock())
-    @patch('salt.utils.thin.tempfile', MagicMock(mkdtemp=MagicMock(return_value='')))
+    @patch('salt.utils.thin.os.close', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
     @patch('salt.utils.thin.shutil', MagicMock())
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
@@ -496,7 +502,7 @@ class SSHThinTestCase(TestCase):
         '''
         thin.gen_thin('')
         arc_name, arc_mode = thin.tarfile.method_calls[0][1]
-        self.assertEqual(arc_name, os.path.join('thin', 'thin.tgz'))
+        self.assertEqual(arc_name, ".temporary")
         self.assertEqual(arc_mode, 'w:gz')
         for idx, fname in enumerate(['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']):
             name = thin.tarfile.open().method_calls[idx + 4][1][0]
@@ -524,7 +530,9 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
     @patch('salt.utils.thin.os.chdir', MagicMock())
-    @patch('salt.utils.thin.tempfile', MagicMock())
+    @patch('salt.utils.thin.os.close', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
     @patch('salt.utils.thin.shutil', MagicMock())
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)
@@ -574,7 +582,9 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
     @patch('salt.utils.thin.os.chdir', MagicMock())
-    @patch('salt.utils.thin.tempfile', MagicMock(mkdtemp=MagicMock(return_value='')))
+    @patch('salt.utils.thin.os.close', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
     @patch('salt.utils.thin.shutil', MagicMock())
     @patch('salt.utils.thin._six.PY3', True)
     @patch('salt.utils.thin._six.PY2', False)

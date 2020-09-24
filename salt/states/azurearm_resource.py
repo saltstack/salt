@@ -20,8 +20,8 @@ Azure (ARM) Resource State Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as a dictionary of
-keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
-parameters are sensitive, it's recommended to pass them to the states via pillar.
+    keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
+    parameters are sensitive, it's recommended to pass them to the states via pillar.
 
     Required provider parameters:
 
@@ -62,7 +62,7 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure resource group exists:

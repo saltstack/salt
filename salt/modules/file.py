@@ -23,6 +23,7 @@ import re
 import shutil
 import stat
 import string
+import subprocess
 import sys
 import tempfile
 import time
@@ -61,6 +62,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
 import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -157,6 +159,35 @@ def _splitlines_preserving_trailing_newline(str):
     if str.endswith('\n') or str.endswith('\r'):
         lines.append('')
     return lines
+
+
+def _get_chattr_man():
+    '''
+    Get the contents of the chattr man page
+    '''
+    return subprocess.check_output(['man', 'chattr'])
+
+
+def _parse_chattr_man(man):
+    '''
+    Parse the contents of a chattr man page to find the E2fsprogs version
+    '''
+    match = re.search(
+        r'E2fsprogs version [0-9\.]+',
+        salt.utils.stringutils.to_str(man),
+    )
+    if match:
+        version = match.group().strip('E2fsprogs version ')
+    else:
+        version = None
+    return version
+
+
+def _chattr_version():
+    '''
+    Return the version of chattr installed
+    '''
+    return _parse_chattr_man(_get_chattr_man())
 
 
 def gid_to_group(gid):
@@ -577,7 +608,14 @@ def lsattr(path):
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
             vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+            needed_version = salt.utils.versions.LooseVersion('1.41.12')
+            chattr_version = salt.utils.versions.LooseVersion(_chattr_version())
+            # The version of chattr on Centos 6 does not support extended
+            # attributes.
+            if chattr_version > needed_version:
+                results[vals[1]] = re.findall(r"[aAcCdDeijPsStTu]", vals[0])
+            else:
+                results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
 
     return results
 
@@ -594,8 +632,8 @@ def chattr(*files, **kwargs):
         should be added or removed from files
 
     attributes
-        One or more of the following characters: ``acdijstuADST``, representing
-        attributes to add to/remove from files
+        One or more of the following characters: ``aAcCdDeijPsStTu``,
+        representing attributes to add to/remove from files
 
     version
         a version number to assign to the file(s)
@@ -620,7 +658,7 @@ def chattr(*files, **kwargs):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
-        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+        raise SaltInvocationError("Need attributes: [aAcCdDeijPsStTu]")
 
     cmd = ['chattr']
 
@@ -3632,7 +3670,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'

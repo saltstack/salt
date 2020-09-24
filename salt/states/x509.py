@@ -292,7 +292,7 @@ def private_key_managed(name,
           x509.private_key_managed:
             - bits: 4096
             - new: True
-            {% if salt['file.file_exists']('/etc/pki/ca.key') -%}
+            {% if salt['file.file_exists']('/etc/pki/www.key') -%}
             - prereq:
               - x509: /etc/pki/www.crt
             {%- endif %}

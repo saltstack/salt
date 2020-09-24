@@ -228,7 +228,11 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 GPG_CIPHERTEXT = re.compile(
-    r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----', re.DOTALL)
+    salt.utils.stringutils.to_bytes(
+        r'-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----'
+    ),
+    re.DOTALL,
+)
 
 
 def _get_gpg_exec():
@@ -281,36 +285,40 @@ def _decrypt_ciphertext(cipher):
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
-        try:
-            cipher = salt.utils.stringutils.to_unicode(cipher)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
         log.warning(
-            'Could not decrypt cipher %s, received: %s',
+            'Could not decrypt cipher %r, received: %r',
             cipher,
             decrypt_error
         )
         return cipher
     else:
-        try:
-            decrypted_data = salt.utils.stringutils.to_unicode(decrypted_data)
-        except UnicodeDecodeError:
-            # decrypted data contains undecodable binary data
-            pass
         return decrypted_data
 
 
 def _decrypt_ciphertexts(cipher, translate_newlines=False):
+    to_bytes = salt.utils.stringutils.to_bytes
+    cipher = to_bytes(cipher)
     if translate_newlines:
-        cipher = cipher.replace(r'\n', '\n')
-    ret, num = GPG_CIPHERTEXT.subn(lambda m: _decrypt_ciphertext(m.group()), cipher)
+        cipher = cipher.replace(to_bytes(r'\n'), to_bytes('\n'))
+
+    def replace(match):
+        result = to_bytes(_decrypt_ciphertext(match.group()))
+        return result
+
+    ret, num = GPG_CIPHERTEXT.subn(replace, to_bytes(cipher))
     if num > 0:
         # Remove trailing newlines. Without if crypted value initially specified as a YAML multiline
         # it will conain unexpected trailing newline.
-        return ret.rstrip('\n')
+        ret = ret.rstrip(b'\n')
     else:
-        return cipher
+        ret = cipher
+
+    try:
+        ret = salt.utils.stringutils.to_unicode(ret)
+    except UnicodeDecodeError:
+        # decrypted data contains some sort of binary data - not our problem
+        pass
+    return ret
 
 
 def _decrypt_object(obj, translate_newlines=False):

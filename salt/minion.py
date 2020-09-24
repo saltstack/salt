@@ -25,7 +25,10 @@ from binascii import crc32
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
+from salt._compat import ipaddress
+from salt.utils.network import parse_host_port
 from salt.ext.six.moves import range
+from salt.template import SLS_ENCODING
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
@@ -238,27 +241,29 @@ def resolve_dns(opts, fallback=True):
 
 
 def prep_ip_port(opts):
+    '''
+    parse host:port values from opts['master'] and return valid:
+        master: ip address or hostname as a string
+        master_port: (optional) master returner port as integer
+
+    e.g.:
+      - master: 'localhost:1234' -> {'master': 'localhost', 'master_port': 1234}
+      - master: '127.0.0.1:1234' -> {'master': '127.0.0.1', 'master_port' :1234}
+      - master: '[::1]:1234' -> {'master': '::1', 'master_port': 1234}
+      - master: 'fe80::a00:27ff:fedc:ba98' -> {'master': 'fe80::a00:27ff:fedc:ba98'}
+    '''
     ret = {}
     # Use given master IP if "ip_only" is set or if master_ip is an ipv6 address without
     # a port specified. The is_ipv6 check returns False if brackets are used in the IP
     # definition such as master: '[::1]:1234'.
-    if opts['master_uri_format'] == 'ip_only' or salt.utils.network.is_ipv6(opts['master']):
-        ret['master'] = opts['master']
+    if opts['master_uri_format'] == 'ip_only':
+        ret['master'] = ipaddress.ip_address(opts['master'])
     else:
-        ip_port = opts['master'].rsplit(':', 1)
-        if len(ip_port) == 1:
-            # e.g. master: mysaltmaster
-            ret['master'] = ip_port[0]
-        else:
-            # e.g. master: localhost:1234
-            # e.g. master: 127.0.0.1:1234
-            # e.g. master: [::1]:1234
-            # Strip off brackets for ipv6 support
-            ret['master'] = ip_port[0].strip('[]')
+        host, port = parse_host_port(opts['master'])
+        ret = {'master': host}
+        if port:
+            ret.update({'master_port': port})
 
-            # Cast port back to an int! Otherwise a TypeError is thrown
-            # on some of the socket calls elsewhere in the minion and utils code.
-            ret['master_port'] = int(ip_port[1])
     return ret
 
 
@@ -505,7 +510,7 @@ class MinionBase(object):
                                 preferred_masters[0] = opts['master'][master_idx]
                                 preferred_masters[1:] = [m for m in opts['master'] if m != preferred_masters[0]]
                                 opts['master'] = preferred_masters
-                                log.info('Distributed to the master at \'{0}\'.'.format(opts['master'][0]))
+                                log.info('Distributed to the master at \'%s\'.', opts['master'][0])
                             except (KeyError, AttributeError, TypeError):
                                 log.warning('Failed to distribute to a specific master.')
                         else:
@@ -729,21 +734,21 @@ class MinionBase(object):
             for att in range(self.opts['discovery'].get('attempts', 3)):
                 try:
                     att += 1
-                    log.info('Attempting {0} time{1} to discover masters'.format(att, (att > 1 and 's' or '')))
+                    log.info('Attempting %s time(s) to discover masters', att)
                     masters.update(master_discovery_client.discover())
                     if not masters:
                         time.sleep(self.opts['discovery'].get('pause', 5))
                     else:
                         break
                 except Exception as err:
-                    log.error('SSDP discovery failure: {0}'.format(err))
+                    log.error('SSDP discovery failure: %s', err)
                     break
 
             if masters:
                 policy = self.opts.get('discovery', {}).get('match', 'any')
                 if policy not in ['any', 'all']:
-                    log.error('SSDP configuration matcher failure: unknown value "{0}". '
-                              'Should be "any" or "all"'.format(policy))
+                    log.error('SSDP configuration matcher failure: unknown value "%s". '
+                              'Should be "any" or "all"', policy)
                 else:
                     mapping = self.opts['discovery'].get('mapping', {})
                     for addr, mappings in masters.items():
@@ -759,12 +764,12 @@ class MinionBase(object):
         Based on the minion configuration, either return a randomized timer or
         just return the value of the return_retry_timer.
         '''
-        msg = 'Minion return retry timer set to {0} seconds'
-        # future lint: disable=str-format-in-logging
+        msg = 'Minion return retry timer set to %s seconds'
         if self.opts.get('return_retry_timer_max'):
             try:
                 random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
-                log.debug(msg.format(random_retry) + ' (randomized)')
+                retry_msg = msg % random_retry
+                log.debug('%s (randomized)', msg % random_retry)
                 return random_retry
             except ValueError:
                 # Catch wiseguys using negative integers here
@@ -775,12 +780,11 @@ class MinionBase(object):
                     self.opts['return_retry_timer'],
                     self.opts['return_retry_timer_max'],
                 )
-                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
+                log.debug(msg, DEFAULT_MINION_OPTS['return_retry_timer'])
                 return DEFAULT_MINION_OPTS['return_retry_timer']
         else:
-            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            log.debug(msg, self.opts.get('return_retry_timer'))
             return self.opts.get('return_retry_timer')
-        # future lint: enable=str-format-in-logging
 
 
 class SMinion(MinionBase):
@@ -819,11 +823,11 @@ class SMinion(MinionBase):
                 penv = 'base'
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.files.fopen(ptop, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(cache_top, fp_)
+                salt.utils.yaml.safe_dump(cache_top, fp_, encoding=SLS_ENCODING)
                 os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.files.fopen(cache_sls, 'wb') as fp_:
-                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_)
+                salt.utils.yaml.safe_dump(self.opts['pillar'], fp_, encoding=SLS_ENCODING)
                 os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
@@ -859,7 +863,7 @@ class SMinion(MinionBase):
 #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts)
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
 
 class MasterMinion(object):
@@ -1491,7 +1495,7 @@ class Minion(MinionBase):
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
-                log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
+                log.warning("Maximum number of processes reached while executing jid %s, waiting...", data['jid'])
                 yield tornado.gen.sleep(10)
                 process_count = len(salt.utils.minion.running(self.opts))
 
@@ -2206,6 +2210,8 @@ class Minion(MinionBase):
             finally:
                 async_pillar.destroy()
         self.module_refresh(force_refresh)
+        self.matchers_refresh()
+        self.beacons_refresh()
 
     def manage_schedule(self, tag, data):
         '''
@@ -2633,24 +2639,16 @@ class Minion(MinionBase):
                     cleanup=[master_event(type='alive')])
 
             try:
-                if self.opts['grains_refresh_every']:  # If exists and is not zero. In minutes, not seconds!
-                    if self.opts['grains_refresh_every'] > 1:
-                        log.debug(
-                            'Enabling the grains refresher. Will run every {0} minutes.'.format(
-                                self.opts['grains_refresh_every'])
-                        )
-                    else:  # Clean up minute vs. minutes in log message
-                        log.debug(
-                            'Enabling the grains refresher. Will run every {0} minute.'.format(
-                                self.opts['grains_refresh_every'])
-                        )
-                    self._refresh_grains_watcher(
-                        abs(self.opts['grains_refresh_every'])
+                if self.opts['grains_refresh_every']:  # In minutes, not seconds!
+                    log.debug(
+                        'Enabling the grains refresher. Will run every %d minute(s).',
+                        self.opts['grains_refresh_every']
                     )
+                    self._refresh_grains_watcher(abs(self.opts['grains_refresh_every']))
             except Exception as exc:
                 log.error(
-                    'Exception occurred in attempt to initialize grain refresh routine during minion tune-in: {0}'.format(
-                        exc)
+                    'Exception occurred in attempt to initialize grain refresh '
+                    'routine during minion tune-in: %s', exc
                 )
 
             # TODO: actually listen to the return and change period
@@ -3168,7 +3166,7 @@ class SyndicManager(MinionBase):
 
         while True:
             yield master_id, self._syndics[master_id]
-            if len(masters) == 0:
+            if not masters:
                 break
             master_id = masters.pop(0)
 

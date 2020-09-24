@@ -31,7 +31,7 @@ returner modules
     mongo_return
     multi_returner
     mysql
-    nagios_return
+    nagios_nrdp_return
     odbc
     pgjsonb
     postgres

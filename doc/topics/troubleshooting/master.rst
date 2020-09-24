@@ -219,6 +219,10 @@ configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
 change the default timeout for all commands, and then restarting the
 salt-master service.
 
+If a ``state.apply`` run takes too long, you can find a bottleneck by adding the
+:py:mod:`--out=profile <salt.output.profile>` option.
+
+
 Salt Master Auth Flooding
 =========================
 

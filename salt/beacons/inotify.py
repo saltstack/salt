@@ -117,6 +117,10 @@ def validate(config):
         if 'files' not in _config:
             return False, 'Configuration for inotify beacon must include files.'
         else:
+            if not isinstance(_config['files'], dict):
+                return False, ('Configuration for inotify beacon invalid, '
+                               'files must be a dict.')
+
             for path in _config.get('files'):
 
                 if not isinstance(_config['files'][path], dict):
@@ -238,21 +242,21 @@ def beacon(config):
                     break
                 path = os.path.dirname(path)
 
-            for path in _config.get('files', {}):
-                excludes = _config['files'][path].get('exclude', '')
+            excludes = _config['files'][path].get('exclude', '')
 
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
                     if isinstance(exclude, dict):
-                        if exclude.values()[0].get('regex', False):
+                        _exclude = next(iter(exclude))
+                        if exclude[_exclude].get('regex', False):
                             try:
-                                if re.search(list(exclude)[0], event.pathname):
+                                if re.search(_exclude, event.pathname):
                                     _append = False
                             except Exception:
                                 log.warning('Failed to compile regex: %s',
-                                            list(exclude)[0])
+                                            _exclude)
                         else:
-                            exclude = list(exclude)[0]
+                            exclude = _exclude
                     elif '*' in exclude:
                         if fnmatch.fnmatch(event.pathname, exclude):
                             _append = False
@@ -312,7 +316,7 @@ def beacon(config):
                 excl = []
                 for exclude in excludes:
                     if isinstance(exclude, dict):
-                        excl.append(exclude.keys()[0])
+                        excl.append(list(exclude)[0])
                     else:
                         excl.append(exclude)
                 excl = pyinotify.ExcludeFilter(excl)

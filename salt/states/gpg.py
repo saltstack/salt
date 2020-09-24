@@ -70,7 +70,7 @@ def present(name,
            'changes': {},
            'comment': []}
 
-    _current_keys = __salt__['gpg.list_keys']()
+    _current_keys = __salt__['gpg.list_keys'](user=user, gnupghome=gnupghome)
 
     current_keys = {}
     for key in _current_keys:

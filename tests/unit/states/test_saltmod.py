@@ -175,13 +175,11 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         name = 'state'
         tgt = 'larry'
 
-        comt = ('Function state will be executed'
-                ' on target {0} as test=False'.format(tgt))
-
         ret = {'name': name,
                'changes': {},
                'result': None,
-               'comment': comt}
+               'comment': 'Function state would be executed '
+                          'on target {0}'.format(tgt)}
 
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.function(name, tgt), ret)
@@ -281,6 +279,24 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
+
+    def test_state_ssh(self):
+        '''
+        Test saltmod passes roster to saltutil.cmd
+        '''
+        origcmd = saltmod.__salt__['saltutil.cmd']
+        cmd_kwargs = {}
+        cmd_args = []
+
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__salt__, {'saltutil.cmd': cmd_mock}):
+            ret = saltmod.state('state.sls', tgt='*', ssh=True, highstate=True, roster='my_roster')
+        assert 'roster' in cmd_kwargs
+        assert cmd_kwargs['roster'] == 'my_roster'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

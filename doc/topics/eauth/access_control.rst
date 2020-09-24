@@ -67,7 +67,7 @@ other minions based on standard targets (all matchers are supported except the c
     external_auth:
       pam:
         dave:
-          - test.ping
+          - test.version
           - mongo\*:
             - network.*
           - log\*:
@@ -78,7 +78,7 @@ other minions based on standard targets (all matchers are supported except the c
         steve:
           - .*
 
-The above allows for all minions to be hit by test.ping by dave, and adds a
+The above allows for all minions to be hit by test.version by dave, and adds a
 few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
 

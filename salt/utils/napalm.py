@@ -492,7 +492,6 @@ def default_ret(name):
     '''
     ret = {
         'name': name,
-        'pchanges': {},
         'changes': {},
         'result': False,
         'comment': ''
@@ -510,22 +509,16 @@ def loaded_ret(ret, loaded, test, debug, compliance_report=False, opts=None):
     '''
     # Always get the comment
     changes = {}
-    pchanges = {}
     ret['comment'] = loaded['comment']
     if 'diff' in loaded:
         changes['diff'] = loaded['diff']
-        pchanges['diff'] = loaded['diff']
     if 'commit_id' in loaded:
         changes['commit_id'] = loaded['commit_id']
-        pchanges['commit_id'] = loaded['commit_id']
     if 'compliance_report' in loaded:
         if compliance_report:
             changes['compliance_report'] = loaded['compliance_report']
-        pchanges['compliance_report'] = loaded['compliance_report']
     if debug and 'loaded_config' in loaded:
         changes['loaded_config'] = loaded['loaded_config']
-        pchanges['loaded_config'] = loaded['loaded_config']
-    ret['pchanges'] = pchanges
     if changes.get('diff'):
         ret['comment'] = '{comment_base}\n\nConfiguration diff:\n\n{diff}'.format(comment_base=ret['comment'],
                                                                                   diff=changes['diff'])

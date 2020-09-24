@@ -55,7 +55,7 @@ import salt.log.setup
 from salt.utils.odict import OrderedDict
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace']  # pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']  # pylint: disable=invalid-name
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
@@ -140,12 +140,6 @@ def pytest_addoption(parser):
         default=False,
         action='store_true',
         help='Disable colour printing.'
-    )
-    output_options_group.addoption(
-        '--sys-stats',
-        default=False,
-        action='store_true',
-        help='Print System CPU and MEM statistics after each test execution.'
     )
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 

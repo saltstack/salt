@@ -458,7 +458,7 @@ def _refresh_buckets_cache_file(cache_file):
                 bucket_files_list.append(bucket_files)
 
                 # check to see if we added any keys, otherwise investigate possible error conditions
-                if len(bucket_files[bucket_name]) == 0:
+                if not bucket_files[bucket_name]:
                     meta_response = {}
                     for k in s3_meta:
                         if 'Code' in k or 'Message' in k:
@@ -497,7 +497,7 @@ def _refresh_buckets_cache_file(cache_file):
             files = [k for k in s3_meta if 'Key' in k]
 
             # check to see if we added any keys, otherwise investigate possible error conditions
-            if len(files) == 0:
+            if not files:
                 meta_response = {}
                 for k in s3_meta:
                     if 'Code' in k or 'Message' in k:

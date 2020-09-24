@@ -119,7 +119,7 @@ to it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt my-id test.ping
+    salt my-id test.version
 
 .. _host provisioning example:
 

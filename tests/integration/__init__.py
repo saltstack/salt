@@ -104,15 +104,16 @@ def get_unused_localhost_port():
 
     DARWIN = True if sys.platform.startswith('darwin') else False
     BSD = True if 'bsd' in sys.platform else False
+    AIX = True if sys.platform.startswith('aix') else False
 
-    if DARWIN and port in _RUNTESTS_PORTS:
+    if (AIX or DARWIN) and port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
         usock.close()
         return port
 
     _RUNTESTS_PORTS[port] = usock
 
-    if DARWIN or BSD:
+    if DARWIN or BSD or AIX:
         usock.close()
 
     return port
@@ -183,7 +184,7 @@ class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 120
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 500
 
     def __init__(self, parser):
         self.parser = parser
@@ -218,6 +219,8 @@ class TestDaemon(object):
 
         if getattr(self.parser.options, 'ssh', False):
             self.prep_ssh()
+
+        self.wait_for_minions(time.time(), self.MINIONS_CONNECT_TIMEOUT)
 
         if self.parser.options.sysinfo:
             try:
@@ -743,6 +746,12 @@ class TestDaemon(object):
         master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
         master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
         master_opts['syndic_master'] = 'localhost'
+        file_tree = {
+            'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
+            'follow_dir_links': False,
+            'keep_newline': True,
+        }
+        master_opts['ext_pillar'].append({'file_tree': file_tree})
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
@@ -917,6 +926,7 @@ class TestDaemon(object):
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
             conf['runtests_log_port'] = SALT_LOG_PORT
+            conf['runtests_log_level'] = os.environ.get('TESTS_MIN_LOG_LEVEL_NAME') or 'debug'
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
@@ -1031,7 +1041,10 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
+        try:
+            self.sub_minion_process.terminate()
+        except AttributeError:
+            pass
         self.minion_process.terminate()
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
@@ -1179,84 +1192,6 @@ class TestDaemon(object):
             k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
         ]
 
-    def wait_for_minion_connections(self, targets, timeout):
-        salt.utils.process.appendproctitle('WaitForMinionConnections')
-        sys.stdout.write(
-            ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
-            'connect back\n'.format(
-                (timeout > 60 and
-                 timedelta(seconds=timeout) or
-                 '{0} secs'.format(timeout)),
-                ', '.join(targets),
-                **self.colors
-            )
-        )
-        sys.stdout.flush()
-        expected_connections = set(targets)
-        now = datetime.now()
-        expire = now + timedelta(seconds=timeout)
-        while now <= expire:
-            sys.stdout.write(
-                '\r{0}\r'.format(
-                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
-                )
-            )
-            sys.stdout.write(
-                ' * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
-                    '{0}'.format(expire - now).rsplit('.', 1)[0],
-                    ', '.join(expected_connections),
-                    **self.colors
-                )
-            )
-            sys.stdout.flush()
-
-            try:
-                responses = self.client.cmd(
-                    list(expected_connections), 'test.ping', tgt_type='list',
-                )
-            # we'll get this exception if the master process hasn't finished starting yet
-            except SaltClientError:
-                time.sleep(0.1)
-                now = datetime.now()
-                continue
-            for target in responses:
-                if target not in expected_connections:
-                    # Someone(minion) else "listening"?
-                    continue
-                expected_connections.remove(target)
-                sys.stdout.write(
-                    '\r{0}\r'.format(
-                        ' ' * getattr(self.parser.options, 'output_columns',
-                                      PNUM)
-                    )
-                )
-                sys.stdout.write(
-                    '   {LIGHT_GREEN}*{ENDC} {0} connected.\n'.format(
-                        target, **self.colors
-                    )
-                )
-                sys.stdout.flush()
-
-            if not expected_connections:
-                return
-
-            time.sleep(1)
-            now = datetime.now()
-        else:  # pylint: disable=W0120
-            print(
-                '\n {LIGHT_RED}*{ENDC} WARNING: Minions failed to connect '
-                'back. Tests requiring them WILL fail'.format(**self.colors)
-            )
-            try:
-                print_header(
-                    '=', sep='=', inline=True,
-                    width=getattr(self.parser.options, 'output_columns', PNUM)
-
-                )
-            except TypeError:
-                print_header('=', sep='=', inline=True)
-            raise SystemExit()
-
     def sync_minion_modules_(self, modules_kind, targets, timeout=None):
         if not timeout:
             timeout = 120
@@ -1333,3 +1268,20 @@ class TestDaemon(object):
     def sync_minion_grains(self, targets, timeout=None):
         salt.utils.process.appendproctitle('SyncMinionGrains')
         self.sync_minion_modules_('grains', targets, timeout=timeout)
+
+    def wait_for_minions(self, start, timeout, sleep=5):
+        '''
+        Ensure all minions and masters (including sub-masters) are connected.
+        '''
+        while True:
+            try:
+                ret = self.client.run_job('*', 'test.ping')
+            except salt.exceptions.SaltClientError:
+                ret = None
+            if ret and 'minions' not in ret:
+                continue
+            if ret and sorted(ret['minions']) == ['minion', 'sub_minion']:
+                break
+            if time.time() - start >= timeout:
+                raise RuntimeError("Ping Minions Failed")
+            time.sleep(sleep)

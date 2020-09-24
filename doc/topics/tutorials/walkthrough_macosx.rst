@@ -412,9 +412,9 @@ following:
 
 .. code-block:: bash
 
-    sudo salt '*' test.ping
+    sudo salt '*' test.version
 
-You should see your minion answering the ping. It's now time to do some
+You should see your minion answering with its salt version. It's now time to do some
 configuration.
 
 

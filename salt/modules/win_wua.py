@@ -62,12 +62,12 @@ import logging
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.win_update
+import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
 try:
-    import pythoncom
     import win32com.client
     HAS_PYWIN32 = True
 except ImportError:
@@ -704,6 +704,7 @@ def set_wu_settings(level=None,
     # work on Windows 10 / Server 2016. It is called in throughout this function
     # like this:
     #
+    # with salt.utils.winapi.Com():
     #     obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
     #     obj_au_settings = obj_au.Settings
     #     obj_au_settings.Save()
@@ -724,10 +725,10 @@ def set_wu_settings(level=None,
     ret = {'Success': True}
 
     # Initialize the PyCom system
-    pythoncom.CoInitialize()
+    with salt.utils.winapi.Com():
 
-    # Create an AutoUpdate object
-    obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
+        # Create an AutoUpdate object
+        obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
 
     # Create an AutoUpdate Settings Object
     obj_au_settings = obj_au.Settings
@@ -821,7 +822,8 @@ def set_wu_settings(level=None,
     if msupdate is not None:
         # Microsoft Update requires special handling
         # First load the MS Update Service Manager
-        obj_sm = win32com.client.Dispatch('Microsoft.Update.ServiceManager')
+        with salt.utils.winapi.Com():
+            obj_sm = win32com.client.Dispatch('Microsoft.Update.ServiceManager')
 
         # Give it a bogus name
         obj_sm.ClientApplicationID = "My App"
@@ -922,10 +924,9 @@ def get_wu_settings():
            'Saturday']
 
     # Initialize the PyCom system
-    pythoncom.CoInitialize()
-
-    # Create an AutoUpdate object
-    obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
+    with salt.utils.winapi.Com():
+        # Create an AutoUpdate object
+        obj_au = win32com.client.Dispatch('Microsoft.Update.AutoUpdate')
 
     # Create an AutoUpdate Settings Object
     obj_au_settings = obj_au.Settings
@@ -959,8 +960,10 @@ def _get_msupdate_status():
     '''
     # To get the status of Microsoft Update we actually have to check the
     # Microsoft Update Service Manager
-    # Create a ServiceManager Object
-    obj_sm = win32com.client.Dispatch('Microsoft.Update.ServiceManager')
+    # Initialize the PyCom system
+    with salt.utils.winapi.Com():
+        # Create a ServiceManager Object
+        obj_sm = win32com.client.Dispatch('Microsoft.Update.ServiceManager')
 
     # Return a collection of loaded Services
     col_services = obj_sm.Services

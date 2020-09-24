@@ -27,7 +27,7 @@ def __virtual__():
                    'only available on AIX systems.')
 
 
-def __validate__(config):
+def validate(config):
     '''
     Validate the beacon configuration
     '''

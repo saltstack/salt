@@ -659,14 +659,21 @@ generic:
             'oscodename': 'raring',
             'osfullname': 'Ubuntu',
             'osrelease': '13.04',
-            'kernel': 'Linux'
+            'kernel': 'Linux',
         }
         sls_files = self._setup_test_include_sls(tempdir)
         fc_mock = MockFileclient(
             cache_file=sls_files['top']['dest'],
             get_state=sls_files,
-            list_states=['top', 'test.init', 'test.sub1',
-                         'test.sub2', 'test.sub_wildcard_1'],
+            list_states=[
+                'top',
+                'test.init',
+                'test.sub1',
+                'test.sub2',
+                'test.sub_wildcard_1',
+                'test.sub_with_init_dot',
+                'test.sub.with.slashes',
+            ],
         )
         with patch.object(salt.fileclient, 'get_file_client',
                           MagicMock(return_value=fc_mock)):
@@ -677,6 +684,8 @@ generic:
             self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
             self.assertEqual(compiled_pillar['foo1'], 'bar1')
             self.assertEqual(compiled_pillar['foo2'], 'bar2')
+            self.assertEqual(compiled_pillar['sub_with_slashes'], 'sub_slashes_worked')
+            self.assertEqual(compiled_pillar['sub_init_dot'], 'sub_with_init_dot_worked')
 
     def _setup_test_include_sls(self, tempdir):
         top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
@@ -695,6 +704,8 @@ base:
 include:
    - test.sub1
    - test.sub_wildcard*
+   - .test.sub_with_init_dot
+   - test/sub/with/slashes
 ''')
         init_sls.flush()
         sub1_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
@@ -717,12 +728,28 @@ foo_wildcard:
 ''')
         sub_wildcard_1_sls.flush()
 
+        sub_with_init_dot_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_init_dot_sls.write(b'''
+sub_init_dot:
+  sub_with_init_dot_worked
+''')
+        sub_with_init_dot_sls.flush()
+
+        sub_with_slashes_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_slashes_sls.write(b'''
+sub_with_slashes:
+  sub_slashes_worked
+''')
+        sub_with_slashes_sls.flush()
+
         return {
             'top': {'path': '', 'dest': top_file.name},
             'test': {'path': '', 'dest': init_sls.name},
             'test.sub1': {'path': '', 'dest': sub1_sls.name},
             'test.sub2': {'path': '', 'dest': sub2_sls.name},
             'test.sub_wildcard_1': {'path': '', 'dest': sub_wildcard_1_sls.name},
+            'test.sub_with_init_dot': {'path': '', 'dest': sub_with_init_dot_sls.name},
+            'test.sub.with.slashes': {'path': '', 'dest': sub_with_slashes_sls.name},
         }
 
 

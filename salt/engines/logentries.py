@@ -171,6 +171,22 @@ else:
     SocketAppender = TLSSocketAppender
 
 
+def event_bus_context(opts):
+    if opts.get('id').endswith('_master'):
+        event_bus = salt.utils.event.get_master_event(
+            opts,
+            opts['sock_dir'],
+            listen=True)
+    else:
+        event_bus = salt.utils.event.get_event(
+            'minion',
+            transport=opts['transport'],
+            opts=opts,
+            sock_dir=opts['sock_dir'],
+            listen=True)
+    return event_bus
+
+
 def start(endpoint='data.logentries.com',
           port=10000,
           token=None,
@@ -178,38 +194,26 @@ def start(endpoint='data.logentries.com',
     '''
     Listen to salt events and forward them to Logentries
     '''
-    if __opts__.get('id').endswith('_master'):
-        event_bus = salt.utils.event.get_master_event(
-            __opts__,
-            __opts__['sock_dir'],
-            listen=True)
-    else:
-        event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
-            opts=__opts__,
-            sock_dir=__opts__['sock_dir'],
-            listen=True)
-    log.debug('Logentries engine started')
+    with event_bus_context(__opts__) as event_bus:
+        log.debug('Logentries engine started')
+        try:
+            val = uuid.UUID(token)
+        except ValueError:
+            log.warning('Not a valid logentries token')
 
-    try:
-        val = uuid.UUID(token)
-    except ValueError:
-        log.warning('Not a valid logentries token')
+        appender = SocketAppender(verbose=False, LE_API=endpoint, LE_PORT=port)
+        appender.reopen_connection()
 
-    appender = SocketAppender(verbose=False, LE_API=endpoint, LE_PORT=port)
-    appender.reopen_connection()
+        while True:
+            event = event_bus.get_event()
+            if event:
+                # future lint: disable=blacklisted-function
+                msg = str(' ').join((
+                    salt.utils.stringutils.to_str(token),
+                    salt.utils.stringutils.to_str(tag),
+                    salt.utils.json.dumps(event)
+                ))
+                # future lint: enable=blacklisted-function
+                appender.put(msg)
 
-    while True:
-        event = event_bus.get_event()
-        if event:
-            # future lint: disable=blacklisted-function
-            msg = str(' ').join((
-                salt.utils.stringutils.to_str(token),
-                salt.utils.stringutils.to_str(tag),
-                salt.utils.json.dumps(event)
-            ))
-            # future lint: enable=blacklisted-function
-            appender.put(msg)
-
-    appender.close_connection()
+        appender.close_connection()

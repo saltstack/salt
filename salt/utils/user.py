@@ -238,18 +238,24 @@ def chugid_and_umask(runas, umask, group=None):
     set_grp = False
 
     current_user = getpass.getuser()
+    current_grp = grp.getgrgid(pwd.getpwnam(getpass.getuser()).pw_gid).gr_name
+
     if runas and runas != current_user:
         set_runas = True
         runas_user = runas
     else:
         runas_user = current_user
 
-    current_grp = grp.getgrgid(pwd.getpwnam(getpass.getuser()).pw_gid).gr_name
-    if group and group != current_grp:
-        set_grp = True
+    if group:
         runas_grp = group
+        if group != current_grp:
+            set_grp = True
     else:
-        runas_grp = current_grp
+        if runas and runas != current_user:
+            runas_grp = grp.getgrgid(pwd.getpwnam(runas_user).pw_gid).gr_name
+            set_grp = True
+        else:
+            runas_grp = current_grp
 
     if set_runas or set_grp:
         chugid(runas_user, runas_grp)

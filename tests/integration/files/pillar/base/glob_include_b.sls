@@ -1,0 +1,2 @@
+glob-b:
+  - 'Entry B'

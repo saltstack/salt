@@ -328,7 +328,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt 'ami.example.com' test.ping
+    # salt 'ami.example.com' test.version
 
 
 Required Settings

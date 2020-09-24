@@ -531,7 +531,13 @@ Global Remotes
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
-allows a single branch/tag to appear in *all* saltenvs.
+allows a single branch/tag to appear in *all* GitFS saltenvs.
+
+.. note::
+   ``all_saltenvs`` only works *within* GitFS. That is, files in a branch
+   configured using ``all_saltenvs`` will *not* show up in a fileserver
+   environment defined via some other fileserver backend (e.g.
+   :conf_master:`file_roots`).
 
 This is very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
@@ -727,6 +733,19 @@ backends:
 Then the ``roots`` backend (the default backend of files in ``/srv/salt``) will
 be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
+
+.. note::
+
+    This can be used together with `file_roots` accepting `__env__` as a catch-all
+    environment, since 2018.3.5 and 2019.2.1:
+
+    .. code-block:: yaml
+
+        file_roots:
+          base:
+            - /srv/salt
+          __env__:
+            - /srv/salt
 
 Branches, Environments, and Top Files
 =====================================

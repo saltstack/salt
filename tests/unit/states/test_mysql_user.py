@@ -47,6 +47,8 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         mock_str = MagicMock(return_value='salt')
+        mock_warn = MagicMock(return_value='warn')
+        mock_empty_warn = MagicMock(return_value=None)
         mock_none = MagicMock(return_value=None)
         mock_sn = MagicMock(side_effect=[None, 'salt', None, None, None])
         with patch.object(salt.utils.data, 'is_true', mock_f):
@@ -58,29 +60,34 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mysql_user.__salt__, {'mysql.user_exists': mock,
                                               'mysql.user_chpass': mock_t}):
             with patch.object(salt.utils.data, 'is_true', mock_t):
-                comt = ('User frank@localhost is already present'
-                        ' with passwordless login')
-                ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mysql_user.present(name), ret)
+                with patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
+                    comt = ('User frank@localhost is already present'
+                            ' with passwordless login')
+                    ret.update({'comment': comt, 'result': True})
+                    self.assertDictEqual(mysql_user.present(name), ret)
 
-                with patch.object(mysql_user, '_get_mysql_error', mock_str):
+                with patch.object(mysql_user, '_get_mysql_error', mock_str), \
+                    patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
                     ret.update({'comment': 'salt', 'result': False})
                     self.assertDictEqual(mysql_user.present(name), ret)
 
-            with patch.object(mysql_user, '_get_mysql_error', mock_str):
+            with patch.object(mysql_user, '_get_mysql_error', mock_str), \
+                    patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
                 comt = ('User frank@localhost is already present'
                         ' with the desired password')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(mysql_user.present(name,
                                                         password=password), ret)
 
-                with patch.object(mysql_user, '_get_mysql_error', mock_str):
+                with patch.object(mysql_user, '_get_mysql_error', mock_str), \
+                    patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
                     ret.update({'comment': 'salt', 'result': False})
                     self.assertDictEqual(mysql_user.present(name,
                                                             password=password),
                                          ret)
 
-                with patch.object(mysql_user, '_get_mysql_error', mock_none):
+                with patch.object(mysql_user, '_get_mysql_error', mock_none), \
+                    patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
                     with patch.dict(mysql_user.__opts__, {'test': True}):
                         comt = ('Password for user frank@localhost'
                                 ' is set to be changed')
@@ -88,7 +95,8 @@ class MysqlUserTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertDictEqual(mysql_user.present
                                              (name, password=password), ret)
 
-                with patch.object(mysql_user, '_get_mysql_error', mock_sn):
+                with patch.object(mysql_user, '_get_mysql_error', mock_sn), \
+                    patch.object(mysql_user, '_get_mysql_warning', mock_empty_warn):
                     with patch.dict(mysql_user.__opts__, {'test': False}):
                         ret.update({'comment': 'salt', 'result': False})
                         self.assertDictEqual(mysql_user.present

@@ -9,6 +9,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,11 +19,59 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 # Import salt libs
 import salt.modules.mysql as mysql
 
+log = logging.getLogger(__name__)
+
 NO_MYSQL = False
 try:
     import MySQLdb  # pylint: disable=W0611
 except Exception:
     NO_MYSQL = True
+
+__all_privileges__ = [
+    'ALTER',
+    'ALTER ROUTINE',
+    'BACKUP_ADMIN',
+    'BINLOG_ADMIN',
+    'CONNECTION_ADMIN',
+    'CREATE',
+    'CREATE ROLE',
+    'CREATE ROUTINE',
+    'CREATE TABLESPACE',
+    'CREATE TEMPORARY TABLES',
+    'CREATE USER',
+    'CREATE VIEW',
+    'DELETE',
+    'DROP',
+    'DROP ROLE',
+    'ENCRYPTION_KEY_ADMIN',
+    'EVENT',
+    'EXECUTE',
+    'FILE',
+    'GROUP_REPLICATION_ADMIN',
+    'INDEX',
+    'INSERT',
+    'LOCK TABLES',
+    'PERSIST_RO_VARIABLES_ADMIN',
+    'PROCESS',
+    'REFERENCES',
+    'RELOAD',
+    'REPLICATION CLIENT',
+    'REPLICATION SLAVE',
+    'REPLICATION_SLAVE_ADMIN',
+    'RESOURCE_GROUP_ADMIN',
+    'RESOURCE_GROUP_USER',
+    'ROLE_ADMIN',
+    'SELECT',
+    'SET_USER_ID',
+    'SHOW DATABASES',
+    'SHOW VIEW',
+    'SHUTDOWN',
+    'SUPER',
+    'SYSTEM_VARIABLES_ADMIN',
+    'TRIGGER',
+    'UPDATE',
+    'XA_RECOVER_ADMIN'
+]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -38,62 +87,88 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
         Do it before test_user_create_when_user_exists mocks the user_exists call
         '''
-        with patch.object(mysql, 'version', return_value='8.0.10'):
-            self._test_call(mysql.user_exists,
-                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                     'User = %(user)s AND Host = %(host)s AND '
-                                     'Password = PASSWORD(%(password)s)'),
-                             'sql_args': {'host': 'localhost',
-                                          'password': 'BLUECOW',
-                                          'user': 'mytestuser'
-                                         }
-                            },
-                            user='mytestuser',
-                            host='localhost',
-                            password='BLUECOW'
-            )
+        with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+            with patch.object(mysql, 'version', return_value='8.0.10'):
+                with patch.object(mysql, '_get_user_auth_plugin', return_value=({'PLUGIN': 'mysql_native_password'},)):
+                    self._test_call(mysql.user_exists,
+                                    {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                             'User = %(user)s AND Host = %(host)s AND '
+                                             'Password = PASSWORD(%(password)s)'),
+                                     'sql_args': {'host': 'localhost',
+                                                  'password': 'BLUECOW',
+                                                  'user': 'mytestuser'
+                                                 }
+                                    },
+                                    user='mytestuser',
+                                    host='localhost',
+                                    password='BLUECOW'
+                    )
 
-        with patch.object(mysql, 'version', return_value='8.0.11'):
-            self._test_call(mysql.user_exists,
-                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                     'User = %(user)s AND Host = %(host)s'),
-                             'sql_args': {'host': 'localhost',
-                                          'user': 'mytestuser'
-                                         }
-                            },
-                            user='mytestuser',
-                            host='localhost',
-                            password='BLUECOW'
-            )
+        with patch.object(mysql, 'version_comment', return_value='mariadb.org binary distribution'):
+            with patch.object(mysql, 'version', return_value='10.1.38-MariaDB'):
+                self._test_call(mysql.user_exists,
+                                {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                         'User = %(user)s AND Host = %(host)s AND '
+                                         'Password = PASSWORD(%(password)s)'),
+                                 'sql_args': {'host': 'localhost',
+                                              'password': 'BLUECOW',
+                                              'user': 'mytestuser'
+                                             }
+                                },
+                                user='mytestuser',
+                                host='localhost',
+                                password='BLUECOW'
+                )
 
-        with patch.object(mysql, 'version', return_value='8.0.11'):
-            self._test_call(mysql.user_exists,
-                            {'sql': ('SELECT User,Host FROM mysql.user WHERE '
-                                     'User = %(user)s AND Host = %(host)s'),
-                             'sql_args': {'host': '%',
-                                          'user': 'mytestuser'
-                                         }
-                            },
-                            user='mytestuser',
-                            host='%',
-                            password='BLUECOW'
-            )
+            with patch.object(mysql, 'version', return_value='10.2.21-MariaDB'):
+                self._test_call(mysql.user_exists,
+                                {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                         'User = %(user)s AND Host = %(host)s AND '
+                                         'Password = PASSWORD(%(password)s)'),
+                                 'sql_args': {'host': 'localhost',
+                                              'password': 'BLUECOW',
+                                              'user': 'mytestuser'
+                                             }
+                                },
+                                user='mytestuser',
+                                host='localhost',
+                                password='BLUECOW'
+                )
 
-        # test_user_create_when_user_exists(self):
-        # ensure we don't try to create a user when one already exists
-        # mock the version of MySQL
-        with patch.object(mysql, 'version', return_value='8.0.10'):
-            with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    ret = mysql.user_create('testuser')
-                    self.assertEqual(False, ret)
+        with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+            with patch.object(mysql, 'version', return_value='8.0.11'):
+                with patch.object(mysql, '_get_user_auth_plugin',
+                                  return_value=({'PLUGIN': 'caching_sha2_password'},)):
+                    self._test_call(mysql.user_exists,
+                                    {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                             'User = %(user)s AND Host = %(host)s'),
+                                     'sql_args': {'host': 'localhost',
+                                                  'user': 'mytestuser'
+                                                 }
+                                    },
+                                    user='mytestuser',
+                                    host='localhost',
+                    )
 
-        # test_user_create_when_user_exists(self):
-        # ensure we don't try to create a user when one already exists
-        # mock the version of MySQL
-        with patch.object(mysql, 'version', return_value='8.0.11'):
-            with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
-                with patch.object(mysql, 'verify_login', MagicMock(return_value=True)):
+            with patch.object(mysql, 'version', return_value='8.0.11'):
+                with patch.object(mysql, '_get_user_auth_plugin',
+                                  return_value=({'PLUGIN': 'caching_sha2_password'},)):
+                    self._test_call(mysql.user_exists,
+                                    {'sql': ('SELECT User,Host FROM mysql.user WHERE '
+                                             'User = %(user)s AND Host = %(host)s'),
+                                     'sql_args': {'host': '%',
+                                                  'user': 'mytestuser'
+                                                 }
+                                    },
+                                    user='mytestuser',
+                                    host='%',
+                    )
+
+            # test_user_create_when_user_exists(self):
+            # ensure we don't try to create a user when one already exists
+            # mock the version of MySQL
+            with patch.object(mysql, 'version', return_value='8.0.10'):
+                with patch.object(mysql, 'user_exists', MagicMock(return_value=True)):
                     with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                         ret = mysql.user_create('testuser')
                         self.assertEqual(False, ret)
@@ -102,16 +177,17 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the creation of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_create,
-                        {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s',
-                         'sql_args': {'password': 'BLUECOW',
-                                      'user': 'testuser',
-                                      'host': 'localhost',
-                                     }
-                        },
-                        'testuser',
-                        password='BLUECOW'
-        )
+        with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+            self._test_call(mysql.user_create,
+                            {'sql': 'CREATE USER %(user)s@%(host)s IDENTIFIED BY %(password)s',
+                             'sql_args': {'password': 'BLUECOW',
+                                          'user': 'testuser',
+                                          'host': 'localhost',
+                                         }
+                            },
+                            'testuser',
+                            password='BLUECOW'
+            )
 
     def test_user_chpass(self):
         '''
@@ -119,46 +195,129 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         '''
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
-            with patch.object(mysql, 'version', return_value='8.0.10'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
-                            {'password': 'BLUECOW',
-                             'user': 'testuser',
-                             'host': 'localhost',
-                            }
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.10'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
-            with patch.object(mysql, 'version', return_value='8.0.11'):
-                with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                    mysql.user_chpass('testuser', password='BLUECOW')
-                    calls = (
-                        call().cursor().execute(
-                            "ALTER USER 'testuser'@'localhost' IDENTIFIED BY 'BLUECOW';"
-                        ),
-                        call().cursor().execute('FLUSH PRIVILEGES;'),
-                    )
-                    connect_mock.assert_has_calls(calls, any_order=True)
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.10'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=%(password)s WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.11'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser', password='BLUECOW')
+                        calls = (
+                            call().cursor().execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;",
+                                {'password': 'BLUECOW',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+                with patch.object(mysql, 'version', return_value='8.0.11'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                "ALTER USER %(user)s@%(host)s IDENTIFIED AS %(password)s;",
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='mariadb.org binary distribution'):
+                with patch.object(mysql, 'version', return_value='10.3.1-MariaDB-1'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'UPDATE mysql.user SET Password=%(password)s WHERE User=%(user)s AND Host = %(host)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
+
+        connect_mock = MagicMock()
+        with patch.object(mysql, '_connect', connect_mock):
+            with patch.object(mysql, 'version_comment', return_value='mariadb.org binary distribution'):
+                with patch.object(mysql, 'version', return_value='10.4.5-MariaDB-1'):
+                    with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
+                        mysql.user_chpass('testuser',
+                                          password_hash='*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4')
+                        calls = (
+                            call().cursor().execute(
+                                'SET PASSWORD FOR %(user)s@%(host)s = %(password)s;',
+                                {'password': '*6C8989366EAF75BB670AD8EA7A7FC1176A95CEF4',
+                                 'user': 'testuser',
+                                 'host': 'localhost',
+                                }
+                            ),
+                            call().cursor().execute('FLUSH PRIVILEGES;'),
+                        )
+                        connect_mock.assert_has_calls(calls, any_order=True)
 
     def test_user_remove(self):
         '''
         Test the removal of a MySQL user in mysql exec module
         '''
-        self._test_call(mysql.user_remove,
-                        {'sql': 'DROP USER %(user)s@%(host)s',
-                         'sql_args': {'user': 'testuser',
-                                      'host': 'localhost',
-                                     }
-                        },
-                        'testuser'
-        )
+        with patch.object(mysql, 'version_comment', return_value='MySQL Community Server - GPL'):
+            self._test_call(mysql.user_remove,
+                            {'sql': 'DROP USER %(user)s@%(host)s',
+                             'sql_args': {'user': 'testuser',
+                                          'host': 'localhost',
+                                         }
+                            },
+                            'testuser'
+            )
 
     def test_db_check(self):
         '''
@@ -256,15 +415,16 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "GRANT SELECT ON `testdb`.`testtabletwo` TO 'testuer'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
-        mock = MagicMock(return_value=mock_grants)
-        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
-            ret = mysql.grant_exists(
-                'SELECT, INSERT, UPDATE',
-                'testdb.testtableone',
-                'testuser',
-                '%'
-            )
-            self.assertEqual(ret, True)
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'SELECT, INSERT, UPDATE',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
 
     def test_grant_exists_false(self):
         '''
@@ -275,15 +435,47 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
             "GRANT SELECT, INSERT, UPDATE ON `testdb`.`testtableone` TO 'testuser'@'%'",
             "GRANT SELECT ON `testdb`.`testtablethree` TO 'testuser'@'%'",
         ]
-        mock = MagicMock(return_value=mock_grants)
-        with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
-            ret = mysql.grant_exists(
-                'SELECT',
-                'testdb.testtabletwo',
-                'testuser',
-                '%'
-            )
-            self.assertEqual(ret, False)
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'SELECT',
+                    'testdb.testtabletwo',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, False)
+
+    def test_grant_exists_all(self):
+        '''
+        Test to ensure that we can find a grant that exists
+        '''
+        mock_grants = [
+            "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, SHUTDOWN, PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, REPLICATION SLAVE, REPLICATION CLIENT, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE USER, EVENT, TRIGGER, CREATE TABLESPACE, CREATE ROLE, DROP ROLE ON testdb.testtableone TO `testuser`@`%`",
+            "GRANT BACKUP_ADMIN,BINLOG_ADMIN,CONNECTION_ADMIN,ENCRYPTION_KEY_ADMIN,GROUP_REPLICATION_ADMIN,PERSIST_RO_VARIABLES_ADMIN,REPLICATION_SLAVE_ADMIN,RESOURCE_GROUP_ADMIN,RESOURCE_GROUP_USER,ROLE_ADMIN,SET_USER_ID,SYSTEM_VARIABLES_ADMIN,XA_RECOVER_ADMIN ON testdb.testtableone TO `testuser`@`%`"
+        ]
+        with patch.object(mysql, 'version', return_value='8.0.10'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'ALL',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
+
+        mock_grants = ["GRANT ALL PRIVILEGES ON testdb.testtableone TO `testuser`@`%`"]
+        with patch.object(mysql, 'version', return_value='5.6.41'):
+            mock = MagicMock(return_value=mock_grants)
+            with patch.object(mysql, 'user_grants', return_value=mock_grants) as mock_user_grants:
+                ret = mysql.grant_exists(
+                    'ALL PRIVILEGES',
+                    'testdb.testtableone',
+                    'testuser',
+                    '%'
+                )
+                self.assertEqual(ret, True)
 
     @skipIf(True, 'TODO: Mock up user_grants()')
     def test_grant_add(self):
@@ -348,11 +540,12 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
     def _test_call(self, function, expected_sql, *args, **kwargs):
         connect_mock = MagicMock()
-        with patch.object(mysql, '_connect', connect_mock):
+        with patch.object(mysql, '_connect', connect_mock) as mock_connect:
             with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
                 function(*args, **kwargs)
                 if isinstance(expected_sql, dict):
                     calls = call().cursor().execute('{0}'.format(expected_sql['sql']), expected_sql['sql_args'])
+                    connect_mock.assert_has_calls((calls,), True)
                 else:
                     calls = call().cursor().execute('{0}'.format(expected_sql))
-                connect_mock.assert_has_calls((calls,), True)
+                    connect_mock.assert_has_calls((calls,), True)

@@ -19,7 +19,6 @@ import re
 import subprocess
 
 # Import salt libs
-from salt.ext import six
 import salt.utils.decorators.path
 import salt.utils.data
 import salt.utils.files
@@ -44,9 +43,8 @@ if six.PY3:
 
 
 def __virtual__():
-    # TODO: This could work on windows with some love
-    if salt.utils.platform.is_windows():
-        return (False, 'The module cannot be loaded on windows.')
+    if not salt.utils.path.which('ssh'):
+        return False, 'The module requires the ssh binary.'
     return True
 
 
@@ -753,9 +751,10 @@ def set_auth_key(
         if not os.path.isdir(os.path.dirname(fconfig)):
             dpath = os.path.dirname(fconfig)
             os.makedirs(dpath)
-            if os.geteuid() == 0:
-                os.chown(dpath, uinfo['uid'], uinfo['gid'])
-            os.chmod(dpath, 448)
+            if not salt.utils.platform.is_windows():
+                if os.geteuid() == 0:
+                    os.chown(dpath, uinfo['uid'], uinfo['gid'])
+                os.chmod(dpath, 448)
             # If SELINUX is available run a restorecon on the file
             rcon = salt.utils.path.which('restorecon')
             if rcon:
@@ -784,9 +783,10 @@ def set_auth_key(
             raise CommandExecutionError(msg.format(exc))
 
         if new_file:
-            if os.geteuid() == 0:
-                os.chown(fconfig, uinfo['uid'], uinfo['gid'])
-            os.chmod(fconfig, 384)
+            if not salt.utils.platform.is_windows():
+                if os.geteuid() == 0:
+                    os.chown(fconfig, uinfo['uid'], uinfo['gid'])
+                os.chmod(fconfig, 384)
             # If SELINUX is available run a restorecon on the file
             rcon = salt.utils.path.which('restorecon')
             if rcon:
@@ -1104,10 +1104,11 @@ def rm_known_host(user=None, hostname=None, config=None, port=None):
     ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
     cmd = ['ssh-keygen', '-R', ssh_hostname, '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
-    # ssh-keygen creates a new file, thus a chown is required.
-    if os.geteuid() == 0 and user:
-        uinfo = __salt__['user.info'](user)
-        os.chown(full, uinfo['uid'], uinfo['gid'])
+    if not salt.utils.platform.is_windows():
+        # ssh-keygen creates a new file, thus a chown is required.
+        if os.geteuid() == 0 and user:
+            uinfo = __salt__['user.info'](user)
+            os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'removed', 'comment': cmd_result}
 
 
@@ -1317,12 +1318,13 @@ def set_known_host(user=None,
             "Couldn't append to known hosts file: '{0}'".format(exception)
         )
 
-    if os.geteuid() == 0 and user:
-        os.chown(full, uinfo['uid'], uinfo['gid'])
-    if origmode:
-        os.chmod(full, origmode)
-    else:
-        os.chmod(full, 0o600)
+    if not salt.utils.platform.is_windows():
+        if os.geteuid() == 0 and user:
+            os.chown(full, uinfo['uid'], uinfo['gid'])
+        if origmode:
+            os.chmod(full, origmode)
+        else:
+            os.chmod(full, 0o600)
 
     if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
@@ -1446,10 +1448,11 @@ def hash_known_hosts(user=None, config=None):
     cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     os.chmod(full, origmode)
-    # ssh-keygen creates a new file, thus a chown is required.
-    if os.geteuid() == 0 and user:
-        uinfo = __salt__['user.info'](user)
-        os.chown(full, uinfo['uid'], uinfo['gid'])
+    if not salt.utils.platform.is_windows():
+        # ssh-keygen creates a new file, thus a chown is required.
+        if os.geteuid() == 0 and user:
+            uinfo = __salt__['user.info'](user)
+            os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'comment': cmd_result}
 
 

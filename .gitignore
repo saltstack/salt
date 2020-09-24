@@ -2,7 +2,7 @@
 /src
 *.py[co]
 pkg/arch/*.tar.xz
-*.sw[pon]
+*.sw[a-p]
 doc/_build
 dist
 MANIFEST
@@ -84,6 +84,9 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 
+# VS Code
+.vscode
+
 # Ignore the log directory created by tests
 /logs
 tests/integration/cloud/providers/logs
@@ -94,6 +97,9 @@ tests/integration/cloud/providers/pki/minions
 
 # Ignore tox virtualenvs
 /.tox/
+
+# Ignore nox virtualenvs
+/.nox/
 
 # Kitchen tests files
 .kitchen.local.yml
