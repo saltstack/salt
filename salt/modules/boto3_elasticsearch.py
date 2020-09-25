@@ -68,8 +68,9 @@ try:
     from botocore.exceptions import ClientError, ParamValidationError, WaiterError
 
     logging.getLogger("boto3").setLevel(logging.INFO)
+    HAS_BOTO = True
 except ImportError:
-    pass
+    HAS_BOTO = False
 
 log = logging.getLogger(__name__)
 
@@ -79,12 +80,15 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.7")
+    return HAS_BOTO and salt.utils.versions.check_boto_reqs(
+        boto3_ver="1.2.7", check_boto=False
+    )
 
 
 def __init__(opts):
     _ = opts
-    __utils__["boto3.assign_funcs"](__name__, "es")
+    if HAS_BOTO:
+        __utils__["boto3.assign_funcs"](__name__, "es")
 
 
 def add_tags(
