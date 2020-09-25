@@ -27,7 +27,10 @@ class ZyppCallMock:
 
     def __call__(self, *args, **kwargs):
         # If the call is for a configuration modifier, we return self
-        if any(i in kwargs for i in ("no_repo_failure", "systemd_scope", "root")):
+        if any(
+            i in kwargs
+            for i in ("no_repo_failure", "ignore_not_found", "systemd_scope", "root")
+        ):
             return self
         return MagicMock(return_value=self.__return_value)()
 
@@ -1801,8 +1804,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="installed" name="libzypp" kind="package" edition="16.2.4-19.5" arch="x86_64" repository="(System Packages)"/>
         </solvable-list></search-result></stream>
                 """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1824,8 +1828,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         </solvable-list></search-result></stream>
         """
 
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "16.2.*-2*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1846,8 +1851,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         </solvable-list></search-result></stream>
         """
 
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "16.2.5*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1867,8 +1873,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         </solvable-list></search-result></stream>
         """
 
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "*.1"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1889,8 +1896,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
         </solvable-list></search-result></stream>
         """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         assert zypper.Wildcard(_zpr)("libzypp", "16.2.4*") == "16.2.4-19.5"
         assert zypper.Wildcard(_zpr)("libzypp", "16.2*") == "16.2.5-25.1"
         assert zypper.Wildcard(_zpr)("libzypp", "*6-*") == "17.2.6-27.9.1"
@@ -1909,8 +1917,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
         </solvable-list></search-result></stream>
         """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
+
         assert zypper.Wildcard(_zpr)("libzypp", None) is None
 
     def test_wildcard_to_query_typecheck(self):
@@ -1926,8 +1936,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
         </solvable-list></search-result></stream>
         """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
         assert isinstance(zypper.Wildcard(_zpr)("libzypp", "*.1"), str)
 
     def test_wildcard_to_query_condition_preservation(self):
@@ -1943,8 +1954,9 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
         </solvable-list></search-result></stream>
         """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
 
         for op in zypper.Wildcard.Z_OP:
             assert zypper.Wildcard(_zpr)(
@@ -1970,8 +1982,10 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         <solvable status="other-version" name="libzypp" kind="package" edition="17.2.6-27.9.1" arch="x86_64" repository="foo"/>
         </solvable-list></search-result></stream>
         """
-        _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        __zpr = MagicMock()
+        __zpr.nolock.xml.call.return_value = minidom.parseString(xmldoc)
+        _zpr = MagicMock(return_value=__zpr)
+
         with self.assertRaises(CommandExecutionError):
             for op in [">>", "==", "<<", "+"]:
                 zypper.Wildcard(_zpr)("libzypp", "{}*.1".format(op))
@@ -2063,3 +2077,38 @@ pattern() = package-c"""
         with patch("salt.modules.zypperpkg.__zypper__", zypper_mock):
             assert zypper.services_need_restart() == expected
             zypper_mock(root=None).nolock.call.assert_called_with("ps", "-sss")
+
+    def test_search(self):
+        """Test zypperpkg.search()"""
+        xml_mock = MagicMock(return_value=[])
+        zypp_mock = MagicMock(return_value=xml_mock)
+        ZyppCallMock(return_value=xml_mock)
+        with patch("salt.modules.zypperpkg.__zypper__", zypp_mock):
+            zypper.search("emacs")
+            zypp_mock.assert_called_with(root=None, ignore_not_found=True)
+            xml_mock.nolock.noraise.xml.call.assert_called_with("search", "emacs")
+
+    def test_search_not_found(self):
+        """Test zypperpkg.search()"""
+        ret = {
+            "stdout": "<?xml version='1.0'?><stream></stream>",
+            "stderr": None,
+            "retcode": 104,
+        }
+        run_all_mock = MagicMock(return_value=ret)
+        with patch.dict(zypper.__salt__, {"cmd.run_all": run_all_mock}):
+            self.assertRaises(CommandExecutionError, zypper.search, "vim")
+            run_all_mock.assert_called_with(
+                [
+                    "zypper",
+                    "--non-interactive",
+                    "--xmlout",
+                    "--no-refresh",
+                    "search",
+                    "vim",
+                ],
+                success_retcodes=[104],
+                output_loglevel="trace",
+                python_shell=False,
+                env={"ZYPP_READONLY_HACK": "1"},
+            )

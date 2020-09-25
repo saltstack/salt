@@ -99,6 +99,8 @@ class _Zypper:
     }
 
     LOCK_EXIT_CODE = 7
+    NOT_FOUND_EXIT_CODE = 104
+
     XML_DIRECTIVES = ["-x", "--xmlout"]
     # ZYPPER_LOCK is not affected by --root
     ZYPPER_LOCK = "/var/run/zypp.pid"
@@ -129,6 +131,7 @@ class _Zypper:
         self.__no_raise = False
         self.__refresh = False
         self.__ignore_repo_failure = False
+        self.__ignore_not_found = False
         self.__systemd_scope = False
         self.__root = None
 
@@ -148,6 +151,9 @@ class _Zypper:
         # Ignore exit code for 106 (repo is not available)
         if "no_repo_failure" in kwargs:
             self.__ignore_repo_failure = kwargs["no_repo_failure"]
+        # Ignore exit code for 104 (package not found)
+        if "ignore_not_found" in kwargs:
+            self.__ignore_not_found = kwargs["ignore_not_found"]
         if "systemd_scope" in kwargs:
             self.__systemd_scope = kwargs["systemd_scope"]
         if "root" in kwargs:
@@ -306,6 +312,10 @@ class _Zypper:
         if self.__root:
             self.__cmd.extend(["--root", self.__root])
 
+        # Do not consider 104 as a retcode error
+        if self.__ignore_not_found:
+            kwargs["success_retcodes"] = [_Zypper.NOT_FOUND_EXIT_CODE]
+
         self.__cmd.extend(args)
         kwargs["output_loglevel"] = "trace"
         kwargs["python_shell"] = False
@@ -447,9 +457,11 @@ class Wildcard:
         Get available versions of the package.
         :return:
         """
-        solvables = self.zypper.nolock.xml.call(
-            "se", "-xv", self.name
-        ).getElementsByTagName("solvable")
+        solvables = (
+            self.zypper(ignore_not_found=True)
+            .nolock.xml.call("se", "-v", self.name)
+            .getElementsByTagName("solvable")
+        )
         if not solvables:
             raise CommandExecutionError(
                 "No packages found matching '{}'".format(self.name)
@@ -1054,7 +1066,7 @@ def list_repo_pkgs(*args, **kwargs):
 
     root = kwargs.get("root") or None
     for node in (
-        __zypper__(root=root)
+        __zypper__(root=root, ignore_not_found=True)
         .xml.call("se", "-s", *targets)
         .getElementsByTagName("solvable")
     ):
@@ -2413,7 +2425,9 @@ def owner(*paths, **kwargs):
 def _get_visible_patterns(root=None):
     """Get all available patterns in the repo that are visible."""
     patterns = {}
-    search_patterns = __zypper__(root=root).nolock.xml.call("se", "-t", "pattern")
+    search_patterns = __zypper__(root=root, ignore_not_found=True).nolock.xml.call(
+        "se", "-t", "pattern"
+    )
     for element in search_patterns.getElementsByTagName("solvable"):
         installed = element.getAttribute("status") == "installed"
         patterns[element.getAttribute("name")] = {
@@ -2610,7 +2624,7 @@ def search(criteria, refresh=False, **kwargs):
 
     cmd.append(criteria)
     solvables = (
-        __zypper__(root=root)
+        __zypper__(root=root, ignore_not_found=True)
         .nolock.noraise.xml.call(*cmd)
         .getElementsByTagName("solvable")
     )
@@ -2862,7 +2876,7 @@ def _get_patches(installed_only=False, root=None):
     """
     patches = {}
     for element in (
-        __zypper__(root=root)
+        __zypper__(root=root, ignore_not_found=True)
         .nolock.xml.call("se", "-t", "patch")
         .getElementsByTagName("solvable")
     ):
