@@ -8,17 +8,14 @@ Microsoft IIS site management via WebAdministration powershell module
 
 .. versionadded:: 2016.3.0
 """
-# Import python libs
-
 import decimal
 import logging
 import os
 import re
+import yaml
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.platform
-import yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import map, range
 
