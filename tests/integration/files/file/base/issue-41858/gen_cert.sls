@@ -25,11 +25,11 @@
     - authorityKeyIdentifier: keyid,issuer:always
     - days_valid: 3650
     - days_remaining: 0
-    - backup: True
+    - backup: minion
     - managed_private_key:
         name: {{ tmp_dir  }}/pki/ca.key
         bits: 4096
-        backup: True
+        backup: minion
     - require:
       - file: {{ tmp_dir  }}/pki
       - {{ tmp_dir  }}/pki/ca.key
@@ -55,7 +55,7 @@ test_crt:
     - signing_policy: ca_policy
     - CN: minion
     - days_remaining: 30
-    - backup: True
+    - backup: minion
     - require:
         - {{ tmp_dir  }}/pki/ca.crt
         - test_priv_key

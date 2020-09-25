@@ -8,11 +8,11 @@
     - authorityKeyIdentifier: keyid,issuer:always
     - days_valid: 1460
     - days_remaining: 0
-    - backup: True
+    - backup: minion
     - watch:
       - x509: {{ pillar['keyfile'] }}
 
 {{ pillar['keyfile'] }}:
   x509.private_key_managed:
     - bits: 4096
-    - backup: True
+    - backup: minion

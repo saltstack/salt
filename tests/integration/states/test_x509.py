@@ -712,7 +712,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         certificate.authority::private-key:
           x509.private_key_managed:
             - name: {{ ca_key_path }}
-            - backup: True
+            - backup: minion
 
         certificate.authority::certificate:
           x509.certificate_managed:
@@ -730,7 +730,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             - authorityKeyIdentifier: keyid,issuer:always
             - days_valid: 3650
             - days_remaining: 0
-            - backup: True
+            - backup: minion
             - require:
               - x509: certificate.authority::private-key
         """
