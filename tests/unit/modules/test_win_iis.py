@@ -4,16 +4,9 @@
     :maturity: develop
     versionadded:: 2016.11.0
 """
-
-# Import Python Libs
-
 import salt.modules.win_iis as win_iis
 import salt.utils.json
-
-# Import Salt Libs
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
