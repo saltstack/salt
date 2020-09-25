@@ -12,10 +12,10 @@ import decimal
 import logging
 import os
 import re
-import yaml
 
 import salt.utils.json
 import salt.utils.platform
+import yaml
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import map, range
 
