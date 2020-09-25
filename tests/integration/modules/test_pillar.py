@@ -49,9 +49,11 @@ class PillarModuleTest(ModuleCase):
 
     @slowTest
     def test_issue_5951_actual_file_roots_in_opts(self):
+        pillar_data = self.run_function("pillar.data")
+        file_roots = pillar_data["ext_pillar_opts"]["file_roots"]["base"]
         self.assertIn(
-            RUNTIME_VARS.TMP_STATE_TREE,
-            self.run_function("pillar.data")["ext_pillar_opts"]["file_roots"]["base"],
+            pathlib.Path(RUNTIME_VARS.TMP_STATE_TREE).resolve(),
+            [pathlib.Path(p).resolve() for p in file_roots],
         )
 
     @slowTest
