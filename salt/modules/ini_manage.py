@@ -8,20 +8,16 @@ Edit ini files
 
 (for example /etc/sysctl.conf)
 """
-# Import Python libs
 
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
