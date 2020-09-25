@@ -43,7 +43,6 @@ provided `kubeconfig` entry is preferred.
 
 """
 
-# Import Python Futures
 
 import base64
 import errno
