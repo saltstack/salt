@@ -103,13 +103,12 @@ python-jose==2.0.2        # via moto
 pytz==2019.3
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==18.0.1
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
 rsa==4.0                  # via google-auth
 s3transfer==0.3.3         # via boto3
-salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
 six==1.15.0

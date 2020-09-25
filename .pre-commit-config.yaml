@@ -149,8 +149,7 @@ repos:
           - --py-version=3.5
           - --platform=darwin
           - --include=pkg/osx/req_pyobjc.txt
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -164,8 +163,7 @@ repos:
           - --py-version=3.6
           - --platform=darwin
           - --include=pkg/osx/req_pyobjc.txt
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -179,8 +177,7 @@ repos:
           - --py-version=3.7
           - --platform=darwin
           - --include=pkg/osx/req_pyobjc.txt
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -194,8 +191,7 @@ repos:
           - --py-version=3.8
           - --platform=darwin
           - --include=pkg/osx/req_pyobjc.txt
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -209,8 +205,7 @@ repos:
           - --py-version=3.9
           - --platform=darwin
           - --include=pkg/osx/req_pyobjc.txt
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/darwin.txt
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
@@ -223,8 +218,7 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=windows
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
       - id: pip-tools-compile
@@ -236,8 +230,7 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=windows
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
       - id: pip-tools-compile
@@ -249,8 +242,7 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=windows
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
+          - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
 # Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
@@ -263,8 +255,7 @@ repos:
 #          - -v
 #          - --py-version=3.8
 #          - --platform=windows
-#          - --include=requirements/base.txt
-#          - --include=requirements/zeromq.txt
+#          - --include=requirements/windows.txt
 #          - requirements/static/pkg/windows.in
 
 # Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
@@ -277,8 +268,7 @@ repos:
 #          - -v
 #          - --py-version=3.9
 #          - --platform=windows
-#          - --include=requirements/base.txt
-#          - --include=requirements/zeromq.txt
+#          - --include=requirements/windows.txt
 #          - requirements/static/pkg/windows.in
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------

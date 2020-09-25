@@ -1,1 +1,2 @@
-# Linux source distribution requirements
+# This file only exists to trigger the right static compiled requirements destination
+# Don't add any requirements here.

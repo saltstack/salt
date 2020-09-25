@@ -10,7 +10,7 @@ argh==0.26.2              # via watchdog
 asn1crypto==1.3.0
 attrs==19.1.0             # via pytest
 aws-xray-sdk==0.95        # via moto
-backports.ssl_match_hostname==3.7.0.1 ; python_version < "3.7"
+backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
 bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
@@ -100,13 +100,12 @@ python-jose==2.0.2        # via moto
 pytz==2019.3
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==18.0.1
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
 rsa==4.0                  # via google-auth
 s3transfer==0.3.3         # via boto3
-salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc
 setproctitle==1.1.10
 six==1.15.0

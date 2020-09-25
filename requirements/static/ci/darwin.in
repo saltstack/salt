@@ -21,7 +21,6 @@ pyopenssl
 python-etcd>0.4.2
 pyvmomi
 rfc3987
-salttesting==2017.6.1
 strict_rfc3339
 toml
 virtualenv>=20.0.20

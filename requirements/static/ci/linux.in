@@ -34,7 +34,6 @@ python-gnupg
 pyvmomi
 requests
 rfc3987
-salttesting==2017.6.1
 setproctitle
 setuptools-scm
 strict_rfc3339

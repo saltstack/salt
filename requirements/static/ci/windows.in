@@ -17,18 +17,13 @@ patch
 pygit2<=0.28.2; python_version < '3.8'
 pygit2>=1.2.0; python_version >= '3.8'
 python-etcd>0.4.2
-pyopenssl
-python-gnupg
 pyvmomi
 rfc3987
-salttesting==2017.6.1
 sed
-setproctitle
 strict_rfc3339
-timelib
 toml
 virtualenv>=20.0.20
-wmi==1.4.9
+watchdog>=0.9.0
 
 # Available template libraries that can be used
 Genshi
