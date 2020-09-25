@@ -3,7 +3,6 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
-# Import python libs
 
 import fnmatch
 import logging
@@ -12,8 +11,6 @@ import re
 
 import salt.auth.ldap
 import salt.cache
-
-# Import salt libs
 import salt.payload
 import salt.roster
 import salt.utils.data
@@ -21,8 +18,6 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.stringutils
 import salt.utils.versions
-
-# Import 3rd-party libs
 from salt._compat import ipaddress
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError, SaltCacheError
