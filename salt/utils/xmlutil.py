@@ -2,12 +2,10 @@
 Various XML utilities
 """
 
-# Import Python libs
 import re
 import string  # pylint: disable=deprecated-module
 from xml.etree import ElementTree
 
-# Import salt libs
 import salt.utils.data
 
 
