@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt module
 ===========================

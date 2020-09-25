@@ -1,0 +1,38 @@
+# Workflow to commit back pre-commit fixes to pull requests
+name: Pre-Commit
+
+on: [
+  pull_request
+]
+
+jobs:
+
+  autofix:
+    name: Autofix
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Set Cache Key
+      run: echo "::set-env name=PY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+    - id: changed-files
+      name: Get Changed Files
+      uses: jitterbit/get-changed-files@v1
+    - name: List Changed Files
+      run: |
+        for changed_file in ${{ steps.changed-files.outputs.all }}; do
+          echo "${changed_file}"
+        done
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+    - uses: pre-commit/action@v2.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        extra_args: --files ${{ steps.changed-files.outputs.all }}
