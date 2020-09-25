@@ -52,12 +52,15 @@ class IniManageTestCase(TestCase):
 
     maxDiff = None
 
-    def setUp(self, linesep=os.linesep):
+    def _setUp(self, linesep=os.linesep):
         self.tfile = tempfile.NamedTemporaryFile(delete=False, mode="w+b")
         self.tfile.write(
             salt.utils.stringutils.to_bytes(linesep.join(self.TEST_FILE_CONTENT))
         )
         self.tfile.close()
+
+    def setUp(self):
+        self._setUp(os.linesep)
 
     def tearDown(self):
         os.remove(self.tfile.name)
@@ -232,5 +235,5 @@ class IniManageTestCase(TestCase):
                 self.test_empty_lines_multiple_edits,
             ]:
                 self.tearDown()
-                self.setUp(c)
+                self._setUp(c)
                 test()
