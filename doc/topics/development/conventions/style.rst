@@ -123,7 +123,7 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
         signature : None
             An optional signature.
 
-        .. versionadded 0.17.0
+        .. versionadded:: 0.17.0
         """
         print("Greetings! {0}\n\n{1}".format(msg, signature))
 
