@@ -1,11 +1,9 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-
 import copy
 import glob
 import os
-
 import salt.config
 import salt.ext.six as six
 import salt.loader
