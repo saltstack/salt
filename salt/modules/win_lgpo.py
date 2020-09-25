@@ -36,7 +36,6 @@ Current known limitations
   - struct
   - salt.utils.win_reg
 """
-# Import Python libs
 import csv
 import ctypes
 import glob
@@ -44,22 +43,17 @@ import locale
 import logging
 import os
 import re
-import tempfile
-import time
-import uuid
-import zlib
-
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
-
-# Import Salt libs
+import tempfile
+import time
+import uuid
+import zlib
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.serializers.configparser import deserialize
@@ -8700,7 +8694,7 @@ def _get_policy_adm_setting(
     this_key = admx_policy.attrib.get("key", None)
     this_policy_name = admx_policy.attrib.get("name", None)
     if this_key is None or this_policy_name is None:
-        msg = 'Policy is missing the required "key" or "name" attribute:\n' "{}".format(
+        msg = 'Policy is missing the required "key" or "name" attribute:\n{}'.format(
             admx_policy.attrib
         )
         raise CommandExecutionError(msg)
@@ -9156,7 +9150,7 @@ def _get_policy_adm_setting(
                                 "element {} is disabled".format(child_item.attrib["id"])
                             )
             if element_only_enabled_disabled:
-                if len(required_elements.keys()) > 0:
+                if 0 < len(required_elements.keys()) == len(configured_elements.keys()):
                     if policy_disabled_elements == len(required_elements.keys()):
                         log.trace(
                             "{} is disabled by all enum elements".format(
