@@ -11,13 +11,11 @@ for the generation and signing of certificates for systems running libvirt:
       virt.keys
 """
 
-# Import Python libs
 
 import fnmatch
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
