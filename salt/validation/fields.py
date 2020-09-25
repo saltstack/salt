@@ -33,8 +33,10 @@ class Charset(Field):
         self.charset = set(charset)
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if isinstance(value, (bytes, str)) and all(
-            (char in self.charset for char in value)
-        ):
-            return value
-        raise ValidationError("Value must be str or bytes")
+        if not isinstance(value, (bytes, str)):
+            raise ValidationError("Value must be str or bytes, got ({})'{}'".format(
+                type(value), value))
+        if not all((char in self.charset for char in value)):
+            raise ValidationError("Value '{}' contains characters not in set '{}'".format(
+                value, self.charset))
+        return value
