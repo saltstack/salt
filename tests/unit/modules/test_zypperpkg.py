@@ -1,33 +1,24 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import os
 from xml.dom import minidom
 
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.zypperpkg as zypper
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
-
-# Import 3rd-party libs
 from salt.ext.six.moves import configparser
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
 
 
-class ZyppCallMock(object):
+class ZyppCallMock:
     def __init__(self, return_value=None):
         self.__return_value = return_value
 
@@ -124,7 +115,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         """
 
-        class RunSniffer(object):
+        class RunSniffer:
             def __init__(self, stdout=None, stderr=None, retcode=None):
                 self.calls = list()
                 self._stdout = stdout or ""
@@ -237,7 +228,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with self.assertRaisesRegex(
                 CommandExecutionError,
-                "^Zypper command failure: Some handled zypper internal error{0}Another zypper internal error$".format(
+                "^Zypper command failure: Some handled zypper internal error{}Another zypper internal error$".format(
                     os.linesep
                 ),
             ):
@@ -316,7 +307,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "--no-refresh",
                     "--disable-repositories",
                     "products",
-                    u"-i",
+                    "-i",
                 ],
                 env={"ZYPP_READONLY_HACK": "1"},
                 output_loglevel="trace",
@@ -338,14 +329,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "eol_t",
                     "registerrelease",
                 ]:
-                    if six.PY3:
-                        self.assertCountEqual(
-                            test_data[kwd], [prod.get(kwd) for prod in products]
-                        )
-                    else:
-                        self.assertEqual(
-                            test_data[kwd], sorted([prod.get(kwd) for prod in products])
-                        )
+                    self.assertCountEqual(
+                        test_data[kwd], [prod.get(kwd) for prod in products]
+                    )
                 cmd_run_all.assert_has_calls([mock_call])
 
     def test_refresh_db(self):
@@ -702,7 +688,6 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "--debug-solver",
                     )
 
-
                 with patch(
                     "salt.modules.zypperpkg.list_pkgs",
                     MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}]),
@@ -790,6 +775,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                         "Dummy2",
                         "--allow-vendor-change",
                     )
+
     def test_upgrade_kernel(self):
         """
         Test kernel package upgrade success.
@@ -848,7 +834,7 @@ Use 'zypper repos' to get the list of defined repositories.
 Repository 'DUMMY' not found by its alias, number, or URI.
 """
 
-        class FailingZypperDummy(object):
+        class FailingZypperDummy:
             def __init__(self):
                 self.stdout = zypper_out
                 self.stderr = ""
@@ -1134,10 +1120,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 ],
             }
             for pkgname, pkginfo in pkgs.items():
-                if six.PY3:
-                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
-                else:
-                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         """
@@ -1497,7 +1480,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         :return:
         """
 
-        class ListPackages(object):
+        class ListPackages:
             def __init__(self):
                 self._packages = ["vim", "pico"]
                 self._pkgs = {
@@ -1935,7 +1918,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         _zpr = MagicMock()
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
-        assert isinstance(zypper.Wildcard(_zpr)("libzypp", "*.1"), six.string_types)
+        assert isinstance(zypper.Wildcard(_zpr)("libzypp", "*.1"), str)
 
     def test_wildcard_to_query_condition_preservation(self):
         """
@@ -1955,14 +1938,14 @@ Repository 'DUMMY' not found by its alias, number, or URI.
 
         for op in zypper.Wildcard.Z_OP:
             assert zypper.Wildcard(_zpr)(
-                "libzypp", "{0}*.1".format(op)
-            ) == "{0}17.2.6-27.9.1".format(op)
+                "libzypp", "{}*.1".format(op)
+            ) == "{}17.2.6-27.9.1".format(op)
 
         # Auto-fix feature: moves operator from end to front
         for op in zypper.Wildcard.Z_OP:
             assert zypper.Wildcard(_zpr)(
-                "libzypp", "16*{0}".format(op)
-            ) == "{0}16.2.5-25.1".format(op)
+                "libzypp", "16*{}".format(op)
+            ) == "{}16.2.5-25.1".format(op)
 
     def test_wildcard_to_query_unsupported_operators(self):
         """
@@ -1981,7 +1964,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
         with self.assertRaises(CommandExecutionError):
             for op in [">>", "==", "<<", "+"]:
-                zypper.Wildcard(_zpr)("libzypp", "{0}*.1".format(op))
+                zypper.Wildcard(_zpr)("libzypp", "{}*.1".format(op))
 
     @patch("salt.modules.zypperpkg._get_visible_patterns")
     def test__get_installed_patterns(self, get_visible_patterns):
