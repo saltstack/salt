@@ -221,8 +221,8 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 @pytest.helpers.register
-def loader_mock(request, loader_modules, **kwargs):
-    return LoaderModuleMock(request, loader_modules, **kwargs)
+def loader_mock(loader_modules, **kwargs):
+    return LoaderModuleMock(loader_modules, **kwargs)
 
 
 @pytest.helpers.register
