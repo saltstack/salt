@@ -7,7 +7,6 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 
