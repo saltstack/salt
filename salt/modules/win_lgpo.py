@@ -43,16 +43,17 @@ import locale
 import logging
 import os
 import re
+import tempfile
+import time
+import uuid
+import zlib
+
 import salt.utils.dictupdate as dictupdate
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
-import tempfile
-import time
-import uuid
-import zlib
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range
