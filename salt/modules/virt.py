@@ -119,7 +119,6 @@ YB      10**24
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-# Import python libs
 
 import base64
 import collections
@@ -136,10 +135,7 @@ import time
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
-# Import third party libs
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json

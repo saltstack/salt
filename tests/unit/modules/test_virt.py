@@ -4,7 +4,6 @@ virt execution module unit tests
 
 # pylint: disable=3rd-party-module-not-gated
 
-# Import python libs
 
 import datetime
 import os
@@ -15,16 +14,12 @@ import salt.config
 import salt.modules.config as config
 import salt.modules.virt as virt
 import salt.syspaths
-
-# Import salt libs
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
