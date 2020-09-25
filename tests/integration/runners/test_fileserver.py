@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the fileserver runner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
 import pathlib
 
 import pytest
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
+from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -170,6 +168,7 @@ class FileserverTest(ShellCase):
         self.assertTrue("grail/scene33" in ret["return"])
 
     @slowTest
+    @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
     def test_symlink_list(self):
         """
         fileserver.symlink_list
