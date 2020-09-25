@@ -23,9 +23,7 @@ Docker Python SDK
 
 More information: https://docker-py.readthedocs.io/en/stable/
 """
-# Import python libraries
 
-# Import Salt libs
 import salt.utils.json
 
 
