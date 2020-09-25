@@ -277,7 +277,6 @@ For example:
 
 """
 
-# Import python libs
 
 import copy
 import difflib
@@ -294,7 +293,6 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
 
-# Import salt libs
 import salt.loader
 import salt.payload
 import salt.utils.data
@@ -309,8 +307,6 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext.six.moves import zip_longest
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError

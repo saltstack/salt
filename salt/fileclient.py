@@ -2,7 +2,6 @@
 Classes that manage file clients
 """
 
-# Import python libs
 import contextlib
 import errno
 import ftplib
@@ -30,8 +29,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.versions
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, MinionError
 
 # pylint: disable=no-name-in-module,import-error

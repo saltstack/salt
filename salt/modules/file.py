@@ -8,7 +8,6 @@ group, mode, and data
 # some time in the future
 
 
-# Import python libs
 import datetime
 import errno
 import fnmatch
@@ -30,7 +29,6 @@ from collections import namedtuple
 from collections.abc import Iterable, Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.data
