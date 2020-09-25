@@ -2,7 +2,6 @@
 Minion side functions for salt-cp
 """
 
-# Import python libs
 import base64
 import errno
 import fnmatch
@@ -12,8 +11,6 @@ from urllib.parse import urlparse
 
 import salt.crypt
 import salt.fileclient
-
-# Import salt libs
 import salt.minion
 import salt.transport.client
 import salt.utils.data
