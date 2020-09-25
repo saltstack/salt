@@ -102,7 +102,7 @@ s3transfer==0.3.3         # via boto3
 salttesting==2017.6.1
 sed==0.3.1
 setproctitle==1.1.10
-six==1.12.0               # via cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, virtualenv, websocket-client
+six==1.15.0               # via cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, kubernetes, mock, more-itertools, moto, packaging, pygit2, pyopenssl, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, virtualenv, websocket-client
 smmap2==2.0.5
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend

@@ -1231,7 +1231,7 @@ def invoke(session):
     _invoke(session)
 
 
-@nox.session(name="invoke-pre-commit", python="3")
+@nox.session(name="invoke-pre-commit", python=False)
 def invoke_pre_commit(session):
     """
     DO NOT CALL THIS NOX SESSION DIRECTLY
