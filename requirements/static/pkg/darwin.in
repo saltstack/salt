@@ -1,0 +1,23 @@
+# Darwin packaging distribution requirements
+apache-libcloud
+backports.ssl_match_hostname==3.7.0.1; python_version < "3.7"
+certifi
+cherrypy
+cryptography
+gitpython
+idna
+ipaddress
+linode-python
+mako
+psutil
+pyasn1
+pycparser
+pyopenssl
+python-dateutil
+python-gnupg
+pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==19.0.0 ; python_version >= "3.8"
+requests
+setproctitle
+timelib>=0.2.5
+vultr

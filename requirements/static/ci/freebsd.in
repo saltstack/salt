@@ -18,7 +18,6 @@ keyring==5.7.1
 kubernetes<4.0
 libnacl>=1.7.1
 mock>=3.0.5
-more-itertools==5.0.0
 moto
 napalm; python_version >= '3.6'
 paramiko>=2.1.6
