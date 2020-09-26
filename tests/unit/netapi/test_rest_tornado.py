@@ -967,7 +967,7 @@ class TestEventListener(AsyncTestCase):
             )  # get an event future
             me.fire_event({"data": "foo2"}, "evt2")  # fire an event we don't want
             me.fire_event({"data": "foo1"}, "evt1")  # fire an event we do want
-            self.wait()  # wait for the future
+            self.wait(timeout=60)  # wait for the future
 
             # check that we got the event we wanted
             self.assertTrue(event_future.done())
@@ -1076,7 +1076,7 @@ class TestEventListener(AsyncTestCase):
 
             me.fire_event({"data": "foo2"}, "evt2")
             me.fire_event({"data": "foo3"}, "evt3")
-            self.wait(timeout=30)
+            self.wait(timeout=60)
             event_listener.clean_by_request(self)
             me.fire_event({"data": "foo1"}, "evt1")
 
