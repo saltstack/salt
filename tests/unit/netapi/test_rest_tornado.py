@@ -1085,7 +1085,7 @@ class TestEventListener(AsyncTestCase):
 
             me.fire_event({"data": "foo2"}, "evt2")
             me.fire_event({"data": "foo3"}, "evt3")
-            self.wait()
+            self.wait(timeout=30)
             event_listener.clean_by_request(self)
             me.fire_event({"data": "foo1"}, "evt1")
 
