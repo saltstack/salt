@@ -1871,7 +1871,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual("2", setxml.find("vcpu").text)
-        self.assertEqual("2048", setxml.find("memory").text)
+        self.assertEqual("2147483648", setxml.find("memory").text)
 
         # Same parameters passed than in default virt.defined state case
         self.assertEqual(
@@ -2031,7 +2031,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "mem": False,
+                "mem": True,
             },
             virt.update("my_vm", mem=memtune),
         )
