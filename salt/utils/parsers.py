@@ -42,6 +42,15 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt.utils.verify import verify_log_files
 
+if salt.utils.platform.is_windows():
+    # Let's try to set an UTF-8 capable codepage for windows from the get go
+    import salt.utils.win_chcp
+
+    try:
+        salt.utils.win_chcp.set_codepage_id(65001)
+    except salt.exceptions.CodePageError:
+        pass
+
 logger = logging.getLogger(__name__)
 
 
