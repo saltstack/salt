@@ -6,5 +6,6 @@ minion to run.
 
 from salt.scripts import salt_call
 
+x = "fix pre"
 if __name__ == "__main__":
     salt_call()
