@@ -26,7 +26,7 @@ def eventpublisher_process(sock_dir):
             # Travis is slow
             time.sleep(10)
         else:
-            time.sleep(2)
+            time.sleep(8)
         yield
     finally:
         clean_proc(proc)
