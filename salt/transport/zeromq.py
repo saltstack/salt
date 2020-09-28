@@ -2,7 +2,6 @@
 Zeromq transport classes
 """
 
-# Import Python Libs
 
 import copy
 import errno
@@ -15,11 +14,8 @@ import threading
 import weakref
 from random import randint
 
-# Import Salt Libs
 import salt.auth
 import salt.crypt
-
-# Import Tornado Libs
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
@@ -59,7 +55,6 @@ except ImportError:
     HAS_ZMQ_MONITOR = False
 
 
-# Import third party libs
 try:
     from M2Crypto import RSA
 
