@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.events
     ~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import multiprocessing
 import os
 import time
 from contextlib import contextmanager
 
-# Import Salt libs
 import salt.utils.event
 from salt.utils.process import clean_proc
 
@@ -34,7 +30,7 @@ def eventpublisher_process(sock_dir):
 
 class EventSender(multiprocessing.Process):
     def __init__(self, data, tag, wait, sock_dir):
-        super(EventSender, self).__init__()
+        super().__init__()
         self.data = data
         self.tag = tag
         self.wait = wait
