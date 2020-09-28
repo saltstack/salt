@@ -4,10 +4,6 @@ Encapsulate the different transports available to Salt.
 
 import logging
 
-import salt.utils.versions
-from salt.ext import six
-from salt.ext.six.moves import range
-
 log = logging.getLogger(__name__)
 
 

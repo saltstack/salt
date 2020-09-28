@@ -3,14 +3,12 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
-# Import python libs
 
 import logging
 import os
 import sys
 import traceback
 
-# Import salt libs
 import salt
 import salt.defaults.exitcodes
 import salt.loader
@@ -25,16 +23,12 @@ import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
-
-# Custom exceptions
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltClientError,
     SaltInvocationError,
 )
-
-# Import 3rd-party libs
 from salt.log import LOG_LEVELS
 
 log = logging.getLogger(__name__)
