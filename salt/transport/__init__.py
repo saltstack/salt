@@ -1,20 +1,14 @@
 """
 Encapsulate the different transports available to Salt.
 """
-# Import Python libs
 
 import logging
 
-# Import Salt libs
 import salt.utils.versions
-
-# Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
-
-x = "fix pre"
 
 
 def iter_transport_opts(opts):
