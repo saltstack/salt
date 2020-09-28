@@ -37,7 +37,6 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.log import LOG_LEVELS
 
-x = "fix"
 log = logging.getLogger(__name__)
 
 
