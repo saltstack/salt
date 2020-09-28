@@ -40,8 +40,6 @@ import salt.utils.xdg
 import salt.utils.yaml
 import salt.version as version
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.utils.validate.path import is_writeable
 from salt.utils.verify import verify_log_files
 
@@ -175,9 +173,6 @@ class OptionParser(optparse.OptionParser):
             options.__dict__.update(new_options.__dict__)
             args.extend(new_args)
 
-        if six.PY2:
-            args = salt.utils.data.decode(args)
-
         if options.versions_report:
             self.print_versions_report()
 
@@ -248,7 +243,7 @@ class OptionParser(optparse.OptionParser):
     def print_versions_report(
         self, file=sys.stdout
     ):  # pylint: disable=redefined-builtin
-        print("\n".join(version.versions_report()), file=file)
+        print("\n".join(version.versions_report()), file=file, flush=True)
         self.exit(salt.defaults.exitcodes.EX_OK)
 
     def exit(self, status=0, msg=None):
@@ -296,7 +291,7 @@ class MergeConfigMixIn(metaclass=MixInMeta):
     This mix-in should run last.
     """
 
-    _mixin_prio_ = six.MAXSIZE
+    _mixin_prio_ = sys.maxsize
 
     def _mixin_setup(self):
         if not hasattr(self, "setup_config") and not hasattr(self, "config"):
