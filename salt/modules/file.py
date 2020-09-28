@@ -8,7 +8,6 @@ group, mode, and data
 # some time in the future
 
 
-# Import python libs
 import datetime
 import errno
 import fnmatch
@@ -30,7 +29,6 @@ from collections import namedtuple
 from collections.abc import Iterable, Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.data
@@ -768,7 +766,12 @@ def get_hash(path, form="sha256", chunk_size=65536):
 
 
 def get_source_sum(
-    file_name="", source="", source_hash=None, source_hash_name=None, saltenv="base"
+    file_name="",
+    source="",
+    source_hash=None,
+    source_hash_name=None,
+    saltenv="base",
+    verify_ssl=True,
 ):
     """
     .. versionadded:: 2016.11.0
@@ -802,6 +805,12 @@ def get_source_sum(
         Salt fileserver environment from which to retrieve the source_hash. This
         value will only be used when ``source_hash`` refers to a file on the
         Salt fileserver (i.e. one beginning with ``salt://``).
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``) and source_hash
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -841,7 +850,9 @@ def get_source_sum(
         try:
             proto = _urlparse(source_hash).scheme
             if proto in salt.utils.files.VALID_PROTOS:
-                hash_fn = __salt__["cp.cache_file"](source_hash, saltenv)
+                hash_fn = __salt__["cp.cache_file"](
+                    source_hash, saltenv, verify_ssl=verify_ssl
+                )
                 if not hash_fn:
                     raise CommandExecutionError(
                         "Source hash file {} not found".format(source_hash)
@@ -4441,6 +4452,7 @@ def get_managed(
     context,
     defaults,
     skip_verify=False,
+    verify_ssl=True,
     **kwargs
 ):
     """
@@ -4490,6 +4502,12 @@ def get_managed(
         argument will be ignored.
 
         .. versionadded:: 2016.3.0
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``) and source_hash
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -4553,7 +4571,12 @@ def get_managed(
                 if source_hash:
                     try:
                         source_sum = get_source_sum(
-                            name, source, source_hash, source_hash_name, saltenv
+                            name,
+                            source,
+                            source_hash,
+                            source_hash_name,
+                            saltenv,
+                            verify_ssl=verify_ssl,
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
@@ -4588,7 +4611,10 @@ def get_managed(
         if not sfn or cache_refetch:
             try:
                 sfn = __salt__["cp.cache_file"](
-                    source, saltenv, source_hash=source_sum.get("hsum")
+                    source,
+                    saltenv,
+                    source_hash=source_sum.get("hsum"),
+                    verify_ssl=verify_ssl,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -5318,6 +5344,7 @@ def check_managed_changes(
     serole=None,
     setype=None,
     serange=None,
+    verify_ssl=True,
     **kwargs
 ):
     """
@@ -5326,6 +5353,12 @@ def check_managed_changes(
     .. versionchanged:: 3001
 
         selinux attributes added
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``) and source_hash
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
 
     CLI Example:
 
@@ -5357,6 +5390,7 @@ def check_managed_changes(
             context,
             defaults,
             skip_verify,
+            verify_ssl=verify_ssl,
             **kwargs
         )
 
@@ -5408,6 +5442,7 @@ def check_file_meta(
     serole=None,
     setype=None,
     serange=None,
+    verify_ssl=True,
 ):
     """
     Check for the changes in the file metadata.
@@ -5416,7 +5451,7 @@ def check_file_meta(
 
     .. code-block:: bash
 
-        salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' base
+        salt '*' file.check_file_meta /etc/httpd/conf.d/httpd.conf None salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' None base
 
     .. note::
 
@@ -5478,6 +5513,12 @@ def check_file_meta(
         selinux range attribute
 
         .. versionadded:: 3001
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``)
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
     """
     changes = {}
     if not source_sum:
@@ -5498,7 +5539,10 @@ def check_file_meta(
         if source_sum["hsum"] != lstats["sum"]:
             if not sfn and source:
                 sfn = __salt__["cp.cache_file"](
-                    source, saltenv, source_hash=source_sum["hsum"]
+                    source,
+                    saltenv,
+                    source_hash=source_sum["hsum"],
+                    verify_ssl=verify_ssl,
                 )
             if sfn:
                 try:
@@ -5743,6 +5787,7 @@ def manage_file(
     serole=None,
     setype=None,
     serange=None,
+    verify_ssl=True,
     **kwargs
 ):
     """
@@ -5857,6 +5902,12 @@ def manage_file(
 
         .. versionadded:: 3001
 
+    verify_ssl
+        If ``False``, remote https file sources (``https://``)
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
+
     CLI Example:
 
     .. code-block:: bash
@@ -5878,7 +5929,7 @@ def manage_file(
     if source:
         if not sfn:
             # File is not present, cache it
-            sfn = __salt__["cp.cache_file"](source, saltenv)
+            sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             htype = source_sum.get("hash_type", __opts__["hash_type"])
@@ -5913,7 +5964,7 @@ def manage_file(
             or source_sum.get("hsum", __opts__["hash_type"]) != name_sum
         ):
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv)
+                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server or local
@@ -6011,7 +6062,7 @@ def manage_file(
         # Check for changing symlink to regular file here
         if os.path.islink(name) and not follow_symlinks:
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv)
+                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
@@ -6120,7 +6171,7 @@ def manage_file(
         if source:
             # Apply the new file
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv)
+                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
