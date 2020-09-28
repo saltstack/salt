@@ -2755,6 +2755,8 @@ def update(
         value = node.get("memory") or node.text
         return _handle_unit("{}{}".format(value, unit)) if value else None
 
+    old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
+
     # Update the kernel boot parameters
     params_mapping = [
         {"path": "boot:kernel", "xpath": "os/kernel"},
@@ -2918,16 +2920,23 @@ def update(
                 )
             if mem:
                 if isinstance(mem, dict):
-                    mem = str(_handle_unit(mem.get("current", 0)))
+                    # setMemoryFlags takes memory amount in KiB
+                    new_mem = (
+                        int(_handle_unit(mem.get("current")) / 1024)
+                        if "current" in mem
+                        else None
+                    )
                 elif isinstance(mem, int):
-                    mem = str(mem * 1024)
-                commands.append(
-                    {
-                        "device": "mem",
-                        "cmd": "setMemoryFlags",
-                        "args": [mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                    }
-                )
+                    new_mem = int(mem * 1024)
+
+                if old_mem != new_mem and new_mem is not None:
+                    commands.append(
+                        {
+                            "device": "mem",
+                            "cmd": "setMemoryFlags",
+                            "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                        }
+                    )
 
             # Look for removable device source changes
             new_disks = []
