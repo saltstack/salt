@@ -51,7 +51,6 @@ from salt.utils.zeromq import (
     zmq,
 )
 
-x = "fix pre"
 try:
     import zmq.utils.monitor
 

@@ -35,6 +35,8 @@ from tests.unit.transport.mixins import (
     run_loop_in_thread,
 )
 
+x = "fix pre"
+
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
