@@ -119,7 +119,7 @@ distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
-docutils==0.14            # via botocore
+docutils==0.15.2            # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via napalm, python-jose, textfsm
