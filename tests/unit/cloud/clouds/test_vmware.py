@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: `Nitin Madhok <nmadhok@clemson.edu>`
 
@@ -6,17 +5,11 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import copy
 
-from copy import deepcopy
-
-# Import Salt Libs
 from salt import config
 from salt.cloud.clouds import vmware
 from salt.exceptions import SaltCloudSystemExit
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -59,12 +52,7 @@ class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            vmware: {
-                "__virtual__": MagicMock(return_value="vmware"),
-                "__active_provider_name__": "",
-            }
-        }
+        return {vmware: {"__active_provider_name__": ""}}
 
     def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
         try:
@@ -686,7 +674,7 @@ class VMwareTestCase(ExtendedTestCase):
             "esxi_host_user": "root",
         }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
         provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
         with patch.dict(vmware.__opts__, {"providers": provider_config}, clean=True):
@@ -705,8 +693,8 @@ class VMwareTestCase(ExtendedTestCase):
 
         profile_additions = {"image": "some-image.iso"}
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
-        profile = deepcopy(PROFILE)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
+        profile = copy.deepcopy(PROFILE)
         profile["base-gold"].update(profile_additions)
 
         provider_config_additions = {"profiles": profile}
@@ -730,8 +718,8 @@ class VMwareTestCase(ExtendedTestCase):
             "image": "should ignore image",
         }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
-        profile = deepcopy(PROFILE)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
+        profile = copy.deepcopy(PROFILE)
         profile["base-gold"].update(profile_additions)
 
         provider_config_additions = {"profiles": profile}
@@ -815,7 +803,7 @@ class VMwareTestCase(ExtendedTestCase):
             "esxi_host_password": "myhostpassword",
         }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
         provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
         with patch.dict(vmware.__opts__, {"providers": provider_config}, clean=True):
@@ -837,7 +825,7 @@ class VMwareTestCase(ExtendedTestCase):
             "esxi_host_password": "myhostpassword",
         }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
         provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
         with patch.dict(vmware.__opts__, {"providers": provider_config}, clean=True):
@@ -863,7 +851,7 @@ class VMwareTestCase(ExtendedTestCase):
             "esxi_host_password": "myhostpassword",
         }
 
-        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config = copy.deepcopy(PROVIDER_CONFIG)
         provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
         with patch.dict(vmware.__opts__, {"providers": provider_config}, clean=True):
@@ -891,7 +879,7 @@ class VMwareTestCase(ExtendedTestCase):
                     "esxi_host_password": "myhostpassword",
                 }
 
-                provider_config = deepcopy(PROVIDER_CONFIG)
+                provider_config = copy.deepcopy(PROVIDER_CONFIG)
                 provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
                 with patch.dict(
@@ -921,7 +909,7 @@ class VMwareTestCase(ExtendedTestCase):
                     "esxi_host_password": "myhostpassword",
                 }
 
-                provider_config = deepcopy(PROVIDER_CONFIG)
+                provider_config = copy.deepcopy(PROVIDER_CONFIG)
                 provider_config["vcenter01"]["vmware"].update(provider_config_additions)
 
                 with patch.dict(

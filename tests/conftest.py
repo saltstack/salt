@@ -16,6 +16,7 @@ import pathlib
 import pprint
 import re
 import shutil
+import ssl
 import stat
 import sys
 import textwrap
@@ -40,6 +41,7 @@ from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
     PRE_PYTEST_SKIP_OR_NOT,
     PRE_PYTEST_SKIP_REASON,
+    Webserver,
     get_virtualenv_binary_path,
 )
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
@@ -622,6 +624,11 @@ def integration_files_dir(salt_factories):
     Creates the directory if it does not yet exist.
     """
     dirname = salt_factories.root_dir / "integration-files"
+    int_files = os.path.join(
+        salt_factories.code_dir, "tests", "pytests", "integration", "files"
+    )
+    if not os.path.exists(dirname):
+        shutil.copytree(int_files, dirname)
     dirname.mkdir(exist_ok=True)
     return dirname
 
@@ -1316,6 +1323,23 @@ def sminion():
 @pytest.fixture(scope="session")
 def grains(sminion):
     return sminion.opts["grains"].copy()
+
+
+@pytest.fixture
+def ssl_webserver(integration_files_dir, scope="module"):
+    """
+    spins up an https webserver.
+    """
+    context = ssl.SSLContext()
+    root_dir = os.path.join(integration_files_dir, "https")
+    context.load_cert_chain(
+        os.path.join(root_dir, "cert.pem"), os.path.join(root_dir, "key.pem")
+    )
+
+    webserver = Webserver(root=integration_files_dir, ssl_opts=context)
+    webserver.start()
+    yield webserver
+    webserver.stop()
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

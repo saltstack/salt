@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Classes for working with Windows Update Agent
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import subprocess
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import range
 
-# Import 3rd-party libs
 try:
     import win32com.client
     import pywintypes
@@ -38,7 +31,7 @@ def __virtual__():
     return __virtualname__
 
 
-class Updates(object):
+class Updates:
     """
     Wrapper around the 'Microsoft.Update.UpdateColl' instance
     Adds the list and summary functions. For use by the WindowUpdateAgent class.
@@ -151,7 +144,7 @@ class Updates(object):
 
             results[update.Identity.UpdateID] = {
                 "guid": update.Identity.UpdateID,
-                "Title": six.text_type(update.Title),
+                "Title": str(update.Title),
                 "Type": self.update_types[update.Type],
                 "Description": update.Description,
                 "Downloaded": bool(update.IsDownloaded),
@@ -159,7 +152,7 @@ class Updates(object):
                 "Mandatory": bool(update.IsMandatory),
                 "EULAAccepted": bool(update.EulaAccepted),
                 "NeedsReboot": bool(update.RebootRequired),
-                "Severity": six.text_type(update.MsrcSeverity),
+                "Severity": str(update.MsrcSeverity),
                 "UserInput": bool(update.InstallationBehavior.CanRequestUserInput),
                 "RebootBehavior": self.reboot_behavior[
                     update.InstallationBehavior.RebootBehavior
@@ -252,7 +245,7 @@ class Updates(object):
         return results
 
 
-class WindowsUpdateAgent(object):
+class WindowsUpdateAgent:
     """
     Class for working with the Windows update agent
     """
@@ -385,14 +378,14 @@ class WindowsUpdateAgent(object):
             results = searcher.Search(search_string)
             if results.Updates.Count == 0:
                 log.debug("No Updates found for:\n\t\t%s", search_string)
-                return "No Updates found: {0}".format(search_string)
+                return "No Updates found: {}".format(search_string)
         except pywintypes.com_error as error:
             # Something happened, raise an error
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
             try:
                 failure_code = self.fail_codes[exc[5]]
             except KeyError:
-                failure_code = "Unknown Failure: {0}".format(error)
+                failure_code = "Unknown Failure: {}".format(error)
 
             log.error("Search Failed: %s\n\t\t%s", failure_code, search_string)
             raise CommandExecutionError(failure_code)
@@ -586,11 +579,11 @@ class WindowsUpdateAgent(object):
         updates = Updates()
         found = updates.updates
 
-        if isinstance(search_string, six.string_types):
+        if isinstance(search_string, str):
             search_string = [search_string]
 
-        if isinstance(search_string, six.integer_types):
-            search_string = [six.text_type(search_string)]
+        if isinstance(search_string, int):
+            search_string = [str(search_string)]
 
         for update in self._updates:
 
@@ -695,7 +688,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 log.error("Download Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -804,7 +797,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 log.error("Install Failed: %s", failure_code)
                 raise CommandExecutionError(failure_code)
@@ -928,7 +921,7 @@ class WindowsUpdateAgent(object):
                 try:
                     failure_code = self.fail_codes[exc[5]]
                 except KeyError:
-                    failure_code = "Unknown Failure: {0}".format(error)
+                    failure_code = "Unknown Failure: {}".format(error)
 
                 # If "Uninstall Not Allowed" error, try using DISM
                 if exc[5] == -2145124312:
@@ -958,7 +951,7 @@ class WindowsUpdateAgent(object):
                                             "dism",
                                             "/Online",
                                             "/Remove-Package",
-                                            "/PackageName:{0}".format(pkg),
+                                            "/PackageName:{}".format(pkg),
                                             "/Quiet",
                                             "/NoRestart",
                                         ]
@@ -970,7 +963,7 @@ class WindowsUpdateAgent(object):
                         log.debug("Command: %s", " ".join(cmd))
                         log.debug("Error: %s", exc)
                         raise CommandExecutionError(
-                            "Uninstall using DISM failed: {0}".format(exc)
+                            "Uninstall using DISM failed: {}".format(exc)
                         )
 
                     # DISM Uninstall Completed Successfully
@@ -1056,7 +1049,7 @@ class WindowsUpdateAgent(object):
             str: The stdout of the command
         """
 
-        if isinstance(cmd, six.string_types):
+        if isinstance(cmd, str):
             cmd = salt.utils.args.shlex_split(cmd)
 
         try:
@@ -1066,7 +1059,7 @@ class WindowsUpdateAgent(object):
             )
             return p.communicate()
 
-        except (OSError, IOError) as exc:
+        except OSError as exc:
             log.debug("Command Failed: %s", " ".join(cmd))
             log.debug("Error: %s", exc)
             raise CommandExecutionError(exc)
@@ -1092,5 +1085,10 @@ def needs_reboot():
     # Initialize the PyCom system
     with salt.utils.winapi.Com():
         # Create an AutoUpdate object
-        obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
+        try:
+            obj_sys = win32com.client.Dispatch("Microsoft.Update.SystemInfo")
+        except pywintypes.com_error as exc:
+            _, msg, _, _ = exc.args
+            log.debug("Failed to create AutoUpdate object: %s", msg)
+            return False
         return salt.utils.data.is_true(obj_sys.RebootRequired)
