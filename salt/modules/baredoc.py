@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Baredoc walks the installed module and state directories and generates
 dictionaries and lists of the function names and their arguments.
@@ -6,7 +5,6 @@ dictionaries and lists of the function names and their arguments.
 .. versionadded:: 3001
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ast
 
@@ -222,7 +220,7 @@ def list_states(name=False, names_only=False):
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_states
 
         myminion:
             ----------
@@ -271,11 +269,10 @@ def list_modules(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
-    (example truncated for brevity)
 
     .. code-block:: bash
 
-        salt myminion baredoc.modules_and_args
+        salt myminion baredoc.list_modules
 
         myminion:
             ----------
@@ -283,14 +280,14 @@ def list_modules(name=False, names_only=False):
           at:
         - atq:
             tag: null
-          - atrm:
+        - atrm:
             args: args
-          - at:
+        - at:
             args: args
             kwargs: kwargs
-          - atc:
+        - atc:
             jobid: null
-          - jobcheck:
+        - jobcheck:
             kwargs: kwargs
         [...]
     """
@@ -311,6 +308,12 @@ def state_docs(*names):
     function to narrow the selection.
 
     :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.state_docs at
     """
     return_type = "docs"
     ret = {}
@@ -333,6 +336,12 @@ def module_docs(*names):
     function to narrow the selection.
 
     :param name: specify a specific module to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion baredoc.module_docs
     """
     return_type = "docs"
     ret = {}
