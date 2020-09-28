@@ -1,6 +1,3 @@
-# coding: utf-8
-from __future__ import absolute_import
-
 import os
 
 import salt.utils.json
@@ -87,6 +84,27 @@ class TestLogin(cptc.BaseRestCherryPyTest):
             },
         )
         self.assertEqual(response.status, "200 OK")
+
+    def test_perms_string(self):
+        """
+        Test the run URL with good auth credentials
+        """
+        auth_creds2 = (
+            ("username", "user_string_perms"),
+            ("password", "saltdev"),
+            ("eauth", "auto"),
+        )
+        body = urlencode(auth_creds2)
+        request, response = self.request(
+            "/login",
+            method="POST",
+            body=body,
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
+        self.assertEqual(response.status, "200 OK")
+        resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
+        self.assertEqual(["@runner"], resp["return"][0]["perms"])
+        return response
 
 
 class TestRun(cptc.BaseRestCherryPyTest):

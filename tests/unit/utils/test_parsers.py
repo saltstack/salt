@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -24,7 +22,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 
-class ErrorMock(object):  # pylint: disable=too-few-public-methods
+class ErrorMock:  # pylint: disable=too-few-public-methods
     """
     Error handling
     """
@@ -42,7 +40,7 @@ class ErrorMock(object):  # pylint: disable=too-few-public-methods
         self.msg = msg
 
 
-class LogSetupMock(object):
+class LogSetupMock:
     """
     Logger setup
     """
@@ -104,7 +102,7 @@ class LogSetupMock(object):
         self.temp_log_level = log_level
 
 
-class ObjectView(object):  # pylint: disable=too-few-public-methods
+class ObjectView:  # pylint: disable=too-few-public-methods
     """
     Dict object view
     """
@@ -113,7 +111,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
-class ParserBase(object):
+class ParserBase:
     """
     Unit Tests for Log Level Mixin with Salt parsers
     """
@@ -260,7 +258,7 @@ class ParserBase(object):
         self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_level),
+            "Default: '{}'.".format(default_log_level),
             parser.get_option("--log-level").help,
         )
 
@@ -274,7 +272,7 @@ class ParserBase(object):
         log_level = self.testing_config[self.loglevel_config_setting_name]
 
         # Set log file in CLI
-        log_file = "{0}_cli.log".format(self.log_file)
+        log_file = "{}_cli.log".format(self.log_file)
         args = ["--log-file", log_file] + self.args
 
         parser = self.parser()
@@ -312,7 +310,7 @@ class ParserBase(object):
         args = self.args
 
         # Set log file in config
-        log_file = "{0}_config.log".format(self.log_file)
+        log_file = "{}_config.log".format(self.log_file)
         opts = self.testing_config.copy()
         opts.update({self.logfile_config_setting_name: log_file})
 
@@ -378,7 +376,7 @@ class ParserBase(object):
         self.assertEqual(self.log_setup.log_file, log_file)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_file),
+            "Default: '{}'.".format(default_log_file),
             parser.get_option("--log-file").help,
         )
 
@@ -507,7 +505,7 @@ class ParserBase(object):
         self.assertEqual(self.log_setup.log_level_logfile, log_level_logfile)
         # Check help message
         self.assertIn(
-            "Default: '{0}'.".format(default_log_level),
+            "Default: '{}'.".format(default_log_level),
             parser.get_option("--log-file-level").help,
         )
 
@@ -850,7 +848,7 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
             parser.parse_args(args)
 
         # Check error msg
-        self.assertEqual(mock_err.msg, "no such option: {0}".format(option))
+        self.assertEqual(mock_err.msg, "no such option: {}".format(option))
         # Check console loggger has not been set
         self.assertEqual(self.log_setup.log_level, log_level)
         self.assertNotIn(self.loglevel_config_setting_name, self.log_setup.config)
@@ -1145,6 +1143,9 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
             os.unlink(self.log_file)
         if os.path.exists(self.api_logfile):
             os.unlink(self.api_logfile)
+
+    def test_logging_listener(self):
+        self.assertTrue(self.parser._setup_mp_logging_listener_)
 
 
 class DaemonMixInTestCase(TestCase):
