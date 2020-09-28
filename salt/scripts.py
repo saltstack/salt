@@ -429,6 +429,9 @@ def salt_cp():
     client.run()
 
 
+x = "fix pre"
+
+
 def salt_call():
     """
     Directly call a salt command in the modules, does not require a running

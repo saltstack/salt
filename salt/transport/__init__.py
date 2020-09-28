@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Encapsulate the different transports available to Salt.
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -16,6 +14,8 @@ from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
+x = "fix pre"
+
 
 def iter_transport_opts(opts):
     """
@@ -23,7 +23,7 @@ def iter_transport_opts(opts):
     """
     transports = set()
 
-    for transport, opts_overrides in six.iteritems(opts.get("transport_opts", {})):
+    for transport, opts_overrides in opts.get("transport_opts", {}).items():
         t_opts = dict(opts)
         t_opts.update(opts_overrides)
         t_opts["transport"] = transport
@@ -34,7 +34,7 @@ def iter_transport_opts(opts):
         yield opts["transport"], opts
 
 
-class MessageClientPool(object):
+class MessageClientPool:
     def __init__(self, tgt, opts, args=None, kwargs=None):
         sock_pool_size = opts["sock_pool_size"] if "sock_pool_size" in opts else 1
         if sock_pool_size < 1:
