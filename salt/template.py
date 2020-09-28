@@ -1,26 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Manage basic template commands
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import codecs
 import logging
 import os
-
-# Import Python libs
 import time
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.sanitizers
 import salt.utils.stringio
 import salt.utils.versions
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.ext.six.moves import StringIO
 
 log = logging.getLogger(__name__)
@@ -68,7 +60,7 @@ def compile_template(
 
     if template != ":string:":
         # Template was specified incorrectly
-        if not isinstance(template, six.string_types):
+        if not isinstance(template, str):
             log.error("Template was specified incorrectly: %s", template)
             return ret
         # Template does not exist
@@ -141,7 +133,7 @@ def compile_template(
             is_stringio = False
             contents = ret
 
-        if isinstance(contents, six.string_types):
+        if isinstance(contents, str):
             if "\r\n" not in contents:
                 contents = contents.replace("\n", "\r\n")
                 ret = StringIO(contents) if is_stringio else contents
@@ -216,7 +208,7 @@ for comb in (
 ):
 
     fmt, tmpl = comb.split("_")
-    OLD_STYLE_RENDERERS[comb] = "{0}|{1}".format(tmpl, fmt)
+    OLD_STYLE_RENDERERS[comb] = "{}|{}".format(tmpl, fmt)
 
 
 def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):

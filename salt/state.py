@@ -11,7 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-# Import python libs
 
 import copy
 import datetime
@@ -26,8 +25,6 @@ import time
 import traceback
 
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -51,7 +48,6 @@ import salt.utils.url
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
-# Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
