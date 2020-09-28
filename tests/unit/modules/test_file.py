@@ -1,5 +1,3 @@
-# Import python libs
-
 import os
 import shutil
 import tempfile
@@ -15,15 +13,11 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt libs
 from salt.ext import six
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
