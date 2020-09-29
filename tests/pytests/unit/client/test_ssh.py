@@ -4,7 +4,7 @@ from salt.client import ssh
 from tests.support.mock import MagicMock, patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def ssh_target(tmpdir):
     argv = [
         "ssh.set_auth_key",
@@ -16,7 +16,7 @@ def ssh_target(tmpdir):
         "argv": argv,
         "__role": "master",
         "cachedir": tmpdir.strpath,
-        "extension_modules": tmpdir.join("extmods"),
+        "extension_modules": tmpdir.join("extmods").strpath,
     }
     target = {
         "passwd": "abc123",
