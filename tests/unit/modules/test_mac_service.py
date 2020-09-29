@@ -3,14 +3,9 @@
 """
 
 
-# Import Python libs
 import pytest
-
-# Import Salt Libs
 import salt.modules.mac_service as mac_service
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
