@@ -80,6 +80,15 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
+    if salt.utils.platform.is_darwin():
+        # On a freshly installed macOS, if we proceed a GUI dialog box
+        # will be opened. Instead, we can see if it's safe to check
+        # first. If git is a stub, git is _not_ present.
+        from salt.utils.mac_utils import git_is_stub
+
+        if git_is_stub():
+            raise ImportError("Git is not present.")
+
     import git
     import gitdb
 
