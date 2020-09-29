@@ -39,7 +39,7 @@ def syndic_id(salt_factories, salt_master):
 
 @slowTest
 @PRE_PYTEST_SKIP
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_master, syndic_id):
     """
     Ensure correct exit status when the syndic is configured to run as an unknown user.

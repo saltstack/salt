@@ -29,7 +29,7 @@ pyzmq==18.0.1 ; python_version < "3.8"
 pyzmq==19.0.0 ; python_version >= "3.8"
 requests==2.21.0
 setproctitle
-timelib==0.2.4
+timelib==0.2.5
 wheel==0.33.4
 
 # GitPython

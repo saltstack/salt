@@ -34,7 +34,7 @@ distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
-docutils==0.14            # via botocore
+docutils==0.15.2          # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via napalm, python-jose, textfsm
@@ -95,10 +95,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.92.0
+pytest-salt-factories==0.93.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==6.0.2
+pytest==6.1.0
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, vcert
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -116,7 +116,7 @@ salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
 setuptools-scm==3.2.0
-six==1.12.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, textfsm, transitions, vcert, virtualenv, websocket-client
+six==1.15.0               # via bcrypt, cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pynacl, pyopenssl, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, textfsm, transitions, vcert, virtualenv, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend

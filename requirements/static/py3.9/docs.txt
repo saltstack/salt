@@ -8,7 +8,7 @@ alabaster==0.7.12         # via sphinx
 babel==2.7.0              # via sphinx
 certifi==2019.3.9         # via requests
 chardet==3.0.4            # via requests
-docutils==0.14            # via sphinx
+docutils==0.15.2          # via sphinx
 idna==2.8                 # via requests
 imagesize==1.1.0          # via sphinx
 jinja2==2.10.1            # via sphinx
@@ -18,7 +18,7 @@ pygments==2.4.2           # via sphinx
 pyparsing==2.4.0          # via packaging
 pytz==2019.1              # via babel
 requests==2.22.0          # via sphinx
-six==1.12.0               # via packaging
+six==1.15.0               # via packaging
 snowballstemmer==1.2.1    # via sphinx
 sphinx==3.0.4
 sphinxcontrib-applehelp==1.0.1  # via sphinx
