@@ -118,7 +118,7 @@ distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
-docutils==0.16            # via botocore
+docutils==0.15.2          # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via napalm, python-jose, textfsm
@@ -184,10 +184,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.92.0
+pytest-salt-factories==0.93.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==6.0.2
+pytest==6.1.0
 python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common, botocore, croniter, kubernetes, moto, vcert
 python-etcd==0.4.5
 python-gnupg==0.4.4
