@@ -3,7 +3,6 @@ Helper functions for use by mac modules
 .. versionadded:: 2016.3.0
 """
 
-# Import Python Libraries
 import logging
 import os
 import plistlib
@@ -12,8 +11,6 @@ import time
 import xml.parsers.expat
 
 import salt.grains.extra
-
-# Import Salt Libs
 import salt.modules.cmdmod
 import salt.utils.args
 import salt.utils.files
