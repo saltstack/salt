@@ -2500,6 +2500,8 @@ class GitBase:
         """
         if remotes is None:
             remotes = []
+        elif isinstance(remotes, str):
+            remotes = remotes.split(",")
         elif not isinstance(remotes, list):
             log.error(
                 "Invalid 'remotes' argument (%s) for fetch_remotes. "
@@ -2511,7 +2513,7 @@ class GitBase:
         changed = False
         for repo in self.remotes:
             name = getattr(repo, "name", None)
-            if not remotes or (repo.id, name) in remotes:
+            if not remotes or (repo.id, name) in remotes or name in remotes:
                 try:
                     if repo.fetch():
                         # We can't just use the return value from repo.fetch()
