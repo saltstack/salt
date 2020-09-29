@@ -1016,6 +1016,7 @@ def generate_new_name(orig_name, disk_name):
     else:
         return "{}.{}".format(disk_name, ext)
 
+
 def get_domain_volumes(conn, domain):
     volumes = []
     xml = ElementTree.fromstring(domain.XMLDesc(0))
