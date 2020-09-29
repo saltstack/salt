@@ -2,24 +2,16 @@
 mac_utils tests
 """
 
-# Import python libs
-
 import os
 import plistlib
 import xml.parsers.expat
 
 import salt.modules.cmdmod as cmd
-
-# Import Salt libs
 import salt.utils.mac_utils as mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, MockTimedProc, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 
