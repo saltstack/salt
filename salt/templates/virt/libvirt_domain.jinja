@@ -1,9 +1,33 @@
+{%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
-        <memory unit='KiB'>{{ mem }}</memory>
-        <currentMemory unit='KiB'>{{ mem }}</currentMemory>
-        <os {{boot.os_attrib}}>
+        {%- if mem.max %}
+        <maxMemory {{ mem.slots }} unit='KiB'> {{ mem.max }}</maxMemory>
+        {%- endif %}
+        {%- if mem.boot %}
+        <memory unit='KiB'>{{ mem.boot }}</memory>
+        {%- endif %}
+        {%- if mem.current %}
+        <currentMemory unit='KiB'>{{ mem.current }}</currentMemory>
+        {%- endif %}
+        {%- if mem %}
+        <memtune>
+            {%- if 'hard_limit' in mem and mem.hard_limit %}
+                <hard_limit unit="KiB">{{ mem.hard_limit }}</hard_limit>
+            {%- endif %}
+            {%- if 'soft_limit' in mem and mem.soft_limit %}
+                <soft_limit unit="KiB">{{ mem.soft_limit }}</soft_limit>
+            {%- endif %}
+            {%- if 'swap_hard_limit' in mem and mem.swap_hard_limit %}
+                <swap_hard_limit unit="KiB">{{ mem.swap_hard_limit }}</swap_hard_limit>
+            {%- endif %}
+            {%- if 'min_guarantee' in mem and mem.min_guarantee %}
+                <min_guarantee unit="KiB">{{ mem.min_guarantee }}</min_guarantee>
+            {%- endif %}
+        </memtune>
+        {%- endif %}
+        <os {{ boot.os_attrib }}>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% if boot %}
                   {% if 'kernel' in boot %}
@@ -32,21 +56,13 @@
                         {% if disk.type == 'file' and 'source_file' in disk -%}
                         <source file='{{ disk.source_file }}' />
                         {% endif %}
+                        {% if disk.type == 'block' -%}
+                        <source dev='{{ disk.source_file }}' />
+                        {% endif %}
                         {% if disk.type == 'volume' and 'pool' in disk -%}
                         <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
                         {% endif %}
-                        {%- if disk.type == 'network' %}
-                        <source protocol='{{ disk.protocol }}' name='{{ disk.volume }}'{% if disk.get('query') %} query='{{ disk.query }}'{% endif %}>
-                          {%- for host in disk.get('hosts') %}
-                          <host name='{{ host.name }}'{% if host.get("port") %} port='{{ host.port }}'{% endif %}/>
-                          {%- endfor %}
-                          {%- if disk.get("auth") %}
-                          <auth username='{{ disk.auth.username }}'>
-                            <secret type='{{ disk.auth.type }}' usage='{{ disk.auth.usage}}'/>
-                          </auth>
-                          {%- endif %}
-                        </source>
-                        {%- endif %}
+                        {%- if disk.type == 'network' %}{{ libvirt_disks.network_source(disk) }}{%- endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />

@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 This is the a dummy proxy-minion designed for testing the proxy minion subsystem.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import pickle
 
-# Import Salt libs
-import salt.ext.six as six
 import salt.utils.files
 
 # This must be present or the Salt loader won't load this module
@@ -30,7 +24,7 @@ DETAILS["packages"] = {
     "redbull": "999.99",
 }
 FILENAME = salt.utils.files.mkstemp()
-# Want logging!
+
 log = logging.getLogger(__file__)
 
 
@@ -51,12 +45,7 @@ def _save_state(details):
 
 def _load_state():
     try:
-        if six.PY3 is True:
-            mode = "rb"
-        else:
-            mode = "r"
-
-        with salt.utils.files.fopen(FILENAME, mode) as pck:
+        with salt.utils.files.fopen(FILENAME, "rb") as pck:
             DETAILS = pickle.load(pck)
     except EOFError:
         DETAILS = {}
@@ -207,7 +196,7 @@ def uptodate():
     for p in DETAILS["packages"]:
         version_float = float(DETAILS["packages"][p])
         version_float = version_float + 1.0
-        DETAILS["packages"][p] = six.text_type(version_float)
+        DETAILS["packages"][p] = str(version_float)
     return DETAILS["packages"]
 
 

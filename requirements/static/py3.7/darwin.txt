@@ -36,7 +36,7 @@ distro==1.5.0
 dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
-docutils==0.14            # via botocore
+docutils==0.15.2          # via botocore
 ecdsa==0.13.3             # via python-jose
 filelock==3.0.12          # via virtualenv
 future==0.17.1            # via napalm, python-jose, textfsm
@@ -47,6 +47,7 @@ gitpython==2.1.15
 google-auth==1.6.3        # via kubernetes
 idna==2.8
 importlib-metadata==0.23  # via pluggy, pytest, virtualenv
+iniconfig==1.0.1          # via pytest
 ipaddress==1.0.22
 jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
@@ -79,7 +80,7 @@ pathtools==0.1.2          # via watchdog
 pluggy==0.13.1            # via pytest
 portend==2.4              # via cherrypy
 psutil==5.6.7
-py==1.8.0                 # via pytest
+py==1.9.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.8
@@ -92,10 +93,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.10.7
+pytest-salt-factories==0.93.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==5.4.2 ; sys_platform != "win32"
+pytest==6.1.0
 python-dateutil==2.8.0
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -112,13 +113,13 @@ s3transfer==0.3.3         # via boto3
 salttesting==2017.6.1
 scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
-six==1.14.0
+six==1.15.0
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via napalm, netmiko, ntc-templates
-timelib==0.2.4
+timelib==0.2.5
 toml==0.10.0
 transitions==0.8.1        # via junos-eznc
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
@@ -126,7 +127,6 @@ vcert==0.7.3
 virtualenv==20.0.20
 vultr==1.0.1
 watchdog==0.9.0
-wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
