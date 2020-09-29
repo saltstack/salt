@@ -388,19 +388,14 @@ Setting ``fallback`` per-remote or global configuration parameter will map non-e
 
 """
 
-# Import python libs
 import copy
 import logging
 
 import salt.utils.dictupdate
-
-# Import salt libs
 import salt.utils.gitfs
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-
-# Import third party libs
 from salt.pillar import Pillar
 
 PER_REMOTE_OVERRIDES = ("base", "env", "root", "ssl_verify", "refspecs", "fallback")
