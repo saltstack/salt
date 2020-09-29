@@ -2,7 +2,6 @@
 Directly manage the Salt fileserver plugins
 """
 
-# Import Salt libs
 import salt.fileserver
 
 

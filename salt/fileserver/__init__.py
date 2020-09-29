@@ -2,7 +2,6 @@
 File server pluggable modules and generic backend functions
 """
 
-# Import python libs
 
 import errno
 import fnmatch
@@ -12,15 +11,12 @@ import re
 import time
 from collections.abc import Sequence
 
-# Import salt libs
 import salt.loader
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args

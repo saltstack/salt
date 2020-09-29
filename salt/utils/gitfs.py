@@ -2,7 +2,6 @@
 Classes which provide the shared base for GitFS, git_pillar, and winrepo
 """
 
-# Import python libs
 
 import contextlib
 import copy
@@ -22,8 +21,6 @@ from datetime import datetime
 
 import salt.ext.tornado.ioloop
 import salt.fileserver
-
-# Import salt libs
 import salt.utils.configparser
 import salt.utils.data
 import salt.utils.files
@@ -38,8 +35,6 @@ import salt.utils.user
 import salt.utils.versions
 from salt.config import DEFAULT_MASTER_OPTS as _DEFAULT_MASTER_OPTS
 from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
-
-# Import third party libs
 from salt.ext import six
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
