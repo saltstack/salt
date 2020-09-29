@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Grains for NVMe Qualified Names (NQN).
 
@@ -11,7 +10,6 @@ To enable these grains set `nvme_grains: True` in the minion config.
     nvme_grains: True
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -57,7 +55,7 @@ def _linux_nqn():
                 line = line.strip()
                 if line.startswith("nqn."):
                     ret.append(line)
-    except IOError as ex:
+    except OSError as ex:
         if ex.errno != errno.ENOENT:
             log.debug("Error while accessing '%s': %s", initiator, ex)
 
