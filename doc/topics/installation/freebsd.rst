@@ -13,22 +13,19 @@ FreeBSD binary repo
 ===================
 
 
-Install Salt via the official package repository. Salt is packaged both as a Python 2.7 or 3.7 version.
+Install Salt via the official package repository. Salt is packaged both as a Python 3 or 2.7 version.
+
+For Python 3.7 use:
+
+.. code-block:: bash
+
+    pkg install py37-salt
 
 For Python 2.7 use:
 
 .. code-block:: bash
 
     pkg install py27-salt
-
-
-For Python 3.7 use:
-
-
-.. code-block:: bash
-
-    pkg install py37-salt
-
 
 FreeBSD ports
 =============
