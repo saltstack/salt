@@ -41,13 +41,6 @@ Installation from ports:
     cd /usr/ports/sysutils/py-salt
     make install
 
-Python 3.7 can be used by setting default Python version to 3.7:  
-    
-.. code-block:: text
-
-    echo "DEFAULT_VERSIONS+= python=3.7" >> /etc/make.conf
-
-
 Post-installation tasks
 =======================
 
