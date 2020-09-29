@@ -1,21 +1,15 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
 
 import shutil
 import tempfile
 
-# Import Salt Libs
 import salt.states.virt as virt
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
