@@ -1,15 +1,9 @@
-# Import Python Libs
-
 import os
 
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
