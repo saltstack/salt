@@ -80,7 +80,10 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
-    if salt.utils.platform.is_darwin():
+    if (
+        salt.utils.platform.is_darwin()
+        and salt.utils.path.which("git") == "/usr/bin/git"
+    ):
         # On a freshly installed macOS, if we proceed a GUI dialog box
         # will be opened. Instead, we can see if it's safe to check
         # first. If git is a stub, git is _not_ present.
