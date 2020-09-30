@@ -389,8 +389,9 @@ def _get_supported_py_config(tops, extended_cfg):
     for the supported Python interpreter versions. This is then written into the thin.tgz
     archive and then verified by salt.client.ssh.ssh_py_shim.get_executable()
 
-    Note: Minimum default of 3.x is 3.0, unless specified in namespaces.
-
+    Note: Current versions of Salt only Support Python 3, but the versions of Python
+    (2.7,3.0) remain to include support for ssh_ext_alternatives if user is targeting an
+    older version of Salt.
     :return:
     """
     pymap = []
