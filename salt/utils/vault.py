@@ -132,10 +132,11 @@ def get_vault_connection():
                     payload = {"role_id": __opts__["vault"]["auth"]["role_id"]}
                     if "secret_id" in __opts__["vault"]["auth"]:
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
-                    headers = None
                     if namespace is not None:
                         headers = {"X-Vault-Namespace": namespace}
-                    response = requests.post(url, headers=headers, json=payload, verify=verify)
+                        response = requests.post(url, headers=headers, json=payload, verify=verify)
+                    else:
+                        response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:
                         errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
