@@ -490,3 +490,25 @@ def console_user(username=False):
         return pwd.getpwuid(uid)[0]
 
     return uid
+
+
+def git_is_stub():
+    """
+    Return whether macOS git is the standard OS stub or a real binary.
+    """
+    # On a fresh macOS install, /usr/bin/git is a stub, which if
+    # accessed, triggers a UI dialog box prompting the user to install
+    # the developer command line tools. We don't want that! So instead,
+    # running the below command will return a path to the installed dev
+    # tools and retcode 0, or print a bunch of info to stderr and
+    # retcode 2.
+    try:
+        cmd = ["/usr/bin/xcode-select", "-p"]
+        _ = subprocess.check_call(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=1
+        )
+        log.debug("Xcode command line tools present")
+        return False
+    except subprocess.CalledProcessError:
+        log.debug("Xcode command line tools not present")
+        return True

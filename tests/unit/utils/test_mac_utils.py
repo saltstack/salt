@@ -2,8 +2,10 @@
 mac_utils tests
 """
 
+
 import os
 import plistlib
+import subprocess
 import xml.parsers.expat
 
 import salt.modules.cmdmod as cmd
@@ -465,6 +467,17 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                     mac_utils.launchctl("bootstrap", "org.salt.minion")
                 except CommandExecutionError as exc:
                     self.assertEqual(exc.message, error)
+
+    def test_git_is_stub(self):
+        mock_check_call = MagicMock(
+            side_effect=subprocess.CalledProcessError(cmd="", returncode=2)
+        )
+        with patch("salt.utils.mac_utils.subprocess.check_call", mock_check_call):
+            self.assertEqual(mac_utils.git_is_stub(), True)
+
+    @patch("salt.utils.mac_utils.subprocess.check_call")
+    def test_git_is_not_stub(self, mock_check_call):
+        self.assertEqual(mac_utils.git_is_stub(), False)
 
 
 def _get_walk_side_effects(results):
