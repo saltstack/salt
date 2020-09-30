@@ -1,0 +1,2 @@
+Added list_sources to chocolatey module to have an overview of the repositories present on the minions.  
+Added source_added to chocolatey state in order to add repositories to chocolatey.
