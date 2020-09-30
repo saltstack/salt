@@ -326,7 +326,7 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
         )
         with patch("requests.post", mock):
             result = vault.generate_token("test-minion", "signature")
-            log.error("generate_token result: %s", result)
+            log.debug("generate_token result: %s", result)
             self.assertTrue(isinstance(result, dict))
             self.assertFalse("error" in result)
             self.assertTrue("token" in result)
