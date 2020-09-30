@@ -460,3 +460,84 @@ def upgraded(
     ret["changes"] = salt.utils.data.compare_dicts(pre_install, post_install)
 
     return ret
+
+def source_added(name, source_location, username=None, password=None, force=False):
+    """
+    Instructs Chocolatey to add a source if not already added.
+
+    name
+        The name of the source to be added as a chocolatey repository.
+
+    source
+        Location of the source you want to work with.
+
+    username
+        Provide username for chocolatey sources that need authentication
+        credentials.
+
+    password
+        Provide password for chocolatey sources that need authentication
+        credentials.
+
+    force
+        Salt will not modify a existing repository with the same name. Set this
+        option to true to update an existing repository.
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        add_some_source:
+          chocolatey.source_added:
+            - name: reponame
+            - source: https://repo.exemple.com
+            - username: myuser
+            - password: mypassword
+    """
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
+
+    # Get list of currently present sources
+    pre_install = __salt__["chocolatey.list_sources"]()
+
+    # Determine action
+    # Source with same name not present
+    if name.lower() not in [present.lower() for present in pre_install.keys()]:
+        ret["comment"] = "Add the source {0}".format(name)
+
+
+    # Source with same name already present
+    else:
+        if force:
+            ret["comment"] = "Update the source {0}".format(name)
+        else:
+            ret["comment"] = "A source with the name {0} is already present".format(name)
+            if __opts__["test"]:
+                ret["result"] = None
+            return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "The installation was tested"
+        return ret
+
+    # Add the source
+    result = __salt__["chocolatey.add_source"](
+        name=name, 
+        source_location=source_location, 
+        username=username, 
+        password=password
+    )
+
+    if "Running chocolatey failed" not in result:
+        ret["result"] = True
+        ret["comment"] = "Source {0} added successfully".format(name)
+    else:
+        ret["result"] = False
+        ret["comment"] = "Failed to add the source {0}".format(name)
+
+    # Get list of present sources after 'chocolatey.add_source'
+    post_install = __salt__["chocolatey.list_sources"]()
+
+    ret["changes"] = salt.utils.data.compare_dicts(pre_install, post_install)
+
+    return ret
