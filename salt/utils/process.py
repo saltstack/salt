@@ -2,7 +2,6 @@
 Functions for daemonizing and otherwise modifying running processes
 """
 
-# Import python libs
 
 import contextlib
 import copy
@@ -22,15 +21,12 @@ import threading
 import time
 import types
 
-# Import salt libs
 import salt.defaults.exitcodes
 import salt.log.setup
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-
-# Import 3rd-party libs
 from salt.ext.six.moves import queue, range
 from salt.ext.tornado import gen
 from salt.log.mixins import NewStyleClassMixIn

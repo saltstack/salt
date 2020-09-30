@@ -10,7 +10,6 @@ import threading
 import traceback
 import types
 
-# Import Salt Libs
 # pylint: disable=3rd-party-module-not-gated
 import salt
 import salt.beacons

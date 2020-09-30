@@ -1,7 +1,6 @@
 """
 Routines to set up a minion
 """
-# Import python libs
 
 import contextlib
 import copy
@@ -20,7 +19,6 @@ from binascii import crc32
 from random import randint, shuffle
 from stat import S_IMODE
 
-# Import salt libs
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -74,7 +72,6 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 
-# Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range

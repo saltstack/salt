@@ -8,7 +8,6 @@ Detailed tutorial about scheduling jobs can be found :ref:`here
 <scheduling-jobs>`.
 """
 
-# Import python libs
 
 import copy
 import datetime
@@ -23,7 +22,6 @@ import threading
 import time
 import weakref
 
-# Import Salt libs
 import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
@@ -44,8 +42,6 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 
