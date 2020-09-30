@@ -250,6 +250,7 @@
     {%- endfor %}
         </clock>
 {%- endif %}
+        <on_reboot>{{ on_reboot }}</on_reboot>
         <devices>
                 {% for disk in disks %}
                 <disk type='{{ disk.type }}' device='{{ disk.device }}'>

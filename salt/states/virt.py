@@ -291,6 +291,7 @@ def defined(
     clock=None,
     serials=None,
     consoles=None,
+    stop_on_reboot=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -576,6 +577,14 @@ def defined(
 
         .. versionadded:: Aluminium
 
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
+
+        .. versionadded:: Aluminium
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -645,6 +654,7 @@ def defined(
                     boot_dev=boot_dev,
                     hypervisor_features=hypervisor_features,
                     clock=clock,
+                    stop_on_reboot=stop_on_reboot,
                 )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -685,6 +695,7 @@ def defined(
                     boot_dev=boot_dev,
                     hypervisor_features=hypervisor_features,
                     clock=clock,
+                    stop_on_reboot=stop_on_reboot,
                 )
             ret["changes"][name] = {"definition": True}
             ret["comment"] = "Domain {} defined".format(name)
@@ -723,6 +734,7 @@ def running(
     clock=None,
     serials=None,
     consoles=None,
+    stop_on_reboot=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -870,15 +882,11 @@ def running(
 
         .. versionadded:: Aluminium
 
-    :param numatune:
-        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
-        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
-        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
-        used in the dictionary can be found at :ref:`init-cpu-def`.
-
-        To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
-        for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
-        sls file instead.
+    :param stop_on_reboot:
+        If set to ``True`` the guest will stop instead of rebooting.
+        This is specially useful when creating a virtual machine with an installation cdrom or
+        an autoinstallation needing a special first boot configuration.
+        Defaults to ``False``
 
         .. versionadded:: Aluminium
 
@@ -998,6 +1006,7 @@ def running(
         numatune=numatune,
         hypervisor_features=hypervisor_features,
         clock=clock,
+        stop_on_reboot=stop_on_reboot,
         connection=connection,
         username=username,
         password=password,
