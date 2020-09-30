@@ -292,6 +292,7 @@ def defined(
     serials=None,
     consoles=None,
     stop_on_reboot=False,
+    live=True,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -585,6 +586,12 @@ def defined(
 
         .. versionadded:: Aluminium
 
+    :param live:
+        If set to ``False`` the changes will not be applied live to the running instance, but will
+        only apply at the next start. Note that reboot will not take those changes.
+
+        .. versionadded:: Aluminium
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -642,7 +649,7 @@ def defined(
                     nic_profile=nic_profile,
                     interfaces=interfaces,
                     graphics=graphics,
-                    live=True,
+                    live=live,
                     connection=connection,
                     username=username,
                     password=password,
