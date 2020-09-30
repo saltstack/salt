@@ -182,16 +182,12 @@ outside a ``netmiko`` Proxy, e.g.:
     the documentation notes for a proper setup.
 """
 
-# Import python stdlib
 import logging
 
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
 from salt.utils.args import clean_kwargs
 
-# Import third party libs
 try:
     from netmiko import ConnectHandler
     from netmiko import BaseConnection

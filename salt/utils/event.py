@@ -54,14 +54,11 @@ import datetime
 import fnmatch
 import hashlib
 import logging
-
-# Import python libs
 import os
 import time
 from collections.abc import MutableMapping
 from multiprocessing.util import Finalize
 
-# Import salt libs
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.ioloop
@@ -78,8 +75,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-
-# Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 
