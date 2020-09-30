@@ -1,18 +1,13 @@
 """
 Testing ini_manage exec module.
 """
-# Import python libs
 
 import os
 import tempfile
 
 import salt.modules.ini_manage as ini
-
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -50,7 +45,7 @@ class IniManageTestCase(TestCase):
 
     maxDiff = None
 
-    def _setUp(self, linesep=os.linesep):
+    def _setUp(self, linesep):
         self.tfile = tempfile.NamedTemporaryFile(delete=False, mode="w+b")
         self.tfile.write(
             salt.utils.stringutils.to_bytes(linesep.join(self.TEST_FILE_CONTENT))
