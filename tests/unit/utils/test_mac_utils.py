@@ -12,8 +12,6 @@ import salt.modules.cmdmod as cmd
 import salt.utils.mac_utils as mac_utils
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, MockTimedProc, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -267,7 +265,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    @patch("plistlib.readPlist" if six.PY2 else "plistlib.load")
+    @patch("plistlib.load")
     def test_available_services_broken_symlink(
         self, mock_read_plist, mock_exists, mock_os_walk
     ):
@@ -300,16 +298,9 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    @patch("plistlib.readPlist")
     @patch("salt.utils.mac_utils.__salt__")
-    @patch("plistlib.readPlistFromString", create=True)
     def test_available_services_binary_plist(
-        self,
-        mock_read_plist_from_string,
-        mock_run,
-        mock_read_plist,
-        mock_exists,
-        mock_os_walk,
+        self, mock_run, mock_exists, mock_os_walk,
     ):
         """
         test available_services handles binary plist files.
@@ -326,9 +317,6 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         if salt.utils.platform.is_windows():
             file_path = "c:" + file_path
 
-        # Py3 plistlib knows how to handle binary plists without
-        # any extra work, so this test doesn't really do anything
-        # new.
         ret = _run_available_services(plists)
 
         expected = {
@@ -345,9 +333,8 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     def test_available_services_invalid_file(self, mock_exists, mock_os_walk):
         """
         test available_services excludes invalid files.
-
         The py3 plistlib raises an InvalidFileException when a plist
-        file cannot be parsed. This test only asserts things for py3.
+        file cannot be parsed.
         """
         results = {"/Library/LaunchAgents": ["com.apple.lla1.plist"]}
         mock_os_walk.side_effect = _get_walk_side_effects(results)
@@ -364,12 +351,9 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(len(ret), 0)
 
     @patch("salt.utils.mac_utils.__salt__")
-    @patch("plistlib.readPlist")
     @patch("salt.utils.path.os_walk")
     @patch("os.path.exists")
-    def test_available_services_expat_error(
-        self, mock_exists, mock_os_walk, mock_read_plist, mock_run
-    ):
+    def test_available_services_expat_error(self, mock_exists, mock_os_walk, mock_run):
         """
         test available_services excludes files with expat errors.
 
@@ -388,6 +372,31 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_load = MagicMock()
         mock_load.side_effect = xml.parsers.expat.ExpatError
+        with patch("salt.utils.files.fopen", mock_open()):
+            with patch("plistlib.load", mock_load):
+                ret = mac_utils._available_services()
+
+        self.assertEqual(len(ret), 0)
+
+    @patch("salt.utils.mac_utils.__salt__")
+    @patch("salt.utils.path.os_walk")
+    @patch("os.path.exists")
+    def test_available_services_value_error(self, mock_exists, mock_os_walk, mock_run):
+        """
+        test available_services excludes files with ValueErrors.
+        """
+        results = {"/Library/LaunchAgents": ["com.apple.lla1.plist"]}
+        mock_os_walk.side_effect = _get_walk_side_effects(results)
+        mock_exists.return_value = True
+
+        file_path = os.sep + os.path.join(
+            "Library", "LaunchAgents", "com.apple.lla1.plist"
+        )
+        if salt.utils.platform.is_windows():
+            file_path = "c:" + file_path
+
+        mock_load = MagicMock()
+        mock_load.side_effect = ValueError
         with patch("salt.utils.files.fopen", mock_open()):
             with patch("plistlib.load", mock_load):
                 ret = mac_utils._available_services()
