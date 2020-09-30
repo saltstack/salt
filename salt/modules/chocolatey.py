@@ -1235,3 +1235,39 @@ def disable_source(name):
         salt '*' chocolatey.disable_source <name>
     """
     return _change_source_state(name, "disable")
+
+def list_sources():
+    """
+    Returns the list of installed sources.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.list_sources
+    """
+    choc_path = _find_chocolatey()
+    cmd = [choc_path, "source"]
+
+    # This is needed to parse the output correctly
+    cmd.append("--limit-output")
+
+    result = __salt__["cmd.run_all"](cmd, python_shell=False)
+
+    # Chocolatey introduced Enhanced Exit Codes starting with version 0.10.12
+    # Exit Code 2 means there were no results, but is not a failure
+    # This may start to effect other functions in the future as Chocolatey
+    # moves more functions to this new paradigm
+    # https://github.com/chocolatey/choco/issues/1758
+    if result["retcode"] not in [0, 2]:
+        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        raise CommandExecutionError(err)
+
+    ret = CaseInsensitiveDict({})
+    pkg_re = re.compile(r"(.*)\|(.*)\|(.*)\|(.*)\|.*\|.*\|.*\|.*\|.*")
+    for line in result["stdout"].split("\n"):
+        for name, url, disabled, user in pkg_re.findall(line):
+            if name not in ret:
+                ret[name] = {"URL: ": url, "Disabled": disabled, "User: ": user}
+
+    return ret
