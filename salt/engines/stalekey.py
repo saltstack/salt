@@ -70,19 +70,18 @@ def _read_presence(presence_file):
     if os.path.exists(presence_file):
         try:
             with salt.utils.files.fopen(presence_file, "rb") as f:
-                minions = salt.utils.msgpack.load(f)
+                _minions = salt.utils.msgpack.load(f)
 
                 # ensure all keys are unicode, not bytes.
-                _minions = {}
-                for minion in minions:
+                for minion in _minions:
                     _minion = salt.utils.stringutils.to_unicode(minion)
-                    _minions[_minion] = minions[minion]
+                    minions[_minion] = _minions[minion]
 
         except OSError as e:
             error = True
             log.error("Could not open presence file %s: %s", presence_file, e)
 
-    return error, _minions
+    return error, minions
 
 
 def _write_presence(presence_file, minions):
