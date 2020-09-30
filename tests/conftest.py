@@ -1330,7 +1330,7 @@ def ssl_webserver(integration_files_dir, scope="module"):
     """
     spins up an https webserver.
     """
-    context = ssl.SSLContext()
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),
         str(integration_files_dir / "https" / "key.pem"),
