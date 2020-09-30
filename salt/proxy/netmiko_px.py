@@ -183,15 +183,11 @@ Proxy Pillar Example
 """
 
 import contextlib
-
-# Import python stdlib
 import logging
 import time
 
-# Import salt modules
 from salt.utils.args import clean_kwargs
 
-# Import third party libs
 try:
     from netmiko import ConnectHandler
     from netmiko.ssh_exception import NetMikoTimeoutException
