@@ -4,7 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-# Import python libs
 
 import functools
 import inspect
@@ -20,7 +19,6 @@ import types
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
-# Import salt libs
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
@@ -37,8 +35,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
@@ -1209,7 +1205,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
-        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        if loaded_base_name:
+            self.loaded_base_name = loaded_base_name
+        else:
+            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1264,6 +1263,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
         _generate_module("{}.ext".format(self.loaded_base_name))
         _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
+
+    def clean_modules(self):
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                mod = sys.modules.pop(name)
+                del mod
 
     def __getitem__(self, item):
         """

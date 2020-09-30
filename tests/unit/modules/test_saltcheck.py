@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 """Unit test for saltcheck execution module"""
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 
@@ -874,4 +872,101 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             },
         ]
         ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)
+
+        # Failed with only_fails
+        sc_results = {
+            "a_state": {
+                "test_id1": {
+                    "assertion1": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "IS NOT EMPTY /etc/salt/master",
+                    },
+                    "assertion2": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "master IN /etc/salt/master",
+                    },
+                    "status": "Pass",
+                    "duration": 1.4383,
+                },
+                "test_id2": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.308,
+                },
+                "test_id3": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3073,
+                },
+            },
+            "b_state": {
+                "test_id4": {
+                    "assertion1": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "IS NOT EMPTY /etc/salt/master",
+                    },
+                    "assertion2": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "master IN /etc/salt/master",
+                    },
+                    "status": "Pass",
+                    "duration": 0.3057,
+                },
+                "test_id5": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3066,
+                },
+                "test_id6": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3076,
+                },
+            },
+        }
+        expected_output = [
+            {
+                "a_state": {
+                    "test_id2": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.308,
+                    },
+                    "test_id3": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3073,
+                    },
+                }
+            },
+            {
+                "b_state": {
+                    "test_id5": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3066,
+                    },
+                    "test_id6": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3076,
+                    },
+                }
+            },
+            {
+                "TEST RESULTS": {
+                    "Execution Time": 2.9735,
+                    "Passed": 2,
+                    "Failed": 4,
+                    "Skipped": 0,
+                    "Missing Tests": 0,
+                }
+            },
+        ]
+        ret = saltcheck._generate_out_list(sc_results, only_fails=True)
         self.assertEqual(ret, expected_output)
