@@ -8,11 +8,7 @@ import sys
 from pathlib import PurePath, PurePosixPath
 
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.templates
-
-# Import Salt Testing Libs
 from tests.support import mock
 from tests.support.helpers import with_tempdir
 from tests.support.unit import TestCase, skipIf
