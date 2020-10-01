@@ -9,7 +9,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-# Import Python libs
 import datetime
 import hashlib
 import locale
@@ -24,8 +23,6 @@ import uuid
 from errno import EACCES, EPERM
 
 import distro
-
-# Import Salt libs
 import salt.exceptions
 import salt.log
 
