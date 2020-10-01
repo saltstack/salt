@@ -1,12 +1,10 @@
 """
 Test the win_wua execution module
 """
-# Import Salt Libs
 import salt.modules.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update
 
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 

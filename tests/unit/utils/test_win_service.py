@@ -1,7 +1,5 @@
-# Import Salt Libs
 import salt.utils.platform
 
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 try:

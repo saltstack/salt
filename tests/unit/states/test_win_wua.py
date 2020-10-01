@@ -1,15 +1,12 @@
 """
 Test the win_wua state module
 """
-# Import Python Libs
 from collections import namedtuple
 
-# Import Salt Libs
 import salt.states.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update as win_update
 
-# Import Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
