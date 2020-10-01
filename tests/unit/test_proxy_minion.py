@@ -10,10 +10,13 @@ import textwrap
 
 import salt.config
 import salt.ext.tornado
+
+import salt.ext.tornado.testing
 import salt.metaproxy.proxy
 import salt.minion
 import salt.syspaths
 from tests.support.helpers import slowTest
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -57,13 +60,13 @@ class ProxyMinionTestCase(TestCase):
         """
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
         """
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
 
-        jid_queue = [123]
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
+        mock_jid_queue = [123]
         proxy_minion = salt.minion.ProxyMinion(
-            opts,
-            jid_queue=copy.copy(jid_queue),
+            mock_opts,
+            jid_queue=copy.copy(mock_jid_queue),
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
@@ -83,14 +86,14 @@ class ProxyMinionTestCase(TestCase):
         """
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
         """
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
 
-        data = {"fun": "foo.bar", "jid": 123}
-        jid_queue = [123]
+        mock_data = {"fun": "foo.bar", "jid": 123}
+        mock_jid_queue = [123]
         proxy_minion = salt.minion.ProxyMinion(
-            opts,
-            jid_queue=copy.copy(jid_queue),
+            mock_opts,
+            jid_queue=copy.copy(mock_jid_queue),
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
@@ -100,8 +103,8 @@ class ProxyMinionTestCase(TestCase):
             autospec=True,
         ):
             try:
-                ret = proxy_minion._handle_decoded_payload(data).result()
-                self.assertEqual(proxy_minion.jid_queue, jid_queue)
+                ret = proxy_minion._handle_decoded_payload(mock_data).result()
+                self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
                 self.assert_called_once(salt.minion._metaproxy_call)
             finally:
                 proxy_minion.destroy()
@@ -111,14 +114,14 @@ class ProxyMinionTestCase(TestCase):
         """
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.
         """
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(salt.config.DEFAULT_PROXY_MINION_OPTS)
 
-        data = {"fun": "foo.bar", "jid": 123}
-        jid_queue = [123]
+        mock_data = {"fun": "foo.bar", "jid": 123}
+        mock_jid_queue = [123]
         proxy_minion = salt.minion.ProxyMinion(
-            opts,
-            jid_queue=copy.copy(jid_queue),
+            mock_opts,
+            jid_queue=copy.copy(mock_jid_queue),
             io_loop=salt.ext.tornado.ioloop.IOLoop(),
         )
         mock_metaproxy_call = MagicMock()
@@ -128,13 +131,12 @@ class ProxyMinionTestCase(TestCase):
             autospec=True,
         ):
             try:
-                ret = proxy_minion._handle_decoded_payload(data).result()
-                self.assertEqual(proxy_minion.jid_queue, jid_queue)
+                ret = proxy_minion._handle_decoded_payload(mock_data).result()
+                self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
                 self.assert_called_once(mock_metaproxy_call)
             finally:
                 proxy_minion.destroy()
 
-    @slowTest
     def test_proxy_config_default_include(self):
         """
         Tests that when the proxy_config function is called,

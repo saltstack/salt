@@ -2,8 +2,6 @@
 All salt configuration loading and defaults should be in this module
 """
 
-# Import python libs
-
 import codecs
 import glob
 import logging
@@ -17,8 +15,6 @@ from copy import deepcopy
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.syspaths
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files

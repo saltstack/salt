@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the vault modules
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -202,13 +200,24 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
                     self.skipTest("unable to login to vault")
             ret = self.run_function(
                 "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
+                cmd="/usr/local/bin/vault policy write testpolicy {}/vault.hcl".format(
                     RUNTIME_VARS.FILES
                 ),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
             )
             if ret != 0:
                 self.skipTest("unable to assign policy to vault")
+            ret = self.run_function(
+                "cmd.run",
+                cmd="/usr/local/bin/vault secrets enable kv-v2",
+                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+            )
+            if "path is already in use at kv-v2/" in ret:
+                pass
+            elif "Success" in ret:
+                pass
+            else:
+                self.skipTest("unable to enable kv-v2 {}".format(ret))
         self.count += 1
 
     def tearDown(self):
@@ -240,6 +249,24 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             "sdb.get", arg=["sdb://sdbvault/secret/test/test_sdb/foo"]
         )
         self.assertEqual(get_output, "bar")
+
+    @flaky
+    @slowTest
+    def test_sdb_kv2_kvv2_path_local(self):
+        set_output = self.run_function(
+            "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
+        )
+        self.assertEqual(set_output, True)
+        import copy
+
+        opts = copy.copy(self.minion_opts)
+        get_output = ShellCase.run_function(
+            self,
+            function="sdb.get",
+            arg=["sdb://sdbvault/kv-v2/test/test_sdb/foo"],
+            local=True,
+        )
+        self.assertEqual(get_output[1], "    bar")
 
     @flaky
     @slowTest
