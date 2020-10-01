@@ -30,8 +30,10 @@ the debugger should be started:
 
 .. code-block:: python
 
-    test = 'test123'
-    import IPython; IPython.embed_kernel()
+    test = "test123"
+    import IPython
+
+    IPython.embed_kernel()
 
 After running a Salt command that hits that line, the following will show up in
 the log file:
@@ -146,8 +148,8 @@ functions to be called as they have been set up by the salt loader.
 
 .. code-block:: python
 
-    __salt__['cmd.run']('fdisk -l')
-    __salt__['network.ip_addrs']()
+    __salt__["cmd.run"]("fdisk -l")
+    __salt__["network.ip_addrs"]()
 
 .. note::
 
@@ -205,8 +207,8 @@ each file. Here is an example from salt/modules/cp.py:
 
 .. code-block:: python
 
-    if not 'cp.fileclient' in __context__:
-        __context__['cp.fileclient'] = salt.fileclient.get_file_client(__opts__)
+    if not "cp.fileclient" in __context__:
+        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
 
 
 .. note:: Because __context__ may or may not have been destroyed, always be
@@ -251,17 +253,3 @@ Defined in: State
 __sdb__
 -------
 Defined in: SDB
-
-
-Additional Globals
-==================
-
-Defined for: Runners, Execution Modules, Wheels
-
-* ``__jid__``: The job ID
-* ``__user__``: The user
-* ``__tag__``: The jid tag
-* ``__jid_event__``: A :py:class:`salt.utils.event.NamespacedEvent`.
-
-:py:class:`NamespacedEvent <salt.utils.event.NamespacedEvent>` defines a single
-method :py:meth:`fire_event <salt.utils.event.NamespacedEvent.fire_event>`, that takes data and tag. The :ref:`Runner docs <runners>` has examples.

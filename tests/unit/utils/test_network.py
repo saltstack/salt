@@ -4,6 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import socket
 import textwrap
+import time
 
 import pytest
 import salt.exceptions
@@ -376,6 +377,12 @@ class NetworkTestCase(TestCase):
             addrs = network._test_addrs(addrinfo, 80)
             self.assertTrue(len(addrs) == 1)
             self.assertTrue(addrs[0] == addrinfo[2][4][0])
+
+            # attempt to connect to resolved address with default timeout
+            s.side_effect = socket.error
+            addrs = network._test_addrs(addrinfo, 80)
+            time.sleep(2)
+            self.assertFalse(len(addrs) == 0)
 
             # nothing can connect, but we've eliminated duplicates
             s.side_effect = socket.error
