@@ -14,9 +14,9 @@ import salt.utils.win_service
 from salt.exceptions import CommandExecutionError
 
 try:
+    import pywintypes
     import win32service
     import win32serviceutil
-    import pywintypes
 
     HAS_WIN32_MODS = True
 except ImportError:
