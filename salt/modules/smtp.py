@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for Sending Messages via SMTP
 
@@ -41,13 +40,11 @@ Module for Sending Messages via SMTP
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import socket
 
-# Import salt libs
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -164,7 +161,7 @@ def send_msg(
             name = os.path.basename(f)
             with salt.utils.files.fopen(f, "rb") as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
-            att["Content-Disposition"] = 'attachment; filename="{0}"'.format(name)
+            att["Content-Disposition"] = 'attachment; filename="{}"'.format(name)
             msg.attach(att)
 
     try:
