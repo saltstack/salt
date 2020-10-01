@@ -1,7 +1,7 @@
 import salt.modules.nilrt_ip as nilrt_ip
 from tests.support.mixins import LoaderModuleMockMixin
 
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, patch, mock
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -46,7 +46,7 @@ class NilrtIPTestCase(TestCase, LoaderModuleMockMixin):
             ) as change_dhcp_config_mock:
                 assert nilrt_ip._change_state("test_interface", "up")
                 assert change_dhcp_config_mock.called_with("test_interface")
-                
+
     def test_set_static_all_with_dns(self):
         """
         Tests set_static_all with dns provided
