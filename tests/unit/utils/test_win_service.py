@@ -1,5 +1,4 @@
 import salt.utils.platform
-
 from tests.support.unit import TestCase, skipIf
 
 try:
