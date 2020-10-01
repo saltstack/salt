@@ -1,7 +1,6 @@
 import salt.modules.nilrt_ip as nilrt_ip
 from tests.support.mixins import LoaderModuleMockMixin
-
-from tests.support.mock import MagicMock, patch, mock
+from tests.support.mock import MagicMock, mock, patch
 from tests.support.unit import TestCase, skipIf
 
 try:
