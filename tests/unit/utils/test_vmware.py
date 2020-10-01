@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Alexandru Bleotu <alexandru.bleotu@morganstanley.com>
 
 Tests for cluster related functions in salt.utils.vmware
 """
 
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
 import ssl
-import sys
 
 import salt.utils.vmware
-
-# Import Salt libraries
 from salt.exceptions import (
     ArgumentValueError,
     CommandExecutionError,
@@ -25,13 +19,8 @@ from salt.exceptions import (
     VMwareRuntimeError,
     VMwareSystemError,
 )
-
-# Import Third Party Libs
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, PropertyMock, call, patch
-
-# Import Salt testing libraries
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -49,17 +38,6 @@ try:
 except ImportError:
     HAS_GSSAPI = False
 
-if sys.version_info[:3] > (2, 7, 8):
-    SSL_VALIDATION = True
-else:
-    SSL_VALIDATION = False
-
-if hasattr(ssl, "_create_unverified_context"):
-    ssl_context = "ssl._create_unverified_context"
-else:
-    ssl_context = "ssl._create_stdlib_context"
-
-# Get Logging Started
 log = logging.getLogger(__name__)
 
 
@@ -536,7 +514,7 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(
                 mock_task, "fake_instance_name", "task_type"
             )
-        self.assertEqual(six.text_type(excinfo.exception), "error exc")
+        self.assertEqual(str(excinfo.exception), "error exc")
 
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()
@@ -1713,16 +1691,17 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 mechanism="sspi",
             )
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_second_attempt_successful_connection(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             mock_sc = MagicMock(side_effect=[exc, None])
             mock_ssl = MagicMock()
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
-                with patch(ssl_context, mock_ssl):
+                with patch("ssl._create_unverified_context", mock_ssl):
 
                     salt.utils.vmware._get_service_instance(
                         host="fake_host.fqdn",
@@ -1759,9 +1738,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     ]
                     mock_sc.assert_has_calls(calls)
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_third_attempt_successful_connection(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             exc2 = Exception("certificate verify failed")
@@ -1770,7 +1750,7 @@ class PrivateGetServiceInstanceTestCase(TestCase):
             mock_ssl_context = MagicMock()
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
-                with patch(ssl_context, mock_ssl_unverif):
+                with patch("ssl._create_unverified_context", mock_ssl_unverif):
                     with patch("ssl.SSLContext", mock_ssl_context):
 
                         salt.utils.vmware._get_service_instance(
@@ -1863,9 +1843,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 self.assertEqual(mock_sc.call_count, 1)
                 self.assertEqual("VimFault", excinfo.Exception.message)
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_second_attempt_unsuccsessful_connection_default_error(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             exc2 = Exception("Exception")
@@ -1890,9 +1871,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                         excinfo.Exception.message,
                     )
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_second_attempt_unsuccsessful_connection_vim_fault(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             exc2 = vim.fault.VimFault()
@@ -1915,9 +1897,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     self.assertEqual(mock_sc.call_count, 2)
                     self.assertIn("VimFault", excinfo.Exception.message)
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_third_attempt_unsuccessful_connection_detault_error(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             exc2 = Exception("certificate verify failed")
@@ -1940,9 +1923,10 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                     self.assertEqual(mock_sc.call_count, 3)
                     self.assertIn("Exception", excinfo.Exception.message)
 
-    @skipIf(not SSL_VALIDATION, "SSL validation is not enabled")
     def test_third_attempt_unsuccessful_connection_vim_fault(self):
-        with patch("ssl.SSLContext", MagicMock()), patch(ssl_context, MagicMock()):
+        with patch("ssl.SSLContext", MagicMock()), patch(
+            "ssl._create_unverified_context", MagicMock()
+        ):
             exc = vim.fault.HostConnectFault()
             exc.msg = "[SSL: CERTIFICATE_VERIFY_FAILED]"
             exc2 = Exception("certificate verify failed")
@@ -2266,13 +2250,7 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {
-            salt.utils.vmware: {
-                "__virtual__": MagicMock(return_value="vmware"),
-                "sys": MagicMock(),
-                "ssl": MagicMock(),
-            }
-        }
+        return {salt.utils.vmware: {"sys": MagicMock(), "ssl": MagicMock()}}
 
     def setUp(self):
         self.mock_stub = MagicMock(host="fake_host:1000", cookie='ignore"fake_cookie')
@@ -2295,7 +2273,6 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-        type(salt.utils.vmware.sys).version_info = PropertyMock(return_value=(2, 7, 9))
         self.mock_context = MagicMock()
         self.mock_create_default_context = MagicMock(return_value=self.mock_context)
         salt.utils.vmware.ssl.create_default_context = self.mock_create_default_context
@@ -2318,11 +2295,6 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
         self.assertFalse(self.mock_context.check_hostname)
         self.assertEqual(self.mock_context.verify_mode, salt.utils.vmware.ssl.CERT_NONE)
 
-    def test_ssl_default_context_not_loaded(self):
-        type(salt.utils.vmware.sys).version_info = PropertyMock(return_value=(2, 7, 8))
-        salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
-        self.assertEqual(self.mock_create_default_context.call_count, 0)
-
     def test_session_cookie_in_context(self):
         salt.utils.vmware.get_new_service_instance_stub(self.mock_si, "fake_path")
         self.assertEqual(self.context_dict["vcSessionCookie"], "fake_cookie")
@@ -2340,22 +2312,6 @@ class GetNewServiceInstanceStub(TestCase, LoaderModuleMockMixin):
             version="fake_version",
             poolSize=0,
             sslContext=self.mock_context,
-        )
-
-    def test_get_new_stub_2_7_8_python(self):
-        type(salt.utils.vmware.sys).version_info = PropertyMock(return_value=(2, 7, 8))
-        mock_get_new_stub = MagicMock()
-        with patch("salt.utils.vmware.SoapStubAdapter", mock_get_new_stub):
-            salt.utils.vmware.get_new_service_instance_stub(
-                self.mock_si, "fake_path", "fake_ns", "fake_version"
-            )
-        mock_get_new_stub.assert_called_once_with(
-            host="fake_host",
-            ns="fake_ns",
-            path="fake_path",
-            version="fake_version",
-            poolSize=0,
-            sslContext=None,
         )
 
     def test_new_stub_returned(self):
@@ -2628,7 +2584,7 @@ class CreateDatacenterTestCase(TestCase):
         self.assertEqual(res, self.mock_dc)
 
 
-class FakeTaskClass(object):
+class FakeTaskClass:
     pass
 
 
@@ -4690,7 +4646,7 @@ class GetDatastoresTestCase(TestCase):
         )
 
     def test_unsupported_reference_type(self):
-        class FakeClass(object):
+        class FakeClass:
             pass
 
         mock_reference = MagicMock(spec=FakeClass)
