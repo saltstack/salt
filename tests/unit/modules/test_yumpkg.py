@@ -1,19 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
@@ -332,10 +322,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 ],
             }
             for pkgname, pkginfo in pkgs.items():
-                if six.PY3:
-                    self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
-                else:
-                    self.assertItemsEqual(pkginfo, expected_pkg_list[pkgname])
+                self.assertCountEqual(pkginfo, expected_pkg_list[pkgname])
 
     def test_list_patches(self):
         """
@@ -632,7 +619,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                             except AssertionError:
                                 continue
                         else:
-                            self.fail("repo '{0}' not checked".format(repo))
+                            self.fail("repo '{}' not checked".format(repo))
 
     def test_list_upgrades_dnf(self):
         """
@@ -1538,6 +1525,70 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         ):
             info = yumpkg.group_info("@gnome-desktop")
             self.assertDictEqual(info, expected)
+
+    def test_get_repo_with_existent_repo(self):
+        """
+        Test get_repo with an existent repository
+        Expected return is a populated dictionary
+        """
+        repo = "base-source"
+        kwargs = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": True,
+        }
+        parse_repo_file_return = (
+            "",
+            {
+                "base-source": {
+                    "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+                    "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+                    "name": "CentOS-$releasever - Base Sources",
+                    "enabled": "1",
+                }
+            },
+        )
+        expected = {
+            "baseurl": "http://vault.centos.org/centos/$releasever/os/Source/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Base Sources",
+            "enabled": "1",
+        }
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+        patch_parse_repo_file = patch.object(
+            yumpkg,
+            "_parse_repo_file",
+            autospec=True,
+            return_value=parse_repo_file_return,
+        )
+
+        with patch_list_repos, patch_parse_repo_file:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
+
+    def test_get_repo_with_non_existent_repo(self):
+        """
+        Test get_repo with an non existent repository
+        Expected return is an empty dictionary
+        """
+        repo = "non-existent-repository"
+        kwargs = {
+            "baseurl": "http://fake.centos.org/centos/$releasever/os/Non-Existent/",
+            "gpgkey": "file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7",
+            "name": "CentOS-$releasever - Non-Existent Repository",
+            "enabled": True,
+        }
+        expected = {}
+        patch_list_repos = patch.object(
+            yumpkg, "list_repos", autospec=True, return_value=LIST_REPOS
+        )
+
+        with patch_list_repos:
+            ret = yumpkg.get_repo(repo, **kwargs)
+        assert ret == expected, ret
 
 
 @skipIf(pytest is None, "PyTest is missing")

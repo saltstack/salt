@@ -1,5 +1,3 @@
-# Import python libs
-
 import os
 import shutil
 import tempfile
@@ -15,15 +13,11 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt libs
 from salt.ext import six
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -994,6 +988,46 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                     name, name, source, source_sum, "root", "root", "755", None, "base"
                 )
         self.assertTrue(result, None)
+
+    @skipIf(
+        salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
+        "lsattr is not available on Windows and AIX",
+    )
+    def test_cmp_attrs_extents_flag(self):
+        """
+        Test that the cmp_attr function handles the extents flag correctly.
+        This test specifically tests for a bug described in #57189.
+        """
+        # If the e attribute is not present and shall not be set, it should be
+        # neither in the added nor in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": ""}
+            changes = filemod._cmp_attrs("file", "")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is present and shall also be set, it should be
+        # neither in the added nor in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": "e"}
+            changes = filemod._cmp_attrs("file", "e")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is present and shall not be set, it should be
+        # neither in the added nor in the removed set. One would assume that it
+        # should be in the removed set, but the e attribute can never be reset,
+        # so it is correct that both sets are empty.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": "e"}
+            changes = filemod._cmp_attrs("file", "")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is not present and shall be set, it should be in
+        # the added, but not in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": ""}
+            changes = filemod._cmp_attrs("file", "e")
+            self.assertEqual("e", changes.added)
+            self.assertIsNone(changes.removed)
 
     @skipIf(salt.utils.platform.is_windows(), "SED is not available on Windows")
     def test_sed_limit_escaped(self):
