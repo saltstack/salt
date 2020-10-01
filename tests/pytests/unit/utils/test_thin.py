@@ -30,8 +30,9 @@ def test_get_tops_python(version):
     popen_ret = tuple(salt.utils.stringutils.to_bytes(x) for x in ("", ""))
     mock_popen = _mock_popen(return_value=popen_ret)
     patch_proc = patch("salt.utils.thin.subprocess.Popen", mock_popen)
+    patch_which = patch("salt.utils.path.which", return_value=True)
 
-    with patch_proc:
+    with patch_proc, patch_which:
         salt.utils.thin.get_tops_python("python2", ext_py_ver=version)
         cmds = [x[0][0] for x in mock_popen.call_args_list]
         assert [x for x in cmds if "jinja2" in x]

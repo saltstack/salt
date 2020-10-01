@@ -34,6 +34,7 @@ def ssh_target(tmpdir):
     return opts, target
 
 
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 def test_cmd_block_python_version_error(ssh_target):
     opts = ssh_target[0]
     target = ssh_target[1]
