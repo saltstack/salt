@@ -461,6 +461,7 @@ def upgraded(
 
     return ret
 
+
 def source_added(name, source_location, username=None, password=None, force=False):
     """
     Instructs Chocolatey to add a source if not already added.
@@ -504,7 +505,6 @@ def source_added(name, source_location, username=None, password=None, force=Fals
     if name.lower() not in [present.lower() for present in pre_install.keys()]:
         ret["comment"] = "Add the source {0}".format(name)
 
-
     # Source with same name already present
     else:
         if force:
@@ -522,9 +522,9 @@ def source_added(name, source_location, username=None, password=None, force=Fals
 
     # Add the source
     result = __salt__["chocolatey.add_source"](
-        name=name, 
-        source_location=source_location, 
-        username=username, 
+        name=name,
+        source_location=source_location,
+        username=username,
         password=password
     )
 
