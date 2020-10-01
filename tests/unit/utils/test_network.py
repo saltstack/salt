@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import socket
 import textwrap
@@ -616,7 +613,7 @@ class NetworkTestCase(TestCase):
             with patch("salt.utils.platform.is_freebsd", lambda: True):
                 with patch("subprocess.check_output", return_value=FREEBSD_SOCKSTAT):
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, set(["127.0.0.1"]))
+                    self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_freebsd_remotes_on_with_fat_pid(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -626,7 +623,7 @@ class NetworkTestCase(TestCase):
                     return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID,
                 ):
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, set(["127.0.0.1"]))
+                    self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_netlink_tool_remote_on_a(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -635,14 +632,12 @@ class NetworkTestCase(TestCase):
                     "subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT
                 ):
                     remotes = network._netlink_tool_remote_on("4506", "local")
-                    self.assertEqual(
-                        remotes, set(["192.168.122.177", "::ffff:127.0.0.1"])
-                    )
+                    self.assertEqual(remotes, {"192.168.122.177", "::ffff:127.0.0.1"})
 
     def test_netlink_tool_remote_on_b(self):
         with patch("subprocess.check_output", return_value=NETLINK_SS):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
-            self.assertEqual(remotes, set(["127.0.0.1", "::ffff:1.2.3.4"]))
+            self.assertEqual(remotes, {"127.0.0.1", "::ffff:1.2.3.4"})
 
     def test_generate_minion_id_distinct(self):
         """

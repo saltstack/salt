@@ -3,7 +3,6 @@
 Define some generic socket functions for network modules
 """
 
-# Import Python libs
 import fnmatch
 import itertools
 import logging
@@ -17,7 +16,6 @@ import types
 from collections.abc import Mapping, Sequence
 from string import ascii_letters, digits
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.path
