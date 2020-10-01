@@ -63,6 +63,8 @@ Fixed
 - Fixed bug with distro version breaking osrelease on Centos 7. (#57781)
 - Fixed macOS build scripts. (#57973)
 - Fixed Salt-API startup failure. (#57975)
+- Fixed CSR handling in x509 module (#54867)
+- Re-allow x509 to manage a certificate based on a CSR
 
 
 Added
@@ -91,13 +93,14 @@ Removed
 - Deprecated `refresh_db` removed from pkgrepo state. Use `refresh` instead. (#57366)
 - Deprecated internal functions salt.utils.locales.sdecode and .sdecode_if_string removed. Use salt.utils.data.decode instead. (#57367)
 - Removed deprecated misc. internal Salt functions. See https://github.com/saltstack/salt/issues/57368 for more info. (#57368)
+- Remove salt/utils/vt.py duplication from filename map. (#57004)
 
 
 Changed
 -------
 
 - `file.rename` no longer returns False when `force:False`. (#49843)
-- Brought localclient command line args functionality into line with regular `salt` calls. (#49886)
+- Brought localclient command line args functionality into line with regular `salt` calls. (#56853)
 - Updated requisites documentation. (#49962)
 - Changed eauth "not enabled" log message level from debug to warning. (#50946)
 -  (#52546)
@@ -118,6 +121,7 @@ Changed
 - Upgraded dependency to use boto3>=1.13.5. (#57161)
 - Changed to consistent file location handling across APIs for Juniper network devices. (#57399)
 - Use Python's hashlib (sha256) instead of shelling out (SipHash24) to generate server_id. (#57415)
+- Update `formulas.rst` with new IRC channel and links to IRC logs (#51628)
 
 
 Fixed
@@ -144,10 +148,10 @@ Fixed
 - Fixed to use the correct LetsEncrypt path on FreeBSD. (#49129)
 - Updated docs for netapi logs - log.access_file and log.error_file. (#49247)
 - Retry proxmox queries instead of failing immediately. (#49485)
-- Fixed AMD GPU vendor detection. (#49492)
+- Fixed AMD GPU vendor detection. (#56837)
 - Fixed `aptpkg.normalize_name` to respect architecture. (#49637)
 - Add error message for proxmox failures. (#49562)
-- Fixed nilrt_ip.enable/disable idempotency. (#49624)
+- Fixed nilrt_ip.enable/disable idempotency. (#56795)
 - Fixed issue with file.line doing a partial comparison to determine replacement need, instead compare actual content of lines. (#49855)
 - Return actual error message to user or hex code for `win_task.create_task_from_xml`. (#49981)
 - Use minion name as ssh_host for saltify cloud provider. (#50135)
@@ -198,6 +202,7 @@ Fixed
 - Fixed error when trying to delete more than one key using `ini.options_absent`. (#53874)
 - Fixed error with cmd.run when run in a chroot environment. (#53992)
 - Fixed Zabbix configuration.import to use the correct values for the API version. (#54020)
+- Fixed salt key management with eauth. (#54078)
 - Fixed broken sdb.get_or_set_hash when using Hashicorp's Vault. (#54199)
 - Fixed `mac_softwareupdate.list_available` for Catalina. (#54220)
 - Fixed bug blocking `user.present` `createhome` on macOS. (#54288)
@@ -285,6 +290,7 @@ Fixed
 - Fixed issue with `salt.utils.functools.call_functions` not checking for expected arguments. (#56584)
 - Fixed a broken statement when using arbitrary `kwargs` in mine.value. (#56593)
 - Fixed support for booting VMs with UEFI on virt. (#56613)
+- Fixed postgres.db_remove() execution function if db is still in use. (#56631)
 - Updated old redirects and http->https fixes in docs. (#56655)
 - Renamed `salt/utils/docker/` to `salt/utils/dockermod/` to avoid clashes with the `docker` package from pypi. (#56669)
 - Changed behavior to implicitly ignore package epochs and just use the latest one. (#56681)
@@ -326,6 +332,9 @@ Fixed
 - Fixed `win_system.join_domain` failures. (#57360)
 - Fixed `template_vars` functionality on Junos. (#57388)
 - Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
+- Fix issue with finding the real python executable during tests (#56686)
+- Fix broken link regarding the 1024 character limit for YAML keys (#56540)
+- Fix grain.delkey grains.delval for nested keys (#54819)
 
 
 Added
@@ -349,7 +358,7 @@ Added
 - Added ability to disable requisites during state runs. (#49955)
 - Add a reactor "leader", especially useful for multimaster hot-hot environments. (#50053)
 - Added `method_call` Jinja filter to help reduce boilerplate. (#50152)
-- Added ability for async pillar refresh. (#50168)
+- Added ability for async pillar refresh. (#56881)
 - Added `shutdown_host` to vmware cloud. (#50177)
 - Added `drbd.status` module. (#50410)
 - Added `file.keyvalue` state. (#50627)
@@ -423,6 +432,7 @@ Added
 - `fetchonly` parameter added for `pkg.upgrade` when using `pkgng` (FreeBSD). (#57371)
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
+- Clarify how to get the master fingerprint (#54699)
 
 
 ## 3000.1
