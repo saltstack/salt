@@ -1,8 +1,6 @@
-# Import Salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd party libs
 try:
     import pywintypes
     import win32security
