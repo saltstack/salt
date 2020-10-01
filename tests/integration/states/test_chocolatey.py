@@ -44,6 +44,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         - `chocolatey.installed`
         - `chocolatey.upgraded`
         - `chocolatey.uninstalled`
+        - `chocolatey.source_added`
         """
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -51,6 +52,8 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         target = "firefox"
         pre_version = "52.0.2"
         upg_version = "57.0.2"
+        src_name = "test_repo"
+        src_location = "https://repo.test.com/chocolatey"
         log.debug("Making sure %s is not installed", target)
         self.assertFalse(self.run_function("chocolatey.version", [target]))
 
@@ -97,6 +100,19 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             log.debug("Verifying uninstall success")
             ret = self.run_function("chocolatey.version", [target])
             self.assertEqual(ret, {})
+
+            ####################################################
+            # Test `chocolatey.source_added`
+            ####################################################
+            # add the source
+            log.debug("Testing chocolatey.source_added")
+            ret = self.run_state("chocolatey.source_added", name=src_name, source_location=src_location)
+            self.assertSaltTrueReturn(ret)
+
+            # Verify the source is added
+            log.debug("Verifying source_add success")
+            ret = self.run_function("chocolatey.list_sources")
+            self.assertTrue(source_name in ret.keys())
 
         finally:
             # Always uninstall
