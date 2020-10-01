@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon IoT
 
@@ -48,18 +47,13 @@ The dependencies listed above can be installed via package or pip.
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
-
-# Import third party libs
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -89,7 +83,9 @@ def __virtual__():
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    return salt.utils.versions.check_boto_reqs(check_boto=False, boto3_ver="1.2.1", botocore_ver="1.4.41")
+    return salt.utils.versions.check_boto_reqs(
+        check_boto=False, boto3_ver="1.2.1", botocore_ver="1.4.41"
+    )
 
 
 def __init__(opts):
@@ -154,7 +150,7 @@ def describe_thing_type(thingTypeName, region=None, key=None, keyid=None, profil
                 for dtype in ("creationDate", "deprecationDate"):
                     dval = thingTypeMetadata.get(dtype)
                     if dval and isinstance(dval, datetime.date):
-                        thingTypeMetadata[dtype] = "{0}".format(dval)
+                        thingTypeMetadata[dtype] = "{}".format(dval)
             return {"thing_type": res}
         else:
             return {"thing_type": None}
@@ -382,7 +378,7 @@ def describe_policy(policyName, region=None, key=None, keyid=None, profile=None)
         policy = conn.get_policy(policyName=policyName)
         if policy:
             keys = ("policyName", "policyArn", "policyDocument", "defaultVersionId")
-            return {"policy": dict([(k, policy.get(k)) for k in keys])}
+            return {"policy": {k: policy.get(k) for k in keys}}
         else:
             return {"policy": None}
     except ClientError as e:
@@ -524,7 +520,7 @@ def describe_policy_version(
                 "policyVersionId",
                 "isDefaultVersion",
             )
-            return {"policy": dict([(k, policy.get(k)) for k in keys])}
+            return {"policy": {k: policy.get(k) for k in keys}}
         else:
             return {"policy": None}
     except ClientError as e:
@@ -881,7 +877,7 @@ def describe_topic_rule(ruleName, region=None, key=None, keyid=None, profile=Non
         if rule and "rule" in rule:
             rule = rule["rule"]
             keys = ("ruleName", "sql", "description", "actions", "ruleDisabled")
-            return {"rule": dict([(k, rule.get(k)) for k in keys])}
+            return {"rule": {k: rule.get(k) for k in keys}}
         else:
             return {"rule": None}
     except ClientError as e:

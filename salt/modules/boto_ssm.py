@@ -12,10 +12,8 @@ Connection module for Amazon SSM
 
 :depends: boto3
 """
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.boto3mod
 import salt.utils.json as json
 import salt.utils.versions
