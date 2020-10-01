@@ -13,7 +13,6 @@ Support for YUM/DNF
     automatically in place of YUM in Fedora 22 and newer.
 """
 
-# Import python libs
 
 import contextlib
 import datetime
@@ -24,7 +23,6 @@ import os
 import re
 import string
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.decorators.path
@@ -40,9 +38,7 @@ import salt.utils.systemd
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 
-# Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
-# Import 3rd-party libs
 from salt.ext.six.moves import configparser, zip
 from salt.utils.versions import LooseVersion as _LooseVersion
 
