@@ -39,7 +39,7 @@ def minion_id(salt_factories, salt_master):
 
 
 @slowTest
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_master, minion_id):
     """
     Ensure correct exit status when the minion is configured to run as an unknown user.
