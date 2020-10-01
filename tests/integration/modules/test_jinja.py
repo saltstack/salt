@@ -2,18 +2,15 @@
 Test the jinja module
 """
 
-# Import python libs
 import os
 
 import salt.utils.files
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.yaml
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains
 
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 
 
