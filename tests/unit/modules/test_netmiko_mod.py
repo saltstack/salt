@@ -1,6 +1,11 @@
+import logging
+
 import salt.modules.netmiko_mod as netmiko_mod
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import patch
 from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 
 class MockNetmikoConnection:
@@ -46,3 +51,23 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
         self.assertEqual(ret.get("user"), "salt")
         self.assertEqual(ret.get("password"), "password")
+
+    def test_virtual(self):
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "netmiko"}}):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", True):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertTrue(ret)
+
+        _expected = (False, "Not a proxy or a proxy of type netmiko.")
+        with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
+            with patch.dict(netmiko_mod.__opts__, {"proxy": {"proxytype": "esxi"}}):
+                with patch.object(netmiko_mod, "HAS_NETMIKO", True):
+                    ret = netmiko_mod.__virtual__()
+                    self.assertEqual(ret, _expected)
+
+        _expected = (False, "Not a proxy or a proxy of type netmiko.")
+        with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
+            with patch.object(netmiko_mod, "HAS_NETMIKO", True):
+                ret = netmiko_mod.__virtual__()
+                self.assertEqual(ret, _expected)
