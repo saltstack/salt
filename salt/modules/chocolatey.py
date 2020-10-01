@@ -1236,6 +1236,7 @@ def disable_source(name):
     """
     return _change_source_state(name, "disable")
 
+
 def list_sources():
     """
     Returns the list of installed sources.

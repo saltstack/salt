@@ -112,7 +112,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             # Verify the source is added
             log.debug("Verifying source_add success")
             ret = self.run_function("chocolatey.list_sources")
-            self.assertTrue(source_name in ret.keys())
+            self.assertTrue(src_name in ret.keys())
 
         finally:
             # Always uninstall
