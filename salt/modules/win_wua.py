@@ -54,17 +54,14 @@ Group Policy using the ``lgpo`` module.
 
 :depends: salt.utils.win_update
 """
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.win_service
 import salt.utils.win_update
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd-party libs
 try:
     import win32com.client
 
