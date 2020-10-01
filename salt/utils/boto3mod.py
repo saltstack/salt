@@ -36,6 +36,8 @@ import logging
 import sys
 from functools import partial
 
+import requests
+
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -51,6 +53,8 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+default_region = "us-east-1"
+instance_data_url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 
 __virtualname__ = "boto3"
 
@@ -93,8 +97,14 @@ def _get_profile(service, region, key, keyid, profile):
         region = _option(service + ".region")
 
     if not region:
-        region = "us-east-1"
-        log.info("Assuming default region %s", region)
+        try:
+            resp = request.get(instance_data_url)
+            instance_data = resp.json()
+            region = instance_data["region"]
+            log.info("Assuming instance region %s", region)
+        except:
+            region = default_region
+            log.info("Assuming default region %s", region)
 
     if not key and _option(service + ".key"):
         key = _option(service + ".key")
