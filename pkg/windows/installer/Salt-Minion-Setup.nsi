@@ -738,6 +738,7 @@ Section -Post
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
+    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
 
     ${IfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
         Call updateMinionConfig
@@ -1012,51 +1013,6 @@ Function Explode
 
     Push $explArrCount
 FunctionEnd
-
-
-#------------------------------------------------------------------------------
-# StrStr Function
-# - find substring in a string
-#
-# Usage:
-#   Push "this is some string"
-#   Push "some"
-#   Call StrStr
-#   Pop $0 # "some string"
-#------------------------------------------------------------------------------
-!macro StrStr un
-Function ${un}StrStr
-
-    Exch $R1 # $R1=substring, stack=[old$R1,string,...]
-    Exch     #                stack=[string,old$R1,...]
-    Exch $R2 # $R2=string,    stack=[old$R2,old$R1,...]
-    Push $R3 # $R3=strlen(substring)
-    Push $R4 # $R4=count
-    Push $R5 # $R5=tmp
-    StrLen $R3 $R1 # Get the length of the Search String
-    StrCpy $R4 0 # Set the counter to 0
-
-    loop:
-        StrCpy $R5 $R2 $R3 $R4 # Create a moving window of the string that is
-                               # the size of the length of the search string
-        StrCmp $R5 $R1 done    # Is the contents of the window the same as
-                               # search string, then done
-        StrCmp $R5 "" done     # Is the window empty, then done
-        IntOp $R4 $R4 + 1      # Shift the windows one character
-        Goto loop              # Repeat
-
-    done:
-        StrCpy $R1 $R2 "" $R4
-        Pop $R5
-        Pop $R4
-        Pop $R3
-        Pop $R2
-        Exch $R1 # $R1=old$R1, stack=[result,...]
-
-FunctionEnd
-!macroend
-!insertmacro StrStr ""
-!insertmacro StrStr "un."
 
 
 #------------------------------------------------------------------------------
