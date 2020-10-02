@@ -33,17 +33,14 @@ Usage:
 """
 
 # https://docs.microsoft.com/en-us/windows/desktop/perfctrs/using-the-pdh-functions-to-consume-counter-data
-# Import python libs
 
 # https://www.cac.cornell.edu/wiki/index.php?title=Performance_Data_Helper_in_Python_with_win32pdh
 import logging
 import time
 
-# Import salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd party libs
 try:
     import pywintypes
     import win32pdh
