@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the etcd SDB module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -11,8 +9,6 @@ import salt.sdb.etcd_db as etcd_db
 import salt.utils.etcd_util as etcd_util
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, call, create_autospec, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
