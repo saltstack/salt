@@ -114,13 +114,7 @@ def static_loader(
 ):
     funcs = LazyLoader(
         _module_dirs(
-            opts,
-            ext_type,
-            tag,
-            int_type,
-            ext_dirs,
-            ext_type_dirs,
-            base_path,
+            opts, ext_type, tag, int_type, ext_dirs, ext_type_dirs, base_path,
         ),
         opts,
         tag=tag,
@@ -430,10 +424,7 @@ def tops(opts):
         return {}
     whitelist = list(opts["master_tops"].keys())
     ret = LazyLoader(
-        _module_dirs(opts, "tops", "top"),
-        opts,
-        tag="top",
-        whitelist=whitelist,
+        _module_dirs(opts, "tops", "top"), opts, tag="top", whitelist=whitelist,
     )
     return FilterDictWrapper(ret, ".top")
 
@@ -477,11 +468,7 @@ def serializers(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only serializers present in the keyspace
     """
-    return LazyLoader(
-        _module_dirs(opts, "serializers"),
-        opts,
-        tag="serializers",
-    )
+    return LazyLoader(_module_dirs(opts, "serializers"), opts, tag="serializers",)
 
 
 def eauth_tokens(opts):
@@ -490,11 +477,7 @@ def eauth_tokens(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only token backends present in the keyspace
     """
-    return LazyLoader(
-        _module_dirs(opts, "tokens"),
-        opts,
-        tag="tokens",
-    )
+    return LazyLoader(_module_dirs(opts, "tokens"), opts, tag="tokens",)
 
 
 def auth(opts, whitelist=None):
@@ -679,12 +662,7 @@ def render(opts, functions, states=None, proxy=None, context=None):
         pack["__states__"] = states
     pack["__proxy__"] = proxy or {}
     ret = LazyLoader(
-        _module_dirs(
-            opts,
-            "renderers",
-            "render",
-            ext_type_dirs="render_dirs",
-        ),
+        _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
         opts,
         tag="render",
         pack=pack,
@@ -719,12 +697,7 @@ def grain_funcs(opts, proxy=None, context=None):
     pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
 
     ret = LazyLoader(
-        _module_dirs(
-            opts,
-            "grains",
-            "grain",
-            ext_type_dirs="grains_dirs",
-        ),
+        _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
@@ -1106,11 +1079,7 @@ def netapi(opts):
     """
     Return the network api functions
     """
-    return LazyLoader(
-        _module_dirs(opts, "netapi"),
-        opts,
-        tag="netapi",
-    )
+    return LazyLoader(_module_dirs(opts, "netapi"), opts, tag="netapi",)
 
 
 def executors(opts, functions=None, context=None, proxy=None):
@@ -1308,7 +1277,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
         _generate_module("{}.ext".format(self.loaded_base_name))
         _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
-
 
     def clean_modules(self):
         """

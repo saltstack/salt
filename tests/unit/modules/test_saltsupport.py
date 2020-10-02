@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
 import salt.exceptions
 import salt.utils.platform
 from salt.modules import saltsupport
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -395,7 +390,7 @@ class LogCollectorTestCase(TestCase, LoaderModuleMockMixin):
                 == saltsupport.LogCollector.MessagesList
             )
             assert out.messages[saltsupport.LogCollector.INFO] == [
-                "00:00:00.000 - {0}: {1}".format("Here", msg)
+                "00:00:00.000 - {}: {}".format("Here", msg)
             ]
 
     def test_info_message(self):
