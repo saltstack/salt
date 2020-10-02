@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import
 
 import copy
+import logging
 import os
 
 import salt.ext.tornado
@@ -14,12 +13,15 @@ import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
 import salt.utils.process
-from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit
+from salt._compat import ipaddress
+from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -504,7 +506,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         io_loop.make_current()
         minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
-        class MockPillarCompiler(object):
+        class MockPillarCompiler:
             def compile_pillar(self):
                 return {}
 
@@ -627,12 +629,40 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertIn("ps", minion.opts["beacons"])
             self.assertEqual(minion.opts["beacons"]["ps"], bdata)
 
+    def test_prep_ip_port(self):
+        _ip = ipaddress.ip_address
+
+        opts = {"master": "10.10.0.3", "master_uri_format": "ip_only"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": _ip("10.10.0.3")})
+
+        opts = {
+            "master": "10.10.0.3",
+            "master_port": 1234,
+            "master_uri_format": "default",
+        }
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3"})
+
+        opts = {"master": "10.10.0.3:1234", "master_uri_format": "default"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3", "master_port": 1234})
+
+        opts = {"master": "host name", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3:abcd", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3::1234", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
 
 class MinionAsyncTestCase(
     TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase
 ):
     def setUp(self):
-        super(MinionAsyncTestCase, self).setUp()
+        super().setUp()
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 

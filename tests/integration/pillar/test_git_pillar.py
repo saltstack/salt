@@ -3669,7 +3669,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
             file_ignore_regex: []
             file_ignore_glob: []
             git_pillar_provider: pygit2
-            git_pillar_user: {user}
+            git_pillar_user: {username}
             git_pillar_password: {password}
             git_pillar_insecure_auth: True
             cachedir: {cachedir}
@@ -3707,7 +3707,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 file_ignore_regex: []
                 file_ignore_glob: []
                 git_pillar_provider: pygit2
-                git_pillar_user: {user}
+                git_pillar_user: {username}
                 git_pillar_password: {password}
                 git_pillar_insecure_auth: True
                 cachedir: {cachedir}

@@ -1,0 +1,1 @@
+Doesn't remove underscore when sanitizing hostname in network salt util
