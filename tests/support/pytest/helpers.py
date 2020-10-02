@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.helpers
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -11,6 +10,7 @@ import shutil
 import tempfile
 import textwrap
 import types
+import warnings
 from contextlib import contextmanager
 
 import pytest
@@ -161,7 +161,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_STATE_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_STATE_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
@@ -209,7 +209,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_PILLAR_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
@@ -222,8 +222,16 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 @pytest.helpers.register
-def loader_mock(request, loader_modules, **kwargs):
-    return LoaderModuleMock(request, loader_modules, **kwargs)
+def loader_mock(*args, **kwargs):
+    if len(args) > 1:
+        loader_modules = args[1]
+        warnings.warn(
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            category=DeprecationWarning,
+        )
+    else:
+        loader_modules = args[0]
+    return LoaderModuleMock(loader_modules, **kwargs)
 
 
 @pytest.helpers.register
@@ -249,6 +257,15 @@ def salt_loader_module_functions(module):
         funcname = func_alias.get(func.__name__) or func.__name__
         funcs["{}.{}".format(virtualname, funcname)] = func
     return funcs
+
+
+@pytest.helpers.register
+def remove_stale_minion_key(master, minion_id):
+    key_path = os.path.join(master.config["pki_dir"], "minions", minion_id)
+    if os.path.exists(key_path):
+        os.unlink(key_path)
+    else:
+        log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
 
 
 # Only allow star importing the functions defined in this module
