@@ -454,9 +454,9 @@ def upgraded(
     return ret
 
 
-def source_added(name, source_location, username=None, password=None, force=False):
+def source_present(name, source_location, username=None, password=None, force=False):
     """
-    Instructs Chocolatey to add a source if not already added.
+    Instructs Chocolatey to add a source if not already present.
 
     name
         The name of the source to be added as a chocolatey repository.
@@ -481,7 +481,7 @@ def source_added(name, source_location, username=None, password=None, force=Fals
     .. code-block:: yaml
 
         add_some_source:
-          chocolatey.source_added:
+          chocolatey.source_present:
             - name: reponame
             - source: https://repo.exemple.com
             - username: myuser
