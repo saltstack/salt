@@ -30,6 +30,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.runners.winrepo import genrepo as _genrepo
 from salt.runners.winrepo import update_git_repos as _update_git_repos
+from salt.ext import six
 
 # pylint: enable=unused-import
 
