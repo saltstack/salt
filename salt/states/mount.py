@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Mounting of filesystems
 =======================
@@ -35,18 +34,10 @@ Mount any type of mountable filesystem with the mounted function:
         - persist: True
         - mkmnt: True
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os.path
 import re
-
-from salt.ext import six
-
-# Import salt libs
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -229,10 +220,10 @@ def mounted(
 
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
-    if isinstance(opts, string_types):
+    if isinstance(opts, str):
         opts = opts.split(",")
 
-    if isinstance(hidden_opts, string_types):
+    if isinstance(hidden_opts, str):
         hidden_opts = hidden_opts.split(",")
 
     # remove possible trailing slash
@@ -280,10 +271,10 @@ def mounted(
         real_device = device.split("=")[1].strip('"').lower()
     elif device.upper().startswith("LABEL="):
         _label = device.split("=")[1]
-        cmd = "blkid -t LABEL={0}".format(_label)
-        res = __salt__["cmd.run_all"]("{0}".format(cmd))
+        cmd = "blkid -t LABEL={}".format(_label)
+        res = __salt__["cmd.run_all"]("{}".format(cmd))
         if res["retcode"] > 0:
-            ret["comment"] = "Unable to find device with label {0}.".format(_label)
+            ret["comment"] = "Unable to find device with label {}.".format(_label)
             ret["result"] = False
             return ret
         else:
@@ -307,9 +298,9 @@ def mounted(
     # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
     lvs_match = re.match(r"^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)", device)
     if lvs_match:
-        double_dash_escaped = dict(
-            (k, re.sub(r"-", "--", v)) for k, v in six.iteritems(lvs_match.groupdict())
-        )
+        double_dash_escaped = {
+            k: re.sub(r"-", "--", v) for k, v in lvs_match.groupdict().items()
+        }
         mapper_device = "/dev/mapper/{vg_name}-{lv_name}".format(**double_dash_escaped)
         if os.path.exists(mapper_device):
             real_device = mapper_device
@@ -431,10 +422,10 @@ def mounted(
                     )
                     if size_match:
                         converted_size = _size_convert(size_match)
-                        opt = "size={0}k".format(converted_size)
+                        opt = "size={}k".format(converted_size)
                     # make cifs option user synonym for option username which is reported by /proc/mounts
                     if fstype in ["cifs"] and opt.split("=")[0] == "user":
-                        opt = "username={0}".format(opt.split("=")[1])
+                        opt = "username={}".format(opt.split("=")[1])
 
                     if opt.split("=")[0] in mount_ignore_fs_keys.get(fstype, []):
                         opt = opt.split("=")[0]
@@ -449,7 +440,7 @@ def mounted(
                             _info = __salt__[name_id_opts[_param]](_givenid)
                             if _info and _param in _info:
                                 _id = _info[_param]
-                        opt = _param + "=" + six.text_type(_id)
+                        opt = _param + "=" + str(_id)
 
                     _active_superopts = active[real_name].get("superopts", [])
                     for _active_opt in _active_superopts:
@@ -459,9 +450,9 @@ def mounted(
                         )
                         if size_match:
                             converted_size = _size_convert(size_match)
-                            opt = "size={0}k".format(converted_size)
+                            opt = "size={}k".format(converted_size)
                             _active_superopts.remove(_active_opt)
-                            _active_opt = "size={0}k".format(converted_size)
+                            _active_opt = "size={}k".format(converted_size)
                             _active_superopts.append(_active_opt)
 
                     if (
@@ -475,7 +466,7 @@ def mounted(
                             ret["result"] = None
                             ret[
                                 "comment"
-                            ] = "Remount would be forced because options ({0}) changed".format(
+                            ] = "Remount would be forced because options ({}) changed".format(
                                 opt
                             )
                             return ret
@@ -485,7 +476,7 @@ def mounted(
                             if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
                                 ret["changes"]["umount"] = (
                                     "Forced unmount and mount because "
-                                    + "options ({0}) changed".format(opt)
+                                    + "options ({}) changed".format(opt)
                                 )
                                 unmount_result = __salt__["mount.umount"](real_name)
                                 if unmount_result is True:
@@ -499,16 +490,14 @@ def mounted(
                                     ret["result"] = mount_result
                                 else:
                                     ret["result"] = False
-                                    ret[
-                                        "comment"
-                                    ] = "Unable to unmount {0}: {1}.".format(
+                                    ret["comment"] = "Unable to unmount {}: {}.".format(
                                         real_name, unmount_result
                                     )
                                     return ret
                             else:
                                 ret["changes"]["umount"] = (
                                     "Forced remount because "
-                                    + "options ({0}) changed".format(opt)
+                                    + "options ({}) changed".format(opt)
                                 )
                                 remount_result = __salt__["mount.remount"](
                                     real_name,
@@ -535,7 +524,7 @@ def mounted(
                             ret["result"] = None
                             ret["comment"] = (
                                 "Remount would be forced because"
-                                " options ({0})"
+                                " options ({})"
                                 "changed".format(",".join(_missing))
                             )
                             return ret
@@ -545,7 +534,7 @@ def mounted(
                             if fstype in ["nfs", "cvfs"] or fstype.startswith("fuse"):
                                 ret["changes"]["umount"] = (
                                     "Forced unmount and mount because "
-                                    + "options ({0}) changed".format(opt)
+                                    + "options ({}) changed".format(opt)
                                 )
                                 unmount_result = __salt__["mount.umount"](real_name)
                                 if unmount_result is True:
@@ -559,16 +548,14 @@ def mounted(
                                     ret["result"] = mount_result
                                 else:
                                     ret["result"] = False
-                                    ret[
-                                        "comment"
-                                    ] = "Unable to unmount {0}: {1}.".format(
+                                    ret["comment"] = "Unable to unmount {}: {}.".format(
                                         real_name, unmount_result
                                     )
                                     return ret
                             else:
                                 ret["changes"]["umount"] = (
                                     "Forced remount because "
-                                    + "options ({0}) changed".format(opt)
+                                    + "options ({}) changed".format(opt)
                                 )
                                 remount_result = __salt__["mount.remount"](
                                     real_name,
@@ -634,13 +621,13 @@ def mounted(
             if __opts__["test"]:
                 ret["result"] = None
                 if os.path.exists(name):
-                    ret["comment"] = "{0} would be mounted".format(name)
+                    ret["comment"] = "{} would be mounted".format(name)
                 elif mkmnt:
-                    ret["comment"] = "{0} would be created and mounted".format(name)
+                    ret["comment"] = "{} would be created and mounted".format(name)
                 else:
                     ret[
                         "comment"
-                    ] = "{0} does not exist and would not be created".format(name)
+                    ] = "{} does not exist and would not be created".format(name)
                 return ret
 
             if not os.path.exists(name) and not mkmnt:
@@ -651,7 +638,7 @@ def mounted(
             out = __salt__["mount.mount"](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__["mount.active"](extended=True)
             update_mount_cache = True
-            if isinstance(out, string_types):
+            if isinstance(out, str):
                 # Failed to (re)mount, the state has failed!
                 ret["comment"] = out
                 ret["result"] = False
@@ -664,26 +651,24 @@ def mounted(
             if __opts__["test"]:
                 ret["result"] = None
                 if mkmnt:
-                    ret["comment"] = "{0} would be created, but not mounted".format(
-                        name
-                    )
+                    ret["comment"] = "{} would be created, but not mounted".format(name)
                 else:
                     ret[
                         "comment"
-                    ] = "{0} does not exist and would neither be created nor mounted".format(
+                    ] = "{} does not exist and would neither be created nor mounted".format(
                         name
                     )
             elif mkmnt:
                 __salt__["file.mkdir"](name, user=user)
-                ret["comment"] = "{0} was created, not mounted".format(name)
+                ret["comment"] = "{} was created, not mounted".format(name)
             else:
-                ret["comment"] = "{0} not present and not mounted".format(name)
+                ret["comment"] = "{} not present and not mounted".format(name)
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "{0} would not be mounted".format(name)
+                ret["comment"] = "{} would not be mounted".format(name)
             else:
-                ret["comment"] = "{0} not mounted".format(name)
+                ret["comment"] = "{} not mounted".format(name)
 
     if persist:
         if "/etc/fstab" == config:
@@ -728,36 +713,36 @@ def mounted(
                 if out == "new":
                     if mount:
                         comment = (
-                            "{0} is mounted, but needs to be "
+                            "{} is mounted, but needs to be "
                             "written to the fstab in order to be "
                             "made persistent."
                         ).format(name)
                     else:
                         comment = (
-                            "{0} needs to be "
+                            "{} needs to be "
                             "written to the fstab in order to be "
                             "made persistent."
                         ).format(name)
                 elif out == "change":
                     if mount:
                         comment = (
-                            "{0} is mounted, but its fstab entry " "must be updated."
+                            "{} is mounted, but its fstab entry " "must be updated."
                         ).format(name)
                     else:
-                        comment = ("The {0} fstab entry " "must be updated.").format(
+                        comment = ("The {} fstab entry " "must be updated.").format(
                             name
                         )
                 else:
                     ret["result"] = False
                     comment = (
                         "Unable to detect fstab status for "
-                        "mount point {0} due to unexpected "
-                        "output '{1}' from call to "
+                        "mount point {} due to unexpected "
+                        "output '{}' from call to "
                         "mount.set_fstab. This is most likely "
                         "a bug."
                     ).format(name, out)
                 if "comment" in ret:
-                    ret["comment"] = "{0}. {1}".format(ret["comment"], comment)
+                    ret["comment"] = "{}. {}".format(ret["comment"], comment)
                 else:
                     ret["comment"] = comment
                 return ret
@@ -825,25 +810,25 @@ def swap(name, persist=True, config="/etc/fstab"):
     if __salt__["file.is_link"](name):
         real_swap_device = __salt__["file.readlink"](name)
         if not real_swap_device.startswith("/"):
-            real_swap_device = "/dev/{0}".format(os.path.basename(real_swap_device))
+            real_swap_device = "/dev/{}".format(os.path.basename(real_swap_device))
     else:
         real_swap_device = name
 
     if real_swap_device in on_:
-        ret["comment"] = "Swap {0} already active".format(name)
+        ret["comment"] = "Swap {} already active".format(name)
     elif __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Swap {0} is set to be activated".format(name)
+        ret["comment"] = "Swap {} is set to be activated".format(name)
     else:
         __salt__["mount.swapon"](real_swap_device)
 
         on_ = __salt__["mount.swaps"]()
 
         if real_swap_device in on_:
-            ret["comment"] = "Swap {0} activated".format(name)
+            ret["comment"] = "Swap {} activated".format(name)
             ret["changes"] = on_[real_swap_device]
         else:
-            ret["comment"] = "Swap {0} failed to activate".format(name)
+            ret["comment"] = "Swap {} failed to activate".format(name)
             ret["result"] = False
 
     if persist:
@@ -863,8 +848,7 @@ def swap(name, persist=True, config="/etc/fstab"):
                 ret["result"] = None
                 if name in on_:
                     ret["comment"] = (
-                        "Swap {0} is set to be added to the "
-                        "fstab and to be activated"
+                        "Swap {} is set to be added to the " "fstab and to be activated"
                     ).format(name)
             return ret
 
@@ -948,7 +932,7 @@ def unmounted(
         # The mount is present! Unmount it
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = ("Mount point {0} is mounted but should not " "be").format(
+            ret["comment"] = ("Mount point {} is mounted but should not " "be").format(
                 name
             )
             return ret
@@ -958,7 +942,7 @@ def unmounted(
         else:
             out = __salt__["mount.umount"](name, user=user)
             update_mount_cache = True
-        if isinstance(out, string_types):
+        if isinstance(out, str):
             # Failed to umount, the state has failed!
             ret["comment"] = out
             ret["result"] = False
@@ -992,15 +976,15 @@ def unmounted(
         else:
             if device:
                 if fstab_data[name][device_key_name] != device:
-                    ret["comment"] += ". fstab entry for device {0} not found".format(
+                    ret["comment"] += ". fstab entry for device {} not found".format(
                         device
                     )
                     return ret
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] = (
-                    "Mount point {0} is unmounted but needs to "
-                    "be purged from {1} to be made "
+                    "Mount point {} is unmounted but needs to "
+                    "be purged from {} to be made "
                     "persistent"
                 ).format(name, config)
                 return ret
@@ -1042,14 +1026,12 @@ def mod_watch(name, user=None, **kwargs):
             name, kwargs["device"], False, kwargs["fstype"], kwargs["opts"], user=user
         )
         if out:
-            ret["comment"] = "{0} remounted".format(name)
+            ret["comment"] = "{} remounted".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = "{0} failed to remount: {1}".format(name, out)
+            ret["comment"] = "{} failed to remount: {}".format(name, out)
     else:
-        ret["comment"] = "Watch not supported in {0} at this time".format(
-            kwargs["sfun"]
-        )
+        ret["comment"] = "Watch not supported in {} at this time".format(kwargs["sfun"])
     return ret
 
 
