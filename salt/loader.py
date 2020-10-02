@@ -388,7 +388,7 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy):
+def utils(opts, whitelist=None, context=None, proxy=proxy, loaded_base_name=None):
     """
     Returns the utility modules
     """
@@ -398,6 +398,7 @@ def utils(opts, whitelist=None, context=None, proxy=proxy):
         tag="utils",
         whitelist=whitelist,
         pack={"__context__": context, "__proxy__": proxy or {}},
+        loaded_base_name=loaded_base_name,
     )
 
 

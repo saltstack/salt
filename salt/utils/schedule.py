@@ -145,7 +145,8 @@ class Schedule:
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
-        self.utils = utils or salt.loader.utils(opts)
+        self.loaded_base_name = 'schedule_{}'.format(id(self))
+        self.utils = utils or salt.loader.utils(opts, loaded_base_name=self.loaded_base_name)
         self.standalone = standalone
         self.skip_function = None
         self.skip_during_range = None
@@ -666,7 +667,7 @@ class Schedule:
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
             # hang on polling parents connections from the child process.
-            self.utils = salt.loader.utils(self.opts)
+            self.utils = salt.loader.utils(self.opts, loaded_base_name=self.loaded_base_name)
             if self.opts["__role"] == "master":
                 self.functions = salt.loader.runner(self.opts, utils=self.utils)
             else:
