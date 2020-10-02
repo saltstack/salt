@@ -26,8 +26,6 @@ import salt.utils.stringutils
 from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -684,6 +682,27 @@ class LazyLoaderReloadingTest(TestCase):
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
 
+    def test_wrong_bytecode(self):
+        """
+        Checks to make sure we don't even try to load .pyc files that are for a different Python
+        This should pass (the load should fail) all the time because we don't run Salt on Py 3.4 anymore
+        """
+        test_module_name = "test_module.cpython-34"
+        filemap_save = copy.deepcopy(self.loader.file_mapping)
+        self.loader.file_mapping = {
+            test_module_name: (
+                "/temp/path/does/not/matter/here/__pycache__/"
+                + test_module_name
+                + ".pyc",
+                ".pyc",
+                0,
+            )
+        }
+
+        self.assertFalse(self.loader._load_module(test_module_name))
+
+        self.loader.file_mapping = copy.deepcopy(filemap_save)
+
 
 virtual_aliases = ("loadertest2", "loadertest3")
 virtual_alias_module_template = """
@@ -1217,6 +1236,45 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self.update_lib(lib)
                 self.loader.clear()
                 self._verify_libs()
+
+
+class LoaderMultipleGlobalTest(ModuleCase):
+    """
+    Tests when using multiple lazyloaders
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+        self.loader2 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+
+    def tearDown(self):
+        del self.loader1
+        del self.loader2
+
+    def test_loader_globals(self):
+        """
+        Test to ensure loaders do not edit
+        each others loader's namespace
+        """
+        self.loader1.pack["__foo__"] = "bar1"
+        func1 = self.loader1["test.ping"]
+
+        self.loader2.pack["__foo__"] = "bar2"
+        func2 = self.loader2["test.ping"]
+
+        assert func1.__globals__["__foo__"] == "bar1"
+        assert func2.__globals__["__foo__"] == "bar2"
 
 
 class LoaderGlobalsTest(ModuleCase):

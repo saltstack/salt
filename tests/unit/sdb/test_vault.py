@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the vault SDB module
 """
 
 # Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.sdb.vault as vault
@@ -125,8 +123,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
         self.assertEqual(
-            mock_vault.call_args_list,
-            [call("GET", "v1/sdb://myvault/path/to/foo", None)],
+            mock_vault.call_args_list, [call("GET", "v1/sdb://myvault/path/to/foo")],
         )
 
     def test_get_v2(self):
@@ -149,7 +146,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo/bar"), "test")
 
         self.assertEqual(
-            mock_vault.call_args_list, [call("GET", "v1/path/data/to/foo", None)]
+            mock_vault.call_args_list, [call("GET", "v1/path/data/to/foo")]
         )
 
     def test_get_question_mark(self):
@@ -167,8 +164,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         ), patch.dict(vault.__utils__, {"vault.is_v2": mock_version}):
             self.assertEqual(vault.get("sdb://myvault/path/to/foo?bar"), "test")
         self.assertEqual(
-            mock_vault.call_args_list,
-            [call("GET", "v1/sdb://myvault/path/to/foo", None)],
+            mock_vault.call_args_list, [call("GET", "v1/sdb://myvault/path/to/foo")],
         )
 
     def test_get_missing(self):
@@ -186,7 +182,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             self.assertIsNone(vault.get("sdb://myvault/path/to/foo/bar"))
 
         assert mock_vault.call_args_list == [
-            call("GET", "v1/sdb://myvault/path/to/foo", None)
+            call("GET", "v1/sdb://myvault/path/to/foo")
         ]
 
     def test_get_missing_key(self):
@@ -205,5 +201,5 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             self.assertIsNone(vault.get("sdb://myvault/path/to/foo/foo"))
 
         assert mock_vault.call_args_list == [
-            call("GET", "v1/sdb://myvault/path/to/foo", None)
+            call("GET", "v1/sdb://myvault/path/to/foo")
         ]

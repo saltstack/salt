@@ -4,8 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-# Import python libs
-
 import functools
 import inspect
 import logging
@@ -20,7 +18,6 @@ import types
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
-# Import salt libs
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
@@ -37,8 +34,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import LoaderError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
@@ -322,12 +317,17 @@ def raw_mod(opts, name, functions, mod="modules"):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
-def metaproxy(opts):
+def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
     """
 
-    return LazyLoader(_module_dirs(opts, "metaproxy"), opts, tag="metaproxy")
+    return LazyLoader(
+        _module_dirs(opts, "metaproxy"),
+        opts,
+        tag="metaproxy",
+        loaded_base_name=loaded_base_name,
+    )
 
 
 def matchers(opts):
@@ -356,7 +356,9 @@ def engines(opts, functions, runners, utils, proxy=None):
     )
 
 
-def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
+def proxy(
+    opts, functions=None, returners=None, whitelist=None, utils=None, context=None
+):
     """
     Returns the proxy module for this salt-proxy-minion
     """
@@ -364,7 +366,12 @@ def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
         _module_dirs(opts, "proxy"),
         opts,
         tag="proxy",
-        pack={"__salt__": functions, "__ret__": returners, "__utils__": utils},
+        pack={
+            "__salt__": functions,
+            "__ret__": returners,
+            "__utils__": utils,
+            "__context__": context,
+        },
         extra_module_dirs=utils.module_dirs if utils else None,
     )
 
@@ -696,7 +703,7 @@ def render(opts, functions, states=None, proxy=None, context=None):
     return rend
 
 
-def grain_funcs(opts, proxy=None):
+def grain_funcs(opts, proxy=None, context=None):
     """
     Returns the grain functions
 
@@ -709,6 +716,8 @@ def grain_funcs(opts, proxy=None):
           grainfuncs = salt.loader.grain_funcs(__opts__)
     """
     _utils = utils(opts, proxy=proxy)
+    pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
+
     ret = LazyLoader(
         _module_dirs(
             opts,
@@ -719,6 +728,7 @@ def grain_funcs(opts, proxy=None):
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
+        pack=pack,
     )
     ret.pack["__utils__"] = _utils
     return ret
@@ -775,7 +785,7 @@ def _load_cached_grains(opts, cfn):
         return None
 
 
-def grains(opts, force_refresh=False, proxy=None):
+def grains(opts, force_refresh=False, proxy=None, context=None):
     """
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -837,7 +847,7 @@ def grains(opts, force_refresh=False, proxy=None):
 
     grains_data = {}
     blist = opts.get("grains_blacklist", [])
-    funcs = grain_funcs(opts, proxy=proxy)
+    funcs = grain_funcs(opts, proxy=proxy, context=context or {})
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -1240,7 +1250,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
-        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        if loaded_base_name:
+            self.loaded_base_name = loaded_base_name
+        else:
+            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1272,8 +1285,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.disabled = set(
             self.opts.get(
-                "disable_{}{}".format(self.tag, "" if self.tag[-1] == "s" else "s"),
-                [],
+                "disable_{}{}".format(self.tag, "" if self.tag[-1] == "s" else "s"), [],
             )
         )
 
@@ -1296,6 +1308,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
         _generate_module("{}.ext".format(self.loaded_base_name))
         _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
+
+
+    def clean_modules(self):
+        """
+        Clean modules
+        """
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                mod = sys.modules.pop(name)
+                del mod
 
     def __getitem__(self, item):
         """
@@ -1612,6 +1634,28 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name][:2]
+        # if the fpath has `.cpython-3x` in it, but the running Py version
+        # is 3.y, the following will cause us to return immediately and we won't try to import this .pyc.
+        # This is for the unusual case where several Python versions share a single
+        # source tree and drop their .pycs in the same __pycache__ folder.
+        # If we were to load a .pyc for another Py version it's not a big problem
+        # but the log will get spammed with "Bad Magic Number" messages that
+        # can be very misleading if the user is debugging another problem.
+        try:
+            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
+                "-"
+            )
+            if cache_tag_ver not in fpath and implementation_tag in fpath:
+                log.trace(
+                    "Trying to load %s on %s, returning False.",
+                    fpath,
+                    sys.implementation.cache_tag,
+                )
+                return False
+        except AttributeError:
+            # Most likely Py 2.7 or some other Python version we don't really support
+            pass
+
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
         try:

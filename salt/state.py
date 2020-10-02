@@ -11,8 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-# Import python libs
-
 import copy
 import datetime
 import fnmatch
@@ -26,8 +24,6 @@ import time
 import traceback
 
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -51,9 +47,7 @@ import salt.utils.url
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
-# Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
@@ -544,8 +538,7 @@ class Compiler:
                                                     'Illegal requisite "{}", '
                                                     "is SLS {}\n"
                                                 ).format(
-                                                    str(req_val),
-                                                    body["__sls__"],
+                                                    str(req_val), body["__sls__"],
                                                 )
                                             )
                                             continue
@@ -879,7 +872,23 @@ class State:
         ret = {"result": False, "comment": []}
         cmd_opts = {}
 
-        if "shell" in self.opts["grains"]:
+        # Set arguments from cmd.run state as appropriate
+        POSSIBLE_CMD_ARGS = (
+            "cwd",
+            "root",
+            "runas",
+            "env",
+            "prepend_path",
+            "umask",
+            "timeout",
+            "success_retcodes",
+        )
+        for run_cmd_arg in POSSIBLE_CMD_ARGS:
+            cmd_opts[run_cmd_arg] = low_data.get(run_cmd_arg)
+
+        if "shell" in low_data:
+            cmd_opts["shell"] = low_data["shell"]
+        elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
 
         if "onlyif" in low_data:
@@ -956,7 +965,10 @@ class State:
                     log.warning(ret["comment"])
                     return ret
 
+                get_return = entry.pop("get_return", None)
                 result = self._run_check_function(entry)
+                if get_return:
+                    result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
                     _check_cmd(self.state_con["retcode"])
                 elif not result:
@@ -1019,7 +1031,10 @@ class State:
                     log.warning(ret["comment"])
                     return ret
 
+                get_return = entry.pop("get_return", None)
                 result = self._run_check_function(entry)
+                if get_return:
+                    result = salt.utils.data.traverse_dict_and_list(result, get_return)
                 if self.state_con.get("retcode", 0):
                     _check_cmd(self.state_con["retcode"])
                 elif result:
@@ -2803,22 +2818,15 @@ class State:
             ret = {"ret": chunk_ret}
             if fire_event is True:
                 tag = salt.utils.event.tagify(
-                    [self.jid, self.opts["id"], str(chunk_ret["name"])],
-                    "state_result",
+                    [self.jid, self.opts["id"], str(chunk_ret["name"])], "state_result",
                 )
             elif isinstance(fire_event, str):
                 tag = salt.utils.event.tagify(
-                    [self.jid, self.opts["id"], str(fire_event)],
-                    "state_result",
+                    [self.jid, self.opts["id"], str(fire_event)], "state_result",
                 )
             else:
                 tag = salt.utils.event.tagify(
-                    [
-                        self.jid,
-                        "prog",
-                        self.opts["id"],
-                        str(chunk_ret["__run_num__"]),
-                    ],
+                    [self.jid, "prog", self.opts["id"], str(chunk_ret["__run_num__"])],
                     "job",
                 )
                 ret["len"] = length
@@ -3940,7 +3948,7 @@ class BaseHighState:
             self.state.opts["pillar"] = self.state._gather_pillar()
         self.state.module_refresh()
 
-    def render_state(self, sls, saltenv, mods, matches, local=False):
+    def render_state(self, sls, saltenv, mods, matches, local=False, context=None):
         """
         Render a state file and retrieve all of the include states
         """
@@ -3973,6 +3981,7 @@ class BaseHighState:
                     saltenv,
                     sls,
                     rendered_sls=mods,
+                    context=context,
                 )
             except SaltRenderError as exc:
                 msg = "Rendering SLS '{}:{}' failed: {}".format(saltenv, sls, exc)
@@ -4272,7 +4281,7 @@ class BaseHighState:
                 errors.append(err)
             state.setdefault("__exclude__", []).extend(exc)
 
-    def render_highstate(self, matches):
+    def render_highstate(self, matches, context=None):
         """
         Gather the state files and render them into a single unified salt
         high data structure.
@@ -4303,7 +4312,9 @@ class BaseHighState:
                     r_env = "{}:{}".format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches, context=context
+                    )
                     if state:
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):

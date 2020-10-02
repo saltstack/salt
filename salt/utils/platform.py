@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Functions for identifying which platform a machine is
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
@@ -39,9 +37,11 @@ def is_proxy():
         # Changed this from 'salt-proxy in main...' to 'proxy in main...'
         # to support the testsuite's temp script that is called 'cli_salt_proxy'
         #
-        # Add '--proxyid' in sys.argv so that salt-call --proxyid
+        # Add '--proxyid' or '--proxyid=...' in sys.argv so that salt-call
         # is seen as a proxy minion
-        if "proxy" in main.__file__ or "--proxyid" in sys.argv:
+        if "proxy" in main.__file__ or any(
+            arg for arg in sys.argv if arg.startswith("--proxyid")
+        ):
             ret = True
     except AttributeError:
         pass

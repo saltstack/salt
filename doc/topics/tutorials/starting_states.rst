@@ -86,7 +86,7 @@ function ensures that a software package is installed via the system's native
 package manager. The ``service.running`` state module function ensures that a
 given system daemon is running.
 
-Finally, on line five, is the word ``require``. This is called a Requisite
+Finally, on line four, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
