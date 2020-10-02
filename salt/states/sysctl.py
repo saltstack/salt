@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Configuration of the kernel using sysctl
 ========================================
@@ -11,16 +10,10 @@ Control the kernel sysctl system.
     sysctl.present:
       - value: 20
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import re
 
-# Import salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd part libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -64,17 +57,17 @@ def present(name, value, config=None):
         if configured is None:
             ret["result"] = None
             ret["comment"] = (
-                "Sysctl option {0} might be changed, we failed to check "
-                "config file at {1}. The file is either unreadable, or "
+                "Sysctl option {} might be changed, we failed to check "
+                "config file at {}. The file is either unreadable, or "
                 "missing.".format(name, config)
             )
             return ret
         if name in current and name not in configured:
             if re.sub(" +|\t+", " ", current[name]) != re.sub(
-                " +|\t+", " ", six.text_type(value)
+                " +|\t+", " ", str(value)
             ):
                 ret["result"] = None
-                ret["comment"] = "Sysctl option {0} set to be changed to {1}".format(
+                ret["comment"] = "Sysctl option {} set to be changed to {}".format(
                     name, value
                 )
                 return ret
@@ -82,8 +75,8 @@ def present(name, value, config=None):
                 ret["result"] = None
                 ret["comment"] = (
                     "Sysctl value is currently set on the running system but "
-                    "not in a config file. Sysctl option {0} set to be "
-                    "changed to {1} in config file.".format(name, value)
+                    "not in a config file. Sysctl option {} set to be "
+                    "changed to {} in config file.".format(name, value)
                 )
                 return ret
         elif name in configured and name not in current:
@@ -95,28 +88,28 @@ def present(name, value, config=None):
             )
             return ret
         elif name in configured and name in current:
-            if six.text_type(value).split() == __salt__["sysctl.get"](name).split():
+            if str(value).split() == __salt__["sysctl.get"](name).split():
                 ret["result"] = True
-                ret["comment"] = "Sysctl value {0} = {1} is already set".format(
+                ret["comment"] = "Sysctl value {} = {} is already set".format(
                     name, value
                 )
                 return ret
         # otherwise, we don't have it set anywhere and need to set it
         ret["result"] = None
-        ret["comment"] = "Sysctl option {0} would be changed to {1}".format(name, value)
+        ret["comment"] = "Sysctl option {} would be changed to {}".format(name, value)
         return ret
 
     try:
         update = __salt__["sysctl.persist"](name, value, config)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to set {0} to {1}: {2}".format(name, value, exc)
+        ret["comment"] = "Failed to set {} to {}: {}".format(name, value, exc)
         return ret
 
     if update == "Updated":
         ret["changes"] = {name: value}
-        ret["comment"] = "Updated sysctl value {0} = {1}".format(name, value)
+        ret["comment"] = "Updated sysctl value {} = {}".format(name, value)
     elif update == "Already set":
-        ret["comment"] = "Sysctl value {0} = {1} is already set".format(name, value)
+        ret["comment"] = "Sysctl value {} = {} is already set".format(name, value)
 
     return ret
