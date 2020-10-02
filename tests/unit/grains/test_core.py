@@ -1614,8 +1614,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 ):
                     with patch(
-                        "salt.utils.files.fopen",
-                        mock_open(read_data="嗨".encode("utf8")),
+                        "salt.utils.files.fopen", mock_open(read_data="嗨".encode()),
                     ):
                         osdata = {
                             "kernel": "Linux",
@@ -1632,6 +1631,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         """
         test virtual grain with an invalid unicode character in product_name file
         """
+
         def path_side_effect(path):
             if path == "/sys/devices/virtual/dmi/id/product_name":
                 return True
@@ -1640,18 +1640,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         virt = "kvm"
         mock_file.side_effect = path_side_effect
         mock_dir.side_effect = path_side_effect
-        with patch.object(salt.utils.platform, 'is_windows',
-                          MagicMock(return_value=False)):
-            with patch.object(salt.utils.path, 'which',
-                              MagicMock(return_value=True)):
-                with patch.dict(core.__salt__, {'cmd.run_all':
-                                                MagicMock(return_value={'pid': 78,
-                                                                        'retcode': 0,
-                                                                        'stderr': '',
-                                                                        'stdout': virt})}):
-                    with patch('salt.utils.files.fopen',
-                               mock_open(read_data=b'\xff')):
-                        osdata = {'kernel': 'Linux', }
+        with patch.object(
+            salt.utils.platform, "is_windows", MagicMock(return_value=False)
+        ):
+            with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
+                with patch.dict(
+                    core.__salt__,
+                    {
+                        "cmd.run_all": MagicMock(
+                            return_value={
+                                "pid": 78,
+                                "retcode": 0,
+                                "stderr": "",
+                                "stdout": virt,
+                            }
+                        )
+                    },
+                ):
+                    with patch("salt.utils.files.fopen", mock_open(read_data=b"\xff")):
+                        osdata = {
+                            "kernel": "Linux",
+                        }
                         ret = core._virtual(osdata)
                         self.assertEqual(ret["virtual"], virt)
 
