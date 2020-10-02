@@ -160,7 +160,6 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup:
 """
-# Import Python libs
 import logging
 import os
 
