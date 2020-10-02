@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the etcd modules
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
