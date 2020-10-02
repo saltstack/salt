@@ -5,18 +5,15 @@ A dead simple module wrapping calls to the Chocolatey package manager
 .. versionadded:: 2014.1.0
 """
 
-# Import python libs
 import logging
 import os
 import re
 import tempfile
 
-# Import salt libs
+from requests.structures import CaseInsensitiveDict
+
 import salt.utils.data
 import salt.utils.platform
-
-# Import 3rd party libs
-from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -396,9 +393,7 @@ def unbootstrap():
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug(
-                "Removing Chocolatey environment variable: {}" "".format(env_var)
-            )
+            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )

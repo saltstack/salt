@@ -9,7 +9,6 @@ Manage Chocolatey package installs
     repo.
 """
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
@@ -137,9 +136,7 @@ def installed(
                     }
                     ret["comment"] = "Reinstall {} {}".format(full_name, version)
                 else:
-                    ret["comment"] = "{} {} is already installed".format(
-                        name, version
-                    )
+                    ret["comment"] = "{} {} is already installed".format(name, version)
                     if __opts__["test"]:
                         ret["result"] = None
                     return ret

@@ -4,10 +4,7 @@ Tests for the Chocolatey State
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
