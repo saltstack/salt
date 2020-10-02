@@ -7,7 +7,7 @@ import logging
 
 import salt.utils.path
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import flaky, slowTest
+from tests.support.helpers import slowTest
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -59,7 +59,6 @@ class EtcdTestCase(ModuleCase, ShellCase):
             self.run_state("docker_container.absent", name="etcd")
             self.run_state("docker_image.absent", name="bitnami/etcd", force=True)
 
-    @flaky
     @slowTest
     def test_sdb(self):
         set_output = self.run_function(
@@ -71,7 +70,6 @@ class EtcdTestCase(ModuleCase, ShellCase):
         )
         self.assertEqual(get_output, "bar")
 
-    @flaky
     @slowTest
     def test_sdb_runner(self):
         set_output = self.run_run(
@@ -83,7 +81,6 @@ class EtcdTestCase(ModuleCase, ShellCase):
         )
         self.assertEqual(get_output, ["bar"])
 
-    @flaky
     @slowTest
     def test_config(self):
         set_output = self.run_function(
