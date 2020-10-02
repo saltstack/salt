@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Chocolatey State
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -33,7 +30,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         """
         Ensure that Chocolatey is installed
         """
-        super(ChocolateyTest, self).setUp()
+        super().setUp()
         if "chocolatey" not in __testcontext__:
             self.run_function("chocolatey.bootstrap")
             __testcontext__["chocolatey"] = True
@@ -106,7 +103,9 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             ####################################################
             # add the source
             log.debug("Testing chocolatey.source_added")
-            ret = self.run_state("chocolatey.source_added", name=src_name, source_location=src_location)
+            ret = self.run_state(
+                "chocolatey.source_added", name=src_name, source_location=src_location
+            )
             self.assertSaltTrueReturn(ret)
 
             # Verify the source is added
