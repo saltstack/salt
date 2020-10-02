@@ -80,16 +80,12 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 """
 
 import logging
-
-# Import Python libs
 import pprint
 
-# Import Salt Libs
 import salt.returners
 import salt.utils.pushover
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 
