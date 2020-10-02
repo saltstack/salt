@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
 
 import pytest
@@ -22,9 +19,9 @@ class ZipFileMock(MagicMock):
 
 
 @pytest.fixture(autouse=True)
-def setup_loader(request):
+def setup_loader():
     setup_loader_modules = {archive: {"__grains__": {"id": 0}}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
+    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
 
 

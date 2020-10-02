@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon ALB
 
@@ -40,15 +39,12 @@ Connection module for Amazon ALB
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 # Import Python libs
 import logging
 
-import salt.utils.versions
-
 # Import Salt libs
-from salt.ext import six
+import salt.utils.boto3mod
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +72,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        __utils__["boto3.assign_funcs"](__name__, "elbv2")
+        salt.utils.boto3mod.assign_funcs(__name__, "elbv2")
     return has_boto_reqs
 
 
@@ -296,7 +292,7 @@ def register_targets(name, targets, region=None, key=None, keyid=None, profile=N
         salt myminion boto_elbv2.register_targets myelb "[instance_id,instance_id]"
     """
     targetsdict = []
-    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
+    if isinstance(targets, str):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
@@ -333,7 +329,7 @@ def deregister_targets(name, targets, region=None, key=None, keyid=None, profile
         salt myminion boto_elbv2.deregister_targets myelb "[instance_id,instance_id]"
     """
     targetsdict = []
-    if isinstance(targets, six.string_types) or isinstance(targets, six.text_type):
+    if isinstance(targets, str):
         targetsdict.append({"Id": targets})
     else:
         for target in targets:
