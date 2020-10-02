@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: jmoney <justin@saltstack.com>
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.linux_sysctl as linux_sysctl

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for viewing and modifying sysctl parameters
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -94,7 +92,7 @@ def show(config_file=False):
                         key = key.strip()
                         value = value.lstrip()
                         ret[key] = value
-        except (OSError, IOError):
+        except OSError:
             log.error("Could not open sysctl file")
             return None
     else:
@@ -118,7 +116,7 @@ def get(name):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     """
-    cmd = "sysctl -n {0}".format(name)
+    cmd = "sysctl -n {}".format(name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -133,7 +131,7 @@ def assign(name, value):
 
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     """
-    value = six.text_type(value)
+    value = str(value)
 
     if six.PY3:
         tran_tab = name.translate("".maketrans("./", "/."))
@@ -146,12 +144,12 @@ def assign(name, value):
         # pylint: enable=incompatible-py3-code,undefined-variable
         tran_tab = name.translate(trans_args)
 
-    sysctl_file = "/proc/sys/{0}".format(tran_tab)
+    sysctl_file = "/proc/sys/{}".format(tran_tab)
     if not os.path.exists(sysctl_file):
-        raise CommandExecutionError("sysctl {0} does not exist".format(name))
+        raise CommandExecutionError("sysctl {} does not exist".format(name))
 
     ret = {}
-    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
+    cmd = 'sysctl -w {}="{}"'.format(name, value)
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
@@ -159,14 +157,14 @@ def assign(name, value):
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
-    regex = re.compile(r"^{0}\s+=\s+{1}$".format(re.escape(name), re.escape(value)))
+    regex = re.compile(r"^{}\s+=\s+{}$".format(re.escape(name), re.escape(value)))
 
-    if not regex.match(out) or "Invalid argument" in six.text_type(err):
+    if not regex.match(out) or "Invalid argument" in str(err):
         if data["retcode"] != 0 and err:
             error = err
         else:
             error = out
-        raise CommandExecutionError("sysctl -w failed: {0}".format(error))
+        raise CommandExecutionError("sysctl -w failed: {}".format(error))
     new_name, new_value = out.split(" = ", 1)
     ret[new_name] = new_value
     return ret
@@ -195,7 +193,7 @@ def persist(name, value, config=None):
         try:
             with salt.utils.files.fopen(config, "w+") as _fh:
                 _fh.write("#\n# Kernel sysctl configuration\n#\n")
-        except (IOError, OSError):
+        except OSError:
             msg = "Could not write to file: {0}"
             raise CommandExecutionError(msg.format(config))
 
@@ -207,7 +205,7 @@ def persist(name, value, config=None):
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
             config_data = salt.utils.data.decode(_fh.readlines())
-    except (IOError, OSError):
+    except OSError:
         msg = "Could not read from file: {0}"
         raise CommandExecutionError(msg.format(config))
 
@@ -238,25 +236,25 @@ def persist(name, value, config=None):
             continue
         if name == comps[0]:
             # This is the line to edit
-            if six.text_type(comps[1]) == six.text_type(value):
+            if str(comps[1]) == str(value):
                 # It is correct in the config, check if it is correct in /proc
-                if six.text_type(get(name)) != six.text_type(value):
+                if str(get(name)) != str(value):
                     assign(name, value)
                     return "Updated"
                 else:
                     return "Already set"
 
-            nlines.append("{0} = {1}\n".format(name, value))
+            nlines.append("{} = {}\n".format(name, value))
             edited = True
             continue
         else:
             nlines.append(line)
     if not edited:
-        nlines.append("{0} = {1}\n".format(name, value))
+        nlines.append("{} = {}\n".format(name, value))
     try:
         with salt.utils.files.fopen(config, "wb") as _fh:
             _fh.writelines(salt.utils.data.encode(nlines))
-    except (IOError, OSError):
+    except OSError:
         msg = "Could not write to file: {0}"
         raise CommandExecutionError(msg.format(config))
 
