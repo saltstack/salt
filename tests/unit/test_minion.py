@@ -719,7 +719,7 @@ class MinionAsyncTestCase(
             self.assertFalse(fallback)
 
             if opts["master"] == "master1":
-                raise SaltClientError("Cannot resolve {0}".format(opts["master"]))
+                raise SaltClientError("Cannot resolve {}".format(opts["master"]))
 
             return {
                 "master_ip": "192.168.2.1",
@@ -754,7 +754,7 @@ class MinionAsyncTestCase(
 
         def mock_resolve_dns(opts, fallback=False):
             self.assertFalse(fallback)
-            raise SaltClientError("Cannot resolve {0}".format(opts["master"]))
+            raise SaltClientError("Cannot resolve {}".format(opts["master"]))
 
         with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
             "salt.loader.grains", MagicMock(return_value=[])
