@@ -10,16 +10,12 @@ Service support for Debian systems (uses update-rc.d and /sbin/service)
 
 import fnmatch
 import glob
-
-# Import python libs
 import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.systemd
 
-# Import 3rd-party libs
 # pylint: disable=import-error
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 
@@ -37,16 +33,12 @@ def __virtual__():
     """
     Only work on Debian and when systemd isn't running
     """
-    if (
-        __grains__["os"]
-        in (
-            "Debian",
-            "Raspbian",
-            "Devuan",
-            "NILinuxRT",
-        )
-        and not salt.utils.systemd.booted(__context__)
-    ):
+    if __grains__["os"] in (
+        "Debian",
+        "Raspbian",
+        "Devuan",
+        "NILinuxRT",
+    ) and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     else:
         return (
