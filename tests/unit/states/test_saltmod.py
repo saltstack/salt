@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import tempfile
@@ -206,7 +204,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "changes": {},
             "result": None,
-            "comment": "Function state would be executed " "on target {0}".format(tgt),
+            "comment": "Function state would be executed " "on target {}".format(tgt),
         }
 
         with patch.dict(saltmod.__opts__, {"test": True}):
@@ -217,7 +215,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                 "result": True,
                 "changes": {"out": "highstate", "ret": {tgt: ""}},
                 "comment": "Function ran successfully."
-                " Function state ran on {0}.".format(tgt),
+                " Function state ran on {}.".format(tgt),
             }
         )
         with patch.dict(saltmod.__opts__, {"test": False}):
@@ -261,7 +259,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "changes": {}, "result": False, "comment": comt}
 
-        class Mockevent(object):
+        class Mockevent:
             """
             Mock event class
             """
