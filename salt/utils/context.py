@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Thomas Jackson (jacksontj.89@gmail.com)
@@ -9,15 +8,11 @@
 
     Context managers used throughout Salt's source code.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import threading
 from collections.abc import MutableMapping
 from contextlib import contextmanager
-
-from salt.ext import six
 
 
 @contextmanager
@@ -45,16 +40,17 @@ def func_globals_inject(func, **overrides):
     func_globals.update(overrides)
 
     # The context is now ready to be used
-    yield
+    try:
+        yield
+    finally:
+        # We're now done with the context
 
-    # We're now done with the context
+        # Restore the overwritten function globals
+        func_globals.update(overridden_func_globals)
 
-    # Restore the overwritten function globals
-    func_globals.update(overridden_func_globals)
-
-    # Remove any entry injected in the function globals
-    for injected in injected_func_globals:
-        del func_globals[injected]
+        # Remove any entry injected in the function globals
+        for injected in injected_func_globals:
+            del func_globals[injected]
 
 
 class ContextDict(MutableMapping):
@@ -156,7 +152,7 @@ class ChildContextDict(MutableMapping):
 
         # merge self.global_data into self._data
         if threadsafe:
-            for k, v in six.iteritems(self.parent.global_data):
+            for k, v in self.parent.global_data.items():
                 if k not in self._data:
                     # A deepcopy is necessary to avoid using the same
                     # objects in globals as we do in thread local storage.
@@ -164,7 +160,7 @@ class ChildContextDict(MutableMapping):
                     # the other.
                     self._data[k] = copy.deepcopy(v)
         else:
-            for k, v in six.iteritems(self.parent.global_data):
+            for k, v in self.parent.global_data.items():
                 if k not in self._data:
                     self._data[k] = v
 
@@ -202,11 +198,11 @@ class NamespacedDictWrapper(MutableMapping, dict):
 
     def __init__(self, d, pre_keys):  # pylint: disable=W0231
         self.__dict = d
-        if isinstance(pre_keys, six.string_types):
+        if isinstance(pre_keys, str):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
-        super(NamespacedDictWrapper, self).__init__(self._dict())
+        super().__init__(self._dict())
 
     def _dict(self):
         r = self.__dict

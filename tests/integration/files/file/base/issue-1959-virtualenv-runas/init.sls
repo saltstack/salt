@@ -1,4 +1,6 @@
-{{ salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-1959-virtualenv-runas') }}:
+{%- set venv_dir = salt['runtests_helpers.get_sys_temp_dir_for_path']('issue-1959-virtualenv-runas') %}
+
+{{ venv_dir }}:
   virtualenv.managed:
     - requirements: salt://issue-1959-virtualenv-runas/requirements.txt
     - user: issue-1959
@@ -10,3 +12,10 @@
     {%- endif %}
     - env:
         XDG_CACHE_HOME: /tmp
+
+install-working-setuptools:
+  pip.installed:
+    - name: 'setuptools<50.0.0'
+    - bin_env: {{ venv_dir }}
+    - require:
+      - virtualenv: {{ venv_dir }}
