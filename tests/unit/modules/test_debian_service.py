@@ -1,9 +1,4 @@
-# Import Python libs
-
-# Import Salt Libs
 import salt.modules.debian_service as debian_service
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, patch
 from tests.support.unit import TestCase
