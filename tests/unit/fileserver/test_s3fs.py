@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import tempfile
 
-# Import Salt libs
 import salt.fileserver.s3fs as s3fs
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
