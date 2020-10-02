@@ -38,7 +38,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         - `chocolatey.installed`
         - `chocolatey.upgraded`
         - `chocolatey.uninstalled`
-        - `chocolatey.source_added`
+        - `chocolatey.source_present`
         """
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
@@ -96,16 +96,16 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(ret, {})
 
             ####################################################
-            # Test `chocolatey.source_added`
+            # Test `chocolatey.source_present`
             ####################################################
             # add the source
-            log.debug("Testing chocolatey.source_added")
+            log.debug("Testing chocolatey.source_present")
             ret = self.run_state(
-                "chocolatey.source_added", name=src_name, source_location=src_location
+                "chocolatey.source_present", name=src_name, source_location=src_location
             )
             self.assertSaltTrueReturn(ret)
 
-            # Verify the source is added
+            # Verify the source is present
             log.debug("Verifying source_add success")
             ret = self.run_function("chocolatey.list_sources")
             self.assertTrue(src_name in ret.keys())
