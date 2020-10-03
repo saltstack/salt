@@ -92,7 +92,6 @@ def __virtual__():
 
 def __init__(opts):
     _ = opts
-    salt.utils.compat.pack_dunder(__name__)
     __utils__["boto3.assign_funcs"](__name__, "es")
 
 
