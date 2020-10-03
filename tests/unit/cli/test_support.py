@@ -6,12 +6,11 @@
 import os
 
 import jinja2
-import yaml
-
 import salt.cli.support.collector
 import salt.exceptions
 import salt.utils.files
 import salt.utils.platform
+import yaml
 from salt.cli.support.collector import SaltSupport, SupportDataCollector
 from salt.cli.support.console import IndentOutput
 from salt.utils.color import get_colors

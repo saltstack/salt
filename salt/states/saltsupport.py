@@ -37,8 +37,6 @@ import os
 import tempfile
 
 import salt.exceptions
-
-# Import salt modules
 import salt.fileclient
 import salt.utils.decorators.path
 import salt.utils.odict

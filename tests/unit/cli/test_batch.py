@@ -2,13 +2,9 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import python libs
 
-# Import Salt Libs
 from salt.cli.batch import Batch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
