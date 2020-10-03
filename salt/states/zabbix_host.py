@@ -71,11 +71,11 @@ def present(host, groups, interfaces, **kwargs):
     """
     connection_args = {}
     if "_connection_user" in kwargs:
-        connection_args["_connection_user"] = kwargs["_connection_user"]
+        connection_args["_connection_user"] = kwargs.pop("_connection_user")
     if "_connection_password" in kwargs:
-        connection_args["_connection_password"] = kwargs["_connection_password"]
+        connection_args["_connection_password"] = kwargs.pop("_connection_password")
     if "_connection_url" in kwargs:
-        connection_args["_connection_url"] = kwargs["_connection_url"]
+        connection_args["_connection_url"] = kwargs.pop("_connection_url")
 
     ret = {"name": host, "changes": {}, "result": False, "comment": ""}
 
@@ -103,7 +103,7 @@ def present(host, groups, interfaces, **kwargs):
         if not interfaces_data:
             return list()
 
-        interface_attrs = ("ip", "dns", "main", "type", "useip", "port")
+        interface_attrs = ("ip", "dns", "main", "type", "useip", "port", "details")
         interfaces_json = salt.utils.json.loads(salt.utils.json.dumps(interfaces_data))
         interfaces_dict = dict()
 
@@ -132,6 +132,46 @@ def present(host, groups, interfaces, **kwargs):
             interface_ip = value.get("ip", "")
             dns = value.get("dns", key)
             port = str(value.get("port", interface_ports[value["type"].lower()][1]))
+            if interface_type == "2":
+                if not value.get("details", False):
+                    details_version = "2"
+                    details_bulk = "1"
+                    details_community = "{$SNMP_COMMUNITY}"
+                else:
+                    val_details = {}
+                    for detail in value.get("details"):
+                        val_details.update(detail)
+                    details_version = val_details.get("version", "2")
+                    details_bulk = val_details.get("bulk", "1")
+                    details_community = val_details.get(
+                        "community", "{$SNMP_COMMUNITY}"
+                    )
+                details = {
+                    "version": details_version,
+                    "bulk": details_bulk,
+                    "community": details_community,
+                }
+                if details_version == "3":
+                    details_securitylevel = val_details.get("securitylevel", "0")
+                    details_securityname = val_details.get("securityname", "")
+                    details_contextname = val_details.get("contextname", "")
+                    details["securitylevel"] = details_securitylevel
+                    details["securityname"] = details_securityname
+                    details["contextname"] = details_contextname
+                    if int(details_securitylevel) > 0:
+                        details_authpassphrase = val_details.get("authpassphrase", "")
+                        details_authprotocol = val_details.get("authprotocol", "0")
+                        details["authpassphrase"] = details_authpassphrase
+                        details["authprotocol"] = details_authprotocol
+                        if int(details_securitylevel) > 1:
+                            details_privpassphrase = val_details.get(
+                                "privpassphrase", ""
+                            )
+                            details_privprotocol = val_details.get("privprotocol", "0")
+                            details["privpassphrase"] = details_privpassphrase
+                            details["privprotocol"] = details_privprotocol
+            else:
+                details = []
 
             interfaces_list.append(
                 {
@@ -141,6 +181,7 @@ def present(host, groups, interfaces, **kwargs):
                     "ip": interface_ip,
                     "dns": dns,
                     "port": port,
+                    "details": details,
                 }
             )
 
@@ -169,40 +210,38 @@ def present(host, groups, interfaces, **kwargs):
     # Get and validate proxyid
     proxy_hostid = "0"
     if "proxy_host" in kwargs:
+        proxy_host = kwargs.pop("proxy_host")
         # Test if proxy_host given as name
-        if isinstance(kwargs["proxy_host"], str):
+        if isinstance(proxy_host, str):
             try:
                 proxy_hostid = __salt__["zabbix.run_query"](
                     "proxy.get",
                     {
                         "output": "proxyid",
                         "selectInterface": "extend",
-                        "filter": {"host": "{}".format(kwargs["proxy_host"])},
+                        "filter": {"host": "{}".format(proxy_host)},
                     },
                     **connection_args
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {}".format(kwargs["proxy_host"])
+                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
         # Otherwise lookup proxy_host as proxyid
         else:
             try:
                 proxy_hostid = __salt__["zabbix.run_query"](
                     "proxy.get",
-                    {
-                        "proxyids": "{}".format(kwargs["proxy_host"]),
-                        "output": "proxyid",
-                    },
+                    {"proxyids": "{}".format(proxy_host), "output": "proxyid"},
                     **connection_args
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {}".format(kwargs["proxy_host"])
+                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
 
     if "inventory" not in kwargs:
         inventory = {}
     else:
-        inventory = kwargs["inventory"]
+        inventory = kwargs.pop("inventory")
     if inventory is None:
         inventory = {}
     # Create dict of requested inventory items
@@ -214,7 +253,28 @@ def present(host, groups, interfaces, **kwargs):
     if "visible_name" not in kwargs:
         visible_name = None
     else:
-        visible_name = kwargs["visible_name"]
+        visible_name = kwargs.pop("visible_name")
+
+    if kwargs:
+        host_properties_definition = [
+            "description",
+            "inventory_mode",
+            "ipmi_authtype",
+            "ipmi_password",
+            "ipmi_privilege",
+            "ipmi_username",
+            "status",
+            "tls_connect",
+            "tls_accept",
+            "tls_issuer",
+            "tls_subject",
+            "tls_psk_identity",
+            "tls_psk",
+        ]
+        host_extra_properties = {}
+        for param in host_properties_definition:
+            if param in kwargs:
+                host_extra_properties[param] = kwargs.pop(param)
 
     host_exists = __salt__["zabbix.host_exists"](host, **connection_args)
 
@@ -222,10 +282,20 @@ def present(host, groups, interfaces, **kwargs):
         host = __salt__["zabbix.host_get"](host=host, **connection_args)[0]
         hostid = host["hostid"]
 
+        update_host = False
         update_proxy = False
         update_hostgroups = False
         update_interfaces = False
         update_inventory = False
+
+        host_updated_params = {}
+        for param in host_extra_properties:
+            if param in host:
+                if host[param] == host_extra_properties[param]:
+                    continue
+            host_updated_params[param] = host_extra_properties[param]
+        if host_updated_params:
+            update_host = True
 
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
@@ -253,9 +323,16 @@ def present(host, groups, interfaces, **kwargs):
                 # "bulk" is present only in snmp interfaces with Zabbix < 5.0
                 if "bulk" in hostintf:
                     hostintf.pop("bulk")
-                # "details" is available only in Zabbix >= 5.0
-                if "details" in hostintf:
-                    hostintf.pop("details")
+                    # as we always sent the "details" it needs to be
+                    # populated in Zabbix < 5.0 response:
+                    if hostintf["type"] == "2":
+                        hostintf["details"] = {
+                            "version": "2",
+                            "bulk": "1",
+                            "community": "{$SNMP_COMMUNITY}",
+                        }
+                    else:
+                        hostintf["details"] = []
             interface_diff = [
                 x for x in interfaces_formated if x not in hostinterfaces_copy
             ] + [y for y in hostinterfaces_copy if y not in interfaces_formated]
@@ -285,7 +362,8 @@ def present(host, groups, interfaces, **kwargs):
     if __opts__["test"]:
         if host_exists:
             if (
-                update_hostgroups
+                update_host
+                or update_hostgroups
                 or update_interfaces
                 or update_proxy
                 or update_inventory
@@ -305,8 +383,22 @@ def present(host, groups, interfaces, **kwargs):
 
     if host_exists:
         ret["result"] = True
-        if update_hostgroups or update_interfaces or update_proxy or update_inventory:
+        if (
+            update_host
+            or update_hostgroups
+            or update_interfaces
+            or update_proxy
+            or update_inventory
+        ):
 
+            if update_host:
+                # combine connection_args and host_updated_params
+                sum_kwargs = deepcopy(host_updated_params)
+                sum_kwargs.update(connection_args)
+                hostupdate = __salt__["zabbix.host_update"](hostid, **sum_kwargs)
+                ret["changes"]["host"] = str(host_updated_params)
+                if "error" in hostupdate:
+                    error.append(hostupdate["error"])
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
                 sum_kwargs = dict(new_inventory)
@@ -351,10 +443,6 @@ def present(host, groups, interfaces, **kwargs):
                                 interface["interfaceid"]
                             )
 
-                hostid = __salt__["zabbix.host_get"](name=host, **connection_args)[0][
-                    "hostid"
-                ]
-
                 def _update_interfaces(interface):
                     if not interfaceid_by_type[interface["type"]]:
                         ret = __salt__["zabbix.hostinterface_create"](
@@ -365,6 +453,7 @@ def present(host, groups, interfaces, **kwargs):
                             if_type=interface["type"],
                             useip=interface["useip"],
                             port=interface["port"],
+                            details=interface["details"],
                             **connection_args
                         )
                     else:
@@ -377,6 +466,7 @@ def present(host, groups, interfaces, **kwargs):
                             type=interface["type"],
                             useip=interface["useip"],
                             port=interface["port"],
+                            details=interface["details"],
                             **connection_args
                         )
                     return ret
@@ -411,6 +501,9 @@ def present(host, groups, interfaces, **kwargs):
         else:
             ret["comment"] = comment_host_exists
     else:
+        # combine connection_args and host_properties
+        sum_kwargs = host_extra_properties
+        sum_kwargs.update(connection_args)
         host_create = __salt__["zabbix.host_create"](
             host,
             groups,
@@ -418,7 +511,7 @@ def present(host, groups, interfaces, **kwargs):
             proxy_hostid=proxy_hostid,
             inventory=new_inventory,
             visible_name=visible_name,
-            **connection_args
+            **sum_kwargs
         )
 
         if "error" not in host_create:
