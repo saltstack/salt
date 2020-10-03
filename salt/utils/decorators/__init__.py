@@ -2,7 +2,6 @@
 Helpful decorators for module writing
 """
 
-# Import python libs
 
 import errno
 import inspect
@@ -13,13 +12,10 @@ import time
 from collections import defaultdict
 from functools import wraps
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltConfigurationError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.log import LOG_LEVELS
 

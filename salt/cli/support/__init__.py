@@ -6,9 +6,8 @@ import logging
 import os
 
 import jinja2
-import yaml
-
 import salt.exceptions
+import yaml
 
 log = logging.getLogger(__name__)
 

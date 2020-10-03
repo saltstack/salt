@@ -9,8 +9,6 @@ import time
 from io import BytesIO
 from io import IOBase as file
 
-import yaml
-
 import salt.cli.caller
 import salt.cli.support
 import salt.cli.support.console
@@ -18,7 +16,6 @@ import salt.cli.support.intfunc
 import salt.cli.support.localrunner
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.ext.six as six
 import salt.output.table_out
 import salt.runner
 import salt.utils.files
@@ -27,6 +24,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.verify
+import yaml
 
 salt.output.table_out.__opts__ = {}
 log = logging.getLogger(__name__)

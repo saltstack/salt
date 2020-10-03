@@ -2459,10 +2459,7 @@ class State:
                         comment = (
                             'The state function "{0}" is currently disabled by "{1}", '
                             "to re-enable, run state.enable {1}."
-                        ).format(
-                            state_,
-                            pat,
-                        )
+                        ).format(state_, pat,)
                         _tag = _gen_tag(low)
                         disabled[_tag] = {
                             "changes": {},
@@ -2807,10 +2804,10 @@ class State:
             self.opts.get("state_events", True) or fire_event
         ):
             if not self.opts.get("master_uri"):
-                ev_func = (
-                    lambda ret, tag, preload=None: salt.utils.event.get_master_event(
-                        self.opts, self.opts["sock_dir"], listen=False
-                    ).fire_event(ret, tag)
+                ev_func = lambda ret, tag, preload=None: salt.utils.event.get_master_event(
+                    self.opts, self.opts["sock_dir"], listen=False
+                ).fire_event(
+                    ret, tag
                 )
             else:
                 ev_func = self.functions["event.fire_master"]

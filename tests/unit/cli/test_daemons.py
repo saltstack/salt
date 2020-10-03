@@ -2,18 +2,14 @@
     :codeauthor: Bo Maryniuk <bo@suse.de>
 """
 
-# Import python libs
 
 import logging
 import multiprocessing
 
-# Import Salt libs
 import salt.cli.daemons as daemons
 from tests.support.helpers import slowTest
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
