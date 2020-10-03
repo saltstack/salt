@@ -28,6 +28,7 @@ from distutils.version import StrictVersion as _StrictVersion
 
 # Import Salt libs
 import salt.version
+from salt.exceptions import SaltException
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -383,7 +384,7 @@ def compare(ver1="", oper="==", ver2="", cmp_func=None, ignore_epoch=False):
 
 
 def check_boto_reqs(
-    boto_ver=None, boto3_ver=None, botocore_ver=None, check_boto=True, check_boto3=True
+    boto_ver=None, boto3_ver=None, botocore_ver=None, check_boto=False, check_boto3=False
 ):
     """
     Checks for the version of various required boto libs in one central location. Most
@@ -412,6 +413,10 @@ def check_boto_reqs(
         This defaults to ``True`` as most boto modules/states rely on boto3/botocore, but
         some do not.
     """
+
+    if check_boto is True and check_boto3 is True:
+        raise SaltException("Simultaneous use of boto and boto3 is prohibited.")
+
     if check_boto is True:
         try:
             # Late import so we can only load these for this function
