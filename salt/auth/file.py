@@ -248,7 +248,7 @@ def _htfile(username, password, **kwargs):
     """
 
     filetype = kwargs.get("filetype", "htpasswd").lower()
-
+    log.info("filetype is {}".format(filetype))
     try:
         import passlib
 
@@ -261,6 +261,7 @@ def _htfile(username, password, **kwargs):
         return False
 
     if filetype == "htdigest":
+        log.info("inside filetype {}".format(filetype))
         return _htdigest(username, password, **kwargs)
     else:
         return _htpasswd(username, password, **kwargs)
