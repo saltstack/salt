@@ -88,7 +88,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     """
-    return HAS_FERNET and salt.utils.versions.check_boto_reqs()
+    return HAS_FERNET and salt.utils.versions.check_boto_reqs(boto3_ver="1.2.6")
 
 
 log = logging.getLogger(__name__)

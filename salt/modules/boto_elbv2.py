@@ -70,7 +70,7 @@ def __virtual__():
     """
     Only load if boto3 libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(boto3_ver="1.2.6")
     if has_boto_reqs is True:
         salt.utils.boto3mod.assign_funcs(__name__, "elbv2")
     return has_boto_reqs

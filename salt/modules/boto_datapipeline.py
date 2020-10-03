@@ -34,7 +34,7 @@ def __virtual__():
     """
     Only load if boto3 libraries exists.
     """
-    return salt.utils.versions.check_boto_reqs(check_boto=False)
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.6")
 
 
 def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None):

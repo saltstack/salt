@@ -1,0 +1,1 @@
+Changed `check_boto_reqs()` rely on the specified `boto_ver` or `boto3_ver` to decide which versions of boto to test and changed all boto/boto3 code to explicitly specify which boto version they depend on.
