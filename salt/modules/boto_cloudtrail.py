@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudTrail
 
@@ -49,20 +48,14 @@ The dependencies listed above can be installed via package or pip.
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.compat
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -235,7 +228,7 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
                 "KmsKeyId",
             )
             trail = trails["trailList"].pop()
-            return {"trail": dict([(k, trail.get(k)) for k in keys])}
+            return {"trail": {k: trail.get(k) for k in keys}}
         else:
             return {"trail": None}
     except ClientError as e:
@@ -282,7 +275,7 @@ def status(Name, region=None, key=None, keyid=None, profile=None):
                 "TimeLoggingStarted",
                 "TimeLoggingStopped",
             )
-            return {"trail": dict([(k, trail.get(k)) for k in keys])}
+            return {"trail": {k: trail.get(k) for k in keys}}
         else:
             return {"trail": None}
     except ClientError as e:
@@ -431,7 +424,7 @@ def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:cloudtrail:{0}:{1}:trail/{2}".format(region, account_id, name)
+    return "arn:aws:cloudtrail:{}:{}:trail/{}".format(region, account_id, name)
 
 
 def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
@@ -452,10 +445,10 @@ def add_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs):
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith("__"):
+        for k, v in kwargs.items():
+            if str(k).startswith("__"):
                 continue
-            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+            tagslist.append({"Key": str(k), "Value": str(v)})
         conn.add_tags(
             ResourceId=_get_trail_arn(
                 Name, region=region, key=key, keyid=keyid, profile=profile
@@ -485,10 +478,10 @@ def remove_tags(Name, region=None, key=None, keyid=None, profile=None, **kwargs)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith("__"):
+        for k, v in kwargs.items():
+            if str(k).startswith("__"):
                 continue
-            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+            tagslist.append({"Key": str(k), "Value": str(v)})
         conn.remove_tags(
             ResourceId=_get_trail_arn(
                 Name, region=region, key=key, keyid=keyid, profile=profile

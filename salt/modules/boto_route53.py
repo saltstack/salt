@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Route53
 
@@ -45,23 +44,17 @@ Connection module for Amazon Route53
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
-import sys
 import time
 
-# Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto
@@ -311,7 +304,7 @@ def zone_exists(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
     return False
 
 
@@ -587,7 +580,7 @@ def get_record(
             else:
                 _zone = conn.get_zone(zone)
             if not _zone:
-                msg = "Failed to retrieve zone {0}".format(zone)
+                msg = "Failed to retrieve zone {}".format(zone)
                 log.error(msg)
                 return None
             _type = record_type.upper()
@@ -612,7 +605,7 @@ def get_record(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
 
     if _record:
         ret["name"] = _decode_name(_record.name)
@@ -694,7 +687,7 @@ def add_record(
             else:
                 _zone = conn.get_zone(zone)
             if not _zone:
-                msg = "Failed to retrieve zone {0}".format(zone)
+                msg = "Failed to retrieve zone {}".format(zone)
                 log.error(msg)
                 return False
             _type = record_type.upper()
@@ -712,7 +705,7 @@ def add_record(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
 
     _value = _munge_value(value, _type)
     while error_retries > 0:
@@ -735,7 +728,7 @@ def add_record(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
     return False
 
 
@@ -791,7 +784,7 @@ def update_record(
     else:
         _zone = conn.get_zone(zone)
     if not _zone:
-        msg = "Failed to retrieve zone {0}".format(zone)
+        msg = "Failed to retrieve zone {}".format(zone)
         log.error(msg)
         return False
     _type = record_type.upper()
@@ -823,7 +816,7 @@ def update_record(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
     return False
 
 
@@ -878,7 +871,7 @@ def delete_record(
     else:
         _zone = conn.get_zone(zone)
     if not _zone:
-        msg = "Failed to retrieve zone {0}".format(zone)
+        msg = "Failed to retrieve zone {}".format(zone)
         log.error(msg)
         return False
     _type = record_type.upper()
@@ -911,7 +904,7 @@ def delete_record(
                 time.sleep(3)
                 error_retries -= 1
                 continue
-            six.reraise(*sys.exc_info())
+            raise
 
 
 def _try_func(conn, func, **args):
