@@ -102,7 +102,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](
             __name__, "autoscaling", get_conn_funcname="_get_conn_autoscaling_boto3"
