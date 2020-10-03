@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CognitoIdentity
 
@@ -76,18 +75,14 @@ Connection module for Amazon CognitoIdentity
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -370,7 +365,7 @@ def set_identity_pool_roles(
             if role_arn is None:
                 return {
                     "set": False,
-                    "error": "invalid AuthenticatedRole {0}".format(AuthenticatedRole),
+                    "error": "invalid AuthenticatedRole {}".format(AuthenticatedRole),
                 }
             AuthenticatedRole = role_arn
 
@@ -379,7 +374,7 @@ def set_identity_pool_roles(
             if role_arn is None:
                 return {
                     "set": False,
-                    "error": "invalid UnauthenticatedRole {0}".format(
+                    "error": "invalid UnauthenticatedRole {}".format(
                         UnauthenticatedRole
                     ),
                 }

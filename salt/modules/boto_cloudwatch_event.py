@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon CloudWatch Events
 
@@ -44,20 +43,15 @@ Connection module for Amazon CloudWatch Events
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
@@ -212,13 +206,13 @@ def describe(Name, region=None, key=None, keyid=None, profile=None):
                 "Description",
                 "RoleArn",
             )
-            return {"rule": dict([(k, rule.get(k)) for k in keys])}
+            return {"rule": {k: rule.get(k) for k in keys}}
         else:
             return {"rule": None}
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {0} not found".format(Rule)}
+            return {"error": "Rule {} not found".format(Rule)}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -265,14 +259,14 @@ def list_targets(Rule, region=None, key=None, keyid=None, profile=None):
         if targets and "Targets" in targets:
             keys = ("Id", "Arn", "Input", "InputPath")
             for target in targets.get("Targets"):
-                ret.append(dict([(k, target.get(k)) for k in keys if k in target]))
+                ret.append({k: target.get(k) for k in keys if k in target})
             return {"targets": ret}
         else:
             return {"targets": None}
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {0} not found".format(Rule)}
+            return {"error": "Rule {} not found".format(Rule)}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -291,7 +285,7 @@ def put_targets(Rule, Targets, region=None, key=None, keyid=None, profile=None):
     """
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if isinstance(Targets, six.string_types):
+        if isinstance(Targets, str):
             Targets = salt.utils.json.loads(Targets)
         failures = conn.put_targets(Rule=Rule, Targets=Targets)
         if failures and failures.get("FailedEntryCount", 0) > 0:
@@ -301,7 +295,7 @@ def put_targets(Rule, Targets, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {0} not found".format(Rule)}
+            return {"error": "Rule {} not found".format(Rule)}
         return {"error": __utils__["boto3.get_error"](e)}
 
 
@@ -320,7 +314,7 @@ def remove_targets(Rule, Ids, region=None, key=None, keyid=None, profile=None):
     """
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if isinstance(Ids, six.string_types):
+        if isinstance(Ids, str):
             Ids = salt.utils.json.loads(Ids)
         failures = conn.remove_targets(Rule=Rule, Ids=Ids)
         if failures and failures.get("FailedEntryCount", 0) > 0:
@@ -330,5 +324,5 @@ def remove_targets(Rule, Ids, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         err = __utils__["boto3.get_error"](e)
         if e.response.get("Error", {}).get("Code") == "RuleNotFoundException":
-            return {"error": "Rule {0} not found".format(Rule)}
+            return {"error": "Rule {} not found".format(Rule)}
         return {"error": __utils__["boto3.get_error"](e)}
