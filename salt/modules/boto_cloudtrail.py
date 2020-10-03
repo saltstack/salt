@@ -81,7 +81,7 @@ def __virtual__():
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.5")
+    return salt.utils.versions.check_boto_reqs(boto_ver="2.0.0", boto3_ver="1.2.5")
 
 
 def __init__(opts):

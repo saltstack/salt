@@ -70,7 +70,7 @@ def __virtual__():
     Only load if boto3 libraries exist and if boto3 libraries are greater than
     a given version.
     """
-    return salt.utils.versions.check_boto_reqs(boto3_ver="1.0.0", check_boto=False)
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.0.0")
 
 
 def _get_conn(key=None, keyid=None, profile=None, region=None, **kwargs):

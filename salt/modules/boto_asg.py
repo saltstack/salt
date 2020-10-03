@@ -81,7 +81,7 @@ def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs()
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(boto_ver="2.0.0", boto3_ver="1.2.6")
     if has_boto_reqs is True:
         __utils__["boto.assign_funcs"](
             __name__, "asg", module="ec2.autoscale", pack=__salt__

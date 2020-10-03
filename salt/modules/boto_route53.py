@@ -74,7 +74,7 @@ def __virtual__():
     Only load if boto libraries exist.
     """
     # create_zone params were changed in boto 2.35+
-    return salt.utils.versions.check_boto_reqs(boto_ver="2.35.0", check_boto3=False)
+    return salt.utils.versions.check_boto_reqs(boto_ver="2.35.0")
 
 
 def __init__(opts):

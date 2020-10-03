@@ -86,7 +86,7 @@ def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(boto_ver="2.0.0")
     if has_boto_reqs is True:
         __utils__["boto.assign_funcs"](__name__, "dynamodb2", pack=__salt__)
     return has_boto_reqs

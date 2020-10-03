@@ -83,9 +83,7 @@ def __virtual__():
     # Differences include no group_id attribute in Boto < 2.4.0 and returning
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(
-        boto_ver="2.4.0", check_boto3=False
-    )
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(boto_ver="2.4.0")
     if has_boto_reqs is True:
         __utils__["boto.assign_funcs"](__name__, "ec2", pack=__salt__)
     return has_boto_reqs

@@ -81,9 +81,7 @@ def __virtual__():
     # the boto_ec2 execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(
-        boto_ver="2.8.0", check_boto3=False
-    )
+    has_boto_reqs = salt.utils.versions.check_boto_reqs(boto_ver="2.8.0")
     if has_boto_reqs is True:
         __utils__["boto.assign_funcs"](__name__, "ec2", pack=__salt__)
     return has_boto_reqs
