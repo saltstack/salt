@@ -196,7 +196,7 @@ def __init__(opts):
 
 
 def check_vpc(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None
+    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
     Check whether a VPC with the given name or id exists.
@@ -606,7 +606,7 @@ def _find_vpcs(
     )
 
     if vpcs:
-        if not any ((vpc_id, vpc_name, cidr, tags)):
+        if not any((vpc_id, vpc_name, cidr, tags)):
             return [vpc.id for vpc in vpcs if vpc.is_default]
         else:
             return [vpc.id for vpc in vpcs]
@@ -615,7 +615,13 @@ def _find_vpcs(
 
 
 def _get_id(
-    vpc_name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None
+    vpc_name=None,
+    cidr=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
@@ -623,8 +629,7 @@ def _get_id(
 
     if not any((vpc_name, tags, cidr)):
         raise SaltInvocationError(
-            "At least one of the following must be "
-            "provided: vpc_name, cidr or tags."
+            "At least one of the following must be provided: vpc_name, cidr or tags."
         )
 
     if vpc_name and not any((cidr, tags)):
@@ -667,7 +672,7 @@ def _get_id(
 
 
 def get_id(
-    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None
+    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
@@ -878,7 +883,7 @@ def delete(
 
 
 def describe(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None
+    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
     Describe a VPC's properties. If no VPC ID/Name is spcified then describe the default VPC.
@@ -905,7 +910,8 @@ def describe(
             region=region,
             key=key,
             keyid=keyid,
-            profile=profile)
+            profile=profile,
+        )
     except BotoServerError as err:
         boto_err = __utils__["boto.get_error"](err)
         if boto_err.get("aws", {}).get("code") == "InvalidVpcID.NotFound":
