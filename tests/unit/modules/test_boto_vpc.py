@@ -332,10 +332,6 @@ class BotoVpcTestCaseMixin:
         return rtbl
 
 
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-)
 class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     """
     TestCase for salt.modules.boto_vpc module
@@ -541,7 +537,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         with self.assertRaisesRegex(
             SaltInvocationError,
-            "At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.",
+            "At least one of the following must be provided: vpc_name, cidr or tags.",
         ):
             boto_vpc.get_id(**conn_parameters)
 
@@ -693,16 +689,15 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue("error" in describe_result)
 
     @mock_ec2_deprecated
-    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(
+    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_returns_the_default_vpc(
         self,
     ):
         """
         Tests describing vpc without vpc id
         """
-        with self.assertRaisesRegex(
-            SaltInvocationError, "A valid vpc id or name needs to be specified."
-        ):
-            boto_vpc.describe(vpc_id=None, **conn_parameters)
+        describe_vpc = boto_vpc.describe(vpc_id=None, **conn_parameters)
+
+        self.assertTrue(describe_vpc["vpc"]["is_default"])
 
 
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
