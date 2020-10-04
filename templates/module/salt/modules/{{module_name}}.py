@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 {{module_name}} execution module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -13,14 +12,10 @@
         <your example config>
 
 '''
-# Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
 import logging
 
-# Import salt libs
 import salt.utils.compat
 
-# Import third party libs
 try:
     #  Import libs...
     {% if depending_libraries %}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage DNS records and zones using libcloud
 
@@ -46,9 +45,6 @@ Example:
 
 :depends: apache-libcloud
 """
-
-# Import Python Libs
-from __future__ import absolute_import
 
 
 def __virtual__():
@@ -189,8 +185,6 @@ def record_absent(name, zone, type, data, profile):
                     matching_zone["id"], record["id"], profile
                 )
             )
-        return state_result(
-            all(result), "Removed {0} records".format(len(result)), name
-        )
+        return state_result(all(result), "Removed {} records".format(len(result)), name)
     else:
         return state_result(True, "Records already absent", name)
