@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache Libcloud Storage State
 =============================
@@ -64,8 +63,6 @@ This example will download the file from the remote cloud and keep it locally
 :depends: apache-libcloud
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
