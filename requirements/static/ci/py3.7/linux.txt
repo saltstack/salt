@@ -174,7 +174,7 @@ pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.19           # via cffi
 pycryptodome==3.8.1       # via python-jose
-pycryptodomex==3.9.7
+pycryptodomex==3.9.8
 pyeapi==0.8.3             # via napalm
 pygit2==0.28.2 ; python_version < "3.8"
 pyiface==0.0.11
