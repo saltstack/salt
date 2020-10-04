@@ -227,11 +227,6 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
         client = libcloud_compute._get_driver("test")
         self.assertFalse(client is None)
 
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_compute.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_compute")
-
     def _validate_node(self, node):
         self.assertEqual(node["name"], "test_node")
         self.assertEqual(node["id"], "test_id")

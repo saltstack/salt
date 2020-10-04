@@ -10,7 +10,7 @@ import salt.modules.libcloud_dns as libcloud_dns
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock
 from tests.support.unit import TestCase, skipIf
 
 
@@ -42,8 +42,3 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_module_creation(self):
         client = libcloud_dns._get_driver("test")
         self.assertFalse(client is None)
-
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_dns.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_dns")

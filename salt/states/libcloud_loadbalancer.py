@@ -51,9 +51,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
-import salt.utils.compat
-
 log = logging.getLogger(__name__)
 
 
@@ -61,10 +58,6 @@ def __virtual__():
     if "libcloud_loadbalancer.list_balancers" in __salt__:
         return True
     return (False, "libcloud_loadbalancer module could not be loaded")
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def state_result(result, message, name, changes=None):

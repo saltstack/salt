@@ -72,10 +72,6 @@ def __virtual__():
     return True
 
 
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
-
-
 def _get_driver(profile):
     config = __salt__["config.option"]("libcloud_storage")[profile]
     cls = get_driver(config["driver"])
