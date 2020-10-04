@@ -2,15 +2,11 @@
 Tests for salt.utils.data
 """
 
-# Import Python libs
 
 import logging
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-
-# Import 3rd party libs
 from salt.ext.six.moves import (  # pylint: disable=import-error,redefined-builtin
     builtins,
 )
@@ -241,7 +237,7 @@ class DataTestCase(TestCase):
                 {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
             ),
         )
-              
+
     def test_issue_39709(self):
         test_two_level_dict_and_list = {
             "foo": ["bar", "baz", {"lorem": {"ipsum": [{"dolor": "sit"}]}}]
