@@ -245,26 +245,12 @@ def get_error(e):
     return r
 
 
-def exactly_n(l, n=1):
-    """
-    Tests that exactly N items in an iterable are "truthy" (neither None,
-    False, nor 0).
-    """
-    i = iter(l)
-    return all(any(i) for j in range(n)) and not any(i)
-
-
-def exactly_one(l):
-    return exactly_n(l)
-
-
 def assign_funcs(
     modname,
     service,
     module=None,
     get_conn_funcname="_get_conn",
-    cache_id_funcname="_cache_id",
-    exactly_one_funcname="_exactly_one",
+    cache_id_funcname="_cache_id"
 ):
     """
     Assign _get_conn and _cache_id functions to the named module.
@@ -276,12 +262,6 @@ def assign_funcs(
     mod = sys.modules[modname]
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
-
-    # TODO: Remove this and import salt.utils.data.exactly_one into boto_* modules instead
-    # Leaving this way for now so boto modules can be back ported
-    if exactly_one_funcname is not None:
-        setattr(mod, exactly_one_funcname, exactly_one)
-
 
 def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
