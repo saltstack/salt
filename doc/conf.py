@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=C0103,W0622
 """
 Sphinx documentation for Salt
@@ -9,10 +8,10 @@ import sys
 import time
 import types
 
-from sphinx.directives import TocTree
+from sphinx.directives.other import TocTree
 
 
-class Mock(object):
+class Mock:
     """
     Mock out specified imports.
 
@@ -21,7 +20,7 @@ class Mock(object):
 
     This Mock class can be configured to return a specific values at specific names, if required.
 
-    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     """
 
     def __init__(
@@ -86,7 +85,6 @@ MOCK_MODULES = [
     # Python stdlib
     "user",
     # salt core
-    "concurrent",
     "Crypto",
     "Crypto.Signature",
     "Crypto.Cipher",
@@ -95,6 +93,7 @@ MOCK_MODULES = [
     "Crypto.Random",
     "Crypto.Signature",
     "Crypto.Signature.PKCS1_v1_5",
+    "distro",
     "M2Crypto",
     "msgpack",
     "yaml",
@@ -150,7 +149,6 @@ MOCK_MODULES = [
     "OpenSSL",
     "avahi",
     "boto.regioninfo",
-    "concurrent",
     "dbus",
     "django",
     "dns",
@@ -163,6 +161,8 @@ MOCK_MODULES = [
     "jnpr.junos.utils.config",
     "jnpr.junos.utils.sw",
     "keyring",
+    "kubernetes",
+    "kubernetes.config",
     "libvirt",
     "lxml",
     "lxml.etree",
@@ -290,7 +290,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3000"):
+    if release.startswith("3003"):
+        search_cx = "a70a1a73eef62aecd"  # 3003
+    elif release.startswith("3002"):
+        search_cx = "5026f4f2af0bdbe2d"  # 3002
+    elif release.startswith("3001"):
+        search_cx = "f0e4f298fa32b8a5e"  # 3001
+    elif release.startswith("3000"):
         search_cx = "011515552685726825874:3skhaozjtyn"  # 3000
     elif release.startswith("2019.2"):
         search_cx = "011515552685726825874:huvjhlpptnm"  # 2019.2
@@ -342,6 +348,7 @@ else:
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
+autosummary_generate_overwrite = False
 
 # strip git rev as there won't necessarily be a release based on it
 stripped_release = re.sub(r"-\d+-g[0-9a-f]+$", "", release)
@@ -356,13 +363,6 @@ rst_prolog = """\
 .. _`salt-slack`: https://saltstackcommunity.herokuapp.com/
 .. |windownload| raw:: html
 
-     <p>Python2 x86: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
-
-     <p>Python2 AMD64: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
      <p>Python3 x86: <a
      href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
@@ -370,12 +370,6 @@ rst_prolog = """\
      <p>Python3 AMD64: <a
      href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
-
-
-.. |osxdownloadpy2| raw:: html
-
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg"><strong>salt-{release}-py2-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-py2-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 .. |osxdownloadpy3| raw:: html
 
@@ -408,7 +402,7 @@ gettext_compact = False
 # set 'HTML_THEME=saltstack' to use previous theme
 html_theme = os.environ.get("HTML_THEME", "saltstack2")
 html_theme_path = ["_themes"]
-html_title = u""
+html_title = ""
 html_short_title = "Salt"
 
 html_static_path = ["_static"]
@@ -504,8 +498,8 @@ linkcheck_ignore = [
     r"http://123.456.789.012:\d+",
     r"http://localhost",
     r"https://groups.google.com/forum/#!forum/salt-users",
-    r"http://logstash.net/docs/latest/inputs/udp",
-    r"http://logstash.net/docs/latest/inputs/zeromq",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/udp",
+    r"https://www.elastic.co/logstash/docs/latest/inputs/zeromq",
     r"http://www.youtube.com/saltstack",
     r"https://raven.readthedocs.io",
     r"https://getsentry.com",
@@ -584,7 +578,7 @@ class ReleasesTree(TocTree):
     option_spec = dict(TocTree.option_spec)
 
     def run(self):
-        rst = super(ReleasesTree, self).run()
+        rst = super().run()
         entries = rst[0][0]["entries"][:]
         entries.sort(key=_normalize_version, reverse=True)
         rst[0][0]["entries"][:] = entries

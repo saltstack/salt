@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for salt.states.zpool
 
@@ -8,21 +7,14 @@ Tests for salt.states.zpool
 :depends:       salt.utils.zfs, salt.modules.zpool
 :platform:      illumos,freebsd,linux
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Utils
 import salt.loader
 import salt.states.zpool as zpool
-
-# Import Salt Execution module to test
 import salt.utils.zfs
 from salt.utils.odict import OrderedDict
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-# Import Salt Testing Libs
 from tests.support.zfs import ZFSMockData
 
 
@@ -31,11 +23,16 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.states.zpool
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.utils_patch = ZFSMockData().get_patched_utils()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.utils_patch = None
+
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        self.utils_patch = ZFSMockData().get_patched_utils()
-        for key in ("opts", "utils_patch"):
-            self.addCleanup(delattr, self, key)
         utils = salt.loader.utils(opts, whitelist=["zfs"])
         zpool_obj = {
             zpool: {
@@ -412,13 +409,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test zpool present with non existing pool
         """
-        ret = {
-            "name": "myzpool",
-            "result": True,
-            "comment": "no update needed",
-            "changes": {},
-        }
-
         config = {
             "import": False,
         }
@@ -478,15 +468,26 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ]
             )
         )
-        with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
-            zpool.__salt__, {"zpool.get": mock_get}
-        ), patch.dict(zpool.__utils__, self.utils_patch):
-            self.assertEqual(
-                zpool.present(
-                    "myzpool", config=config, layout=layout, properties=properties,
-                ),
-                ret,
-            )
+
+        ret = {
+            "name": "myzpool",
+            "result": True,
+            "comment": "no update needed",
+            "changes": {},
+        }
+
+        with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
+            with patch.dict(zpool.__salt__, {"zpool.get": mock_get}):
+                with patch.dict(zpool.__utils__, self.utils_patch):
+                    self.assertEqual(
+                        zpool.present(
+                            "myzpool",
+                            config=config,
+                            layout=layout,
+                            properties=properties,
+                        ),
+                        ret,
+                    )
 
         # Run state with test=true
         ret = {
@@ -496,14 +497,16 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             "changes": {},
         }
 
-        with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}), patch.dict(
-            zpool.__salt__, {"zpool.get": mock_get}
-        ), patch.dict(zpool.__utils__, self.utils_patch), patch.dict(
-            zpool.__opts__, {"test": True}
-        ):
-            self.assertEqual(
-                zpool.present(
-                    "myzpool", config=config, layout=layout, properties=properties,
-                ),
-                ret,
-            )
+        with patch.dict(zpool.__salt__, {"zpool.exists": mock_exists}):
+            with patch.dict(zpool.__salt__, {"zpool.get": mock_get}):
+                with patch.dict(zpool.__utils__, self.utils_patch):
+                    with patch.dict(zpool.__opts__, {"test": True}):
+                        self.assertEqual(
+                            zpool.present(
+                                "myzpool",
+                                config=config,
+                                layout=layout,
+                                properties=properties,
+                            ),
+                            ret,
+                        )

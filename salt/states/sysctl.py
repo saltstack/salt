@@ -27,7 +27,9 @@ def __virtual__():
     """
     This state is only available on Minions which support sysctl
     """
-    return "sysctl.show" in __salt__
+    if "sysctl.show" in __salt__:
+        return True
+    return (False, "sysctl module could not be loaded")
 
 
 def present(name, value, config=None, ignore=False):
@@ -47,7 +49,7 @@ def present(name, value, config=None, ignore=False):
         proper location will be detected based on platform.
 
     ignore
-        ..versionadded:: neon
+        .. versionadded:: 3001
 
         Adds --ignore to sysctl commands. This suppresses errors in environments
         where sysctl settings may have been disabled in kernel boot configuration.

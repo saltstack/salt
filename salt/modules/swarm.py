@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Docker Swarm Module using Docker's Python SDK
 =============================================
@@ -24,16 +23,19 @@ Docker Python SDK
 
 More information: https://docker-py.readthedocs.io/en/stable/
 """
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.json
+
+
+def _is_docker_module(mod):
+    required_attrs = ["APIClient", "from_env"]
+    return all(hasattr(mod, attr) for attr in required_attrs)
+
 
 try:
     import docker
 
-    HAS_DOCKER = True
+    HAS_DOCKER = _is_docker_module(docker)
 except ImportError:
     HAS_DOCKER = False
 
@@ -75,7 +77,7 @@ def swarm_tokens():
 
 def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
     """
-    Initalize Docker on Minion as a Swarm Manager
+    Initialize Docker on Minion as a Swarm Manager
 
     advertise_addr
         The ip of the manager
@@ -102,12 +104,18 @@ def swarm_init(advertise_addr=str, listen_addr=int, force_new_cluster=bool):
         salt_return = {}
         __context__["client"].swarm.init(advertise_addr, listen_addr, force_new_cluster)
         output = (
-            "Docker swarm has been initialized on {0} "
+            "Docker swarm has been initialized on {} "
             "and the worker/manager Join token is below".format(
                 __context__["server_name"]
             )
         )
         salt_return.update({"Comment": output, "Tokens": swarm_tokens()})
+    except docker.errors.APIError as err:
+        salt_return = {}
+        if "This node is already part of a swarm." in err.explanation:
+            salt_return.update({"Comment": err.explanation, "result": False})
+        else:
+            salt_return.update({"Error": str(err.explanation), "result": False})
     except TypeError:
         salt_return = {}
         salt_return.update(
@@ -210,7 +218,7 @@ def service_create(
         The target port on the container
 
     published_port
-        port thats published on the host/os
+        port that's published on the host/os
 
     CLI Example:
 
@@ -445,7 +453,7 @@ def update_node(availability=str, node_name=str, role=str, node_id=str, version=
 
     .. code-block:: bash
 
-        salt '*' docker_util.update_node availability=drain node_name=minion2 \
+        salt '*' swarm.update_node availability=drain node_name=minion2 \
             role=worker node_id=3k9x7t8m4pel9c0nqr3iajnzp version=19
     """
     client = docker.APIClient(base_url="unix://var/run/docker.sock")

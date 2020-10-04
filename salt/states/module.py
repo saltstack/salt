@@ -6,7 +6,7 @@ Execution of Salt modules from within states
 .. note::
 
     There are two styles of calling ``module.run``. **The legacy style will no
-    longer be available starting in the Sodium release.** To opt-in early to the
+    longer be available starting in the 3005 release.** To opt-in early to the
     new style you must add the following to your ``/etc/salt/minion`` config
     file:
 
@@ -342,7 +342,7 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Sodium", policy=with_deprecated.OPT_IN)
+@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.
@@ -450,7 +450,7 @@ def run(**kwargs):
     return ret
 
 
-def _call_function(name, returner=None, func_args=None):
+def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     """
     Calls a function from the specified module.
 
@@ -462,7 +462,11 @@ def _call_function(name, returner=None, func_args=None):
     """
     if func_args is None:
         func_args = []
-    mret = salt.utils.functools.call_function(__salt__[name], *func_args)
+
+    if func_kwargs is None:
+        func_kwargs = {}
+
+    mret = salt.utils.functools.call_function(__salt__[name], *func_args, **func_kwargs)
     if returner is not None:
         returners = salt.loader.returners(__opts__, __salt__)
         if returner in returners:
@@ -609,7 +613,7 @@ def _run(name, **kwargs):
         ret["result"] = False
         return ret
     else:
-        if mret is not None or mret is not {}:
+        if mret is not None or mret != {}:
             ret["changes"]["ret"] = mret
 
     if "returner" in kwargs:

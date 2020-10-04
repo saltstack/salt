@@ -42,7 +42,9 @@ def __virtual__():
         "rabbitmq.set_upstream",
         "rabbitmq.delete_upstream",
     ]
-    return all(req in __salt__ for req in requirements)
+    if all(req in __salt__ for req in requirements):
+        return True
+    return (False, "rabbitmq module could not be loaded")
 
 
 def present(

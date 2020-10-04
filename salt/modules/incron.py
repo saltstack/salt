@@ -122,7 +122,7 @@ def _write_incron_lines(user, lines):
         path = salt.utils.files.mkstemp()
         with salt.utils.files.fopen(path, "wb") as fp_:
             fp_.writelines(salt.utils.data.encode(lines))
-        if __grains__["os_family"] == "Solaris" and user != "root":
+        if user != "root":
             __salt__["cmd.run"]("chown {0} {1}".format(user, path), python_shell=False)
         ret = __salt__["cmd.run_all"](
             _get_incron_cmdstr(path), runas=user, python_shell=False
@@ -168,7 +168,7 @@ def raw_system_incron():
 
         salt '*' incron.raw_system_incron
     """
-    log.debug("read_file {0}".format(_read_file(_INCRON_SYSTEM_TAB, "salt")))
+    log.debug("read_file %s", _read_file(_INCRON_SYSTEM_TAB, "salt"))
     return "".join(_read_file(_INCRON_SYSTEM_TAB, "salt"))
 
 
@@ -182,10 +182,7 @@ def raw_incron(user):
 
         salt '*' incron.raw_incron root
     """
-    if __grains__["os_family"] == "Solaris":
-        cmd = "incrontab -l {0}".format(user)
-    else:
-        cmd = "incrontab -l -u {0}".format(user)
+    cmd = "incrontab -l {0}".format(user)
     return __salt__["cmd.run_stdout"](cmd, rstrip=False, runas=user, python_shell=False)
 
 
@@ -203,7 +200,7 @@ def list_tab(user):
         data = raw_system_incron()
     else:
         data = raw_incron(user)
-        log.debug("user data {0}".format(data))
+        log.debug("user data %s", data)
     ret = {"crons": [], "pre": []}
     flag = False
     for line in data.splitlines():

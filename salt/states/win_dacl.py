@@ -80,7 +80,9 @@ def __virtual__():
     """
     Load this state if the win_acl module exists
     """
-    return "win_dacl" if "win_dacl.add_ace" in __salt__ else False
+    if "win_dacl.add_ace" in __salt__:
+        return "win_dacl"
+    return (False, "win_dacl module could not be loaded")
 
 
 def present(name, objectType, user, permission, acetype, propagation):

@@ -1,21 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import io
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import destructiveTest, random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -38,6 +29,8 @@ class WinLgpoTest(ModuleCase):
         registry_value_path,
         registry_value_vname,
         expected_value_data,
+        expected_value_type=None,
+        expect_value_exists=True,
     ):
         """
         Takes a registry based policy name and config and validates that the
@@ -55,26 +48,39 @@ class WinLgpoTest(ModuleCase):
             the registry value name
         expected_value_data
             the expected data that the value will contain
+        expected_value_type
+            the registry value type (i.e. REG_SZ, REG_DWORD, etc)
+        expect_value_exists
+            define if it expected for a registry value to exist
+            some policies when set to 'Not Defined' delete the registry value
         """
         ret = self.run_function(
             "lgpo.set_computer_policy", (policy_name, policy_config)
         )
         self.assertTrue(ret)
         val = reg.read_value(
-            hive=registry_value_hive,
-            key=registry_value_path,
-            vname=registry_value_vname,
+            registry_value_hive, registry_value_path, registry_value_vname
         )
-        self.assertTrue(
-            val["success"],
-            msg="Failed to obtain the registry data for policy {0}".format(policy_name),
+        if expect_value_exists:
+            self.assertTrue(
+                val["success"],
+                msg="Failed to obtain the registry data for policy {}".format(
+                    policy_name
+                ),
+            )
+        self.assertEqual(
+            val["vdata"],
+            expected_value_data,
+            "The registry value data {} does not match the expected value {} for policy {}".format(
+                val["vdata"], expected_value_data, policy_name
+            ),
         )
-        if val["success"]:
+        if expected_value_type:
             self.assertEqual(
-                val["vdata"],
-                expected_value_data,
-                "The registry value data {0} does not match the expected value {1} for policy {2}".format(
-                    val["vdata"], expected_value_data, policy_name
+                val["vtype"],
+                expected_value_type,
+                "The registry value type {} does not match the expected type {} for policy {}".format(
+                    val["vtype"], expected_value_type, policy_name
                 ),
             )
 
@@ -103,14 +109,16 @@ class WinLgpoTest(ModuleCase):
         )
         self.assertTrue(ret)
         secedit_output_file = os.path.join(
-            RUNTIME_VARS.TMP, generate_random_name("secedit-output-")
+            RUNTIME_VARS.TMP, random_string("secedit-output-")
         )
         secedit_output = self.run_function(
-            "cmd.run", (), cmd="secedit /export /cfg {0}".format(secedit_output_file)
+            "cmd.run", (), cmd="secedit /export /cfg {}".format(secedit_output_file)
         )
         secedit_file_content = None
         if secedit_output:
-            with io.open(secedit_output_file, encoding="utf-16") as _reader:
+            with salt.utils.files.fopen(
+                secedit_output_file, encoding="utf-16"
+            ) as _reader:
                 secedit_file_content = _reader.read()
         for expected_regex in expected_regexes:
             match = re.search(
@@ -118,7 +126,7 @@ class WinLgpoTest(ModuleCase):
             )
             self.assertIsNotNone(
                 match,
-                'Failed validating policy "{0}" configuration, regex "{1}" not found in secedit output'.format(
+                'Failed validating policy "{}" configuration, regex "{}" not found in secedit output'.format(
                     policy_name, expected_regex
                 ),
             )
@@ -155,7 +163,7 @@ class WinLgpoTest(ModuleCase):
             lgpo_folder = "User"
 
         ret = self.run_function(
-            "lgpo.{0}".format(lgpo_function), (policy_name, policy_config)
+            "lgpo.{}".format(lgpo_function), (policy_name, policy_config)
         )
         log.debug("lgpo set_computer_policy ret == %s", ret)
         cmd = [
@@ -177,8 +185,8 @@ class WinLgpoTest(ModuleCase):
                 match = re.search(expected_regex, lgpo_output, re.IGNORECASE)
                 self.assertIsNotNone(
                     match,
-                    msg='Failed validating policy "{0}" configuration, regex '
-                    '"{1}" not found in lgpo output:\n{2}'
+                    msg='Failed validating policy "{}" configuration, regex '
+                    '"{}" not found in lgpo output:\n{}'
                     "".format(policy_name, expected_regex, lgpo_output),
                 )
         else:
@@ -560,6 +568,27 @@ class WinLgpoTest(ModuleCase):
         )
 
     @destructiveTest
+    def test_set_computer_policy_LockoutDuration(self):
+        """
+        Test setting LockoutDuration
+        """
+        # For LockoutDuration to be meaningful, first configure
+        # LockoutThreshold
+        self._testSeceditPolicy("LockoutThreshold", 3, [r"^LockoutBadCount = 3"])
+
+        # Next set the LockoutDuration non-zero value, as this is required
+        # before setting LockoutWindow
+        self._testSeceditPolicy("LockoutDuration", 60, [r"^LockoutDuration = 60"])
+
+        # Now set LockoutWindow to a valid value <= LockoutDuration. If this
+        # is not set, then the LockoutDuration zero value is ignored by the
+        # Windows API (leading to a false sense of accomplishment)
+        self._testSeceditPolicy("LockoutWindow", 60, [r"^ResetLockoutCount = 60"])
+
+        # set LockoutDuration zero value, the secedit zero value is -1
+        self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
+
+    @destructiveTest
     def test_set_computer_policy_GuestAccountStatus(self):
         """
         Test setting/unsetting/changing GuestAccountStatus
@@ -725,7 +754,7 @@ class WinLgpoTest(ModuleCase):
         valid_osreleases = ["2016Server"]
         if self.osrelease not in valid_osreleases:
             self.skipTest(
-                "DisableUXWUAccess policy is only applicable if the osrelease grain is {0}".format(
+                "DisableUXWUAccess policy is only applicable if the osrelease grain is {}".format(
                     " or ".join(valid_osreleases)
                 )
             )
@@ -798,7 +827,7 @@ class WinLgpoTest(ModuleCase):
         valid_osreleases = ["2016Server"]
         if self.osrelease not in valid_osreleases:
             self.skipTest(
-                "ActiveHours policy is only applicable if the osrelease grain is {0}".format(
+                "ActiveHours policy is only applicable if the osrelease grain is {}".format(
                     " or ".join(valid_osreleases)
                 )
             )
@@ -848,7 +877,7 @@ class WinLgpoTest(ModuleCase):
         if self.osrelease not in valid_osreleases:
             self.skipTest(
                 "Allow Telemetry policy is only applicable if the "
-                "osrelease grain is {0}".format(" or ".join(valid_osreleases))
+                "osrelease grain is {}".format(" or ".join(valid_osreleases))
             )
         else:
             self._testAdmxPolicy(
@@ -915,6 +944,40 @@ class WinLgpoTest(ModuleCase):
                         },
                     }
                     self.assertDictEqual(result[name]["changes"], expected)
+
+    @destructiveTest
+    def test_set_computer_policy_ScRemoveOption(self):
+        """
+        Tests changing ScRemoveOption policy
+        """
+        self._testRegistryPolicy(
+            "ScRemoveOption",
+            "No Action",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            "0",
+            "REG_SZ",
+        )
+        self._testRegistryPolicy(
+            "Interactive logon: Smart card removal behavior",
+            "Lock Workstation",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            "1",
+            "REG_SZ",
+        )
+        self._testRegistryPolicy(
+            "Interactive logon: Smart card removal behavior",
+            "Not Defined",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            None,
+            None,
+            False,
+        )
 
     def tearDown(self):
         """

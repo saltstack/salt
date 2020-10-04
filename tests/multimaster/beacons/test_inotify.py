@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
@@ -10,12 +5,9 @@ import tempfile
 import time
 
 import salt.config
-
-# Import salt libs
 import salt.version
-
-# Import Salt Testing libs
 from tests.support.case import MultimasterModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
 
@@ -31,6 +23,10 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_PYINOTIFY, "pyinotify is not available")
+@skipIf(
+    salt.utils.platform.is_freebsd(),
+    "Skip on FreeBSD, IN_CREATE event is not supported",
+)
 class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the inotify beacon in multimaster environment
@@ -40,6 +36,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
         self.tmpdir = salt.utils.stringutils.to_unicode(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
 
+    @slowTest
     def test_beacons_duplicate_53344(self):
         # Also add a status beacon to use it for interval checks
         res = self.run_function(

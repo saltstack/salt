@@ -1605,13 +1605,13 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     """
-
+    my_pid = str(os.getpid())
     cmd = __grains__["ps"]
     output = __salt__["cmd.run_stdout"](cmd, python_shell=True)
 
     pids = ""
     for line in output.splitlines():
-        if "status.pid" in line:
+        if my_pid in line:
             continue
         if re.search(sig, line):
             if pids:

@@ -6,14 +6,13 @@ Module for fetching artifacts from Artifactory
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import base64
 import logging
 import os
 
-import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
-
 # Import Salt libs
+import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.utils.files
+import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
@@ -101,7 +100,9 @@ def get_latest_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            salt.utils.hashutils.base64_encodestring(
+                "{0}:{1}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     artifact_metadata = _get_artifact_metadata(
         artifactory_url=artifactory_url,
@@ -183,7 +184,9 @@ def get_snapshot(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            salt.utils.hashutils.base64_encodestring(
+                "{0}:{1}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     snapshot_url, file_name = _get_snapshot_url(
         artifactory_url=artifactory_url,
@@ -252,7 +255,9 @@ def get_latest_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            salt.utils.hashutils.base64_encodestring(
+                "{0}:{1}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     version = __find_latest_version(
         artifactory_url=artifactory_url,
@@ -330,7 +335,9 @@ def get_release(
     headers = {}
     if username and password:
         headers["Authorization"] = "Basic {0}".format(
-            base64.encodestring("{0}:{1}".format(username, password)).replace("\n", "")
+            salt.utils.hashutils.base64_encodestring(
+                "{0}:{1}".format(username.replace("\n", ""), password.replace("\n", ""))
+            )
         )
     release_url, file_name = _get_release_url(
         repository,
@@ -379,7 +386,10 @@ def _get_snapshot_url(
                 version=version,
                 headers=headers,
             )
-            if packaging not in snapshot_version_metadata["snapshot_versions"]:
+            if (
+                not has_classifier
+                and packaging not in snapshot_version_metadata["snapshot_versions"]
+            ):
                 error_message = """Cannot find requested packaging '{packaging}' in the snapshot version metadata.
                           artifactory_url: {artifactory_url}
                           repository: {repository}
@@ -703,6 +713,7 @@ def __save_artifact(artifact_url, target_file, headers):
             checksum_url, headers
         )
         if checksum_success:
+            artifact_sum = salt.utils.stringutils.to_unicode(artifact_sum)
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__["file.get_hash"](path=target_file, form="sha1")
             log.debug("Target file (%s) SHA1 SUM: %s", target_file, file_sum)

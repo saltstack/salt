@@ -20,6 +20,7 @@ grains modules
     fx2
     iscsi
     junos
+    lvm
     marathon
     mdadm
     mdata
@@ -30,6 +31,7 @@ grains modules
     nxos
     opts
     panos
+    pending_reboot
     philips_hue
     rest_sample
     smartos

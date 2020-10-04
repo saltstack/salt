@@ -40,7 +40,9 @@ def __virtual__():
     """
     Only work when the ACME module agrees
     """
-    return "acme.cert" in __salt__
+    if "acme.cert" in __salt__:
+        return True
+    return (False, "acme module could not be loaded")
 
 
 def cert(
@@ -94,27 +96,31 @@ def cert(
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
     """
-    ret = {"name": name, "result": "changeme", "comment": [], "changes": {}}
+
+    if certname is None:
+        certname = name
+
+    ret = {"name": certname, "result": "changeme", "comment": [], "changes": {}}
     action = None
 
     current_certificate = {}
     new_certificate = {}
-    if not __salt__["acme.has"](name):
+    if not __salt__["acme.has"](certname):
         action = "obtain"
-    elif __salt__["acme.needs_renewal"](name, renew):
+    elif __salt__["acme.needs_renewal"](certname, renew):
         action = "renew"
-        current_certificate = __salt__["acme.info"](name)
+        current_certificate = __salt__["acme.info"](certname)
     else:
         ret["result"] = True
         ret["comment"].append(
-            "Certificate {} exists and does not need renewal." "".format(name)
+            "Certificate {} exists and does not need renewal." "".format(certname)
         )
 
     if action:
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                "Certificate {} would have been {}ed." "".format(name, action)
+                "Certificate {} would have been {}ed." "".format(certname, action)
             )
             ret["changes"] = {"old": "current certificate", "new": "new certificate"}
         else:
@@ -142,7 +148,7 @@ def cert(
             ret["result"] = res["result"]
             ret["comment"].append(res["comment"])
             if ret["result"]:
-                new_certificate = __salt__["acme.info"](name)
+                new_certificate = __salt__["acme.info"](certname)
             ret["changes"] = salt.utils.dictdiffer.deep_diff(
                 current_certificate, new_certificate
             )

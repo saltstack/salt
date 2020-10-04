@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
 # Import Salt Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 from salt.cloud.clouds import proxmox
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -21,6 +19,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             proxmox: {
                 "__utils__": {
                     "cloud.fire_event": MagicMock(),
+                    "cloud.filter_event": MagicMock(),
                     "cloud.bootstrap": MagicMock(),
                 },
                 "__opts__": {
@@ -106,4 +105,60 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             )
             query.assert_any_call(
                 "post", "nodes/127.0.0.1/qemu/0/config", {"scsi0": "data"}
+            )
+
+    def test_clone(self):
+        """
+        Test that an integer value for clone_from
+        """
+        mock_query = MagicMock(return_value="")
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties", MagicMock(return_value=[])
+        ), patch("salt.cloud.clouds.proxmox.query", mock_query):
+            vm_ = {
+                "technology": "qemu",
+                "name": "new2",
+                "host": "myhost",
+                "clone": True,
+                "clone_from": 123,
+            }
+
+            # CASE 1: Numeric ID
+            result = proxmox.create_node(vm_, ANY)
+            mock_query.assert_called_once_with(
+                "post", "nodes/myhost/qemu/123/clone", {"newid": ANY},
+            )
+            assert result == {}
+
+            # CASE 2: host:ID notation
+            mock_query.reset_mock()
+            vm_["clone_from"] = "otherhost:123"
+            result = proxmox.create_node(vm_, ANY)
+            mock_query.assert_called_once_with(
+                "post", "nodes/otherhost/qemu/123/clone", {"newid": ANY},
+            )
+            assert result == {}
+
+    def test__authenticate_with_custom_port(self):
+        """
+        Test the use of a custom port for Proxmox connection
+        """
+        get_cloud_config_mock = [
+            "proxmox.connection.url",
+            "9999",
+            "fakeuser",
+            "secretpassword",
+            True,
+        ]
+        requests_post_mock = MagicMock()
+        with patch(
+            "salt.config.get_cloud_config_value",
+            autospec=True,
+            side_effect=get_cloud_config_mock,
+        ), patch("requests.post", requests_post_mock):
+            proxmox._authenticate()
+            requests_post_mock.assert_called_with(
+                "https://proxmox.connection.url:9999/api2/json/access/ticket",
+                verify=True,
+                data={"username": ("fakeuser",), "password": "secretpassword"},
             )

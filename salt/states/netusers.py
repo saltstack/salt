@@ -172,7 +172,7 @@ def managed(name, users=None, defaults=None):
 
     """
     Manages the configuration of the users on the device, as specified in the state SLS file. Users not defined in that
-    file will be remove whilst users not configured on the device, will be added.
+    file will be removed whilst users not configured on the device, will be added.
 
     SLS Example:
 

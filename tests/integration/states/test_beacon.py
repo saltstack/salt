@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the beacon states
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing Libs
+import pytest
 from tests.support.case import ModuleCase
+from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
+@pytest.mark.usefixtures("salt_sub_minion")
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test beacon states
@@ -23,6 +22,7 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_function("beacons.reset", f_timeout=300)
 
+    @slowTest
     def test_present_absent(self):
         kwargs = {"/": "38%", "interval": 5}
         ret = self.run_state(

@@ -241,7 +241,7 @@ Add the following to ``/srv/reactor/revert.sls``:
     In addition to :ref:`setting <avoid-beacon-event-loops>`
     ``disable_during_state_run: True`` for an inotify beacon whose reaction is
     to modify the watched file, it is important to ensure the state applied is
-    also :term:`idempotent`.
+    also :term:`idempotent <Idempotent>`.
 
 .. note::
 
@@ -360,8 +360,7 @@ The return data structure would look something like this:
 
 .. code-block:: python
 
-    [{'changes': ['/foo/bar'], 'tag': 'foo'},
-     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+    [{"changes": ["/foo/bar"], "tag": "foo"}, {"changes": ["/foo/baz"], "tag": "bar"}]
 
 Calling Execution Modules
 -------------------------

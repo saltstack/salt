@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.parser
     ~~~~~~~~~~~~~~~~~~~~
@@ -10,8 +9,6 @@
     :license: Apache 2.0, see LICENSE for more details.
 """
 # pylint: disable=repr-flag-used-in-string
-
-from __future__ import absolute_import, print_function
 
 import fnmatch
 import logging
@@ -125,13 +122,13 @@ def print_header(
         print(sep * width)
 
     if centered and not inline:
-        fmt = u"{0:^{width}}"
+        fmt = "{0:^{width}}"
     elif inline and not centered:
-        fmt = u"{0:{sep}<{width}}"
+        fmt = "{0:{sep}<{width}}"
     elif inline and centered:
-        fmt = u"{0:{sep}^{width}}"
+        fmt = "{0:{sep}^{width}}"
     else:
-        fmt = u"{0}"
+        fmt = "{0}"
     print(fmt.format(header, sep=sep, width=width))
 
     if bottom and not inline:
@@ -217,6 +214,9 @@ class SaltTestingParser(optparse.OptionParser):
                     "destroying cloud instances on a cloud provider."
                 ),
             )
+        self.test_selection_group.add_option(
+            "--run-slow", action="store_true", default=False, help=("Run slow tests."),
+        )
 
         self.test_selection_group.add_option(
             "-n",
@@ -339,7 +339,7 @@ class SaltTestingParser(optparse.OptionParser):
                 "--xml-out",
                 dest="xml_out",
                 default=False,
-                help="XML test runner output(Output directory: {0})".format(
+                help="XML test runner output(Output directory: {})".format(
                     self.xml_output_dir
                 ),
             )
@@ -400,9 +400,12 @@ class SaltTestingParser(optparse.OptionParser):
                                     )
                                 else:
                                     ret.add(line)
-                    except (IOError, OSError) as exc:
+                    except OSError as exc:
                         log.error("Failed to read from %s: %s", item, exc)
                 else:
+                    if not os.path.exists(item):
+                        log.info("%s does not exist. Skipping...", item)
+                        continue
                     ret.add(item)
         return ret
 
@@ -431,7 +434,7 @@ class SaltTestingParser(optparse.OptionParser):
                 with salt.utils.files.fopen(self.options.filename_map) as fp_:
                     filename_map = salt.utils.yaml.safe_load(fp_)
             except Exception as exc:  # pylint: disable=broad-except
-                raise RuntimeError("Failed to load filename map: {0}".format(exc))
+                raise RuntimeError("Failed to load filename map: {}".format(exc))
         else:
             filename_map = {}
 
@@ -458,13 +461,18 @@ class SaltTestingParser(optparse.OptionParser):
             if match:
                 comps = match.group(3).split("/")
 
+                if match.group(1).startswith("tests/pytests"):
+                    # runtests.py does not know how to run pytest tests
+                    continue
+
                 # Find matches for a source file
                 if match.group(1) == "salt/":
                     if comps[-1] == "__init__.py":
-                        comps.pop(-1)
-                        comps[-1] = "test_" + comps[-1]
+                        if len(comps) > 1:
+                            comps.pop(-1)
+                            comps[-1] = "test_" + comps[-1]
                     else:
-                        comps[-1] = "test_{0}".format(comps[-1][:-3])
+                        comps[-1] = "test_{}".format(comps[-1][:-3])
 
                     # Direct name matches
                     _add(comps)
@@ -493,6 +501,10 @@ class SaltTestingParser(optparse.OptionParser):
         # Next, try the filename_map
         for path_expr in filename_map:
             for filename in files:
+                if not os.path.exists(filename):
+                    continue
+                if filename.startswith("tests/pytests"):
+                    continue
                 if salt.utils.stringutils.expr_match(filename, path_expr):
                     ret.update(filename_map[path_expr])
                     break
@@ -515,10 +527,7 @@ class SaltTestingParser(optparse.OptionParser):
             # pylint: disable=resource-leakage
             with open(self.options.names_file, "rb") as fp_:
                 for line in fp_.readlines():
-                    if six.PY2:
-                        file_names.append(line.strip())
-                    else:
-                        file_names.append(line.decode(__salt_system_encoding__).strip())
+                    file_names.append(line.decode(__salt_system_encoding__).strip())
             # pylint: enable=resource-leakage
 
         if self.args:
@@ -553,18 +562,18 @@ class SaltTestingParser(optparse.OptionParser):
         elif file_names:
             self.options.name = file_names
 
-        print_header(u"", inline=True, width=self.options.output_columns)
+        print_header("", inline=True, width=self.options.output_columns)
         self.pre_execution_cleanup()
 
         if self.support_docker_execution and self.options.docked is not None:
             if self.source_code_basedir is None:
                 raise RuntimeError(
                     "You need to define the 'source_code_basedir' attribute "
-                    "in '{0}'.".format(self.__class__.__name__)
+                    "in '{}'.".format(self.__class__.__name__)
                 )
 
             if "/" not in self.options.docked:
-                self.options.docked = "salttest/{0}".format(self.options.docked)
+                self.options.docked = "salttest/{}".format(self.options.docked)
 
             if self.options.docked_interpreter is None:
                 self.options.docked_interpreter = self._known_interpreters.get(
@@ -579,14 +588,14 @@ class SaltTestingParser(optparse.OptionParser):
         # tests suite under a docker container
         self._validate_options()
 
-        print(" * Current Directory: {0}".format(os.getcwd()))
-        print(" * Test suite is running under PID {0}".format(os.getpid()))
+        print(" * Current Directory: {}".format(os.getcwd()))
+        print(" * Test suite is running under PID {}".format(os.getpid()))
 
         self._setup_logging()
         try:
             return (self.options, self.args)
         finally:
-            print_header(u"", inline=True, width=self.options.output_columns)
+            print_header("", inline=True, width=self.options.output_columns)
 
     def setup_additional_options(self):
         """
@@ -616,7 +625,7 @@ class SaltTestingParser(optparse.OptionParser):
             os.environ["TESTS_XML_OUTPUT_DIR"] = self.xml_output_dir
             print(
                 " * Generated unit test XML reports will be stored "
-                "at {0!r}".format(self.xml_output_dir)
+                "at {!r}".format(self.xml_output_dir)
             )
 
         self.validate_options()
@@ -634,6 +643,9 @@ class SaltTestingParser(optparse.OptionParser):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ["EXPENSIVE_TESTS"] = str(self.options.run_expensive)
+
+        if not os.environ.get("SLOW_TESTS", None):
+            os.environ["SLOW_TESTS"] = str(self.options.run_slow)
 
     def validate_options(self):
         """
@@ -676,7 +688,7 @@ class SaltTestingParser(optparse.OptionParser):
             logging.root.addHandler(filehandler)
             log_levels_to_evaluate.append(logging.DEBUG)
 
-            print(" * Logging tests on {0}".format(self.options.tests_logfile))
+            print(" * Logging tests on {}".format(self.options.tests_logfile))
 
         # With greater verbosity we can also log to the console
         if self.options.verbosity >= 2:
@@ -743,7 +755,7 @@ class SaltTestingParser(optparse.OptionParser):
                     tests = loader.discover(path, suffix)
                     loaded_custom = True
         except (AttributeError, ImportError):
-            print("Could not locate test '{0}'. Exiting.".format(display_name))
+            print("Could not locate test '{}'. Exiting.".format(display_name))
             sys.exit(1)
 
         if additional_test_dirs and not loaded_custom:
@@ -751,8 +763,8 @@ class SaltTestingParser(optparse.OptionParser):
                 additional_tests = loader.discover(test_dir, suffix, test_dir)
                 tests.addTests(additional_tests)
 
-        header = "{0} Tests".format(display_name)
-        print_header("Starting {0}".format(header), width=self.options.output_columns)
+        header = "{} Tests".format(display_name)
+        print_header("Starting {}".format(header), width=self.options.output_columns)
 
         if self.options.xml_out:
             runner = XMLTestRunner(
@@ -795,8 +807,8 @@ class SaltTestingParser(optparse.OptionParser):
         """
         print()
         print_header(
-            u"  Overall Tests Report  ",
-            sep=u"=",
+            "  Overall Tests Report  ",
+            sep="=",
             centered=True,
             inline=True,
             width=self.options.output_columns,
@@ -816,14 +828,14 @@ class SaltTestingParser(optparse.OptionParser):
             no_problems_found = False
 
             print_header(
-                u"*** {0}  ".format(results.header),
-                sep=u"*",
+                "*** {}  ".format(results.header),
+                sep="*",
                 inline=True,
                 width=self.options.output_columns,
             )
             if results.skipped:
                 print_header(
-                    u" --------  Skipped Tests  ",
+                    " --------  Skipped Tests  ",
                     sep="-",
                     inline=True,
                     width=self.options.output_columns,
@@ -831,72 +843,72 @@ class SaltTestingParser(optparse.OptionParser):
                 maxlen = len(
                     max([testcase.id for testcase in results.skipped], key=len)
                 )
-                fmt = u"   -> {0: <{maxlen}}  ->  {1}"
+                fmt = "   -> {0: <{maxlen}}  ->  {1}"
                 for testcase in results.skipped:
                     print(fmt.format(testcase.id, testcase.reason, maxlen=maxlen))
                 print_header(
-                    u" ", sep="-", inline=True, width=self.options.output_columns
+                    " ", sep="-", inline=True, width=self.options.output_columns
                 )
 
             if results.errors:
                 print_header(
-                    u" --------  Tests with Errors  ",
+                    " --------  Tests with Errors  ",
                     sep="-",
                     inline=True,
                     width=self.options.output_columns,
                 )
                 for testcase in results.errors:
                     print_header(
-                        u"   -> {0}  ".format(testcase.id),
-                        sep=u".",
+                        "   -> {}  ".format(testcase.id),
+                        sep=".",
                         inline=True,
                         width=self.options.output_columns,
                     )
                     for line in testcase.reason.rstrip().splitlines():
-                        print("       {0}".format(line.rstrip()))
+                        print("       {}".format(line.rstrip()))
                     print_header(
-                        u"   ", sep=u".", inline=True, width=self.options.output_columns
+                        "   ", sep=".", inline=True, width=self.options.output_columns
                     )
                 print_header(
-                    u" ", sep="-", inline=True, width=self.options.output_columns
+                    " ", sep="-", inline=True, width=self.options.output_columns
                 )
 
             if results.failures:
                 print_header(
-                    u" --------  Failed Tests  ",
+                    " --------  Failed Tests  ",
                     sep="-",
                     inline=True,
                     width=self.options.output_columns,
                 )
                 for testcase in results.failures:
                     print_header(
-                        u"   -> {0}  ".format(testcase.id),
-                        sep=u".",
+                        "   -> {}  ".format(testcase.id),
+                        sep=".",
                         inline=True,
                         width=self.options.output_columns,
                     )
                     for line in testcase.reason.rstrip().splitlines():
-                        print("       {0}".format(line.rstrip()))
+                        print("       {}".format(line.rstrip()))
                     print_header(
-                        u"   ", sep=u".", inline=True, width=self.options.output_columns
+                        "   ", sep=".", inline=True, width=self.options.output_columns
                     )
                 print_header(
-                    u" ", sep="-", inline=True, width=self.options.output_columns
+                    " ", sep="-", inline=True, width=self.options.output_columns
                 )
 
         if no_problems_found:
             print_header(
-                u"***  No Problems Found While Running Tests  ",
-                sep=u"*",
+                "***  No Problems Found While Running Tests  ",
+                sep="*",
                 inline=True,
                 width=self.options.output_columns,
             )
 
-        print_header(u"", sep=u"=", inline=True, width=self.options.output_columns)
+        print_header("", sep="=", inline=True, width=self.options.output_columns)
         total = sum([passed, skipped, errors, failures])
         print(
-            "{0} (total={1}, skipped={2}, passed={3}, failures={4}, "
-            "errors={5}) ".format(
+            "{} (total={}, skipped={}, passed={}, failures={}, "
+            "errors={}) ".format(
                 (errors or failures) and "FAILED" or "OK",
                 total,
                 skipped,
@@ -969,8 +981,7 @@ class SaltTestingParser(optparse.OptionParser):
             )
             scode_call.wait()
             parsed_scode = scode_call.stdout.read().strip()
-            if six.PY3:
-                parsed_scode = parsed_scode.decode(__salt_system_encoding__)
+            parsed_scode = parsed_scode.decode(__salt_system_encoding__)
             if parsed_scode != "false":
                 # If the container is still running, let's make sure it
                 # properly stops
@@ -985,8 +996,7 @@ class SaltTestingParser(optparse.OptionParser):
                 )
                 stop_call.wait()
                 output = stop_call.stdout.read().strip()
-                if six.PY3:
-                    output = output.decode(__salt_system_encoding__)
+                output = output.decode(__salt_system_encoding__)
                 print(output)
                 sys.stdout.flush()
                 time.sleep(0.5)
@@ -1009,8 +1019,7 @@ class SaltTestingParser(optparse.OptionParser):
             )
             rcode_call.wait()
             parsed_rcode = rcode_call.stdout.read().strip()
-            if six.PY3:
-                parsed_rcode = parsed_rcode.decode(__salt_system_encoding__)
+            parsed_rcode = parsed_rcode.decode(__salt_system_encoding__)
             try:
                 returncode = int(parsed_rcode)
             except ValueError:
@@ -1032,8 +1041,7 @@ class SaltTestingParser(optparse.OptionParser):
                 )
                 cleanup_call.wait()
                 output = cleanup_call.stdout.read().strip()
-                if six.PY3:
-                    output = output.decode(__salt_system_encoding__)
+                output = output.decode(__salt_system_encoding__)
                 print(output)
 
             if "DOCKER_CIDFILE" not in os.environ:
@@ -1046,7 +1054,7 @@ class SaltTestingParser(optparse.OptionParser):
 
         # Let's start the Docker container and run the tests suite there
         if "/" not in self.options.docked:
-            container = "salttest/{0}".format(self.options.docked)
+            container = "salttest/{}".format(self.options.docked)
         else:
             container = self.options.docked
 
@@ -1094,11 +1102,11 @@ class SaltTestingParser(optparse.OptionParser):
             calling_args.append("--run-destructive")
 
         if self.options.verbosity > 1:
-            calling_args.append("-{0}".format("v" * (self.options.verbosity - 1)))
+            calling_args.append("-{}".format("v" * (self.options.verbosity - 1)))
 
-        sys.stdout.write(" * Docker command: {0}\n".format(" ".join(calling_args)))
+        sys.stdout.write(" * Docker command: {}\n".format(" ".join(calling_args)))
         sys.stdout.write(
-            " * Running the tests suite under the {0!r} docker "
+            " * Running the tests suite under the {!r} docker "
             "container. CID: ".format(container)
         )
         sys.stdout.flush()
@@ -1115,16 +1123,16 @@ class SaltTestingParser(optparse.OptionParser):
                 "--tty",
                 "--interactive",
                 "-v",
-                "{0}:/salt-source".format(self.source_code_basedir),
+                "{}:/salt-source".format(self.source_code_basedir),
                 "-w",
                 "/salt-source",
                 "-e",
                 "SHELL=/bin/sh",
                 "-e",
-                "COLUMNS={0}".format(WIDTH),
+                "COLUMNS={}".format(WIDTH),
                 "-e",
-                "LINES={0}".format(HEIGHT),
-                "--cidfile={0}".format(cidfile),
+                "LINES={}".format(HEIGHT),
+                "--cidfile={}".format(cidfile),
                 container,
                 # We need to pass the runtests.py arguments as a single string so
                 # that the start-me-up.sh script can handle them properly
@@ -1210,7 +1218,7 @@ class SaltTestcaseParser(SaltTestingParser):
             self.remove_option("--xml-out")
 
     def get_prog_name(self):
-        return "{0} {1}".format(sys.executable.split(os.sep)[-1], sys.argv[0])
+        return "{} {}".format(sys.executable.split(os.sep)[-1], sys.argv[0])
 
     def run_testcase(self, testcase):
         """
@@ -1225,9 +1233,9 @@ class SaltTestcaseParser(SaltTestingParser):
             tests = loader.loadTestsFromTestCase(testcase)
 
         if not isinstance(testcase, list):
-            header = "{0} Tests".format(testcase.__name__)
+            header = "{} Tests".format(testcase.__name__)
             print_header(
-                "Starting {0}".format(header), width=self.options.output_columns
+                "Starting {}".format(header), width=self.options.output_columns
             )
 
         runner = TextTestRunner(

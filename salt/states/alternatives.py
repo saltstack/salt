@@ -36,7 +36,9 @@ def __virtual__():
     """
     Only load if alternatives execution module is available.
     """
-    return True if "alternatives.auto" in __salt__ else False
+    if "alternatives.auto" in __salt__:
+        return True
+    return (False, "alernatives module could not be loaded")
 
 
 def install(name, link, path, priority):

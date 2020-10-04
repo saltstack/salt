@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     if "tls.cert_info" not in __salt__:
-        return False
+        return (False, "tls module could not be loaded")
 
     return __virtualname__
 

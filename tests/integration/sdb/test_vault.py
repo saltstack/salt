@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the vault modules
 """
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import inspect
 import logging
@@ -12,16 +8,13 @@ import time
 
 import salt.utils.path
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import destructiveTest, flaky, slowTest
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 @skipIf(not salt.utils.path.which("vault"), "Vault not installed")
 class VaultTestCase(ModuleCase, ShellCase):
@@ -35,6 +28,8 @@ class VaultTestCase(ModuleCase, ShellCase):
         """
         SetUp vault container
         """
+
+        vault_binary = salt.utils.path.which("vault")
         if VaultTestCase.count == 0:
             config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
             self.run_state("docker_image.present", name="vault", tag="0.9.6")
@@ -52,7 +47,7 @@ class VaultTestCase(ModuleCase, ShellCase):
             time.sleep(5)
             ret = self.run_function(
                 "cmd.retcode",
-                cmd="/usr/local/bin/vault login token=testsecret",
+                cmd="{} login token=testsecret".format(vault_binary),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
             )
             login_attempts = 1
@@ -74,7 +69,7 @@ class VaultTestCase(ModuleCase, ShellCase):
                 time.sleep(5)
                 ret = self.run_function(
                     "cmd.retcode",
-                    cmd="/usr/local/bin/vault login token=testsecret",
+                    cmd="{} login token=testsecret".format(vault_binary),
                     env={"VAULT_ADDR": "http://127.0.0.1:8200"},
                 )
                 login_attempts += 1
@@ -82,8 +77,8 @@ class VaultTestCase(ModuleCase, ShellCase):
                     self.skipTest("unable to login to vault")
             ret = self.run_function(
                 "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
-                    RUNTIME_VARS.FILES
+                cmd="{} policy write testpolicy {}/vault.hcl".format(
+                    vault_binary, RUNTIME_VARS.FILES
                 ),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
             )
@@ -110,6 +105,7 @@ class VaultTestCase(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
+    @slowTest
     def test_sdb(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -121,6 +117,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
+    @slowTest
     def test_sdb_runner(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -132,6 +129,7 @@ class VaultTestCase(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
+    @slowTest
     def test_config(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"
@@ -202,13 +200,24 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
                     self.skipTest("unable to login to vault")
             ret = self.run_function(
                 "cmd.retcode",
-                cmd="/usr/local/bin/vault policy write testpolicy {0}/vault.hcl".format(
+                cmd="/usr/local/bin/vault policy write testpolicy {}/vault.hcl".format(
                     RUNTIME_VARS.FILES
                 ),
                 env={"VAULT_ADDR": "http://127.0.0.1:8200"},
             )
             if ret != 0:
                 self.skipTest("unable to assign policy to vault")
+            ret = self.run_function(
+                "cmd.run",
+                cmd="/usr/local/bin/vault secrets enable kv-v2",
+                env={"VAULT_ADDR": "http://127.0.0.1:8200"},
+            )
+            if "path is already in use at kv-v2/" in ret:
+                pass
+            elif "Success" in ret:
+                pass
+            else:
+                self.skipTest("unable to enable kv-v2 {}".format(ret))
         self.count += 1
 
     def tearDown(self):
@@ -230,6 +239,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             self.run_state("docker_image.absent", name="vault", force=True)
 
     @flaky
+    @slowTest
     def test_sdb_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_sdb/foo", value="bar"
@@ -241,6 +251,25 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, "bar")
 
     @flaky
+    @slowTest
+    def test_sdb_kv2_kvv2_path_local(self):
+        set_output = self.run_function(
+            "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
+        )
+        self.assertEqual(set_output, True)
+        import copy
+
+        opts = copy.copy(self.minion_opts)
+        get_output = ShellCase.run_function(
+            self,
+            function="sdb.get",
+            arg=["sdb://sdbvault/kv-v2/test/test_sdb/foo"],
+            local=True,
+        )
+        self.assertEqual(get_output[1], "    bar")
+
+    @flaky
+    @slowTest
     def test_sdb_runner_kv2(self):
         set_output = self.run_run(
             "sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar"
@@ -252,6 +281,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         self.assertEqual(get_output, ["bar"])
 
     @flaky
+    @slowTest
     def test_config_kv2(self):
         set_output = self.run_function(
             "sdb.set", uri="sdb://sdbvault/secret/test/test_pillar_sdb/foo", value="bar"

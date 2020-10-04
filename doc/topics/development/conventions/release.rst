@@ -38,6 +38,7 @@ example):
 #. Test all release packages.
 #. Test links from `repo.saltstack.com`_.
 #. Update installation instructions with new release number at `repo.saltstack.com`_.
+#. Review and update all impacted :ref:`installation` documentation.
 #. Update and build docs to include new version (3000) as the latest.
 #. Pre-announce on salt-users google group that we are about to update our repo.
 #. Publish release (v3000) archive to pypi based off tag.

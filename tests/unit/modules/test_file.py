@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import tempfile
@@ -18,15 +13,11 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt libs
 from salt.ext import six
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -48,7 +39,7 @@ here
 """
 
 
-class DummyStat(object):
+class DummyStat:
     st_mode = 33188
     st_ino = 115331251
     st_dev = 44
@@ -118,14 +109,6 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(self.tfile.name, "r") as fp:
             self.assertIn("Salticus", salt.utils.stringutils.to_unicode(fp.read()))
 
-    def test_replace_idempotency(self):
-        os.utime(self.tfile.name, (1552661253, 1552661253))
-        mtime = os.stat(self.tfile.name).st_mtime
-        filemod.replace(self.tfile.name, r"Etia.", "Etiam", backup=False)
-        nmtime = os.stat(self.tfile.name).st_mtime
-
-        self.assertEqual(mtime, nmtime)
-
     def test_replace_append_if_not_found(self):
         """
         Check that file.replace append_if_not_found works
@@ -188,7 +171,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_backup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", backup=fext)
 
@@ -197,7 +180,7 @@ class FileReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nobackup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         filemod.replace(self.tfile.name, r"Etiam", "Salticus", backup=False)
 
@@ -488,7 +471,50 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
+                    )
+                ),
+                fp.read(),
+            )
+
+    def test_replace_insert_after(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            insert_after_match="not in the text",
+            backup=False,
+        )
+        with salt.utils.files.fopen(self.tfile.name, "r") as fp:
+            self.assertNotIn(
+                "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2",
+                salt.utils.stringutils.to_unicode(fp.read()),
+            )
+
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, "check_perms", check_perms_patch):
+            filemod.blockreplace(
+                self.tfile.name,
+                marker_start="#-- START BLOCK 2",
+                marker_end="#-- END BLOCK 2",
+                content=new_content,
+                backup=False,
+                insert_after_match="malesuada",
+            )
+
+        with salt.utils.files.fopen(self.tfile.name, "rb") as fp:
+            self.assertIn(
+                salt.utils.stringutils.to_bytes(
+                    os.linesep.join(
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -566,7 +592,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertNotIn(
                 salt.utils.stringutils.to_bytes(
                     os.linesep.join(
-                        ["#-- START BLOCK 2", "{0}#-- END BLOCK 2".format(new_content)]
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                     )
                 ),
                 fp.read(),
@@ -593,11 +619,54 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                         os.linesep.join(
                             [
                                 "#-- START BLOCK 2",
-                                "{0}#-- END BLOCK 2".format(new_content),
+                                "{}#-- END BLOCK 2".format(new_content),
                             ]
                         )
                     )
                 )
+            )
+
+    def test_replace_insert_before(self):
+        new_content = "Well, I didn't vote for you."
+
+        self.assertRaises(
+            CommandExecutionError,
+            filemod.blockreplace,
+            self.tfile.name,
+            marker_start="#-- START BLOCK 2",
+            marker_end="#-- END BLOCK 2",
+            content=new_content,
+            insert_before_match="not in the text",
+            backup=False,
+        )
+        with salt.utils.files.fopen(self.tfile.name, "r") as fp:
+            self.assertNotIn(
+                "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2",
+                salt.utils.stringutils.to_unicode(fp.read()),
+            )
+
+        if salt.utils.platform.is_windows():
+            check_perms_patch = win_file.check_perms
+        else:
+            check_perms_patch = filemod.check_perms
+        with patch.object(filemod, "check_perms", check_perms_patch):
+            filemod.blockreplace(
+                self.tfile.name,
+                marker_start="#-- START BLOCK 2",
+                marker_end="#-- END BLOCK 2",
+                content=new_content,
+                backup=False,
+                insert_before_match="malesuada",
+            )
+
+        with salt.utils.files.fopen(self.tfile.name, "rb") as fp:
+            self.assertIn(
+                salt.utils.stringutils.to_bytes(
+                    os.linesep.join(
+                        ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
+                    )
+                ),
+                fp.read(),
             )
 
     def test_replace_partial_marked_lines(self):
@@ -625,7 +694,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_backup(self):
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -645,7 +714,7 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(os.path.exists(bak_file))
 
         fext = ".bak"
-        bak_file = "{0}{1}".format(self.tfile.name, fext)
+        bak_file = "{}{}".format(self.tfile.name, fext)
 
         if salt.utils.platform.is_windows():
             check_perms_patch = win_file.check_perms
@@ -828,7 +897,7 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
             result = filemod.grep(self.tfile.name, "Lorem Lorem", "-i -b2")
 
     def test_grep_query_exists_wildcard(self):
-        _file = "{0}*".format(self.tfile.name)
+        _file = "{}*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
 
         self.assertTrue(result, None)
@@ -837,13 +906,13 @@ class FileGrepTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["stderr"] == "")
 
     def test_grep_file_not_exists_wildcard(self):
-        _file = "{0}-junk*".format(self.tfile.name)
+        _file = "{}-junk*".format(self.tfile.name)
         result = filemod.grep(_file, "Lorem ipsum")
 
         self.assertTrue(result, None)
         self.assertFalse(result["retcode"] == 0)
         self.assertFalse(result["stdout"] == "Lorem ipsum dolor sit amet, consectetur")
-        _expected_stderr = "grep: {0}-junk*: No such file or directory".format(
+        _expected_stderr = "grep: {}-junk*: No such file or directory".format(
             self.tfile.name
         )
         self.assertTrue(result["stderr"] == _expected_stderr)
@@ -869,6 +938,25 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "__utils__": {"stringutils.get_diff": salt.utils.stringutils.get_diff},
             }
         }
+
+    def test_check_file_meta_binary_contents(self):
+        """
+        Ensure that using the check_file_meta function does not raise a
+        UnicodeDecodeError when used with binary contents (issue #57184).
+        """
+        contents = b"\xf4\x91"
+        filemod.check_file_meta(
+            "test",
+            "test",
+            "salt://test",
+            {},
+            "root",
+            "root",
+            "755",
+            None,
+            "base",
+            contents=contents,
+        )
 
     @skipIf(salt.utils.platform.is_windows(), "lsattr is not available on Windows")
     def test_check_file_meta_no_lsattr(self):
@@ -901,6 +989,46 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 )
         self.assertTrue(result, None)
 
+    @skipIf(
+        salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
+        "lsattr is not available on Windows and AIX",
+    )
+    def test_cmp_attrs_extents_flag(self):
+        """
+        Test that the cmp_attr function handles the extents flag correctly.
+        This test specifically tests for a bug described in #57189.
+        """
+        # If the e attribute is not present and shall not be set, it should be
+        # neither in the added nor in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": ""}
+            changes = filemod._cmp_attrs("file", "")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is present and shall also be set, it should be
+        # neither in the added nor in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": "e"}
+            changes = filemod._cmp_attrs("file", "e")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is present and shall not be set, it should be
+        # neither in the added nor in the removed set. One would assume that it
+        # should be in the removed set, but the e attribute can never be reset,
+        # so it is correct that both sets are empty.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": "e"}
+            changes = filemod._cmp_attrs("file", "")
+            self.assertIsNone(changes.added)
+            self.assertIsNone(changes.removed)
+        # If the e attribute is not present and shall be set, it should be in
+        # the added, but not in the removed set.
+        with patch("salt.modules.file.lsattr") as m_lsattr:
+            m_lsattr.return_value = {"file": ""}
+            changes = filemod._cmp_attrs("file", "e")
+            self.assertEqual("e", changes.added)
+            self.assertIsNone(changes.removed)
+
     @skipIf(salt.utils.platform.is_windows(), "SED is not available on Windows")
     def test_sed_limit_escaped(self):
         with tempfile.NamedTemporaryFile(mode="w+") as tfile:
@@ -910,7 +1038,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             path = tfile.name
             before = "/var/lib/foo"
             after = ""
-            limit = "^{0}".format(before)
+            limit = "^{}".format(before)
 
             filemod.sed(path, before, after, limit=limit)
 
@@ -934,6 +1062,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(tfile.name) as tfile2:
             new_file = salt.utils.stringutils.to_unicode(tfile2.read())
         self.assertEqual(new_file, expected)
+        os.remove(tfile.name)
 
         # File not ending with a newline
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
@@ -950,6 +1079,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 salt.utils.stringutils.to_unicode(tfile2.read()), "bar" + os.linesep
             )
+        os.remove(tfile.name)
 
     def test_extract_hash(self):
         """
@@ -960,9 +1090,9 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
             tfile.write(
                 salt.utils.stringutils.to_bytes(
                     "rc.conf ef6e82e4006dee563d98ada2a2a80a27\n"
-                    "ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n"
+                    "ead48423703509d37c4a90e6a0d53e143b6fc268  example.tar.gz\n"
                     "fe05bcdcdc4928012781a5f1a2a77cbb5398e106 ./subdir/example.tar.gz\n"
-                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b foo.tar.bz2\n"
+                    "ad782ecdac770fc6eb9a62e44f90873fb97fb26b *foo.tar.bz2\n"
                 )
             )
             tfile.flush()
@@ -1041,6 +1171,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 else None
             )
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
         # Hash only, no file name (Maven repo checksum format)
         # Since there is no name match, the first checksum in the file will
@@ -1065,6 +1196,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 else None
             )
             self.assertEqual(result, expected)
+        os.remove(tfile.name)
 
     def test_user_to_uid_int(self):
         """
@@ -1191,7 +1323,7 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
         binary2 = b",\x13\x04\xa5\xb0\x12\xdf%"
 
         # pylint: disable=no-self-argument
-        class MockFopen(object):
+        class MockFopen:
             """
             Provides a fake filehandle object that has just enough to run
             readlines() as file.get_diff does. Any significant changes to
@@ -1296,7 +1428,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
     """
 
     def setUp(self):
-        class AnyAttr(object):
+        class AnyAttr:
             def __getattr__(self, item):
                 return 0
 
@@ -1341,6 +1473,835 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         else:
             return salt.utils.data.decode_list(ret, to_str=True)
 
+    def test_set_line_should_raise_command_execution_error_with_no_mode(self):
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(lines=[], mode=None)
+        self.assertEqual(
+            err.exception.args[0], "Mode was not defined. How to process the file?",
+        )
+
+    def test_set_line_should_raise_command_execution_error_with_unknown_mode(self):
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(lines=[], mode="fnord")
+        self.assertEqual(
+            err.exception.args[0], "Unknown mode: fnord",
+        )
+
+    def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_command_execution_error(
+        self,
+    ):
+        valid_modes = ("insert", "ensure", "replace")
+        for mode in valid_modes:
+            with self.assertRaises(CommandExecutionError) as err:
+                filemod._set_line(lines=[], mode=mode)
+            self.assertEqual(
+                err.exception.args[0], "Content can only be empty if mode is delete",
+            )
+
+    def test_if_delete_or_replace_is_called_with_empty_lines_it_should_warn_and_return_empty_body(
+        self,
+    ):
+        for mode in ("delete", "replace"):
+            with patch("salt.modules.file.log.warning", MagicMock()) as fake_warn:
+                actual_lines = filemod._set_line(mode=mode, lines=[], content="roscivs")
+                self.assertEqual(actual_lines, [])
+                fake_warn.assert_called_with(
+                    "Cannot find text to %s. File is empty.", mode
+                )
+
+    def test_if_mode_is_delete_and_not_before_after_or_match_then_content_should_be_used_to_delete_line(
+        self,
+    ):
+        lines = ["foo", "roscivs", "bar"]
+        to_remove = "roscivs"
+        expected_lines = ["foo", "bar"]
+
+        actual_lines = filemod._set_line(mode="delete", lines=lines, content=to_remove)
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_replace_and_not_before_after_or_match_and_content_exists_then_lines_should_not_change(
+        self,
+    ):
+        original_lines = ["foo", "roscivs", "bar"]
+        content = "roscivs"
+
+        actual_lines = filemod._set_line(
+            mode="replace", lines=original_lines, content=content
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_if_mode_is_replace_and_match_is_set_then_it_should_replace_the_first_match(
+        self,
+    ):
+        to_replace = "quuxy"
+        replacement = "roscivs"
+        original_lines = ["foo", to_replace, "bar"]
+        expected_lines = ["foo", replacement, "bar"]
+
+        actual_lines = filemod._set_line(
+            mode="replace", lines=original_lines, content=replacement, match=to_replace,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_replace_and_indent_is_true_then_it_should_match_indention_of_existing_line(
+        self,
+    ):
+        indents = "\t\t      \t \t"
+        to_replace = indents + "quuxy"
+        replacement = "roscivs"
+        original_lines = ["foo", to_replace, "bar"]
+        expected_lines = ["foo", indents + replacement, "bar"]
+
+        actual_lines = filemod._set_line(
+            mode="replace",
+            lines=original_lines,
+            content=replacement,
+            match=to_replace,
+            indent=True,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_replace_and_indent_is_false_then_it_should_just_use_content(
+        self,
+    ):
+        indents = "\t\t      \t \t"
+        to_replace = indents + "quuxy"
+        replacement = "\t        \t\troscivs"
+        original_lines = ["foo", to_replace, "bar"]
+        expected_lines = ["foo", replacement, "bar"]
+
+        actual_lines = filemod._set_line(
+            mode="replace",
+            lines=original_lines,
+            content=replacement,
+            match=to_replace,
+            indent=False,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_insert_and_no_location_before_or_after_then_it_should_raise_command_execution_error(
+        self,
+    ):
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=[],
+                content="fnord",
+                mode="insert",
+                location=None,
+                before=None,
+                after=None,
+            )
+
+        self.assertEqual(
+            err.exception.args[0],
+            'On insert either "location" or "before/after" conditions are required.',
+        )
+
+    def test_if_mode_is_insert_and_location_is_start_it_should_insert_content_at_start(
+        self,
+    ):
+        lines = ["foo", "bar", "bang"]
+        content = "roscivs"
+        expected_lines = [content] + lines
+
+        with patch("os.linesep", ""):
+            actual_lines = filemod._set_line(
+                lines=lines, content=content, mode="insert", location="start",
+            )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_insert_and_lines_have_eol_then_inserted_line_should_have_matching_eol(
+        self,
+    ):
+        linesep = "\r\n"
+        lines = ["foo" + linesep]
+        content = "roscivs"
+        expected_lines = [content + linesep] + lines
+
+        actual_lines = filemod._set_line(
+            lines=lines, content=content, mode="insert", location="start",
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_mode_is_insert_and_no_lines_then_the_content_should_have_os_linesep_added(
+        self,
+    ):
+        content = "roscivs"
+        fake_linesep = "\U0001f40d"
+        expected_lines = [content + fake_linesep]
+
+        with patch("os.linesep", fake_linesep):
+            actual_lines = filemod._set_line(
+                lines=[], content=content, mode="insert", location="start",
+            )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_location_is_end_of_empty_file_then_it_should_just_be_content(self):
+        content = "roscivs"
+        expected_lines = [content]
+
+        actual_lines = filemod._set_line(
+            lines=[], content=content, mode="insert", location="end",
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_location_is_end_of_file_and_indent_is_True_then_line_should_match_previous_indent(
+        self,
+    ):
+        content = "roscivs"
+        indent = "   \t\t\t   "
+        original_lines = [indent + "fnord"]
+        expected_lines = original_lines + [indent + content]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location="end",
+            indent=True,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_location_is_not_set_but_before_and_after_are_then_line_should_appear_as_the_line_before_before(
+        self,
+    ):
+        for indent in ("", " \t \t\t\t      "):
+            content = "roscivs"
+            after = "after"
+            before = "before"
+            original_lines = ["foo", "bar", indent + after, "belowme", indent + before]
+            expected_lines = [
+                "foo",
+                "bar",
+                indent + after,
+                "belowme",
+                indent + content,
+                indent + before,
+            ]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                mode="insert",
+                location=None,
+                before=before,
+                after=after,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_insert_with_after_and_before_with_no_location_should_indent_to_match_before_indent(
+        self,
+    ):
+        for indent in ("", " \t \t\t\t      "):
+            content = "roscivs"
+            after = "after"
+            before = "before"
+            original_lines = [
+                "foo",
+                "bar",
+                indent + after,
+                "belowme",
+                (indent * 2) + before,
+            ]
+            expected_lines = [
+                "foo",
+                "bar",
+                indent + after,
+                "belowme",
+                (indent * 2) + content,
+                (indent * 2) + before,
+            ]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                mode="insert",
+                location=None,
+                before=before,
+                after=after,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_CommandExecutionError(
+        self,
+    ):
+        after = "one"
+        before = "two"
+        original_lines = [after, after, after, after, before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=None,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "after" expression',
+        )
+
+    def test_if_not_location_but_before_and_after_and_more_than_one_before_it_should_CommandExecutionError(
+        self,
+    ):
+        after = "one"
+        before = "two"
+        original_lines = [after, before, before, before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=None,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "before" expression',
+        )
+
+    def test_if_not_location_or_before_but_after_and_after_has_more_than_one_it_should_CommandExecutionError(
+        self,
+    ):
+        location = None
+        before = None
+        after = "after"
+        original_lines = [after, after, after]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=location,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "after" expression',
+        )
+
+    def test_if_not_location_or_after_but_before_and_before_has_more_than_one_it_should_CommandExecutionError(
+        self,
+    ):
+        location = None
+        before = "before"
+        after = None
+        original_lines = [before, before, before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=location,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "before" expression',
+        )
+
+    def test_if_not_location_or_after_and_no_before_in_lines_it_should_CommandExecutionError(
+        self,
+    ):
+        location = None
+        before = "before"
+        after = None
+        original_lines = ["fnord", "fnord"]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=location,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0], "Neither before or after was found in file",
+        )
+
+    def test_if_not_location_or_before_and_no_after_in_lines_it_should_CommandExecutionError(
+        self,
+    ):
+        location = None
+        before = None
+        after = "after"
+        original_lines = ["fnord", "fnord"]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content="fnord",
+                mode="insert",
+                location=location,
+                before=before,
+                after=after,
+            )
+        self.assertEqual(
+            err.exception.args[0], "Neither before or after was found in file",
+        )
+
+    def test_if_not_location_or_before_but_after_then_line_should_be_inserted_after_after(
+        self,
+    ):
+        location = before = None
+        after = "indessed"
+        content = "roscivs"
+        indent = "\t\t\t   "
+        original_lines = ["foo", indent + after, "bar"]
+        expected_lines = ["foo", indent + after, indent + content, "bar"]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_insert_with_after_should_ignore_line_endings_on_comparison(self):
+        after = "after"
+        content = "roscivs"
+        line_endings = "\r\n\r\n"
+        original_lines = [after, content + line_endings]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines[:], content=content, mode="insert", after=after,
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_insert_with_before_should_ignore_line_endings_on_comparison(self):
+        before = "before"
+        content = "bottia"
+        line_endings = "\r\n\r\n"
+        original_lines = [content + line_endings, before]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines[:], content=content, mode="insert", before=before,
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_if_not_location_or_before_but_after_and_indent_False_then_line_should_be_inserted_after_after_without_indent(
+        self,
+    ):
+        location = before = None
+        after = "indessed"
+        content = "roscivs"
+        indent = "\t\t\t   "
+        original_lines = ["foo", indent + after, "bar"]
+        expected_lines = ["foo", indent + after, content, "bar"]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+            indent=False,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_not_location_or_after_but_before_then_line_should_be_inserted_before_before(
+        self,
+    ):
+        location = after = None
+        before = "indessed"
+        content = "roscivs"
+        indent = "\t\t\t   "
+        original_lines = [indent + "foo", indent + before, "bar"]
+        expected_lines = [indent + "foo", indent + content, indent + before, "bar"]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_if_not_location_or_after_but_before_and_indent_False_then_line_should_be_inserted_before_before_without_indent(
+        self,
+    ):
+        location = after = None
+        before = "indessed"
+        content = "roscivs"
+        indent = "\t\t\t   "
+        original_lines = [indent + "foo", before, "bar"]
+        expected_lines = [indent + "foo", content, before, "bar"]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+            indent=False,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_insert_after_the_last_line_should_work(self):
+        location = before = None
+        after = "indessed"
+        content = "roscivs"
+        original_lines = [after]
+        expected_lines = [after, content]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+            indent=True,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_insert_should_work_just_like_ensure_on_before(self):
+        # I'm pretty sure that this is or should be a bug, but that
+        # is how things currently work, so I'm calling it out here.
+        #
+        # If that should change, then this test should change.
+        before = "indessed"
+        content = "roscivs"
+        original_lines = [content, before]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines[:], content=content, mode="insert", before=before,
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_insert_should_work_just_like_ensure_on_after(self):
+        # I'm pretty sure that this is or should be a bug, but that
+        # is how things currently work, so I'm calling it out here.
+        #
+        # If that should change, then this test should change.
+        after = "indessed"
+        content = "roscivs"
+        original_lines = [after, content]
+
+        actual_lines = filemod._set_line(
+            # If we don't pass in a copy of the lines then it modifies
+            # them, and our test fails. Oops.
+            lines=original_lines[:],
+            content=content,
+            mode="insert",
+            after=after,
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_insert_before_the_first_line_should_work(self):
+        location = after = None
+        before = "indessed"
+        content = "roscivs"
+        original_lines = [before]
+        expected_lines = [content, before]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="insert",
+            location=location,
+            before=before,
+            after=after,
+            indent=True,
+        )
+
+        self.assertEqual(actual_lines, expected_lines)
+
+    def test_ensure_with_before_and_too_many_after_should_CommandExecutionError(self):
+        location = None
+        before = "before"
+        after = "after"
+        lines = [after, after, before]
+        content = "fnord"
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=lines,
+                content=content,
+                mode="ensure",
+                location=location,
+                before=before,
+                after=after,
+            )
+
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "after" expression',
+        )
+
+    def test_ensure_with_too_many_after_should_CommandExecutionError(self):
+        after = "fnord"
+        bad_lines = [after, after]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=bad_lines, content="asdf", after=after, mode="ensure",
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "after" expression',
+        )
+
+    def test_ensure_with_after_and_too_many_before_should_CommandExecutionError(self):
+        location = None
+        before = "before"
+        after = "after"
+        lines = [after, before, before]
+        content = "fnord"
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=lines,
+                content=content,
+                mode="ensure",
+                location=location,
+                before=before,
+                after=after,
+            )
+
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "before" expression',
+        )
+
+    def test_ensure_with_too_many_before_should_CommandExecutionError(self):
+        before = "fnord"
+        bad_lines = [before, before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=bad_lines, content="asdf", before=before, mode="ensure",
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than expected occurrences in "before" expression',
+        )
+
+    def test_ensure_with_before_and_after_that_already_contains_the_line_should_return_original_info(
+        self,
+    ):
+        before = "before"
+        after = "after"
+        content = "roscivs"
+        original_lines = [after, content, before]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines,
+            content=content,
+            mode="ensure",
+            after=after,
+            before=before,
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_ensure_with_too_many_lines_between_before_and_after_should_CommandExecutionError(
+        self,
+    ):
+        before = "before"
+        after = "after"
+        content = "roscivs"
+        original_lines = [after, "fnord", "fnord", before]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=original_lines,
+                content=content,
+                mode="ensure",
+                after=after,
+                before=before,
+            )
+
+        self.assertEqual(
+            err.exception.args[0],
+            'Found more than one line between boundaries "before" and "after".',
+        )
+
+    def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = "before"
+            after = "after"
+            content = "roscivs"
+            original_lines = [indent + after, before]
+            expected_lines = [indent + after, indent + content, before]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_ensure_with_existing_but_different_line_should_set_the_line(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = "before"
+            after = "after"
+            content = "roscivs"
+            original_lines = [indent + after, "fnord", before]
+            expected_lines = [indent + after, indent + content, before]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_ensure_with_after_and_existing_content_should_return_same_lines(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = None
+            after = "after"
+            content = "roscivs"
+            original_lines = [indent + after, indent + content, "fnord"]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, original_lines)
+
+    def test_ensure_with_after_and_missing_content_should_add_it(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = None
+            after = "after"
+            content = "roscivs"
+            original_lines = [indent + after, "more fnord", "fnord"]
+            expected_lines = [indent + after, indent + content, "more fnord", "fnord"]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_ensure_with_after_and_content_at_the_end_should_not_add_duplicate(self):
+        after = "after"
+        content = "roscivs"
+        original_lines = [after, content + "\n"]
+
+        actual_lines = filemod._set_line(
+            lines=original_lines, content=content, after=after, mode="ensure",
+        )
+
+        self.assertEqual(actual_lines, original_lines)
+
+    def test_ensure_with_before_and_missing_content_should_add_it(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = "before"
+            after = None
+            content = "roscivs"
+            original_lines = [indent + "fnord", indent + "fnord", before]
+            expected_lines = [
+                indent + "fnord",
+                indent + "fnord",
+                indent + content,
+                before,
+            ]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, expected_lines)
+
+    def test_ensure_with_before_and_existing_content_should_return_same_lines(self):
+        for indent in ("", " \t \t\t\t      "):
+            before = "before"
+            after = None
+            content = "roscivs"
+            original_lines = [indent + "fnord", indent + content, before]
+
+            actual_lines = filemod._set_line(
+                lines=original_lines,
+                content=content,
+                before=before,
+                after=after,
+                mode="ensure",
+                indent=True,
+            )
+
+            self.assertEqual(actual_lines, original_lines)
+
+    def test_ensure_without_before_and_after_should_CommandExecutionError(self):
+        before = "before"
+        after = "after"
+        bad_lines = ["fnord", "fnord1", "fnord2"]
+
+        with self.assertRaises(CommandExecutionError) as err:
+            filemod._set_line(
+                lines=bad_lines,
+                before=before,
+                after=after,
+                content="aardvark",
+                mode="ensure",
+            )
+        self.assertEqual(
+            err.exception.args[0],
+            "Wrong conditions? Unable to ensure line without knowing where"
+            " to put it before and/or after.",
+        )
+
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
     def test_delete_line_in_empty_file(self):
@@ -1359,10 +2320,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 self.assertFalse(
                     filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
                 )
-            self.assertIn(
-                "Cannot find text to {0}".format(mode),
-                _log.warning.call_args_list[0][0][0],
-            )
+            warning_call = _log.warning.call_args_list[0][0]
+            warning_log_msg = warning_call[0] % warning_call[1:]
+            self.assertIn("Cannot find text to {}".format(mode), warning_log_msg)
 
     @patch("os.path.realpath", MagicMock())
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -1400,7 +2360,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         ]:
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", mode=mode)
-            self.assertIn(err_msg, six.text_type(exc_info.value))
+            self.assertIn(err_msg, str(exc_info.value))
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -1413,8 +2373,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", mode=mode)
             self.assertIn(
-                'Content can only be empty if mode is "delete"',
-                six.text_type(exc_info.value),
+                'Content can only be empty if mode is "delete"', str(exc_info.value),
             )
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
@@ -1429,22 +2388,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         with patch("salt.utils.files.fopen", files_fopen):
             with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line("foo", content="test content", mode="insert")
-            self.assertIn('"location" or "before/after"', six.text_type(exc_info.value))
-
-    def test_util_starts_till(self):
-        """
-        Test for file._starts_till function.
-
-        :return:
-        """
-        src = "here is something"
-        self.assertEqual(
-            filemod._starts_till(src=src, probe="here quite something else"), 1
-        )
-        self.assertEqual(filemod._starts_till(src=src, probe="here is something"), 0)
-        self.assertEqual(
-            filemod._starts_till(src=src, probe="and here is something"), -1
-        )
+            self.assertIn('"location" or "before/after"', str(exc_info.value))
 
     @with_tempfile()
     def test_line_insert_after_no_pattern(self, name):
@@ -1635,10 +2579,8 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 assert writelines_count == 1, writelines_count
                 # ... with the updated content
                 expected = self._get_body(file_modified)
-                assert writelines_content[0] == expected, (
-                    writelines_content[0],
-                    expected,
-                )
+                # assert writelines_content[0] == expected, (writelines_content[0], expected)
+                self.assertEqual(writelines_content[0], expected)
 
     @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
     @patch("os.path.isfile", MagicMock(return_value=True))
@@ -1725,10 +2667,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 assert writelines_count == 1, writelines_count
                 # ... with the updated content
                 expected = self._get_body(file_modified)
-                assert writelines_content[0] == expected, (
-                    writelines_content[0],
-                    expected,
-                )
+                self.assertEqual(writelines_content[0], expected)
 
     @with_tempfile()
     def test_line_insert_start(self, name):
@@ -1970,7 +2909,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         # pylint: disable=W1401
         file_content = os.linesep.join(
             [
-                'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
+                r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
                 'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"',
             ]
         )
@@ -2019,7 +2958,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         # pylint: disable=W1401
         file_content = os.linesep.join(
             [
-                'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
+                r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"',
                 'EXTRA_GROUPS="dialout"',
                 'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"',
             ]
@@ -2062,7 +3001,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         cfg_content = 'EXTRA_GROUPS="dialout cdrom floppy audio video plugdev users"'
         # pylint: disable=W1401
         file_content = (
-            'NAME_REGEX="^[a-z][-a-z0-9_]*\$"{}SETGID_HOME=no{}ADD_EXTRA_GROUPS=1{}'
+            r'NAME_REGEX="^[a-z][-a-z0-9_]*\$"{}SETGID_HOME=no{}ADD_EXTRA_GROUPS=1{}'
             'SKEL_IGNORE_REGEX="dpkg-(old|new|dist|save)"'.format(
                 os.linesep, os.linesep, os.linesep
             )
@@ -2087,7 +3026,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                         )
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(exc_info.value),
+                str(exc_info.value),
             )
 
     @with_tempfile()
@@ -2262,12 +3201,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
                     "cp.cache_file": MagicMock(return_value="/tmp/http.conf"),
                 },
             ):
-                ret = filemod.source_list(
-                    [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
-                )
-                self.assertEqual(
-                    list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
-                )
+                with patch("salt.utils.http.query") as http_query:
+                    http_query.return_value = {}
+                    ret = filemod.source_list(
+                        [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
+                    )
+                    self.assertEqual(
+                        list(ret), ["http://t.est.com/http/httpd.conf", "filehash"]
+                    )
 
     def test_source_list_for_list_returns_existing_file(self):
         with patch.dict(
@@ -2385,7 +3326,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         patch_exists = patch("os.path.exists", Mock(return_value=True),)
         patch_which = patch("salt.utils.path.which", Mock(return_value="fnord"),)
         with patch_aix, patch_exists, patch_which:
-            super(LsattrTests, self).run(result)
+            super().run(result)
 
     def test_if_lsattr_is_missing_it_should_return_None(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=None),)
@@ -2426,9 +3367,9 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_has_ext, patch_run:
             actual = set(filemod.lsattr(fname)[fname])
-            # pylint: disable=E1322
-            msg = "Actual: {!r} Expected: {!r}".format(actual, expected)
-            # pylint: enable=E1322
+            msg = "Actual: {!r} Expected: {!r}".format(
+                actual, expected
+            )  # pylint: disable=E1322
             assert actual == expected, msg
 
     def test_if_chattr_version_is_high_enough_then_extended_flags_should_be_returned(
@@ -2453,7 +3394,9 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_has_ext, patch_run:
             actual = set(filemod.lsattr(fname)[fname])
-            msg = "Actual: {!r} Expected: {!r}".format(actual, expected)
+            msg = "Actual: {!r} Expected: {!r}".format(
+                actual, expected
+            )  # pylint: disable=E1322
             assert actual == expected, msg
 
     def test_if_supports_extended_but_there_are_no_flags_then_none_should_be_returned(
@@ -2478,7 +3421,9 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
         )
         with patch_has_ext, patch_run:
             actual = set(filemod.lsattr(fname)[fname])
-            msg = "Actual: {!r} Expected: {!r}".format(actual, expected)
+            msg = "Actual: {!r} Expected: {!r}".format(
+                actual, expected
+            )  # pylint: disable=E1322
             assert actual == expected, msg
 
 
@@ -2486,6 +3431,7 @@ class LsattrTests(TestCase, LoaderModuleMockMixin):
 # a merge forward to develop happens. Develop's changes are made
 # obsolete by this ChattrTests class, and should be removed in favor
 # of this change.
+@skipIf(salt.utils.platform.is_windows(), "Chattr shouldn't be available on Windows")
 class ChattrTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
@@ -2500,7 +3446,7 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
         patch_exists = patch("os.path.exists", Mock(return_value=True),)
         patch_which = patch("salt.utils.path.which", Mock(return_value="some/tune2fs"),)
         with patch_aix, patch_exists, patch_which:
-            super(ChattrTests, self).run(result)
+            super().run(result)
 
     def test_chattr_version_returns_None_if_no_tune2fs_exists(self):
         patch_which = patch("salt.utils.path.which", Mock(return_value=""),)
@@ -2685,3 +3631,95 @@ class ChattrTests(TestCase, LoaderModuleMockMixin):
                 follow_symlinks=False,
             )
             self.assertDictEqual(actual_ret["changes"], expected)
+
+
+@skipIf(salt.modules.selinux.getenforce() != "Enforcing", "Skip if selinux not enabled")
+class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                "__salt__": {
+                    "cmd.run": cmdmod.run,
+                    "cmd.run_all": cmdmod.run_all,
+                    "cmd.retcode": cmdmod.retcode,
+                    "selinux.fcontext_add_policy": MagicMock(
+                        return_value={"retcode": 0, "stdout": ""}
+                    ),
+                },
+                "__opts__": {"test": False},
+            }
+        }
+
+    def setUp(self):
+        # Read copy 1
+        self.tfile1 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+        # Edit copy 2
+        self.tfile2 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+        # Edit copy 3
+        self.tfile3 = tempfile.NamedTemporaryFile(delete=False, mode="w+")
+
+    def tearDown(self):
+        os.remove(self.tfile1.name)
+        del self.tfile1
+        os.remove(self.tfile2.name)
+        del self.tfile2
+        os.remove(self.tfile3.name)
+        del self.tfile3
+
+    def test_selinux_getcontext(self):
+        """
+            Test get selinux context
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.get_selinux_context(self.tfile1.name)
+        self.assertEqual(result, "unconfined_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext(self):
+        """
+            Test set selinux context
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.set_selinux_context(self.tfile2.name, user="system_u")
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_selinux_setcontext_persist(self):
+        """
+            Test set selinux context with persist=True
+            Assumes default selinux attributes on temporary files
+        """
+        result = filemod.set_selinux_context(
+            self.tfile2.name, user="system_u", persist=True
+        )
+        self.assertEqual(result, "system_u:object_r:user_tmp_t:s0")
+
+    def test_file_check_perms(self):
+        expected_result = (
+            {
+                "comment": "The file {} is set to be changed".format(self.tfile3.name),
+                "changes": {
+                    "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
+                    "mode": "0644",
+                },
+                "name": self.tfile3.name,
+                "result": True,
+            },
+            {"luser": "root", "lmode": "0600", "lgroup": "root"},
+        )
+
+        # Disable lsattr calls
+        with patch("salt.utils.path.which") as m_which:
+            m_which.return_value = None
+            result = filemod.check_perms(
+                self.tfile3.name,
+                {},
+                "root",
+                "root",
+                644,
+                seuser=None,
+                serole=None,
+                setype="lost_found_t",
+                serange=None,
+            )
+            self.assertEqual(result, expected_result)

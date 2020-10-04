@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import textwrap
 
@@ -9,7 +5,7 @@ import pytest
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -19,9 +15,9 @@ from tests.support.unit import skipIf
 class WinPKGTest(ModuleCase):
     """
     Tests for salt.modules.win_pkg. There are already
-    some pkg execution module tests in the the test
+    some pkg execution module tests in the test
     integration.modules.test_pkg but this will be for
-    specific windows software respository tests while
+    specific windows software repository tests while
     using the win_pkg module.
     """
 
@@ -37,6 +33,7 @@ class WinPKGTest(ModuleCase):
             os.remove(self.curl_sls_path)
 
     @destructiveTest
+    @slowTest
     def test_adding_removing_pkg_sls(self):
         """
         Test add and removing a new pkg sls
@@ -48,7 +45,7 @@ class WinPKGTest(ModuleCase):
             self.assertEqual(
                 check_refresh,
                 refresh["total"],
-                msg="total returned {0}. Expected return {1}".format(
+                msg="total returned {}. Expected return {}".format(
                     refresh["total"], check_refresh
                 ),
             )
@@ -68,8 +65,8 @@ class WinPKGTest(ModuleCase):
                     else:
                         assert pkg + ".sls" not in files
 
-        pkgs = ["putty", "7zip"]
-        # check putty and 7zip are in cache and repo query
+        pkgs = ["putty", "vlc"]
+        # check putty and vlc are in cache and repo query
         _check_pkg(pkgs, 2)
 
         # now add new sls

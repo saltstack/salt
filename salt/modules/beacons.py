@@ -163,7 +163,7 @@ def add(name, beacon_data, **kwargs):
     else:
         beacon_name = name
 
-    if beacon_name not in list_available(return_yaml=False):
+    if beacon_name not in list_available(return_yaml=False, **kwargs):
         ret["comment"] = 'Beacon "{0}" is not available.'.format(beacon_name)
         return ret
 
@@ -201,7 +201,9 @@ def add(name, beacon_data, **kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon add failed."
+            return ret
 
         try:
             with salt.utils.event.get_event(
@@ -234,6 +236,7 @@ def add(name, beacon_data, **kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon add failed."
     return ret
 
@@ -262,7 +265,7 @@ def modify(name, beacon_data, **kwargs):
 
     if "test" in kwargs and kwargs["test"]:
         ret["result"] = True
-        ret["comment"] = "Beacon: {0} would be added.".format(name)
+        ret["comment"] = "Beacon: {0} would be modified.".format(name)
     else:
         try:
             # Attempt to load the beacon module so we have access to the validate function
@@ -289,13 +292,15 @@ def modify(name, beacon_data, **kwargs):
                     ret["result"] = False
                     ret["comment"] = (
                         "Beacon {0} configuration invalid, "
-                        "not adding.\n{1}".format(name, vcomment)
+                        "not modifying.\n{1}".format(name, vcomment)
                     )
                     return ret
 
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon modify failed."
+            return ret
 
         if not valid:
             ret["result"] = False
@@ -364,7 +369,8 @@ def modify(name, beacon_data, **kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
-            ret["comment"] = "Event module not available. Beacon add failed."
+            ret["result"] = False
+            ret["comment"] = "Event module not available. Beacon modify failed."
     return ret
 
 
@@ -421,13 +427,14 @@ def delete(name, **kwargs):
                         )
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon add failed."
     return ret
 
 
 def save(**kwargs):
     """
-    Save all beacons on the minion
+    Save all configured beacons to the minion config
 
     :return:                Boolean and status message on success or failure of save.
 
@@ -461,7 +468,7 @@ def save(**kwargs):
     except (IOError, OSError):
         ret[
             "comment"
-        ] = "Unable to write to beacons file at {0}. Check " "permissions.".format(sfn)
+        ] = "Unable to write to beacons file at {0}. Check permissions.".format(sfn)
         ret["result"] = False
     return ret
 
@@ -513,6 +520,7 @@ def enable(**kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacons enable job failed."
     return ret
 
@@ -564,6 +572,7 @@ def disable(**kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacons enable job failed."
     return ret
 
@@ -650,13 +659,14 @@ def enable_beacon(name, **kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon enable job failed."
     return ret
 
 
 def disable_beacon(name, **kwargs):
     """
-    Disable beacon on the minion
+    Disable a beacon on the minion
 
     :name:                  Name of the beacon to disable.
     :return:                Boolean and status message on success or failure of disable.
@@ -676,7 +686,7 @@ def disable_beacon(name, **kwargs):
         return ret
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Beacons would be enabled."
+        ret["comment"] = "Beacons would be disabled."
     else:
         _beacons = list_(return_yaml=False, **kwargs)
         if name not in _beacons:
@@ -724,6 +734,7 @@ def disable_beacon(name, **kwargs):
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
+            ret["result"] = False
             ret["comment"] = "Event module not available. Beacon disable job failed."
     return ret
 
@@ -762,9 +773,14 @@ def reset(**kwargs):
                         if ret is not None:
                             ret["comment"] = event_ret["comment"]
                         else:
-                            ret["comment"] = "Beacon reset event never received"
+                            ret[
+                                "comment"
+                            ] = "Did not receive the beacon reset event before the timeout of {}s".format(
+                                kwargs.get("timeout", default_event_wait)
+                            )
                     return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
-            ret["comment"] = "Event module not available. Beacon disable job failed."
+            ret["result"] = False
+            ret["comment"] = "Event module not available. Beacon reset job failed."
     return ret

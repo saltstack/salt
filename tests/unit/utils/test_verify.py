@@ -6,6 +6,7 @@ Test the verification routines
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import ctypes
 import getpass
 import os
 import shutil
@@ -24,6 +25,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 from salt.utils.verify import (
     check_max_open_files,
     check_user,
+    clean_path,
     log,
     valid_id,
     verify_env,
@@ -37,8 +39,16 @@ from tests.support.helpers import TstSuiteLoggingHandler, requires_network
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
+# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
+
+# Import third party libs
+if sys.platform.startswith("win"):
+    import win32file
+else:
+    import resource
+
 
 # Import third party libs
 if sys.platform.startswith("win"):
@@ -317,3 +327,81 @@ class TestVerifyLog(TestCase):
         self.assertFalse(os.path.exists(path))
         verify_log_files([path], getpass.getuser())
         self.assertTrue(os.path.exists(path))
+
+
+class TestCleanPath(TestCase):
+    """
+    salt.utils.clean_path works as expected
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_clean_path_valid(self):
+        path_a = os.path.join(self.tmpdir, "foo")
+        path_b = os.path.join(self.tmpdir, "foo", "bar")
+        assert clean_path(path_a, path_b) == path_b
+
+    def test_clean_path_invalid(self):
+        path_a = os.path.join(self.tmpdir, "foo")
+        path_b = os.path.join(self.tmpdir, "baz", "bar")
+        assert clean_path(path_a, path_b) == ""
+
+
+__CSL = None
+
+
+def symlink(source, link_name):
+    """
+    symlink(source, link_name) Creates a symbolic link pointing to source named
+    link_name
+    """
+    global __CSL
+    if __CSL is None:
+        csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+        csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+        csl.restype = ctypes.c_ubyte
+        __CSL = csl
+    flags = 0
+    if source is not None and os.path.isdir(source):
+        flags = 1
+    if __CSL(link_name, source, flags) == 0:
+        raise ctypes.WinError()
+
+
+@skipIf(six.PY2 and salt.utils.platform.is_windows(), "Skipped on windows py2")
+class TestCleanPathLink(TestCase):
+    """
+    Ensure salt.utils.clean_path works with symlinked directories and files
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.to_path = os.path.join(self.tmpdir, "linkto")
+        self.from_path = os.path.join(self.tmpdir, "linkfrom")
+        if six.PY2 or salt.utils.platform.is_windows():
+            kwargs = {}
+        else:
+            kwargs = {"target_is_directory": True}
+        if salt.utils.platform.is_windows():
+            symlink(self.to_path, self.from_path, **kwargs)
+        else:
+            os.symlink(self.to_path, self.from_path, **kwargs)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_clean_path_symlinked_src(self):
+        test_path = os.path.join(self.from_path, "test")
+        expect_path = os.path.join(self.to_path, "test")
+        ret = clean_path(self.from_path, test_path)
+        assert ret == expect_path, "{} is not {}".format(ret, expect_path)
+
+    def test_clean_path_symlinked_tgt(self):
+        test_path = os.path.join(self.to_path, "test")
+        expect_path = os.path.join(self.to_path, "test")
+        ret = clean_path(self.from_path, test_path)
+        assert ret == expect_path, "{} is not {}".format(ret, expect_path)

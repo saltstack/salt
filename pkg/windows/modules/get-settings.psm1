@@ -14,15 +14,15 @@ Function Get-Settings {
 
         # Location where the files are kept
         $Settings = @{
-            "SaltRepo"    = "https://repo.saltstack.com/windows/dependencies"
-            "SaltDir"     = "C:\salt"
-            "Python2Dir"   = "C:\Python27"
-            "Scripts2Dir"  = "C:\Python27\Scripts"
-            "SitePkgs2Dir" = "C:\Python27\Lib\site-packages"
-            "Python3Dir"   = "C:\Python35"
-            "Scripts3Dir"  = "C:\Python35\Scripts"
-            "SitePkgs3Dir" = "C:\Python35\Lib\site-packages"
-            "DownloadDir" = "$env:Temp\DevSalt"
+            "SrcDir"       = "$env:SrcDir"
+            "SaltRepo"     = "https://repo.saltstack.com/windows/dependencies"
+            "SaltDir"      = "C:\salt"
+            "PyVerMajor"   = "$env:PyVerMajor"
+            "PyVerMinor"   = "$env:PyVerMinor"
+            "Python3Dir"   = "$env:PyDir"
+            "Scripts3Dir"  = "$env:PyDir\Scripts"
+            "SitePkgs3Dir" = "$env:PyDir\Lib\site-packages"
+            "DownloadDir"  = "$env:Temp\DevSalt"
             }
 
         $ini.Add("Settings", $Settings)
@@ -30,15 +30,19 @@ Function Get-Settings {
 
         # Prerequisite software
         $Prerequisites = @{
-            "NSIS"           = "nsis-3.03-setup.exe"
-            "VCforPython"    = "VCForPython27.msi"
-            "VCppBuildTools" = "visualcppbuildtools_full.exe"
+            "NSIS"             = "nsis-3.03-setup.exe"
+            "NSISPluginEnVar"  = "nsis-plugin-envar.zip"
+            "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
+            "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
+            "VCppBuildTools"   = "visualcppbuildtools_full.exe"
         }
         $ini.Add("Prerequisites", $Prerequisites)
 
         # Location of programs on 64 bit Windows
         $64bitPaths = @{
             "NSISDir"           = "C:\Program Files (x86)\NSIS"
+            "NSISPluginsDirA"   = "C:\Program Files (x86)\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"   = "C:\Program Files (x86)\NSIS\Plugins\x86-unicode"
             "VCforPythonDir"    = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0"
             "VCppBuildToolsDir" = "C:\Program Files (x86)\Microsoft Visual C++ Build Tools"
         }
@@ -47,6 +51,8 @@ Function Get-Settings {
         # Location of programs on 32 bit Windows
         $32bitPaths = @{
             "NSISDir"           = "C:\Program Files\NSIS"
+            "NSISPluginsDirA"   = "C:\Program Files\NSIS\Plugins\x86-ansi"
+            "NSISPluginsDirU"   = "C:\Program Files\NSIS\Plugins\x86-unicode"
             "VCforPythonDir"    = "C:\Program Files\Common Files\Microsoft\Visual C++ for Python\9.0"
             "VCppBuildToolsDir" = "C:\Program Files\Microsoft Visual C++ Build Tools"
         }
@@ -54,15 +60,17 @@ Function Get-Settings {
 
         # Filenames for 64 bit Windows
         $64bitPrograms = @{
-            "Python2"   = "python-2.7.15.amd64.msi"
-            "Python3"   = "python-3.5.4-amd64.exe"
+            "Python3"     = "python-3.7.4-amd64.exe"
+            "VCRedist"    = "vcredist_x64_2013.exe"
+            "VCRedistReg" = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
         }
         $ini.Add("64bitPrograms", $64bitPrograms)
 
         # Filenames for 32 bit Windows
         $32bitPrograms = @{
-            "Python2"   = "python-2.7.15.msi"
-            "Python3"   = "python-3.5.4.exe"
+            "Python3"     = "python-3.7.4.exe"
+            "VCRedist"    = "vcredist_x86_2013.exe"
+            "VCRedistReg" = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
         }
         $ini.Add("32bitPrograms", $32bitPrograms)
 
@@ -71,7 +79,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "msvcr"      = "msvcr120.dll"
             "Libsodium"  = "libsodium.dll"
         }
         $ini.Add("64bitDLLs", $64bitDLLs)
@@ -81,7 +88,6 @@ Function Get-Settings {
             "Libeay"     = "libeay32.dll"
             "SSLeay"     = "ssleay32.dll"
             "OpenSSLLic" = "OpenSSL_License.txt"
-            "msvcr"      = "msvcr120.dll"
             "Libsodium"  = "libsodium.dll"
         }
         $ini.Add("32bitDLLs", $32bitDLLs)

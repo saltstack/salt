@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Dave Rawks (dave@pandora.com)
 
@@ -8,7 +7,6 @@
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.parted_partition as parted
 
@@ -438,4 +436,49 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             self.cmdrun.assert_called_once_with(
                 ["parted", "-m", "-s", "/dev/sda", "disk_toggle", "pmbr_boot"]
             )
+            assert output == []
+
+    def test__is_fstype(self):
+        assert parted._is_fstype("fat")
+        assert not parted._is_fstype("thicc")
+
+    def test_mkpart_without_fstype(self):
+        """Test if mkpart works with an empty fstype"""
+        cmd = (
+            "parted",
+            "-m",
+            "-s",
+            "--",
+            "/dev/nothinghere",
+            "mkpart",
+            "primary",
+            "",
+            "",
+        )
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            self.cmdrun.return_value = ""
+            output = parted.mkpart("/dev/nothinghere", "primary")
+            self.cmdrun.assert_called_once_with(cmd, python_shell=False)
+            assert output == []
+
+    def test_mkpartfs_to_mkpart(self):
+        """Test if mkpart got all arguments from mkpartfs"""
+        cmd = (
+            "parted",
+            "-m",
+            "-s",
+            "--",
+            "/dev/nothinghere",
+            "mkpart",
+            "primary",
+            "ext3",
+            "1",
+            "2",
+        )
+        with patch("salt.modules.parted_partition._validate_device", MagicMock()):
+            self.cmdrun.return_value = ""
+            output = parted.mkpartfs(
+                "/dev/nothinghere", "primary", fs_type="ext3", start="1", end="2"
+            )
+            self.cmdrun.assert_called_once_with(cmd, python_shell=False)
             assert output == []

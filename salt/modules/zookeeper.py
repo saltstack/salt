@@ -85,7 +85,7 @@ __virtualname__ = "zookeeper"
 def __virtual__():
     if HAS_KAZOO:
         return __virtualname__
-    return False
+    return (False, "Missing dependency: kazoo")
 
 
 def _get_zk_conn(profile=None, **connection_args):

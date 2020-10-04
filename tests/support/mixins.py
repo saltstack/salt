@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,10 +7,6 @@
 
     Some reusable class Mixins
 """
-# pylint: disable=repr-flag-used-in-string
-
-# Import python libs
-from __future__ import absolute_import, print_function
 
 import atexit
 import copy
@@ -21,13 +16,9 @@ import multiprocessing
 import os
 import pprint
 import subprocess
-import sys
 import tempfile
 import time
-import types
-from collections import OrderedDict
 
-# Import salt libs
 import salt.config
 import salt.exceptions
 import salt.utils.event
@@ -39,27 +30,27 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 from salt._compat import ElementTree as etree
-
-# Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.queue import (  # pylint: disable=import-error,no-name-in-module
-    Empty,
-)
+from salt.ext.six.moves import zip
+from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-
-# Import Salt Testing Libs
-from tests.support.mock import patch
+from saltfactories.utils import random_string
 from tests.support.paths import CODE_DIR
+from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
+
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 log = logging.getLogger(__name__)
 
 
-class CheckShellBinaryNameAndVersionMixin(object):
+class CheckShellBinaryNameAndVersionMixin:
     """
-    Simple class mix-in to subclass in companion to :class:`ShellTestCase<tests.support.case.ShellTestCase>` which
+    Simple class mix-in to subclass in companion to :class:`ShellCase<tests.support.case.ShellCase>` which
     adds a test case to verify proper version report from Salt's CLI tools.
     """
 
@@ -90,7 +81,7 @@ class CheckShellBinaryNameAndVersionMixin(object):
         self.assertIn(self._call_binary_expected_version_, out)
 
 
-class AdaptedConfigurationTestCaseMixin(object):
+class AdaptedConfigurationTestCaseMixin:
 
     __slots__ = ()
 
@@ -99,6 +90,8 @@ class AdaptedConfigurationTestCaseMixin(object):
         rootdir = config_overrides.get(
             "root_dir", tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         )
+        if not os.path.exists(rootdir):
+            os.makedirs(rootdir)
         conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
         for key in ("cachedir", "pki_dir", "sock_dir"):
             if key not in config_overrides:
@@ -116,7 +109,17 @@ class AdaptedConfigurationTestCaseMixin(object):
         if config_for in ("master", "client_config"):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == "minion":
-            rdict = salt.config.apply_minion_config(config_overrides, cdict)
+            minion_id = (
+                config_overrides.get("id")
+                or config_overrides.get("minion_id")
+                or cdict.get("id")
+                or cdict.get("minion_id")
+                or random_string("temp-minion-")
+            )
+            config_overrides["minion_id"] = config_overrides["id"] = minion_id
+            rdict = salt.config.apply_minion_config(
+                config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
+            )
 
         verify_env(
             [
@@ -152,7 +155,8 @@ class AdaptedConfigurationTestCaseMixin(object):
                 )
             elif config_for in ("minion", "sub_minion"):
                 return salt.config.minion_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
+                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
+                    cache_minion_id=False,
                 )
             elif config_for in ("syndic",):
                 return salt.config.syndic_config(
@@ -210,6 +214,10 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_config_file_path(filename):
+        if filename == "master":
+            return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+        if filename == "minion":
+            return os.path.join(RUNTIME_VARS.TMP_MINION_CONF_DIR, filename)
         if filename == "syndic_master":
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR, "master")
         if filename == "syndic":
@@ -221,9 +229,9 @@ class AdaptedConfigurationTestCaseMixin(object):
         if filename == "mm_sub_master":
             return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "master")
         if filename == "mm_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_MINION_CONF_DIR, "minion")
         if filename == "mm_sub_minion":
-            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, "minion")
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR, "minion")
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property
@@ -390,7 +398,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         if not out:
             self.skipTest(
                 "Failed to get the output of 'git describe'. "
-                "Error: '{0}'".format(salt.utils.stringutils.to_str(err))
+                "Error: '{}'".format(salt.utils.stringutils.to_str(err))
             )
 
         parsed_version = SaltStackVersion.parse(out)
@@ -398,7 +406,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         if parsed_version.info < __version_info__:
             self.skipTest(
                 "We're likely about to release a new version. This test "
-                "would fail. Parsed('{0}') < Expected('{1}')".format(
+                "would fail. Parsed('{}') < Expected('{}')".format(
                     parsed_version.info, __version_info__
                 )
             )
@@ -423,9 +431,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
 
     def __new__(mcs, cls_name, cls_bases, cls_dict):
         if cls_name == "LoaderModuleMockMixin":
-            return super(_FixLoaderModuleMockMixinMroOrder, mcs).__new__(
-                mcs, cls_name, cls_bases, cls_dict
-            )
+            return super().__new__(mcs, cls_name, cls_bases, cls_dict)
         bases = list(cls_bases)
         for idx, base in enumerate(bases):
             if base.__name__ == "LoaderModuleMockMixin":
@@ -433,9 +439,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
                 break
 
         # Create the class instance
-        instance = super(_FixLoaderModuleMockMixinMroOrder, mcs).__new__(
-            mcs, cls_name, tuple(bases), cls_dict
-        )
+        instance = super().__new__(mcs, cls_name, tuple(bases), cls_dict)
 
         # Apply our setUp function decorator
         instance.setUp = LoaderModuleMockMixin.__setup_loader_modules_mocks__(
@@ -444,9 +448,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
         return instance
 
 
-class LoaderModuleMockMixin(
-    six.with_metaclass(_FixLoaderModuleMockMixinMroOrder, object)
-):
+class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
     """
     This class will setup salt loader dunders.
 
@@ -467,122 +469,9 @@ class LoaderModuleMockMixin(
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            salt_dunders = (
-                "__opts__",
-                "__salt__",
-                "__runner__",
-                "__context__",
-                "__utils__",
-                "__ext_pillar__",
-                "__thorium__",
-                "__states__",
-                "__serializers__",
-                "__ret__",
-                "__grains__",
-                "__pillar__",
-                "__sdb__",
-                # Proxy is commented out on purpose since some code in salt expects a NameError
-                # and is most of the time not a required dunder
-                # '__proxy__'
-            )
-
-            for module, module_globals in six.iteritems(loader_modules_configs):
-                if not isinstance(module, types.ModuleType):
-                    raise RuntimeError(
-                        "The dictionary keys returned by {}.setup_loader_modules() "
-                        "must be an imported module, not {}".format(
-                            self.__class__.__name__, type(module)
-                        )
-                    )
-                if not isinstance(module_globals, dict):
-                    raise RuntimeError(
-                        "The dictionary values returned by {}.setup_loader_modules() "
-                        "must be a dictionary, not {}".format(
-                            self.__class__.__name__, type(module_globals)
-                        )
-                    )
-
-                module_blacklisted_dunders = module_globals.pop(
-                    "blacklisted_dunders", ()
-                )
-
-                minion_funcs = {}
-                if (
-                    "__salt__" in module_globals
-                    and module_globals["__salt__"] == "autoload"
-                ):
-                    if "__opts__" not in module_globals:
-                        raise RuntimeError(
-                            "You must provide '__opts__' on the {} module globals dictionary "
-                            "to auto load the minion functions".format(module.__name__)
-                        )
-                    import salt.loader
-
-                    ctx = {}
-                    if "__utils__" not in module_globals:
-                        utils = salt.loader.utils(
-                            module_globals["__opts__"],
-                            context=module_globals.get("__context__") or ctx,
-                        )
-                        module_globals["__utils__"] = utils
-                    minion_funcs = salt.loader.minion_mods(
-                        module_globals["__opts__"],
-                        context=module_globals.get("__context__") or ctx,
-                        utils=module_globals.get("__utils__"),
-                    )
-                    module_globals["__salt__"] = minion_funcs
-
-                for dunder_name in salt_dunders:
-                    if dunder_name not in module_globals:
-                        if dunder_name in module_blacklisted_dunders:
-                            continue
-                        module_globals[dunder_name] = {}
-
-                sys_modules = module_globals.pop("sys.modules", None)
-                if sys_modules is not None:
-                    if not isinstance(sys_modules, dict):
-                        raise RuntimeError(
-                            "'sys.modules' must be a dictionary not: {}".format(
-                                type(sys_modules)
-                            )
-                        )
-                    patcher = patch.dict(sys.modules, sys_modules)
-                    patcher.start()
-
-                    def cleanup_sys_modules(patcher, sys_modules):
-                        patcher.stop()
-                        del patcher
-                        del sys_modules
-
-                    self.addCleanup(cleanup_sys_modules, patcher, sys_modules)
-
-                for key in module_globals:
-                    if not hasattr(module, key):
-                        if key in salt_dunders:
-                            setattr(module, key, {})
-                        else:
-                            setattr(module, key, None)
-
-                if module_globals:
-                    patcher = patch.multiple(module, **module_globals)
-                    patcher.start()
-
-                    def cleanup_module_globals(patcher, module_globals):
-                        patcher.stop()
-                        del patcher
-                        del module_globals
-
-                    self.addCleanup(cleanup_module_globals, patcher, module_globals)
-
-                if minion_funcs:
-                    # Since we autoloaded the minion_funcs, let's namespace the functions with the globals
-                    # used to patch above
-                    import salt.utils
-
-                    for func in minion_funcs:
-                        minion_funcs[func] = salt.utils.functools.namespaced_function(
-                            minion_funcs[func], module_globals, preserve_context=True
-                        )
+            mocker = LoaderModuleMock(loader_modules_configs)
+            mocker.start()
+            self.addCleanup(mocker.stop)
             return setup_func(self)
 
         return wrapper
@@ -595,15 +484,15 @@ class LoaderModuleMockMixin(
         )
 
 
-class XMLEqualityMixin(object):
+class XMLEqualityMixin:
     def assertEqualXML(self, e1, e2):
         if six.PY3 and isinstance(e1, bytes):
             e1 = e1.decode("utf-8")
         if six.PY3 and isinstance(e2, bytes):
             e2 = e2.decode("utf-8")
-        if isinstance(e1, six.string_types):
+        if isinstance(e1, str):
             e1 = etree.XML(e1)
-        if isinstance(e2, six.string_types):
+        if isinstance(e2, str):
             e2 = etree.XML(e2)
         if e1.tag != e2.tag:
             return False
@@ -618,13 +507,13 @@ class XMLEqualityMixin(object):
         return all(self.assertEqualXML(c1, c2) for c1, c2 in zip(e1, e2))
 
 
-class SaltReturnAssertsMixin(object):
+class SaltReturnAssertsMixin:
     def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
             raise AssertionError(
-                "{0} is not dict. Salt returned: {1}".format(type(ret).__name__, ret)
+                "{} is not dict. Salt returned: {}".format(type(ret).__name__, ret)
             )
 
     def assertReturnNonEmptySaltType(self, ret):
@@ -640,7 +529,7 @@ class SaltReturnAssertsMixin(object):
         if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif isinstance(keys, six.string_types):
+        elif isinstance(keys, str):
             # If it's a string, make it a one item list
             keys = [keys]
         elif not isinstance(keys, list):
@@ -651,15 +540,15 @@ class SaltReturnAssertsMixin(object):
     def __getWithinSaltReturn(self, ret, keys):
         self.assertReturnNonEmptySaltType(ret)
         ret_data = []
-        for part in six.itervalues(ret):
+        for part in ret.values():
             keys = self.__return_valid_keys(keys)
             okeys = keys[:]
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
                 raise AssertionError(
-                    "Could not get ret{0} from salt's return: {1}".format(
-                        "".join(["['{0}']".format(k) for k in keys]), part
+                    "Could not get ret{} from salt's return: {}".format(
+                        "".join(["['{}']".format(k) for k in keys]), part
                     )
                 )
             while okeys:
@@ -667,8 +556,8 @@ class SaltReturnAssertsMixin(object):
                     ret_item = ret_item[okeys.pop(0)]
                 except (KeyError, TypeError):
                     raise AssertionError(
-                        "Could not get ret{0} from salt's return: {1}".format(
-                            "".join(["['{0}']".format(k) for k in keys]), part
+                        "Could not get ret{} from salt's return: {}".format(
+                            "".join(["['{}']".format(k) for k in keys]), part
                         )
                     )
             ret_data.append(ret_item)
@@ -679,16 +568,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertTrue(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned:\n{0}".format(
+                    "Failed to get result. Salt Returned:\n{}".format(
                         pprint.pformat(ret)
                     )
                 )
@@ -698,16 +587,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertFalse(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned: {0}".format(ret)
+                    "Failed to get result. Salt Returned: {}".format(ret)
                 )
 
     def assertSaltNoneReturn(self, ret):
@@ -715,16 +604,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertIsNone(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned: {0}".format(ret)
+                    "Failed to get result. Salt Returned: {}".format(ret)
                 )
 
     def assertInSaltComment(self, in_comment, ret):
@@ -800,7 +689,7 @@ def _fetch_events(q, opts):
         q.put(events)
 
 
-class SaltMinionEventAssertsMixin(object):
+class SaltMinionEventAssertsMixin:
     """
     Asserts to verify that a given event was seen
     """
@@ -850,5 +739,5 @@ class SaltMinionEventAssertsMixin(object):
                 break
         self.fetch_proc.terminate()
         raise AssertionError(
-            "Event {0} was not received by minion".format(desired_event)
+            "Event {} was not received by minion".format(desired_event)
         )

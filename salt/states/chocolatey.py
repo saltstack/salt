@@ -24,7 +24,9 @@ def __virtual__():
     """
     Load only if chocolatey is loaded
     """
-    return "chocolatey" if "chocolatey.install" in __salt__ else False
+    if "chocolatey.install" in __salt__:
+        return "chocolatey"
+    return (False, "chocolatey module could not be loaded")
 
 
 def installed(
@@ -38,6 +40,7 @@ def installed(
     force_x86=False,
     package_args=None,
     allow_multiple=False,
+    execution_timeout=None,
 ):
     """
     Installs a package if not already installed
@@ -84,6 +87,10 @@ def installed(
             with ``force``. Does not work with all packages. Default is False.
 
             .. versionadded:: 2017.7.0
+
+        execution_timeout (str):
+            Chocolatey execution timeout value you want to pass to the
+            installation process. Default is None.
 
     .. code-block:: yaml
 
@@ -190,6 +197,7 @@ def installed(
         force_x86=force_x86,
         package_args=package_args,
         allow_multiple=allow_multiple,
+        execution_timeout=execution_timeout,
     )
 
     if "Running chocolatey failed" not in result:

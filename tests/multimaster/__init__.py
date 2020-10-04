@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """
 Set up the Salt multimaster test suite
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function
 
 import copy
 import logging
@@ -15,7 +12,6 @@ import stat
 import sys
 import threading
 import time
-from collections import OrderedDict
 
 import salt.config
 import salt.log.setup as salt_log_setup
@@ -48,6 +44,11 @@ from tests.support.paths import (
 from tests.support.processes import SaltMaster, SaltMinion, start_daemon
 from tests.support.runtests import RUNTIME_VARS
 
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
+
 log = logging.getLogger(__name__)
 
 
@@ -70,7 +71,7 @@ class MultimasterTestDaemon(TestDaemon):
         self._enter_mockbin()
 
         self.master_targets = [self.mm_master_opts, self.mm_sub_master_opts]
-        self.minion_targets = set(["mm-minion", "mm-sub-minion"])
+        self.minion_targets = {"mm-minion", "mm-sub-minion"}
 
         if self.parser.options.transport == "zeromq":
             self.start_zeromq_daemons()
@@ -202,7 +203,7 @@ class MultimasterTestDaemon(TestDaemon):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -214,7 +215,7 @@ class MultimasterTestDaemon(TestDaemon):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -255,7 +256,7 @@ class MultimasterTestDaemon(TestDaemon):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -267,7 +268,7 @@ class MultimasterTestDaemon(TestDaemon):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -297,7 +298,7 @@ class MultimasterTestDaemon(TestDaemon):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -309,7 +310,7 @@ class MultimasterTestDaemon(TestDaemon):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -343,7 +344,7 @@ class MultimasterTestDaemon(TestDaemon):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -355,7 +356,7 @@ class MultimasterTestDaemon(TestDaemon):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -422,7 +423,7 @@ class MultimasterTestDaemon(TestDaemon):
         os.makedirs(RUNTIME_VARS.TMP_MM_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR)
         print(
-            " * Transplanting multimaster configuration files to '{0}'".format(
+            " * Transplanting multimaster configuration files to '{}'".format(
                 RUNTIME_VARS.TMP_CONF_DIR
             )
         )
@@ -604,11 +605,11 @@ class MultimasterTestDaemon(TestDaemon):
                 opts_dict["ext_pillar"] = []
             if salt.utils.platform.is_windows():
                 opts_dict["ext_pillar"].append(
-                    {"cmd_yaml": "type {0}".format(os.path.join(FILES, "ext.yaml"))}
+                    {"cmd_yaml": "type {}".format(os.path.join(FILES, "ext.yaml"))}
                 )
             else:
                 opts_dict["ext_pillar"].append(
-                    {"cmd_yaml": "cat {0}".format(os.path.join(FILES, "ext.yaml"))}
+                    {"cmd_yaml": "cat {}".format(os.path.join(FILES, "ext.yaml"))}
                 )
 
         # all read, only owner write
@@ -642,7 +643,7 @@ class MultimasterTestDaemon(TestDaemon):
 
         # Point the config values to the correct temporary paths
         for name in ("hosts", "aliases"):
-            optname = "{0}.file".format(name)
+            optname = "{}.file".format(name)
             optname_path = os.path.join(TMP, name)
             master_opts[optname] = optname_path
             sub_master_opts[optname] = optname_path

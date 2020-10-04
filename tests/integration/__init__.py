@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Set up the Salt integration test suite
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function
 
 import atexit
 import copy
@@ -26,7 +21,6 @@ import threading
 import time
 from datetime import datetime, timedelta
 
-# Import Salt libs
 import salt
 import salt.config
 import salt.log.setup as salt_log_setup
@@ -44,12 +38,9 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.version
 from salt.exceptions import SaltClientError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
-from tests.support.case import ShellTestCase
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import RedirectStdStreams, requires_sshd_server
 from tests.support.mixins import (
@@ -63,8 +54,6 @@ from tests.support.mixins import (
 from tests.support.parser import PNUM, SaltTestcaseParser, print_header
 from tests.support.paths import *  # pylint: disable=wildcard-import
 from tests.support.processes import *  # pylint: disable=wildcard-import
-
-# Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -133,18 +122,18 @@ class ThreadingMixIn(socketserver.ThreadingMixIn):
     daemon_threads = False
 
 
-class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer, object):
+class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
     allow_reuse_address = True
 
     def server_activate(self):
         self.shutting_down = threading.Event()
-        super(ThreadedSocketServer, self).server_activate()
+        super().server_activate()
 
     def server_close(self):
         if hasattr(self, "shutting_down"):
             self.shutting_down.set()
-        super(ThreadedSocketServer, self).server_close()
+        super().server_close()
 
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
@@ -163,7 +152,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     del record_dict
             except (EOFError, KeyboardInterrupt, SystemExit):
                 break
-            except socket.error as exc:
+            except OSError as exc:
                 try:
                     if exc.errno == errno.WSAECONNRESET:
                         # Connection reset on windows
@@ -182,7 +171,7 @@ class TestDaemonStartFailed(Exception):
     """
 
 
-class TestDaemon(object):
+class TestDaemon:
     """
     Set up the master and minion daemons, and run related cases
     """
@@ -209,7 +198,7 @@ class TestDaemon(object):
         # Set up PATH to mockbin
         self._enter_mockbin()
 
-        self.minion_targets = set(["minion", "sub_minion"])
+        self.minion_targets = {"minion", "sub_minion"}
 
         if self.parser.options.transport == "zeromq":
             self.start_zeromq_daemons()
@@ -294,7 +283,7 @@ class TestDaemon(object):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -306,7 +295,7 @@ class TestDaemon(object):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -337,7 +326,7 @@ class TestDaemon(object):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -349,7 +338,7 @@ class TestDaemon(object):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -384,7 +373,7 @@ class TestDaemon(object):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -396,7 +385,7 @@ class TestDaemon(object):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -432,7 +421,7 @@ class TestDaemon(object):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -444,7 +433,7 @@ class TestDaemon(object):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -475,7 +464,7 @@ class TestDaemon(object):
                 start_timeout=120,
             )
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -487,7 +476,7 @@ class TestDaemon(object):
             sys.stdout.flush()
         except (RuntimeWarning, RuntimeError):
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -521,7 +510,7 @@ class TestDaemon(object):
                     start_timeout=120,
                 )
                 sys.stdout.write(
-                    "\r{0}\r".format(
+                    "\r{}\r".format(
                         " " * getattr(self.parser.options, "output_columns", PNUM)
                     )
                 )
@@ -533,7 +522,7 @@ class TestDaemon(object):
                 sys.stdout.flush()
             except (RuntimeWarning, RuntimeError):
                 sys.stdout.write(
-                    "\r{0}\r".format(
+                    "\r{}\r".format(
                         " " * getattr(self.parser.options, "output_columns", PNUM)
                     )
                 )
@@ -604,7 +593,7 @@ class TestDaemon(object):
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
             print(
-                "ssh-keygen had errors: {0}".format(
+                "ssh-keygen had errors: {}".format(
                     salt.utils.stringutils.to_str(keygen_err)
                 )
             )
@@ -662,7 +651,7 @@ class TestDaemon(object):
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
             print(
-                "ssh-keygen had errors: {0}".format(
+                "ssh-keygen had errors: {}".format(
                     salt.utils.stringutils.to_str(keygen_dsa_err)
                 )
             )
@@ -689,7 +678,7 @@ class TestDaemon(object):
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
             print(
-                "ssh-keygen had errors: {0}".format(
+                "ssh-keygen had errors: {}".format(
                     salt.utils.stringutils.to_str(keygen_escda_err)
                 )
             )
@@ -716,7 +705,7 @@ class TestDaemon(object):
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
             print(
-                "ssh-keygen had errors: {0}".format(
+                "ssh-keygen had errors: {}".format(
                     salt.utils.stringutils.to_str(keygen_ed25519_err)
                 )
             )
@@ -724,17 +713,17 @@ class TestDaemon(object):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "sshd_config"), "a"
         ) as ssh_config:
-            ssh_config.write("AuthorizedKeysFile {0}\n".format(auth_key_file))
+            ssh_config.write("AuthorizedKeysFile {}\n".format(auth_key_file))
             if not keygen_dsa_err:
-                ssh_config.write("HostKey {0}\n".format(server_dsa_priv_key_file))
+                ssh_config.write("HostKey {}\n".format(server_dsa_priv_key_file))
             if not keygen_escda_err:
-                ssh_config.write("HostKey {0}\n".format(server_ecdsa_priv_key_file))
+                ssh_config.write("HostKey {}\n".format(server_ecdsa_priv_key_file))
             if not keygen_ed25519_err:
-                ssh_config.write("HostKey {0}\n".format(server_ed25519_priv_key_file))
+                ssh_config.write("HostKey {}\n".format(server_ed25519_priv_key_file))
 
         self.sshd_pidfile = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "sshd.pid")
         self.sshd_process = subprocess.Popen(
-            [sshd, "-f", "sshd_config", "-o", "PidFile={0}".format(self.sshd_pidfile)],
+            [sshd, "-f", "sshd_config", "-o", "PidFile={}".format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -743,7 +732,7 @@ class TestDaemon(object):
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
             print(
-                "sshd had errors on startup: {0}".format(
+                "sshd had errors on startup: {}".format(
                     salt.utils.stringutils.to_str(sshd_err)
                 )
             )
@@ -753,10 +742,12 @@ class TestDaemon(object):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster"), "a"
         ) as roster:
-            roster.write("  user: {0}\n".format(RUNTIME_VARS.RUNNING_TESTS_USER))
+            roster.write("  user: {}\n".format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write(
-                "  priv: {0}/{1}".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+                "  priv: {}/{}\n".format(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
             )
+            if salt.utils.platform.is_darwin():
+                roster.write("  set_path: $PATH:/usr/local/bin/\n")
         sys.stdout.write(" {LIGHT_GREEN}STARTED!\n{ENDC}".format(**self.colors))
 
     @classmethod
@@ -806,7 +797,7 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
 
         print(
-            " * Transplanting configuration files to '{0}'".format(
+            " * Transplanting configuration files to '{}'".format(
                 RUNTIME_VARS.TMP_CONF_DIR
             )
         )
@@ -940,8 +931,9 @@ class TestDaemon(object):
         syndic_opts.update(
             salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic"))
         )
-        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
         syndic_opts["config_dir"] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
+        syndic_opts["cachedir"] = os.path.join(TMP, "rootdir", "cache")
+        syndic_opts["root_dir"] = os.path.join(TMP, "rootdir")
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, "proxy"))
@@ -1011,16 +1003,19 @@ class TestDaemon(object):
         master_opts.setdefault("reactor", []).append(
             {"salt/minion/*/start": [os.path.join(FILES, "reactor-sync-minion.sls")]}
         )
+        master_opts.setdefault("reactor", []).append(
+            {"salt/test/reactor": [os.path.join(FILES, "reactor-test.sls")]}
+        )
         for opts_dict in (master_opts, syndic_master_opts):
             if "ext_pillar" not in opts_dict:
                 opts_dict["ext_pillar"] = []
             if salt.utils.platform.is_windows():
                 opts_dict["ext_pillar"].append(
-                    {"cmd_yaml": "type {0}".format(os.path.join(FILES, "ext.yaml"))}
+                    {"cmd_yaml": "type {}".format(os.path.join(FILES, "ext.yaml"))}
                 )
             else:
                 opts_dict["ext_pillar"].append(
-                    {"cmd_yaml": "cat {0}".format(os.path.join(FILES, "ext.yaml"))}
+                    {"cmd_yaml": "cat {}".format(os.path.join(FILES, "ext.yaml"))}
                 )
 
         # all read, only owner write
@@ -1054,7 +1049,7 @@ class TestDaemon(object):
 
         # Point the config values to the correct temporary paths
         for name in ("hosts", "aliases"):
-            optname = "{0}.file".format(name)
+            optname = "{}.file".format(name)
             optname_path = os.path.join(TMP, name)
             master_opts[optname] = optname_path
             minion_opts[optname] = optname_path
@@ -1124,7 +1119,7 @@ class TestDaemon(object):
             "syndic_master",
             "proxy",
         ):
-            computed_config = copy.deepcopy(locals()["{0}_opts".format(entry)])
+            computed_config = copy.deepcopy(locals()["{}_opts".format(entry)])
             with salt.utils.files.fopen(
                 os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry), "w"
             ) as fp_:
@@ -1220,6 +1215,7 @@ class TestDaemon(object):
                 minion_opts["extension_modules"],
                 sub_minion_opts["extension_modules"],
                 sub_minion_opts["pki_dir"],
+                proxy_opts["pki_dir"],
                 master_opts["sock_dir"],
                 syndic_master_opts["sock_dir"],
                 sub_minion_opts["sock_dir"],
@@ -1356,7 +1352,7 @@ class TestDaemon(object):
         ):
             if os.path.isdir(dirname):
                 try:
-                    shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
+                    shutil.rmtree(str(dirname), onerror=remove_readonly)
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to remove directory: %s", dirname)
 
@@ -1368,7 +1364,7 @@ class TestDaemon(object):
         while now <= expire:
             running = self.__client_job_running(targets, jid)
             sys.stdout.write(
-                "\r{0}\r".format(
+                "\r{}\r".format(
                     " " * getattr(self.parser.options, "output_columns", PNUM)
                 )
             )
@@ -1383,7 +1379,7 @@ class TestDaemon(object):
             if job_finished is False:
                 sys.stdout.write(
                     "   * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}".format(
-                        "{0}".format(expire - now).rsplit(".", 1)[0],
+                        "{}".format(expire - now).rsplit(".", 1)[0],
                         ", ".join(running),
                         **self.colors
                     )
@@ -1401,7 +1397,7 @@ class TestDaemon(object):
 
     def __client_job_running(self, targets, jid):
         running = self.client.cmd(list(targets), "saltutil.running", tgt_type="list")
-        return [k for (k, v) in six.iteritems(running) if v and v[0]["jid"] == jid]
+        return [k for (k, v) in running.items() if v and v[0]["jid"] == jid]
 
     def sync_minion_modules_(self, modules_kind, targets, timeout=None):
         if not timeout:
@@ -1416,7 +1412,7 @@ class TestDaemon(object):
         syncing = set(targets)
         jid_info = self.client.run_job(
             list(targets),
-            "saltutil.sync_{0}".format(modules_kind),
+            "saltutil.sync_{}".format(modules_kind),
             tgt_type="list",
             timeout=999999999999999,
         )
@@ -1433,13 +1429,13 @@ class TestDaemon(object):
         while syncing:
             rdata = self.client.get_full_returns(jid_info["jid"], syncing, 1)
             if rdata:
-                for name, output in six.iteritems(rdata):
+                for name, output in rdata.items():
                     if not output["ret"]:
                         # Already synced!?
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output["ret"], six.string_types):
+                    if isinstance(output["ret"], str):
                         # An errors has occurred
                         print(
                             " {LIGHT_RED}*{ENDC} {0} Failed to sync {2}: "

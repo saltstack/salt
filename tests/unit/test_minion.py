@@ -1,31 +1,27 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
 
-# Import python libs
-from __future__ import absolute_import
-
 import copy
+import logging
 import os
 
 import salt.ext.tornado
 import salt.ext.tornado.testing
-
-# Import salt libs
 import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
 import salt.utils.process
-from salt.exceptions import SaltMasterUnresolvableError, SaltSystemExit
+from salt._compat import ipaddress
+from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from salt.ext.six.moves import range
-from tests.support.helpers import skip_if_not_root
+from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -84,6 +80,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
+    @slowTest
     def test_source_int_name_remote(self):
         """
         test when file_client remote and
@@ -123,6 +120,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "master_uri": "tcp://127.0.0.1:4555",
             }
 
+    @slowTest
     def test_source_address(self):
         """
         test when source_address is set
@@ -164,6 +162,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # Tests for _handle_decoded_payload in the salt.minion.Minion() class: 3
 
+    @slowTest
     def test_handle_decoded_payload_jid_match_in_jid_queue(self):
         """
         Tests that the _handle_decoded_payload function returns when a jid is given that is already present
@@ -189,6 +188,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    @slowTest
     def test_handle_decoded_payload_jid_queue_addition(self):
         """
         Tests that the _handle_decoded_payload function adds a jid to the minion's jid_queue when the new
@@ -225,6 +225,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm(self):
         """
         Tests that the _handle_decoded_payload function removes a jid from the minion's jid_queue when the
@@ -260,6 +261,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_process_count_max(self):
         """
         Tests that the _handle_decoded_payload function does not spawn more than the configured amount of processes,
@@ -324,6 +326,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_beacons_before_connect(self):
         """
         Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
@@ -356,6 +359,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_scheduler_before_connect(self):
         """
         Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
@@ -387,6 +391,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(
         self,
     ):
@@ -418,6 +423,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    @slowTest
     def test_when_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         mock_opts["start_event_grains"] = ["os"]
@@ -437,6 +443,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    @slowTest
     def test_when_not_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         io_loop = salt.ext.tornado.ioloop.IOLoop()
@@ -452,6 +459,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    @slowTest
     def test_when_other_events_fired_and_start_event_grains_are_set(self):
         mock_opts = self.get_config("minion", from_scratch=True)
         mock_opts["start_event_grains"] = ["os"]
@@ -468,6 +476,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    @slowTest
     def test_minion_retry_dns_count(self):
         """
         Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -487,6 +496,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 SaltMasterUnresolvableError, salt.minion.resolve_dns, self.opts
             )
 
+    @slowTest
     def test_gen_modules_executors(self):
         """
         Ensure gen_modules is called with the correct arguments #54429
@@ -496,7 +506,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         io_loop.make_current()
         minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
 
-        class MockPillarCompiler(object):
+        class MockPillarCompiler:
             def compile_pillar(self):
                 return {}
 
@@ -509,6 +519,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
     @patch("salt.utils.process.default_signals")
+    @slowTest
     def test_reinit_crypto_on_fork(self, def_mock):
         """
         Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
@@ -541,12 +552,117 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         ):
             io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
+    def test_minion_manage_schedule(self):
+        """
+        Tests that the manage_schedule will call the add function, adding
+        schedule data into opts.
+        """
+        with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+            "salt.minion.Minion.sync_connect_master",
+            MagicMock(side_effect=RuntimeError("stop execution")),
+        ), patch(
+            "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+            MagicMock(return_value=True),
+        ), patch(
+            "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+            MagicMock(return_value=True),
+        ):
+            mock_opts = self.get_config("minion", from_scratch=True)
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
+            io_loop.make_current()
+
+            with patch(
+                "salt.utils.schedule.clean_proc_dir", MagicMock(return_value=None)
+            ):
+                mock_functions = {"test.ping": None}
+
+                minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+                minion.schedule = salt.utils.schedule.Schedule(
+                    mock_opts, mock_functions, returners={}
+                )
+
+                schedule_data = {
+                    "test_job": {
+                        "function": "test.ping",
+                        "return_job": False,
+                        "jid_include": True,
+                        "maxrunning": 2,
+                        "seconds": 10,
+                    }
+                }
+
+                data = {"name": "test-item", "schedule": schedule_data, "func": "add"}
+                tag = "manage_schedule"
+
+                minion.manage_schedule(tag, data)
+                self.assertIn("test_job", minion.opts["schedule"])
+
+    def test_minion_manage_beacons(self):
+        """
+        Tests that the manage_beacons will call the add function, adding
+        beacon data into opts.
+        """
+        with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+            "salt.minion.Minion.sync_connect_master",
+            MagicMock(side_effect=RuntimeError("stop execution")),
+        ), patch(
+            "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+            MagicMock(return_value=True),
+        ), patch(
+            "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+            MagicMock(return_value=True),
+        ):
+            mock_opts = self.get_config("minion", from_scratch=True)
+            io_loop = salt.ext.tornado.ioloop.IOLoop()
+            io_loop.make_current()
+
+            mock_functions = {"test.ping": None}
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+            minion.beacons = salt.beacons.Beacon(mock_opts, mock_functions)
+
+            bdata = [{"salt-master": "stopped"}, {"apache2": "stopped"}]
+            data = {"name": "ps", "beacon_data": bdata, "func": "add"}
+
+            tag = "manage_beacons"
+
+            minion.manage_beacons(tag, data)
+            self.assertIn("ps", minion.opts["beacons"])
+            self.assertEqual(minion.opts["beacons"]["ps"], bdata)
+
+    def test_prep_ip_port(self):
+        _ip = ipaddress.ip_address
+
+        opts = {"master": "10.10.0.3", "master_uri_format": "ip_only"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": _ip("10.10.0.3")})
+
+        opts = {
+            "master": "10.10.0.3",
+            "master_port": 1234,
+            "master_uri_format": "default",
+        }
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3"})
+
+        opts = {"master": "10.10.0.3:1234", "master_uri_format": "default"}
+        ret = salt.minion.prep_ip_port(opts)
+        self.assertEqual(ret, {"master": "10.10.0.3", "master_port": 1234})
+
+        opts = {"master": "host name", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3:abcd", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
+        opts = {"master": "10.10.0.3::1234", "master_uri_format": "default"}
+        self.assertRaises(SaltClientError, salt.minion.prep_ip_port, opts)
+
 
 class MinionAsyncTestCase(
     TestCase, AdaptedConfigurationTestCaseMixin, salt.ext.tornado.testing.AsyncTestCase
 ):
     def setUp(self):
-        super(MinionAsyncTestCase, self).setUp()
+        super().setUp()
         self.opts = {}
         self.addCleanup(delattr, self, "opts")
 

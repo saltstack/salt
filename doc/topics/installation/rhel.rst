@@ -8,9 +8,8 @@ RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 
 Salt should work properly with all mainstream derivatives of Red Hat Enterprise
 Linux, including CentOS, Scientific Linux, Oracle Linux, and Amazon Linux.
-Report any bugs or issues on the `issue tracker`__.
-
-.. __: https://github.com/saltstack/salt/issues
+Report any bugs or issues on the `issue tracker 
+<https://github.com/saltstack/salt/issues>`__.
 
 Installation from the Official SaltStack Repository
 ===================================================
@@ -20,6 +19,43 @@ the SaltStack Repository.
 
 - `Red Hat / CentOS <https://repo.saltstack.com/#rhel>`_
 - `Amazon Linux <https://repo.saltstack.com/#amzn>`_
+
+.. note::
+    Archived builds from unsupported branches: 
+    
+    **Red Hat / CentOS**
+    
+    - `Archive 1 <https://archive.repo.saltstack.com/py3/redhat/>`__
+    - `Archive 2 <https://archive.repo.saltstack.com/yum/redhat/>`__
+
+    If looking to use archives, the same directions from the `RHEL/CentOS
+    install directions <https://repo.saltstack.com/#rhel>`__ can be used by
+    replacing the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/yum.repos.d/ directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/yum.repos.d/salt*.repo
+
+
+    **Amazon Linux**
+
+    - `Archive 1 <https://archive.repo.saltstack.com/py3/amazon/>`__
+    - `Archive 2 <https://archive.repo.saltstack.com/yum/amazon/>`__
+
+    If looking to use archives, the same directions from the `Amazon
+    install directions <https://repo.saltstack.com/#amzn>`__ can be used by
+    replacing the URL paths with the appropriate archive location. The
+    repository configuration endpoint also needs to be adjusted to point to the
+    archives. Here is an example ``sed`` command:
+
+    .. code-block:: bash
+
+        # Salt repo configurations are found in the /etc/yum.repos.d/ directory
+        sed -i 's/repo.saltstack.com/archive.repo.saltstack.com/g' /etc/yum.repos.d/salt*.repo
+
 
 .. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
@@ -53,9 +89,10 @@ Beginning with version 0.9.4, Salt has been available in `EPEL`_.
 
 .. note::
    Packages in this repository are built by community, and it can take a little
-   while until the latest stable SaltStack release become available.
+   while until the latest stable SaltStack release becomes available. Using the
+   SaltStack Repository is highly preferred, instead.
 
-.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
+.. _`EPEL`: https://fedoraproject.org/wiki/EPEL
 
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
@@ -124,7 +161,7 @@ will need to provide your own systemd service unit.
 
 Installation from pip:
 
-.. _`PyPI`: https://pypi.python.org/pypi/salt
+.. _`PyPI`: https://pypi.org/project/salt/
 
 .. code-block:: bash
 

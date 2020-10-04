@@ -10,7 +10,6 @@ file on the minions. By default, this file is located at: ``/etc/salt/grains``
    This does **NOT** override any grains set in the minion config file.
 """
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
@@ -19,6 +18,7 @@ import math
 import operator
 import os
 import random
+from collections.abc import Mapping
 from functools import reduce  # pylint: disable=redefined-builtin
 
 import salt.utils.compat
@@ -29,10 +29,6 @@ import salt.utils.platform
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-
-# Import Salt libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 __proxyenabled__ = ["*"]
 
@@ -163,7 +159,7 @@ def items(sanitize=False):
     """
     if salt.utils.data.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in six.iteritems(_SANITIZERS):
+        for key, func in _SANITIZERS.items():
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -201,19 +197,23 @@ def item(*args, **kwargs):
         pass
 
     if salt.utils.data.is_true(kwargs.get("sanitize")):
-        for arg, func in six.iteritems(_SANITIZERS):
+        for arg, func in _SANITIZERS.items():
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
 
 
-def setvals(grains, destructive=False):
+def setvals(grains, destructive=False, refresh_pillar=True):
     """
     Set new grains values in the grains config file
 
     destructive
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
+
+    refresh_pillar
+        Whether pillar will be refreshed.
+        Defaults to True.
 
     CLI Example:
 
@@ -222,7 +222,7 @@ def setvals(grains, destructive=False):
         salt '*' grains.setvals "{'key1': 'val1', 'key2': 'val2'}"
     """
     new_grains = grains
-    if not isinstance(new_grains, collections.Mapping):
+    if not isinstance(new_grains, Mapping):
         raise SaltException("setvals grains must be a dictionary.")
     grains = {}
     if os.path.isfile(__opts__["conf_file"]):
@@ -261,7 +261,7 @@ def setvals(grains, destructive=False):
                 return "Unable to read existing grains file: {0}".format(exc)
         if not isinstance(grains, dict):
             grains = {}
-    for key, val in six.iteritems(new_grains):
+    for key, val in new_grains.items():
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
@@ -271,7 +271,7 @@ def setvals(grains, destructive=False):
             grains[key] = val
             __grains__[key] = val
     try:
-        with salt.utils.files.fopen(gfn, "w+") as fp_:
+        with salt.utils.files.fopen(gfn, "w+", encoding="utf-8") as fp_:
             salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
     except (IOError, OSError):
         log.error("Unable to write to grains file at %s. Check permissions.", gfn)
@@ -283,12 +283,12 @@ def setvals(grains, destructive=False):
         log.error("Unable to write to cache file %s. Check permissions.", fn_)
     if not __opts__.get("local", False):
         # Refresh the grains
-        __salt__["saltutil.refresh_grains"]()
+        __salt__["saltutil.refresh_grains"](refresh_pillar=refresh_pillar)
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
 
-def setval(key, val, destructive=False):
+def setval(key, val, destructive=False, refresh_pillar=True):
     """
     Set a grains value in the grains config file
 
@@ -302,6 +302,10 @@ def setval(key, val, destructive=False):
         If an operation results in a key being removed, delete the key, too.
         Defaults to False.
 
+    refresh_pillar
+        Whether pillar will be refreshed.
+        Defaults to True.
+
     CLI Example:
 
     .. code-block:: bash
@@ -309,7 +313,7 @@ def setval(key, val, destructive=False):
         salt '*' grains.setval key val
         salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     """
-    return setvals({key: val}, destructive)
+    return setvals({key: val}, destructive, refresh_pillar=refresh_pillar)
 
 
 def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
@@ -412,7 +416,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def delkey(key):
+def delkey(key, force=False):
     """
     .. versionadded:: 2017.7.0
 
@@ -422,16 +426,20 @@ def delkey(key):
     key
         The grain key from which to delete the value.
 
+    force
+        Force remove the grain even when it is a mapped value.
+        Defaults to False
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.delkey key
     """
-    setval(key, None, destructive=True)
+    return delval(key, destructive=True, force=force)
 
 
-def delval(key, destructive=False):
+def delval(key, destructive=False, force=False):
     """
     .. versionadded:: 0.17.0
 
@@ -445,13 +453,17 @@ def delval(key, destructive=False):
     destructive
         Delete the key, too. Defaults to False.
 
+    force
+        Force remove the grain even when it is a mapped value.
+        Defaults to False
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.delval key
     """
-    setval(key, None, destructive=destructive)
+    return set(key, None, destructive=destructive, force=force)
 
 
 def ls():  # pylint: disable=C0103
@@ -780,7 +792,7 @@ def equals(key, value):
         salt '*' grains.equals fqdn <expected_fqdn>
         salt '*' grains.equals systemd:version 219
     """
-    return six.text_type(value) == six.text_type(get(key))
+    return str(value) == str(get(key))
 
 
 # Provide a jinja function call compatible get aliased as fetch

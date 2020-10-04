@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """Unit test for saltcheck execution module"""
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 
 import salt.config
 import salt.modules.saltcheck as saltcheck
 import salt.syspaths as syspaths
-
-# Import Salt Testing Libs
+from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -33,6 +28,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(patcher.stop)
         return {saltcheck: {"__opts__": local_opts}}
 
+    @slowTest
     def test_call_salt_command(self):
         """test simple test.echo module"""
         with patch.dict(
@@ -49,6 +45,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual(returned, "hello")
 
+    @slowTest
     def test_call_salt_command2(self):
         """test simple test.echo module again"""
         with patch.dict(
@@ -467,6 +464,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             mybool = sc_instance._SaltCheck__assert_not_empty("")
             self.assertNotEqual(mybool, "Pass")
 
+    @slowTest
     def test_run_test_1(self):
         """test"""
         with patch.dict(
@@ -487,6 +485,52 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                 }
             )
             self.assertEqual(returned["status"], "Pass")
+
+    def test_run_test_muliassert(self):
+        """test"""
+        with patch.dict(
+            saltcheck.__salt__,
+            {
+                "config.get": MagicMock(return_value=True),
+                "sys.list_modules": MagicMock(return_value=["test"]),
+                "sys.list_functions": MagicMock(return_value=["test.echo"]),
+                "cp.cache_master": MagicMock(return_value=[True]),
+            },
+        ):
+            returned = saltcheck.run_test(
+                test={
+                    "module_and_function": "test.echo",
+                    "assertions": [
+                        {"assertion": "assertEqual", "expected_return": "This works!"},
+                        {"assertion": "assertEqual", "expected_return": "This works!"},
+                    ],
+                    "args": ["This works!"],
+                }
+            )
+            self.assertEqual(returned["status"], "Pass")
+
+    def test_run_test_muliassert_failure(self):
+        """test"""
+        with patch.dict(
+            saltcheck.__salt__,
+            {
+                "config.get": MagicMock(return_value=True),
+                "sys.list_modules": MagicMock(return_value=["test"]),
+                "sys.list_functions": MagicMock(return_value=["test.echo"]),
+                "cp.cache_master": MagicMock(return_value=[True]),
+            },
+        ):
+            returned = saltcheck.run_test(
+                test={
+                    "module_and_function": "test.echo",
+                    "assertions": [
+                        {"assertion": "assertEqual", "expected_return": "WRONG"},
+                        {"assertion": "assertEqual", "expected_return": "This works!"},
+                    ],
+                    "args": ["This works!"],
+                }
+            )
+            self.assertEqual(returned["status"], "Fail")
 
     def test_report_highstate_tests(self):
         """test report_highstate_tests"""
@@ -657,6 +701,34 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
             self.assertEqual(val_ret, expected_return)
 
+        # Succeed on multiple assertions
+        test_dict = {
+            "module_and_function": "test.echo",
+            "args": ["somearg"],
+            "assertions": [
+                {
+                    "assertion": "assertEqual",
+                    "assertion_section": "0:program",
+                    "expected_return": "systemd-resolve",
+                },
+                {
+                    "assertion": "assertEqual",
+                    "assertion_section": "0:proto",
+                    "expected_return": "udp",
+                },
+            ],
+        }
+        expected_return = True
+        with patch.dict(
+            saltcheck.__salt__,
+            {
+                "sys.list_modules": MagicMock(return_value=["test"]),
+                "sys.list_functions": MagicMock(return_value=["test.echo"]),
+            },
+        ):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
     def test_sls_path_generation(self):
         """test generation of sls paths"""
         with patch.dict(
@@ -800,4 +872,101 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             },
         ]
         ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)
+
+        # Failed with only_fails
+        sc_results = {
+            "a_state": {
+                "test_id1": {
+                    "assertion1": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "IS NOT EMPTY /etc/salt/master",
+                    },
+                    "assertion2": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "master IN /etc/salt/master",
+                    },
+                    "status": "Pass",
+                    "duration": 1.4383,
+                },
+                "test_id2": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.308,
+                },
+                "test_id3": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3073,
+                },
+            },
+            "b_state": {
+                "test_id4": {
+                    "assertion1": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "IS NOT EMPTY /etc/salt/master",
+                    },
+                    "assertion2": {
+                        "status": "Pass",
+                        "module.function [args]": 'cmd.run ["ls /etc/salt/master"]',
+                        "saltcheck assertion": "master IN /etc/salt/master",
+                    },
+                    "status": "Pass",
+                    "duration": 0.3057,
+                },
+                "test_id5": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3066,
+                },
+                "test_id6": {
+                    "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                    "status": "Fail",
+                    "duration": 0.3076,
+                },
+            },
+        }
+        expected_output = [
+            {
+                "a_state": {
+                    "test_id2": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.308,
+                    },
+                    "test_id3": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3073,
+                    },
+                }
+            },
+            {
+                "b_state": {
+                    "test_id5": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3066,
+                    },
+                    "test_id6": {
+                        "assertion1": {"status": "Fail: /etc/salt/master is not empty"},
+                        "status": "Fail",
+                        "duration": 0.3076,
+                    },
+                }
+            },
+            {
+                "TEST RESULTS": {
+                    "Execution Time": 2.9735,
+                    "Passed": 2,
+                    "Failed": 4,
+                    "Skipped": 0,
+                    "Missing Tests": 0,
+                }
+            },
+        ]
+        ret = saltcheck._generate_out_list(sc_results, only_fails=True)
         self.assertEqual(ret, expected_output)

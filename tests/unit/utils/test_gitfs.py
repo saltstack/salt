@@ -1,25 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 These only test the provider selection and verification logic, they do not init
 any remotes.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 from time import time
 
-# Import salt libs
 import salt.fileserver.gitfs
 import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.platform
-
-# Import Salt Testing libs
 import tests.support.paths
 from salt.exceptions import FileserverConfigError
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
@@ -36,11 +31,91 @@ if HAS_PYGIT2:
     import pygit2
 
 
-# GLOBALS
-OPTS = {"cachedir": "/tmp/gitfs-test-cache"}
+class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
+    def setUp(self):
+        class MockedProvider(
+            salt.utils.gitfs.GitProvider
+        ):  # pylint: disable=abstract-method
+            def __init__(
+                self,
+                opts,
+                remote,
+                per_remote_defaults,
+                per_remote_only,
+                override_params,
+                cache_root,
+                role="gitfs",
+            ):
+                self.provider = "mocked"
+                self.fetched = False
+                super().__init__(
+                    opts,
+                    remote,
+                    per_remote_defaults,
+                    per_remote_only,
+                    override_params,
+                    cache_root,
+                    role,
+                )
+
+            def init_remote(self):
+                self.repo = True
+                new = False
+                return new
+
+            def envs(self):
+                return ["base"]
+
+            def fetch(self):
+                self.fetched = True
+
+        git_providers = {
+            "mocked": MockedProvider,
+        }
+        gitfs_remotes = ["file://repo1.git", {"file://repo2.git": [{"name": "repo2"}]}]
+        self.opts = self.get_temp_config(
+            "master", gitfs_remotes=gitfs_remotes, verified_gitfs_provider="mocked"
+        )
+        self.main_class = salt.utils.gitfs.GitFS(
+            self.opts,
+            self.opts["gitfs_remotes"],
+            per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+            per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
+            git_providers=git_providers,
+        )
+
+    def tearDown(self):
+        # Providers are preserved with GitFS's instance_map
+        for remote in self.main_class.remotes:
+            remote.fetched = False
+        del self.main_class
+
+    def test_update_all(self):
+        self.main_class.update()
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_name(self):
+        self.main_class.update("repo2")
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertFalse(self.main_class.remotes[0].fetched)
+        self.assertTrue(self.main_class.remotes[1].fetched)
+
+    def test_update_by_id_and_name(self):
+        self.main_class.update([("file://repo1.git", None)])
+        self.assertEqual(len(self.main_class.remotes), 2, "Wrong number of remotes")
+        self.assertTrue(self.main_class.remotes[0].fetched)
+        self.assertFalse(self.main_class.remotes[1].fetched)
 
 
 class TestGitFSProvider(TestCase):
+    def setUp(self):
+        self.opts = {"cachedir": "/tmp/gitfs-test-cache"}
+
+    def tearDown(self):
+        self.opts = None
+
     def test_provider_case_insensitive(self):
         """
         Ensure that both lowercase and non-lowercase values are supported
@@ -52,18 +127,18 @@ class TestGitFSProvider(TestCase):
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
 
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             with patch.object(
                 role_class, "verify_gitpython", MagicMock(return_value=True)
             ):
                 with patch.object(
                     role_class, "verify_pygit2", MagicMock(return_value=False)
                 ):
-                    args = [OPTS, {}]
+                    args = [self.opts, {}]
                     kwargs = {"init_remotes": False}
                     if role_name == "winrepo":
                         kwargs["cache_root"] = "/tmp/winrepo-dir"
-                    with patch.dict(OPTS, {key: provider}):
+                    with patch.dict(self.opts, {key: provider}):
                         # Try to create an instance with uppercase letters in
                         # provider name. If it fails then a
                         # FileserverConfigError will be raised, so no assert is
@@ -90,7 +165,7 @@ class TestGitFSProvider(TestCase):
             ("git_pillar", salt.utils.gitfs.GitPillar),
             ("winrepo", salt.utils.gitfs.WinRepo),
         ):
-            key = "{0}_provider".format(role_name)
+            key = "{}_provider".format(role_name)
             for provider in salt.utils.gitfs.GIT_PROVIDERS:
                 verify = "verify_gitpython"
                 mock1 = _get_mock(verify, provider)
@@ -98,15 +173,15 @@ class TestGitFSProvider(TestCase):
                     verify = "verify_pygit2"
                     mock2 = _get_mock(verify, provider)
                     with patch.object(role_class, verify, mock2):
-                        args = [OPTS, {}]
+                        args = [self.opts, {}]
                         kwargs = {"init_remotes": False}
                         if role_name == "winrepo":
                             kwargs["cache_root"] = "/tmp/winrepo-dir"
 
-                        with patch.dict(OPTS, {key: provider}):
+                        with patch.dict(self.opts, {key: provider}):
                             role_class(*args, **kwargs)
 
-                        with patch.dict(OPTS, {key: "foo"}):
+                        with patch.dict(self.opts, {key: "foo"}):
                             # Set the provider name to a known invalid provider
                             # and make sure it raises an exception.
                             self.assertRaises(

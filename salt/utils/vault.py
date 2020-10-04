@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :maintainer:    SaltStack
 :maturity:      new
@@ -8,10 +7,11 @@ Utilities supporting modules for Hashicorp Vault. Configuration instructions are
 documented in the execution module docs.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import logging
+import os
+import time
 
 import requests
 import salt.crypt
@@ -44,18 +44,26 @@ def _get_token_and_url_from_master():
     """
     minion_id = __grains__["id"]
     pki_dir = __opts__["pki_dir"]
+    # Allow minion override salt-master settings/defaults
+    try:
+        uses = __opts__.get("vault", {}).get("auth", {}).get("uses", None)
+        ttl = __opts__.get("vault", {}).get("auth", {}).get("ttl", None)
+    except (TypeError, AttributeError):
+        # If uses or ttl are not defined, just use defaults
+        uses = None
+        ttl = None
 
     # When rendering pillars, the module executes on the master, but the token
     # should be issued for the minion, so that the correct policies are applied
     if __opts__.get("__role", "minion") == "minion":
-        private_key = "{0}/minion.pem".format(pki_dir)
+        private_key = "{}/minion.pem".format(pki_dir)
         log.debug("Running on minion, signing token request with key %s", private_key)
         signature = base64.b64encode(salt.crypt.sign_message(private_key, minion_id))
         result = __salt__["publish.runner"](
-            "vault.generate_token", arg=[minion_id, signature]
+            "vault.generate_token", arg=[minion_id, signature, False, ttl, uses]
         )
     else:
-        private_key = "{0}/master.pem".format(pki_dir)
+        private_key = "{}/master.pem".format(pki_dir)
         log.debug(
             "Running on master, signing token request for %s with key %s",
             minion_id,
@@ -67,8 +75,9 @@ def _get_token_and_url_from_master():
             minion_id=minion_id,
             signature=signature,
             impersonated_by_master=True,
+            ttl=ttl,
+            uses=uses,
         )
-
     if not result:
         log.error(
             "Failed to get token from master! No result returned - "
@@ -86,10 +95,18 @@ def _get_token_and_url_from_master():
             result["error"],
         )
         raise salt.exceptions.CommandExecutionError(result)
+    if "session" in result.get("token_backend", "session"):
+        # This is the only way that this key can be placed onto __context__
+        # Thus is tells the minion that the master is configured for token_backend: session
+        log.debug("Using session storage for vault credentials")
+        __context__["vault_secret_path_metadata"] = {}
     return {
         "url": result["url"],
         "token": result["token"],
         "verify": result.get("verify", None),
+        "uses": result.get("uses", 1),
+        "lease_duration": result["lease_duration"],
+        "issued": result["issued"],
     }
 
 
@@ -107,13 +124,13 @@ def get_vault_connection():
                 if _selftoken_expired():
                     log.debug("Vault token expired. Recreating one")
                     # Requesting a short ttl token
-                    url = "{0}/v1/auth/approle/login".format(__opts__["vault"]["url"])
+                    url = "{}/v1/auth/approle/login".format(__opts__["vault"]["url"])
                     payload = {"role_id": __opts__["vault"]["auth"]["role_id"]}
                     if "secret_id" in __opts__["vault"]["auth"]:
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
                     response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:
-                        errmsg = "An error occured while getting a token from approle"
+                        errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
                     __opts__["vault"]["auth"]["token"] = response.json()["auth"][
                         "client_token"
@@ -121,7 +138,7 @@ def get_vault_connection():
             if __opts__["vault"]["auth"]["method"] == "wrapped_token":
                 verify = __opts__["vault"].get("verify", None)
                 if _wrapped_token_valid():
-                    url = "{0}/v1/sys/wrapping/unwrap".format(__opts__["vault"]["url"])
+                    url = "{}/v1/sys/wrapping/unwrap".format(__opts__["vault"]["url"])
                     headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
                     response = requests.post(url, headers=headers, verify=verify)
                     if response.status_code != 200:
@@ -134,10 +151,12 @@ def get_vault_connection():
                 "url": __opts__["vault"]["url"],
                 "token": __opts__["vault"]["auth"]["token"],
                 "verify": __opts__["vault"].get("verify", None),
+                "issued": int(round(time.time())),
+                "ttl": 3600,
             }
         except KeyError as err:
-            errmsg = 'Minion has "vault" config section, but could not find key "{0}" within'.format(
-                err.message
+            errmsg = 'Minion has "vault" config section, but could not find key "{}" within'.format(
+                err
             )
             raise salt.exceptions.CommandExecutionError(errmsg)
 
@@ -149,9 +168,9 @@ def get_vault_connection():
             return _use_local_config()
     elif any(
         (
-            __opts__["local"],
-            __opts__["file_client"] == "local",
-            __opts__["master_type"] == "disable",
+            __opts__.get("local", None),
+            __opts__.get("file_client", None) == "local",
+            __opts__.get("master_type", None) == "disable",
         )
     ):
         return _use_local_config()
@@ -160,21 +179,175 @@ def get_vault_connection():
         return _get_token_and_url_from_master()
 
 
+def del_cache():
+    """
+    Delete cache file
+    """
+    log.debug("Deleting cache file")
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+
+    if os.path.exists(cache_file):
+        os.remove(cache_file)
+    else:
+        log.debug("Attempted to delete vault cache file, but it does not exist.")
+
+
+def write_cache(connection):
+    # If uses is 1 and unlimited_use_token is not true, then this is a single use token and should not be cached
+    # In that case, we still want to cache the vault metadata lookup information for paths, so continue on
+    if (
+        connection.get("uses", None) == 1
+        and "unlimited_use_token" not in connection
+        and "vault_secret_path_metadata" not in connection
+    ):
+        log.debug("Not caching vault single use token")
+        __context__["vault_token"] = connection
+        return True
+    elif (
+        "vault_secret_path_metadata" in __context__
+        and "vault_secret_path_metadata" not in connection
+    ):
+        # If session storage is being used, and info passed is not the already saved metadata
+        log.debug("Storing token only for this session")
+        __context__["vault_token"] = connection
+        return True
+    elif "vault_secret_path_metadata" in __context__:
+        # Must have been passed metadata. This is already handled by _get_secret_path_metadata
+        #  and does not need to be resaved
+        return True
+
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+    try:
+        log.debug("Writing vault cache file")
+        # Detect if token was issued without use limit
+        if connection.get("uses") == 0:
+            connection["unlimited_use_token"] = True
+        else:
+            connection["unlimited_use_token"] = False
+        with salt.utils.files.fpopen(cache_file, "w", mode=0o600) as fp_:
+            fp_.write(salt.utils.json.dumps(connection))
+        return True
+    except OSError:
+        log.error(
+            "Failed to cache vault information", exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
+
+
+def _read_cache_file():
+    """
+    Return contents of cache file
+    """
+    try:
+        cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+        with salt.utils.files.fopen(cache_file, "r") as contents:
+            return salt.utils.json.load(contents)
+    except FileNotFoundError:
+        return {}
+
+
+def get_cache():
+    """
+    Return connection information from vault cache file
+    """
+
+    def _gen_new_connection():
+        log.debug("Refreshing token")
+        connection = get_vault_connection()
+        write_status = write_cache(connection)
+        return connection
+
+    connection = _read_cache_file()
+    # If no cache, or only metadata info is saved in cache, generate a new token
+    if not connection or "url" not in connection:
+        return _gen_new_connection()
+
+    # Drop 10 seconds from ttl to be safe
+    if "lease_duration" in connection:
+        ttl = connection["lease_duration"]
+    else:
+        ttl = connection["ttl"]
+    ttl10 = connection["issued"] + ttl - 10
+    cur_time = int(round(time.time()))
+
+    # Determine if ttl still valid
+    if ttl10 < cur_time:
+        log.debug("Cached token has expired {} < {}: DELETING".format(ttl10, cur_time))
+        del_cache()
+        return _gen_new_connection()
+    else:
+        log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
+    return connection
+
+
 def make_request(
-    method, resource, token=None, vault_url=None, get_token_url=False, **args
+    method,
+    resource,
+    token=None,
+    vault_url=None,
+    get_token_url=False,
+    retry=False,
+    **args
 ):
     """
     Make a request to Vault
     """
-    if not token or not vault_url:
-        connection = get_vault_connection()
-        token, vault_url = connection["token"], connection["url"]
-        if "verify" not in args:
-            args["verify"] = connection["verify"]
-
-    url = "{0}/{1}".format(vault_url, resource)
-    headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
+    if "vault_token" in __context__:
+        connection = __context__["vault_token"]
+    else:
+        connection = get_cache()
+    token = connection["token"] if not token else token
+    vault_url = connection["url"] if not vault_url else vault_url
+    if "verify" in args:
+        args["verify"] = args["verify"]
+    else:
+        try:
+            args["verify"] = __opts__.get("vault").get("verify", None)
+        except (TypeError, AttributeError):
+            # Don't worry about setting verify if it doesn't exist
+            pass
+    url = "{}/{}".format(vault_url, resource)
+    headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
     response = requests.request(method, url, headers=headers, **args)
+    if not response.ok and response.json().get("errors", None) == ["permission denied"]:
+        log.info("Permission denied from vault")
+        del_cache()
+        if not retry:
+            log.debug("Retrying with new credentials")
+            response = make_request(
+                method,
+                resource,
+                token=None,
+                vault_url=vault_url,
+                get_token_url=get_token_url,
+                retry=True,
+                **args
+            )
+        else:
+            log.error("Unable to connect to vault server: %s", response.text)
+            return response
+    elif not response.ok:
+        log.error("Error from vault: %s", response.text)
+        return response
+
+    # Decrement vault uses, only on secret URL lookups and multi use tokens
+    if (
+        "uses" in connection
+        and not connection.get("unlimited_use_token")
+        and not resource.startswith("v1/sys")
+    ):
+        log.debug("Decrementing Vault uses on limited token for url: %s", resource)
+        connection["uses"] -= 1
+        if connection["uses"] <= 0:
+            log.debug("Cached token has no more uses left.")
+            if "vault_token" not in __context__:
+                del_cache()
+            else:
+                log.debug("Deleting token from memory")
+                del __context__["vault_token"]
+        else:
+            log.debug("Token has {} uses left".format(connection["uses"]))
+            write_cache(connection)
 
     if get_token_url:
         return response, token, vault_url
@@ -188,7 +361,7 @@ def _selftoken_expired():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
-        url = "{0}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
+        url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
@@ -198,7 +371,7 @@ def _selftoken_expired():
         return False
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up self token : {0}".format(e)
+            "Error while looking up self token : {}".format(e)
         )
 
 
@@ -208,7 +381,7 @@ def _wrapped_token_valid():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
-        url = "{0}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
+        url = "{}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return False
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
@@ -218,7 +391,7 @@ def _wrapped_token_valid():
         return True
     except Exception as e:  # pylint: disable=broad-except
         raise salt.exceptions.CommandExecutionError(
-            "Error while looking up wrapped token : {0}".format(e)
+            "Error while looking up wrapped token : {}".format(e)
         )
 
 
@@ -235,9 +408,11 @@ def is_v2(path):
         # metadata lookup failed. Simply return not v2
         return ret
     ret["type"] = path_metadata.get("type", "kv")
-    if ret["type"] == "kv" and path_metadata.get("options", {}).get("version", "1") in [
-        "2"
-    ]:
+    if (
+        ret["type"] == "kv"
+        and path_metadata["options"] is not None
+        and path_metadata.get("options", {}).get("version", "1") in ["2"]
+    ):
         ret["v2"] = True
         ret["data"] = _v2_the_path(path, path_metadata.get("path", path))
         ret["metadata"] = _v2_the_path(
@@ -284,32 +459,48 @@ def _v2_the_path(path, pfilter, ptype="data"):
 
 def _get_secret_path_metadata(path):
     """
-    Given a path query vault to determine where the mount point is, it's type and version
+    Given a path, query vault to determine mount point, type, and version
     CLI Example:
     .. code-block:: python
         _get_secret_path_metadata('dev/secrets/fu/bar')
     """
     ckey = "vault_secret_path_metadata"
-    if ckey not in __context__:
-        __context__[ckey] = {}
+
+    # Attempt to lookup from cache
+    if ckey in __context__:
+        cache_content = __context__[ckey]
+    else:
+        cache_content = _read_cache_file()
+    if ckey not in cache_content:
+        cache_content[ckey] = {}
 
     ret = None
-    if path.startswith(tuple(__context__[ckey].keys())):
+    if path.startswith(tuple(cache_content[ckey].keys())):
         log.debug("Found cached metadata for %s", path)
-        ret = next(v for k, v in __context__[ckey].items() if path.startswith(k))
+        ret = next(v for k, v in cache_content[ckey].items() if path.startswith(k))
     else:
         log.debug("Fetching metadata for %s", path)
         try:
-            url = "v1/sys/internal/ui/mounts/{0}".format(path)
+            url = "v1/sys/internal/ui/mounts/{}".format(path)
             response = make_request("GET", url)
             if response.ok:
                 response.raise_for_status()
             if response.json().get("data", False):
                 log.debug("Got metadata for %s", path)
                 ret = response.json()["data"]
-                __context__[ckey][path] = ret
+                # Write metadata to cache file
+                # Check for new cache content from make_request
+                if "url" not in cache_content:
+                    if ckey in __context__:
+                        cache_content = __context__[ckey]
+                    else:
+                        cache_content = _read_cache_file()
+                    if ckey not in cache_content:
+                        cache_content[ckey] = {}
+                cache_content[ckey][path] = ret
+                write_cache(cache_content)
             else:
                 raise response.json()
         except Exception as err:  # pylint: disable=broad-except
-            log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
+            log.error("Failed to get secret metadata %s: %s", type(err).__name__, err)
     return ret

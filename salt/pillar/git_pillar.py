@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use a git repository as a Pillar source
 ---------------------------------------
@@ -151,7 +150,7 @@ The corresponding Pillar top file would look like this:
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
 the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
-with the global authenication parameter names prefixed with ``git_pillar``
+with the global authentication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
@@ -365,28 +364,43 @@ remotes. The update is handled within the global loop, hence
 
     git_pillar_update_interval: 120
 
-"""
-from __future__ import absolute_import, print_function, unicode_literals
+.. _git-pillar-fallback:
 
-# Import python libs
+fallback
+~~~~~~~~
+
+.. versionadded:: 3001
+
+Setting ``fallback`` per-remote or global configuration parameter will map non-existing environments to a default branch. Example:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - __env__ https://mydomain.tld/top.git
+          - all_saltenvs: master
+        - __env__ https://mydomain.tld/pillar-nginx.git:
+          - mountpoint: web/server/
+          - fallback: master
+        - __env__ https://mydomain.tld/pillar-appdata.git:
+          - mountpoint: web/server/
+          - fallback: master
+
+"""
+
 import copy
 import logging
 
 import salt.utils.dictupdate
-
-# Import salt libs
 import salt.utils.gitfs
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-
-# Import third party libs
-from salt.ext import six
 from salt.pillar import Pillar
 
-PER_REMOTE_OVERRIDES = ("env", "root", "ssl_verify", "refspecs")
+PER_REMOTE_OVERRIDES = ("base", "env", "root", "ssl_verify", "refspecs", "fallback")
 PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
-GLOBAL_ONLY = ("base", "branch")
+GLOBAL_ONLY = ("branch",)
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -436,7 +450,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
     ret = {}
     merge_strategy = __opts__.get("pillar_source_merging_strategy", "smart")
     merge_lists = __opts__.get("pillar_merge_lists", False)
-    for pillar_dir, env in six.iteritems(git_pillar.pillar_dirs):
+    for pillar_dir, env in git_pillar.pillar_dirs.items():
         # Map env if env == '__env__' before checking the env value
         if env == "__env__":
             env = (
@@ -480,7 +494,7 @@ def ext_pillar(minion_id, pillar, *repos):  # pylint: disable=unused-argument
             pillar_roots.extend(
                 [
                     d
-                    for (d, e) in six.iteritems(git_pillar.pillar_dirs)
+                    for (d, e) in git_pillar.pillar_dirs.items()
                     if env == e and d != pillar_dir
                 ]
             )

@@ -607,8 +607,8 @@ be found by analyzing the cache log with ``memcache_debug`` enabled.
 Default: ``False``
 
 If cache storage got full, i.e. the items count exceeds the
-``memcache_max_items`` value, memcache cleans up it's storage. If this option
-set to ``False`` memcache removes the only one oldest value from it's storage.
+``memcache_max_items`` value, memcache cleans up its storage. If this option
+set to ``False`` memcache removes the only one oldest value from its storage.
 If this set set to ``True`` memcache removes all the expired items and also
 removes the oldest one if there are no expired items.
 
@@ -1026,7 +1026,7 @@ The TCP port for ``mworkers`` to connect to on the master.
 .. conf_master:: auth_events
 
 ``auth_events``
---------------------
+---------------
 
 .. versionadded:: 2017.7.3
 
@@ -1091,7 +1091,7 @@ Should be greater than overall download time.
     http_request_timeout: 3600
 
 ``use_yamlloader_old``
-------------------------
+----------------------
 
 .. versionadded:: 2019.2.1
 
@@ -1104,6 +1104,151 @@ See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
 .. code-block:: yaml
 
     use_yamlloader_old: False
+
+.. conf_master:: req_server_niceness
+
+``req_server_niceness``
+-----------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the ReqServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    req_server_niceness: 9
+
+.. conf_master:: pub_server_niceness
+
+``pub_server_niceness``
+-----------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the PubServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    pub_server_niceness: 9
+
+.. conf_master:: fileserver_update_niceness
+
+``fileserver_update_niceness``
+------------------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the FileServerUpdate subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    fileserver_update_niceness: 9
+
+.. conf_master:: maintenance_niceness
+
+``maintenance_niceness``
+------------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the Maintenance subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    maintenance_niceness: 9
+
+.. conf_master:: mworker_niceness
+
+``mworker_niceness``
+--------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the MWorker subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_niceness: 9
+
+.. conf_master:: mworker_queue_niceness
+
+``mworker_queue_niceness``
+--------------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the MWorkerQueue subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_queue_niceness: 9
+
+.. conf_master:: event_return_niceness
+
+``event_return_niceness``
+-------------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the EventReturn subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_return_niceness: 9
+
+
+.. conf_master:: event_publisher_niceness
+
+``event_publisher_niceness``
+----------------------------
+
+.. versionadded:: 3001
+
+default: ``none``
+
+process priority level of the EventPublisher subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_publisher_niceness: 9
+
+.. conf_master:: reactor_niceness
+
+``reactor_niceness``
+--------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the Reactor subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    reactor_niceness: 9
 
 .. _salt-ssh-configuration:
 
@@ -1468,7 +1613,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
 .. versionchanged:: 2018.3.0
-    For security reasons the file must be readonly except for it's owner.
+    For security reasons the file must be readonly except for its owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
     A less strict requirement also existed in previous version.
@@ -1796,7 +1941,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -2177,7 +2322,7 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
 .. note::
 
-    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>`_ is the official source for the default values.
+    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
 
 The default options are:
@@ -2654,14 +2799,18 @@ nothing is ignored.
 ``master_roots``
 ----------------
 
-Default: ``/srv/salt-master``
+Default: ``''``
 
 A master-only copy of the :conf_master:`file_roots` dictionary, used by the
 state compiler.
 
+Example:
+
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    master_roots:
+      base:
+        - /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -4033,7 +4182,7 @@ ext_pillar keys to override those from :conf_master:`pillar_roots`.
 
     ext_pillar_first: False
 
-.. conf_minion:: pillarenv_from_saltenv
+.. conf_master:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
@@ -4151,7 +4300,7 @@ branch/tag (or from a per-remote ``env`` parameter), but if set this will
 override the process of deriving the env from the branch/tag name. For example,
 in the configuration below the ``foo`` branch would be assigned to the ``base``
 environment, while the ``bar`` branch would need to explicitly have ``bar``
-configured as it's environment to keep it from also being mapped to the
+configured as its environment to keep it from also being mapped to the
 ``base`` environment.
 
 .. code-block:: yaml
@@ -5665,7 +5814,7 @@ authenticate is protected by a passphrase.
 .. conf_master:: winrepo_refspecs
 
 ``winrepo_refspecs``
-~~~~~~~~~~~~~~~~~~~~
+********************
 
 .. versionadded:: 2017.7.0
 

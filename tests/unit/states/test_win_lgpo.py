@@ -1,32 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+import copy
 
-# Import Salt Libs
 import salt.config
-
-# Import 3rd Party Libs
 import salt.ext.six as six
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
-
-# Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
-
-# We're going to actually use the loader, without grains (slow)
-opts = salt.config.DEFAULT_MINION_OPTS.copy()
-utils = salt.loader.utils(opts)
-modules = salt.loader.minion_mods(opts, utils=utils)
-
-LOADER_DICTS = {win_lgpo: {"__opts__": opts, "__salt__": modules, "__utils__": utils}}
 
 
 class WinLGPOComparePoliciesTestCase(TestCase):
@@ -115,14 +101,31 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     Configured (NC)
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        cls.utils = salt.loader.utils(cls.opts)
+        cls.modules = salt.loader.minion_mods(cls.opts, utils=cls.utils)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.opts = cls.utils = cls.modules = None
+
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return {
+            win_lgpo: {
+                "__opts__": copy.deepcopy(self.opts),
+                "__salt__": self.modules,
+                "__utils__": self.utils,
+            }
+        }
 
     def setUp(self):
         computer_policy = {"Point and Print Restrictions": "Not Configured"}
         with patch.dict(win_lgpo.__opts__, {"test": False}):
             win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
 
+    @slowTest
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -151,6 +154,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
             result["changes"]["new"]["Computer Configuration"], expected
         )
 
+    @slowTest
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -190,6 +194,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         )
         self.assertEqual(result["comment"], expected)
 
+    @slowTest
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -223,8 +228,24 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
 
     configured = False
 
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        cls.utils = salt.loader.utils(cls.opts)
+        cls.modules = salt.loader.minion_mods(cls.opts, utils=cls.utils)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.opts = cls.utils = cls.modules = None
+
     def setup_loader_modules(self):
-        return LOADER_DICTS
+        return {
+            win_lgpo: {
+                "__opts__": copy.deepcopy(self.opts),
+                "__salt__": self.modules,
+                "__utils__": self.utils,
+            }
+        }
 
     def setUp(self):
         if not self.configured:
@@ -243,6 +264,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
                 win_lgpo.set_(name="nc_state", computer_policy=computer_policy)
             self.configured = True
 
+    @slowTest
     def test_current_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -264,6 +286,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
+    @slowTest
     def test_old_element_naming_style(self):
         computer_policy = {
             "Point and Print Restrictions": {
@@ -289,6 +312,7 @@ class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
         self.assertTrue(result["result"])
         self.assertEqual(result["comment"], expected["comment"])
 
+    @slowTest
     def test_invalid_elements(self):
         computer_policy = {
             "Point and Print Restrictions": {

@@ -9,7 +9,7 @@ import shutil
 
 import pytest
 from tests.support.case import SPMCase
-from tests.support.helpers import destructiveTest
+from tests.support.helpers import destructiveTest, slowTest
 
 
 @destructiveTest
@@ -23,6 +23,7 @@ class SPMRemoveTest(SPMCase):
         self.config = self._spm_config()
         self._spm_build_files(self.config)
 
+    @slowTest
     def test_spm_remove(self):
         """
         test spm remove from an inital repo install

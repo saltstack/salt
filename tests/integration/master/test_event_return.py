@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tests.integration.master.test_event_return
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,28 +6,21 @@ tests.integration.master.test_event_return
 
         https://github.com/saltstack/salt/pull/54731
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import shutil
 import subprocess
+import sys
 import time
 
-# Import 3rd-party libs
-import pytest
-
-# Import Salt libs
-import salt.ext.six as six
 from salt.utils.nb_popen import NonBlockingPopen
-
-# Import Salt Testing libs
-from tests.support.case import TestCase
+from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.processes import terminate_process
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import SkipTest, TestCase
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +45,7 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
         cls.root_dir = temp_config["root_dir"]
         cls.config_dir = os.path.dirname(temp_config["conf_file"])
         if temp_config["transport"] == "tcp":
-            pytest.skip("Test only applicable to the ZMQ transport")
+            raise SkipTest("Test only applicable to the ZMQ transport")
 
     @classmethod
     def tearDownClass(cls):
@@ -62,12 +54,19 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
 
     def test_master_startup(self):
         proc = NonBlockingPopen(
-            [self.get_script_path("master"), "-c", self.config_dir, "-l", "info"],
+            [
+                sys.executable,
+                self.get_script_path("master"),
+                "-c",
+                RUNTIME_VARS.TMP_CONF_DIR,
+                "-l",
+                "info",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        out = six.b("")
-        err = six.b("")
+        out = b""
+        err = b""
 
         # Testing this should never be longer than 1 minute
         max_time = time.time() + 60
@@ -83,17 +82,17 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
                 if _err:
                     err += _err
 
-                if six.b("DeprecationWarning: object() takes no parameters") in out:
+                if b"DeprecationWarning: object() takes no parameters" in out:
                     self.fail(
                         "'DeprecationWarning: object() takes no parameters' was seen in output"
                     )
 
-                if six.b("TypeError: object() takes no parameters") in out:
+                if b"TypeError: object() takes no parameters" in out:
                     self.fail(
                         "'TypeError: object() takes no parameters' was seen in output"
                     )
 
-                if six.b("Setting up the master communication server") in out:
+                if b"Setting up the master communication server" in out:
                     # We got past the place we need, stop the process
                     break
 

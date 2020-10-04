@@ -41,7 +41,9 @@ def __virtual__():
     """
     Only load if the uptime module is present
     """
-    return "uptime.checks_list" in __salt__
+    if "uptime.checks_list" in __salt__:
+        return True
+    return (False, "uptime module could not be loaded")
 
 
 def monitored(name, **params):

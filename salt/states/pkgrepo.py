@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of APT/DNF/YUM/Zypper package repos
 ==============================================
@@ -21,6 +20,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -37,6 +37,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -45,6 +46,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
+        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
         - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
@@ -80,10 +82,17 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
     installed. To check if this package is installed, run ``dpkg -l python-apt``.
     ``python-apt`` will need to be manually installed if it is not present.
 
+.. code-block:: yaml
+
+    hello-copr:
+        pkgrepo.managed:
+            - copr: mymindstorm/hello
+        pkg.installed:
+            - name: hello
+
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
@@ -91,12 +100,12 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.versions
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Import 3rd-party libs
-from salt.ext import six
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -107,7 +116,7 @@ def __virtual__():
     return "pkg.mod_repo" in __salt__
 
 
-def managed(name, ppa=None, **kwargs):
+def managed(name, ppa=None, copr=None, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
@@ -136,6 +145,12 @@ def managed(name, ppa=None, **kwargs):
         argument. If this is passed for a YUM/DNF/Zypper-based distro, then the
         reverse will be passed as ``enabled``. For example passing
         ``disabled=True`` will assume ``enabled=False``.
+
+    copr
+        Fedora and RedHat based distributions only. Use community packages
+        outside of the main package repository.
+
+        .. versionadded:: 3002
 
     humanname
         This is used as the "name" value in the repo file in
@@ -228,7 +243,7 @@ def managed(name, ppa=None, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=True``.
+        ``enabled=False`` will assume ``disabled=False``.
 
     architectures
         On apt-based systems, architectures can restrict the available
@@ -297,18 +312,14 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       This argument has been deprecated. Please use ``refresh`` instead.
-       The ``refresh_db`` argument will continue to work to ensure backwards
-       compatibility, but we recommend using the preferred ``refresh``
-       argument instead.
+       .. deprecated:: 2018.3.0
+           Use ``refresh`` instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
        running of apt-get update prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
     """
-    if "refresh_db" in kwargs:
-        kwargs["refresh"] = kwargs.pop("refresh_db")
 
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
@@ -360,7 +371,7 @@ def managed(name, ppa=None, **kwargs):
             try:
                 repo = ":".join(("ppa", ppa))
             except TypeError:
-                repo = ":".join(("ppa", six.text_type(ppa)))
+                repo = ":".join(("ppa", str(ppa)))
 
         kwargs["disabled"] = (
             not salt.utils.data.is_true(enabled)
@@ -369,6 +380,11 @@ def managed(name, ppa=None, **kwargs):
         )
 
     elif __grains__["os_family"] in ("RedHat", "Suse"):
+        if __grains__["os_family"] in "RedHat":
+            if copr is not None:
+                repo = ":".join(("copr", copr))
+                kwargs["name"] = name
+
         if "humanname" in kwargs:
             kwargs["name"] = kwargs.pop("humanname")
         if "name" not in kwargs:
@@ -393,10 +409,10 @@ def managed(name, ppa=None, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        pre = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
+        pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to examine repo '{0}': {1}".format(name, exc)
+        ret["comment"] = "Failed to examine repo '{}': {}".format(name, exc)
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
@@ -429,7 +445,7 @@ def managed(name, ppa=None, **kwargs):
                         break
                 else:
                     break
-            elif kwarg == "comps":
+            elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
             elif kwarg == "line" and __grains__["os_family"] == "Debian":
@@ -469,18 +485,16 @@ def managed(name, ppa=None, **kwargs):
                     ) != salt.utils.data.is_true(pre[kwarg]):
                         break
                 else:
-                    if six.text_type(sanitizedkwargs[kwarg]) != six.text_type(
-                        pre[kwarg]
-                    ):
+                    if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
                         break
         else:
             ret["result"] = True
-            ret["comment"] = "Package repo '{0}' already configured".format(name)
+            ret["comment"] = "Package repo '{}' already configured".format(name)
             return ret
 
     if __opts__["test"]:
         ret["comment"] = (
-            "Package repo '{0}' would be configured. This may cause pkg "
+            "Package repo '{}' would be configured. This may cause pkg "
             "states to behave differently than stated if this action is "
             "repeated without test=True, due to the differences in the "
             "configured repositories.".format(name)
@@ -510,11 +524,11 @@ def managed(name, ppa=None, **kwargs):
         # This is another way to pass information back from the mod_repo
         # function.
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)
+        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
         return ret
 
     try:
-        post = __salt__["pkg.get_repo"](repo, ppa_auth=kwargs.get("ppa_auth", None))
+        post = __salt__["pkg.get_repo"](repo=repo, **kwargs)
         if pre:
             for kwarg in sanitizedkwargs:
                 if post.get(kwarg) != pre.get(kwarg):
@@ -526,10 +540,10 @@ def managed(name, ppa=None, **kwargs):
             ret["changes"] = {"repo": repo}
 
         ret["result"] = True
-        ret["comment"] = "Configured package repo '{0}'".format(name)
+        ret["comment"] = "Configured package repo '{}'".format(name)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Failed to confirm config of repo '{0}': {1}".format(name, exc)
+        ret["comment"] = "Failed to confirm config of repo '{}': {}".format(name, exc)
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -549,6 +563,19 @@ def absent(name, **kwargs):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
+
+    **FEDORA/REDHAT-SPECIFIC OPTIONS**
+
+    copr
+        Use community packages outside of the main package repository.
+
+        .. versionadded:: 3002
+
+        .. code-block:: yaml
+
+            hello-copr:
+                pkgrepo.absent:
+                  - copr: mymindstorm/hello
 
     **UBUNTU-SPECIFIC OPTIONS**
 
@@ -596,6 +623,11 @@ def absent(name, **kwargs):
         if not name.startswith("ppa:"):
             name = "ppa:" + name
 
+    if "copr" in kwargs and __grains__["os_family"] in "RedHat":
+        name = kwargs.pop("copr")
+        if not name.startswith("copr:"):
+            name = "copr:" + name
+
     remove_key = any(kwargs.get(x) is not None for x in ("keyid", "keyid_ppa"))
     if remove_key and "pkg.del_repo_key" not in __salt__:
         ret["result"] = False
@@ -603,20 +635,20 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        repo = __salt__["pkg.get_repo"](name, ppa_auth=kwargs.get("ppa_auth", None))
+        repo = __salt__["pkg.get_repo"](name, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{0}': {1}".format(name, exc)
+        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
         return ret
 
     if not repo:
-        ret["comment"] = "Package repo {0} is absent".format(name)
+        ret["comment"] = "Package repo {} is absent".format(name)
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
         ret["comment"] = (
-            "Package repo '{0}' will be removed. This may "
+            "Package repo '{}' will be removed. This may "
             "cause pkg states to behave differently than stated "
             "if this action is repeated without test=True, due "
             "to the differences in the configured repositories.".format(name)
@@ -633,7 +665,7 @@ def absent(name, **kwargs):
     repos = __salt__["pkg.list_repos"]()
     if name not in repos:
         ret["changes"]["repo"] = name
-        ret["comment"] = "Removed repo {0}".format(name)
+        ret["comment"] = "Removed repo {}".format(name)
 
         if not remove_key:
             ret["result"] = True
@@ -642,13 +674,13 @@ def absent(name, **kwargs):
                 removed_keyid = __salt__["pkg.del_repo_key"](name, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but failed to remove key: {0}".format(exc)
+                ret["comment"] += ", but failed to remove key: {}".format(exc)
             else:
                 ret["result"] = True
                 ret["changes"]["keyid"] = removed_keyid
-                ret["comment"] += ", and keyid {0}".format(removed_keyid)
+                ret["comment"] += ", and keyid {}".format(removed_keyid)
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove repo {0}".format(name)
+        ret["comment"] = "Failed to remove repo {}".format(name)
 
     return ret
