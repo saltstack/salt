@@ -31,7 +31,6 @@ import sys
 from functools import partial
 
 import requests
-
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError

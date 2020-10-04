@@ -48,10 +48,8 @@ Connection module for Amazon EFS
 """
 
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.versions
 
 try:
