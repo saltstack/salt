@@ -114,11 +114,6 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
         client = libcloud_loadbalancer._get_driver("test")
         self.assertFalse(client is None)
 
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_loadbalancer.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_loadbalancer")
-
     def _validate_balancer(self, balancer):
         self.assertEqual(balancer["name"], "test_balancer")
 

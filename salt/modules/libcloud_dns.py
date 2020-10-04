@@ -34,7 +34,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
-import salt.utils.compat
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -68,10 +67,6 @@ def __virtual__():
         ).format(REQUIRED_LIBCLOUD_VERSION)
         return (False, msg)
     return True
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def _get_driver(profile):
