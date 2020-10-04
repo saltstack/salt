@@ -51,7 +51,7 @@ def __virtual__():
 
 def __init__(opts):
     #  Put logic here to instantiate underlying jobs/connections
-    salt.utils.compat.pack_dunder(__name__)
+    pass
 
 
 def present(name):

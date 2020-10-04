@@ -74,10 +74,6 @@ def __virtual__():
     return True
 
 
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
-
-
 def _algorithm_maps():
     return {
         "RANDOM": Algorithm.RANDOM,

@@ -90,11 +90,6 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
         client = libcloud_storage._get_driver("test")
         self.assertFalse(client is None)
 
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_storage.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_storage")
-
     def test_list_containers(self):
         containers = libcloud_storage.list_containers("test")
         self.assertEqual(len(containers), 1)

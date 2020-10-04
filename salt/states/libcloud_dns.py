@@ -50,18 +50,11 @@ Example:
 # Import Python Libs
 from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils.compat
-
 
 def __virtual__():
     if "libcloud_dns.list_zones" in __salt__:
         return True
     return (False, "libcloud_dns module could not be loaded")
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def state_result(result, message, name, changes=None):
