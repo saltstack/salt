@@ -42,7 +42,6 @@
         minion_config_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
 
     .. _`pytest`: http://pytest.org
-    .. _`nose`: https://nose.readthedocs.org
     """
 
 import logging
@@ -190,6 +189,7 @@ RUNTIME_VARS = RuntimeVars(
     TMP_MM_MINION_CONF_DIR=paths.TMP_MM_MINION_CONF_DIR,
     TMP_MM_SUB_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
     TMP_MM_SUB_MINION_CONF_DIR=paths.TMP_MM_SUB_CONF_DIR,
+    TMP_SSH_CONF_DIR=paths.TMP_SSH_CONF_DIR,
     TMP_SCRIPT_DIR=paths.TMP_SCRIPT_DIR,
     TMP_STATE_TREE=paths.TMP_STATE_TREE,
     TMP_BASEENV_STATE_TREE=paths.TMP_STATE_TREE,
@@ -210,6 +210,6 @@ RUNTIME_VARS = RuntimeVars(
     BASE_FILES=paths.BASE_FILES,
     PROD_FILES=paths.PROD_FILES,
     TESTS_DIR=paths.TESTS_DIR,
-    PYTEST_SESSION=False,
+    PYTEST_SESSION="PYTEST_SESSION" in os.environ,
 )
 # <---- Tests Runtime Variables --------------------------------------------------------------------------------------
