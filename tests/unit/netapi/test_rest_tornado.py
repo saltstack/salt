@@ -1,22 +1,13 @@
-# coding: utf-8
-
-from __future__ import absolute_import
-
 import copy
 import hashlib
 import os
 import shutil
+from urllib.parse import urlencode, urlparse
 
 import salt.auth
 import salt.utils.event
 import salt.utils.json
 import salt.utils.yaml
-from salt.ext import six
-from salt.ext.six.moves import map, range  # pylint: disable=import-error
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=no-name-in-module
-    urlencode,
-    urlparse,
-)
 from tests.support.events import eventpublisher_process
 from tests.support.helpers import patched_environ, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -45,10 +36,10 @@ except ImportError:
     HAS_TORNADO = False
 
     # Create fake test case classes so we can properly skip the test case
-    class AsyncTestCase(object):
+    class AsyncTestCase:
         pass
 
-    class AsyncHTTPTestCase(object):
+    class AsyncHTTPTestCase:
         pass
 
 
@@ -103,13 +94,13 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
-        super(SaltnadoTestCase, self).setUp()
+        super().setUp()
         self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT="30")
         self.patched_environ.__enter__()
         self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):
-        super(SaltnadoTestCase, self).tearDown()
+        super().tearDown()
         if hasattr(self, "http_server"):
             del self.http_server
         if hasattr(self, "io_loop"):
@@ -130,6 +121,8 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
             del self._test_generator
         if hasattr(self, "application"):
             del self.application
+        if hasattr(self, "patched_environ"):
+            del self.patched_environ
 
     def build_tornado_app(self, urls):
         application = salt.ext.tornado.web.Application(urls, debug=True)
@@ -143,8 +136,6 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
     def decode_body(self, response):
         if response is None:
             return response
-        if six.PY2:
-            return response
         if response.body:
             # Decode it
             if response.headers.get("Content-Type") == "application/json":
@@ -154,7 +145,7 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
         return response
 
     def fetch(self, path, **kwargs):
-        return self.decode_body(super(SaltnadoTestCase, self).fetch(path, **kwargs))
+        return self.decode_body(super().fetch(path, **kwargs))
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -242,7 +233,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
 
         # send a token as a cookie
         response = self.fetch(
-            "/", headers={"Cookie": "{0}=foo".format(saltnado.AUTH_COOKIE_NAME)}
+            "/", headers={"Cookie": "{}=foo".format(saltnado.AUTH_COOKIE_NAME)}
         )
         token = salt.utils.json.loads(response.body)["token"]
         self.assertEqual(token, "foo")
@@ -252,7 +243,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
             "/",
             headers={
                 saltnado.AUTH_TOKEN_HEADER: "foo",
-                "Cookie": "{0}=bar".format(saltnado.AUTH_COOKIE_NAME),
+                "Cookie": "{}=bar".format(saltnado.AUTH_COOKIE_NAME),
             },
         )
         token = salt.utils.json.loads(response.body)["token"]
@@ -365,7 +356,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         Test transformations low data of the function _get_lowstate
         """
         valid_lowstate = [
-            {u"client": u"local", u"tgt": u"*", u"fun": u"test.fib", u"arg": [u"10"]}
+            {"client": "local", "tgt": "*", "fun": "test.fib", "arg": ["10"]}
         ]
 
         # Case 1. dictionary type of lowstate
@@ -613,7 +604,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        self.assertIn("session_id={0}".format(token), cookies)
+        self.assertIn("session_id={}".format(token), cookies)
         self.assertEqual(
             sorted(response_obj["perms"]),
             sorted(
@@ -636,7 +627,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        self.assertIn("session_id={0}".format(token), cookies)
+        self.assertIn("session_id={}".format(token), cookies)
         self.assertEqual(
             sorted(response_obj["perms"]),
             sorted(
@@ -659,7 +650,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)["return"][0]
         token = response_obj["token"]
-        self.assertIn("session_id={0}".format(token), cookies)
+        self.assertIn("session_id={}".format(token), cookies)
         self.assertEqual(
             sorted(response_obj["perms"]),
             sorted(
@@ -675,7 +666,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         """
         bad_creds = []
-        for key, val in six.iteritems(self.auth_creds_dict):
+        for key, val in self.auth_creds_dict.items():
             if key == "password":
                 continue
             bad_creds.append((key, val))
@@ -693,7 +684,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         """
         bad_creds = []
-        for key, val in six.iteritems(self.auth_creds_dict):
+        for key, val in self.auth_creds_dict.items():
             if key == "username":
                 val = val + "foo"
             if key == "eauth":
@@ -795,7 +786,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
             "token"
         ]
 
-        url = "ws://127.0.0.1:{0}/all_events/{1}".format(self.get_http_port(), token)
+        url = "ws://127.0.0.1:{}/all_events/{}".format(self.get_http_port(), token)
         request = HTTPRequest(
             url, headers={"Origin": "http://example.com", "Host": "example.com"}
         )
@@ -812,7 +803,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
             getattr(hashlib, self.opts.get("hash_type", "md5"))().hexdigest()
         )
 
-        url = "ws://127.0.0.1:{0}/all_events/{1}".format(self.get_http_port(), token)
+        url = "ws://127.0.0.1:{}/all_events/{}".format(self.get_http_port(), token)
         request = HTTPRequest(
             url, headers={"Origin": "http://example.com", "Host": "example.com"}
         )
@@ -835,7 +826,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
             "token"
         ]
 
-        url = "ws://127.0.0.1:{0}/all_events/{1}".format(self.get_http_port(), token)
+        url = "ws://127.0.0.1:{}/all_events/{}".format(self.get_http_port(), token)
         request = HTTPRequest(
             url, headers={"Origin": "http://foo.bar", "Host": "example.com"}
         )
@@ -856,7 +847,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
             "token"
         ]
-        url = "ws://127.0.0.1:{0}/all_events/{1}".format(self.get_http_port(), token)
+        url = "ws://127.0.0.1:{}/all_events/{}".format(self.get_http_port(), token)
 
         # Example.com should works
         request = HTTPRequest(
@@ -888,7 +879,7 @@ class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
         token = salt.utils.json.loads(self.decode_body(response).body)["return"][0][
             "token"
         ]
-        url = "ws://127.0.0.1:{0}/all_events/{1}".format(self.get_http_port(), token)
+        url = "ws://127.0.0.1:{}/all_events/{}".format(self.get_http_port(), token)
 
         # Example.com should works
         request = HTTPRequest(
@@ -953,7 +944,7 @@ class TestEventListener(AsyncTestCase):
         if not os.path.exists(self.sock_dir):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
-        super(TestEventListener, self).setUp()
+        super().setUp()
 
     @slowTest
     def test_simple(self):
@@ -1029,7 +1020,7 @@ class TestEventListener(AsyncTestCase):
         dummy_request_future_2 : will be timeout-ed by clean-by_request(dummy_request)
         """
 
-        class DummyRequest(object):
+        class DummyRequest:
             """
             Dummy request object to simulate the request object
             """

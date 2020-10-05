@@ -469,9 +469,9 @@ class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            mocker = LoaderModuleMock(self, loader_modules_configs)
-            mocker.__enter__()
-            self.addCleanup(mocker.__exit__)
+            mocker = LoaderModuleMock(loader_modules_configs)
+            mocker.start()
+            self.addCleanup(mocker.stop)
             return setup_func(self)
 
         return wrapper

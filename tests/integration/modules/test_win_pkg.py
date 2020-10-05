@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import textwrap
 
@@ -49,7 +45,7 @@ class WinPKGTest(ModuleCase):
             self.assertEqual(
                 check_refresh,
                 refresh["total"],
-                msg="total returned {0}. Expected return {1}".format(
+                msg="total returned {}. Expected return {}".format(
                     refresh["total"], check_refresh
                 ),
             )
@@ -69,8 +65,8 @@ class WinPKGTest(ModuleCase):
                     else:
                         assert pkg + ".sls" not in files
 
-        pkgs = ["putty", "7zip"]
-        # check putty and 7zip are in cache and repo query
+        pkgs = ["putty", "vlc"]
+        # check putty and vlc are in cache and repo query
         _check_pkg(pkgs, 2)
 
         # now add new sls
