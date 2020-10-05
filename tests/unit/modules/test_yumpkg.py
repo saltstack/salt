@@ -4,8 +4,8 @@ import salt.modules.cmdmod as cmdmod
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
-from salt.exceptions import CommandExecutionError
 import salt.utils.platform
+from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
