@@ -311,12 +311,17 @@ def raw_mod(opts, name, functions, mod="modules"):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
-def metaproxy(opts):
+def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
     """
 
-    return LazyLoader(_module_dirs(opts, "metaproxy"), opts, tag="metaproxy")
+    return LazyLoader(
+        _module_dirs(opts, "metaproxy"),
+        opts,
+        tag="metaproxy",
+        loaded_base_name=loaded_base_name,
+    )
 
 
 def matchers(opts):
@@ -345,7 +350,9 @@ def engines(opts, functions, runners, utils, proxy=None):
     )
 
 
-def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
+def proxy(
+    opts, functions=None, returners=None, whitelist=None, utils=None, context=None
+):
     """
     Returns the proxy module for this salt-proxy-minion
     """
@@ -353,7 +360,12 @@ def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
         _module_dirs(opts, "proxy"),
         opts,
         tag="proxy",
-        pack={"__salt__": functions, "__ret__": returners, "__utils__": utils},
+        pack={
+            "__salt__": functions,
+            "__ret__": returners,
+            "__utils__": utils,
+            "__context__": context,
+        },
         extra_module_dirs=utils.module_dirs if utils else None,
     )
 
@@ -669,7 +681,7 @@ def render(opts, functions, states=None, proxy=None, context=None):
     return rend
 
 
-def grain_funcs(opts, proxy=None):
+def grain_funcs(opts, proxy=None, context=None):
     """
     Returns the grain functions
 
@@ -682,11 +694,14 @@ def grain_funcs(opts, proxy=None):
           grainfuncs = salt.loader.grain_funcs(__opts__)
     """
     _utils = utils(opts, proxy=proxy)
+    pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
+
     ret = LazyLoader(
         _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
+        pack=pack,
     )
     ret.pack["__utils__"] = _utils
     return ret
@@ -743,7 +758,7 @@ def _load_cached_grains(opts, cfn):
         return None
 
 
-def grains(opts, force_refresh=False, proxy=None):
+def grains(opts, force_refresh=False, proxy=None, context=None):
     """
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -805,7 +820,7 @@ def grains(opts, force_refresh=False, proxy=None):
 
     grains_data = {}
     blist = opts.get("grains_blacklist", [])
-    funcs = grain_funcs(opts, proxy=proxy)
+    funcs = grain_funcs(opts, proxy=proxy, context=context or {})
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -1204,7 +1219,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
-        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        if loaded_base_name:
+            self.loaded_base_name = loaded_base_name
+        else:
+            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1259,6 +1277,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module("{}.int.{}".format(self.loaded_base_name, tag))
         _generate_module("{}.ext".format(self.loaded_base_name))
         _generate_module("{}.ext.{}".format(self.loaded_base_name, tag))
+
+    def clean_modules(self):
+        """
+        Clean modules
+        """
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                mod = sys.modules.pop(name)
+                del mod
 
     def __getitem__(self, item):
         """

@@ -1232,6 +1232,45 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self._verify_libs()
 
 
+class LoaderMultipleGlobalTest(ModuleCase):
+    """
+    Tests when using multiple lazyloaders
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+        self.loader2 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+
+    def tearDown(self):
+        del self.loader1
+        del self.loader2
+
+    def test_loader_globals(self):
+        """
+        Test to ensure loaders do not edit
+        each others loader's namespace
+        """
+        self.loader1.pack["__foo__"] = "bar1"
+        func1 = self.loader1["test.ping"]
+
+        self.loader2.pack["__foo__"] = "bar2"
+        func2 = self.loader2["test.ping"]
+
+        assert func1.__globals__["__foo__"] == "bar1"
+        assert func2.__globals__["__foo__"] == "bar2"
+
+
 class LoaderGlobalsTest(ModuleCase):
     """
     Test all of the globals that the loader is responsible for adding to modules
