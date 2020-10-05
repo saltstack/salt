@@ -37,6 +37,7 @@ import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
 import salt.utils.hashutils
+import salt.utils.http
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.platform
@@ -2939,51 +2940,49 @@ def blockreplace(
     # no changes are required and to avoid any file access on a partially
     # written file.
     try:
-        # pylint: disable=resource-leakage
-        fi_file = salt.utils.files.fopen(
-            path, mode="r", encoding=file_encoding, newline=""
-        )
-        # pylint: enable=resource-leakage
-        for line in fi_file:
-            write_line_to_new_file = True
+        with salt.utils.files.fopen(
+            path, "r", encoding=file_encoding, newline=""
+        ) as fi_file:
+            for line in fi_file:
+                write_line_to_new_file = True
 
-            if linesep is None:
-                # Auto-detect line separator
-                if line.endswith("\r\n"):
-                    linesep = "\r\n"
-                elif line.endswith("\n"):
-                    linesep = "\n"
+                if linesep is None:
+                    # Auto-detect line separator
+                    if line.endswith("\r\n"):
+                        linesep = "\r\n"
+                    elif line.endswith("\n"):
+                        linesep = "\n"
+                    else:
+                        # No newline(s) in file, fall back to system's linesep
+                        linesep = os.linesep
+
+                if marker_start in line:
+                    # We've entered the content block
+                    in_block = True
                 else:
-                    # No newline(s) in file, fall back to system's linesep
-                    linesep = os.linesep
+                    if in_block:
+                        # We're not going to write the lines from the old file to
+                        # the new file until we have exited the block.
+                        write_line_to_new_file = False
 
-            if marker_start in line:
-                # We've entered the content block
-                in_block = True
-            else:
-                if in_block:
-                    # We're not going to write the lines from the old file to
-                    # the new file until we have exited the block.
-                    write_line_to_new_file = False
+                        marker_end_pos = line.find(marker_end)
+                        if marker_end_pos != -1:
+                            # End of block detected
+                            in_block = False
+                            # We've found and exited the block
+                            block_found = True
 
-                    marker_end_pos = line.find(marker_end)
-                    if marker_end_pos != -1:
-                        # End of block detected
-                        in_block = False
-                        # We've found and exited the block
-                        block_found = True
+                            _add_content(
+                                linesep,
+                                lines=new_file,
+                                include_marker_start=False,
+                                end_line=line[marker_end_pos:],
+                            )
 
-                        _add_content(
-                            linesep,
-                            lines=new_file,
-                            include_marker_start=False,
-                            end_line=line[marker_end_pos:],
-                        )
-
-            # Save the line from the original file
-            orig_file.append(line)
-            if write_line_to_new_file:
-                new_file.append(line)
+                # Save the line from the original file
+                orig_file.append(line)
+                if write_line_to_new_file:
+                    new_file.append(line)
 
     except OSError as exc:
         raise CommandExecutionError("Failed to read from {}: {}".format(path, exc))
@@ -3909,6 +3908,9 @@ def read(path, binary=False):
 
     Return the content of the file.
 
+    :param bool binary:
+        Whether to read and return binary data
+
     CLI Example:
 
     .. code-block:: bash
@@ -3919,7 +3921,10 @@ def read(path, binary=False):
     if binary is True:
         access_mode += "b"
     with salt.utils.files.fopen(path, access_mode) as file_obj:
-        return salt.utils.stringutils.to_unicode(file_obj.read())
+        if binary is True:
+            return file_obj.read()
+        else:
+            return salt.utils.stringutils.to_unicode(file_obj.read())
 
 
 def readlink(path, canonicalize=False):
@@ -4324,8 +4329,10 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    ret = (single_src, single_hash)
-                    break
+                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    if "error" not in query_res:
+                        ret = (single_src, single_hash)
+                        break
                 elif proto == "file" and (
                     os.path.exists(urlparsed_single_src.netloc)
                     or os.path.exists(urlparsed_single_src.path)
@@ -4366,8 +4373,10 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    ret = (single, source_hash)
-                    break
+                    query_res = salt.utils.http.query(single, method="HEAD")
+                    if "error" not in query_res:
+                        ret = (single, source_hash)
+                        break
                 elif single.startswith(os.sep) and os.path.exists(single):
                     ret = (single, source_hash)
                     break
