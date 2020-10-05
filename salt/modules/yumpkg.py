@@ -2,15 +2,15 @@
 Support for YUM/DNF
 
 .. important::
-If you feel that Salt should be using this module to manage packages on a
-minion, and it is using a different module (or gives an error similar to
-*'pkg.install' is not available*), see :ref:`here
-<module-provider-override>`.
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 
 .. note::
-DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
-support for DNF was initially added in 2015.8.0), and DNF is used
-automatically in place of YUM in Fedora 22 and newer.
+    DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
+    support for DNF was initially added in 2015.8.0), and DNF is used
+    automatically in place of YUM in Fedora 22 and newer.
 """
 
 
@@ -2897,7 +2897,6 @@ def mod_repo(repo, basedir=None, **kwargs):
                 "The repo does not exist and needs to be created, but none "
                 "of the following basedir directories exist: {}".format(basedirs)
             )
-
         repofile = "{}/{}.repo".format(newdir, repo)
         if use_copr:
             # Is copr plugin installed?
