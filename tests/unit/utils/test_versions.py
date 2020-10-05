@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.version_test
     ~~~~~~~~~~~~~~~~~~~~~~~
@@ -7,8 +6,6 @@
     Some new examples were added and some adjustments were made to run tests in python 2 and 3
 """
 # pylint: disable=string-substitution-usage-error
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
@@ -19,17 +16,11 @@ import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.versions
 import salt.version
-from salt.ext import six
 from salt.utils.versions import LooseVersion, StrictVersion
 from tests.support.helpers import slowTest
 from tests.support.mock import patch
-from tests.support.paths import CODE_DIR
+from tests.support.paths import SALT_CODE_DIR
 from tests.support.unit import TestCase, skipIf
-
-if six.PY2:
-    cmp_method = "__cmp__"
-else:
-    cmp_method = "_cmp"
 
 
 class VersionTestCase(TestCase):
@@ -37,10 +28,10 @@ class VersionTestCase(TestCase):
         version = StrictVersion("1.2.3a1")
         self.assertEqual(version.version, (1, 2, 3))
         self.assertEqual(version.prerelease, ("a", 1))
-        self.assertEqual(six.text_type(version), "1.2.3a1")
+        self.assertEqual(str(version), "1.2.3a1")
 
         version = StrictVersion("1.2.0")
-        self.assertEqual(six.text_type(version), "1.2")
+        self.assertEqual(str(version), "1.2")
 
     def test_cmp_strict(self):
         versions = (
@@ -65,7 +56,7 @@ class VersionTestCase(TestCase):
 
         for v1, v2, wanted in versions:
             try:
-                res = getattr(StrictVersion(v1), cmp_method)(StrictVersion(v2))
+                res = StrictVersion(v1)._cmp(StrictVersion(v2))
             except ValueError:
                 if wanted is ValueError:
                     continue
@@ -74,7 +65,9 @@ class VersionTestCase(TestCase):
                         ("cmp(%s, %s) " "shouldn't raise ValueError") % (v1, v2)
                     )
             self.assertEqual(
-                res, wanted, "cmp(%s, %s) should be %s, got %s" % (v1, v2, wanted, res)
+                res,
+                wanted,
+                "cmp({}, {}) should be {}, got {}".format(v1, v2, wanted, res),
             )
 
     def test_cmp(self):
@@ -93,9 +86,11 @@ class VersionTestCase(TestCase):
         )
 
         for v1, v2, wanted in versions:
-            res = getattr(LooseVersion(v1), cmp_method)(LooseVersion(v2))
+            res = LooseVersion(v1)._cmp(LooseVersion(v2))
             self.assertEqual(
-                res, wanted, "cmp(%s, %s) should be %s, got %s" % (v1, v2, wanted, res)
+                res,
+                wanted,
+                "cmp({}, {}) should be {}, got {}".format(v1, v2, wanted, res),
             )
 
     @skipIf(not salt.utils.platform.is_linux(), "only need to run on linux")
@@ -108,16 +103,16 @@ class VersionTestCase(TestCase):
         query = "salt.utils.versions.warn_until("
         names = salt.version.SaltStackVersion.NAMES
 
-        cmd = "grep -lr {} -A 1 {}".format(query, os.path.join(CODE_DIR, "salt"))
+        cmd = ["grep", "-lr", query, "-A", "1", SALT_CODE_DIR]
 
         grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
 
         for line in grep_call:
             num_cmd = salt.modules.cmdmod.run_stdout(
-                "grep -c {0} {1}".format(query, line)
+                "grep -c {} {}".format(query, line)
             )
             ver_cmd = salt.modules.cmdmod.run_stdout(
-                "grep {0} {1} -A 1".format(query, line)
+                "grep {} {} -A 1".format(query, line)
             )
             if "pyc" in line:
                 break
@@ -133,10 +128,10 @@ class VersionTestCase(TestCase):
             self.assertEqual(
                 match,
                 int(num_cmd),
-                msg="The file: {0} has an "
+                msg="The file: {} has an "
                 "incorrect spelling for the release name in the warn_utils "
-                "call: {1}. Expecting one of these release names: "
-                "{2}".format(line, ver_cmd, names),
+                "call: {}. Expecting one of these release names: "
+                "{}".format(line, ver_cmd, names),
             )
 
 
@@ -175,16 +170,12 @@ class VersionFuncsTestCase(TestCase):
         # raise_warning should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_warning()
-            self.assertEqual(
-                "Deprecation Message!", six.text_type(recorded_warnings[0].message)
-            )
+            self.assertEqual("Deprecation Message!", str(recorded_warnings[0].message))
 
         # raise_warning should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_named_version_warning()
-            self.assertEqual(
-                "Deprecation Message!", six.text_type(recorded_warnings[0].message)
-            )
+            self.assertEqual("Deprecation Message!", str(recorded_warnings[0].message))
 
         # the deprecation warning is not issued because we passed
         # _dont_call_warning
@@ -258,8 +249,8 @@ class VersionFuncsTestCase(TestCase):
                 _version_info_=(vrs.major - 1, 0),
             )
             self.assertEqual(
-                "Deprecation Message until {0}!".format(vrs.formatted_version),
-                six.text_type(recorded_warnings[0].message),
+                "Deprecation Message until {}!".format(vrs.formatted_version),
+                str(recorded_warnings[0].message),
             )
 
     def test_kwargs_warn_until_warning_raised(self):
@@ -278,7 +269,7 @@ class VersionFuncsTestCase(TestCase):
             self.assertEqual(
                 "The following parameter(s) have been deprecated and "
                 "will be removed in '0.17.0': 'foo'.",
-                six.text_type(recorded_warnings[0].message),
+                str(recorded_warnings[0].message),
             )
         # With no **kwargs, should not show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
@@ -320,9 +311,7 @@ class VersionFuncsTestCase(TestCase):
                 "Deprecation Message!",
                 _current_date=_current_date,
             )
-            self.assertEqual(
-                "Deprecation Message!", six.text_type(recorded_warnings[0].message)
-            )
+            self.assertEqual("Deprecation Message!", str(recorded_warnings[0].message))
 
         # Test warning with datetime.datetime instance
         with warnings.catch_warnings(record=True) as recorded_warnings:
@@ -331,18 +320,14 @@ class VersionFuncsTestCase(TestCase):
                 "Deprecation Message!",
                 _current_date=_current_date,
             )
-            self.assertEqual(
-                "Deprecation Message!", six.text_type(recorded_warnings[0].message)
-            )
+            self.assertEqual("Deprecation Message!", str(recorded_warnings[0].message))
 
         # Test warning with date as a string
         with warnings.catch_warnings(record=True) as recorded_warnings:
             salt.utils.versions.warn_until_date(
                 "20000102", "Deprecation Message!", _current_date=_current_date
             )
-            self.assertEqual(
-                "Deprecation Message!", six.text_type(recorded_warnings[0].message)
-            )
+            self.assertEqual("Deprecation Message!", str(recorded_warnings[0].message))
 
         # the deprecation warning is not issued because we passed
         # _dont_call_warning
