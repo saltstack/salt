@@ -55,7 +55,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-rom salt.ext import six
+from salt.ext import six
 from salt.ext.six.moves import range
 from salt.serializers.configparser import deserialize
 
@@ -92,11 +92,13 @@ PRESENTATION_ANCESTOR_XPATH = None
 TEXT_ELEMENT_XPATH = None
 
 try:
+    import struct
+
+    import lxml
     import win32net
     import win32security
-    import lxml
-    import struct
     from lxml import etree
+
     from salt.utils.win_reg import Registry
 
     HAS_WINDOWS_MODULES = True
