@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
 # TODO: Update skipped tests to expect dictionary results from the execution
 #       module functions.
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 import random
@@ -15,21 +11,14 @@ import sys
 import pkg_resources
 from pkg_resources import DistributionNotFound
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-# Import 3rd-party libs
-from salt.ext import six
-
 # pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -130,7 +119,7 @@ def _get_moto_version():
     Returns the moto version
     """
     try:
-        return LooseVersion(six.text_type(moto.__version__))
+        return LooseVersion(str(moto.__version__))
     except AttributeError:
         try:
             return LooseVersion(pkg_resources.get_distribution("moto").version)
@@ -178,7 +167,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        super(BotoVpcTestCaseBase, self).setUp()
+        super().setUp()
         boto_vpc.__init__(self.opts)
         delattr(self, "opts")
         # connections keep getting cached from prior tests, can't find the
@@ -199,7 +188,7 @@ class BotoVpcTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn3
 
 
-class BotoVpcTestCaseMixin(object):
+class BotoVpcTestCaseMixin:
     conn = None
 
     def _create_vpc(self, name=None, tags=None):
@@ -664,7 +653,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_properties = dict(
             id=vpc.id,
-            cidr_block=six.text_type(cidr_block),
+            cidr_block=str(cidr_block),
             is_default=is_default,
             state="available",
             tags={"Name": "test", "test": "testvalue"},
@@ -727,7 +716,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 @skipIf(
     sys.version_info > (3, 6),
@@ -775,7 +764,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_association = boto_vpc.get_subnet_association(
             [subnet_a.id, subnet_b.id], **conn_parameters
         )
-        self.assertEqual(set(subnet_association["vpc_ids"]), set([vpc_a.id, vpc_b.id]))
+        self.assertEqual(set(subnet_association["vpc_ids"]), {vpc_a.id, vpc_b.id})
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(
@@ -986,7 +975,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1017,7 +1006,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1051,7 +1040,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "cidr_block", "availability_zone", "tags"},
         )
 
     @skipIf(True, "Skip these tests while investigating failures")
@@ -1075,7 +1064,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            set(["id", "cidr_block", "availability_zone", "tags"]),
+            {"id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1296,7 +1285,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 @skipIf(
     sys.version_info > (3, 6),
@@ -2248,7 +2237,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 )
 @skipIf(
     _has_required_moto() is False,
-    "The moto version must be >= to version {0}".format(required_moto_version),
+    "The moto version must be >= to version {}".format(required_moto_version),
 )
 @skipIf(
     sys.version_info > (3, 6),
@@ -2294,3 +2283,12 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             peer_vpc_id=other_vpc.id,
             **conn_parameters
         )
+
+
+class BotoVpcTestDeprecation(TestCase):
+    def test_deprecation_58636(self):
+        try:
+            boto_vpc.describe_route_table
+        except AttributeError:
+            return
+        raise AttributeError("describe_route_table should be deprecated")
