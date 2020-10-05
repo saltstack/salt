@@ -8,6 +8,7 @@
 import collections
 import compileall
 import copy
+import gc
 import imp
 import inspect
 import logging
@@ -1269,6 +1270,95 @@ class LoaderMultipleGlobalTest(ModuleCase):
 
         assert func1.__globals__["__foo__"] == "bar1"
         assert func2.__globals__["__foo__"] == "bar2"
+
+
+class LoaderCleanupTest(ModuleCase):
+    """
+    Tests the loader cleanup procedures
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+
+    def tearDown(self):
+        del self.loader1
+
+    def test_loader_gc_cleanup(self):
+        loaded_base_name = self.loader1.loaded_base_name
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+
+        # Assert that the weakref.finalizer is alive
+        assert self.loader1._gc_finalizer.alive is True
+
+        gc.collect()
+        # Even after a gc.collect call, we should still have our module in sys.modules
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                if sys.modules[name] is None:
+                    self.fail(
+                        "Found at least one module in sys.modules matching {!r} prematurely set to None".format(
+                            loaded_base_name
+                        )
+                    )
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+        # Should still be true because there's still at least one reference to self.loader1
+        assert self.loader1._gc_finalizer.alive is True
+
+        # Now we remove our refence to loader and trigger GC, thus triggering the loader weakref finalizer
+        self.loader1 = None
+        gc.collect()
+
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                if sys.modules[name] is not None:
+                    self.fail(
+                        "Found a real module reference in sys.modules matching {!r}.".format(
+                            loaded_base_name,
+                        )
+                    )
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+
+    def test_loader_clean_modules(self):
+        loaded_base_name = self.loader1.loaded_base_name
+        self.loader1.clean_modules()
+
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                self.fail(
+                    "Found a real module reference in sys.modules matching {!r}".format(
+                        loaded_base_name
+                    )
+                )
+                break
+
+        # Additionally, assert that the weakref.finalizer is now dead
+        assert self.loader1._gc_finalizer.alive is False
 
 
 class LoaderGlobalsTest(ModuleCase):
