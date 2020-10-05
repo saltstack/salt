@@ -295,11 +295,6 @@ def get_pending_update():
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired``
     ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\PostRebootReporting``
 
-    If there are any subkeys under the following registry key, a reboot is
-    pending:
-
-    ``HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Services\\Pending``
-
     .. versionadded:: 3001
 
     Returns:

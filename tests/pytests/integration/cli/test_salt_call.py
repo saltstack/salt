@@ -57,8 +57,6 @@ def test_json_out_indent(salt_call_cli, indent):
     else:
         expected_output = '{\n "local": true\n}\n'
     stdout = ret.stdout
-    if salt.utils.platform.is_windows():
-        expected_output = expected_output.replace("\n", os.linesep)
     assert ret.stdout == expected_output
 
 
