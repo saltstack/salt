@@ -31,7 +31,7 @@ portend==2.6              # via cherrypy
 psutil==5.6.7
 pyasn1==0.4.5
 pycparser==2.19
-pycryptodomex==3.9.7
+pycryptodomex==3.9.8
 pycurl==7.43.0.5
 pymssql==2.1.4 ; python_version < "3.8"
 pymysql==0.9.3
