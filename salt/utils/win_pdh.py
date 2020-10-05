@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Salt Util for getting system information with the Performance Data Helper (pdh).
 Counter information is gathered from current activity or log files.
@@ -34,18 +33,14 @@ Usage:
 """
 
 # https://docs.microsoft.com/en-us/windows/desktop/perfctrs/using-the-pdh-functions-to-consume-counter-data
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 # https://www.cac.cornell.edu/wiki/index.php?title=Performance_Data_Helper_in_Python_with_win32pdh
 import logging
 import time
 
-# Import salt libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
-# Import 3rd party libs
 try:
     import pywintypes
     import win32pdh
@@ -74,7 +69,7 @@ def __virtual__():
     return __virtualname__
 
 
-class Counter(object):
+class Counter:
     """
     Counter object
     Has enumerations and functions for working with counters
@@ -172,7 +167,7 @@ class Counter(object):
         )
         if win32pdh.ValidatePath(path) == 0:
             return Counter(path, obj, instance, instance_index, counter)
-        raise CommandExecutionError("Invalid counter specified: {0}".format(path))
+        raise CommandExecutionError("Invalid counter specified: {}".format(path))
 
     build_counter = staticmethod(build_counter)
 
@@ -420,6 +415,14 @@ def get_counters(counter_list):
                     continue
                 else:
                     raise
+
+    except pywintypes.error as exc:
+        if exc.strerror == "No data to return.":
+            # Sometimess, win32pdh.CollectQueryData can err
+            # so just ignore it
+            return {}
+        else:
+            raise
 
     finally:
         win32pdh.CloseQuery(query)
