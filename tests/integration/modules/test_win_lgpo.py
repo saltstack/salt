@@ -188,8 +188,9 @@ class WinLgpoTest(ModuleCase):
                 self.assertIsNotNone(
                     match,
                     msg='Failed validating policy "{}" configuration, regex '
-                        '"{}" not found in lgpo output:\n{}'
-                        ''.format(policy_name, expected_regex, lgpo_output))
+                    '"{}" not found in lgpo output:\n{}'
+                    "".format(policy_name, expected_regex, lgpo_output),
+                )
             # validate the lgpo also sees the right setting
             this_policy_info = self.run_function(
                 "lgpo.get_policy_info",
@@ -218,7 +219,12 @@ class WinLgpoTest(ModuleCase):
             )
             if isinstance(policy_config, list):
                 for this_item in policy_config:
-                    self.assertTrue(this_item in ret[lgpo_top_level][output_policy_name], msg='Item {} not found in policy configuration'.format(this_item))
+                    self.assertTrue(
+                        this_item in ret[lgpo_top_level][output_policy_name],
+                        msg="Item {} not found in policy configuration".format(
+                            this_item
+                        ),
+                    )
             elif isinstance(policy_config, dict):
                 for this_item, this_val in policy_config.items():
                     item_correct = False
@@ -253,10 +259,16 @@ class WinLgpoTest(ModuleCase):
                                             ):
                                                 item_correct = True
                                                 break
-                    self.assertTrue(item_correct,
-                                    msg='Item "{}" does not have the expected value of "{}"{}'.format(this_item,
-                                                                                                         this_val,
-                                                                                                         ' value found: "{}"'.format(actual_val) if actual_val else ''))
+                    self.assertTrue(
+                        item_correct,
+                        msg='Item "{}" does not have the expected value of "{}"{}'.format(
+                            this_item,
+                            this_val,
+                            ' value found: "{}"'.format(actual_val)
+                            if actual_val
+                            else "",
+                        ),
+                    )
             else:
                 self.assertEqual(
                     ret[lgpo_top_level][output_policy_name],
