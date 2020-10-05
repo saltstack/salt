@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.sysctl as sysctl
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -35,22 +29,20 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
         config = "/etc/sysctl.conf"
 
         comment = (
-            "Sysctl option {0} might be changed, we failed to check "
-            "config file at {1}. The file is either unreadable, or "
+            "Sysctl option {} might be changed, we failed to check "
+            "config file at {}. The file is either unreadable, or "
             "missing.".format(name, config)
         )
 
         ret = {"name": name, "result": None, "changes": {}, "comment": comment}
 
-        comment_empty = "Sysctl option {0} would be changed to {1}" "".format(
-            name, value
-        )
+        comment_empty = "Sysctl option {} would be changed to {}" "".format(name, value)
 
-        comment1 = "Sysctl option {0} set to be changed to {1}".format(name, value)
+        comment1 = "Sysctl option {} set to be changed to {}".format(name, value)
 
         comment2 = (
             "Sysctl value is currently set on the running system but "
-            "not in a config file. Sysctl option {0} set to be "
+            "not in a config file. Sysctl option {} set to be "
             "changed to 2 in config file.".format(name)
         )
 
@@ -60,15 +52,13 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
             "changed to {1}".format(name, value)
         )
 
-        comt4 = "Sysctl value {0} = {1} is already set".format(name, value)
+        comt4 = "Sysctl value {} = {} is already set".format(name, value)
 
-        comt5 = "Sysctl option {0} would be changed to {1}".format(name, value)
+        comt5 = "Sysctl option {} would be changed to {}".format(name, value)
 
-        comt6 = "Failed to set {0} to {1}: ".format(name, value)
+        comt6 = "Failed to set {} to {}: ".format(name, value)
 
-        comt7 = "Sysctl value {0} = {1} is already set".format(name, value)
-
-        comt8 = "Sysctl value {0} = {1} was ignored".format(name, value)
+        comt7 = "Sysctl value {} = {} is already set".format(name, value)
 
         def mock_current(config_file=None):
             """
@@ -136,9 +126,4 @@ class SysctlTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value="Already set")
             with patch.dict(sysctl.__salt__, {"sysctl.persist": mock}):
                 ret.update({"comment": comt7, "result": True})
-                self.assertDictEqual(sysctl.present(name, value), ret)
-
-            mock = MagicMock(return_value="Ignored")
-            with patch.dict(sysctl.__salt__, {"sysctl.persist": mock}):
-                ret.update({"comment": comt8, "result": True})
                 self.assertDictEqual(sysctl.present(name, value), ret)
