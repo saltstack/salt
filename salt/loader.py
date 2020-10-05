@@ -1220,10 +1220,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
-        if loaded_base_name:
-            self.loaded_base_name = loaded_base_name
-        else:
-            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
+        # if loaded_base_name:
+        #    self.loaded_base_name = loaded_base_name
+        # else:
+        #    self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
