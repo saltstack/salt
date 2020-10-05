@@ -317,7 +317,7 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
     )
     retmsg = _get_return(ret)
     # Supervisor>=4.0 sets non zero return code if all processes are not
-    # in RUNNING state. In this case, _get_str appends and "ERROR: " to
+    # in RUNNING state. In this case, _get_return appends and "ERROR: " to
     # the return, which we need to filter out
     if retmsg.startswith("ERROR: "):
         retmsg = retmsg[7:]
