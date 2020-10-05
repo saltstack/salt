@@ -16,10 +16,8 @@ description.
       system.computer_desc: []
 """
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.functools
 import salt.utils.platform
 
