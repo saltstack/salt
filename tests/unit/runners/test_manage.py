@@ -12,8 +12,8 @@ class ManageTest(TestCase):
             manage.list_state(  # pylint: disable=unexpected-keyword-arg
                 show_ipv4="data"
             )
-        except TypeError as no_opts:
+        except TypeError as no_show_ipv4:
             self.assertEqual(
-                str(no_opts),
+                str(no_show_ipv4),
                 "list_state() got an unexpected keyword argument 'show_ipv4'",
             )
