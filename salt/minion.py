@@ -1,6 +1,7 @@
 """
 Routines to set up a minion
 """
+
 import contextlib
 import copy
 import functools
@@ -68,8 +69,6 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
-
-# Import Salt Libs
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.template import SLS_ENCODING
@@ -257,7 +256,10 @@ def prep_ip_port(opts):
     if opts["master_uri_format"] == "ip_only":
         ret["master"] = ipaddress.ip_address(opts["master"])
     else:
-        host, port = parse_host_port(opts["master"])
+        try:
+            host, port = parse_host_port(opts["master"])
+        except ValueError as exc:
+            raise SaltClientError(exc)
         ret = {"master": host}
         if port:
             ret.update({"master_port": port})
@@ -1452,7 +1454,9 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False, notify=False, grains=None, opts=None):
+    def _load_modules(
+        self, force_refresh=False, notify=False, grains=None, opts=None, context=None
+    ):
         """
         Return the functions and the returners loaded up from the loader
         module
@@ -1491,9 +1495,14 @@ class Minion(MinionBase):
         else:
             proxy = None
 
+        if context is None:
+            context = {}
+
         if grains is None:
-            opts["grains"] = salt.loader.grains(opts, force_refresh, proxy=proxy)
-        self.utils = salt.loader.utils(opts, proxy=proxy)
+            opts["grains"] = salt.loader.grains(
+                opts, force_refresh, proxy=proxy, context=context
+            )
+        self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
             s_opts = copy.deepcopy(opts)
@@ -1503,12 +1512,13 @@ class Minion(MinionBase):
                 proxy=proxy,
                 loaded_base_name=self.loaded_base_name,
                 notify=notify,
+                context=context,
             )
         else:
             functions = salt.loader.minion_mods(
-                opts, utils=self.utils, notify=notify, proxy=proxy
+                opts, utils=self.utils, notify=notify, proxy=proxy, context=context,
             )
-        returners = salt.loader.returners(opts, functions, proxy=proxy)
+        returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
         errors = {}
         if "_errors" in functions:
             errors = functions["_errors"]
@@ -1518,7 +1528,7 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        executors = salt.loader.executors(opts, functions, proxy=proxy)
+        executors = salt.loader.executors(opts, functions, proxy=proxy, context=context)
 
         if opt_in:
             self.opts = opts
@@ -1753,6 +1763,68 @@ class Minion(MinionBase):
             with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
                 run_func(minion_instance, opts, data)
 
+    def _execute_job_function(
+        self, function_name, function_args, executors, opts, data
+    ):
+        """
+        Executes a function within a job given it's name, the args and the executors.
+        It also checks if the function is allowed to run if 'blackout mode' is enabled.
+        """
+        minion_blackout_violation = False
+        if self.connected and self.opts["pillar"].get("minion_blackout", False):
+            whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
+            # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
+            if (
+                function_name != "saltutil.refresh_pillar"
+                and function_name not in whitelist
+            ):
+                minion_blackout_violation = True
+        # use minion_blackout_whitelist from grains if it exists
+        if self.opts["grains"].get("minion_blackout", False):
+            whitelist = self.opts["grains"].get("minion_blackout_whitelist", [])
+            if (
+                function_name != "saltutil.refresh_pillar"
+                and function_name not in whitelist
+            ):
+                minion_blackout_violation = True
+        if minion_blackout_violation:
+            raise SaltInvocationError(
+                "Minion in blackout mode. Set 'minion_blackout' "
+                "to False in pillar or grains to resume operations. Only "
+                "saltutil.refresh_pillar allowed in blackout mode."
+            )
+
+        if function_name in self.functions:
+            func = self.functions[function_name]
+            args, kwargs = load_args_and_kwargs(func, function_args, data)
+        else:
+            # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
+            func = function_name
+            args, kwargs = function_args, data
+        self.functions.pack["__context__"]["retcode"] = 0
+
+        if isinstance(executors, str):
+            executors = [executors]
+        elif not isinstance(executors, list) or not executors:
+            raise SaltInvocationError(
+                "Wrong executors specification: {}. String or non-empty list expected".format(
+                    executors
+                )
+            )
+        if opts.get("sudo_user", "") and executors[-1] != "sudo":
+            executors[-1] = "sudo"  # replace the last one with sudo
+        log.trace("Executors list %s", executors)  # pylint: disable=no-member
+
+        for name in executors:
+            fname = "{}.execute".format(name)
+            if fname not in self.executors:
+                raise SaltInvocationError("Executor '{}' is not available".format(name))
+            return_data = self.executors[fname](opts, data, func, args, kwargs)
+            if return_data is not None:
+                return return_data
+
+        return None
+
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         """
@@ -1773,6 +1845,7 @@ class Minion(MinionBase):
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {"success": False}
         function_name = data["fun"]
+        function_args = data["arg"]
         executors = (
             data.get("module_executors")
             or getattr(minion_instance, "module_executors", [])
@@ -1789,67 +1862,9 @@ class Minion(MinionBase):
         )
         if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts["pillar"].get(
-                    "minion_blackout", False
-                ):
-                    whitelist = minion_instance.opts["pillar"].get(
-                        "minion_blackout_whitelist", []
-                    )
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if (
-                        function_name != "saltutil.refresh_pillar"
-                        and function_name not in whitelist
-                    ):
-                        minion_blackout_violation = True
-                # use minion_blackout_whitelist from grains if it exists
-                if minion_instance.opts["grains"].get("minion_blackout", False):
-                    whitelist = minion_instance.opts["grains"].get(
-                        "minion_blackout_whitelist", []
-                    )
-                    if (
-                        function_name != "saltutil.refresh_pillar"
-                        and function_name not in whitelist
-                    ):
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError(
-                        "Minion in blackout mode. Set 'minion_blackout' "
-                        "to False in pillar or grains to resume operations. Only "
-                        "saltutil.refresh_pillar allowed in blackout mode."
-                    )
-
-                if function_name in minion_instance.functions:
-                    func = minion_instance.functions[function_name]
-                    args, kwargs = load_args_and_kwargs(func, data["arg"], data)
-                else:
-                    # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
-                    func = function_name
-                    args, kwargs = data["arg"], data
-                minion_instance.functions.pack["__context__"]["retcode"] = 0
-                if isinstance(executors, str):
-                    executors = [executors]
-                elif not isinstance(executors, list) or not executors:
-                    raise SaltInvocationError(
-                        "Wrong executors specification: {}. String or non-empty list expected".format(
-                            executors
-                        )
-                    )
-                if opts.get("sudo_user", "") and executors[-1] != "sudo":
-                    executors[-1] = "sudo"  # replace the last one with sudo
-                log.trace("Executors list %s", executors)  # pylint: disable=no-member
-
-                for name in executors:
-                    fname = "{}.execute".format(name)
-                    if fname not in minion_instance.executors:
-                        raise SaltInvocationError(
-                            "Executor '{}' is not available".format(name)
-                        )
-                    return_data = minion_instance.executors[fname](
-                        opts, data, func, args, kwargs
-                    )
-                    if return_data is not None:
-                        break
+                return_data = minion_instance._execute_job_function(
+                    function_name, function_args, executors, opts, data
+                )
 
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
@@ -1915,7 +1930,9 @@ class Minion(MinionBase):
                 ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
             except TypeError as exc:
                 msg = "Passed invalid arguments to {}: {}\n{}".format(
-                    function_name, exc, func.__doc__ or ""
+                    function_name,
+                    exc,
+                    minion_instance.functions[function_name].__doc__ or "",
                 )
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret["return"] = msg
@@ -2036,46 +2053,24 @@ class Minion(MinionBase):
             }
         else:
             ret = {"return": {}, "retcode": {}, "success": {}}
+        executors = (
+            data.get("module_executors")
+            or getattr(minion_instance, "module_executors", [])
+            or opts.get("module_executors", ["direct_call"])
+        )
 
         for ind in range(0, num_funcs):
+            function_name = data["fun"][ind]
+            function_args = data["arg"][ind]
             if not multifunc_ordered:
-                ret["success"][data["fun"][ind]] = False
+                ret["success"][function_name] = False
             try:
-                minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.opts["pillar"].get(
-                    "minion_blackout", False
-                ):
-                    whitelist = minion_instance.opts["pillar"].get(
-                        "minion_blackout_whitelist", []
-                    )
-                    # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
-                    if (
-                        data["fun"][ind] != "saltutil.refresh_pillar"
-                        and data["fun"][ind] not in whitelist
-                    ):
-                        minion_blackout_violation = True
-                elif minion_instance.opts["grains"].get("minion_blackout", False):
-                    whitelist = minion_instance.opts["grains"].get(
-                        "minion_blackout_whitelist", []
-                    )
-                    if (
-                        data["fun"][ind] != "saltutil.refresh_pillar"
-                        and data["fun"][ind] not in whitelist
-                    ):
-                        minion_blackout_violation = True
-                if minion_blackout_violation:
-                    raise SaltInvocationError(
-                        "Minion in blackout mode. Set 'minion_blackout' "
-                        "to False in pillar or grains to resume operations. Only "
-                        "saltutil.refresh_pillar allowed in blackout mode."
-                    )
+                return_data = minion_instance._execute_job_function(
+                    function_name, function_args, executors, opts, data
+                )
 
-                func = minion_instance.functions[data["fun"][ind]]
-
-                args, kwargs = load_args_and_kwargs(func, data["arg"][ind], data)
-                minion_instance.functions.pack["__context__"]["retcode"] = 0
                 key = ind if multifunc_ordered else data["fun"][ind]
-                ret["return"][key] = func(*args, **kwargs)
+                ret["return"][key] = return_data
                 retcode = minion_instance.functions.pack["__context__"].get(
                     "retcode", 0
                 )
@@ -2578,29 +2573,36 @@ class Minion(MinionBase):
         if not self.ready:
             raise salt.ext.tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
+
+        if "proxy_target" in data and self.opts.get("metaproxy") == "deltaproxy":
+            proxy_target = data["proxy_target"]
+            _minion = self.deltaproxy_objs[proxy_target]
+        else:
+            _minion = self
+
         log.debug("Minion of '%s' is handling event tag '%s'", self.opts["master"], tag)
         if tag.startswith("module_refresh"):
-            self.module_refresh(
+            _minion.module_refresh(
                 force_refresh=data.get("force_refresh", False),
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield self.pillar_refresh(force_refresh=data.get("force_refresh", False))
+            yield _minion.pillar_refresh(force_refresh=data.get("force_refresh", False))
         elif tag.startswith("beacons_refresh"):
-            self.beacons_refresh()
+            _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
-            self.matchers_refresh()
+            _minion.matchers_refresh()
         elif tag.startswith("manage_schedule"):
-            self.manage_schedule(tag, data)
+            _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
-            self.manage_beacons(tag, data)
+            _minion.manage_beacons(tag, data)
         elif tag.startswith("grains_refresh"):
             if (
                 data.get("force_refresh", False)
-                or self.grains_cache != self.opts["grains"]
+                or _minion.grains_cache != _minion.opts["grains"]
             ):
-                self.pillar_refresh(force_refresh=True)
-                self.grains_cache = self.opts["grains"]
+                _minion.pillar_refresh(force_refresh=True)
+                _minion.grains_cache = _minion.opts["grains"]
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
         elif tag.startswith("_minion_mine"):
@@ -3614,7 +3616,8 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    metaproxy = salt.loader.metaproxy(opts)
+    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
+    metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
         metaproxy_name = opts["metaproxy"]
     except KeyError:
@@ -3625,7 +3628,7 @@ def _metaproxy_call(opts, fn_name):
             + ". "
             + "Defaulting to standard proxy minion"
         )
-        log.trace(errmsg)
+        log.error(errmsg)
 
     metaproxy_fn = metaproxy_name + "." + fn_name
     return metaproxy[metaproxy_fn]
@@ -3655,6 +3658,14 @@ class ProxyMinion(Minion):
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
         return mp_call(self, master)
+
+    def tune_in(self, start=True):
+        """
+        Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
+        """
+        mp_call = _metaproxy_call(self.opts, "tune_in")
+        return mp_call(self, start)
 
     def _target_load(self, load):
         """
@@ -3743,7 +3754,7 @@ class SProxyMinion(SMinion):
         self.matchers = salt.loader.matchers(self.opts)
         self.functions["sys.reload_modules"] = self.gen_modules
         self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+            self.opts, functions=self.functions, proxy=self.proxy, context=context,
         )
 
         fq_proxyname = self.opts["proxy"]["proxytype"]

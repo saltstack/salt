@@ -1,6 +1,7 @@
 """
 Functions for daemonizing and otherwise modifying running processes
 """
+
 import contextlib
 import copy
 import errno
@@ -872,6 +873,11 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
             "_finalize_methods": self._finalize_methods,
         }
 
+    def join(self, *args, **kwargs):  # pylint: disable=arguments-differ
+        super().join(*args, **kwargs)
+        self._after_fork_methods = None
+        self._finalize_methods = None
+
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
@@ -882,6 +888,9 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
                 method(*args, **kwargs)
             try:
                 return run_func()
+            except SystemExit:  # pylint: disable=try-except-raise
+                # These are handled by multiprocessing.Process._bootstrap()
+                raise
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "An un-handled exception from the multiprocessing process "
@@ -1022,11 +1031,13 @@ class SubprocessList:
             self.lock = multiprocessing.Lock()
         else:
             self.lock = lock
+        self.count = 0
 
     def add(self, proc):
         with self.lock:
             self.processes.append(proc)
             log.debug("Subprocess %s added", proc.name)
+            self.count += 1
 
     def cleanup(self):
         with self.lock:
@@ -1035,6 +1046,7 @@ class SubprocessList:
                     continue
                 proc.join()
                 self.processes.remove(proc)
+                self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)
 
     def terminate(self):
@@ -1045,3 +1057,4 @@ class SubprocessList:
             for proc in self.processes:
                 proc.join()
             self.processes.clear()
+            self.count = 0

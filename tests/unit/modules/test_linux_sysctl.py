@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: jmoney <justin@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.linux_sysctl as linux_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -32,14 +26,6 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=1)
         with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
             self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward"), 1)
-
-    def test_get_ignore(self):
-        """
-        Tests the return of get function with ignore
-        """
-        mock_cmd = MagicMock(return_value="")
-        with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
-            self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward", ignore=True), "")
 
     def test_assign_proc_sys_failed(self):
         """
@@ -93,19 +79,6 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             mock_cmd = MagicMock(return_value=cmd)
             with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
                 self.assertEqual(linux_sysctl.assign("net.ipv4.ip_forward", 1), ret)
-
-    def test_assign_ignore(self):
-        """
-        Tests the ignore assign function
-        """
-        with patch("os.path.exists", MagicMock(return_value=True)):
-            cmd = {"pid": 1337, "retcode": 0, "stderr": "", "stdout": ""}
-            ret = {"net.ipv4.ip_forward": "ignored"}
-            mock_cmd = MagicMock(return_value=cmd)
-            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
-                self.assertEqual(
-                    linux_sysctl.assign("net.ipv4.ip_forward", 1, ignore=True), ret
-                )
 
     def test_persist_no_conf_failure(self):
         """
