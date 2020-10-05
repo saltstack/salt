@@ -4,7 +4,6 @@ and data structures.
 """
 
 
-# Import Python libs
 import copy
 import fnmatch
 import functools
@@ -12,15 +11,12 @@ import logging
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
-# Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.ext import six
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
@@ -790,7 +786,10 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     then return data['foo']['bar']['0']
     """
     ptr = data
-    for each in key.split(delimiter):
+    if isinstance(key, str):
+        key = key.split(delimiter)
+
+    for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)

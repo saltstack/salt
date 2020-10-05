@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 
 .. versionadded:: 2015.5.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import cgi
 import gzip
@@ -49,21 +47,18 @@ from salt.template import compile_template
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
-    from ssl import CertificateError
-    from ssl import match_hostname
+    from ssl import CertificateError, match_hostname
 
     HAS_MATCHHOSTNAME = True
 except ImportError:
     # pylint: disable=no-name-in-module
     try:
-        from backports.ssl_match_hostname import CertificateError
-        from backports.ssl_match_hostname import match_hostname
+        from backports.ssl_match_hostname import CertificateError, match_hostname
 
         HAS_MATCHHOSTNAME = True
     except ImportError:
         try:
-            from salt.ext.ssl_match_hostname import CertificateError
-            from salt.ext.ssl_match_hostname import match_hostname
+            from salt.ext.ssl_match_hostname import CertificateError, match_hostname
 
             HAS_MATCHHOSTNAME = True
         except ImportError:
@@ -93,7 +88,7 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-USERAGENT = "Salt/{0}".format(salt.version.__version__)
+USERAGENT = "Salt/{}".format(salt.version.__version__)
 
 
 def __decompressContent(coding, pgctnt):
@@ -304,7 +299,7 @@ def query(
             auth = (username, password)
 
     if agent == USERAGENT:
-        agent = "{0} http.query()".format(agent)
+        agent = "{} http.query()".format(agent)
     header_dict["User-agent"] = agent
 
     if backend == "requests":
@@ -349,7 +344,7 @@ def query(
 
         # Client-side cert handling
         if cert is not None:
-            if isinstance(cert, six.string_types):
+            if isinstance(cert, str):
                 if os.path.exists(cert):
                     req_kwargs["cert"] = cert
             elif isinstance(cert, list):
@@ -379,7 +374,7 @@ def query(
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
-            header_callback("HTTP/1.0 {0} MESSAGE".format(result.status_code))
+            header_callback("HTTP/1.0 {} MESSAGE".format(result.status_code))
             # fake streaming the content
             streaming_callback(result.content)
             return {
@@ -401,7 +396,7 @@ def query(
         result_text = result.content
         result_cookies = result.cookies
         body = result.content
-        if not isinstance(body, six.text_type) and decode_body:
+        if not isinstance(body, str) and decode_body:
             body = body.decode(result.encoding or "utf-8")
         ret["body"] = body
     elif backend == "urllib2":
@@ -439,7 +434,7 @@ def query(
                 except CertificateError as exc:
                     ret[
                         "error"
-                    ] = "The certificate was invalid. Error returned was: {0}".format(
+                    ] = "The certificate was invalid. Error returned was: {}".format(
                         pprint.pformat(exc)
                     )
                     return ret
@@ -447,7 +442,7 @@ def query(
                 # Client-side cert handling
                 if cert is not None:
                     cert_chain = None
-                    if isinstance(cert, six.string_types):
+                    if isinstance(cert, str):
                         if os.path.exists(cert):
                             cert_chain = cert
                     elif isinstance(cert, list):
@@ -486,7 +481,7 @@ def query(
         try:
             result = opener.open(request)
         except URLError as exc:
-            return {"Error": six.text_type(exc)}
+            return {"Error": str(exc)}
         if stream is True or handle is True:
             return {
                 "handle": result,
@@ -503,7 +498,7 @@ def query(
             if (
                 res_content_type.startswith("text/")
                 and "charset" in res_params
-                and not isinstance(result_text, six.text_type)
+                and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
         if six.PY3 and isinstance(result_text, bytes) and decode_body:
@@ -515,7 +510,7 @@ def query(
 
         # Client-side cert handling
         if cert is not None:
-            if isinstance(cert, six.string_types):
+            if isinstance(cert, str):
                 if os.path.exists(cert):
                     req_kwargs["client_cert"] = cert
             elif isinstance(cert, list):
@@ -629,12 +624,12 @@ def query(
             result = download_client.fetch(url_full, **req_kwargs)
         except salt.ext.tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
-            ret["error"] = six.text_type(exc)
+            ret["error"] = str(exc)
             return ret
-        except (socket.herror, socket.error, socket.timeout, socket.gaierror) as exc:
+        except (socket.herror, OSError, socket.timeout, socket.gaierror) as exc:
             if status is True:
                 ret["status"] = 0
-            ret["error"] = six.text_type(exc)
+            ret["error"] = str(exc)
             log.debug("Cannot perform 'http.query': %s - %s", url_full, ret["error"])
             return ret
 
@@ -654,7 +649,7 @@ def query(
             if (
                 res_content_type.startswith("text/")
                 and "charset" in res_params
-                and not isinstance(result_text, six.text_type)
+                and not isinstance(result_text, str)
             ):
                 result_text = result_text.decode(res_params["charset"])
         if six.PY3 and isinstance(result_text, bytes) and decode_body:
@@ -735,9 +730,10 @@ def query(
 
         valid_decodes = ("json", "xml", "yaml", "plain")
         if decode_type not in valid_decodes:
-            ret["error"] = (
-                "Invalid decode_type specified. "
-                "Valid decode types are: {0}".format(pprint.pformat(valid_decodes))
+            ret[
+                "error"
+            ] = "Invalid decode_type specified. Valid decode types are: {}".format(
+                pprint.pformat(valid_decodes)
             )
             log.error(ret["error"])
             return ret
@@ -852,7 +848,7 @@ def update_ca_bundle(
     query(source, text=True, decode=False, headers=False, status=False, text_out=target)
 
     if merge_files is not None:
-        if isinstance(merge_files, six.string_types):
+        if isinstance(merge_files, str):
             merge_files = [merge_files]
 
         if not isinstance(merge_files, list):
@@ -870,7 +866,7 @@ def update_ca_bundle(
                 try:
                     with salt.utils.files.fopen(cert_file, "r") as fcf:
                         merge_content = "\n".join((merge_content, fcf.read()))
-                except IOError as exc:
+                except OSError as exc:
                     log.error(
                         "Reading from %s caused the following error: %s", cert_file, exc
                     )
@@ -881,7 +877,7 @@ def update_ca_bundle(
                 with salt.utils.files.fopen(target, "a") as tfp:
                     tfp.write("\n")
                     tfp.write(merge_content)
-            except IOError as exc:
+            except OSError as exc:
                 log.error("Writing to %s caused the following error: %s", target, exc)
 
 
@@ -902,10 +898,8 @@ def _render(template, render, renderer, template_dict, opts):
         )
         if salt.utils.stringio.is_readable(ret):
             ret = ret.read()
-        if six.text_type(ret).startswith("#!") and not six.text_type(ret).startswith(
-            "#!/"
-        ):
-            ret = six.text_type(ret).split("\n", 1)[1]
+        if str(ret).startswith("#!") and not str(ret).startswith("#!/"):
+            ret = str(ret).split("\n", 1)[1]
         return ret
     with salt.utils.files.fopen(template, "r") as fh_:
         return fh_.read()
@@ -926,6 +920,7 @@ def parse_cookie_header(header):
         "secure",
         "comment",
         "max-age",
+        "samesite",
     )
 
     # Split into cookie(s); handles headers with multiple cookies defined
@@ -944,7 +939,8 @@ def parse_cookie_header(header):
     value_set = False
     for morsel in morsels:
         parts = morsel.split("=")
-        if parts[0].lower() in attribs:
+        parts[0] = parts[0].lower()
+        if parts[0] in attribs:
             if parts[0] in cookie:
                 cookies.append(cookie)
                 cookie = {}
@@ -1010,8 +1006,9 @@ def parse_cookie_header(header):
         if cookie["expires"] == "":
             cookie["expires"] = 0
 
-        if "httponly" in cookie:
-            del cookie["httponly"]
+        # Remove attribs that don't apply to Cookie objects
+        cookie.pop("httponly", None)
+        cookie.pop("samesite", None)
         ret.append(
             salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie)
         )
@@ -1040,7 +1037,7 @@ def sanitize_url(url, hide_fields):
             log_url += url_tmp
         return log_url.rstrip("&")
     else:
-        return six.text_type(url)
+        return str(url)
 
 
 def _sanitize_url_components(comp_list, field):
@@ -1049,11 +1046,11 @@ def _sanitize_url_components(comp_list, field):
     """
     if not comp_list:
         return ""
-    elif comp_list[0].startswith("{0}=".format(field)):
-        ret = "{0}=XXXXXXXXXX&".format(field)
+    elif comp_list[0].startswith("{}=".format(field)):
+        ret = "{}=XXXXXXXXXX&".format(field)
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)
     else:
-        ret = "{0}&".format(comp_list[0])
+        ret = "{}&".format(comp_list[0])
         comp_list.remove(comp_list[0])
         return ret + _sanitize_url_components(comp_list, field)

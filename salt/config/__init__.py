@@ -103,30 +103,30 @@ _DFLT_IPC_RBUFFER = _gather_buffer_space() * 0.5
 VALID_OPTS = immutabletypes.freeze(
     {
         # The address of the salt master. May be specified as IP address or hostname
-        "master": ((str,), list),
+        "master": (str, list),
         # The TCP/UDP port of the master to connect to in order to listen to publications
-        "master_port": ((str,), int),
+        "master_port": (str, int),
         # The behaviour of the minion when connecting to a master. Can specify 'failover',
         # 'disable', 'distributed', or 'func'. If 'func' is specified, the 'master' option should be
         # set to an exec module function to run to determine the master hostname. If 'disable' is
         # specified the minion will run, but will not try to connect to a master. If 'distributed'
         # is specified the minion will try to deterministically pick a master based on its' id.
-        "master_type": (str,),
+        "master_type": str,
         # Specify the format in which the master address will be specified. Can
         # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
         # master address will not be split into IP and PORT.
-        "master_uri_format": (str,),
+        "master_uri_format": str,
         # The following optiosn refer to the Minion only, and they specify
         # the details of the source address / port to be used when connecting to
         # the Master. This is useful when dealing withmachines where due to firewall
         # rules you are restricted to use a certain IP/port combination only.
-        "source_interface_name": (str,),
-        "source_address": (str,),
-        "source_ret_port": ((str,), int),
-        "source_publish_port": ((str,), int),
+        "source_interface_name": str,
+        "source_address": str,
+        "source_ret_port": (str, int),
+        "source_publish_port": (str, int),
         # The fingerprint of the master key may be specified to increase security. Generate
         # a master fingerprint with `salt-key -F master`
-        "master_finger": (str,),
+        "master_finger": str,
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
@@ -140,7 +140,7 @@ VALID_OPTS = immutabletypes.freeze(
         # interval.
         "master_failback_interval": int,
         # The name of the signing key-pair
-        "master_sign_key_name": (str,),
+        "master_sign_key_name": str,
         # Sign the master auth-replies with a cryptographic signature of the masters public key.
         "master_sign_pubkey": bool,
         # Enables verification of the master-public-signature returned by the master in auth-replies.
@@ -151,7 +151,7 @@ VALID_OPTS = immutabletypes.freeze(
         "always_verify_signature": bool,
         # The name of the file in the masters pki-directory that holds the pre-calculated signature of
         # the masters public-key
-        "master_pubkey_signature": (str,),
+        "master_pubkey_signature": str,
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
@@ -161,22 +161,22 @@ VALID_OPTS = immutabletypes.freeze(
         "master_stats_event_iter": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
-        "syndic_finger": (str,),
+        "syndic_finger": str,
         # The caching mechanism to use for the PKI key store. Can substantially decrease master publish
         # times. Available types:
         # 'maint': Runs on a schedule as a part of the maintanence process.
         # '': Disable the key cache [default]
-        "key_cache": (str,),
+        "key_cache": str,
         # The user under which the daemon should run
-        "user": (str,),
+        "user": str,
         # The root directory prepended to these options: pki_dir, cachedir,
         # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
         # key_logfile, pidfile:
-        "root_dir": (str,),
+        "root_dir": str,
         # The directory used to store public key data
-        "pki_dir": (str,),
+        "pki_dir": str,
         # A unique identifier for this daemon
-        "id": (str,),
+        "id": str,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -185,9 +185,9 @@ VALID_OPTS = immutabletypes.freeze(
         # key being the function name, and the value being an embedded dictionary
         # where each key is a function argument name and each value is the
         # corresponding argument value.
-        "id_function": (dict, (str,)),
+        "id_function": (dict, str),
         # The directory to store all cache files.
-        "cachedir": (str,),
+        "cachedir": str,
         # Append minion_id to these directories.  Helps with
         # multiple proxies and minions running on the same machine.
         # Allowed elements in the list: pki_dir, cachedir, extension_modules, pidfile
@@ -195,16 +195,16 @@ VALID_OPTS = immutabletypes.freeze(
         # Flag to cache jobs locally.
         "cache_jobs": bool,
         # The path to the salt configuration file
-        "conf_file": (str,),
+        "conf_file": str,
         # The directory containing unix sockets for things like the event bus
-        "sock_dir": (str,),
+        "sock_dir": str,
         # The pool size of unix sockets, it is necessary to avoid blocking waiting for zeromq and tcp communications.
         "sock_pool_size": int,
         # Specifies how the file server should backup files, if enabled. The backups
         # live in the cache dir.
-        "backup_mode": (str,),
+        "backup_mode": str,
         # A default renderer for all operations on this host
-        "renderer": (str,),
+        "renderer": str,
         # Renderer whitelist. The only renderers from this list are allowed.
         "renderer_whitelist": list,
         # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
@@ -214,27 +214,27 @@ VALID_OPTS = immutabletypes.freeze(
         # A flag to indicate that highstate runs should force refresh the modules prior to execution
         "autoload_dynamic_modules": bool,
         # Force the minion into a single environment when it fetches files from the master
-        "saltenv": (type(None), (str,)),
+        "saltenv": (type(None), str),
         # Prevent saltenv from being overridden on the command line
         "lock_saltenv": bool,
         # Force the minion into a single pillar root when it fetches pillar data from the master
-        "pillarenv": (type(None), (str,)),
+        "pillarenv": (type(None), str),
         # Make the pillarenv always match the effective saltenv
         "pillarenv_from_saltenv": bool,
         # Allows a user to provide an alternate name for top.sls
-        "state_top": (str,),
-        "state_top_saltenv": (type(None), (str,)),
+        "state_top": str,
+        "state_top_saltenv": (type(None), str),
         # States to run when a minion starts up
-        "startup_states": (str,),
+        "startup_states": str,
         # List of startup states
         "sls_list": list,
         # Configuration for snapper in the state system
         "snapper_states": bool,
-        "snapper_states_config": (str,),
+        "snapper_states_config": str,
         # A top file to execute if startup_states == 'top'
-        "top_file": (str,),
+        "top_file": str,
         # Location of the files a minion should look for. Set to 'local' to never ask the master.
-        "file_client": (str,),
+        "file_client": str,
         "local": bool,
         # When using a local file_client, this parameter is used to allow the client to connect to
         # a master for remote execution.
@@ -248,13 +248,13 @@ VALID_OPTS = immutabletypes.freeze(
         # A map of glob paths to be used
         "decrypt_pillar": list,
         # Delimiter to use in path expressions for decrypt_pillar
-        "decrypt_pillar_delimiter": (str,),
+        "decrypt_pillar_delimiter": str,
         # Default renderer for decrypt_pillar
-        "decrypt_pillar_default": (str,),
+        "decrypt_pillar_default": str,
         # List of renderers available for decrypt_pillar
         "decrypt_pillar_renderers": list,
         # The type of hashing algorithm to use when doing file comparisons
-        "hash_type": (str,),
+        "hash_type": str,
         # Order of preference for optimized .pyc files (PY3 only)
         "optimization_order": list,
         # Refuse to load these modules
@@ -295,7 +295,7 @@ VALID_OPTS = immutabletypes.freeze(
         # The number of minutes between mine updates.
         "mine_interval": int,
         # The ipc strategy. (i.e., sockets versus tcp, etc)
-        "ipc_mode": (str,),
+        "ipc_mode": str,
         # Enable ipv6 support for daemons
         "ipv6": (type(None), bool),
         # The chunk size to use when streaming files with the file server
@@ -314,19 +314,19 @@ VALID_OPTS = immutabletypes.freeze(
         # The TCP port for mworkers to connect to on the master
         "tcp_master_workers": int,
         # The file to send logging data to
-        "log_file": (str,),
+        "log_file": str,
         # The level of verbosity at which to log
-        "log_level": (str,),
+        "log_level": str,
         # The log level to log to a given file
-        "log_level_logfile": (type(None), (str,)),
+        "log_level_logfile": (type(None), str),
         # The format to construct dates in log files
-        "log_datefmt": (str,),
+        "log_datefmt": str,
         # The dateformat for a given logfile
-        "log_datefmt_logfile": (str,),
+        "log_datefmt_logfile": str,
         # The format for console logs
-        "log_fmt_console": (str,),
+        "log_fmt_console": str,
         # The format for a given log file
-        "log_fmt_logfile": (tuple, (str,)),
+        "log_fmt_logfile": (tuple, str),
         # A dictionary of logging levels
         "log_granular_levels": dict,
         # The maximum number of bytes a single log file may contain before
@@ -365,7 +365,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Tells the highstate outputter to show successful states. False will omit successes.
         "state_verbose": bool,
         # Specify the format for state outputs. See highstate outputter for additional details.
-        "state_output": (str,),
+        "state_output": str,
         # Tells the highstate outputter to only report diffs of states that changed
         "state_output_diff": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
@@ -389,14 +389,14 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow a daemon to function even if the key directories are not secured
         "permissive_pki_access": bool,
         # The passphrase of the master's private key
-        "key_pass": (type(None), (str,)),
+        "key_pass": (type(None), str),
         # The passphrase of the master's private signing key
-        "signing_key_pass": (type(None), (str,)),
+        "signing_key_pass": (type(None), str),
         # The path to a directory to pull in configuration file includes
-        "default_include": (str,),
+        "default_include": str,
         # If a minion is running an esky build of salt, upgrades can be performed using the url
         # defined here. See saltutil.update() for additional information
-        "update_url": (bool, (str,)),
+        "update_url": (bool, str),
         # If using update_url with saltutil.update(), provide a list of services to be restarted
         # post-install
         "update_restart_services": list,
@@ -418,7 +418,7 @@ VALID_OPTS = immutabletypes.freeze(
         "return_retry_timer_max": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
-        "event_return": (list, (str,)),
+        "event_return": (list, str),
         # The number of events to queue up in memory before pushing them down the pipe to an event
         # returner specified by 'event_return'
         "event_return_queue": int,
@@ -431,11 +431,11 @@ VALID_OPTS = immutabletypes.freeze(
         # Events matching a tag in this list should never be sent to an event returner.
         "event_return_blacklist": list,
         # default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
-        "event_match_type": (str,),
+        "event_match_type": str,
         # This pidfile to write out to when a daemon starts
-        "pidfile": (str,),
+        "pidfile": str,
         # Used with the SECO range master tops system
-        "range_server": (str,),
+        "range_server": str,
         # The tcp keepalive interval to set on TCP ports. This setting can be used to tune Salt
         # connectivity issues in messy network environments with misbehaving firewalls
         "tcp_keepalive": bool,
@@ -446,7 +446,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Sets zeromq TCP keepalive interval. May be used to tune issues with minion disconnects.
         "tcp_keepalive_intvl": float,
         # The network interface for a daemon to bind to
-        "interface": (str,),
+        "interface": str,
         # The port for a salt master to broadcast publications on. This will also be the port minions
         # connect to to listen for publications.
         "publish_port": int,
@@ -497,7 +497,7 @@ VALID_OPTS = immutabletypes.freeze(
         "proxy_deep_merge_pillar_in_opts": bool,
         # The strategy used when merging pillar into opts.
         # Considered only when `proxy_merge_pillar_in_opts` is True.
-        "proxy_merge_pillar_in_opts_strategy": (str,),
+        "proxy_merge_pillar_in_opts_strategy": str,
         # Allow enabling mine details using pillar data.
         "proxy_mines_pillar": bool,
         # In some particular cases, always alive proxies are not beneficial.
@@ -527,12 +527,12 @@ VALID_OPTS = immutabletypes.freeze(
         # possible types they could be, we'll just skip type-checking.
         "git_pillar_ssl_verify": bool,
         "git_pillar_global_lock": bool,
-        "git_pillar_user": (str,),
-        "git_pillar_password": (str,),
+        "git_pillar_user": str,
+        "git_pillar_password": str,
         "git_pillar_insecure_auth": bool,
-        "git_pillar_privkey": (str,),
-        "git_pillar_pubkey": (str,),
-        "git_pillar_passphrase": (str,),
+        "git_pillar_privkey": str,
+        "git_pillar_pubkey": str,
+        "git_pillar_passphrase": str,
         "git_pillar_refspecs": list,
         "git_pillar_includes": bool,
         "git_pillar_verify_config": bool,
@@ -542,9 +542,9 @@ VALID_OPTS = immutabletypes.freeze(
         # include all the possible types they could be, we'll just skip type-checking.
         "gitfs_remotes": list,
         "gitfs_insecure_auth": bool,
-        "gitfs_privkey": (str,),
-        "gitfs_pubkey": (str,),
-        "gitfs_passphrase": (str,),
+        "gitfs_privkey": str,
+        "gitfs_pubkey": str,
+        "gitfs_passphrase": str,
         "gitfs_saltenv_whitelist": list,
         "gitfs_saltenv_blacklist": list,
         "gitfs_ssl_verify": bool,
@@ -554,22 +554,22 @@ VALID_OPTS = immutabletypes.freeze(
         "gitfs_refspecs": list,
         "gitfs_disable_saltenv_mapping": bool,
         "hgfs_remotes": list,
-        "hgfs_mountpoint": (str,),
-        "hgfs_root": (str,),
-        "hgfs_base": (str,),
-        "hgfs_branch_method": (str,),
+        "hgfs_mountpoint": str,
+        "hgfs_root": str,
+        "hgfs_base": str,
+        "hgfs_branch_method": str,
         "hgfs_saltenv_whitelist": list,
         "hgfs_saltenv_blacklist": list,
         "svnfs_remotes": list,
-        "svnfs_mountpoint": (str,),
-        "svnfs_root": (str,),
-        "svnfs_trunk": (str,),
-        "svnfs_branches": (str,),
-        "svnfs_tags": (str,),
+        "svnfs_mountpoint": str,
+        "svnfs_root": str,
+        "svnfs_trunk": str,
+        "svnfs_branches": str,
+        "svnfs_tags": str,
         "svnfs_saltenv_whitelist": list,
         "svnfs_saltenv_blacklist": list,
-        "minionfs_env": (str,),
-        "minionfs_mountpoint": (str,),
+        "minionfs_env": str,
+        "minionfs_mountpoint": str,
         "minionfs_whitelist": list,
         "minionfs_blacklist": list,
         # Specify a list of external pillar systems to use
@@ -583,38 +583,38 @@ VALID_OPTS = immutabletypes.freeze(
         # Pillar cache TTL, in seconds. Has no effect unless `pillar_cache` is True
         "pillar_cache_ttl": int,
         # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
-        "pillar_cache_backend": (str,),
+        "pillar_cache_backend": str,
         # Cache the GPG data to avoid having to pass through the gpg renderer
         "gpg_cache": bool,
         # GPG data cache TTL, in seconds. Has no effect unless `gpg_cache` is True
         "gpg_cache_ttl": int,
         # GPG data cache backend. Defaults to `disk` which stores caches in the master cache
-        "gpg_cache_backend": (str,),
+        "gpg_cache_backend": str,
         "pillar_safe_render_error": bool,
         # When creating a pillar, there are several strategies to choose from when
         # encountering duplicate values
-        "pillar_source_merging_strategy": (str,),
+        "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
         # How to merge multiple top files from multiple salt environments
         # (saltenvs); can be 'merge' or 'same'
-        "top_file_merging_strategy": (str,),
+        "top_file_merging_strategy": str,
         # The ordering for salt environment merging, when top_file_merging_strategy
         # is set to 'same'
         "env_order": list,
         # The salt environment which provides the default top file when
         # top_file_merging_strategy is set to 'same'; defaults to 'base'
-        "default_top": (str,),
+        "default_top": str,
         "ping_on_rotate": bool,
         "peer": dict,
         "preserve_minion_cache": bool,
-        "syndic_master": ((str,), list),
+        "syndic_master": (str, list),
         # The behaviour of the multimaster syndic when connection to a master of masters failed. Can
         # specify 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random
         # order if 'ordered' the configured order will be used.
-        "syndic_failover": (str,),
+        "syndic_failover": str,
         "syndic_forward_all_events": bool,
         "runner_dirs": list,
         "client_acl_verify": bool,
@@ -626,8 +626,8 @@ VALID_OPTS = immutabletypes.freeze(
         "token_expire_user_override": (bool, dict),
         "file_recv": bool,
         "file_recv_max_size": int,
-        "file_ignore_regex": (list, (str,)),
-        "file_ignore_glob": (list, (str,)),
+        "file_ignore_regex": (list, str),
+        "file_ignore_glob": (list, str),
         "fileserver_backend": list,
         "fileserver_followsymlinks": bool,
         "fileserver_ignoresymlinks": bool,
@@ -640,10 +640,10 @@ VALID_OPTS = immutabletypes.freeze(
         "keep_acl_in_token": bool,
         # Auth subsystem module to use to get authorized access list for a user. By default it's the
         # same module used for external authentication.
-        "eauth_acl_module": (str,),
+        "eauth_acl_module": str,
         # Subsystem to use to maintain eauth tokens. By default, tokens are stored on the local
         # filesystem
-        "eauth_tokens": (str,),
+        "eauth_tokens": str,
         # The number of open files a daemon is allowed to have open. Frequently needs to be increased
         # higher than the system default in order to account for the way zeromq consumes file handles.
         "max_open_files": int,
@@ -663,10 +663,10 @@ VALID_OPTS = immutabletypes.freeze(
         # Whether or not to cache jobs so that they can be examined later on
         "job_cache": bool,
         # Define a returner to be used as an external job caching storage backend
-        "ext_job_cache": (str,),
+        "ext_job_cache": str,
         # Specify a returner for the master to use as a backend storage system to cache jobs returns
         # that it receives
-        "master_job_cache": (str,),
+        "master_job_cache": str,
         # Specify whether the master should store end times for jobs as returns come in
         "job_cache_store_endtime": bool,
         # The minion data cache is a cache of information about the minions stored on the master.
@@ -688,8 +688,8 @@ VALID_OPTS = immutabletypes.freeze(
         "engines": list,
         # Whether or not to store runner returns in the job cache
         "runner_returns": bool,
-        "serial": (str,),
-        "search": (str,),
+        "serial": str,
+        "search": str,
         # A compound target definition.
         # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
         "nodegroups": (dict, list),
@@ -702,7 +702,7 @@ VALID_OPTS = immutabletypes.freeze(
         # generated RSA key if that file doesn't exist.
         "ssh_use_home_key": bool,
         # The logfile location for salt-key
-        "key_logfile": (str,),
+        "key_logfile": str,
         # The upper bound for the random number of seconds that a minion should
         # delay when starting in up before it connects to a master. This can be
         # used to mitigate a thundering-herd scenario when many minions start up
@@ -710,10 +710,10 @@ VALID_OPTS = immutabletypes.freeze(
         "random_startup_delay": int,
         # The source location for the winrepo sls files
         # (used by win_pkg.py, minion only)
-        "winrepo_source_dir": (str,),
-        "winrepo_dir": (str,),
-        "winrepo_dir_ng": (str,),
-        "winrepo_cachefile": (str,),
+        "winrepo_source_dir": str,
+        "winrepo_dir": str,
+        "winrepo_dir_ng": str,
+        "winrepo_cachefile": str,
         # NOTE: winrepo_branch omitted here because its value could conceivably be
         # loaded as a non-string type, which is OK because winrepo will normalize
         # them to strings. But rather than include all the possible types it could
@@ -723,12 +723,12 @@ VALID_OPTS = immutabletypes.freeze(
         "winrepo_remotes": list,
         "winrepo_remotes_ng": list,
         "winrepo_ssl_verify": bool,
-        "winrepo_user": (str,),
-        "winrepo_password": (str,),
+        "winrepo_user": str,
+        "winrepo_password": str,
         "winrepo_insecure_auth": bool,
-        "winrepo_privkey": (str,),
-        "winrepo_pubkey": (str,),
-        "winrepo_passphrase": (str,),
+        "winrepo_privkey": str,
+        "winrepo_pubkey": str,
+        "winrepo_passphrase": str,
         "winrepo_refspecs": list,
         # Set a hard limit for the amount of memory modules can consume on a minion.
         "modules_max_memory": int,
@@ -755,13 +755,13 @@ VALID_OPTS = immutabletypes.freeze(
         # Always generate minion id in lowercase.
         "minion_id_lowercase": bool,
         # Remove either a single domain (foo.org), or all (True) from a generated minion id.
-        "minion_id_remove_domain": ((str,), bool),
+        "minion_id_remove_domain": (str, bool),
         # If set, the master will sign all publications before they are sent out
         "sign_pub_messages": bool,
         # The size of key that should be generated when creating new keys
         "keysize": int,
         # The transport system for this daemon. (i.e. zeromq, tcp, detect, etc)
-        "transport": (str,),
+        "transport": str,
         # The number of seconds to wait when the client is requesting information about running jobs
         "gather_job_timeout": int,
         # The number of seconds to wait before timing out an authentication request
@@ -787,21 +787,21 @@ VALID_OPTS = immutabletypes.freeze(
         # The length that the syndic event queue must hit before events are popped off and forwarded
         "syndic_jid_forward_cache_hwm": int,
         # Salt SSH configuration
-        "ssh_passwd": (str,),
-        "ssh_port": (str,),
+        "ssh_passwd": str,
+        "ssh_port": str,
         "ssh_sudo": bool,
-        "ssh_sudo_user": (str,),
+        "ssh_sudo_user": str,
         "ssh_timeout": float,
-        "ssh_user": (str,),
-        "ssh_scan_ports": (str,),
+        "ssh_user": str,
+        "ssh_scan_ports": str,
         "ssh_scan_timeout": float,
         "ssh_identities_only": bool,
-        "ssh_log_file": (str,),
-        "ssh_config_file": (str,),
+        "ssh_log_file": str,
+        "ssh_config_file": str,
         "ssh_merge_pillar": bool,
         "ssh_run_pre_flight": bool,
         "cluster_mode": bool,
-        "sqlite_queue_dir": (str,),
+        "sqlite_queue_dir": str,
         "queue_dirs": list,
         # Instructs the minion to ping its master(s) every n number of minutes. Used
         # primarily as a mitigation technique against minion disconnects.
@@ -811,8 +811,8 @@ VALID_OPTS = immutabletypes.freeze(
         # The maximum number of minion connections allowed by the master. Can have performance
         # implications in large setups.
         "max_minions": int,
-        "username": (type(None), (str,)),
-        "password": (type(None), (str,)),
+        "username": (type(None), str),
+        "password": (type(None), str),
         # Use zmq.SUSCRIBE to limit listening sockets to only process messages bound for them
         "zmq_filtering": bool,
         # Connection caching. Can greatly speed up salt performance.
@@ -825,7 +825,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Used by salt-api for master requests timeout
         "rest_timeout": int,
         # If set, all minion exec module actions will be rerouted through sudo as this user
-        "sudo_user": (str,),
+        "sudo_user": str,
         # HTTP connection timeout in seconds. Applied for tornado http fetch functions like cp.get_url
         # should be greater than overall download time
         "http_connect_timeout": float,
@@ -849,16 +849,16 @@ VALID_OPTS = immutabletypes.freeze(
         # Useful when a returner is the source of truth for a job result
         "pub_ret": bool,
         # HTTP proxy settings. Used in tornado fetch functions, apt-key etc
-        "proxy_host": (str,),
-        "proxy_username": (str,),
-        "proxy_password": (str,),
+        "proxy_host": str,
+        "proxy_username": str,
+        "proxy_password": str,
         "proxy_port": int,
         # Exclude list of hostnames from proxy
         "no_proxy": list,
         # Minion de-dup jid cache max size
         "minion_jid_queue_hwm": int,
         # Minion data cache driver (one of satl.cache.* modules)
-        "cache": (str,),
+        "cache": str,
         # Enables a fast in-memory cache booster and sets the expiration time.
         "memcache_expire_seconds": int,
         # Set a memcache limit in items (bank + key) per cache storage (driver + driver_opts).
@@ -868,10 +868,10 @@ VALID_OPTS = immutabletypes.freeze(
         # Enable collecting the memcache stats and log it on `debug` log level.
         "memcache_debug": bool,
         # Thin and minimal Salt extra modules
-        "thin_extra_mods": (str,),
-        "min_extra_mods": (str,),
+        "thin_extra_mods": str,
+        "min_extra_mods": str,
         # Default returners minion should use. List or comma-delimited string
-        "return": ((str,), list),
+        "return": (str, list),
         # TLS/SSL connection options. This could be set to a dictionary containing arguments
         # corresponding to python ssl.wrap_socket method. For details see:
         # http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer
@@ -896,8 +896,8 @@ VALID_OPTS = immutabletypes.freeze(
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
         # django auth
-        "django_auth_path": (str,),
-        "django_auth_settings": (str,),
+        "django_auth_path": str,
+        "django_auth_settings": str,
         # Number of times to try to auth with the master on a reconnect with the
         # tcp transport
         "tcp_authentication_retries": int,
@@ -918,7 +918,7 @@ VALID_OPTS = immutabletypes.freeze(
         # The list of config entries to be passed to external pillar function as
         # part of the extra_minion_data param
         # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
-        "pass_to_ext_pillars": ((str,), list),
+        "pass_to_ext_pillars": (str, list),
         # SSDP discovery publisher description.
         # Contains publisher configuration and minion mapping.
         # Setting it to False disables discovery
@@ -932,13 +932,13 @@ VALID_OPTS = immutabletypes.freeze(
         # Enable calling ssh minions from the salt master
         "enable_ssh_minions": bool,
         # Thorium saltenv
-        "thoriumenv": (type(None), (str,)),
+        "thoriumenv": (type(None), str),
         # Thorium top file location
-        "thorium_top": (str,),
+        "thorium_top": str,
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
-        "disabled_requisites": ((str,), list),
+        "disabled_requisites": (str, list),
     }
 )
 
@@ -1785,8 +1785,8 @@ def _validate_opts(opts):
     errors = []
 
     err = (
-        "Config option '{0}' with value {1} has an invalid type of {2}, a "
-        "{3} is required for this option"
+        "Config option '{}' with value {} has an invalid type of {}, a "
+        "{} is required for this option"
     )
     for key, val in opts.items():
         if key in VALID_OPTS:
@@ -1890,31 +1890,43 @@ def _read_conf_file(path):
     Read in a config file from a given path and process it into a dictionary
     """
     log.debug("Reading configuration from %s", path)
+    append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
         except salt.utils.yaml.YAMLError as err:
             message = "Error parsing configuration file: {} - {}".format(path, err)
             log.error(message)
-            raise salt.exceptions.SaltConfigurationError(message)
-
-        # only interpret documents as a valid conf, not things like strings,
-        # which might have been caused by invalid yaml syntax
-        if not isinstance(conf_opts, dict):
-            message = (
-                "Error parsing configuration file: {} - conf "
-                "should be a document, not {}.".format(path, type(conf_opts))
-            )
-            log.error(message)
-            raise salt.exceptions.SaltConfigurationError(message)
-
-        # allow using numeric ids: convert int to string
-        if "id" in conf_opts:
-            if not isinstance(conf_opts["id"], str):
-                conf_opts["id"] = str(conf_opts["id"])
+            if path.endswith("_schedule.conf"):
+                # Create empty dictionary of config options
+                conf_opts = {}
+                # Rename this file, once closed
+                append_file_suffix_YAMLError = True
             else:
-                conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
-        return conf_opts
+                raise salt.exceptions.SaltConfigurationError(message)
+
+    if append_file_suffix_YAMLError:
+        message = "Renaming to {}".format(path + "YAMLError")
+        log.error(message)
+        os.replace(path, path + "YAMLError")
+
+    # only interpret documents as a valid conf, not things like strings,
+    # which might have been caused by invalid yaml syntax
+    if not isinstance(conf_opts, dict):
+        message = (
+            "Error parsing configuration file: {} - conf "
+            "should be a document, not {}.".format(path, type(conf_opts))
+        )
+        log.error(message)
+        raise salt.exceptions.SaltConfigurationError(message)
+
+    # allow using numeric ids: convert int to string
+    if "id" in conf_opts:
+        if not isinstance(conf_opts["id"], str):
+            conf_opts["id"] = str(conf_opts["id"])
+        else:
+            conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
+    return conf_opts
 
 
 def _absolute_path(path, relative_to=None):
@@ -2240,6 +2252,30 @@ def proxy_config(
     opts = apply_minion_config(
         overrides, defaults, cache_minion_id=cache_minion_id, minion_id=minion_id
     )
+
+    # Update opts with proxy specific configuration
+    # with the updated default_include.
+    default_include = opts.get("default_include", defaults["default_include"])
+    include = opts.get("include", [])
+
+    overrides.update(
+        include_config(
+            default_include,
+            path,
+            verbose=False,
+            exit_on_config_errors=not ignore_config_errors,
+        )
+    )
+    overrides.update(
+        include_config(
+            include, path, verbose=True, exit_on_config_errors=not ignore_config_errors
+        )
+    )
+
+    opts = apply_minion_config(
+        overrides, defaults, cache_minion_id=cache_minion_id, minion_id=minion_id
+    )
+
     apply_sdb(opts)
     _validate_opts(opts)
     return opts
