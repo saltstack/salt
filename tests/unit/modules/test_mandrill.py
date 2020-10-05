@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Mandrill execution module.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.mandrill as mandrill
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -63,4 +57,25 @@ class MandrillModuleTest(TestCase, LoaderModuleMockMixin):
                     }
                 ),
                 TEST_SEND,
+            )
+
+    def test_deprecation_58640(self):
+        # check that type error will be raised
+        message = {
+            "subject": "Hi",
+            "from_email": "test@example.com",
+            "to": [{"email": "recv@example.com", "type": "to"}],
+        }
+        self.assertRaises(
+            TypeError, mandrill.send, **{"message": message, "async": True}
+        )
+
+        # check that async will raise an error
+        try:
+            mandrill.send(  # pylint: disable=unexpected-keyword-arg
+                **{"message": message, "async": True}
+            )
+        except TypeError as no_async:
+            self.assertEqual(
+                str(no_async), "send() got an unexpected keyword argument 'async'",
             )

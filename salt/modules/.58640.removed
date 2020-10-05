@@ -1,0 +1,1 @@
+removed kwargs from mandrill.send if you use "async" please use "asynchronous"
