@@ -386,9 +386,6 @@ def not_allowed(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
-        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
-        includes IPv6 addresses for IPv6-connected minions.
-
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -477,9 +474,6 @@ def not_reaped(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
-        The 'show_ipv4' argument has been renamed to 'show_ip' as it now
-        includes IPv6 addresses for IPv6-connected minions.
-
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
