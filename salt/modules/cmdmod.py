@@ -5,7 +5,6 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 """
 
-# Import python libs
 import base64
 import fnmatch
 import functools
@@ -20,7 +19,6 @@ import tempfile
 import time
 import traceback
 
-# Import salt libs
 import salt.grains.extra
 import salt.utils.args
 import salt.utils.data

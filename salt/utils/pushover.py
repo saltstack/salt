@@ -1,27 +1,13 @@
-# -*- coding: utf-8 -*-
 """
-Library for interacting with Slack API
+Library for interacting with Pushover API
 
 .. versionadded:: 2016.3.0
-
-:configuration: This module can be used by specifying the name of a
-    configuration profile in the minion config, minion pillar, or master
-    config.
-
-    For example:
-
-    .. code-block:: yaml
-
-        slack:
-          api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.ext.six.moves.http_client
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
@@ -124,10 +110,10 @@ def validate_sound(sound, token):
                 if _message.get("dict", {}).get("status", "") == 1:
                     sounds = _message.get("dict", {}).get("sounds", "")
                     if sound in sounds:
-                        ret["message"] = "Valid sound {0}.".format(sound)
+                        ret["message"] = "Valid sound {}.".format(sound)
                         ret["res"] = True
                     else:
-                        ret["message"] = "Warning: {0} not a valid sound.".format(sound)
+                        ret["message"] = "Warning: {} not a valid sound.".format(sound)
                         ret["res"] = False
                 else:
                     ret["message"] = "".join(_message.get("dict", {}).get("errors"))

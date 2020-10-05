@@ -1,12 +1,10 @@
 import fnmatch
 import re
 
-import pytest
 from tests.support.helpers import slowTest
 
 
 @slowTest
-@pytest.mark.windows_whitelisted
 def test_valid_docs(salt_call_cli):
     """
     Make sure no functions are exposed that don't have valid docstrings
