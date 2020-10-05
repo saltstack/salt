@@ -165,7 +165,7 @@ class WinLgpoTest(ModuleCase):
             lgpo_top_level = "User Configuration"
 
         ret = self.run_function(
-            "lgpo.{0}".format(lgpo_function), (policy_name, policy_config)
+            "lgpo.{}".format(lgpo_function), (policy_name, policy_config)
         )
         log.debug("lgpo set_computer_policy ret == %s", ret)
         cmd = [
