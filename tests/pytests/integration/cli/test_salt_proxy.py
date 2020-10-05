@@ -46,9 +46,7 @@ def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     assert "error: salt-proxy requires --proxyid" in exc.value.stderr, exc.value
 
 
-# Hangs on Windows. You can add a timeout to the proxy.run command, but then
-# it just times out.
-@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when the proxy is configured to run as an

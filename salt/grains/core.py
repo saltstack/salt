@@ -9,7 +9,6 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-# Import Python libs
 import datetime
 import hashlib
 import locale
@@ -24,8 +23,6 @@ import uuid
 from errno import EACCES, EPERM
 
 import distro
-
-# Import Salt libs
 import salt.exceptions
 import salt.log
 
@@ -1038,7 +1035,7 @@ def _virtual(osdata):
         if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
             try:
                 with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
+                    "/sys/devices/virtual/dmi/id/product_name", "rb"
                 ) as fhr:
                     output = salt.utils.stringutils.to_unicode(
                         fhr.read(), errors="replace"
@@ -1503,9 +1500,11 @@ def id_():
 _REPLACE_LINUX_RE = re.compile(r"\W(?:gnu/)?linux", re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
-# 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see os_data() and _supported_dists.
-# If your system is not detecting properly it likely needs an entry here.
+# 'osfullname' to the 'os' grain that Salt traditionally uses, and is used by
+# the os_data() function to create the "os" grain.
+#
+# If your system is not detecting the "os" grain properly, it likely needs an
+# entry in this dictionary.
 _OS_NAME_MAP = {
     "redhatente": "RedHat",
     "gentoobase": "Gentoo",
@@ -2667,7 +2666,7 @@ def _hw_data(osdata):
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.files.fopen(contents_file, "r") as ifile:
+                    with salt.utils.files.fopen(contents_file, "rb") as ifile:
                         grains[key] = salt.utils.stringutils.to_unicode(
                             ifile.read().strip(), errors="replace"
                         )

@@ -1,16 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-    :codeauthor: Rupesh Tare <rupesht@saltstack.com>
-"""
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.debian_service as debian_service
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import DEFAULT, MagicMock, patch
 from tests.support.unit import TestCase
 
 
@@ -23,146 +13,165 @@ class DebianServicesTestCase(TestCase, LoaderModuleMockMixin):
         return {debian_service: {}}
 
     def test_get_enabled(self):
-        """
-        Test for Return a list of service that are enabled on boot
-        """
-        mock_runlevel = MagicMock(return_value=1)
-        mock_prefix = "/etc/rc1.d/S"
-        mock_glob = MagicMock(return_value=[mock_prefix + "01name"])
-
-        with patch.object(debian_service, "_get_runlevel", mock_runlevel):
-            with patch.object(debian_service.glob, "glob", mock_glob):
-                self.assertEqual(debian_service.get_enabled()[0], "name")
+        init_d_globs = ["/etc/init.d/S50foo", "/etc/init.d/S90bar"]
+        glob_mock = MagicMock(
+            side_effect=lambda x: init_d_globs if x == "/etc/rc[S3].d/S*" else DEFAULT
+        )
+        with patch("glob.glob", glob_mock), patch.object(
+            debian_service, "_get_runlevel", MagicMock(return_value="3")
+        ):
+            ret = debian_service.get_enabled()
+            expected = ["bar", "foo"]
+            assert ret == expected, ret
 
     def test_get_disabled(self):
-        """
-        Test for Return a set of services that are installed but disabled
-        """
-        mock = MagicMock(return_value=["A"])
-        with patch.object(debian_service, "get_all", mock):
-            mock = MagicMock(return_value=["B"])
-            with patch.object(debian_service, "get_enabled", mock):
-                self.assertEqual(debian_service.get_disabled(), ["A"])
+        get_all = MagicMock(return_value=["foo", "bar", "baz"])
+        get_enabled = MagicMock(return_value=["bar", "baz"])
+        with patch.object(debian_service, "get_all", get_all), patch.object(
+            debian_service, "get_enabled", get_enabled
+        ):
+            ret = debian_service.get_disabled()
+            expected = ["foo"]
+            assert ret == expected, ret
 
     def test_available(self):
-        """
-        Test for Returns ``True`` if the specified service is
-        available, otherwise returns
-        ``False``.
-        """
-        mock = MagicMock(return_value=["A"])
-        with patch.object(debian_service, "get_all", mock):
-            self.assertFalse(debian_service.available("name"))
+        get_all = MagicMock(return_value=["foo", "bar", "baz"])
+        with patch.object(debian_service, "get_all", get_all):
+            assert not debian_service.available("qux")
+            assert debian_service.available("foo")
 
     def test_missing(self):
-        """
-        Test for The inverse of service.available.
-        """
-        mock = MagicMock(return_value=["A"])
-        with patch.object(debian_service, "get_all", mock):
-            self.assertTrue(debian_service.missing("name"))
+        get_all = MagicMock(return_value=["foo", "bar", "baz"])
+        with patch.object(debian_service, "get_all", get_all):
+            assert debian_service.missing("qux")
+            assert not debian_service.missing("foo")
 
-    def test_getall(self):
-        """
-        Test for Return all available boot services
-        """
-        mock = MagicMock(return_value=("A"))
-        with patch.object(debian_service, "get_enabled", mock):
-            self.assertEqual(debian_service.get_all()[0], "A")
+    def test_get_all(self):
+        get_enabled = MagicMock(return_value=["baz", "hello", "world"])
+        init_d_globs = ["/etc/init.d/foo", "/etc/init.d/bar"]
+        glob_mock = MagicMock(
+            side_effect=lambda x: init_d_globs if x == "/etc/init.d/*" else DEFAULT
+        )
+        with patch("glob.glob", glob_mock), patch.object(
+            debian_service, "get_enabled", get_enabled
+        ):
+            ret = debian_service.get_all()
+            expected = ["bar", "baz", "foo", "hello", "world"]
+            assert ret == expected, ret
 
     def test_start(self):
-        """
-        Test for Start the specified service
-        """
-        mock = MagicMock(return_value=True)
-        with patch.object(debian_service, "_service_cmd", mock):
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.start("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.start("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo start")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.start("foo")
 
     def test_stop(self):
-        """
-        Test for Stop the specified service
-        """
-        mock = MagicMock(return_value=True)
-        with patch.object(debian_service, "_service_cmd", mock):
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.stop("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.stop("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo stop")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.stop("foo")
 
     def test_restart(self):
-        """
-        Test for Restart the named service
-        """
-        mock = MagicMock(return_value=True)
-        with patch.object(debian_service, "_service_cmd", mock):
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.restart("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.restart("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo restart")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.restart("foo")
 
     def test_reload_(self):
-        """
-        Test for Reload the named service
-        """
-        mock = MagicMock(return_value=True)
-        with patch.object(debian_service, "_service_cmd", mock):
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.reload_("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.reload_("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo reload")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.reload_("foo")
 
     def test_force_reload(self):
-        """
-        Test for Force-reload the named service
-        """
-        mock = MagicMock(return_value=True)
-        with patch.object(debian_service, "_service_cmd", mock):
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.force_reload("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.force_reload("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo force-reload")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.force_reload("foo")
 
     def test_status(self):
-        """
-        Test for Return the status for a service
-        """
-        mock = MagicMock(return_value=True)
+        mock = MagicMock(return_value="123")
         with patch.dict(debian_service.__salt__, {"status.pid": mock}):
-            self.assertTrue(debian_service.status("name", 1))
+            assert debian_service.status("foo", "foobar")
 
-        mock = MagicMock(return_value="A")
-        with patch.object(debian_service, "_service_cmd", mock):
-            mock = MagicMock(return_value=True)
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.status("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.status("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("service foo status", ignore_retcode=True)
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.enable("foo")
+
+        mock = MagicMock(
+            side_effect=lambda x, **y: 0 if x == "service bar status" else 1
+        )
+        get_all = MagicMock(return_value=["foo", "bar", "baz"])
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}), patch.object(
+            debian_service, "get_all", get_all
+        ):
+            ret = debian_service.status("b*")
+            expected = {"bar": True, "baz": False}
+            assert ret == expected, ret
 
     def test_enable(self):
-        """
-        Test for Enable the named service to start at boot
-        """
-        mock = MagicMock(return_value="5")
-        with patch.object(debian_service, "_osrel", mock):
-            mock = MagicMock(return_value="")
-            with patch.object(debian_service, "_cmd_quote", mock):
-                mock = MagicMock(return_value=True)
-                with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                    self.assertFalse(debian_service.enable("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.enable("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with(
+                "insserv foo && update-rc.d foo enable", python_shell=True
+            )
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.enable("foo")
 
     def test_disable(self):
-        """
-        Test for Disable the named service to start at boot
-        """
-        mock = MagicMock(return_value="5")
-        with patch.object(debian_service, "_osrel", mock):
-            mock = MagicMock(return_value=True)
-            with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
-                self.assertFalse(debian_service.disable("name"))
+        mock = MagicMock(return_value=0)
+        with patch.dict(debian_service.__salt__, {"cmd.retcode": mock}):
+            # Test successful command (0 retcode)
+            assert debian_service.disable("foo")
+            # Confirm expected command was run
+            mock.assert_called_once_with("update-rc.d foo disable")
+            # Test unsuccessful command (nonzero retcode)
+            mock.return_value = 1
+            assert not debian_service.disable("foo")
 
     def test_enabled(self):
-        """
-        Test for Return True if the named service is enabled, false otherwise
-        """
-        mock = MagicMock(return_value=["A"])
+        mock = MagicMock(return_value=["foo"])
         with patch.object(debian_service, "get_enabled", mock):
-            self.assertFalse(debian_service.enabled("name"))
+            assert debian_service.enabled("foo")
+            assert not debian_service.enabled("bar")
 
     def test_disabled(self):
-        """
-        Test for Return True if the named service is enabled, false otherwise
-        """
-        mock = MagicMock(return_value=["A"])
-        with patch.object(debian_service, "get_enabled", mock):
-            self.assertFalse(debian_service.disabled("name"))
+        mock = MagicMock(return_value=["foo"])
+        with patch.object(debian_service, "get_disabled", mock):
+            assert debian_service.disabled("foo")
+            assert not debian_service.disabled("bar")

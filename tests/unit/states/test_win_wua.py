@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Test the win_wua state module
 """
-# Import Python Libs
-from __future__ import (  # Import Salt Libs
-    absolute_import,
-    print_function,
-    unicode_literals,
-)
+from collections import namedtuple
 
 import salt.states.win_wua as win_wua
 import salt.utils.platform
@@ -76,7 +70,7 @@ UPDATES_LIST_NONE = {}
 UPDATES_SUMMARY = {"Installed": 10}
 
 
-class Updates(object):
+class Updates:
     def __init__(self):
         self.updates = []
 
@@ -89,6 +83,14 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {win_wua: {"__opts__": {"test": False}, "__env__": "base"}}
+
+    def setUp(self):
+        # Use named tuples to mock the Update objects returned by the search
+        self.UpdateRecordIdentity = namedtuple("UpdateRecordIdentity", "UpdateID")
+        self.UpdateRecord = namedtuple(
+            "UpdateRecord",
+            ["KBArticleIDs", "Identity", "IsDownloaded", "IsInstalled", "Title"],
+        )
 
     def test_uptodate_no_updates(self):
         """
@@ -123,7 +125,7 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
             result = win_wua.uptodate(name="NA")
             self.assertDictEqual(result, expected)
 
-    def test_uptodate_testmode(self):
+    def test_uptodate_test_mode(self):
         """
         Test uptodate function in test=true mode.
         """
@@ -209,4 +211,252 @@ class WinWuaTestCase(TestCase, LoaderModuleMockMixin):
         with patch_winapi_com, patch_win32, patch_wua, patch_win_wua_update, patch_opts:
             wua = win_update.WindowsUpdateAgent(online=False)
             result = win_wua.uptodate(name="NA")
+            self.assertDictEqual(result, expected)
+
+    def test_installed(self):
+        """
+        Test installed function
+        """
+
+        update_search_obj = {
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
+                    UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+                ),
+                IsDownloaded=False,
+                IsInstalled=False,
+                Title="Update 2",
+            ),
+        }
+
+        update_search_dict = {
+            "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+                "Downloaded": True,
+                "KBs": ["KB4052623"],
+                "Installed": True,
+                "NeedsReboot": True,
+                "Title": "Update 2",
+            },
+        }
+
+        updates_refresh = {
+            "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {
+                "Downloaded": False,
+                "KBs": ["KB3193497"],
+                "Installed": False,
+                "NeedsReboot": False,
+                "Title": "Update 1",
+            },
+            "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+                "Downloaded": True,
+                "KBs": ["KB4052623"],
+                "Installed": True,
+                "NeedsReboot": True,
+                "Title": "Update 2",
+            },
+            "eac02c07-d744-4892-b80f-312d045e4ccc": {
+                "Downloaded": True,
+                "KBs": ["KB4052444"],
+                "Installed": True,
+                "NeedsReboot": False,
+                "Title": "Update 3",
+            },
+        }
+
+        # Mocks the connection to the Windows Update Agent
+        mock_wua = MagicMock()
+        # Mocks the initial search
+        mock_wua.search = MagicMock()
+        # Mocks the number of updates found.
+        mock_wua.search().count.return_value = 1
+        # Mocks the the updates collection object
+        mock_wua.search().updates = update_search_obj
+
+        # This mocks the updates collection in the install variable. This will
+        # get populated to as matches are found with the Add method
+        mock_updates = MagicMock()
+        # Needs to return the number of updates that need to be installed
+        # (IsInstalled = False)
+        mock_updates.count.return_value = 1
+        # Returns the updates that need to be installed as a dict
+        mock_updates.list.return_value = update_search_dict
+
+        # This gives us post_info
+        mock_wua.updates = MagicMock()
+        # Mock a refresh of the updates recognized by the machine. This would
+        # occur post install. This is compared with the updates on the machine
+        # to determine if the update was successful
+        mock_wua.updates().list.return_value = updates_refresh
+
+        patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+        patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+        patch_wua = patch(
+            "salt.utils.win_update.WindowsUpdateAgent",
+            autospec=True,
+            return_value=mock_wua,
+        )
+        patch_update_collection = patch(
+            "salt.utils.win_update.Updates", autospec=True, return_value=mock_updates
+        )
+        patch_opts = patch.dict(win_wua.__opts__, {"test": False})
+
+        with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+            expected = {
+                "changes": {
+                    "installed": {
+                        "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
+                            "KBs": ["KB4052623"],
+                            "NeedsReboot": True,
+                            "Title": "Update 2...",
+                        }
+                    }
+                },
+                "comment": "Updates installed successfully",
+                "name": "KB4062623",
+                "result": True,
+            }
+            result = win_wua.installed(name="KB4062623")
+            self.assertDictEqual(result, expected)
+
+    def test_installed_no_updates(self):
+        """
+        Test installed function when no updates are found.
+        """
+        # Mocks the connection to the Windows Update Agent
+        mock_wua = MagicMock()
+        # Mocks the initial search
+        mock_wua.search = MagicMock()
+        # Mocks the number of updates found.
+        mock_wua.search().count.return_value = 0
+
+        patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+        patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+        patch_wua = patch(
+            "salt.utils.win_update.WindowsUpdateAgent",
+            autospec=True,
+            return_value=mock_wua,
+        )
+
+        with patch_winapi_com, patch_dispatch, patch_wua:
+            expected = {
+                "name": "KB4062623",
+                "changes": {},
+                "result": True,
+                "comment": "No updates found",
+            }
+            result = win_wua.installed(name="KB4062623")
+            self.assertDictEqual(result, expected)
+
+    def test_installed_test_mode(self):
+        """
+        Test installed function in test mode
+        """
+
+        update_search_obj = {
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
+                    UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+                ),
+                IsDownloaded=False,
+                IsInstalled=False,
+                Title="Update 2",
+            ),
+        }
+
+        # Mocks the connection to the Windows Update Agent
+        mock_wua = MagicMock()
+        # Mocks the initial search
+        mock_wua.search = MagicMock()
+        # Mocks the number of updates found.
+        mock_wua.search().count.return_value = 1
+        # Mocks the the updates collection object
+        mock_wua.search().updates = update_search_obj
+
+        # This mocks the updates collection in the install variable. This will
+        # get populated to as matches are found with the Add method
+        mock_updates = MagicMock()
+        # Needs to return the number of updates that need to be installed
+        # (IsInstalled = False)
+        mock_updates.count.return_value = 1
+
+        patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+        patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+        patch_wua = patch(
+            "salt.utils.win_update.WindowsUpdateAgent",
+            autospec=True,
+            return_value=mock_wua,
+        )
+        patch_update_collection = patch(
+            "salt.utils.win_update.Updates", autospec=True, return_value=mock_updates
+        )
+        patch_opts = patch.dict(win_wua.__opts__, {"test": True})
+
+        with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+            expected = {
+                "changes": {},
+                "comment": "Updates will be installed:",
+                # I don't know how to mock this part so the list will show up.
+                # It's an update collection object populated using the Add
+                # method. But this works for now
+                "name": "KB4062623",
+                "result": None,
+            }
+            result = win_wua.installed(name="KB4062623")
+            self.assertDictEqual(result, expected)
+
+    def test_installed_already_installed(self):
+        """
+        Test installed function when the update is already installed
+        """
+
+        update_search_obj = {
+            self.UpdateRecord(
+                KBArticleIDs=("4052623",),
+                Identity=self.UpdateRecordIdentity(
+                    UpdateID="eac02b09-d745-4891-b80f-400e0e5e4b6d"
+                ),
+                IsDownloaded=True,
+                IsInstalled=True,
+                Title="Update 2",
+            ),
+        }
+
+        # Mocks the connection to the Windows Update Agent
+        mock_wua = MagicMock()
+        # Mocks the initial search
+        mock_wua.search = MagicMock()
+        # Mocks the number of updates found.
+        mock_wua.search().count.return_value = 1
+        # Mocks the the updates collection object
+        mock_wua.search().updates = update_search_obj
+
+        # This mocks the updates collection in the install variable. This will
+        # get populated to as matches are found with the Add method
+        mock_updates = MagicMock()
+        # Needs to return the number of updates that need to be installed
+        # (IsInstalled = False)
+        mock_updates.count.return_value = 0
+
+        patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+        patch_dispatch = patch("win32com.client.Dispatch", autospec=True)
+        patch_wua = patch(
+            "salt.utils.win_update.WindowsUpdateAgent",
+            autospec=True,
+            return_value=mock_wua,
+        )
+        patch_update_collection = patch(
+            "salt.utils.win_update.Updates", autospec=True, return_value=mock_updates
+        )
+        patch_opts = patch.dict(win_wua.__opts__, {"test": True})
+
+        with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+            expected = {
+                "changes": {},
+                "comment": "Updates already installed: KB4052623",
+                "name": "KB4062623",
+                "result": True,
+            }
+            result = win_wua.installed(name="KB4062623")
             self.assertDictEqual(result, expected)
