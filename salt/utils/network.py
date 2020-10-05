@@ -2155,9 +2155,15 @@ def parse_host_port(host_port):
                 port = int(port)
             except ValueError as _e_:
                 log.error(
-                    'host_port "%s" port value "%s" is not an integer.', host_port, port
+                    'host_port "{}" port value "{}" is not an integer.'.format(
+                        host_port, port
+                    )
                 )
-                raise _e_
+                raise ValueError(
+                    'host_port "{}" port value "{}" is not an integer.'.format(
+                        host_port, port
+                    )
+                )
         else:
             host = _s_
     try:

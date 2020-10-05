@@ -245,7 +245,7 @@ def init(opts):
     __context__["netmiko_device"] = {}
     __context__["netmiko_device"]["opts"] = opts
     __context__["netmiko_device"]["id"] = opts["id"]
-    log.error("Init for %s", opts["id"])
+    log.debug("Init for %s", opts["id"])
     proxy_dict = opts.get("proxy", {})
     skip_connect = opts.get(
         "skip_connect_on_init", proxy_dict.get("skip_connect_on_init", False)
@@ -291,12 +291,14 @@ def make_con(connection_timeout=DEFAULT_CONNECTION_TIMEOUT):
     start = time.time()
     args = args.copy()
     found_exception = None
+    connection = None
     while True:
         try:
             connection = ConnectHandler(**args)
         except Exception as exc:  # pylint: disable=broad-except
             log.warn("Got exception %r", exc)
             found_exception = exc
+            break
         else:
             break
         if time.time() - start >= connection_timeout:
