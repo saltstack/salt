@@ -222,6 +222,8 @@ def mounted(
     # string
     if isinstance(opts, str):
         opts = opts.split(",")
+    if opts:
+        opts.sort()
 
     if isinstance(hidden_opts, str):
         hidden_opts = hidden_opts.split(",")
