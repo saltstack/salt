@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Windows Local Group Policy
 =================================
@@ -207,21 +206,14 @@ Multiple policy configuration
 
         Windows Components\\Windows Update\\Configure Automatic Updates:
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.win_functions
-
-# Import 3rd party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 __virtualname__ = "lgpo"
@@ -243,7 +235,7 @@ def _compare_policies(new_policy, current_policy):
     otherwise ``False``
     """
     # Compared dicts, lists, and strings
-    if isinstance(new_policy, (six.string_types, six.integer_types)):
+    if isinstance(new_policy, (str, int)):
         return new_policy == current_policy
     elif isinstance(new_policy, list):
         if isinstance(current_policy, list):
@@ -273,7 +265,7 @@ def _convert_to_unicode(data):
     will just remove all the null bytes (`/x00`), again comparing apples to
     apples.
     """
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         data = data.replace("\x00", "")
         return salt.utils.stringutils.to_unicode(data)
     elif isinstance(data, dict):
@@ -366,7 +358,7 @@ def set_(
         ret["comment"] = msg
         return ret
     if policy_class and policy_class.lower() not in policy_classes:
-        msg = "The policy_class parameter must be one of the following: {0}"
+        msg = "The policy_class parameter must be one of the following: {}"
         ret["result"] = False
         ret["comment"] = msg
         return ret
@@ -398,9 +390,9 @@ def set_(
 
     current_policy = {}
     deprecation_comments = []
-    for p_class, p_data in six.iteritems(pol_data):
+    for p_class, p_data in pol_data.items():
         if p_data["requested_policy"]:
-            for p_name, _ in six.iteritems(p_data["requested_policy"]):
+            for p_name, _ in p_data["requested_policy"].items():
                 lookup = __salt__["lgpo.get_policy_info"](
                     policy_name=p_name,
                     policy_class=p_class,
@@ -434,8 +426,8 @@ def set_(
                                     msg = (
                                         "The LGPO module changed the way "
                                         "it gets policy element names.\n"
-                                        '"{0}" is no longer valid.\n'
-                                        'Please use "{1}" instead.'
+                                        '"{}" is no longer valid.\n'
+                                        'Please use "{}" instead.'
                                         "".format(e_name, new_e_name)
                                     )
                                     salt.utils.versions.warn_until("Phosphorus", msg)
@@ -448,7 +440,7 @@ def set_(
                                     )
                                     deprecation_comments.append(msg)
                                 else:
-                                    msg = "Invalid element name: {0}".format(e_name)
+                                    msg = "Invalid element name: {}".format(e_name)
                                     ret["comment"] = "\n".join(
                                         [ret["comment"], msg]
                                     ).strip()
@@ -468,10 +460,10 @@ def set_(
 
     # compare policies
     policy_changes = []
-    for p_class, p_data in six.iteritems(pol_data):
+    for p_class, p_data in pol_data.items():
         requested_policy = p_data.get("requested_policy")
         if requested_policy:
-            for p_name, p_setting in six.iteritems(requested_policy):
+            for p_name, p_setting in requested_policy.items():
                 if p_name in current_policy[class_map[p_class]]:
                     # compare
                     log.debug(
@@ -489,9 +481,6 @@ def set_(
                         requested_policy_json
                     )
                     current_policy_check = salt.utils.json.loads(current_policy_json)
-
-                    if six.PY2:
-                        current_policy_check = _convert_to_unicode(current_policy_check)
 
                     # Are the requested and current policies identical
                     policies_are_equal = _compare_policies(
@@ -527,14 +516,14 @@ def set_(
                             )
                             policy_changes.append(p_name)
                     else:
-                        msg = '"{0}" is already set'.format(p_name)
+                        msg = '"{}" is already set'.format(p_name)
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)
                     log.debug("policy %s is not set, we will configure it", p_name)
     if __opts__["test"]:
         if policy_changes:
-            msg = "The following policies are set to change:\n{0}" "".format(
+            msg = "The following policies are set to change:\n{}".format(
                 "\n".join(policy_changes)
             )
             ret["result"] = None
@@ -553,11 +542,9 @@ def set_(
             if _ret:
                 ret["result"] = _ret
                 new_policy = {}
-                for p_class, p_data in six.iteritems(pol_data):
+                for p_class, p_data in pol_data.items():
                     if p_data["requested_policy"]:
-                        for p_name, p_setting in six.iteritems(
-                            p_data["requested_policy"]
-                        ):
+                        for p_name, p_setting in p_data["requested_policy"].items():
                             new_policy.setdefault(class_map[p_class], {})
                             new_policy[class_map[p_class]][p_name] = __salt__[
                                 "lgpo.get_policy"
@@ -571,18 +558,18 @@ def set_(
                     old=current_policy, new=new_policy
                 )
                 if ret["changes"]:
-                    msg = "The following policies changed:\n{0}" "".format(
+                    msg = "The following policies changed:\n{}".format(
                         "\n".join(policy_changes)
                     )
                 else:
                     msg = (
                         "The following policies are in the correct "
-                        "state:\n{0}".format("\n".join(policy_changes))
+                        "state:\n{}".format("\n".join(policy_changes))
                     )
             else:
                 msg = (
                     "Errors occurred while attempting to configure "
-                    "policies: {0}".format(_ret)
+                    "policies: {}".format(_ret)
                 )
                 ret["result"] = False
             deprecation_comments.append(msg)
