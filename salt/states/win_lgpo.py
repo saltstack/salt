@@ -5,15 +5,13 @@ Manage Windows Local Group Policy
 
 .. versionadded:: 2016.11.0
 
-This state allows configuring local Windows Group Policy
-
-The state can be used to ensure the setting of a single policy or multiple
-policies in one pass.
+This state module allows you to configure local Group Policy on Windows. You
+can ensure the setting of a single policy or multiple policies in one pass.
 
 Single policies must specify the policy name, the setting, and the policy class
-(Machine/User/Both)
+(Machine/User/Both). Here are some examples for setting a single policy setting.
 
-Example single policy configuration
+Example single policy configuration:
 
 .. code-block:: yaml
 
@@ -23,12 +21,18 @@ Example single policy configuration
         - setting: 90
         - policy_class: Machine
 
+Example using abbreviated form:
+
 .. code-block:: yaml
 
     Account lockout duration:
       lgpo.set:
         - setting: 120
         - policy_class: Machine
+
+It is also possible to set multiple policies in a single state. This is done by
+setting the settings under either `computer_policy` or `user_policy`. Here are
+some examples for setting multiple policy settings in a single state.
 
 Multiple policy configuration
 
@@ -103,6 +107,105 @@ Multiple policy configuration
                 "Set the intranet update service for detecting updates": http://mywsus
                 "Set the intranet statistics server": http://mywsus
         - cumulative_rights_assignments: True
+
+    Some policy settings can't be set on their own an require that other policy
+    settings are set at the same time. It can be difficult to figure out what
+    additional settings need to be applied. The easiest way to do this is to
+    modify the setting manually using the Group Policy Editor (`gpedit.msc`) on
+    the machine. Then `get` the policy settings configured on that machine. Use
+    the following command:
+
+    .. code-block:: bash
+
+        salt-call --local lgpo.get machine
+
+    For example, if I want to set the Windows Update settings for a Windows
+    Server 2016 machine I would go into the Group Policy Editor (`gpedit.msc`)
+    and configure the group policy. That policy can be found at: Computer
+    Configuration -> Administrative Templates -> Windows Components -> Windows
+    Update -> Configure Automatic Updates. You have the option to "Enable" the
+    policy and set some configuration options. In this example, just click
+    "Enable" and accept the default configuration options. Click "OK" to apply
+    the setting.
+
+    Now run the `get` command as shown above. You will find the following in
+    the minion return:
+
+    .. code-block:: bash
+
+        Windows Components\Windows Update\Configure Automatic Updates:
+            ----------
+            Configure automatic updating:
+                3 - Auto download and notify for install
+            Install during automatic maintenance:
+                False
+            Install updates for other Microsoft products:
+                False
+            Scheduled install day:
+                0 - Every day
+            Scheduled install time:
+                03:00
+
+    This shows you that to enable the "Configure Automatic Updates" policy you
+    also have to configure the following settings:
+
+    - Configure automatic updating
+    - Install during automatic maintenance
+    - Install updates for other Microsoft products
+    - Scheduled install day
+    - Scheduled install time
+
+    So, if you were writing a state for the above policy, it would look like
+    this:
+
+    .. code-block:: bash
+
+        configure_windows_update_settings:
+          lgpo.set:
+            - computer_policy:
+                Configure Automatic Updates:
+                  Configure automatic updating: 3 - Auto download and notify for install
+                  Install during automatic maintenance: False
+                  Install updates for other Microsoft products: False
+                  Scheduled install day: 0 - Every day
+                  Scheduled install time: 03:00
+
+    .. note::
+
+        It is important that you put names of policies and settings exactly as
+        they are displayed in the return. That includes capitalization and
+        punctuation such as periods, dashes, etc. This rule applies to both
+        the setting name and the setting value.
+
+    .. warning::
+
+        From time to time Microsoft updates the Administrative templates on the
+        machine. This can cause the policy name to change or the list of
+        settings that must be applied at the same time. These settings often
+        change between versions of Windows as well. For example, Windows Server
+        2019 allows you to also specify a specific week of the month to apply
+        the update.
+
+    Another thing note is the long policy name returned by the `get` function:
+
+    .. code-block:: bash
+
+        Windows Components\Windows Update\Configure Automatic Updates:
+
+    When we wrote the state for this policy we only used the final portion of
+    the policy name, `Configure Automatic Updates`. This usually works fine, but
+    if you are having problems, you may try the long policy name.
+
+    When writing the long name in a state file either wrap the name in single
+    quotes to make yaml see it as raw data, or escape the back slashes.
+
+    .. code-block:: bash
+
+        'Windows Components\Windows Update\Configure Automatic Updates:'
+
+        or
+
+        Windows Components\\Windows Update\\Configure Automatic Updates:
 """
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -131,7 +234,7 @@ def __virtual__():
     """
     if "lgpo.set" in __salt__:
         return __virtualname__
-    return (False, "lgpo module could not be loaded")
+    return False, "lgpo module could not be loaded"
 
 
 def _compare_policies(new_policy, current_policy):
@@ -268,12 +371,6 @@ def set_(
         ret["comment"] = msg
         return ret
     if not setting:
-        if computer_policy and user_policy:
-            policy_class = "both"
-        elif computer_policy:
-            policy_class = "machine"
-        elif user_policy:
-            policy_class = "user"
         if computer_policy and not isinstance(computer_policy, dict):
             msg = "The computer_policy must be specified as a dict."
             ret["result"] = False
