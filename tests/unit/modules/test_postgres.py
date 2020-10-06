@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import re
 
-# Import salt libs
 import salt.modules.postgres as postgres
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock, call, patch
 from tests.support.unit import TestCase
@@ -555,7 +547,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     "PASSWORD",
                     "VALID UNTIL",
                 ):
-                    self.assertTrue(i in call, "{0} not in {1}".format(i, call))
+                    self.assertTrue(i in call, "{} not in {}".format(i, call))
 
     def test_user_exists(self):
         with patch(
@@ -1598,6 +1590,22 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 "table",
                 "ALL",
                 grant_option=True,
+                maintenance_db="db_name",
+                runas="user",
+                host="testhost",
+                port="testport",
+                user="testuser",
+                password="testpassword",
+            )
+
+            self.assertTrue(ret)
+
+            ret = postgres.has_privileges(
+                "baruwa",
+                "awl",
+                "table",
+                "ALL",
+                grant_option=False,
                 maintenance_db="db_name",
                 runas="user",
                 host="testhost",
