@@ -1,28 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Decorators for salt.state
 
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.stringutils
 from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
 
-class OutputUnifier(object):
+class OutputUnifier:
     def __init__(self, *policies):
         self.policies = []
         for pls in policies:
             if not hasattr(self, pls):
-                raise SaltException("Unknown policy: {0}".format(pls))
+                raise SaltException("Unknown policy: {}".format(pls))
             else:
                 self.policies.append(getattr(self, pls))
 
@@ -40,7 +36,7 @@ class OutputUnifier(object):
                     "result": False,
                     "name": "later",
                     "changes": {},
-                    "comment": "An exception occurred in this state: {0}".format(exc),
+                    "comment": "An exception occurred in this state: {}".format(exc),
                 }
         return data
 
@@ -78,7 +74,7 @@ class OutputUnifier(object):
                 if val not in result:
                     missing.append(val)
             if missing:
-                err_msg = "The following keys were not present in the state return: {0}.".format(
+                err_msg = "The following keys were not present in the state return: {}.".format(
                     ", ".join(missing)
                 )
             else:
