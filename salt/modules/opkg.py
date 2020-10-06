@@ -127,7 +127,9 @@ def _fingerprint_file(*, filename, fingerprint_dir):
         ``Path`` of the directory to store the stat and hash output files.
     """
     __salt__["cmd.shell"](
-        "stat -c %Y {} > {}/{}.timestamp".format(filename, fingerprint_dir, filename.name)
+        "stat -c %Y {} > {}/{}.timestamp".format(
+            filename, fingerprint_dir, filename.name
+        )
     )
     __salt__["cmd.shell"](
         "md5sum {} > {}/{}.md5sum".format(filename, fingerprint_dir, filename.name)
