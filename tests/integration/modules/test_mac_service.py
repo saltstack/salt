@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_service
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
+import plistlib
 
+import salt.utils.files
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -23,25 +23,30 @@ class MacServiceModuleTest(ModuleCase):
     Validate the mac_service module
     """
 
-    SERVICE_NAME = "com.apple.apsd"
-    SERVICE_ENABLED = False
+    SERVICE_NAME = "com.salt.integration.test"
+    SERVICE_PATH = "/Library/LaunchDaemons/com.salt.integration.test.plist"
 
     def setUp(self):
         """
-        Get current state of the test service
+        setup our test launch service.
         """
-        self.SERVICE_ENABLED = self.run_function("service.enabled", [self.SERVICE_NAME])
+        service_data = {
+            "KeepAlive": True,
+            "Label": self.SERVICE_NAME,
+            "ProgramArguments": ["/bin/sleep", "1000"],
+            "RunAtLoad": True,
+        }
+        with salt.utils.files.fopen(self.SERVICE_PATH, "wb") as fp:
+            plistlib.dump(service_data, fp)
+        self.run_function("service.enable", [self.SERVICE_NAME])
+        self.run_function("service.start", [self.SERVICE_NAME])
 
     def tearDown(self):
         """
-        Reset the test service to the original state
+        stop and remove our test service.
         """
-        if self.SERVICE_ENABLED:
-            self.run_function("service.start", [self.SERVICE_NAME])
-            self.run_function("service.enable", [self.SERVICE_NAME])
-        else:
-            self.run_function("service.stop", [self.SERVICE_NAME])
-            self.run_function("service.disable", [self.SERVICE_NAME])
+        self.run_function("service.stop", [self.SERVICE_NAME])
+        salt.utils.files.safe_rm(self.SERVICE_PATH)
 
     @slowTest
     def test_show(self):
@@ -87,9 +92,7 @@ class MacServiceModuleTest(ModuleCase):
         """
         # Expected Functionality
         self.assertIn("PID", self.run_function("service.list"))
-        self.assertIn(
-            "{", self.run_function("service.list", ["com.apple.coreservicesd"])
-        )
+        self.assertIn("{", self.run_function("service.list", [self.SERVICE_NAME]))
 
         # Service not found
         self.assertIn(
@@ -154,16 +157,14 @@ class MacServiceModuleTest(ModuleCase):
         """
         # A running service
         self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
-        self.assertTrue(
-            self.run_function("service.status", [self.SERVICE_NAME]).isdigit()
-        )
+        self.assertTrue(self.run_function("service.status", [self.SERVICE_NAME]))
 
         # A stopped service
         self.assertTrue(self.run_function("service.stop", [self.SERVICE_NAME]))
-        self.assertEqual("", self.run_function("service.status", [self.SERVICE_NAME]))
+        self.assertFalse(self.run_function("service.status", [self.SERVICE_NAME]))
 
         # Service not found
-        self.assertEqual("", self.run_function("service.status", ["spongebob"]))
+        self.assertFalse(self.run_function("service.status", ["spongebob"]))
 
     @slowTest
     def test_available(self):
@@ -187,13 +188,13 @@ class MacServiceModuleTest(ModuleCase):
         """
         Test service.enabled
         """
-        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
         self.assertTrue(self.run_function("service.enabled", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
 
+        self.assertTrue(self.run_function("service.enabled", [self.SERVICE_NAME]))
         self.assertTrue(self.run_function("service.stop", [self.SERVICE_NAME]))
-        self.assertFalse(self.run_function("service.enabled", [self.SERVICE_NAME]))
 
-        self.assertFalse(self.run_function("service.enabled", ["spongebob"]))
+        self.assertTrue(self.run_function("service.enabled", ["spongebob"]))
 
     @destructiveTest
     @slowTest
@@ -201,15 +202,15 @@ class MacServiceModuleTest(ModuleCase):
         """
         Test service.disabled
         """
-        SERVICE_NAME = "com.apple.nfsd"
-        self.assertTrue(self.run_function("service.start", [SERVICE_NAME]))
-        self.assertFalse(self.run_function("service.disabled", [SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.start", [self.SERVICE_NAME]))
+        self.assertFalse(self.run_function("service.disabled", [self.SERVICE_NAME]))
 
-        self.assertTrue(self.run_function("service.disable", [SERVICE_NAME]))
-        self.assertTrue(self.run_function("service.disabled", [SERVICE_NAME]))
-        self.assertTrue(self.run_function("service.enable", [SERVICE_NAME]))
-
-        self.assertFalse(self.run_function("service.disabled", ["spongebob"]))
+        self.assertTrue(self.run_function("service.disable", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.disabled", [self.SERVICE_NAME]))
+        self.assertTrue(self.run_function("service.enable", [self.SERVICE_NAME]))
+        self.assertIn(
+            "Service not found", self.run_function("service.stop", ["spongebob"])
+        )
 
     @slowTest
     def test_get_all(self):
@@ -227,4 +228,11 @@ class MacServiceModuleTest(ModuleCase):
         """
         services = self.run_function("service.get_enabled")
         self.assertIsInstance(services, list)
-        self.assertIn("com.apple.coreservicesd", services)
+        self.assertIn(self.SERVICE_NAME, services)
+
+    @slowTest
+    def test_service_laoded(self):
+        """
+        Test service.get_enabled
+        """
+        self.assertTrue(self.run_function("service.loaded", [self.SERVICE_NAME]))

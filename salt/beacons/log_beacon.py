@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire events at specific log messages.
 
@@ -7,7 +6,6 @@ Beacon to fire events at specific log messages.
 """
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
@@ -85,6 +83,17 @@ def beacon(config):
         regex matching is based on the `re`_ module
 
     .. _re: https://docs.python.org/3.6/library/re.html#regular-expression-syntax
+
+    The defined tag is added to the beacon event tag.
+    This is not the tag in the log.
+
+    .. code-block:: yaml
+        beacons:
+            log:
+              - file: /var/log/messages #path to log.
+              - tags:
+                  goodbye/world: # tag added to beacon event tag.
+                    regex: .*good-bye.* # match good-bye string anywhere in the log entry.
     """
     _config = {}
     list(map(_config.update, config))
@@ -119,7 +128,7 @@ def beacon(config):
             if not _config["tags"][tag]["regex"]:
                 continue
             try:
-                d[tag] = re.compile(r"{0}".format(_config["tags"][tag]["regex"]))
+                d[tag] = re.compile(r"{}".format(_config["tags"][tag]["regex"]))
             except Exception as e:  # pylint: disable=broad-except
                 event = SKEL.copy()
                 event["tag"] = tag

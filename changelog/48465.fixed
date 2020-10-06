@@ -1,0 +1,1 @@
+Fixed issue with postgres.has_privilege breaking on ALL.
