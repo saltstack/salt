@@ -21,17 +21,11 @@ import salt.config
 import salt.loader
 import salt.utils.files
 import salt.utils.stringutils
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-# pylint: enable=no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1595,7 +1589,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         self.loader = self._get_loader()
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
-        expected = "lazyloadertest.py" if six.PY3 else "lazyloadertest.pyc"
+        expected = "lazyloadertest.py"
         assert basename == expected, basename
 
 
@@ -1677,3 +1671,29 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         func_mock.assert_called()
         assert len(func_mock.call_args_list) == len(lock_mock.__enter__.call_args_list)
         del loader
+
+    def test_lazyloader_zip_modules(self):
+        self.opts["enable_zip_modules"] = True
+        try:
+            loader = self.__init_loader()
+            assert ".zip" in loader.suffix_map
+            assert ".zip" in loader.suffix_order
+        finally:
+            self.opts["enable_zip_modules"] = False
+        loader = self.__init_loader()
+        assert ".zip" not in loader.suffix_map
+        assert ".zip" not in loader.suffix_order
+
+    def test_lazyloader_pyx_modules(self):
+        self.opts["cython_enable"] = True
+        try:
+            loader = self.__init_loader()
+            # Don't assert if the current environment has no pyximport
+            if salt.loader.pyximport is not None:
+                assert ".pyx" in loader.suffix_map
+                assert ".pyx" in loader.suffix_order
+        finally:
+            self.opts["cython_enable"] = False
+        loader = self.__init_loader()
+        assert ".pyx" not in loader.suffix_map
+        assert ".pyx" not in loader.suffix_order

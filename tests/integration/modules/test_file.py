@@ -365,3 +365,29 @@ class FileModuleTest(ModuleCase):
         with salt.utils.files.fopen(self.myfile, "r") as fp:
             content = fp.read()
         self.assertEqual(content, "Hello" + os.linesep + "Goodbye" + os.linesep)
+
+    def test_file_read_bytes(self):
+        """
+        Test that ``file.read`` reads and returns ``bytes`` data
+        """
+        # Write some random bytes
+        data = b"n\x1a\xf7S@tBI\xa9J"
+        with salt.utils.files.fopen(self.myfile, "wb") as fp:
+            fp.write(data)
+
+        ret = self.minion_run("file.read", self.myfile, binary=True)
+        self.assertEqual(type(ret), bytes)
+        self.assertEqual(ret, data)
+
+    def test_file_read_str(self):
+        """
+        Test that ``file.read`` reads and returns ``str`` data
+        """
+        # Write some str data
+        data = "printable characters"
+        with salt.utils.files.fopen(self.myfile, "w") as fp:
+            fp.write(data)
+
+        ret = self.minion_run("file.read", self.myfile)
+        self.assertEqual(type(ret), str)
+        self.assertEqual(ret, data)
