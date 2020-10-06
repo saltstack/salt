@@ -8,11 +8,13 @@ import copy
 import os
 
 import salt.modules.opkg as opkg
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(not salt.utils.platform.is_linux(), "Must be on Linux!")
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.opkg

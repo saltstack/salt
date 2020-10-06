@@ -15,7 +15,6 @@ Support for Opkg
     must be installed.
 
 """
-# Import python libs
 
 import copy
 import errno
@@ -23,7 +22,6 @@ import logging
 import os
 import re
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -33,8 +31,6 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
