@@ -342,7 +342,7 @@ License: Apache-2.0
  .
  Files in this directory were created in-house.
 
-Files: tests/utils/cptestcase.py
+Files: tests/support/cptestcase.py
 Copyright: (c) 2014 Adam Hajari
 The MIT License (MIT)
 

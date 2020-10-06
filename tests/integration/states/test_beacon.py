@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the beacon states
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing Libs
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
+@pytest.mark.usefixtures("salt_sub_minion")
 class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
     Test beacon states

@@ -1,0 +1,1 @@
+Fixed error in nilrt_ip.get_interfaces_details when loading config.

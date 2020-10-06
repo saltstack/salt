@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test the saltcheck module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest
@@ -87,4 +85,17 @@ class SaltcheckModuleTest(ModuleCase):
         )
         self.assertDictContainsSubset(
             {"status": "Pass"}, ret[0]["validate-saltcheck"]["check_all_validate_prod"]
+        )
+
+    @slowTest
+    def test_saltcheck_saltenv(self):
+        """
+        Validate saltcheck.run_state_tests for the prod saltenv
+        """
+        saltcheck_test = "validate-saltcheck"
+        ret = self.run_function(
+            "saltcheck.run_state_tests", [saltcheck_test], saltenv="prod"
+        )
+        self.assertDictContainsSubset(
+            {"status": "Pass"}, ret[0]["validate-saltcheck"]["echo_test_prod_env"]
         )
