@@ -1,8 +1,5 @@
-# Import Python libs
-
 import logging
 
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 
 log = logging.getLogger(__name__)
