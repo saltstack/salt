@@ -1,11 +1,12 @@
+"""
+Feature flags
+"""
 import logging
-
 
 log = logging.getLogger(__name__)
 
 
-class Features(object):
-
+class Features:
     def __init__(self, _features=None):
         if _features is None:
             self.features = {}
@@ -15,7 +16,7 @@ class Features(object):
 
     def setup_features(self, opts):
         if not self.setup:
-            self.features.update(opts.get('features', {}))
+            self.features.update(opts.get("features", {}))
         else:
             log.warn("Features already setup")
 

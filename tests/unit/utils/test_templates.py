@@ -23,7 +23,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-### Here we go!
 class RenderTestCase(TestCase):
     def setUp(self):
         # Default context for salt.utils.templates.render_*_tmpl to work

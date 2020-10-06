@@ -1,7 +1,6 @@
 """
 All salt configuration loading and defaults should be in this module
 """
-
 import codecs
 import glob
 import logging

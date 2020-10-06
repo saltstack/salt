@@ -2,6 +2,21 @@
 SLS Template Variable Reference
 ===============================
 
+
+.. warning::
+   In the 3002 release sls_path, tplfile, and tpldir have had some significate
+   improvements which have the potential to break states that rely on old and
+   broken functionality. These fixes can be enabled by setting the
+   ``use_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
+   This functionality will become the default in the 3005 release.
+
+   .. code-block:: yaml
+
+       features:
+         use_slsvars_fixes: True
+
+
+
 The template engines available to sls files and file templates come loaded
 with a number of context variables. These variables contain information and
 functions to assist in the generation of templates.  See each variable below
