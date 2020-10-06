@@ -255,6 +255,7 @@ def present(host, groups, interfaces, **kwargs):
     else:
         visible_name = kwargs.pop("visible_name")
 
+    host_extra_properties = {}
     if kwargs:
         host_properties_definition = [
             "description",
@@ -271,7 +272,6 @@ def present(host, groups, interfaces, **kwargs):
             "tls_psk_identity",
             "tls_psk",
         ]
-        host_extra_properties = {}
         for param in host_properties_definition:
             if param in kwargs:
                 host_extra_properties[param] = kwargs.pop(param)
