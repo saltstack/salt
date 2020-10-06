@@ -1,4 +1,4 @@
-"""
+r"""
 Manage Windows Local Group Policy
 =================================
 
@@ -269,9 +269,7 @@ def _convert_to_unicode(data):
         data = data.replace("\x00", "")
         return salt.utils.stringutils.to_unicode(data)
     elif isinstance(data, dict):
-        return dict(
-            (_convert_to_unicode(k), _convert_to_unicode(v)) for k, v in data.items()
-        )
+        return {_convert_to_unicode(k): _convert_to_unicode(v) for k, v in data.items()}
     elif isinstance(data, list):
         return list(_convert_to_unicode(v) for v in data)
     else:
