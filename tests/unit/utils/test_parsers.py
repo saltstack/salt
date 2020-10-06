@@ -1,24 +1,17 @@
 """
     :codeauthor: Denys Havrysh <denys.gavrysh@gmail.com>
 """
-
-# Import python libs
-
 import os
 import shutil
 import tempfile
 
 import salt.config
-
-# Import Salt Libs
 import salt.log.setup as log
 import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 

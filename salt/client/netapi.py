@@ -1,12 +1,9 @@
 """
 The main entry point for salt-api
 """
-# Import python libs
-
 import logging
 import signal
 
-# Import salt-api libs
 import salt.loader
 import salt.utils.process
 

@@ -10,8 +10,6 @@
 # pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
 # pylint: disable=attribute-defined-outside-init,no-self-use
 
-# Import python libs
-
 import getpass
 import logging
 import optparse
@@ -22,7 +20,6 @@ import traceback
 import types
 from functools import partial
 
-# Import salt libs
 import salt.config as config
 import salt.defaults.exitcodes
 import salt.exceptions
