@@ -1389,9 +1389,9 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 if source["file"] in deleted_from:
                     deleted_from[source["file"]] += 1
             for repo_file, count in deleted_from.items():
-                msg = "Repo '{0}' has been removed from {1}.\n"
+                msg = "Repo '{}' has been removed from {}.\n"
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = "File {1} containing repo '{0}' has been " "removed.\n"
+                    msg = "File {1} containing repo '{0}' has been removed.\n"
                     try:
                         os.remove(repo_file)
                     except OSError:
