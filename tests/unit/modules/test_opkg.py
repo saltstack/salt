@@ -276,3 +276,47 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Return the information of check_extra_requirements
         """
         self.assertEqual(opkg.check_extra_requirements("vim", "1.0.1"), True)
+
+    def test_process_restartcheck_always_restart_services(self):
+        """
+        Test - Service is restarted
+        """
+        cmd_mock = MagicMock()
+        system_mock = MagicMock()
+        result = ["service", "System restart required."]
+        with patch.object(opkg, "_update_nilrt_restart_state", MagicMock()):
+            with patch.dict(
+                opkg.__salt__,
+                {
+                    "system.set_reboot_required_witnessed": system_mock,
+                    "cmd.run": cmd_mock,
+                },
+            ):
+                with patch.object(opkg.os.path, "exists", MagicMock(return_value=True)):
+                    opkg._process_restartcheck_result(
+                        result, always_restart_services=True
+                    )
+                    system_mock.assert_called_once()
+                    cmd_mock.assert_called_once_with(["/etc/init.d/service", "restart"])
+
+    def test_process_restartcheck_not_always_restart_services(self):
+        """
+        Test - Service is not restarted
+        """
+        cmd_mock = MagicMock()
+        system_mock = MagicMock()
+        result = ["service", "System restart required."]
+        with patch.object(opkg, "_update_nilrt_restart_state", MagicMock()):
+            with patch.dict(
+                opkg.__salt__,
+                {
+                    "system.set_reboot_required_witnessed": system_mock,
+                    "cmd.run": cmd_mock,
+                },
+            ):
+                with patch.object(opkg.os.path, "exists", MagicMock(return_value=True)):
+                    opkg._process_restartcheck_result(
+                        result, always_restart_services=False
+                    )
+                    system_mock.assert_called_once()
+                    cmd_mock.assert_not_called()
