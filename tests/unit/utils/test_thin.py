@@ -43,7 +43,7 @@ class SSHThinTestCase(TestCase):
         self.ext_conf = {
             "test": {
                 "py-version": [2, 7],
-                "path": os.path.join(RUNTIME_VARS.CODE_DIR, "salt"),
+                "path": RUNTIME_VARS.SALT_CODE_DIR,
                 "dependencies": {"jinja2": self.jinja_fp},
             }
         }
