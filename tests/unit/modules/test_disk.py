@@ -190,6 +190,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(salt.utils.platform.is_darwin(), "Skip on Darwin")
+    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_blkid_token(self):
         run_stdout_mock = MagicMock(return_value={"retcode": 1})
         with patch.dict(disk.__salt__, {"cmd.run_all": run_stdout_mock}):

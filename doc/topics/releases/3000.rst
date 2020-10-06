@@ -519,6 +519,8 @@ Module Changes
 - Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
   secrets in AWS SSM parameters.
 
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+
 - The :py:func:`file.remove <salt.modules.file.remove>` module was
   fixed to remove file system entries other than files, directories
   and symbolic links properly.

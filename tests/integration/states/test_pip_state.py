@@ -228,6 +228,32 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if os.path.isdir(ographite):
                 shutil.rmtree(ographite, ignore_errors=True)
 
+    def test_pip_installed_name_test_mode(self):
+        """
+        Test pip.installed state while test=true
+        """
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode-name")
+        with VirtualEnv(self, venv_dir):
+            name = "pudb"
+            msg = "Python package(s) set to be installed:\npudb"
+            ret = self.run_state(
+                "pip.installed", name=name, bin_env=venv_dir, test=True
+            )
+            self.assertInSaltComment(name, ret)
+
+    def test_pip_installed_pkgs_test_mode(self):
+        """
+        Test pip.installed state while test=true
+        """
+        venv_dir = os.path.join(RUNTIME_VARS.TMP, "pip-installed-test-mode-pkgs")
+        with VirtualEnv(self, venv_dir):
+            pkgs = ["boto", "pudb", "black"]
+            msg = "Python package(s) set to be installed:\nboto\npudb\nblack"
+            ret = self.run_state(
+                "pip.installed", name=None, pkgs=pkgs, bin_env=venv_dir, test=True
+            )
+            self.assertInSaltComment(msg, ret)
+
     @slowTest
     def test_issue_2028_pip_installed_state(self):
         ret = self.run_function("state.sls", mods="issue-2028-pip-installed")

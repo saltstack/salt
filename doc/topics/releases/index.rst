@@ -33,6 +33,15 @@ Previous Releases
     2014.1.*
     0.*
 
+Upcoming Release
+================
+
+.. releasestree::
+    :maxdepth: 1
+    :glob:
+
+    3002*
+
 .. seealso:: :ref:`Legacy salt-cloud release docs <legacy-salt-cloud-release-notes>`
 
 .. seealso:: :ref:`Legacy salt-api release docs <legacy-salt-api-release-notes>`

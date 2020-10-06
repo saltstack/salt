@@ -1,0 +1,27 @@
+.. _release-3002:
+
+============================================
+Salt 3002 Release Notes - Codename Magnesium
+============================================
+
+Salt 3002 is an *unreleased* upcoming feature release.
+
+New Features
+============
+
+Network Teaming Support Added (RHEL/CentOS)
+-------------------------------------------
+
+Support for two new interface types (``team`` and ``teamport``) has been added
+to the :py:func:`network.managed <salt.states.network.managed>` state. See the
+documentation for example usage.
+
+Execution Module Changes
+========================
+
+The :py:func:`ip.get_bond <salt.modules.rh_ip.get_bond>` and
+:py:func:`ip.build_bond <salt.modules.rh_ip.build_bond>` functions have been
+removed from the ``ip`` module for RHEL/CentOS. Configuring bonding opts in
+modprobe configurations has not been necessary since RHEL 4, and Salt was in
+fact redundantly both creating modprobe configurations *and* using the
+``BONDING_OPTS`` interface configuration parameter.

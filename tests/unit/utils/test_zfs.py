@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the zfs utils library
 
@@ -10,22 +9,14 @@ Tests for the zfs utils library
 .. versionadded:: 2018.3.1
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Execution module to test
 import salt.utils.zfs as zfs
-
-# Import Salt Utils
 from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-# Import Salt Testing libs
 from tests.support.zfs import ZFSMockData
 
 
-# Skip this test case if we don't have access to mock!
 class ZfsUtilsTestCase(TestCase):
     """
     This class contains a set of functions that test salt.utils.zfs utils
