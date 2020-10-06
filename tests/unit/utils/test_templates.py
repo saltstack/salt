@@ -224,7 +224,7 @@ class WrapRenderTestCase(TestCase):
         if tmplpath.startswith("\\"):
             tmplpath = "C:{}".format(tmplpath)
         expected["tplpath"] = tmplpath
-        actual = salt.utils.templates.generate_sls_context(tmplpath, sls)
+        actual = salt.utils.templates._generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
     @mock.patch("salt.utils.templates.generate_sls_context")

@@ -944,6 +944,8 @@ VALID_OPTS = immutabletypes.freeze(
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
         "disabled_requisites": (str, list),
+        # Feature flag config
+        "features": dict,
     }
 )
 
