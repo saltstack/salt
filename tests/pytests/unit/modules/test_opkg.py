@@ -1,7 +1,6 @@
 import pytest
 import salt.modules.opkg as opkg
-from tests.support.helpers import TstSuiteLoggingHandler
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +29,7 @@ def test_when_os_is_NILinuxRT_and_creation_is_OK_and_no_files_exist_then_files_s
         "salt.modules.opkg._update_nilrt_restart_state", autospec=True
     )
     patch_listdir = patch("os.listdir", return_value=[], autospec=True)
-    with patch_grains, patch_makedirs, patch_update_state as fake_update, patch_listdir:
+    with patch_grains, patch_makedirs, patch_listdir, patch_update_state as fake_update:
         opkg.__virtual__()
 
         fake_update.assert_called_once()
@@ -45,7 +44,7 @@ def test_when_os_is_NILinuxRT_and_creation_is_OK_and_files_already_exist_then_fi
     patch_listdir = patch(
         "os.listdir", return_value=["these", "are", "pretend", "files"], autospec=True
     )
-    with patch_grains, patch_makedirs, patch_update_state as fake_update, patch_listdir:
+    with patch_grains, patch_makedirs, patch_listdir, patch_update_state as fake_update:
         opkg.__virtual__()
 
         fake_update.assert_not_called()
