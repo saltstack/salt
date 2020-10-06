@@ -8,11 +8,19 @@
     {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
     - python: {{ salt.runtests_helpers.get_python_executable() }}
 
+install-working-setuptools:
+  pip.installed:
+    - name: 'setuptools<50.0.0'
+    - bin_env: {{ virtualenv_base }}
+    - require:
+      - virtualenv: {{ virtualenv_base }}
+
 install_older_venv:
   pip.installed:
     - name: 'virtualenv < 13.0'
     - bin_env: {{ virtualenv_base }}
     - require:
+      - pip: install-working-setuptools
       - virtualenv: {{ virtualenv_base }}
 
 # For this test we need to make sure that the virtualenv used in the

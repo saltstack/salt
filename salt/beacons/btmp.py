@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire events at failed login of users
 
@@ -91,25 +90,13 @@ Match the event like so in the master config file:
     on how to set up a bot user.
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
-
 import datetime
 import logging
 import os
 import struct
 
-# Import 3rd-party libs
-import salt.ext.six
 import salt.utils.files
-
-# Import Salt Libs
 import salt.utils.stringutils
-
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
 
 __virtualname__ = "btmp"
 BTMP = "/var/log/btmp"
@@ -131,7 +118,6 @@ LOC_KEY = "btmp.loc"
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
 
@@ -295,7 +281,7 @@ def beacon(config):
             event = {}
             for ind, field in enumerate(FIELDS):
                 event[field] = pack[ind]
-                if isinstance(event[field], salt.ext.six.string_types):
+                if isinstance(event[field], (str, bytes)):
                     if isinstance(event[field], bytes):
                         event[field] = salt.utils.stringutils.to_unicode(event[field])
                     event[field] = event[field].strip("\x00")

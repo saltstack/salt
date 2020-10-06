@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
@@ -91,11 +87,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         states = self.run_function("state.show_states")
         self.assertTrue(isinstance(states, list))
-        self.assertTrue(isinstance(states[0], six.string_types))
+        self.assertTrue(isinstance(states[0], str))
 
         states = self.run_function("state.show_states", sorted=False)
         self.assertTrue(isinstance(states, list))
-        self.assertTrue(isinstance(states[0], six.string_types))
+        self.assertTrue(isinstance(states[0], str))
 
     @slowTest
     def test_show_states_missing_sls(self):
@@ -183,7 +179,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertTrue(isinstance(ret["__sls__"], type(None)))
 
         for state, ret in sls2.items():
-            self.assertTrue(isinstance(ret["__sls__"], six.string_types))
+            self.assertTrue(isinstance(ret["__sls__"], str))
 
     def _remove_request_cache_file(self):
         """
@@ -339,7 +335,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         sls = self.run_function("state.sls", mods="issue-1876")
         self.assertIn(
-            "ID '{0}' in SLS 'issue-1876' contains multiple state "
+            "ID '{}' in SLS 'issue-1876' contains multiple state "
             "declarations of the same type".format(testfile),
             sls,
         )
@@ -510,7 +506,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertNotEqual(ret, [])
             self.assertEqual(
                 [
-                    "The '{0}' declaration found on '<template-str>' is "
+                    "The '{}' declaration found on '<template-str>' is "
                     "invalid when rendering single templates".format(item)
                 ],
                 ret,
@@ -708,7 +704,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         Normalize the return to the format that we'll use for result checking
         """
         result = {}
-        for item, descr in six.iteritems(ret):
+        for item, descr in ret.items():
             result[item] = {
                 "__run_num__": descr["__run_num__"],
                 "comment": descr["comment"],
@@ -889,51 +885,51 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_true = "true"
             cmd_false = "false"
         expected_result = {
-            "cmd_|-A_|-{0}_|-wait".format(cmd_true): {
+            "cmd_|-A_|-{}_|-wait".format(cmd_true): {
                 "__run_num__": 4,
-                "comment": 'Command "{0}" run'.format(cmd_true),
+                "comment": 'Command "{}" run'.format(cmd_true),
                 "result": True,
                 "changes": True,
             },
-            "cmd_|-B_|-{0}_|-run".format(cmd_true): {
+            "cmd_|-B_|-{}_|-run".format(cmd_true): {
                 "__run_num__": 0,
-                "comment": 'Command "{0}" run'.format(cmd_true),
+                "comment": 'Command "{}" run'.format(cmd_true),
                 "result": True,
                 "changes": True,
             },
-            "cmd_|-C_|-{0}_|-run".format(cmd_false): {
+            "cmd_|-C_|-{}_|-run".format(cmd_false): {
                 "__run_num__": 1,
-                "comment": 'Command "{0}" run'.format(cmd_false),
+                "comment": 'Command "{}" run'.format(cmd_false),
                 "result": False,
                 "changes": True,
             },
-            "cmd_|-D_|-{0}_|-run".format(cmd_true): {
+            "cmd_|-D_|-{}_|-run".format(cmd_true): {
                 "__run_num__": 2,
-                "comment": 'Command "{0}" run'.format(cmd_true),
+                "comment": 'Command "{}" run'.format(cmd_true),
                 "result": True,
                 "changes": True,
             },
-            "cmd_|-E_|-{0}_|-wait".format(cmd_true): {
+            "cmd_|-E_|-{}_|-wait".format(cmd_true): {
                 "__run_num__": 9,
-                "comment": 'Command "{0}" run'.format(cmd_true),
+                "comment": 'Command "{}" run'.format(cmd_true),
                 "result": True,
                 "changes": True,
             },
-            "cmd_|-F_|-{0}_|-run".format(cmd_true): {
+            "cmd_|-F_|-{}_|-run".format(cmd_true): {
                 "__run_num__": 5,
-                "comment": 'Command "{0}" run'.format(cmd_true),
+                "comment": 'Command "{}" run'.format(cmd_true),
                 "result": True,
                 "changes": True,
             },
-            "cmd_|-G_|-{0}_|-run".format(cmd_false): {
+            "cmd_|-G_|-{}_|-run".format(cmd_false): {
                 "__run_num__": 6,
-                "comment": 'Command "{0}" run'.format(cmd_false),
+                "comment": 'Command "{}" run'.format(cmd_false),
                 "result": False,
                 "changes": True,
             },
-            "cmd_|-H_|-{0}_|-run".format(cmd_false): {
+            "cmd_|-H_|-{}_|-run".format(cmd_false): {
                 "__run_num__": 7,
-                "comment": 'Command "{0}" run'.format(cmd_false),
+                "comment": 'Command "{}" run'.format(cmd_false),
                 "result": False,
                 "changes": True,
             },
@@ -1471,7 +1467,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function("state.sls", mods="requisites.use")
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in six.iteritems(ret):
+        for item, descr in ret.items():
             self.assertEqual(descr["comment"], "onlyif condition is false")
 
         # TODO: issue #8802 : use recursions undetected
@@ -1503,7 +1499,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_function("state.sls", mods="requisites.use_no_state_module")
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in six.iteritems(ret):
+        for item, descr in ret.items():
             self.assertEqual(descr["comment"], "onlyif condition is false")
 
     @slowTest
@@ -2094,7 +2090,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         testfile = os.path.join(RUNTIME_VARS.TMP, "retry_file_option_success")
         state_run = self.run_function("state.sls", mods="retry.retry_success")
         os.unlink(testfile)
-        retry_state = "file_|-file_test_|-{0}_|-exists".format(testfile)
+        retry_state = "file_|-file_test_|-{}_|-exists".format(testfile)
         self.assertNotIn("Attempt", state_run[retry_state]["comment"])
 
     def run_create(self, testfile):
@@ -2123,7 +2119,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         create_thread = threading.Thread(target=self.run_create, args=(testfile,))
         create_thread.start()
         state_run = self.run_function("state.sls", mods="retry.retry_success2")
-        retry_state = "file_|-file_test_b_|-{0}_|-exists".format(testfile)
+        retry_state = "file_|-file_test_b_|-{}_|-exists".format(testfile)
         self.assertIn("Attempt 1:", state_run[retry_state]["comment"])
         self.assertIn("Attempt 2:", state_run[retry_state]["comment"])
         self.assertIn("Attempt 3:", state_run[retry_state]["comment"])
@@ -2196,7 +2192,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_function("state.sls", mods="non-base-env", saltenv="prod")
             ret = ret[next(iter(ret))]
             assert ret["result"]
-            assert ret["comment"] == "File {0} updated".format(filename)
+            assert ret["comment"] == "File {} updated".format(filename)
             assert os.path.isfile(filename)
         finally:
             try:
@@ -2233,11 +2229,11 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             mods="issue-49738",
             pillar={"short_command": short_command, "long_command": long_command},
         )
-        comments = sorted([x["comment"] for x in six.itervalues(ret)])
+        comments = sorted([x["comment"] for x in ret.values()])
         expected = sorted(
-            ['Command "{0}" run'.format(x) for x in (short_command, long_command)]
+            ['Command "{}" run'.format(x) for x in (short_command, long_command)]
         )
-        assert comments == expected, "{0} != {1}".format(comments, expected)
+        assert comments == expected, "{} != {}".format(comments, expected)
 
     def _add_runtime_pillar(self, pillar):
         """
@@ -2274,7 +2270,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         self._add_runtime_pillar(pillar={"test": True})
         testfile = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+        comment = "The file {} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
             testfile
         )
         ret = self.run_function("state.sls", ["core"])
@@ -2292,7 +2288,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         file_name = os.path.join(RUNTIME_VARS.TMP, "testfile")
         ret = self.run_function("state.sls", ["core"])
         for key, val in ret.items():
-            self.assertEqual(val["comment"], "File {0} updated".format(file_name))
+            self.assertEqual(val["comment"], "File {} updated".format(file_name))
             self.assertEqual(val["changes"]["diff"], "New file")
 
         self._add_runtime_pillar(pillar={"test": True})
@@ -2300,7 +2296,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         for key, val in ret.items():
             self.assertEqual(
-                val["comment"], "The file {0} is in the correct state".format(file_name)
+                val["comment"], "The file {} is in the correct state".format(file_name)
             )
             self.assertEqual(val["changes"], {})
 
@@ -2314,7 +2310,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for key, val in ret.items():
             self.assertEqual(
                 val["comment"],
-                "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+                "The file {} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
                     file_name
                 ),
             )
@@ -2329,14 +2325,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         file_name = os.path.join(RUNTIME_VARS.TMP, "testfile")
         ret = self.run_function("state.sls", ["core"])
         for key, val in ret.items():
-            self.assertEqual(val["comment"], "File {0} updated".format(file_name))
+            self.assertEqual(val["comment"], "File {} updated".format(file_name))
             self.assertEqual(val["changes"]["diff"], "New file")
 
         ret = self.run_function("state.sls", ["core"], test=True)
 
         for key, val in ret.items():
             self.assertEqual(
-                val["comment"], "The file {0} is in the correct state".format(file_name)
+                val["comment"], "The file {} is in the correct state".format(file_name)
             )
             self.assertEqual(val["changes"], {})
 
@@ -2352,7 +2348,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", ["core"], test=False)
 
         for key, val in ret.items():
-            self.assertEqual(val["comment"], "File {0} updated".format(file_name))
+            self.assertEqual(val["comment"], "File {} updated".format(file_name))
             self.assertEqual(val["changes"]["diff"], "New file")
 
     def test_state_test_pillar_false(self):
@@ -2361,7 +2357,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         self._add_runtime_pillar(pillar={"test": False})
         testfile = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+        comment = "The file {} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
             testfile
         )
         ret = self.run_function("state.test", ["core"])
@@ -2378,7 +2374,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         """
         self._add_runtime_pillar(pillar={"test": False})
         testfile = os.path.join(RUNTIME_VARS.TMP, "testfile")
-        comment = "The file {0} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
+        comment = "The file {} is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.".format(
             testfile
         )
         ret = self.run_function("state.test", ["core"], test=False)
@@ -2405,43 +2401,43 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         # then the unless state run bailed out after the first unless command succeeded,
         # which is the bug we're regression testing for.
         _expected = {
-            "file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed".format(
+            "file_|-unless_false_onlyif_false_|-{}{}test.txt_|-managed".format(
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "onlyif condition is false\nunless condition is false",
-                "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
+                "name": "{}{}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "skip_watch": True,
                 "changes": {},
                 "result": True,
             },
-            "file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed".format(
+            "file_|-unless_false_onlyif_true_|-{}{}test.txt_|-managed".format(
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "Empty file",
-                "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
+                "name": "{}{}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "start_time": "18:10:20.341753",
                 "result": True,
                 "changes": {
-                    "new": "file {0}{1}test.txt created".format(
+                    "new": "file {}{}test.txt created".format(
                         RUNTIME_VARS.TMP, os.path.sep
                     )
                 },
             },
-            "file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed".format(
+            "file_|-unless_true_onlyif_false_|-{}{}test.txt_|-managed".format(
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "onlyif condition is false\nunless condition is true",
-                "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
+                "name": "{}{}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "start_time": "18:10:22.936446",
                 "skip_watch": True,
                 "changes": {},
                 "result": True,
             },
-            "file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed".format(
+            "file_|-unless_true_onlyif_true_|-{}{}test.txt_|-managed".format(
                 RUNTIME_VARS.TMP, os.path.sep
             ): {
                 "comment": "onlyif condition is true\nunless condition is true",
-                "name": "{0}{1}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
+                "name": "{}{}test.txt".format(RUNTIME_VARS.TMP, os.path.sep),
                 "skip_watch": True,
                 "changes": {},
                 "result": True,
@@ -2463,27 +2459,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
-
-    @skipIf(
-        six.PY3 and salt.utils.platform.is_darwin(), "Test is broken on macosx and PY3"
-    )
-    @slowTest
-    def test_state_sls_unicode_characters_cmd_output(self):
-        """
-        test the output from running and echo command with non-ascii
-        characters.
-        """
-        ret = self.run_function("state.sls", ["issue-46672-a"], timeout=60)
-        key = list(ret.keys())[0]
-        log.debug("== ret %s ==", type(ret))
-        _expected = "This is Æ test!"
-        if salt.utils.platform.is_windows():
-            # Windows cmd.exe will mangle the output using cmd's codepage.
-            if six.PY2:
-                _expected = "'This is A+ test!'"
-            else:
-                _expected = "'This is ’ test!'"
-        self.assertEqual(_expected, ret[key]["changes"]["stdout"])
 
     def tearDown(self):
         rm_files = [
@@ -2532,10 +2507,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @slowTest
     def test_issue_56131(self):
         module_path = os.path.join(RUNTIME_VARS.CODE_DIR, "pip.py")
-        if six.PY3:
-            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, "__pycache__", "pip.pyc")
-        else:
-            modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, "pip.pyc")
+        modulec_path = os.path.join(RUNTIME_VARS.CODE_DIR, "__pycache__", "pip.pyc")
         unzip_path = os.path.join(RUNTIME_VARS.TMP, "issue-56131.txt")
 
         def clean_paths(paths):
