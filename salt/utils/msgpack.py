@@ -1,14 +1,10 @@
 """
 Functions to work with MessagePack
 """
-
-# Import Python libs
-
 import logging
 
 log = logging.getLogger(__name__)
 
-# Import 3rd party libs
 HAS_MSGPACK = False
 try:
     import msgpack
