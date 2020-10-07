@@ -684,14 +684,14 @@ def _migrate(dom, dst_uri, **kwargs):
     :param dom: domain object to migrate
     :param dst_uri: destination URI
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
@@ -4158,14 +4158,14 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -4224,14 +4224,14 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -4290,14 +4290,14 @@ def migrate(vm_, target, ssh=False, **kwargs):
        .. deprecated:: 3002
 
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
