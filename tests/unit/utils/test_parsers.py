@@ -1098,6 +1098,7 @@ class SPMParserTestCase(ParserBase, TestCase):
             os.unlink(self.spm_logfile)
 
 
+@skipIf(salt.utils.platform.is_windows(), "Windows uses a logging listener")
 class SaltAPIParserTestCase(ParserBase, TestCase):
     """
     Tests parsing Salt Cloud options
