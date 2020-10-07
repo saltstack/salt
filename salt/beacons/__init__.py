@@ -72,7 +72,7 @@ class Beacon:
                 beacon_name = current_beacon_config["beacon_module"]
             else:
                 beacon_name = mod
-            b_config[mod].append({"beacon_name": mod})
+            b_config[mod].append({"_beacon_name": mod})
             fun_str = "{}.beacon".format(beacon_name)
             validate_str = "{}.validate".format(beacon_name)
             if fun_str in self.beacons:
