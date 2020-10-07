@@ -15,6 +15,7 @@ import threading
 import time
 import traceback
 import types
+import weakref
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
@@ -1129,6 +1130,51 @@ def _mod_type(module_path):
     return "ext"
 
 
+def _cleanup_module_namespace(loaded_base_name, delete_from_sys_modules=False):
+    """
+    Clean module namespace.
+    If ``delete_from_sys_modules`` is ``False``, then the module instance in ``sys.modules``
+    will only be set to ``None``, when ``True``, it's actually ``del``elted.
+
+    The reason for this two stage cleanup procedure is because this function might
+    get called during the GC collection cycle and trigger https://bugs.python.org/issue40327
+
+    We seem to specially trigger this during the CI test runs with ``coverage.py`` tracking
+    the code usage:
+
+        Traceback (most recent call last):
+          File "/urs/lib64/python3.6/site-packages/coverage/multiproc.py", line 37, in _bootstrap
+            cov.start()
+          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 527, in start
+            self._init_for_start()
+          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 455, in _init_for_start
+            concurrency=concurrency,
+          File "/urs/lib64/python3.6/site-packages/coverage/collector.py", line 111, in __init__
+            self.origin = short_stack()
+          File "/urs/lib64/python3.6/site-packages/coverage/debug.py", line 157, in short_stack
+            stack = inspect.stack()[limit:skip:-1]
+          File "/usr/lib64/python3.6/inspect.py", line 1501, in stack
+            return getouterframes(sys._getframe(1), context)
+          File "/usr/lib64/python3.6/inspect.py", line 1478, in getouterframes
+            frameinfo = (frame,) + getframeinfo(frame, context)
+          File "/usr/lib64/python3.6/inspect.py", line 1452, in getframeinfo
+            lines, lnum = findsource(frame)
+          File "/usr/lib64/python3.6/inspect.py", line 780, in findsource
+            module = getmodule(object, file)
+          File "/usr/lib64/python3.6/inspect.py", line 732, in getmodule
+            for modname, module in list(sys.modules.items()):
+        RuntimeError: dictionary changed size during iteration
+    """
+    for name in list(sys.modules):
+        if name.startswith(loaded_base_name):
+            if delete_from_sys_modules:
+                del sys.modules[name]
+            else:
+                mod = sys.modules[name]
+                sys.modules[name] = None
+                del mod
+
+
 # TODO: move somewhere else?
 class FilterDictWrapper(MutableMapping):
     """
@@ -1219,10 +1265,23 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
+        self._gc_finalizer = None
         if loaded_base_name:
             self.loaded_base_name = loaded_base_name
         else:
             self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
+            # Remove any modules matching self.loaded_base_name that have been set to None previously
+            self.clean_modules()
+            # Make sure that, when this module is about to be GC'ed, we at least set any modules in
+            # sys.modules which match self.loaded_base_name to None to reduce memory usage over time.
+            # ATTENTION: Do not replace the '_cleanup_module_namespace' function on the call below with
+            #            self.clean_modules as that WILL prevent this loader object from being garbage
+            #            collected and the finalizer running.
+            self._gc_finalizer = weakref.finalize(
+                self, _cleanup_module_namespace, "{}".format(self.loaded_base_name)
+            )
+            # This finalizer does not need to run when the process is exiting
+            self._gc_finalizer.atexit = False
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1282,10 +1341,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         Clean modules
         """
-        for name in list(sys.modules):
-            if name.startswith(self.loaded_base_name):
-                mod = sys.modules.pop(name)
-                del mod
+        if self._gc_finalizer is not None and self._gc_finalizer.alive:
+            # Prevent the weakref.finalizer instance from running, there's no point after the next call.
+            self._gc_finalizer.detach()
+        _cleanup_module_namespace(self.loaded_base_name, delete_from_sys_modules=True)
 
     def __getitem__(self, item):
         """
