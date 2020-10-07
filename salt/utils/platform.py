@@ -91,16 +91,17 @@ def is_smartos_globalzone():
     if not is_smartos():
         return False
     else:
-        cmd = ['zonename']
         try:
-            zonename = subprocess.Popen(
-                cmd, shell=False,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            zonename_proc = subprocess.Popen(
+                ['zonename'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            )
+            zonename_output = zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
+            zonename_retcode = zonename_proc.poll()
         except OSError:
             return False
-        if zonename.returncode:
+        if zonename_retcode:
             return False
-        if zonename.stdout.read().strip() == 'global':
+        if zonename_output == 'global':
             return True
 
         return False
@@ -114,16 +115,17 @@ def is_smartos_zone():
     if not is_smartos():
         return False
     else:
-        cmd = ['zonename']
         try:
-            zonename = subprocess.Popen(
-                cmd, shell=False,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            zonename_proc = subprocess.Popen(
+                ['zonename'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            )
+            zonename_output = zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
+            zonename_retcode = zonename_proc.poll()
         except OSError:
             return False
-        if zonename.returncode:
+        if zonename_retcode:
             return False
-        if zonename.stdout.read().strip() == 'global':
+        if zonename_output == 'global':
             return False
 
         return True
