@@ -142,7 +142,7 @@ def unpackb(packed, **kwargs):
     """
     .. versionadded:: 2018.3.4
 
-    Wraps msgpack.unpack.
+    Wraps msgpack.unpackb.
 
     By default, this function uses the msgpack module and falls back to
     msgpack_pure.
