@@ -1035,7 +1035,7 @@ def _virtual(osdata):
         if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
             try:
                 with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
+                    "/sys/devices/virtual/dmi/id/product_name", "rb"
                 ) as fhr:
                     output = salt.utils.stringutils.to_unicode(
                         fhr.read(), errors="replace"
@@ -2666,7 +2666,7 @@ def _hw_data(osdata):
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.files.fopen(contents_file, "r") as ifile:
+                    with salt.utils.files.fopen(contents_file, "rb") as ifile:
                         grains[key] = salt.utils.stringutils.to_unicode(
                             ifile.read().strip(), errors="replace"
                         )

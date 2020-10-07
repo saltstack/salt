@@ -3908,6 +3908,9 @@ def read(path, binary=False):
 
     Return the content of the file.
 
+    :param bool binary:
+        Whether to read and return binary data
+
     CLI Example:
 
     .. code-block:: bash
@@ -3918,7 +3921,10 @@ def read(path, binary=False):
     if binary is True:
         access_mode += "b"
     with salt.utils.files.fopen(path, access_mode) as file_obj:
-        return salt.utils.stringutils.to_unicode(file_obj.read())
+        if binary is True:
+            return file_obj.read()
+        else:
+            return salt.utils.stringutils.to_unicode(file_obj.read())
 
 
 def readlink(path, canonicalize=False):

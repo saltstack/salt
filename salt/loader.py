@@ -4,7 +4,6 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
-
 import functools
 import inspect
 import logging
@@ -1353,21 +1352,31 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         refresh the mapping of the FS on disk
         """
         # map of suffix to description for imp
-        if self.opts.get("cython_enable", True) is True:
+        if (
+            self.opts.get("cython_enable", True) is True
+            and ".pyx" not in self.suffix_map
+        ):
             try:
                 global pyximport
                 pyximport = __import__("pyximport")  # pylint: disable=import-error
                 pyximport.install()
                 # add to suffix_map so file_mapping will pick it up
                 self.suffix_map[".pyx"] = tuple()
+                if ".pyx" not in self.suffix_order:
+                    self.suffix_order.append(".pyx")
             except ImportError:
                 log.info(
                     "Cython is enabled in the options but not present "
                     "in the system path. Skipping Cython modules."
                 )
         # Allow for zipimport of modules
-        if self.opts.get("enable_zip_modules", True) is True:
+        if (
+            self.opts.get("enable_zip_modules", True) is True
+            and ".zip" not in self.suffix_map
+        ):
             self.suffix_map[".zip"] = tuple()
+            if ".zip" not in self.suffix_order:
+                self.suffix_order.append(".zip")
         # allow for module dirs
         if USE_IMPORTLIB:
             self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
