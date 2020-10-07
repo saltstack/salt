@@ -627,15 +627,15 @@ def update_secret(
 
     Example of paths array:
 
-    .. code-block:: bash
+    .. code-block:: python
 
-        ['/full/path/filename', "file:///full/path/filename", "salt://secret/storage/file.txt", "http://user:password@securesite.com/secret-file.json"]
+        ["/full/path/filename", "file:///full/path/filename", "salt://secret/storage/file.txt", "http://user:password@securesite.com/secret-file.json"]
 
     Example of dictionaries:
 
-    .. code-block:: bash
+    .. code-block:: python
 
-        {"nameit": '/full/path/fiename', name2: "salt://secret/storage/file.txt"}
+        {"nameit": "/full/path/filename", "name2": "salt://secret/storage/file.txt"}
 
     optional parameters accepted:
 
@@ -689,15 +689,15 @@ def create_secret(
 
     Example of paths array:
 
-    .. code-block:: bash
+    .. code-block:: python
 
-        ['/full/path/filename', "file:///full/path/filename", "salt://secret/storage/file.txt", "http://user:password@securesite.com/secret-file.json"]
+        ["/full/path/filename", "file:///full/path/filename", "salt://secret/storage/file.txt", "http://user:password@securesite.com/secret-file.json"]
 
     Example of dictionaries:
 
-    .. code-block:: bash
+    .. code-block:: python
 
-        {"nameit": '/full/path/fiename', name2: "salt://secret/storage/file.txt"}
+        {"nameit": "/full/path/filename", "name2": "salt://secret/storage/file.txt"}
 
     optional parameters accepted:
 
