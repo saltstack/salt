@@ -1192,11 +1192,12 @@ def encrypt(
 
     .. code-block:: bash
 
-        salt '*' gpg.encrypt text='Hello there.  How are you?'
+        salt '*' gpg.encrypt text='Hello there.  How are you?' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file'
+        salt '*' gpg.encrypt filename='/path/to/important.file' recipients=recipient@example.com
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True \\
+                             recipients=recipient@example.com
 
     """
     ret = {"res": True, "comment": ""}
