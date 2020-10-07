@@ -14,6 +14,7 @@ Support for YUM/DNF
 """
 
 
+import configparser
 import contextlib
 import datetime
 import fnmatch
@@ -1711,7 +1712,7 @@ def install(
             cmd.extend(targets)
             out = _call_yum(cmd, ignore_retcode=False, redirect_stderr=True)
             if out["retcode"] != 0:
-                errors.append(out["stderr"])
+                errors.append(out["stdout"])
 
     targets = []
     with _temporarily_unhold(to_downgrade, targets):
@@ -1720,9 +1721,9 @@ def install(
             _add_common_args(cmd)
             cmd.append("downgrade")
             cmd.extend(targets)
-            out = _call_yum(cmd)
+            out = _call_yum(cmd, redirect_stderr=True)
             if out["retcode"] != 0:
-                errors.append(out["stderr"])
+                errors.append(out["stdout"])
 
     targets = []
     with _temporarily_unhold(to_reinstall, targets):
@@ -1731,9 +1732,9 @@ def install(
             _add_common_args(cmd)
             cmd.append("reinstall")
             cmd.extend(targets)
-            out = _call_yum(cmd)
+            out = _call_yum(cmd, redirect_stderr=True)
             if out["retcode"] != 0:
-                errors.append(out["stderr"])
+                errors.append(out["stdout"])
 
     __context__.pop("pkg.list_pkgs", None)
     new = (
@@ -2896,7 +2897,7 @@ def mod_repo(repo, basedir=None, **kwargs):
                 "The repo does not exist and needs to be created, but none "
                 "of the following basedir directories exist: {}".format(basedirs)
             )
-
+        repofile = "{}/{}.repo".format(newdir, repo)
         if use_copr:
             # Is copr plugin installed?
             copr_plugin_name = ""
