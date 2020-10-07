@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2020.05.28"
+__ScriptVersion="2020.06.23"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -792,11 +792,12 @@ fi
 #----------------------------------------------------------------------------------------------------------------------
 __fetch_url() {
     # shellcheck disable=SC2086
-    curl $_CURL_ARGS -L -s -o "$1" "$2" >/dev/null 2>&1        ||
+    curl $_CURL_ARGS -L -s -f -o "$1" "$2" >/dev/null 2>&1     ||
         wget $_WGET_ARGS -q -O "$1" "$2" >/dev/null 2>&1       ||
             fetch $_FETCH_ARGS -q -o "$1" "$2" >/dev/null 2>&1 ||  # FreeBSD
                 fetch -q -o "$1" "$2" >/dev/null 2>&1          ||  # Pre FreeBSD 10
-                    ftp -o "$1" "$2" >/dev/null 2>&1               # OpenBSD
+                    ftp -o "$1" "$2" >/dev/null 2>&1           ||  # OpenBSD
+                        (echoerror "$2 failed to download to $1"; exit 1)
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -1470,10 +1471,11 @@ __debian_derivatives_translation() {
     # If the file does not exist, return
     [ ! -f /etc/os-release ] && return
 
-    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
+    DEBIAN_DERIVATIVES="(cumulus|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
     # Mappings
     cumulus_2_debian_base="7.0"
     cumulus_3_debian_base="8.0"
+    cumulus_4_debian_base="10.0"
     devuan_1_debian_base="8.0"
     devuan_2_debian_base="9.0"
     kali_1_debian_base="7.0"
@@ -1489,7 +1491,7 @@ __debian_derivatives_translation() {
 
     if [ "${match}" != "" ]; then
         case $match in
-            cumulus_*)
+            cumulus*)
                 _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
                 _debian_derivative="cumulus"
                 ;;
@@ -1872,7 +1874,7 @@ if [ "$ITYPE" = "git" ]; then
     if [ "$_POST_NEON_INSTALL" -eq $BS_TRUE ]; then
         echo
         echowarn "Post Neon git based installations will always install salt"
-        echowarn "and it's dependencies using pip which will be upgraded to"
+        echowarn "and its dependencies using pip which will be upgraded to"
         echowarn "at least v${_MINIMUM_PIP_VERSION}, and, in case the setuptools version is also"
         echowarn "too old, it will be upgraded to at least v${_MINIMUM_SETUPTOOLS_VERSION}"
         echo
@@ -3000,6 +3002,15 @@ install_ubuntu_stable_deps() {
         echodebug "On Ubuntu systems we increase the default sleep value to 10."
         echodebug "See https://github.com/saltstack/salt/issues/12248 for more info."
         _SLEEP=10
+    fi
+
+    if [ "$DISTRO_MAJOR_VERSION" -ge 20 ]; then
+        # Default Ubuntu 20.04 to Py3
+        if [ "x${_PY_EXE}" = "x" ]; then
+            _PY_EXE=python3
+            _PY_MAJOR_VERSION=3
+            PY_PKG_VER=3
+        fi
     fi
 
     if [ $_START_DAEMONS -eq $BS_FALSE ]; then
@@ -4133,10 +4144,9 @@ install_centos_stable_deps() {
     fi
 
     if [ "$_DISABLE_REPOS" -eq "$BS_TRUE" ] && [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-        echoerror "Detected -r or -R option while installing Salt packages for Python 3."
-        echoerror "Python 3 packages for Salt require the EPEL repository to be installed."
-        echoerror "The -r and -R options are incompatible with -x and Python 3 bootstrap installs."
-        return 1
+        echowarn "Detected -r or -R option while installing Salt packages for Python 3."
+        echowarn "Python 3 packages for older Salt releases requires the EPEL repository to be installed."
+        echowarn "Installing the EPEL repository automatically is disabled when using the -r or -R options."
     fi
 
     if [ "$_DISABLE_REPOS" -eq "$BS_FALSE" ]; then

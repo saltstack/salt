@@ -9,8 +9,10 @@ import pprint
 import shutil
 from datetime import datetime
 
+import msgpack
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
+import salt.serializers.msgpack as msgpackserializer
 import salt.serializers.plist as plistserializer
 import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
@@ -52,6 +54,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "python.serialize": pythonserializer.serialize,
                     "json.serialize": jsonserializer.serialize,
                     "plist.serialize": plistserializer.serialize,
+                    "msgpack.serialize": msgpackserializer.serialize,
                 },
                 "__opts__": {"test": False, "cachedir": ""},
                 "__instance_id__": "",
@@ -79,25 +82,62 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             dataset = {"foo": True, "bar": 42, "baz": [1, 2, 3], "qux": 2.0}
 
+            # If no serializer passed, result should be serialized as YAML
             filestate.serialize("/tmp", dataset)
             self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
+            # If serializer and formatter passed, state should not proceed.
+            ret = filestate.serialize(
+                "/tmp", dataset, serializer="yaml", formatter="json"
+            )
+            assert ret["result"] is False
+            assert (
+                ret["comment"] == "Only one of serializer and formatter are allowed"
+            ), ret
+
+            # YAML
+            filestate.serialize("/tmp", dataset, serializer="yaml")
+            self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="yaml")
             self.assertEqual(salt.utils.yaml.safe_load(returner.returned), dataset)
 
+            # JSON
+            filestate.serialize("/tmp", dataset, serializer="json")
+            self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="json")
             self.assertEqual(salt.utils.json.loads(returner.returned), dataset)
 
+            # plist
+            filestate.serialize("/tmp", dataset, serializer="plist")
+            self.assertEqual(plistlib.loads(returner.returned), dataset)
             filestate.serialize("/tmp", dataset, formatter="plist")
             self.assertEqual(plistlib.loads(returner.returned), dataset)
 
+            # Python
+            filestate.serialize("/tmp", dataset, serializer="python")
+            self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
             filestate.serialize("/tmp", dataset, formatter="python")
             self.assertEqual(returner.returned, pprint.pformat(dataset) + "\n")
+
+            # msgpack
+            filestate.serialize("/tmp", dataset, serializer="msgpack")
+            self.assertEqual(returner.returned, msgpack.packb(dataset))
+            filestate.serialize("/tmp", dataset, formatter="msgpack")
+            self.assertEqual(returner.returned, msgpack.packb(dataset))
 
             mock_serializer = Mock(return_value="")
             with patch.dict(
                 filestate.__serializers__, {"json.serialize": mock_serializer}
             ):
+                # Test with "serializer" arg
+                filestate.serialize(
+                    "/tmp", dataset, formatter="json", serializer_opts=[{"indent": 8}]
+                )
+                mock_serializer.assert_called_with(
+                    dataset, indent=8, separators=(",", ": "), sort_keys=True
+                )
+                # Test with "formatter" arg
+                mock_serializer.reset_mock()
                 filestate.serialize(
                     "/tmp", dataset, formatter="json", serializer_opts=[{"indent": 8}]
                 )
@@ -2864,7 +2904,8 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Verify that it returns correctly
         # Delete tmp directory structure
         root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, "test__check_dir")
-        expected_dir_mode = 0o777
+        expected_mode = 0o770
+        changed_mode = 0o755
         depth = 3
         try:
 
@@ -2872,23 +2913,42 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
                 for f in range(depth):
                     path = os.path.join(tmp_dir, "file_{:03}.txt".format(f))
                     with salt.utils.files.fopen(path, "w+"):
-                        os.chmod(path, expected_dir_mode)
+                        os.chmod(path, expected_mode)
 
             # Create tmp directory structure
             os.mkdir(root_tmp_dir)
-            os.chmod(root_tmp_dir, expected_dir_mode)
+            os.chmod(root_tmp_dir, expected_mode)
             create_files(root_tmp_dir)
 
             for d in range(depth):
                 dir_name = os.path.join(root_tmp_dir, "dir{:03}".format(d))
                 os.mkdir(dir_name)
-                os.chmod(dir_name, expected_dir_mode)
+                os.chmod(dir_name, expected_mode)
                 create_files(dir_name)
                 for s in range(depth):
                     sub_dir_name = os.path.join(dir_name, "dir{:03}".format(s))
                     os.mkdir(sub_dir_name)
-                    os.chmod(sub_dir_name, expected_dir_mode)
+                    os.chmod(sub_dir_name, expected_mode)
                     create_files(sub_dir_name)
+            # Symlinks on linux systems always have 0o777 permissions.
+            # Ensure we are not treating them as modified files.
+            target_dir = os.path.join(root_tmp_dir, "link_target_dir")
+            target_file = os.path.join(target_dir, "link_target_file")
+            link_dir = os.path.join(root_tmp_dir, "link_dir")
+            link_to_dir = os.path.join(link_dir, "link_to_dir")
+            link_to_file = os.path.join(link_dir, "link_to_file")
+
+            os.mkdir(target_dir)
+            os.mkdir(link_dir)
+            with salt.utils.files.fopen(target_file, "w+"):
+                pass
+            os.symlink(target_dir, link_to_dir)
+            os.symlink(target_file, link_to_file)
+            for path in (target_dir, target_file, link_dir, link_to_dir, link_to_file):
+                try:
+                    os.chmod(path, expected_mode, follow_symlinks=False)
+                except (NotImplementedError, SystemError):
+                    os.chmod(path, expected_mode)
 
             # Set some bad permissions
             changed_files = {
@@ -2900,12 +2960,12 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
                 os.path.join(root_tmp_dir, "dir001"),
             }
             for c in changed_files:
-                os.chmod(c, 0o770)
+                os.chmod(c, changed_mode)
 
             ret = filestate._check_directory(
                 root_tmp_dir,
-                dir_mode=oct(expected_dir_mode),
-                file_mode=oct(expected_dir_mode),
+                dir_mode=oct(expected_mode),
+                file_mode=oct(expected_mode),
                 recurse=["mode"],
             )
             self.assertSetEqual(changed_files, set(ret[-1].keys()))

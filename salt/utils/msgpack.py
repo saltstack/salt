@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Functions to work with MessagePack
 """
 
 # Import Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -44,7 +42,7 @@ else:
         older versions of msgpack do not have PackValueError
         """
 
-    class _exceptions(object):
+    class _exceptions:
         """
         older versions of msgpack do not have an exceptions module
         """
@@ -71,6 +69,8 @@ def _sanitize_msgpack_kwargs(kwargs):
         log.info("removing unsupported `raw` argument from msgpack call")
     if version < (0, 4, 0) and kwargs.pop("use_bin_type", None) is not None:
         log.info("removing unsupported `use_bin_type` argument from msgpack call")
+    if version >= (1, 0, 0) and kwargs.pop("encoding", None) is not None:
+        log.debug("removing unsupported `encoding` argument from msgpack call")
 
     return kwargs
 
@@ -82,10 +82,9 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst
     """
     assert isinstance(kwargs, dict)
-    if version >= (1, 0, 0) and kwargs.get("raw", None) is None:
-        log.info("adding `raw=True` argument to msgpack call")
-        kwargs["raw"] = True
-
+    if version >= (1, 0, 0):
+        kwargs.setdefault("raw", True)
+        kwargs.setdefault("strict_map_key", False)
     return _sanitize_msgpack_kwargs(kwargs)
 
 

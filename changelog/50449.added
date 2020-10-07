@@ -1,0 +1,1 @@
+Added `execution_timeout` support to `chocolatey.installed` state

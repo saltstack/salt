@@ -1261,6 +1261,49 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 self.assertEqual(junos.install_config("salt://actual/path/config"), ret)
                 mock_load.assert_called_with(path="test/path/config", format="text")
 
+    def test_install_config_cache_not_exists(self):
+        with patch.dict(
+            junos.__salt__,
+            {
+                "cp.is_cached": MagicMock(return_value=None),
+                "file.rmdir": MagicMock(return_value="True"),
+            },
+        ):
+            with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
+                "jnpr.junos.utils.config.Config.commit_check"
+            ) as mock_commit_check, patch(
+                "jnpr.junos.utils.config.Config.diff"
+            ) as mock_diff, patch(
+                "jnpr.junos.utils.config.Config.load"
+            ) as mock_load, patch(
+                "salt.utils.files.safe_rm"
+            ) as mock_safe_rm, patch(
+                "salt.utils.files.mkstemp"
+            ) as mock_mkstemp, patch(
+                "tempfile.mkdtemp"
+            ) as mock_mkdtemp, patch(
+                "os.path.isfile"
+            ) as mock_isfile, patch(
+                "os.path.getsize"
+            ) as mock_getsize:
+                mock_isfile.return_value = True
+                mock_getsize.return_value = 10
+                mock_mkstemp.return_value = "test/path/config"
+                mock_diff.return_value = "diff"
+                mock_commit_check.return_value = True
+                mock_mkdtemp.return_value = "/tmp/argr5351afd"
+
+                ret = dict()
+                ret["message"] = "Successfully loaded and committed!"
+                ret["out"] = True
+                self.assertEqual(
+                    junos.install_config(
+                        "salt://actual/path/config", template_vars=True
+                    ),
+                    ret,
+                )
+                mock_mkstemp.assert_called_with()
+
     def test_install_config_replace(self):
         with patch.dict(
             junos.__salt__,
