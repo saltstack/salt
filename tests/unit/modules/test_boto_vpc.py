@@ -5,7 +5,6 @@
 import os.path
 import random
 import string
-import sys
 
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources

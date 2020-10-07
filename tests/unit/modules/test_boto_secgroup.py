@@ -1,26 +1,16 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
 import random
 import string
-import sys
 from copy import deepcopy
 
-# Import Salt libs
 import salt.config
 import salt.loader
 import salt.modules.boto_secgroup as boto_secgroup
 
-# Import Third Party Libs
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -79,12 +69,12 @@ boto_conn_parameters = {
 
 
 def _random_group_id():
-    group_id = "sg-{0:x}".format(random.randrange(2 ** 32))
+    group_id = "sg-{:x}".format(random.randrange(2 ** 32))
     return group_id
 
 
 def _random_group_name():
-    group_name = "boto_secgroup-{0}".format(
+    group_name = "boto_secgroup-{}".format(
         "".join((random.choice(string.ascii_lowercase)) for char in range(12))
     )
     return group_name
@@ -108,7 +98,7 @@ def _has_required_boto():
 @skipIf(
     _has_required_boto() is False,
     "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    " or equal to version {}".format(required_boto_version),
 )
 class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -126,7 +116,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        super(BotoSecgroupTestCase, self).setUp()
+        super().setUp()
         # __virtual__ must be caller in order for _get_conn to be injected
         boto_secgroup.__virtual__()
 
