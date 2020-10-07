@@ -11,7 +11,7 @@ idna==2.8                 # via requests
 jinja2==2.10.1
 markupsafe==1.1.1
 msgpack==1.0.0
-pycryptodomex==3.9.7
+pycryptodomex==3.9.8
 pyyaml==5.3.1
 pyzmq==19.0.0
 requests==2.21.0
