@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import datetime
@@ -430,7 +428,6 @@ class ScheduleTestCase(SchedulerTestsBase):
         Tests handle_func to ensure that __pub_fun_args is not
         being duplicated in the value of kwargs in data.
         """
-        self.schedule.standalone = True
 
         data = {
             "function": "test.arg",
@@ -450,12 +447,49 @@ class ScheduleTestCase(SchedulerTestsBase):
         }
 
         with patch("salt.utils.process.daemonize"), patch("sys.platform", "linux2"):
-            # run handle_func once
-            self.schedule.handle_func(False, "test.arg", data)
+            with patch.object(self.schedule, "standalone", return_value=True):
+                # run handle_func once
+                self.schedule.handle_func(False, "test.arg", data)
 
-            # run handle_func and ensure __pub_fun_args
-            # is not in kwargs
-            self.schedule.handle_func(False, "test.arg", data)
+                # run handle_func and ensure __pub_fun_args
+                # is not in kwargs
+                self.schedule.handle_func(False, "test.arg", data)
 
-            self.assertIn("kwargs", data)
-            self.assertNotIn("__pub_fun_args", data["kwargs"])
+                self.assertIn("kwargs", data)
+                self.assertNotIn("__pub_fun_args", data["kwargs"])
+
+    # @skipIf(not salt.utils.platform.is_windows(), "Skip on Non-Windows systems")
+    def test_handle_func_check_dicts(self):
+        """
+        Tests that utils, functions, and returners dicts are not
+        empty after handle_func has run on Windows.
+        """
+
+        data = {
+            "function": "test.arg",
+            "_next_scheduled_fire_time": datetime.datetime(
+                2018, 11, 21, 14, 9, 53, 903438
+            ),
+            "run": True,
+            "args": ["arg1", "arg2"],
+            "kwargs": {"key1": "value1", "key2": "value2"},
+            "name": "testjob",
+            "seconds": 60,
+            "_splay": None,
+            "_seconds": 60,
+            "jid_include": True,
+            "maxrunning": 1,
+            "_next_fire_time": datetime.datetime(2018, 11, 21, 14, 8, 53, 903438),
+        }
+
+        with patch("salt.utils.process.daemonize"):
+            with patch.object(self.schedule, "standalone", return_value=True):
+                # simulate what happens before handle_func is called on Windows
+                self.schedule.functions = {}
+                self.schedule.returners = {}
+                self.schedule.utils = {}
+                self.schedule.handle_func(False, "test.arg", data)
+
+                self.assertNotEqual({}, self.schedule.functions)
+                self.assertNotEqual({}, self.schedule.returners)
+                self.assertNotEqual({}, self.schedule.utils)

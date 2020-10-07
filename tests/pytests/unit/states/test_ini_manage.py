@@ -4,17 +4,21 @@ import os
 import pytest
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
+from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def sections():
-    sections = {"general": {"hostname": "myserver.com", "port": "1234"}}
+    sections = OrderedDict()
+    sections["general"] = OrderedDict()
+    sections["general"]["hostname"] = "myserver.com"
+    sections["general"]["port"] = "1234"
     return sections
 
 
 @pytest.fixture(autouse=True)
-def setup_loader(request):
+def setup_loader():
     setup_loader_modules = {
         ini_manage: {
             "__salt__": {
@@ -25,7 +29,7 @@ def setup_loader(request):
         },
         mod_ini_manage: {"__opts__": {"test": False}},
     }
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
+    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
 
 

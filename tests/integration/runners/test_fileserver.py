@@ -8,6 +8,7 @@ import pathlib
 import pytest
 from tests.support.case import ShellCase
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON, slowTest
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -209,3 +210,29 @@ class FileserverTest(ShellCase):
         # Backend submitted as a list
         ret = self.run_run_plus(fun="fileserver.update", backend=["roots"])
         self.assertTrue(ret["return"])
+
+        # Other arguments are passed to backend
+        def mock_gitfs_update(remotes=None):
+            pass
+
+        mock_backend_func = create_autospec(mock_gitfs_update)
+        mock_return_value = {
+            "gitfs.envs": None,  # This is needed to activate the backend
+            "gitfs.update": mock_backend_func,
+        }
+        with patch("salt.loader.fileserver", MagicMock(return_value=mock_return_value)):
+            ret = self.run_run_plus(
+                fun="fileserver.update", backend="gitfs", remotes="myrepo,yourrepo"
+            )
+            self.assertTrue(ret["return"])
+            mock_backend_func.assert_called_once_with(remotes="myrepo,yourrepo")
+
+        # Unknown arguments are passed to backend
+        with patch("salt.loader.fileserver", MagicMock(return_value=mock_return_value)):
+            ret = self.run_run_plus(
+                fun="fileserver.update", backend="gitfs", unknown_arg="foo"
+            )
+        self.assertIn(
+            "Passed invalid arguments: got an unexpected keyword argument 'unknown_arg'",
+            ret["return"],
+        )

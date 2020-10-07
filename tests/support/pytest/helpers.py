@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import textwrap
 import types
+import warnings
 from contextlib import contextmanager
 
 import pytest
@@ -221,7 +222,15 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 @pytest.helpers.register
-def loader_mock(loader_modules, **kwargs):
+def loader_mock(*args, **kwargs):
+    if len(args) > 1:
+        loader_modules = args[1]
+        warnings.warn(
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            category=DeprecationWarning,
+        )
+    else:
+        loader_modules = args[0]
     return LoaderModuleMock(loader_modules, **kwargs)
 
 

@@ -11,7 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-# Import python libs
 
 import copy
 import datetime
@@ -26,8 +25,6 @@ import time
 import traceback
 
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -51,7 +48,6 @@ import salt.utils.url
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
-# Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
@@ -3075,6 +3071,22 @@ class State:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
             self.event(running[tag], len(chunks), fire_event=low.get("fire_event"))
+
+            for sub_state_data in running[tag].pop("sub_state_run", ()):
+                self.__run_num += 1
+                sub_tag = _gen_tag(sub_state_data["low"])
+                running[sub_tag] = {
+                    "name": sub_state_data["low"]["name"],
+                    "changes": sub_state_data["changes"],
+                    "result": sub_state_data["result"],
+                    "duration": sub_state_data.get("duration"),
+                    "start_time": sub_state_data.get("start_time"),
+                    "comment": sub_state_data.get("comment"),
+                    "__state_ran__": True,
+                    "__run_num__": self.__run_num,
+                    "__sls__": low["__sls__"],
+                }
+
         return running
 
     def call_listen(self, chunks, running):
@@ -3920,7 +3932,7 @@ class BaseHighState:
             self.state.opts["pillar"] = self.state._gather_pillar()
         self.state.module_refresh()
 
-    def render_state(self, sls, saltenv, mods, matches, local=False):
+    def render_state(self, sls, saltenv, mods, matches, local=False, context=None):
         """
         Render a state file and retrieve all of the include states
         """
@@ -3953,6 +3965,7 @@ class BaseHighState:
                     saltenv,
                     sls,
                     rendered_sls=mods,
+                    context=context,
                 )
             except SaltRenderError as exc:
                 msg = "Rendering SLS '{}:{}' failed: {}".format(saltenv, sls, exc)
@@ -4252,7 +4265,7 @@ class BaseHighState:
                 errors.append(err)
             state.setdefault("__exclude__", []).extend(exc)
 
-    def render_highstate(self, matches):
+    def render_highstate(self, matches, context=None):
         """
         Gather the state files and render them into a single unified salt
         high data structure.
@@ -4283,7 +4296,9 @@ class BaseHighState:
                     r_env = "{}:{}".format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches, context=context
+                    )
                     if state:
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):

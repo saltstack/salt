@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 A dead simple module wrapping calls to the Chocolatey package manager
 (http://chocolatey.org)
 
 .. versionadded:: 2014.1.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os
 import re
 import tempfile
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.platform
-
-# Import 3rd party libs
 from requests.structures import CaseInsensitiveDict
 from salt.exceptions import (
     CommandExecutionError,
@@ -213,7 +207,7 @@ def bootstrap(force=False, source=None):
     except CommandExecutionError:
         choc_path = None
     if choc_path and not force:
-        return "Chocolatey found at {0}".format(choc_path)
+        return "Chocolatey found at {}".format(choc_path)
 
     temp_dir = tempfile.gettempdir()
 
@@ -254,12 +248,12 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {0}" "".format(
+                err = "Failed to download PowerShell KB for {}" "".format(
                     __grains__["osrelease"]
                 )
                 if source:
                     raise CommandExecutionError(
-                        "{0}: PowerShell is required to bootstrap Chocolatey "
+                        "{}: PowerShell is required to bootstrap Chocolatey "
                         "with Source".format(err)
                     )
                 raise CommandExecutionError(err)
@@ -293,7 +287,7 @@ def bootstrap(force=False, source=None):
             err = "Failed to download .NET v4.0 Web Installer"
             if source:
                 err = (
-                    "{0}: .NET v4.0+ is required to bootstrap "
+                    "{}: .NET v4.0+ is required to bootstrap "
                     "Chocolatey with Source".format(err)
                 )
             raise CommandExecutionError(err)
@@ -318,9 +312,9 @@ def bootstrap(force=False, source=None):
 
     # Download Chocolatey installer
     try:
-        log.debug("Downloading Chocolatey: {0}".format(os.path.basename(url)))
+        log.debug("Downloading Chocolatey: {}".format(os.path.basename(url)))
         script = __salt__["cp.get_url"](path=url, dest=dest)
-        log.debug("Script: {0}".format(script))
+        log.debug("Script: {}".format(script))
     except MinionError:
         err = "Failed to download Chocolatey Installer"
         if source:
@@ -329,7 +323,7 @@ def bootstrap(force=False, source=None):
 
     # If this is a nupkg download we need to unzip it first
     if os.path.splitext(os.path.basename(dest))[1] == ".nupkg":
-        log.debug("Unzipping Chocolatey: {0}".format(dest))
+        log.debug("Unzipping Chocolatey: {}".format(dest))
         __salt__["archive.unzip"](
             zip_file=dest,
             dest=os.path.join(os.path.dirname(dest), "chocolatey"),
@@ -341,16 +335,16 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {0}".format(script)
+            "Failed to find Chocolatey installation " "script: {}".format(script)
         )
 
     # Run the Chocolatey bootstrap
-    log.debug("Installing Chocolatey: {0}".format(script))
+    log.debug("Installing Chocolatey: {}".format(script))
     result = __salt__["cmd.script"](
         script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
     )
     if result["retcode"] != 0:
-        err = "Bootstrapping Chocolatey failed: {0}".format(result["stderr"])
+        err = "Bootstrapping Chocolatey failed: {}".format(result["stderr"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -381,9 +375,9 @@ def unbootstrap():
     choco_dir = os.environ.get("ChocolateyInstall", False)
     if choco_dir:
         if os.path.exists(choco_dir):
-            log.debug("Removing Chocolatey directory: {0}".format(choco_dir))
+            log.debug("Removing Chocolatey directory: {}".format(choco_dir))
             __salt__["file.remove"](path=choco_dir, force=True)
-            removed.append("Removed Directory: {0}".format(choco_dir))
+            removed.append("Removed Directory: {}".format(choco_dir))
     else:
         known_paths = [
             os.path.join(os.environ.get("ProgramData"), "Chocolatey"),
@@ -391,30 +385,28 @@ def unbootstrap():
         ]
         for path in known_paths:
             if os.path.exists(path):
-                log.debug("Removing Chocolatey directory: {0}".format(path))
+                log.debug("Removing Chocolatey directory: {}".format(path))
                 __salt__["file.remove"](path=path, force=True)
-                removed.append("Removed Directory: {0}".format(path))
+                removed.append("Removed Directory: {}".format(path))
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug(
-                "Removing Chocolatey environment variable: {0}" "".format(env_var)
-            )
+            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKCU"
             )
-            removed.append("Removed Environment Var: {0}".format(env_var))
+            removed.append("Removed Environment Var: {}".format(env_var))
 
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
-            log.debug("Removing Chocolatey path item: {0}" "".format(path))
+            log.debug("Removing Chocolatey path item: {}" "".format(path))
             __salt__["win_path.remove"](path=path, rehash=True)
-            removed.append("Removed Path Item: {0}".format(path))
+            removed.append("Removed Path Item: {}".format(path))
 
     return removed
 
@@ -492,7 +484,7 @@ def list_(
     # moves more functions to this new paradigm
     # https://github.com/chocolatey/choco/issues/1758
     if result["retcode"] not in [0, 2]:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     ret = CaseInsensitiveDict({})
@@ -529,7 +521,7 @@ def list_webpi():
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -554,7 +546,7 @@ def list_windowsfeatures():
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -682,7 +674,7 @@ def install(
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] not in [0, 1641, 3010]:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     if name == "chocolatey":
@@ -802,7 +794,7 @@ def install_missing(name, version=None, source=None):
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -934,7 +926,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] not in [0, 1605, 1614, 1641]:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -1029,7 +1021,7 @@ def upgrade(
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] not in [0, 1641, 3010]:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -1074,7 +1066,7 @@ def update(name, source=None, pre_versions=False):
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] not in [0, 1641, 3010]:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -1177,7 +1169,7 @@ def add_source(name, source_location, username=None, password=None):
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -1198,7 +1190,7 @@ def _change_source_state(name, state):
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
-        err = "Running chocolatey failed: {0}".format(result["stdout"])
+        err = "Running chocolatey failed: {}".format(result["stdout"])
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -1235,3 +1227,40 @@ def disable_source(name):
         salt '*' chocolatey.disable_source <name>
     """
     return _change_source_state(name, "disable")
+
+
+def list_sources():
+    """
+    Returns the list of installed sources.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.list_sources
+    """
+    choc_path = _find_chocolatey()
+    cmd = [choc_path, "source"]
+
+    # This is needed to parse the output correctly
+    cmd.append("--limit-output")
+
+    result = __salt__["cmd.run_all"](cmd, python_shell=False)
+
+    # Chocolatey introduced Enhanced Exit Codes starting with version 0.10.12
+    # Exit Code 2 means there were no results, but is not a failure
+    # This may start to effect other functions in the future as Chocolatey
+    # moves more functions to this new paradigm
+    # https://github.com/chocolatey/choco/issues/1758
+    if result["retcode"] not in [0, 2]:
+        err = "Running chocolatey failed: {}".format(result["stdout"])
+        raise CommandExecutionError(err)
+
+    ret = CaseInsensitiveDict({})
+    pkg_re = re.compile(r"(.*)\|(.*)\|(.*)\|(.*)\|.*\|.*\|.*\|.*\|.*")
+    for line in result["stdout"].split("\n"):
+        for name, url, disabled, user in pkg_re.findall(line):
+            if name not in ret:
+                ret[name] = {"URL: ": url, "Disabled": disabled, "User: ": user}
+
+    return ret
