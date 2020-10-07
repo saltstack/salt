@@ -80,8 +80,10 @@ def _sanitize_msgpack_unpack_kwargs(kwargs):
     https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst
     """
     assert isinstance(kwargs, dict)
+    if version >= (0, 5, 2):
+        kwargs.setdefault("raw", False)
+        kwargs.setdefault("encoding", "utf-8")
     if version >= (1, 0, 0):
-        kwargs.setdefault("raw", True)
         kwargs.setdefault("strict_map_key", False)
     return _sanitize_msgpack_kwargs(kwargs)
 
