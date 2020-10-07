@@ -306,7 +306,7 @@ class INotifyBeaconTestCase(TestCase, LoaderModuleMockMixin):
             },
             "coalesce": True,
             "beacon_module": "inotify",
-            "beacon_name": "httpd.inotify",
+            "_beacon_name": "httpd.inotify",
         }
 
         ret = inotify._get_notifier(config)

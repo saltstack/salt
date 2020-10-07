@@ -42,7 +42,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "tag": "salt/beacon/minion/watch_apache/",
                     "data": {"id": "minion", "apache2": "Stopped"},
-                    "beacon_name": "ps",
+                    "_beacon_name": "ps",
                 }
             ]
             self.assertEqual(ret, _expected)
@@ -56,7 +56,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                     [
                         {"processes": {"apache2": "stopped"}},
                         {"beacon_module": "ps"},
-                        {"beacon_name": "watch_apache"},
+                        {"_beacon_name": "watch_apache"},
                     ]
                 )
             ]
