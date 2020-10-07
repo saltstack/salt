@@ -132,7 +132,7 @@ Please be sure to review our
 Also, check out some of our community resources including:
 
 * `SaltStack Community Wiki <https://github.com/saltstack/community/wiki>`_
-* `SaltStack Community Slack <https://saltstackcommunity.herokuapp.com/`_
+* `SaltStack Community Slack <https://saltstackcommunity.herokuapp.com/>`_
 * `SaltStack: IRC on Freenode <https://webchat.freenode.net/#salt>`_
 * `SaltStack YouTube channel <https://www.youtube.com/user/SaltStack>`_
 * `SaltStackInc Twitch channel <https://www.twitch.tv/saltstackinc>`_
