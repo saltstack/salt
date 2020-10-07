@@ -996,7 +996,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1029,7 +1029,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1052,7 +1052,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
