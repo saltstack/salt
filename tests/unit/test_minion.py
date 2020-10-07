@@ -12,6 +12,7 @@ import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
@@ -19,7 +20,7 @@ from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -694,6 +695,9 @@ class MinionAsyncTestCase(
         self.assertTrue(result)
 
     @salt.ext.tornado.testing.gen_test
+    @skipIf(
+        salt.utils.platform.is_windows(), "Skipping, no Salt master running on Windows."
+    )
     def test_master_type_failover(self):
         """
         Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
