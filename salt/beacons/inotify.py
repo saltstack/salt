@@ -21,6 +21,7 @@ import os
 import re
 
 import salt.ext.six
+import salt.utils.beacons
 
 # pylint: disable=import-error
 from salt.ext.six.moves import map
@@ -70,7 +71,7 @@ def _get_notifier(config):
     """
     Check the context for the notifier and construct it if not present
     """
-    beacon_name = config.get("beacon_name", "inotify")
+    beacon_name = config.get("_beacon_name", "inotify")
     notifier = "{}.notifier".format(beacon_name)
     if notifier not in __context__:
         __context__["inotify.queue"] = collections.deque()
@@ -258,6 +259,10 @@ def beacon(config):
       affects all paths that are being watched. This is due to this option
       being at the Notifier level in pyinotify.
     """
+
+    whitelist = ["_beacon_name"]
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
+
     _config = {}
     list(map(_config.update, config))
 
@@ -368,6 +373,8 @@ def beacon(config):
 
 
 def close(config):
-    if "inotify.notifier" in __context__:
-        __context__["inotify.notifier"].stop()
-        del __context__["inotify.notifier"]
+    beacon_name = config.get("_beacon_name", "inotify")
+    notifier = "{}.notifier".format(beacon_name)
+    if notifier in __context__:
+        __context__[notifier].stop()
+        del __context__[notifier]
