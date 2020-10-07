@@ -332,7 +332,7 @@
 # reconnect 9: wait 33 seconds
 # reconnect x: etc.
 #
-# In a setup with ~6000 thousand hosts these settings would average the reconnects
+# In a setup with ~6000 hosts these settings would average the reconnects
 # to about 100 per second and all hosts would be reconnected within 60 seconds.
 # recon_default: 100
 # recon_max: 5000

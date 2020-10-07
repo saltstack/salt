@@ -2,7 +2,6 @@
 All salt configuration loading and defaults should be in this module
 """
 
-# Import python libs
 import codecs
 import glob
 import logging
@@ -16,8 +15,6 @@ from copy import deepcopy
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.syspaths
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
@@ -2262,6 +2259,30 @@ def proxy_config(
     opts = apply_minion_config(
         overrides, defaults, cache_minion_id=cache_minion_id, minion_id=minion_id
     )
+
+    # Update opts with proxy specific configuration
+    # with the updated default_include.
+    default_include = opts.get("default_include", defaults["default_include"])
+    include = opts.get("include", [])
+
+    overrides.update(
+        include_config(
+            default_include,
+            path,
+            verbose=False,
+            exit_on_config_errors=not ignore_config_errors,
+        )
+    )
+    overrides.update(
+        include_config(
+            include, path, verbose=True, exit_on_config_errors=not ignore_config_errors
+        )
+    )
+
+    opts = apply_minion_config(
+        overrides, defaults, cache_minion_id=cache_minion_id, minion_id=minion_id
+    )
+
     apply_sdb(opts)
     _validate_opts(opts)
     return opts

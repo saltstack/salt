@@ -896,6 +896,19 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
 
+    def test_profile(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = (
+            "{%- profile as 'profile test' %}"
+            + "{% set var = 'val' %}"
+            + "{%- endprofile %}"
+            + "{{ var }}"
+        )
+
+        rendered = env.from_string(source).render()
+        self.assertEqual(rendered, "val")
+
     def test_catalog(self):
         loader = DictLoader(
             {

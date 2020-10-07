@@ -34,14 +34,6 @@ documentation.
 
 `<https://docs.saltstack.com/en/latest/>`_
 
-Security Advisory
-=================
-
-For historical reasons, Salt requires PyCrypto as a "lowest common
-denominator". However, `PyCrypto is unmaintained`_ and best practice is to
-manually upgrade to use a more maintained library such as `PyCryptodome`_. See
-`Issue #52674`_ and `Issue #54115`_ for more info
-
 Engage SaltStack
 ================
 
