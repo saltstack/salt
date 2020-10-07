@@ -71,6 +71,7 @@ def status(
 ):
     """
     .. versionchanged:: 2017.7.0
+
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -155,6 +156,7 @@ def down(
 ):
     """
     .. versionchanged:: 2017.7.0
+
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -168,7 +170,6 @@ def down(
         salt-run manage.down
         salt-run manage.down removekeys=True
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
-
     """
     ret = status(
         output=False,
@@ -189,6 +190,7 @@ def up(
 ):  # pylint: disable=C0103
     """
     .. versionchanged:: 2017.7.0
+
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -216,6 +218,7 @@ def list_state(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -245,6 +248,7 @@ def list_not_state(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -276,6 +280,7 @@ def list_not_state(subset=None, show_ip=False):
 def present(subset=None, show_ip=False):
     """
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -298,6 +303,7 @@ def not_present(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.5.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -320,6 +326,7 @@ def joined(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -342,6 +349,7 @@ def not_joined(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -364,6 +372,7 @@ def allowed(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -386,6 +395,7 @@ def not_allowed(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -408,6 +418,7 @@ def alived(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -430,6 +441,7 @@ def not_alived(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -452,6 +464,7 @@ def reaped(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -474,6 +487,7 @@ def not_reaped(subset=None, show_ip=False):
     """
     .. versionadded:: 2015.8.0
     .. versionchanged:: 2019.2.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -495,6 +509,7 @@ def not_reaped(subset=None, show_ip=False):
 def safe_accept(target, tgt_type="glob"):
     """
     .. versionchanged:: 2017.7.0
+
         The ``expr_form`` argument has been renamed to ``tgt_type``, earlier
         releases must use ``expr_form``.
 
@@ -687,9 +702,7 @@ def bootstrap(
 
         salt-run manage.bootstrap hosts='host1,host2'
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
-        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' \
-            script='https://bootstrap.saltstack.com/develop'
-
+        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' script='https://bootstrap.saltstack.com/develop'
     """
     if script is None:
         script = "https://bootstrap.saltstack.com"
