@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-099d7623ded3199ea',
-    concurrent_builds: 2,
+    concurrent_builds: 1,
     distro_name: 'amazon',
     distro_version: '2',
     env: env,
