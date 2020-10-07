@@ -167,7 +167,7 @@ class BotoCognitoIdentityTestCaseMixin(object):
     pass
 
 
-@skipIf(True, "Skip these tests while investigating failures")
+#@skipIf(True, "Skip these tests while investigating failures")
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
