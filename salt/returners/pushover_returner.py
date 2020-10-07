@@ -14,6 +14,10 @@ The following fields can be set in the minion conf file::
     pushover.retry (optional)
     pushover.profile (optional)
 
+.. note::
+    The ``user`` here is your **user key**, *not* the email address you use to
+    login to pushover.net.
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location::
@@ -76,16 +80,12 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 """
 
 import logging
-
-# Import Python libs
 import pprint
 
-# Import Salt Libs
 import salt.returners
 import salt.utils.pushover
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 

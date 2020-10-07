@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
     integration.reactor.reactor
@@ -7,8 +6,8 @@
     Test Salt's reactor system
 """
 
-from __future__ import absolute_import
 
+import logging
 import signal
 
 import pytest
@@ -17,6 +16,8 @@ import salt.utils.reactor
 from tests.support.case import ShellCase
 from tests.support.mixins import SaltMinionEventAssertsMixin
 from tests.support.unit import skipIf
+
+log = logging.getLogger(__name__)
 
 
 class TimeoutException(Exception):
@@ -46,7 +47,7 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
         event.fire_event(tag, data)
 
     def alarm_handler(self, signal, frame):
-        raise TimeoutException("Timeout of {0} seconds reached".format(self.timeout))
+        raise TimeoutException("Timeout of {} seconds reached".format(self.timeout))
 
     def test_ping_reaction(self):
         """
@@ -90,19 +91,39 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
     @skipIf(salt.utils.platform.is_windows(), "no sigalarm on windows")
     def test_reactor_is_leader(self):
         """
-        when leader is set to false reactor should timeout/not do anything
+        If reactor system is unavailable, an exception is thrown.
+        When leader is true (the default), the reacion event should return.
+        When leader is set to false reactor should timeout/not do anything.
         """
-        # by default reactor should be leader
         ret = self.run_run_plus("reactor.is_leader")
-        self.assertTrue(ret["return"])
+        self.assertIn("CommandExecutionError", ret["return"])
 
-        # make reactor not leader
         self.run_run_plus("reactor.set_leader", False)
-        ret = self.run_run_plus("reactor.is_leader")
-        self.assertFalse(ret["return"])
+        self.assertIn("CommandExecutionError", ret["return"])
 
+        ret = self.run_run_plus("reactor.is_leader")
+        self.assertIn("CommandExecutionError", ret["return"])
+
+        # by default reactor should be leader
         signal.signal(signal.SIGALRM, self.alarm_handler)
         signal.alarm(self.timeout)
+
+        # make reactor not the leader
+        # ensure reactor engine is available
+        opts_overrides = {
+            "engines": [
+                {
+                    "reactor": {
+                        "refresh_interval": 60,
+                        "worker_threads": 10,
+                        "worker_hwm": 10000,
+                    }
+                }
+            ]
+        }
+        self.run_run_plus("reactor.set_leader", False, opts_overrides=opts_overrides)
+        ret = self.run_run_plus("reactor.is_leader", opts_overrides=opts_overrides)
+        self.assertFalse(ret["return"])
 
         try:
             master_event = self.get_event()
@@ -116,16 +137,28 @@ class ReactorTest(SaltMinionEventAssertsMixin, ShellCase):
 
                 if event.get("tag") == "test_reaction":
                     # if we reach this point, the test is a failure
-                    self.assertTrue(False)  # pylint: disable=redundant-unittest-assert
+                    self.assertTrue(True)  # pylint: disable=redundant-unittest-assert
                     break
         except TimeoutException as exc:
             self.assertTrue("Timeout" in str(exc))
         finally:
             signal.alarm(0)
 
-        # make reactor leader again
-        self.run_run_plus("reactor.set_leader", True)
-        ret = self.run_run_plus("reactor.is_leader")
+        # make reactor the leader again
+        # ensure reactor engine is available
+        opts_overrides = {
+            "engines": [
+                {
+                    "reactor": {
+                        "refresh_interval": 60,
+                        "worker_threads": 10,
+                        "worker_hwm": 10000,
+                    }
+                }
+            ]
+        }
+        self.run_run_plus("reactor.set_leader", True, opts_overrides=opts_overrides)
+        ret = self.run_run_plus("reactor.is_leader", opts_overrides=opts_overrides)
         self.assertTrue(ret["return"])
 
         # trigger a reaction

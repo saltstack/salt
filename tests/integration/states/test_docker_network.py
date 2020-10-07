@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the docker_network states
 """
 # Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import functools
@@ -111,6 +109,7 @@ def container_name(func):
 
 @slowTest
 @destructiveTest
+@skipIf(salt.utils.platform.is_freebsd(), "No Docker on FreeBSD available")
 @skipIf(not salt.utils.path.which("dockerd"), "Docker not installed")
 class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -135,7 +134,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             raise Exception("Failed to destroy image")
 
     def run_state(self, function, **kwargs):
-        ret = super(DockerNetworkTestCase, self).run_state(function, **kwargs)
+        ret = super().run_state(function, **kwargs)
         log.debug("ret = %s", ret)
         return ret
 
@@ -150,7 +149,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
 
         self.assertEqual(ret["changes"], {"removed": True})
-        self.assertEqual(ret["comment"], "Removed network '{0}'".format(net.name))
+        self.assertEqual(ret["comment"], "Removed network '{}'".format(net.name))
 
     @container_name
     @with_network(create=False)
@@ -168,7 +167,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             ret["changes"], {"removed": True, "disconnected": [container_name]}
         )
-        self.assertEqual(ret["comment"], "Removed network '{0}'".format(net.name))
+        self.assertEqual(ret["comment"], "Removed network '{}'".format(net.name))
 
     @with_network(create=False)
     @slowTest
@@ -177,9 +176,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertEqual(ret["changes"], {})
-        self.assertEqual(
-            ret["comment"], "Network '{0}' already absent".format(net.name)
-        )
+        self.assertEqual(ret["comment"], "Network '{}' already absent".format(net.name))
 
     @with_network(create=False)
     @slowTest
@@ -190,7 +187,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
 
         # Make sure the state return is what we expect
         self.assertEqual(ret["changes"], {"created": True})
-        self.assertEqual(ret["comment"], "Network '{0}' created".format(net.name))
+        self.assertEqual(ret["comment"], "Network '{}' created".format(net.name))
 
         # Now check to see that the network actually exists. If it doesn't,
         # this next function call will raise an exception.
@@ -209,7 +206,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             ret["changes"], {"created": True, "connected": [container_name]}
         )
-        self.assertEqual(ret["comment"], "Network '{0}' created".format(net.name))
+        self.assertEqual(ret["comment"], "Network '{}' created".format(net.name))
 
         # Now check to see that the network actually exists. If it doesn't,
         # this next function call will raise an exception.
@@ -221,7 +218,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
 
         self.assertEqual(ret["changes"], {"created": True})
-        self.assertEqual(ret["comment"], "Network '{0}' created".format(net.name))
+        self.assertEqual(ret["comment"], "Network '{}' created".format(net.name))
 
         # Connect the container
         self.run_function(
@@ -248,7 +245,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(
             ret["comment"],
-            "Network '{0}' was replaced with updated config".format(net.name),
+            "Network '{}' was replaced with updated config".format(net.name),
         )
 
     @container_name
@@ -380,7 +377,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
         self.assertEqual(
             ret["comment"],
-            "Network '{0}' was replaced with updated config".format(net1.name),
+            "Network '{}' was replaced with updated config".format(net1.name),
         )
 
     @with_network(subnet="fe3f:2180:26:1::20/123")
@@ -436,5 +433,5 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["changes"], expected)
         self.assertEqual(
             ret["comment"],
-            "Network '{0}' was replaced with updated config".format(ipv4_net.name),
+            "Network '{}' was replaced with updated config".format(ipv4_net.name),
         )
