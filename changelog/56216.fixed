@@ -1,0 +1,2 @@
+An invalid _schedule.conf configuration file is renamed to _schedule.confYAMLError.
+This avoids disabling the minion and busy polling the CPU on Windows.

@@ -64,6 +64,7 @@ Fixed
 - Fixed macOS build scripts. (#57973)
 - Fixed Salt-API startup failure. (#57975)
 - Fixed CSR handling in x509 module (#54867)
+- Re-allow x509 to manage a certificate based on a CSR
 
 
 Added
@@ -92,6 +93,7 @@ Removed
 - Deprecated `refresh_db` removed from pkgrepo state. Use `refresh` instead. (#57366)
 - Deprecated internal functions salt.utils.locales.sdecode and .sdecode_if_string removed. Use salt.utils.data.decode instead. (#57367)
 - Removed deprecated misc. internal Salt functions. See https://github.com/saltstack/salt/issues/57368 for more info. (#57368)
+- Remove salt/utils/vt.py duplication from filename map. (#57004)
 
 
 Changed
@@ -119,6 +121,7 @@ Changed
 - Upgraded dependency to use boto3>=1.13.5. (#57161)
 - Changed to consistent file location handling across APIs for Juniper network devices. (#57399)
 - Use Python's hashlib (sha256) instead of shelling out (SipHash24) to generate server_id. (#57415)
+- Update `formulas.rst` with new IRC channel and links to IRC logs (#51628)
 
 
 Fixed
@@ -329,6 +332,9 @@ Fixed
 - Fixed `win_system.join_domain` failures. (#57360)
 - Fixed `template_vars` functionality on Junos. (#57388)
 - Filter out aliases/duplicates from zypperpkg for <=SLE12SP4. (#57392)
+- Fix issue with finding the real python executable during tests (#56686)
+- Fix broken link regarding the 1024 character limit for YAML keys (#56540)
+- Fix grain.delkey grains.delval for nested keys (#54819)
 
 
 Added
@@ -426,6 +432,7 @@ Added
 - `fetchonly` parameter added for `pkg.upgrade` when using `pkgng` (FreeBSD). (#57371)
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
+- Clarify how to get the master fingerprint (#54699)
 
 
 ## 3000.1

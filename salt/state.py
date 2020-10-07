@@ -11,7 +11,6 @@ The data sent to the state calls is as follows:
       }
 """
 
-# Import python libs
 
 import copy
 import datetime
@@ -26,8 +25,6 @@ import time
 import traceback
 
 import salt.fileclient
-
-# Import salt libs
 import salt.loader
 import salt.minion
 import salt.pillar
@@ -51,7 +48,6 @@ import salt.utils.url
 import salt.utils.yamlloader as yamlloader
 from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
 
-# Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map, range, reload_module
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
@@ -3920,7 +3916,7 @@ class BaseHighState:
             self.state.opts["pillar"] = self.state._gather_pillar()
         self.state.module_refresh()
 
-    def render_state(self, sls, saltenv, mods, matches, local=False):
+    def render_state(self, sls, saltenv, mods, matches, local=False, context=None):
         """
         Render a state file and retrieve all of the include states
         """
@@ -3953,6 +3949,7 @@ class BaseHighState:
                     saltenv,
                     sls,
                     rendered_sls=mods,
+                    context=context,
                 )
             except SaltRenderError as exc:
                 msg = "Rendering SLS '{}:{}' failed: {}".format(saltenv, sls, exc)
@@ -4252,7 +4249,7 @@ class BaseHighState:
                 errors.append(err)
             state.setdefault("__exclude__", []).extend(exc)
 
-    def render_highstate(self, matches):
+    def render_highstate(self, matches, context=None):
         """
         Gather the state files and render them into a single unified salt
         high data structure.
@@ -4283,7 +4280,9 @@ class BaseHighState:
                     r_env = "{}:{}".format(saltenv, sls)
                     if r_env in mods:
                         continue
-                    state, errors = self.render_state(sls, saltenv, mods, matches)
+                    state, errors = self.render_state(
+                        sls, saltenv, mods, matches, context=context
+                    )
                     if state:
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
