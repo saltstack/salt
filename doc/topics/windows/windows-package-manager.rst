@@ -1233,7 +1233,7 @@ Check the exact ``full_name`` and ``version`` as shown in Add/Remove Programs
 file has the exact value for ``full_name`` and that the version matches exactly.
 
 Also, make sure the version is wrapped in single quotes in the software
-defintion file.
+definition file.
 
 Changes to sls files not being picked up
 ========================================

@@ -162,6 +162,10 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]["path"], path)
         self.assertEqual(ret[0]["change"], "created")
 
+    @skipIf(
+        salt.utils.platform.is_freebsd(),
+        "Skip on FreeBSD - does not yet have full inotify/watchdog support",
+    )
     @slowTest
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, "tmpfile")

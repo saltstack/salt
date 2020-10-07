@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Proxy Minion for Cisco NX-OS Switches
 
@@ -69,7 +68,7 @@ save_config:
     instead of this option to improve performance.  The default behavior
     controlled by this option is preserved for backwards compatibility.
 
-Conection SSH Args:
+Connection SSH Args:
 
     prompt_name:
         (REQUIRED when `connection` is `ssh`)
@@ -119,7 +118,7 @@ Conection SSH Args:
         Extra optional arguments used for connecting to switch.
 
     key_accept:
-        Wheather or not to accept the host key of the switch on initial login.
+        Whether or not to accept the host key of the switch on initial login.
         Default: `False`
 
 Connection NXAPI Args:
@@ -163,8 +162,6 @@ the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 """
 
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import logging
 import multiprocessing
@@ -215,7 +212,7 @@ def init(opts=None):
         log.info("NXOS PROXY: Initialize nxapi proxy connection")
         return _init_nxapi(opts)
     else:
-        log.error("Unknown Connection Type: {0}".format(CONNECTION))
+        log.error("Unknown Connection Type: {}".format(CONNECTION))
         return False
 
 
@@ -342,7 +339,7 @@ def _init_ssh(opts=None):
         if "prompt_regex" in opts["proxy"]:
             this_prompt = opts["proxy"]["prompt_regex"]
         elif "prompt_name" in opts["proxy"]:
-            this_prompt = "{0}.*#".format(opts["proxy"]["prompt_name"])
+            this_prompt = "{}.*#".format(opts["proxy"]["prompt_name"])
         else:
             log.warning("nxos proxy configuration does not specify a prompt match.")
             this_prompt = ".+#$"

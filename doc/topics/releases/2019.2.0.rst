@@ -1344,7 +1344,7 @@ configuration option:
 
 The will cause the JID to be included in any log entries that are related to a
 particular Salt job.  The JID will be included using the default format,
-``[JID: %(jid)s]`` but can be overriden with the ``log_fmt_jid`` configuration item.
+``[JID: %(jid)s]`` but can be overridden with the ``log_fmt_jid`` configuration item.
 
 .. code-block:: yaml
 
