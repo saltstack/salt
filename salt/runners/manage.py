@@ -855,13 +855,13 @@ objShell.Exec("{1}{2}")"""
     vb_vcrunexec = "vcredist.exe"
     if arch == "AMD64":
         vb_vcrun = vb_script.format(
-            "http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe",
+            "https://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe",
             vb_vcrunexec,
             " /q",
         )
     else:
         vb_vcrun = vb_script.format(
-            "http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe",
+            "https://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe",
             vb_vcrunexec,
             " /q",
         )
