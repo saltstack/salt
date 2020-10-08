@@ -72,14 +72,15 @@ def _update_nilrt_restart_state():
 
     """
     # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
+    uname = __salt__["cmd.run_stdout"]("uname -r")
     __salt__["cmd.shell"](
-        "stat -c %Y /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.timestamp".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "stat -c %Y /lib/modules/{}/modules.dep >{}/modules.dep.timestamp".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
     __salt__["cmd.shell"](
-        "md5sum /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.md5sum".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "md5sum /lib/modules/{}/modules.dep >{}/modules.dep.md5sum".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
 
