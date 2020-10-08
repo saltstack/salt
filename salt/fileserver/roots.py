@@ -26,6 +26,7 @@ import salt.utils.gzip_util
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
