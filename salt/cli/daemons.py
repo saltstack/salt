@@ -7,8 +7,6 @@ import warnings
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
 import salt.log.setup
-
-# Import other salt libs
 import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
