@@ -160,8 +160,8 @@ Fixed
 Added
 -----
 
-- Salt Api
-  ========
+Salt Api
+========
 
   salt-api will now work on Windows platforms with limited support. You will be
   able to configure the ``rest_cherrypy`` module, without ``pam`` external
