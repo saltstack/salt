@@ -56,6 +56,7 @@ def run_file(
     overwrite=True,
     saltenv=None,
     check_db_exists=True,
+    client_flags=None,
     **connection_args
 ):
     """
@@ -94,6 +95,10 @@ def run_file(
         The state run will check that the specified database exists (default=True)
         before running any queries
 
+    client_flags:
+        A list of client flags to pass to the MySQL connection.
+        https://dev.mysql.com/doc/internals/en/capability-flags.html
+
     """
     ret = {
         "name": name,
@@ -101,6 +106,15 @@ def run_file(
         "result": True,
         "comment": "Database {} is already present".format(database),
     }
+
+    if client_flags is None:
+        client_flags = []
+    connection_args["client_flags"] = client_flags
+
+    if not isinstance(client_flags, list):
+        ret["comment"] = "Error: client_flags must be a list."
+        ret["result"] = False
+        return ret
 
     if any(
         [
@@ -271,6 +285,11 @@ def run(
     check_db_exists:
         The state run will check that the specified database exists (default=True)
         before running any queries
+
+    client_flags:
+        A list of client flags to pass to the MySQL connection.
+        https://dev.mysql.com/doc/internals/en/capability-flags.html
+
     """
     ret = {
         "name": name,
@@ -278,6 +297,16 @@ def run(
         "result": True,
         "comment": "Database {} is already present".format(database),
     }
+
+    if client_flags is None:
+        client_flags = []
+    connection_args["client_flags"] = client_flags
+
+    if not isinstance(client_flags, list):
+        ret["comment"] = "Error: client_flags must be a list."
+        ret["result"] = False
+        return ret
+
     # check if database exists
     if check_db_exists and not __salt__["mysql.db_exists"](database, **connection_args):
         err = _get_mysql_error()
