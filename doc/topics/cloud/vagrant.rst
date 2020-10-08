@@ -243,7 +243,7 @@ Create and use your new Salt minion
 
 .. _this gist: https://github.com/jirsbek/SSH-keys-in-macOS-Sierra-keychain
 
-.. code-block:: bash
+.. code-block:: console
 
     ssh -A vagrant@< the bridged network address >
       # [ or, if you are at /home/my_username/ on my_laptop ]
@@ -251,7 +251,7 @@ Create and use your new Salt minion
 
 - then typing on your new node "v1" (a.k.a. quail1.bevy1.test)...
 
-.. code-block:: bash
+.. code-block:: console
 
     password: vagrant
       # [ stuff types out ... ]

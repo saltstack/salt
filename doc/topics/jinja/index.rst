@@ -1348,7 +1348,7 @@ Example:
 
 Returns:
 
-.. code-block:: python
+.. code-block:: pycon
 
   {
     'body': '{
@@ -2205,7 +2205,7 @@ log at the ``profile`` level along with the render time of the block.
 The ``profile`` block in the ``example.sls`` state will emit the following log
 statement:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local -l profile state.apply example
     [...]
@@ -2241,7 +2241,7 @@ Using the same logic as the ``profile`` block, the ``import_yaml``,
 
 For ``import_*`` blocks, the ``profile`` log statement has the following form:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-call --local -l profile state.apply example
     [...]
