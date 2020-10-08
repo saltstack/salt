@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon IoT
 
@@ -49,18 +48,13 @@ The dependencies listed above can be installed via package or pip.
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
-
-# Import third party libs
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
@@ -95,7 +89,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "iot")
 
@@ -156,7 +149,7 @@ def describe_thing_type(thingTypeName, region=None, key=None, keyid=None, profil
                 for dtype in ("creationDate", "deprecationDate"):
                     dval = thingTypeMetadata.get(dtype)
                     if dval and isinstance(dval, datetime.date):
-                        thingTypeMetadata[dtype] = "{0}".format(dval)
+                        thingTypeMetadata[dtype] = "{}".format(dval)
             return {"thing_type": res}
         else:
             return {"thing_type": None}
@@ -384,7 +377,7 @@ def describe_policy(policyName, region=None, key=None, keyid=None, profile=None)
         policy = conn.get_policy(policyName=policyName)
         if policy:
             keys = ("policyName", "policyArn", "policyDocument", "defaultVersionId")
-            return {"policy": dict([(k, policy.get(k)) for k in keys])}
+            return {"policy": {k: policy.get(k) for k in keys}}
         else:
             return {"policy": None}
     except ClientError as e:
@@ -526,7 +519,7 @@ def describe_policy_version(
                 "policyVersionId",
                 "isDefaultVersion",
             )
-            return {"policy": dict([(k, policy.get(k)) for k in keys])}
+            return {"policy": {k: policy.get(k) for k in keys}}
         else:
             return {"policy": None}
     except ClientError as e:
@@ -883,7 +876,7 @@ def describe_topic_rule(ruleName, region=None, key=None, keyid=None, profile=Non
         if rule and "rule" in rule:
             rule = rule["rule"]
             keys = ("ruleName", "sql", "description", "actions", "ruleDisabled")
-            return {"rule": dict([(k, rule.get(k)) for k in keys])}
+            return {"rule": {k: rule.get(k) for k in keys}}
         else:
             return {"rule": None}
     except ClientError as e:

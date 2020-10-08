@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Local Policy on Windows
 
@@ -37,13 +36,9 @@ Current known limitations
   - struct
   - salt.utils.win_reg
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import csv
 import ctypes
 import glob
-import io
 import locale
 import logging
 import os
@@ -59,11 +54,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.win_lgpo_netsh
-
-# Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 from salt.serializers.configparser import deserialize
@@ -101,11 +92,13 @@ PRESENTATION_ANCESTOR_XPATH = None
 TEXT_ELEMENT_XPATH = None
 
 try:
+    import struct
+
+    import lxml
     import win32net
     import win32security
-    import lxml
-    import struct
     from lxml import etree
+
     from salt.utils.win_reg import Registry
 
     HAS_WINDOWS_MODULES = True
@@ -159,7 +152,7 @@ except ImportError:
     HAS_WINDOWS_MODULES = False
 
 
-class _policy_info(object):
+class _policy_info:
     r"""
     Policy Helper Class
     ===================
@@ -355,10 +348,10 @@ class _policy_info(object):
             None: "Not Configured",
         }
         self.sc_removal_lookup = {
-            0: "No Action",
-            1: "Lock Workstation",
-            2: "Force Logoff",
-            3: "Disconnect if a Remote Desktop Services session",
+            "0": "No Action",
+            "1": "Lock Workstation",
+            "2": "Force Logoff",
+            "3": "Disconnect if a Remote Desktop Services session",
             None: "Not Defined",
             "(value not set)": "Not Defined",
         }
@@ -1891,7 +1884,7 @@ class _policy_info(object):
                         "Transform": self.enabled_one_disabled_zero_transform,
                     },
                     "ScRemoveOption": {
-                        "Policy": "Interactive logon: Smart card removal " "behavior",
+                        "Policy": "Interactive logon: Smart card removal behavior",
                         "Settings": self.sc_removal_lookup.keys(),
                         "lgpo_section": self.security_options_gpedit_path,
                         "Registry": {
@@ -1915,7 +1908,7 @@ class _policy_info(object):
                         },
                     },
                     "DisableCAD": {
-                        "Policy": "Interactive logon: Do not require " "CTRL+ALT+DEL",
+                        "Policy": "Interactive logon: Do not require CTRL+ALT+DEL",
                         "Settings": self.enabled_one_disabled_zero.keys(),
                         "lgpo_section": self.security_options_gpedit_path,
                         "Registry": {
@@ -4291,7 +4284,7 @@ class _policy_info(object):
         """
         add quotes around the string
         """
-        return '"{0}"'.format(val)
+        return '"{}"'.format(val)
 
     @classmethod
     def _binary_enable_zero_disable_one_conversion(cls, val, **kwargs):
@@ -4305,7 +4298,7 @@ class _policy_info(object):
                 elif ord(val) == 1:
                     return "Enabled"
                 else:
-                    return "Invalid Value: {0!r}".format(val)
+                    return "Invalid Value: {!r}".format(val)
             else:
                 return "Not Defined"
         except TypeError:
@@ -4375,7 +4368,7 @@ class _policy_info(object):
         maximum = kwargs.get("max", 1)
         zero_value = kwargs.get("zero_value", 0)
 
-        if isinstance(val, six.string_types):
+        if isinstance(val, str):
             if val.lower() == "not defined":
                 return True
             else:
@@ -4440,7 +4433,7 @@ class _policy_info(object):
         """
         converts a list of pysid objects to string representations
         """
-        if isinstance(val, six.string_types):
+        if isinstance(val, str):
             val = val.split(",")
         usernames = []
         for _sid in val:
@@ -4449,7 +4442,7 @@ class _policy_info(object):
                 if userSid[1]:
                     userSid = "{1}\\{0}".format(userSid[0], userSid[1])
                 else:
-                    userSid = "{0}".format(userSid[0])
+                    userSid = "{}".format(userSid[0])
             # TODO: This needs to be more specific
             except Exception:  # pylint: disable=broad-except
                 userSid = win32security.ConvertSidToStringSid(_sid)
@@ -4467,7 +4460,7 @@ class _policy_info(object):
         """
         if not val:
             return val
-        if isinstance(val, six.string_types):
+        if isinstance(val, str):
             val = val.split(",")
         sids = []
         for _user in val:
@@ -4479,8 +4472,8 @@ class _policy_info(object):
                 log.exception("Handle this explicitly")
                 raise CommandExecutionError(
                     (
-                        'There was an error obtaining the SID of user "{0}". Error '
-                        "returned: {1}"
+                        'There was an error obtaining the SID of user "{}". Error '
+                        "returned: {}"
                     ).format(_user, e)
                 )
         return sids
@@ -4527,13 +4520,13 @@ class _policy_info(object):
         log.trace("item == %s", item)
         value_lookup = kwargs.get("value_lookup", False)
         if "lookup" in kwargs:
-            for k, v in six.iteritems(kwargs["lookup"]):
+            for k, v in kwargs["lookup"].items():
                 if value_lookup:
-                    if six.text_type(v).lower() == six.text_type(item).lower():
+                    if str(v).lower() == str(item).lower():
                         log.trace("returning key %s", k)
                         return k
                 else:
-                    if six.text_type(k).lower() == six.text_type(item).lower():
+                    if str(k).lower() == str(item).lower():
                         log.trace("returning value %s", v)
                         return v
         return "Invalid Value"
@@ -4563,13 +4556,13 @@ class _policy_info(object):
                 return "Invalid Value"
             ret_val = 0
         else:
-            if not isinstance(item, six.integer_types):
+            if not isinstance(item, int):
                 return "Invalid Value"
             ret_val = []
         if "lookup" in kwargs:
-            for k, v in six.iteritems(kwargs["lookup"]):
+            for k, v in kwargs["lookup"].items():
                 if value_lookup:
-                    if six.text_type(v).lower() in [z.lower() for z in item]:
+                    if str(v).lower() in [z.lower() for z in item]:
                         ret_val = ret_val + k
                 else:
                     do_test = True
@@ -4589,7 +4582,7 @@ class _policy_info(object):
         """
         if isinstance(item, list):
             return item
-        elif isinstance(item, six.string_types):
+        elif isinstance(item, str):
             if item.lower() == "not defined":
                 return None
             else:
@@ -4614,7 +4607,7 @@ class _policy_info(object):
         """
         transform for a REG_SZ to properly handle "Not Defined"
         """
-        if isinstance(item, six.string_types):
+        if isinstance(item, str):
             if item.lower() == "not defined":
                 return None
             else:
@@ -4644,7 +4637,7 @@ def _updateNamespace(item, new_namespace):
         temp_item = item.tag
     item.tag = "{{{0}}}{1}".format(new_namespace, temp_item)
     for child in item.getiterator():
-        if isinstance(child.tag, six.string_types):
+        if isinstance(child.tag, str):
             temp_item = ""
             i = child.tag.find("}")
             if i >= 0:
@@ -4719,10 +4712,10 @@ def _parse_xml(adm_file):
 
     modified_xml = ""
     with salt.utils.files.fopen(adm_file, "rb") as rfh:
-        file_hash = "{0:X}".format(zlib.crc32(rfh.read()) & 0xFFFFFFFF)
+        file_hash = "{:X}".format(zlib.crc32(rfh.read()) & 0xFFFFFFFF)
 
     name, ext = os.path.splitext(os.path.basename(adm_file))
-    hashed_filename = "{0}-{1}{2}".format(name, file_hash, ext)
+    hashed_filename = "{}-{}{}".format(name, file_hash, ext)
 
     cache_dir = os.path.join(__opts__["cachedir"], "lgpo", "policy_defs")
     if not os.path.exists(cache_dir):
@@ -4734,7 +4727,7 @@ def _parse_xml(adm_file):
         log.debug("LGPO: Generating policy template cache for %s%s", name, ext)
 
         # Remove old files, keep the cache clean
-        file_list = glob.glob(os.path.join(cache_dir, "{0}*{1}".format(name, ext)))
+        file_list = glob.glob(os.path.join(cache_dir, "{}*{}".format(name, ext)))
         for file_path in file_list:
             os.remove(file_path)
 
@@ -4808,7 +4801,7 @@ def _load_policy_definitions(path="c:\\Windows\\PolicyDefinitions", language="en
                 # Only process ADMX files, any other file will cause a
                 # stacktrace later on
                 if not admx_file_ext == ".admx":
-                    log.debug("{0} is not an ADMX file".format(t_admx_file))
+                    log.debug("{} is not an ADMX file".format(t_admx_file))
                     continue
                 admx_file = os.path.join(root, t_admx_file)
                 # Parse xml for the ADMX file
@@ -4920,8 +4913,8 @@ def _load_policy_definitions(path="c:\\Windows\\PolicyDefinitions", language="en
                             if not __salt__["file.file_exists"](adml_file):
                                 msg = (
                                     "An ADML file in the specified ADML language "
-                                    '"{0}" and the fallback language "{1}" do not '
-                                    'exist for the ADMX "{2}".'
+                                    '"{}" and the fallback language "{}" do not '
+                                    'exist for the ADMX "{}".'
                                 )
                                 raise SaltInvocationError(
                                     msg.format(
@@ -5052,7 +5045,7 @@ def _get_advaudit_defaults(option=None):
             elif row["Subcategory"] == "Token Right Adjusted Events":
                 row["Subcategory"] = "Audit Token Right Adjusted"
             else:
-                row["Subcategory"] = "Audit {0}".format(row["Subcategory"])
+                row["Subcategory"] = "Audit {}".format(row["Subcategory"])
             audit_defaults[row["Subcategory"]] = row
 
         __context__["lgpo.audit_defaults"] = audit_defaults
@@ -5175,14 +5168,12 @@ def _set_audit_file_data(option, value):
                             # The value is not None, make the change
                             row["Inclusion Setting"] = auditpol_values[value]
                             row["Setting Value"] = value
-                            log.trace(
-                                "LGPO: Setting {0} to {1}" "".format(option, value)
-                            )
+                            log.trace("LGPO: Setting {} to {}".format(option, value))
                             writer.writerow(row)
                         else:
                             # value is None, remove it by not writing it to the
                             # temp file
-                            log.trace("LGPO: Removing {0}".format(option))
+                            log.trace("LGPO: Removing {}".format(option))
                         value_written = True
                     # If it's not the value we're setting, just write it
                     else:
@@ -5194,7 +5185,7 @@ def _set_audit_file_data(option, value):
                 if not value_written:
                     if not value == "None":
                         # value is not None, write the new value
-                        log.trace("LGPO: Setting {0} to {1}" "".format(option, value))
+                        log.trace("LGPO: Setting {} to {}".format(option, value))
                         defaults = _get_advaudit_defaults(option)
                         writer.writerow(
                             {
@@ -5269,26 +5260,22 @@ def _set_advaudit_value(option, value):
     """
     # Set the values in both audit.csv files
     if not _set_audit_file_data(option=option, value=value):
-        raise CommandExecutionError(
-            "Failed to set audit.csv option: {0}" "".format(option)
-        )
+        raise CommandExecutionError("Failed to set audit.csv option: {}".format(option))
     # Apply the settings locally
     if not _set_advaudit_pol_data(option=option, value=value):
         # Only log this error, it will be in effect the next time the machine
         # updates its policy
         log.error(
-            "Failed to apply audit setting: {0}\n"
+            "Failed to apply audit setting: {}\n"
             "Policy will take effect on next GPO update".format(option)
         )
 
     # Update __context__
     if value is None:
-        log.debug("LGPO: Removing Advanced Audit data: {0}".format(option))
+        log.debug("LGPO: Removing Advanced Audit data: {}".format(option))
         __context__["lgpo.adv_audit_data"].pop(option)
     else:
-        log.debug(
-            "LGPO: Updating Advanced Audit data: {0}: {1}" "".format(option, value)
-        )
+        log.debug("LGPO: Updating Advanced Audit data: {}: {}".format(option, value))
         __context__["lgpo.adv_audit_data"][option] = value
 
     return True
@@ -5299,13 +5286,13 @@ def _get_netsh_value(profile, option):
         __context__["lgpo.netsh_data"] = {}
 
     if profile not in __context__["lgpo.netsh_data"]:
-        log.debug("LGPO: Loading netsh data for {0} profile".format(profile))
+        log.debug("LGPO: Loading netsh data for {} profile".format(profile))
         settings = salt.utils.win_lgpo_netsh.get_all_settings(
             profile=profile, store="lgpo"
         )
         __context__["lgpo.netsh_data"].update({profile: settings})
     log.trace(
-        "LGPO: netsh returning value: {0}"
+        "LGPO: netsh returning value: {}"
         "".format(__context__["lgpo.netsh_data"][profile][option])
     )
     return __context__["lgpo.netsh_data"][profile][option]
@@ -5313,13 +5300,13 @@ def _get_netsh_value(profile, option):
 
 def _set_netsh_value(profile, section, option, value):
     if section not in ("firewallpolicy", "settings", "logging", "state"):
-        raise ValueError("LGPO: Invalid section: {0}".format(section))
+        raise ValueError("LGPO: Invalid section: {}".format(section))
     log.trace(
         "LGPO: Setting the following\n"
-        "Profile: {0}\n"
-        "Section: {1}\n"
-        "Option: {2}\n"
-        "Value: {3}".format(profile, section, option, value)
+        "Profile: {}\n"
+        "Section: {}\n"
+        "Option: {}\n"
+        "Value: {}".format(profile, section, option, value)
     )
     if section == "firewallpolicy":
         salt.utils.win_lgpo_netsh.set_firewall_settings(
@@ -5344,7 +5331,7 @@ def _set_netsh_value(profile, section, option, value):
         salt.utils.win_lgpo_netsh.set_logging_settings(
             profile=profile, setting=option, value=value, store="lgpo"
         )
-    log.trace("LGPO: Clearing netsh data for {0} profile".format(profile))
+    log.trace("LGPO: Clearing netsh data for {} profile".format(profile))
     __context__["lgpo.netsh_data"].pop(profile)
     return True
 
@@ -5358,9 +5345,9 @@ def _load_secedit_data():
         str: The contents of the file generated by the secedit command
     """
     try:
-        f_exp = os.path.join(__opts__["cachedir"], "secedit-{0}.txt".format(UUID))
+        f_exp = os.path.join(__opts__["cachedir"], "secedit-{}.txt".format(UUID))
         __salt__["cmd.run"](["secedit", "/export", "/cfg", f_exp])
-        with io.open(f_exp, encoding="utf-16") as fp:
+        with salt.utils.files.fopen(f_exp, encoding="utf-16") as fp:
             secedit_data = fp.readlines()
         return secedit_data
     finally:
@@ -5398,8 +5385,8 @@ def _write_secedit_data(inf_data):
     Helper function to write secedit data to the database
     """
     # Set file names
-    f_sdb = os.path.join(__opts__["cachedir"], "secedit-{0}.sdb".format(UUID))
-    f_inf = os.path.join(__opts__["cachedir"], "secedit-{0}.inf".format(UUID))
+    f_sdb = os.path.join(__opts__["cachedir"], "secedit-{}.sdb".format(UUID))
+    f_inf = os.path.join(__opts__["cachedir"], "secedit-{}.inf".format(UUID))
 
     try:
         # Write the changes to the inf file
@@ -5456,7 +5443,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     """
-    log.debug("validating {0} for policy {1}".format(value, policy))
+    log.debug("validating {} for policy {}".format(value, policy))
     if "Settings" in policy:
         if policy["Settings"]:
             if isinstance(policy["Settings"], list):
@@ -5553,7 +5540,7 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     helper function to check for a presentation label for a policy element
     """
     search_results = adml_data.xpath(
-        '//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id)
+        '//*[@*[local-name() = "refId"] = "{}"]'.format(ref_id)
     )
     alternate_label = ""
     if search_results:
@@ -5673,7 +5660,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                     match.start() : (
                         policy_data.index("]".encode("utf-16-le"), match.end())
                     )
-                ].split(encoded_semicolon)
+                ].split(encoded_semicolon, 4)
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1].decode("utf-16-le").rstrip(chr(0))
                 if len(pol_entry) >= 5:
@@ -5832,11 +5819,11 @@ def _encode_string(value):
     encoded_null = chr(0).encode("utf-16-le")
     if value is None:
         return encoded_null
-    elif not isinstance(value, six.string_types):
+    elif not isinstance(value, str):
         # Should we raise an error here, or attempt to cast to a string
         raise TypeError(
-            "Value {0} is not a string type\n"
-            "Type: {1}".format(repr(value), type(value))
+            "Value {} is not a string type\n"
+            "Type: {}".format(repr(value), type(value))
         )
     return b"".join([value.encode("utf-16-le"), encoded_null])
 
@@ -5878,9 +5865,7 @@ def _buildKnownDataSearchString(
                 encoded_semicolon,
                 chr(registry.vtype[reg_vtype]).encode("utf-32-le"),
                 encoded_semicolon,
-                six.unichr(len(" {0}".format(chr(0)).encode("utf-16-le"))).encode(
-                    "utf-32-le"
-                ),
+                chr(len(" {}".format(chr(0)).encode("utf-16-le"))).encode("utf-32-le"),
                 encoded_semicolon,
                 " ".encode("utf-16-le"),
                 encoded_null,
@@ -5899,7 +5884,7 @@ def _buildKnownDataSearchString(
                 encoded_semicolon,
                 chr(registry.vtype[reg_vtype]).encode("utf-32-le"),
                 encoded_semicolon,
-                six.unichr(len(this_element_value)).encode("utf-32-le"),
+                chr(len(this_element_value)).encode("utf-32-le"),
                 encoded_semicolon,
                 this_element_value,
                 "]".encode("utf-16-le"),
@@ -6008,9 +5993,7 @@ def _processValueItem(
                 if element.attrib["storeAsText"].lower() == "true":
                     this_vtype = "REG_SZ"
                     if requested_val is not None:
-                        this_element_value = six.text_type(requested_val).encode(
-                            "utf-16-le"
-                        )
+                        this_element_value = str(requested_val).encode("utf-16-le")
             if check_deleted:
                 this_vtype = "REG_SZ"
         elif etree.QName(element).localname == "longDecimal":
@@ -6023,9 +6006,7 @@ def _processValueItem(
                 if element.attrib["storeAsText"].lower() == "true":
                     this_vtype = "REG_SZ"
                     if requested_val is not None:
-                        this_element_value = six.text_type(requested_val).encode(
-                            "utf-16-le"
-                        )
+                        this_element_value = str(requested_val).encode("utf-16-le")
         elif etree.QName(element).localname == "text":
             # https://msdn.microsoft.com/en-us/library/dn605969(v=vs.85).aspx
             this_vtype = "REG_SZ"
@@ -6064,9 +6045,9 @@ def _processValueItem(
                             encoded_semicolon,
                             chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                             encoded_semicolon,
-                            six.unichr(
-                                len(" {0}".format(chr(0)).encode("utf-16-le"))
-                            ).encode("utf-32-le"),
+                            chr(len(" {}".format(chr(0)).encode("utf-16-le"))).encode(
+                                "utf-32-le"
+                            ),
                             encoded_semicolon,
                             " ".encode("utf-16-le"),
                             encoded_null,
@@ -6086,7 +6067,7 @@ def _processValueItem(
                 if element.attrib["valuePrefix"] != "":
                     if this_element_value is not None:
                         element_valuenames = [
-                            "{0}{1}".format(element.attrib["valuePrefix"], k)
+                            "{}{}".format(element.attrib["valuePrefix"], k)
                             for k in element_valuenames
                         ]
             else:
@@ -6117,11 +6098,11 @@ def _processValueItem(
                                 encoded_semicolon,
                                 chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                                 encoded_semicolon,
-                                six.unichr(
+                                chr(
                                     len(
-                                        "{0}{1}".format(
-                                            element_values[i], chr(0)
-                                        ).encode("utf-16-le")
+                                        "{}{}".format(element_values[i], chr(0)).encode(
+                                            "utf-16-le"
+                                        )
                                     )
                                 ).encode("utf-32-le"),
                                 encoded_semicolon,
@@ -6150,9 +6131,9 @@ def _processValueItem(
                         encoded_semicolon,
                         chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                         encoded_semicolon,
-                        six.unichr(
-                            len(" {0}".format(chr(0)).encode("utf-16-le"))
-                        ).encode("utf-32-le"),
+                        chr(len(" {}".format(chr(0)).encode("utf-16-le"))).encode(
+                            "utf-32-le"
+                        ),
                         encoded_semicolon,
                         " ".encode("utf-16-le"),
                         encoded_null,
@@ -6167,7 +6148,7 @@ def _processValueItem(
             if this_element_value is not None:
                 # Sometimes values come in as strings
                 if isinstance(this_element_value, str):
-                    log.debug("Converting {0} to bytes".format(this_element_value))
+                    log.debug("Converting {} to bytes".format(this_element_value))
                     this_element_value = this_element_value.encode("utf-32-le")
                 expected_string = b"".join(
                     [
@@ -6180,7 +6161,7 @@ def _processValueItem(
                         encoded_semicolon,
                         chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                         encoded_semicolon,
-                        six.unichr(len(this_element_value)).encode("utf-32-le"),
+                        chr(len(this_element_value)).encode("utf-32-le"),
                         encoded_semicolon,
                         this_element_value,
                         "]".encode("utf-16-le"),
@@ -6216,7 +6197,7 @@ def _processValueItem(
                     encoded_semicolon,
                     chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                     encoded_semicolon,
-                    six.unichr(len(" {0}".format(chr(0)).encode("utf-16-le"))).encode(
+                    chr(len(" {}".format(chr(0)).encode("utf-16-le"))).encode(
                         "utf-32-le"
                     ),
                     encoded_semicolon,
@@ -6237,7 +6218,7 @@ def _processValueItem(
                     encoded_semicolon,
                     chr(registry.vtype[this_vtype]).encode("utf-32-le"),
                     encoded_semicolon,
-                    six.unichr(len(this_element_value)).encode("utf-32-le"),
+                    chr(len(this_element_value)).encode("utf-32-le"),
                     encoded_semicolon,
                     this_element_value,
                     "]".encode("utf-16-le"),
@@ -6271,12 +6252,12 @@ def _checkAllAdmxPolicies(
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.trace("POLICY CLASS {0} has file data".format(policy_class))
+        log.trace("POLICY CLASS {} has file data".format(policy_class))
         policy_filedata_split = re.sub(
-            salt.utils.stringutils.to_bytes(r"\]{0}$".format(chr(0))),
+            salt.utils.stringutils.to_bytes(r"\]{}$".format(chr(0))),
             b"",
             re.sub(
-                salt.utils.stringutils.to_bytes(r"^\[{0}".format(chr(0))),
+                salt.utils.stringutils.to_bytes(r"^\[{}".format(chr(0))),
                 b"",
                 re.sub(
                     re.escape(module_policy_data.reg_pol_header.encode("utf-16-le")),
@@ -6290,7 +6271,7 @@ def _checkAllAdmxPolicies(
         # Get the policy for each item defined in Registry.pol
         for policy_item in policy_filedata_split:
             policy_item_key = (
-                policy_item.split("{0};".format(chr(0)).encode("utf-16-le"))[0]
+                policy_item.split("{};".format(chr(0)).encode("utf-16-le"))[0]
                 .decode("utf-16-le")
                 .lower()
             )
@@ -6811,6 +6792,23 @@ def _checkAllAdmxPolicies(
                                         "explicitValue list, we will return value names"
                                     )
                                     return_value_name = True
+                                regex_str = [
+                                    r"(?!\*",
+                                    r"\*",
+                                    "D",
+                                    "e",
+                                    "l",
+                                    "V",
+                                    "a",
+                                    "l",
+                                    "s",
+                                    r"\.",
+                                    ")",
+                                ]
+                                delvals_regex = "\x00".join(regex_str)
+                                delvals_regex = salt.utils.stringutils.to_bytes(
+                                    delvals_regex
+                                )
                                 if _regexSearchRegPolData(
                                     re.escape(
                                         _processValueItem(
@@ -6822,9 +6820,7 @@ def _checkAllAdmxPolicies(
                                             check_deleted=False,
                                         )
                                     )
-                                    + salt.utils.stringutils.to_bytes(
-                                        r"(?!\*\*delvals\.)"
-                                    ),
+                                    + delvals_regex,
                                     policy_file_data,
                                 ):
                                     configured_value = _getDataFromRegPolData(
@@ -6865,7 +6861,7 @@ def _checkAllAdmxPolicies(
                                         policy_disabled_elements + 1
                                     )
                                     log.trace(
-                                        "element {0} is disabled".format(
+                                        "element {} is disabled".format(
                                             child_item.attrib["id"]
                                         )
                                     )
@@ -6877,7 +6873,7 @@ def _checkAllAdmxPolicies(
                                 required_elements.keys()
                             ):
                                 log.trace(
-                                    "{0} is disabled by all enum elements".format(
+                                    "{} is disabled by all enum elements".format(
                                         this_policyname
                                     )
                                 )
@@ -6893,7 +6889,7 @@ def _checkAllAdmxPolicies(
                                     this_policyname
                                 ] = configured_elements
                                 log.trace(
-                                    "{0} is enabled by enum elements".format(
+                                    "{} is enabled by enum elements".format(
                                         this_policyname
                                     )
                                 )
@@ -7041,13 +7037,13 @@ def _build_parent_list(policy_definition, return_full_policy_names, adml_languag
     parent_list = []
     policy_namespace = next(iter(policy_definition.nsmap))
     parent_category = policy_definition.xpath(
-        "{0}:parentCategory/@ref".format(policy_namespace),
+        "{}:parentCategory/@ref".format(policy_namespace),
         namespaces=policy_definition.nsmap,
     )
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     if parent_category:
         parent_category = parent_category[0]
-        nsmap_xpath = "/policyDefinitions/policyNamespaces/{0}:*" "".format(
+        nsmap_xpath = "/policyDefinitions/policyNamespaces/{}:*" "".format(
             policy_namespace
         )
         this_namespace_map = _buildElementNsmap(
@@ -7082,8 +7078,8 @@ def _admx_policy_parent_walk(
     hierarchy for the policy
     """
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
-    category_xpath_string = '/policyDefinitions/categories/{0}:category[@name="{1}"]'
-    using_xpath_string = "/policyDefinitions/policyNamespaces/{0}:using"
+    category_xpath_string = '/policyDefinitions/categories/{}:category[@name="{}"]'
+    using_xpath_string = "/policyDefinitions/policyNamespaces/{}:using"
     if parent_category.find(":") >= 0:
         # the parent is in another namespace
         policy_namespace = parent_category.split(":")[0]
@@ -7112,14 +7108,14 @@ def _admx_policy_parent_walk(
         )
         path.append(this_parent_name)
         if tparent_category.xpath(
-            "{0}:parentCategory/@ref".format(policy_namespace), namespaces=policy_nsmap
+            "{}:parentCategory/@ref".format(policy_namespace), namespaces=policy_nsmap
         ):
             # parent has a parent
             path = _admx_policy_parent_walk(
                 path=path,
                 policy_namespace=policy_namespace,
                 parent_category=tparent_category.xpath(
-                    "{0}:parentCategory/@ref".format(policy_namespace),
+                    "{}:parentCategory/@ref".format(policy_namespace),
                     namespaces=policy_nsmap,
                 )[0],
                 policy_nsmap=policy_nsmap,
@@ -7216,8 +7212,8 @@ def _write_regpol_data(
     # TODO: This needs to be more specific
     except Exception as e:  # pylint: disable=broad-except
         msg = (
-            "An error occurred attempting to write to {0}, the exception "
-            "was: {1}".format(policy_file_path, e)
+            "An error occurred attempting to write to {}, the exception "
+            "was: {}".format(policy_file_path, e)
         )
         log.exception(msg)
         raise CommandExecutionError(msg)
@@ -7229,16 +7225,16 @@ def _write_regpol_data(
             gpt_ini_data = gpt_file.read()
     if not _regexSearchRegPolData(r"\[General\]\r\n", gpt_ini_data):
         gpt_ini_data = "[General]\r\n" + gpt_ini_data
-    if _regexSearchRegPolData(r"{0}=".format(re.escape(gpt_extension)), gpt_ini_data):
+    if _regexSearchRegPolData(r"{}=".format(re.escape(gpt_extension)), gpt_ini_data):
         # ensure the line contains the ADM guid
         gpt_ext_loc = re.search(
-            r"^{0}=.*\r\n".format(re.escape(gpt_extension)),
+            r"^{}=.*\r\n".format(re.escape(gpt_extension)),
             gpt_ini_data,
             re.IGNORECASE | re.MULTILINE,
         )
         gpt_ext_str = gpt_ini_data[gpt_ext_loc.start() : gpt_ext_loc.end()]
         if not _regexSearchRegPolData(
-            r"{0}".format(re.escape(gpt_extension_guid)), gpt_ext_str
+            r"{}".format(re.escape(gpt_extension_guid)), gpt_ext_str
         ):
             gpt_ext_str = gpt_ext_str.split("=")
             gpt_ext_str[1] = gpt_extension_guid + gpt_ext_str[1]
@@ -7252,7 +7248,7 @@ def _write_regpol_data(
         general_location = re.search(
             r"^\[General\]\r\n", gpt_ini_data, re.IGNORECASE | re.MULTILINE
         )
-        gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+        gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[general_location.start() : general_location.end()],
             gpt_extension,
             gpt_extension_guid,
@@ -7271,7 +7267,7 @@ def _write_regpol_data(
         elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
             version_nums = (version_nums[0] + 1, version_nums[1])
         version_num = struct.unpack(b">I", struct.pack(b">2H", *version_nums))[0]
-        gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+        gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[0 : version_loc.start()],
             "Version",
             version_num,
@@ -7285,13 +7281,12 @@ def _write_regpol_data(
             version_nums = (0, 1)
         elif gpt_extension.lower() == "gPCUserExtensionNames".lower():
             version_nums = (1, 0)
-        gpt_ini_data = "{0}{1}={2}\r\n{3}".format(
+        gpt_ini_data = "{}{}={}\r\n{}".format(
             gpt_ini_data[general_location.start() : general_location.end()],
             "Version",
             int(
-                "{0}{1}".format(
-                    six.text_type(version_nums[0]).zfill(4),
-                    six.text_type(version_nums[1]).zfill(4),
+                "{}{}".format(
+                    str(version_nums[0]).zfill(4), str(version_nums[1]).zfill(4),
                 ),
                 16,
             ),
@@ -7305,8 +7300,8 @@ def _write_regpol_data(
         except Exception as e:  # pylint: disable=broad-except
             msg = (
                 "An error occurred attempting to write the gpg.ini file.\n"
-                "path: {0}\n"
-                "exception: {1}".format(gpt_ini_path, e)
+                "path: {}\n"
+                "exception: {}".format(gpt_ini_path, e)
             )
             log.exception(msg)
             raise CommandExecutionError(msg)
@@ -7402,7 +7397,7 @@ def _writeAdminTemplateRegPolFile(
     for adm_namespace in admtemplate_data:
         for adm_policy in admtemplate_data[adm_namespace]:
             if (
-                six.text_type(admtemplate_data[adm_namespace][adm_policy]).lower()
+                str(admtemplate_data[adm_namespace][adm_policy]).lower()
                 == "not configured"
             ):
                 if (
@@ -7424,7 +7419,7 @@ def _writeAdminTemplateRegPolFile(
             this_key = None
             this_valuename = None
             if (
-                six.text_type(base_policy_settings[adm_namespace][admPolicy]).lower()
+                str(base_policy_settings[adm_namespace][admPolicy]).lower()
                 == "disabled"
             ):
                 log.trace("time to disable %s", admPolicy)
@@ -7702,7 +7697,7 @@ def _writeAdminTemplateRegPolFile(
                                                         test_items=False,
                                                     )
                                                     log.trace(
-                                                        "working with trueList portion of {0}".format(
+                                                        "working with trueList portion of {}".format(
                                                             admPolicy
                                                         )
                                                     )
@@ -8022,7 +8017,7 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
             policy_aliases.append("\\".join(full_path_list))
             return True, the_policy, policy_aliases, None
         else:
-            msg = 'ADMX policy name/id "{0}" is used in multiple ADMX files'
+            msg = 'ADMX policy name/id "{}" is used in multiple ADMX files'
             return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(
@@ -8057,12 +8052,11 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                     else:
                         if hierarchy:
                             log.trace("we have hierarchy of %s", hierarchy)
-                            display_name_searchval = "$({0}.{1})".format(
+                            display_name_searchval = "$({}.{})".format(
                                 adml_search_result.tag.split("}")[1],
                                 adml_search_result.attrib["id"],
                             )
-                            # policy_search_string = '//{0}:policy[@*[local-name() = "displayName"] = "{1}" and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = "{2}") ]'.format(
-                            policy_search_string = '//{0}:policy[@displayName = "{1}" and (@class = "Both" or @class = "{2}") ]'.format(
+                            policy_search_string = '//{}:policy[@displayName = "{}" and (@class = "Both" or @class = "{}") ]'.format(
                                 adml_search_result.prefix,
                                 display_name_searchval,
                                 policy_class,
@@ -8110,7 +8104,7 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                         else:
                             # verify the ADMX correlated to this ADML is in the same class
                             # that we are looking for
-                            display_name_searchval = "$({0}.{1})".format(
+                            display_name_searchval = "$({}.{})".format(
                                 adml_search_result.tag.split("}")[1],
                                 adml_search_result.attrib["id"],
                             )
@@ -8132,7 +8126,7 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                     adml_search_result.tag,
                     adml_search_result.attrib,
                 )
-                display_name_searchval = "$({0}.{1})".format(
+                display_name_searchval = "$({}.{})".format(
                     adml_search_result.tag.split("}")[1],
                     adml_search_result.attrib["id"],
                 )
@@ -8150,12 +8144,12 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                     )
                 if admx_search_results:
                     log.trace(
-                        "processing admx_search_results of {0}".format(
+                        "processing admx_search_results of {}".format(
                             admx_search_results
                         )
                     )
                     log.trace(
-                        "multiple_adml_entries is {0}".format(multiple_adml_entries)
+                        "multiple_adml_entries is {}".format(multiple_adml_entries)
                     )
                     if (
                         len(admx_search_results) == 1 or hierarchy
@@ -8202,13 +8196,13 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                                     return True, search_result, policy_aliases, None
                                 else:
                                     msg = (
-                                        "ADMX policy with the display name {0} does not"
+                                        "ADMX policy with the display name {} does not"
                                         "have the required name attribute"
                                     )
                                     msg = msg.format(policy_name)
                                     return False, None, [], msg
                         if not found:
-                            msg = "Unable to correlate {0} to any policy".format(
+                            msg = "Unable to correlate {} to any policy".format(
                                 hierarchy_policy_name
                             )
                             return False, None, [], msg
@@ -8229,18 +8223,16 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                                 suggested_policies = "\\".join(this_parent_list)
             if suggested_policies:
                 msg = (
-                    'ADML policy name "{0}" is used as the display name'
-                    " for multiple policies."
-                    "  These policies matched: {1}"
-                    ".  You can utilize these long names to"
-                    " specify the correct policy"
+                    'ADML policy name "{}" is used as the display name for '
+                    "multiple policies. These policies matched: {}. You can "
+                    "utilize these long names to specify the correct policy"
                 )
                 return False, None, [], msg.format(policy_name, suggested_policies)
     return (
         False,
         None,
         [],
-        "Unable to find {0} policy {1}".format(policy_class, policy_name),
+        "Unable to find {} policy {}".format(policy_class, policy_name),
     )
 
 
@@ -8398,8 +8390,8 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
     if policy_class not in policy_data.policies.keys():
         policy_classes = ", ".join(policy_data.policies.keys())
         ret["message"] = (
-            'The requested policy class "{0}" is invalid, '
-            "policy_class should be one of: {1}"
+            'The requested policy class "{}" is invalid, '
+            "policy_class should be one of: {}"
             "".format(policy_class, policy_classes)
         )
         return ret
@@ -8505,8 +8497,8 @@ def get(
         policy_class = _policydata.policies.keys()
     elif policy_class.lower() not in [z.lower() for z in _policydata.policies]:
         msg = (
-            "The policy_class {0} is not an available policy class, please "
-            "use one of the following: {1}, Both"
+            "The policy_class {} is not an available policy class, please "
+            "use one of the following: {}, Both"
         )
         raise SaltInvocationError(
             msg.format(policy_class, ", ".join(_policydata.policies.keys()))
@@ -8556,7 +8548,7 @@ def get(
                             class_vals = dictupdate.update(class_vals, tdict)
             else:
                 msg = (
-                    "The specified policy {0} is not currently available "
+                    "The specified policy {} is not currently available "
                     "to be configured via this module"
                 )
                 raise CommandExecutionError(msg.format(policy_name))
@@ -8654,7 +8646,7 @@ def _get_policy_info_setting(policy_definition):
             "Value %r found for ScriptIni policy %s", value, policy_definition["Policy"]
         )
     else:
-        message = "Unknown or missing mechanism in policy_definition\n" "{0}".format(
+        message = "Unknown or missing mechanism in policy_definition\n{}".format(
             policy_definition
         )
         raise CommandExecutionError(message)
@@ -8720,9 +8712,8 @@ def _get_policy_adm_setting(
     this_key = admx_policy.attrib.get("key", None)
     this_policy_name = admx_policy.attrib.get("name", None)
     if this_key is None or this_policy_name is None:
-        msg = (
-            'Policy is missing the required "key" or "name" attribute:\n'
-            "{0}".format(admx_policy.attrib)
+        msg = 'Policy is missing the required "key" or "name" attribute:\n{}'.format(
+            admx_policy.attrib
         )
         raise CommandExecutionError(msg)
 
@@ -9126,6 +9117,21 @@ def _get_policy_adm_setting(
                         ):
                             log.trace("explicitValue list, we will return value names")
                             return_value_name = True
+                        regex_str = [
+                            r"(?!\*",
+                            r"\*",
+                            "D",
+                            "e",
+                            "l",
+                            "V",
+                            "a",
+                            "l",
+                            "s",
+                            r"\.",
+                            ")",
+                        ]
+                        delvals_regex = "\x00".join(regex_str)
+                        delvals_regex = salt.utils.stringutils.to_bytes(delvals_regex)
                         if _regexSearchRegPolData(
                             re.escape(
                                 _processValueItem(
@@ -9137,7 +9143,7 @@ def _get_policy_adm_setting(
                                     check_deleted=False,
                                 )
                             )
-                            + salt.utils.stringutils.to_bytes(r"(?!\*\*delvals\.)"),
+                            + delvals_regex,
                             policy_data=policy_file_data,
                         ):
                             configured_value = _getDataFromRegPolData(
@@ -9174,17 +9180,13 @@ def _get_policy_adm_setting(
                             configured_elements[this_element_name] = "Disabled"
                             policy_disabled_elements = policy_disabled_elements + 1
                             log.trace(
-                                "element {0} is disabled".format(
-                                    child_item.attrib["id"]
-                                )
+                                "element {} is disabled".format(child_item.attrib["id"])
                             )
             if element_only_enabled_disabled:
-                if len(required_elements.keys()) > 0 and len(
-                    configured_elements.keys()
-                ) == len(required_elements.keys()):
+                if 0 < len(required_elements.keys()) == len(configured_elements.keys()):
                     if policy_disabled_elements == len(required_elements.keys()):
                         log.trace(
-                            "{0} is disabled by all enum elements".format(
+                            "{} is disabled by all enum elements".format(
                                 this_policy_name
                             )
                         )
@@ -9193,7 +9195,7 @@ def _get_policy_adm_setting(
                         ] = "Disabled"
                     else:
                         log.trace(
-                            "{0} is enabled by enum elements".format(this_policy_name)
+                            "{} is enabled by enum elements".format(this_policy_name)
                         )
                         policy_vals.setdefault(this_policy_namespace, {})[
                             this_policy_name
@@ -9407,8 +9409,8 @@ def get_policy(
     if policy_class not in policy_data.policies.keys():
         policy_classes = ", ".join(policy_data.policies.keys())
         message = (
-            'The requested policy class "{0}" is invalid, policy_class '
-            "should be one of: {1}".format(policy_class, policy_classes)
+            'The requested policy class "{}" is invalid, policy_class should '
+            "be one of: {}".format(policy_class, policy_classes)
         )
         raise CommandExecutionError(message)
 
@@ -9678,7 +9680,7 @@ def set_(
                                 policy_key_name
                             ],
                         ):
-                            msg = "The specified value {0} is not an acceptable setting for policy {1}."
+                            msg = "The specified value {} is not an acceptable setting for policy {}."
                             raise SaltInvocationError(
                                 msg.format(policies[p_class][policy_name], policy_name)
                             )
@@ -9692,13 +9694,7 @@ def set_(
                             if _pol["Secedit"]["Section"] not in _secedits:
                                 _secedits[_pol["Secedit"]["Section"]] = []
                             _secedits[_pol["Secedit"]["Section"]].append(
-                                " ".join(
-                                    [
-                                        _pol["Secedit"]["Option"],
-                                        "=",
-                                        six.text_type(_value),
-                                    ]
-                                )
+                                " ".join([_pol["Secedit"]["Option"], "=", str(_value)])
                             )
                         elif "NetSH" in _pol:
                             # set value with netsh
@@ -9709,7 +9705,7 @@ def set_(
                                     "profile": _pol["NetSH"]["Profile"],
                                     "section": _pol["NetSH"]["Section"],
                                     "option": _pol["NetSH"]["Option"],
-                                    "value": six.text_type(_value),
+                                    "value": str(_value),
                                 },
                             )
                         elif "AdvAudit" in _pol:
@@ -9718,7 +9714,7 @@ def set_(
                                 policy_name,
                                 {
                                     "option": _pol["AdvAudit"]["Option"],
-                                    "value": six.text_type(_value),
+                                    "value": str(_value),
                                 },
                             )
                         elif "NetUserModal" in _pol:
@@ -9760,21 +9756,21 @@ def set_(
                         ):
                             log.trace(
                                 "setting == %s",
-                                six.text_type(
+                                str(
                                     _admTemplateData[policy_namespace][policy_name]
                                 ).lower(),
                             )
                             log.trace(
-                                six.text_type(
+                                str(
                                     _admTemplateData[policy_namespace][policy_name]
                                 ).lower()
                             )
                             if (
-                                six.text_type(
+                                str(
                                     _admTemplateData[policy_namespace][policy_name]
                                 ).lower()
                                 != "disabled"
-                                and six.text_type(
+                                and str(
                                     _admTemplateData[policy_namespace][policy_name]
                                 ).lower()
                                 != "not configured"
@@ -9823,8 +9819,8 @@ def set_(
                                                     ]
                                                 else:
                                                     msg = (
-                                                        'Element "{0}" must be included'
-                                                        " in the policy configuration for policy {1}"
+                                                        'Element "{}" must be included'
+                                                        " in the policy configuration for policy {}"
                                                     )
                                                     raise SaltInvocationError(
                                                         msg.format(
@@ -9842,7 +9838,7 @@ def set_(
                                                     if not _admTemplateData[
                                                         policy_namespace
                                                     ][policy_name][temp_element_name]:
-                                                        msg = 'Element "{0}" requires a value to be specified'
+                                                        msg = 'Element "{}" requires a value to be specified'
                                                         raise SaltInvocationError(
                                                             msg.format(
                                                                 temp_element_name
@@ -9860,7 +9856,7 @@ def set_(
                                                         ],
                                                         bool,
                                                     ):
-                                                        msg = "Element {0} requires a boolean True or False"
+                                                        msg = "Element {} requires a boolean True or False"
                                                         raise SaltInvocationError(
                                                             msg.format(
                                                                 temp_element_name
@@ -9904,7 +9900,7 @@ def set_(
                                                         )
                                                         > max_val
                                                     ):
-                                                        msg = 'Element "{0}" value must be between {1} and {2}'
+                                                        msg = 'Element "{}" value must be between {} and {}'
                                                         raise SaltInvocationError(
                                                             msg.format(
                                                                 temp_element_name,
@@ -9935,7 +9931,7 @@ def set_(
                                                             found = True
                                                             break
                                                     if not found:
-                                                        msg = 'Element "{0}" does not have a valid value'
+                                                        msg = 'Element "{}" does not have a valid value'
                                                         raise SaltInvocationError(
                                                             msg.format(
                                                                 temp_element_name
@@ -9962,7 +9958,7 @@ def set_(
                                                             dict,
                                                         ):
                                                             msg = (
-                                                                'Each list item of element "{0}" '
+                                                                'Each list item of element "{}" '
                                                                 "requires a dict value"
                                                             )
                                                             msg = msg.format(
@@ -9979,7 +9975,7 @@ def set_(
                                                         ],
                                                         list,
                                                     ):
-                                                        msg = 'Element "{0}" requires a list value'
+                                                        msg = 'Element "{}" requires a list value'
                                                         msg = msg.format(
                                                             temp_element_name
                                                         )
@@ -9996,7 +9992,7 @@ def set_(
                                                         ],
                                                         list,
                                                     ):
-                                                        msg = 'Element "{0}" requires a list value'
+                                                        msg = 'Element "{}" requires a list value'
                                                         msg = msg.format(
                                                             temp_element_name
                                                         )
@@ -10013,12 +10009,12 @@ def set_(
                                                     temp_element_name
                                                 )
                                     else:
-                                        msg = 'The policy "{0}" has elements which must be configured'
+                                        msg = 'The policy "{}" has elements which must be configured'
                                         msg = msg.format(policy_name)
                                         raise SaltInvocationError(msg)
                                 else:
                                     if (
-                                        six.text_type(
+                                        str(
                                             _admTemplateData[policy_namespace][
                                                 policy_name
                                             ]
@@ -10026,7 +10022,7 @@ def set_(
                                         != "enabled"
                                     ):
                                         msg = (
-                                            'The policy {0} must either be "Enabled", '
+                                            'The policy {} must either be "Enabled", '
                                             '"Disabled", or "Not Configured"'
                                         )
                                         msg = msg.format(policy_name)
@@ -10060,7 +10056,7 @@ def set_(
                                 )
                         if not _ret:
                             msg = (
-                                "Error while attempting to set policy {0} via the registry."
+                                "Error while attempting to set policy {} via the registry."
                                 "  Some changes may not be applied as expected"
                             )
                             raise CommandExecutionError(msg.format(regedit))
@@ -10080,7 +10076,7 @@ def set_(
                                     ],
                                 )
                                 if not _ret:
-                                    msg = "An error occurred attempting to configure the user right {0}."
+                                    msg = "An error occurred attempting to configure the user right {}."
                                     raise SaltInvocationError(msg.format(lsaright))
                         if _existingUsers:
                             for acct in _existingUsers:
@@ -10094,7 +10090,7 @@ def set_(
                                     if not _ret:
                                         msg = (
                                             "An error occurred attempting to remove previously"
-                                            "configured users with right {0}."
+                                            "configured users with right {}."
                                         )
                                         raise SaltInvocationError(msg.format(lsaright))
                 if _secedits:
@@ -10130,14 +10126,14 @@ def set_(
                 if _netshs:
                     # we've got netsh settings to make
                     for setting in _netshs:
-                        log.trace("Setting firewall policy: {0}".format(setting))
+                        log.trace("Setting firewall policy: {}".format(setting))
                         log.trace(_netshs[setting])
                         _set_netsh_value(**_netshs[setting])
 
                 if _advaudits:
                     # We've got AdvAudit settings to make
                     for setting in _advaudits:
-                        log.trace("Setting Advanced Audit policy: {0}".format(setting))
+                        log.trace("Setting Advanced Audit policy: {}".format(setting))
                         log.trace(_advaudits[setting])
                         _set_advaudit_value(**_advaudits[setting])
 
@@ -10161,7 +10157,7 @@ def set_(
                             msg = (
                                 "An unhandled exception occurred while "
                                 "attempting to set policy via "
-                                "NetUserModalSet\n{0}".format(exc)
+                                "NetUserModalSet\n{}".format(exc)
                             )
                             log.exception(msg)
                             raise CommandExecutionError(msg)

@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :synopsis: Unit Tests for Package Management module 'module.opkg'
     :platform: Linux
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import copy
+import os
 
 import salt.modules.opkg as opkg
 from tests.support.mixins import LoaderModuleMockMixin
@@ -57,6 +56,55 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Tested modules
         """
         return {opkg: {}}
+
+    def test_virtual_ni_linux_rt_system(self):
+        """
+        Test - Module virtual name on NI Linux RT
+        """
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=[])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", MagicMock()):
+                        self.assertEqual("pkg", opkg.__virtual__())
+
+    def test_virtual_open_embedded_system(self):
+        """
+        Test - Module virtual name on Open Embedded
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=True)):
+            self.assertEqual("pkg", opkg.__virtual__())
+
+    def test_virtual_not_supported_system(self):
+        """
+        Test - Module not supported
+        """
+        with patch.object(os.path, "isdir", MagicMock(return_value=False)):
+            expected = (False, "Module opkg only works on OpenEmbedded based systems")
+            self.assertEqual(expected, opkg.__virtual__())
+
+    def test_virtual_update_restart_state_called(self):
+        """
+        Test - Update restart state is called when empty dir
+        """
+        mock_cmd = MagicMock()
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=[])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", mock_cmd):
+                        opkg.__virtual__()
+                        mock_cmd.assert_called_once()
+
+    def test_virtual_update_restart_state_not_called(self):
+        """
+        Test - Update restart state is not called when dir contains files
+        """
+        mock_cmd = MagicMock()
+        with patch.dict(opkg.__grains__, {"os_family": "NILinuxRT"}):
+            with patch.object(os, "makedirs", MagicMock(return_value=True)):
+                with patch.object(os, "listdir", MagicMock(return_value=["test"])):
+                    with patch.object(opkg, "_update_nilrt_restart_state", mock_cmd):
+                        opkg.__virtual__()
+                        mock_cmd.assert_not_called()
 
     def test_version(self):
         """
