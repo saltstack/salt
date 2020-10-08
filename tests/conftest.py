@@ -1330,6 +1330,8 @@ def ssl_webserver(integration_files_dir, scope="module"):
     """
     spins up an https webserver.
     """
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
     context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),
