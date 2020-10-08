@@ -183,7 +183,7 @@ Salt Api
 
   Example configuration:
 
-  .. code-block:: yaml
+  .. code-block:: text
       external_auth:
         auto:
           saltuser:
