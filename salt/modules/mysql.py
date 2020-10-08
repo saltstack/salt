@@ -388,6 +388,19 @@ def _connect(**kwargs):
     else:
         get_opts = True
 
+    connargs["client_flag"] = 0
+
+    available_client_flags = {}
+    for flag in dir(CLIENT):
+        if not flag.startswith("__"):
+            available_client_flags[flag.lower()] = getattr(CLIENT, flag)
+
+    for flag in kwargs.get("client_flags", []):
+        if available_client_flags.get(flag):
+            connargs["client_flag"] |= available_client_flags[flag]
+        else:
+            log.error("MySQL client flag %s not valid, ignoring.", flag)
+
     _connarg("connection_host", "host", get_opts)
     _connarg("connection_user", "user", get_opts)
     _connarg("connection_pass", "passwd", get_opts)
@@ -407,8 +420,6 @@ def _connect(**kwargs):
     _connarg("connection_charset", "charset")
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = "pyformat"
-
-    connargs["client_flag"] = CLIENT.MULTI_STATEMENTS
 
     for key in copy.deepcopy(connargs):
         if not connargs[key]:
