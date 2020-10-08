@@ -184,6 +184,7 @@ Salt Api
   Example configuration:
 
   .. code-block:: text
+  
       external_auth:
         auto:
           saltuser:
@@ -191,6 +192,7 @@ Salt Api
       rest_cherrypy:
         host: 127.0.0.1
         port: 8000 (#49949)
+        
 - Added `execution_timeout` support to `chocolatey.installed` state (#50449)
 - Add new verify_ssl option to file modules. This allows a user to not validate the server certificate for HTTPS source and source hash's. (#52663)
 - Added list target type support to the `scan` salt-ssh roster. (#52675)
