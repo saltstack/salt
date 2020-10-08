@@ -639,7 +639,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     ret = zypper.upgrade(dist_upgrade=True)
                     self.assertDictEqual(ret, {"vim": {"old": "1.1", "new": "1.2"}})
                     zypper_mock.assert_any_call(
-                        "dist-upgrade", "--auto-agree-with-licenses"
+                        "dist-upgrade",
+                        "--auto-agree-with-licenses",
+                        "--no-allow-vendor-change",
                     )
 
                 with patch(
@@ -648,14 +650,18 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     ret = zypper.upgrade(dist_upgrade=True, dryrun=True)
                     zypper_mock.assert_any_call(
-                        "dist-upgrade", "--auto-agree-with-licenses", "--dry-run"
+                        "dist-upgrade",
+                        "--auto-agree-with-licenses",
+                        "--dry-run",
+                        "--no-allow-vendor-change",
                     )
                     zypper_mock.assert_any_call(
                         "dist-upgrade",
                         "--auto-agree-with-licenses",
                         "--dry-run",
-                        "--debug-solver",
+                        "--no-allow-vendor-change",
                     )
+
                 with patch(
                     "salt.modules.zypperpkg.list_pkgs",
                     MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}]),
@@ -863,7 +869,11 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 self.assertEqual(cmd_exc.exception.info["changes"], {})
                 self.assertEqual(cmd_exc.exception.info["result"]["stdout"], zypper_out)
                 zypper_mock.noraise.call.assert_called_with(
-                    "dist-upgrade", "--auto-agree-with-licenses", "--from", "DUMMY"
+                    "dist-upgrade",
+                    "--auto-agree-with-licenses",
+                    "--from",
+                    "DUMMY",
+                    "--no-allow-vendor-change",
                 )
 
     def test_upgrade_available(self):
