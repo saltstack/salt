@@ -54,7 +54,7 @@ try:
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
-    from MySQLdb.constants import FIELD_TYPE, FLAG
+    from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
     from MySQLdb import OperationalError
 except ImportError:
     try:
@@ -65,7 +65,7 @@ except ImportError:
         import MySQLdb
         import MySQLdb.cursors
         import MySQLdb.converters
-        from MySQLdb.constants import FIELD_TYPE, FLAG
+        from MySQLdb.constants import FIELD_TYPE, FLAG, CLIENT
         from MySQLdb import OperationalError
     except ImportError:
         MySQLdb = None
@@ -407,6 +407,8 @@ def _connect(**kwargs):
     _connarg("connection_charset", "charset")
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = "pyformat"
+
+    connargs["client_flag"] = CLIENT.MULTI_STATEMENTS
 
     for key in copy.deepcopy(connargs):
         if not connargs[key]:
