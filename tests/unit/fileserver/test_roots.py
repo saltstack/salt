@@ -14,6 +14,7 @@ import salt.fileserver.roots as roots
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.platform
+import salt.utils.stringutils
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -231,7 +232,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         lines_written = sorted(mtime_map_mock.write_calls())
         expected = sorted(
             [
-                "{key}:{val}\n".format(key=key, val=val)
+                salt.utils.stringutils.to_bytes("{key}:{val}\n".format(key=key, val=val))
                 for key, val in new_mtime_map.items()
             ]
         )
