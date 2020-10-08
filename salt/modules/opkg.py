@@ -15,15 +15,13 @@ Support for Opkg
     must be installed.
 
 """
-# Import python libs
-
 import copy
 import errno
 import logging
 import os
 import re
+from pathlib import Path
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -33,8 +31,6 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import 3rd-party libs
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
@@ -56,6 +52,14 @@ __virtualname__ = "pkg"
 NILRT_RESTARTCHECK_STATE_PATH = "/var/lib/salt/restartcheck_state"
 
 
+def _get_nisysapi_conf_d_path():
+    return "/usr/lib/{}/nisysapi/conf.d/experts/".format(
+        "arm-linux-gnueabi"
+        if "arm" in __grains__.get("cpuarch")
+        else "x86_64-linux-gnu"
+    )
+
+
 def _update_nilrt_restart_state():
     """
     NILRT systems determine whether to reboot after various package operations
@@ -67,20 +71,23 @@ def _update_nilrt_restart_state():
     and checksums to be used later by the restartcheck module.
 
     """
+    # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
+    uname = __salt__["cmd.run_stdout"]("uname -r")
     __salt__["cmd.shell"](
-        "stat -c %Y /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.timestamp".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "stat -c %Y /lib/modules/{}/modules.dep >{}/modules.dep.timestamp".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
     __salt__["cmd.shell"](
-        "md5sum /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.md5sum".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "md5sum /lib/modules/{}/modules.dep >{}/modules.dep.md5sum".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
 
     # We can't assume nisysapi.ini always exists like modules.dep
     nisysapi_path = "/usr/local/natinst/share/nisysapi.ini"
     if os.path.exists(nisysapi_path):
+        # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
         __salt__["cmd.shell"](
             "stat -c %Y {} >{}/nisysapi.ini.timestamp".format(
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
@@ -91,6 +98,43 @@ def _update_nilrt_restart_state():
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
             )
         )
+
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = _get_nisysapi_conf_d_path()
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen(
+            "{}/sysapi.conf.d.count".format(NILRT_RESTARTCHECK_STATE_PATH), "w"
+        ) as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            _fingerprint_file(
+                filename=Path(nisysapi_conf_d_path, fexpert),
+                fingerprint_dir=Path(NILRT_RESTARTCHECK_STATE_PATH),
+            )
+
+
+def _fingerprint_file(*, filename, fingerprint_dir):
+    """
+    Compute stat & md5sum hash of provided ``filename``. Store
+    the hash and timestamp in ``fingerprint_dir``.
+
+    filename
+        ``Path`` to the file to stat & hash.
+
+    fingerprint_dir
+        ``Path`` of the directory to store the stat and hash output files.
+    """
+    __salt__["cmd.shell"](
+        "stat -c %Y {} > {}/{}.timestamp".format(
+            filename, fingerprint_dir, filename.name
+        )
+    )
+    __salt__["cmd.shell"](
+        "md5sum {} > {}/{}.md5sum".format(filename, fingerprint_dir, filename.name)
+    )
 
 
 def _get_restartcheck_result(errors):
@@ -1348,9 +1392,9 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 if source["file"] in deleted_from:
                     deleted_from[source["file"]] += 1
             for repo_file, count in deleted_from.items():
-                msg = "Repo '{0}' has been removed from {1}.\n"
+                msg = "Repo '{}' has been removed from {}.\n"
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = "File {1} containing repo '{0}' has been " "removed.\n"
+                    msg = "File {1} containing repo '{0}' has been removed.\n"
                     try:
                         os.remove(repo_file)
                     except OSError:

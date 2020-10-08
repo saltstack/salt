@@ -601,6 +601,49 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             ]
             self.assertEqual(run_num, 0)
 
+    def test_call_chunk_sub_state_run(self):
+        """
+        Test running a batch of states with an external runner
+        that returns sub_state_run
+        """
+        low_data = {
+            "state": "external",
+            "name": "external_state_name",
+            "__id__": "do_a_thing",
+            "__sls__": "external",
+            "order": 10000,
+            "fun": "state",
+        }
+        mock_call_return = {
+            "__run_num__": 0,
+            "sub_state_run": [
+                {
+                    "changes": {},
+                    "result": True,
+                    "comment": "",
+                    "low": {
+                        "name": "external_state_name",
+                        "__id__": "external_state_id",
+                        "state": "external_state",
+                        "fun": "external_function",
+                    },
+                }
+            ],
+        }
+        expected_sub_state_tag = "external_state_|-external_state_id_|-external_state_name_|-external_function"
+        with patch("salt.state.State._gather_pillar") as state_patch:
+            with patch("salt.state.State.call", return_value=mock_call_return):
+                minion_opts = self.get_temp_config("minion")
+                minion_opts["disabled_requisites"] = ["require"]
+                state_obj = salt.state.State(minion_opts)
+                ret = state_obj.call_chunk(low_data, {}, {})
+                sub_state = ret.get(expected_sub_state_tag)
+                assert sub_state
+                self.assertEqual(sub_state["__run_num__"], 1)
+                self.assertEqual(sub_state["name"], "external_state_name")
+                self.assertEqual(sub_state["__state_ran__"], True)
+                self.assertEqual(sub_state["__sls__"], "external")
+
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
@@ -869,6 +912,138 @@ class StateReturnsTestCase(TestCase):
             "result": "",
         }
         assert statedecorators.OutputUnifier("unify")(lambda: data)()["result"] is False
+
+
+@skipIf(pytest is None, "PyTest is missing")
+class SubStateReturnsTestCase(TestCase):
+    """
+    TestCase for code handling state returns.
+    """
+
+    def test_sub_state_output_check_changes_is_dict(self):
+        """
+        Test that changes key contains a dictionary.
+        :return:
+        """
+        data = {"changes": {}, "sub_state_run": [{"changes": []}]}
+        out = statedecorators.OutputUnifier("content_check")(lambda: data)()
+        assert "'Changes' should be a dictionary" in out["sub_state_run"][0]["comment"]
+        assert not out["sub_state_run"][0]["result"]
+
+    def test_sub_state_output_check_return_is_dict(self):
+        """
+        Test for the entire return is a dictionary
+        :return:
+        """
+        data = {"sub_state_run": [["whatever"]]}
+        out = statedecorators.OutputUnifier("content_check")(lambda: data)()
+        assert (
+            "Malformed state return. Data must be a dictionary type"
+            in out["sub_state_run"][0]["comment"]
+        )
+        assert not out["sub_state_run"][0]["result"]
+
+    def test_sub_state_output_check_return_has_nrc(self):
+        """
+        Test for name/result/comment keys are inside the return.
+        :return:
+        """
+        data = {"sub_state_run": [{"arbitrary": "data", "changes": {}}]}
+        out = statedecorators.OutputUnifier("content_check")(lambda: data)()
+        assert (
+            " The following keys were not present in the state return: name, result, comment"
+            in out["sub_state_run"][0]["comment"]
+        )
+        assert not out["sub_state_run"][0]["result"]
+
+    def test_sub_state_output_unifier_comment_is_not_list(self):
+        """
+        Test for output is unified so the comment is converted to a multi-line string
+        :return:
+        """
+        data = {
+            "sub_state_run": [
+                {
+                    "comment": ["data", "in", "the", "list"],
+                    "changes": {},
+                    "name": None,
+                    "result": "fantastic!",
+                }
+            ]
+        }
+        expected = {
+            "sub_state_run": [
+                {
+                    "comment": "data\nin\nthe\nlist",
+                    "changes": {},
+                    "name": None,
+                    "result": True,
+                }
+            ]
+        }
+        assert statedecorators.OutputUnifier("unify")(lambda: data)() == expected
+
+        data = {
+            "sub_state_run": [
+                {
+                    "comment": ["data", "in", "the", "list"],
+                    "changes": {},
+                    "name": None,
+                    "result": None,
+                }
+            ]
+        }
+        expected = "data\nin\nthe\nlist"
+        assert (
+            statedecorators.OutputUnifier("unify")(lambda: data)()["sub_state_run"][0][
+                "comment"
+            ]
+            == expected
+        )
+
+    def test_sub_state_output_unifier_result_converted_to_true(self):
+        """
+        Test for output is unified so the result is converted to True
+        :return:
+        """
+        data = {
+            "sub_state_run": [
+                {
+                    "comment": ["data", "in", "the", "list"],
+                    "changes": {},
+                    "name": None,
+                    "result": "Fantastic",
+                }
+            ]
+        }
+        assert (
+            statedecorators.OutputUnifier("unify")(lambda: data)()["sub_state_run"][0][
+                "result"
+            ]
+            is True
+        )
+
+    def test_sub_state_output_unifier_result_converted_to_false(self):
+        """
+        Test for output is unified so the result is converted to False
+        :return:
+        """
+        data = {
+            "sub_state_run": [
+                {
+                    "comment": ["data", "in", "the", "list"],
+                    "changes": {},
+                    "name": None,
+                    "result": "",
+                }
+            ]
+        }
+        assert (
+            statedecorators.OutputUnifier("unify")(lambda: data)()["sub_state_run"][0][
+                "result"
+            ]
+            is False
+        )
 
 
 class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):

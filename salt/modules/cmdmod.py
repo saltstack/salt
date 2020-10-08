@@ -5,7 +5,6 @@ Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 """
 
-# Import python libs
 import base64
 import fnmatch
 import functools
@@ -20,7 +19,6 @@ import tempfile
 import time
 import traceback
 
-# Import salt libs
 import salt.grains.extra
 import salt.utils.args
 import salt.utils.data
@@ -1120,7 +1118,7 @@ def run(
 
     :param int windows_codepage: 65001
         Only applies to Windows: the minion uses `C:\Windows\System32\chcp.com` to
-        verify or set the code page before he excutes the command `cmd`.
+        verify or set the code page before the command `cmd` is executed.
         Code page 65001 corresponds with UTF-8 and allows international localization of Windows.
 
       .. versionadded:: 3002
