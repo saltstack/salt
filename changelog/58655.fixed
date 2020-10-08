@@ -1,0 +1,1 @@
+Fixing a use case when multiple inotify beacons are defined but when notifications are fired the configuration from the first beacon are used.
