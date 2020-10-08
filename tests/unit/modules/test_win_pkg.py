@@ -34,7 +34,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
         pkg_info = {
             "3.03": {
                 "full_name": "Nullsoft Install System",
-                "installer": "http://download.sourceforge.net/project/nsis/NSIS%203/3.03/nsis-3.03-setup.exe",
+                "installer": "https://download.sourceforge.net/project/nsis/NSIS%203/3.03/nsis-3.03-setup.exe",
                 "install_flags": "/S",
                 "uninstaller": "%PROGRAMFILES(x86)%\\NSIS\\uninst-nsis.exe",
                 "uninstall_flags": "/S",
@@ -43,7 +43,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             },
             "3.02": {
                 "full_name": "Nullsoft Install System",
-                "installer": "http://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
+                "installer": "https://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
                 "install_flags": "/S",
                 "uninstaller": "%PROGRAMFILES(x86)%\\NSIS\\uninst-nsis.exe",
                 "uninstall_flags": "/S",
