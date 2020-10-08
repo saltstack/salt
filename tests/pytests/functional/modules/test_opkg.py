@@ -11,7 +11,10 @@ from tests.support.mock import patch
 
 @pytest.fixture(autouse=True)
 def setup_loader(request):
-    setup_loader_modules = {opkg: {"__salt__": {"cmd.shell": cmd.shell}}, cmd: {}}
+    setup_loader_modules = {
+        opkg: {"__salt__": {"cmd.shell": cmd.shell, "cmd.run_stdout": cmd.run_stdout}},
+        cmd: {},
+    }
     with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
         yield loader_mock
 
