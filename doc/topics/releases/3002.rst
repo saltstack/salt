@@ -210,7 +210,7 @@ Salt Api
   ```sls
   # cat /srv/salt/example.sls
   {%- profile as 'local data' %}
-    {%- set local_data = {'counter': 0} %}
+  {%- set local_data = {'counter': 0} %}
     {%- for i in range(313377) %}
       {%- do local_data.update({'counter': i}) %}
     {%- endfor %}
