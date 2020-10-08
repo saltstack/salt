@@ -363,13 +363,13 @@ def create(vm_):
     if firewall_group_id and str(firewall_group_id) not in avail_firewall_groups():
         log.error('Your Vultr account does not have a firewall group with ID %s', str(firewall_group_id))
         return False
-
-    key_list = ssh_key_ids.split(',')
-    available_keys = avail_keys()
-    for key in key_list:
-        if key and str(key) not in available_keys:
-            log.error('Your Vultr account does not have a key with ID %s', str(key))
-            return False
+    if ssh_key_ids is not None:
+      key_list = ssh_key_ids.split(',')
+      available_keys = avail_keys()
+      for key in key_list:
+          if key and str(key) not in available_keys:
+              log.error('Your Vultr account does not have a key with ID %s', str(key))
+              return False
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
