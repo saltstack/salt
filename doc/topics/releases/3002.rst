@@ -173,23 +173,9 @@ Fixed
 Added
 -----
 
-Salt Api
-========
-
-  salt-api will now work on Windows platforms with limited support. You will be
+- salt-api will now work on Windows platforms with limited support. You will be
   able to configure the ``rest_cherrypy`` module, without ``pam`` external
-  authentication and without ssl support.
-
-  Example configuration:
-
-  .. code-block:: text
-      external_auth:
-        auto:
-          saltuser:
-            -.*
-      rest_cherrypy:
-        host: 127.0.0.1
-        port: 8000 (#49949)
+  authentication and without ssl support.(#49949)
 - Added `execution_timeout` support to `chocolatey.installed` state (#50449)
 - Add new verify_ssl option to file modules. This allows a user to not validate the server certificate for HTTPS source and source hash's. (#52663)
 - Added list target type support to the `scan` salt-ssh roster. (#52675)
