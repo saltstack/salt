@@ -207,20 +207,22 @@ Salt Api
   Add profile block and profiling of import_* jinja calls.
 
   ### Example
-  ```sls
-  # cat /srv/salt/example.sls
-  {%- profile as 'local data' %}
-  {%- set local_data = {'counter': 0} %}
-    {%- for i in range(313377) %}
-      {%- do local_data.update({'counter': i}) %}
-    {%- endfor %}
-  {%- endprofile %}
+  
+    .. code-block:: text
+        ```sls
+        # cat /srv/salt/example.sls
+        {%- profile as 'local data' %}
+        {%- set local_data = {'counter': 0} %}
+          {%- for i in range(313377) %}
+            {%- do local_data.update({'counter': i}) %}
+          {%- endfor %}
+        {%- endprofile %}
 
-  test:
-    cmd.run:
-      - name: |-
-          printf 'local data: %s' '{{ local_data['counter'] }}'
-  ```
+        test:
+          cmd.run:
+            - name: |-
+                printf 'local data: %s' '{{ local_data['counter'] }}'
+        ```
 
   ### Motivation
 
