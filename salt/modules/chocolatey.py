@@ -222,19 +222,19 @@ def bootstrap(force=False, source=None):
             (
                 "Vista",
                 "x86",
-            ): "http://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu",
+            ): "https://download.microsoft.com/download/A/7/5/A75BC017-63CE-47D6-8FA4-AFB5C21BAC54/Windows6.0-KB968930-x86.msu",
             (
                 "Vista",
                 "AMD64",
-            ): "http://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu",
+            ): "https://download.microsoft.com/download/3/C/8/3C8CF51E-1D9D-4DAA-AAEA-5C48D1CD055C/Windows6.0-KB968930-x64.msu",
             (
                 "2008Server",
                 "x86",
-            ): "http://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu",
+            ): "https://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu",
             (
                 "2008Server",
                 "AMD64",
-            ): "http://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu",
+            ): "https://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu",
         }
 
         # PowerShell needs to be installed on older systems (Vista, 2008Server)
@@ -277,7 +277,7 @@ def bootstrap(force=False, source=None):
     if not __utils__["dotnet.version_at_least"](version="4"):
         # It took until .NET v4.0 for Microsoft got the hang of making
         # installers, this should work under any version of Windows
-        url = "http://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe"
+        url = "https://download.microsoft.com/download/1/B/E/1BE39E79-7E39-46A3-96FF-047F95396215/dotNetFx40_Full_setup.exe"
         dest = os.path.join(temp_dir, os.path.basename(url))
         # Download the .NET Framework 4 web installer
         try:
