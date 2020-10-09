@@ -1,1 +1,0 @@
-Do not include init directory in sls context parameters if explicitly specified

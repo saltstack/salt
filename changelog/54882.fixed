@@ -1,3 +1,0 @@
-Fixes bogus warning message when an empty list is used for an environment in a
-topfile. This allows `[]` to be used as a placeholder in a topfile without
-needing to comment everything out as a workaround.
