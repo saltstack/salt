@@ -1,1 +1,0 @@
-Fixes an issue where a disabled macOS and Windows service would fail to start with service.running.

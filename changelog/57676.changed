@@ -1,2 +1,0 @@
-Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
-as it is generally not needed and just slows down start up time..

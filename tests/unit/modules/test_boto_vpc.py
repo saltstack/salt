@@ -5,7 +5,6 @@
 import os.path
 import random
 import string
-import sys
 
 # pylint: disable=3rd-party-module-not-gated
 import pkg_resources
@@ -713,10 +712,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     _has_required_moto() is False,
     "The moto version must be >= to version {}".format(required_moto_version),
 )
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
-)
 class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_get_subnet_association_single_subnet(self):
@@ -985,7 +980,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(describe_subnet_results["subnet"], None)
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnet_by_name_for_existing_subnet_returns_correct_data(
         self,
@@ -1001,7 +995,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(
             set(describe_subnet_results["subnet"].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1016,7 +1010,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
         self.assertEqual(describe_subnet_results["subnet"], None)
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnets_by_id_for_existing_subnet_returns_correct_data(self):
         """
@@ -1035,10 +1028,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
-    @skipIf(True, "Skip these tests while investigating failures")
     @mock_ec2_deprecated
     def test_that_describe_subnets_by_name_for_existing_subnets_returns_correct_data(
         self,
@@ -1059,7 +1051,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(len(describe_subnet_results["subnets"]), 2)
         self.assertEqual(
             set(describe_subnet_results["subnets"][0].keys()),
-            {"id", "cidr_block", "availability_zone", "tags"},
+            {"id", "vpc_id", "cidr_block", "availability_zone", "tags"},
         )
 
     @mock_ec2_deprecated
@@ -1085,10 +1077,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     " or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1158,10 +1146,6 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     " or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1281,10 +1265,6 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(
     _has_required_moto() is False,
     "The moto version must be >= to version {}".format(required_moto_version),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -1502,10 +1482,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     " or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
@@ -2233,10 +2209,6 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(
     _has_required_moto() is False,
     "The moto version must be >= to version {}".format(required_moto_version),
-)
-@skipIf(
-    sys.version_info > (3, 6),
-    "Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.",
 )
 class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
