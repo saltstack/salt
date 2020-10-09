@@ -2,7 +2,6 @@
 import logging
 
 import salt.modules.netmiko_mod as netmiko_mod
-from salt.utils.args import get_function_argspec
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -34,8 +33,8 @@ def mock_file_apply_template_on_contents(*args):
     return args[0]
 
 
-def mock_config_get(key, default):
-    return default
+def mock_prepare_connection(**kwargs):
+    return MockNetmikoConnection(**kwargs), {}
 
 
 class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
@@ -44,14 +43,12 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
             netmiko_mod: {
                 "__salt__": {
                     "file.apply_template_on_contents": mock_file_apply_template_on_contents,
-                    "config.get": mock_config_get,
                 },
                 "__proxy__": {
                     "netmiko.conn": mock_netmiko_conn,
                     "netmiko.args": mock_netmiko_args,
                 },
-                "__utils__": {"args.get_function_argspec": get_function_argspec},
-                "ConnectHandler": MockNetmikoConnection,
+                "_prepare_connection": mock_prepare_connection,
             }
         }
 
