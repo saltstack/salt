@@ -16,15 +16,8 @@ def setup_loader():
         yield loader_mock
 
 
-def test_create_a_basic_new_host():
-    """
-    This test creates a host with the minimum required parameters:
-
-    host, groups, interfaces and _connection_args
-
-    The "groups" should be converted to their numeric IDs and the
-    hidden mandatory fields of interfaces should be populated.
-    """
+@pytest.fixture()
+def basic_host_configuration():
     host = "new_host"
     groups = ["Testing Group"]
     interfaces = [
@@ -57,6 +50,94 @@ def test_create_a_basic_new_host():
         "name": "new_host",
         "result": True,
     }
+    return host, groups, interfaces, kwargs, ret
+
+
+@pytest.fixture()
+def existing_host_responses():
+    host_get_output = [
+        {
+            "hostid": "31337",
+            "host": "new_host",
+            "auto_compress": "1",
+            "available": "1",
+            "description": "",
+            "disable_until": "0",
+            "discover": "0",
+            "error": "",
+            "errors_from": "0",
+            "flags": "0",
+            "inventory_mode": "-1",
+            "ipmi_authtype": "-1",
+            "ipmi_available": "0",
+            "ipmi_disable_until": "0",
+            "ipmi_error": "",
+            "ipmi_errors_from": "0",
+            "ipmi_password": "",
+            "ipmi_privilege": "2",
+            "ipmi_username": "",
+            "jmx_available": "0",
+            "jmx_disable_until": "0",
+            "jmx_error": "",
+            "jmx_errors_from": "0",
+            "lastaccess": "0",
+            "maintenance_from": "0",
+            "maintenance_status": "0",
+            "maintenance_type": "0",
+            "maintenanceid": "0",
+            "name": "",
+            "proxy_address": "",
+            "proxy_hostid": "0",
+            "snmp_available": "0",
+            "snmp_disable_until": "0",
+            "snmp_error": "",
+            "snmp_errors_from": "0",
+            "status": "0",
+            "templateid": "0",
+            "tls_accept": "1",
+            "tls_connect": "1",
+            "tls_issuer": "",
+            "tls_psk": "",
+            "tls_psk_identity": "",
+            "tls_subject": "",
+        }
+    ]
+    hostgroup_get_output_up = [
+        {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
+    ]
+    hostinterface_get_output = [
+        {
+            "interfaceid": "29",
+            "hostid": "31337",
+            "main": "1",
+            "type": "1",
+            "useip": "1",
+            "ip": "127.0.0.1",
+            "dns": "basic_interface",
+            "port": "10050",
+            "details": [],
+        }
+    ]
+    host_inventory_get_output = False
+
+    return (
+        host_get_output,
+        hostgroup_get_output_up,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    )
+
+
+def test_create_a_basic_new_host(basic_host_configuration):
+    """
+    This test creates a host with the minimum required parameters:
+
+    host, groups, interfaces and _connection_args
+
+    The "groups" should be converted to their numeric IDs and the
+    hidden mandatory fields of interfaces should be populated.
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
 
     hostgroup_get_output = [
         {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
@@ -99,42 +180,12 @@ def test_create_a_basic_new_host():
         )
 
 
-def test_create_a_new_host_with_multiple_groups():
+def test_create_a_new_host_with_multiple_groups(basic_host_configuration):
     """
     This test creates a host with multiple groups, mixing names and IDs.
     """
-    host = "new_host"
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
     groups = ["Testing Group", 15, "Tested Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
-
-    ret = {
-        "changes": {
-            "new_host": {
-                "new": "Host new_host created.",
-                "old": "Host new_host does not exist.",
-            }
-        },
-        "comment": "Host new_host created.",
-        "name": "new_host",
-        "result": True,
-    }
 
     hostgroup_get_output = [
         [{"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}],
@@ -146,7 +197,6 @@ def test_create_a_new_host_with_multiple_groups():
     mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_host_create = MagicMock(return_value=host_create_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -179,15 +229,14 @@ def test_create_a_new_host_with_multiple_groups():
         )
 
 
-def test_create_a_new_host_with_multiple_interfaces():
+def test_create_a_new_host_with_multiple_interfaces(basic_host_configuration):
     """
     Tests the creation of a host with multiple interfaces. This creates
     one interface of each type, which needs to have their default
     parameters filled. Also, tests the different dns, ip and useip
     combinations.
     """
-    host = "new_host"
-    groups = ["Testing Group", 15, "Tested Group"]
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
     interfaces = [
         OrderedDict(
             [
@@ -227,25 +276,6 @@ def test_create_a_new_host_with_multiple_interfaces():
             ]
         )
     ]
-    kwargs = {
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
-
-    host_created_with = "a"
-
-    ret = {
-        "changes": {
-            "new_host": {
-                "new": "Host new_host created.",
-                "old": "Host new_host does not exist.",
-            }
-        },
-        "comment": "Host new_host created.",
-        "name": "new_host",
-        "result": True,
-    }
 
     hostgroup_get_output = [
         [{"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}],
@@ -257,7 +287,6 @@ def test_create_a_new_host_with_multiple_interfaces():
     mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_host_create = MagicMock(return_value=host_create_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -269,7 +298,7 @@ def test_create_a_new_host_with_multiple_interfaces():
         assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
         mock_host_create.assert_called_with(
             "new_host",
-            [16, 15, 17],
+            [16],
             [
                 {
                     "type": "1",
@@ -321,48 +350,17 @@ def test_create_a_new_host_with_multiple_interfaces():
         )
 
 
-def test_create_a_new_host_with_additional_parameters():
+def test_create_a_new_host_with_additional_parameters(basic_host_configuration):
     """
     Tests if additional parameters, like "description" or "inventory_mode"
     are being properly passed to host_create. Also, checks if invalid
     parameters are filtered out.
     """
-    host = "new_host"
-    groups = ["Testing Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "visible_name": "Visible Name",
-        "description": "An amazing test host entry",
-        "not_valid_property": "This should be removed",
-        "inventory_mode": "0",
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
-
-    ret = {
-        "changes": {
-            "new_host": {
-                "new": "Host new_host created.",
-                "old": "Host new_host does not exist.",
-            }
-        },
-        "comment": "Host new_host created.",
-        "name": "new_host",
-        "result": True,
-    }
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    kwargs["visible_name"] = "Visible Name"
+    kwargs["description"] = "An amazing test host entry"
+    kwargs["not_valid_property"] = "This should be removed"
+    kwargs["inventory_mode"] = "0"
 
     hostgroup_get_output = [
         {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
@@ -373,7 +371,6 @@ def test_create_a_new_host_with_additional_parameters():
     mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_host_create = MagicMock(return_value=host_create_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -408,43 +405,12 @@ def test_create_a_new_host_with_additional_parameters():
         )
 
 
-def test_create_a_new_host_with_proxy_by_name():
+def test_create_a_new_host_with_proxy_by_name(basic_host_configuration):
     """
     Test the handling of proxy_host parameter when it is a name
     """
-    host = "new_host"
-    groups = ["Testing Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "proxy_host": "RemoteProxy",
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
-
-    ret = {
-        "changes": {
-            "new_host": {
-                "new": "Host new_host created.",
-                "old": "Host new_host does not exist.",
-            }
-        },
-        "comment": "Host new_host created.",
-        "name": "new_host",
-        "result": True,
-    }
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    kwargs["proxy_host"] = "RemoteProxy"
 
     hostgroup_get_output = [
         {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
@@ -472,7 +438,6 @@ def test_create_a_new_host_with_proxy_by_name():
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_host_create = MagicMock(return_value=host_create_output)
     mock_run_query = MagicMock(return_value=run_query_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -506,43 +471,12 @@ def test_create_a_new_host_with_proxy_by_name():
         )
 
 
-def test_create_a_new_host_with_proxy_by_id():
+def test_create_a_new_host_with_proxy_by_id(basic_host_configuration):
     """
     Test the handling of proxy_host parameter when it is a proxyid
     """
-    host = "new_host"
-    groups = ["Testing Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "proxy_host": 10356,
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
-
-    ret = {
-        "changes": {
-            "new_host": {
-                "new": "Host new_host created.",
-                "old": "Host new_host does not exist.",
-            }
-        },
-        "comment": "Host new_host created.",
-        "name": "new_host",
-        "result": True,
-    }
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    kwargs["proxy_host"] = 10356
 
     hostgroup_get_output = [
         {"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}
@@ -555,7 +489,6 @@ def test_create_a_new_host_with_proxy_by_id():
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_host_create = MagicMock(return_value=host_create_output)
     mock_run_query = MagicMock(return_value=run_query_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -589,27 +522,12 @@ def test_create_a_new_host_with_proxy_by_id():
         )
 
 
-def test_create_a_new_host_with_missing_groups():
-    host = "new_host"
+def test_create_a_new_host_with_missing_groups(basic_host_configuration):
+    """
+    Tests when any of the provided groups doesn't exists
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
     groups = ["Testing Group", "Missing Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
 
     ret = {
         "changes": {},
@@ -627,10 +545,7 @@ def test_create_a_new_host_with_missing_groups():
 
     mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
     mock_host_exists = MagicMock(return_value=host_exists_output)
-    # we should never reach the host_create call, but let's prevent collateral
-    # damages by keeping it mocked
     mock_host_create = MagicMock(return_value=host_create_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -640,33 +555,15 @@ def test_create_a_new_host_with_missing_groups():
         },
     ):
         assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        assert not mock_host_create.called, "host_create should not be called"
 
 
-def test_create_a_new_host_with_missing_proxy():
+def test_create_a_new_host_with_missing_proxy(basic_host_configuration):
     """
     Tests when the given proxy_host doesn't exists
     """
-    host = "new_host"
-    groups = ["Testing Group"]
-    interfaces = [
-        OrderedDict(
-            [
-                (
-                    "basic_interface",
-                    [
-                        OrderedDict([("ip", "127.0.0.1")]),
-                        OrderedDict([("type", "agent")]),
-                    ],
-                )
-            ]
-        )
-    ]
-    kwargs = {
-        "proxy_host": 10356,
-        "_connection_user": "XXXXXXXXXX",
-        "_connection_password": "XXXXXXXXXX",
-        "_connection_url": "http://XXXXXXXXX/zabbix/api_jsonrpc.php",
-    }
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    kwargs["proxy_host"] = 10356
 
     ret = {
         "changes": {},
@@ -685,10 +582,7 @@ def test_create_a_new_host_with_missing_proxy():
     mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
     mock_host_exists = MagicMock(return_value=host_exists_output)
     mock_run_query = MagicMock(return_value=run_query_output)
-    # we should never reach the host_create call, but let's prevent collateral
-    # damages by keeping it mocked
     mock_host_create = MagicMock(return_value=host_create_output)
-
     with patch.dict(
         zabbix_host.__salt__,
         {
@@ -699,19 +593,445 @@ def test_create_a_new_host_with_missing_proxy():
         },
     ):
         assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        assert not mock_host_create.called, "host_create should not be called"
 
 
-# def test_update_an_existent_host_adding_group():
-#    assert False
-#
-# def test_update_an_existent_host_to_different_proxy():
-#    assert False
-#
-# def test_update_an_existent_host_existent_interfaces():
-#    assert False
-#
-# def test_update_an_existent_host_adding_interfaces():
-#    assert False
-#
-# def test_update_an_existent_host_with_additional_parameters():
-#    assert False
+def test_ensure_nothing_happens_when_host_is_in_desired_state(
+    basic_host_configuration, existing_host_responses
+):
+    """
+    Test to ensure that nothing happens when the state applied
+    already corresponds to the host actual configuration.
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output_up,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    hostgroup_get_output = [
+        [{"groupid": "16", "name": "Testing Group", "internal": "0", "flags": "0"}],
+        hostgroup_get_output_up,
+    ]
+    host_exists_output = True
+    host_create_output = "31337"
+
+    ret = {
+        "changes": {},
+        "comment": "Host new_host already exists.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=False)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        assert not mock_host_update.called, "host_update should not be called"
+
+
+def test_change_a_host_group(basic_host_configuration, existing_host_responses):
+    """
+    Tests if the group of a host is changed when solicited
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output_up,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    hostgroup_get_output = [
+        hostgroup_get_output_up,
+        [{"groupid": "17", "name": "Actual Group", "internal": "0", "flags": "0"}],
+    ]
+    host_exists_output = True
+    host_update_output = "31337"
+
+    ret = {
+        "changes": {"groups": "[16]"},
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=host_update_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_host_update.assert_called_with(
+            "31337",
+            groups=[16],
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
+
+
+def test_to_add_new_groups_to_a_host(basic_host_configuration, existing_host_responses):
+    """
+    Tests if new groups are added to a host
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output_up,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    groups = ["Testing Group", 15, "Tested Group"]
+
+    hostgroup_get_output = [
+        hostgroup_get_output_up,
+        [{"groupid": "17", "name": "Actual Group", "internal": "0", "flags": "0"}],
+        hostgroup_get_output_up,
+    ]
+    host_exists_output = True
+    host_update_output = "31337"
+
+    ret = {
+        "changes": {"groups": "[16, 15, 17]"},
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(side_effect=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=host_update_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_host_update.assert_called_with(
+            "31337",
+            groups=[16, 15, 17],
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
+
+
+def test_update_an_existent_host_proxy(
+    basic_host_configuration, existing_host_responses
+):
+    """
+    Tests if the proxy of a host is updated to a new one.
+    This also tests if a proxy can be added, as a host without a proxy
+    have the proxy_hostid property equals zero.
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    kwargs["proxy_host"] = 10356
+    host_exists_output = True
+    host_update_output = "31337"
+    run_query_output = [{"proxyid": "10356"}]
+
+    ret = {
+        "changes": {"proxy_hostid": "10356"},
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=host_update_output)
+    mock_run_query = MagicMock(return_value=run_query_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+            "zabbix.run_query": mock_run_query,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_host_update.assert_called_with(
+            "31337",
+            proxy_hostid="10356",
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
+
+
+def test_update_a_host_with_additional_parameters(
+    basic_host_configuration, existing_host_responses
+):
+    """
+    This test checks if additional parameters can be added to an
+    existing host
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    kwargs["inventory_mode"] = 0
+    kwargs["description"] = "An amazing test host entry"
+    host_exists_output = True
+    host_update_output = "31337"
+
+    ret = {
+        "changes": {
+            "host": "{'description': 'An amazing test host entry', 'inventory_mode': 0}"
+        },
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_host_update = MagicMock(return_value=host_update_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.host_update": mock_host_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_host_update.assert_called_with(
+            "31337",
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+            description="An amazing test host entry",
+            inventory_mode=0,
+        )
+
+
+def test_update_a_hostinterface(basic_host_configuration, existing_host_responses):
+    """
+    Tests the update of a current hostinterface of a host.
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    interfaces = [
+        OrderedDict(
+            [
+                (
+                    "basic_interface",
+                    [
+                        OrderedDict([("dns", "new_host")]),
+                        OrderedDict([("type", "agent")]),
+                        OrderedDict([("useip", False)]),
+                    ],
+                ),
+            ]
+        )
+    ]
+    host_exists_output = True
+    hostinterface_update_output = "29"
+
+    ret = {
+        "changes": {
+            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}]"
+        },
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_hostinterface_update = MagicMock(return_value=hostinterface_update_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.hostinterface_update": mock_hostinterface_update,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_hostinterface_update.assert_called_with(
+            interfaceid="29",
+            ip="",
+            dns="new_host",
+            useip="0",
+            type="1",
+            main="1",
+            port="10050",
+            details=[],
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
+
+
+def test_add_a_new_hostinterface(basic_host_configuration, existing_host_responses):
+    """
+    Tests the update of a current and creation of a new hostinterface
+    of a host.
+    """
+    host, groups, interfaces, kwargs, ret = basic_host_configuration
+    (
+        host_get_output,
+        hostgroup_get_output,
+        hostinterface_get_output,
+        host_inventory_get_output,
+    ) = existing_host_responses
+
+    interfaces = [
+        OrderedDict(
+            [
+                (
+                    "basic_interface",
+                    [
+                        OrderedDict([("dns", "new_host")]),
+                        OrderedDict([("type", "agent")]),
+                        OrderedDict([("useip", "0")]),
+                    ],
+                ),
+                (
+                    "snmp_interface",
+                    [
+                        OrderedDict([("ip", "127.0.0.1")]),
+                        OrderedDict([("dns", "new_host")]),
+                        OrderedDict([("useip", False)]),
+                        OrderedDict([("type", "snmp")]),
+                    ],
+                ),
+            ]
+        )
+    ]
+    host_exists_output = True
+    hostinterface_update_output = "29"
+    hostinterface_create_output = "30"
+
+    ret = {
+        "changes": {
+            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}, {'type': '2', 'main': '1', 'useip': '0', 'ip': '127.0.0.1', 'dns': 'new_host', 'port': '161', 'details': {'version': '2', 'bulk': '1', 'community': '{$SNMP_COMMUNITY}'}}]"
+        },
+        "comment": "Host new_host updated.",
+        "name": "new_host",
+        "result": True,
+    }
+
+    mock_hostgroup_get = MagicMock(return_value=hostgroup_get_output)
+    mock_host_exists = MagicMock(return_value=host_exists_output)
+    mock_host_get = MagicMock(return_value=host_get_output)
+    mock_hostinterface_get = MagicMock(return_value=hostinterface_get_output)
+    mock_host_inventory_get = MagicMock(return_value=host_inventory_get_output)
+    mock_hostinterface_update = MagicMock(return_value=hostinterface_update_output)
+    mock_hostinterface_create = MagicMock(return_value=hostinterface_create_output)
+    with patch.dict(
+        zabbix_host.__salt__,
+        {
+            "zabbix.hostgroup_get": mock_hostgroup_get,
+            "zabbix.host_exists": mock_host_exists,
+            "zabbix.host_get": mock_host_get,
+            "zabbix.hostinterface_get": mock_hostinterface_get,
+            "zabbix.host_inventory_get": mock_host_inventory_get,
+            "zabbix.hostinterface_update": mock_hostinterface_update,
+            "zabbix.hostinterface_create": mock_hostinterface_create,
+        },
+    ):
+        assert zabbix_host.present(host, groups, interfaces, **kwargs) == ret
+        mock_hostinterface_update.assert_called_with(
+            interfaceid="29",
+            ip="",
+            dns="new_host",
+            useip="0",
+            type="1",
+            main="1",
+            port="10050",
+            details=[],
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
+        mock_hostinterface_create.assert_called_with(
+            "31337",
+            "127.0.0.1",
+            dns="new_host",
+            useip="0",
+            if_type="2",
+            main="1",
+            port="161",
+            details={"version": "2", "bulk": "1", "community": "{$SNMP_COMMUNITY}"},
+            _connection_password="XXXXXXXXXX",
+            _connection_url="http://XXXXXXXXX/zabbix/api_jsonrpc.php",
+            _connection_user="XXXXXXXXXX",
+        )
