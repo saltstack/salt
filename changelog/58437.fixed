@@ -1,1 +1,0 @@
-Make sure we repopulate ``__utils__`` on Windows when a job is run from the scheduler.

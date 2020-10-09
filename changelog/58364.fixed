@@ -1,6 +1,0 @@
-Fixed zmq salt-call hang!
-
-Some objects from the 3rd party module zmq fail to deconstruct if left to the GC when Python exits.
-This is because the objects get destroyed out of order.
-This only happens on some platforms like ubuntu 20.04 and some versions of FreeBSD.
-We fixed this hang by deconstructing all zmq objects in the right order before we exit salt-call.

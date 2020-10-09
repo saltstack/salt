@@ -75,7 +75,7 @@ Units
 ==========
 .. _virt-units:
 .. rubric:: Units specification
-.. versionadded:: Magnesium
+.. versionadded:: 3002
 
 The string should contain a number optionally followed
 by a unit. The number may have a decimal fraction. If
@@ -1893,7 +1893,7 @@ def init(
 
     :param name: name of the virtual machine to create
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
         structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
@@ -1913,7 +1913,7 @@ def init(
                 'min_guarantee': '512mib'
             }
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
@@ -2587,7 +2587,7 @@ def update(
 
     :param name: Name of the domain to update
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
         structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
@@ -2603,7 +2603,7 @@ def update(
                 hard_limit: null
                 soft_limit: null
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
 
     :param disk_profile: disk profile to use
     :param disks:
@@ -2659,7 +2659,7 @@ def update(
 
         By default, the value will ``"hd"``.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
 
     :param test: run in dry-run mode if set to True
 
