@@ -41,7 +41,6 @@ from salt.exceptions import (
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.ext.six.moves import map, range, zip
 from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
@@ -57,7 +56,9 @@ if salt.utils.platform.is_windows():
 
     HAS_WIN_RUNAS = True
 else:
-    from salt.ext.six.moves import shlex_quote as _cmd_quote
+    import shlex
+
+    _cmd_quote = shlex.quote
 
     HAS_WIN_RUNAS = False
 
@@ -65,7 +66,6 @@ __proxyenabled__ = ["*"]
 # Define the module's virtual name
 __virtualname__ = "cmd"
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 DEFAULT_SHELL = salt.grains.extra.shell()["shell"]
@@ -323,14 +323,20 @@ def _run(
         ignore_retcode = True
         use_vt = False
 
+    change_windows_codepage = False
     if not salt.utils.platform.is_windows():
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = "The shell {} is not available".format(shell)
             raise CommandExecutionError(msg)
     elif use_vt:  # Memozation so not much overhead
         raise CommandExecutionError("VT not available on windows")
-    elif windows_codepage is not None:
-        salt.utils.win_chcp.chcp(windows_codepage)
+    else:
+        if windows_codepage:
+            if not isinstance(windows_codepage, int):
+                windows_codepage = int(windows_codepage)
+            previous_windows_codepage = salt.utils.win_chcp.get_codepage_id()
+            if windows_codepage != previous_windows_codepage:
+                change_windows_codepage = True
 
     if shell.lower().strip() == "powershell":
         # Strip whitespace
@@ -671,23 +677,29 @@ def _run(
     if not use_vt:
         # This is where the magic happens
         try:
-            proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
-        except OSError as exc:
-            msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
-                cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
-            )
-            raise CommandExecutionError(msg)
+            if change_windows_codepage:
+                salt.utils.win_chcp.set_codepage_id(windows_codepage)
+            try:
+                proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
+            except OSError as exc:
+                msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
+                    cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
+                )
+                raise CommandExecutionError(msg)
 
-        try:
-            proc.run()
-        except TimedProcTimeoutError as exc:
-            ret["stdout"] = str(exc)
-            ret["stderr"] = ""
-            ret["retcode"] = None
-            ret["pid"] = proc.process.pid
-            # ok return code for timeouts?
-            ret["retcode"] = 1
-            return ret
+            try:
+                proc.run()
+            except TimedProcTimeoutError as exc:
+                ret["stdout"] = str(exc)
+                ret["stderr"] = ""
+                ret["retcode"] = None
+                ret["pid"] = proc.process.pid
+                # ok return code for timeouts?
+                ret["retcode"] = 1
+                return ret
+        finally:
+            if change_windows_codepage:
+                salt.utils.win_chcp.set_codepage_id(previous_windows_codepage)
 
         if output_loglevel != "quiet" and output_encoding is not None:
             log.debug(
@@ -1118,7 +1130,7 @@ def run(
 
     :param int windows_codepage: 65001
         Only applies to Windows: the minion uses `C:\Windows\System32\chcp.com` to
-        verify or set the code page before he excutes the command `cmd`.
+        verify or set the code page before the command `cmd` is executed.
         Code page 65001 corresponds with UTF-8 and allows international localization of Windows.
 
       .. versionadded:: 3002

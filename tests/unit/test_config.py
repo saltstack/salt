@@ -364,6 +364,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             config = salt.config.minion_config(fpath)
             self.assertEqual(config["log_file"], fpath)
 
+    @skipIf(
+        salt.utils.platform.is_windows(),
+        "You can't set an environment dynamically in Windows",
+    )
     @with_tempdir()
     def test_load_client_config_from_environ_var(self, tempdir):
         env_root_dir = os.path.join(tempdir, "foo", "env")
