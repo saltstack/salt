@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Boto Common Utils
 =================
 
 Note: This module depends on the dicts packed by the loader and,
 therefore, must be accessed via the loader or from the __utils__ dict.
-
-The __utils__ dict will not be automatically available to execution modules
-until 2015.8.0. The `salt.utils.compat.pack_dunder` helper function
-provides backwards compatibility.
 
 This module provides common functionality for the boto execution modules.
 The expected usage is to call `assign_funcs` from the `__virtual__` function
@@ -20,9 +15,6 @@ Example Usage:
     .. code-block:: python
 
         def __virtual__():
-            # only required in 2015.2
-            salt.utils.compat.pack_dunder(__name__)
-
             __utils__['boto.assign_funcs'](__name__, 'vpc')
 
         def test():
@@ -32,8 +24,6 @@ Example Usage:
 .. versionadded:: 2015.8.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
@@ -43,13 +33,9 @@ from functools import partial
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import salt libs
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.loader import minion_mods
 
-# Import third party libs
 # pylint: disable=import-error
 try:
     # pylint: disable=import-error
@@ -86,7 +72,7 @@ def __virtual__():
 
 def _get_profile(service, region, key, keyid, profile):
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, str):
             _profile = __salt__["config.option"](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -103,11 +89,10 @@ def _get_profile(service, region, key, keyid, profile):
     if not keyid and __salt__["config.option"](service + ".keyid"):
         keyid = __salt__["config.option"](service + ".keyid")
 
-    label = "boto_{0}:".format(service)
+    label = "boto_{}:".format(service)
     if keyid:
         hash_string = region + keyid + key
-        if six.PY3:
-            hash_string = salt.utils.stringutils.to_bytes(hash_string)
+        hash_string = salt.utils.stringutils.to_bytes(hash_string)
         cxkey = label + hashlib.md5(hash_string).hexdigest()
     else:
         cxkey = label + region
@@ -138,16 +123,16 @@ def cache_id(
 
     cxkey, _, _, _ = _get_profile(service, region, key, keyid, profile)
     if sub_resource:
-        cxkey = "{0}:{1}:{2}:id".format(cxkey, sub_resource, name)
+        cxkey = "{}:{}:{}:id".format(cxkey, sub_resource, name)
     else:
-        cxkey = "{0}:{1}:id".format(cxkey, name)
+        cxkey = "{}:{}:id".format(cxkey, name)
 
     if invalidate:
         if cxkey in __context__:
             del __context__[cxkey]
             return True
         elif resource_id in __context__.values():
-            ctx = dict((k, v) for k, v in __context__.items() if v != resource_id)
+            ctx = {k: v for k, v in __context__.items() if v != resource_id}
             __context__.clear()
             __context__.update(ctx)
             return True
@@ -186,7 +171,7 @@ def get_connection(
 
     # future lint: disable=blacklisted-function
     module = str(module or service)
-    module, submodule = (str("boto.") + module).rsplit(str("."), 1)
+    module, submodule = ("boto." + module).rsplit(".", 1)
     # future lint: enable=blacklisted-function
 
     svc_mod = getattr(__import__(module, fromlist=[submodule]), submodule)
@@ -202,12 +187,12 @@ def get_connection(
             region, aws_access_key_id=keyid, aws_secret_access_key=key
         )
         if conn is None:
-            raise SaltInvocationError('Region "{0}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "
-            "attempting to make boto {0} connection to "
-            'region "{1}".'.format(service, region)
+            "attempting to make boto {} connection to "
+            'region "{}".'.format(service, region)
         )
     __context__[cxkey] = conn
     return conn
@@ -239,7 +224,7 @@ def get_error(e):
         aws["code"] = e.error_code
 
     if "message" in aws and "reason" in aws:
-        message = "{0}: {1}".format(aws["reason"], aws["message"])
+        message = "{}: {}".format(aws["reason"], aws["message"])
     elif "message" in aws:
         message = aws["message"]
     elif "reason" in aws:

@@ -1,3 +1,0 @@
-Fixed issue with the return dictionary from the workgroup() function in the
-salt.states.win_system module. This resulted in a windows-based minion logging
-an error and could also interfere with a highstate being applied.

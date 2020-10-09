@@ -20,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    3002*
     3001*
     3000*
     2019.2.*

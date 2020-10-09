@@ -3071,6 +3071,22 @@ class State:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
             self.event(running[tag], len(chunks), fire_event=low.get("fire_event"))
+
+            for sub_state_data in running[tag].pop("sub_state_run", ()):
+                self.__run_num += 1
+                sub_tag = _gen_tag(sub_state_data["low"])
+                running[sub_tag] = {
+                    "name": sub_state_data["low"]["name"],
+                    "changes": sub_state_data["changes"],
+                    "result": sub_state_data["result"],
+                    "duration": sub_state_data.get("duration"),
+                    "start_time": sub_state_data.get("start_time"),
+                    "comment": sub_state_data.get("comment"),
+                    "__state_ran__": True,
+                    "__run_num__": self.__run_num,
+                    "__sls__": low["__sls__"],
+                }
+
         return running
 
     def call_listen(self, chunks, running):
