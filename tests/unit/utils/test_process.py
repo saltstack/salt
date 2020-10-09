@@ -550,7 +550,7 @@ class TestProcessList(TestCase):
         assert proc not in plist.processes
         assert proc2 not in plist.processes
 
-    @skipIf(True, "SLOWTEST skip")
+    @slowTest
     def test_process_list_terminate(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
