@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Execution of Salt modules from within states
 ============================================
@@ -300,17 +299,13 @@ Windows system:
 
 .. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.loader
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.decorators import with_deprecated
 
 
 def wait(name, **kwargs):
@@ -342,7 +337,6 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.
@@ -428,13 +422,13 @@ def run(**kwargs):
                 if not _get_result(func_ret, ret["changes"].get("ret", {})):
                     if isinstance(func_ret, dict):
                         failures.append(
-                            "'{0}' failed: {1}".format(
+                            "'{}' failed: {}".format(
                                 func, func_ret.get("comment", "(error message N/A)")
                             )
                         )
                 else:
                     success.append(
-                        "{0}: {1}".format(
+                        "{}: {}".format(
                             func,
                             func_ret.get("comment", "Success")
                             if isinstance(func_ret, dict)
@@ -443,7 +437,7 @@ def run(**kwargs):
                     )
                     ret["changes"][func] = func_ret
             except (SaltInvocationError, TypeError) as ex:
-                failures.append("'{0}' failed: {1}".format(func, ex))
+                failures.append("'{}' failed: {}".format(func, ex))
         ret["comment"] = ", ".join(failures + success)
         ret["result"] = not bool(failures)
 
@@ -499,12 +493,12 @@ def _run(name, **kwargs):
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
     if name not in __salt__:
-        ret["comment"] = "Module function {0} is not available".format(name)
+        ret["comment"] = "Module function {} is not available".format(name)
         ret["result"] = False
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Module function {0} is set to execute".format(name)
+        ret["comment"] = "Module function {} is set to execute".format(name)
         return ret
 
     aspec = salt.utils.args.get_function_argspec(__salt__[name])
@@ -562,7 +556,7 @@ def _run(name, **kwargs):
     if missing:
         comment = "The following arguments are missing:"
         for arg in missing:
-            comment += " {0}".format(arg)
+            comment += " {}".format(arg)
         ret["comment"] = comment
         ret["result"] = False
         return ret
@@ -607,9 +601,9 @@ def _run(name, **kwargs):
         else:
             mret = __salt__[name](*args)
     except Exception as e:  # pylint: disable=broad-except
-        ret[
-            "comment"
-        ] = "Module function {0} threw an exception. Exception: {1}".format(name, e)
+        ret["comment"] = "Module function {} threw an exception. Exception: {}".format(
+            name, e
+        )
         ret["result"] = False
         return ret
     else:
@@ -626,7 +620,7 @@ def _run(name, **kwargs):
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs["returner"] in returners:
             returners[kwargs["returner"]](ret_ret)
-    ret["comment"] = "Module function {0} executed".format(name)
+    ret["comment"] = "Module function {} executed".format(name)
     ret["result"] = _get_result(mret, ret["changes"])
 
     return ret
@@ -658,7 +652,7 @@ def _get_result(func_ret, changes):
 
 def _get_dict_result(node):
     ret = True
-    for key, val in six.iteritems(node):
+    for key, val in node.items():
         if key == "result" and val is False:
             ret = False
             break
