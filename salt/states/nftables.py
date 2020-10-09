@@ -112,7 +112,6 @@ at some point be deprecated in favor of a more generic `firewall` state.
 
 import logging
 
-# Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
@@ -133,7 +132,7 @@ def chain_present(
     """
     .. versionadded:: 2014.7.0
 
-    .. versionchanged:: Magnesium
+    .. versionchanged:: 3002
 
     Verify a chain exists in a table.
 
@@ -456,7 +455,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    .. versionchanged:: Magnesium
+    .. versionchanged:: 3002
 
     Flush current nftables state
 
@@ -467,7 +466,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
         If set to True, attempts to flush a non-existent table will not
         result in a failed state.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
 
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
@@ -526,7 +525,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
 
 def set_policy(name, table="filter", family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Sets the default policy for nftables chains
 
@@ -600,7 +599,7 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
 
 def table_present(name, family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Ensure an nftables table is present
 
@@ -645,7 +644,7 @@ def table_present(name, family="ipv4", **kwargs):
 
 def table_absent(name, family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Ensure an nftables table is absent
 
