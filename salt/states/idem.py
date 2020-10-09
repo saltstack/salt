@@ -8,7 +8,7 @@ Idem Support
 
 This state provides access to idem states
 
-.. versionadded:: Magnesium
+.. versionadded:: 3002
 """
 import pathlib
 import re

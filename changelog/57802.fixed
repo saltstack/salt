@@ -1,3 +1,0 @@
-Fixes broken block_device_mapping and block_device_mapping_v2 type checks in
-the OpenStack cloud driver. Salt was looking for a dict and the shade library
-was looking for a list of dicts. This made it impossible to use those params.

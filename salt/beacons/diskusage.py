@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor disk usage.
 
@@ -7,15 +6,13 @@ Beacon to monitor disk usage.
 :depends: python-psutil
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import re
 
+import salt.utils.beacons
 import salt.utils.platform
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -86,6 +83,8 @@ def beacon(config):
     it will override the previously defined threshold.
 
     """
+    whitelist = []
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
     parts = psutil.disk_partitions(all=True)
     ret = []
     for mounts in config:
@@ -95,7 +94,7 @@ def beacon(config):
         # if our mount doesn't end with a $, insert one.
         mount_re = mount
         if not mount.endswith("$"):
-            mount_re = "{0}$".format(mount)
+            mount_re = "{}$".format(mount)
 
         if salt.utils.platform.is_windows():
             # mount_re comes in formatted with a $ at the end

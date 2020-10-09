@@ -1,2 +1,0 @@
-Fix issue with `__utils__` usage in the `__virtual__` functions on a few of the
-execution modules.

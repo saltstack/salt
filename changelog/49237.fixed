@@ -1,1 +1,0 @@
-Fixes service.status to return True/False instead of empty strings or PIDs of the service. This brings macOS into parity with the other service modules.
