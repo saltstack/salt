@@ -157,10 +157,12 @@ class WinLgpoTest(ModuleCase):
         lgpo_function = "set_computer_policy"
         lgpo_class = "/m"
         lgpo_folder = "Machine"
+        lgpo_top_level = "Computer Configuration"
         if policy_class.lower() == "user":
             lgpo_function = "set_user_policy"
             lgpo_class = "/u"
             lgpo_folder = "User"
+            lgpo_top_level = "User Configuration"
 
         ret = self.run_function(
             "lgpo.{}".format(lgpo_function), (policy_name, policy_config)
@@ -188,6 +190,90 @@ class WinLgpoTest(ModuleCase):
                     msg='Failed validating policy "{}" configuration, regex '
                     '"{}" not found in lgpo output:\n{}'
                     "".format(policy_name, expected_regex, lgpo_output),
+                )
+            # validate the lgpo also sees the right setting
+            this_policy_info = self.run_function(
+                "lgpo.get_policy_info",
+                (),
+                policy_name=policy_name,
+                policy_class=policy_class,
+            )
+            ret = self.run_function(
+                "lgpo.get", (), policy_class=policy_class, return_not_configured=True
+            )
+            self.assertTrue(
+                lgpo_top_level in ret, msg="lgpo did not return the expected entries"
+            )
+            found_policy = False
+            output_policy_name = None
+            if "policy_aliases" in this_policy_info:
+                for policy_alias in this_policy_info["policy_aliases"]:
+                    if policy_alias in ret[lgpo_top_level]:
+                        found_policy = True
+                        output_policy_name = policy_alias
+                        break
+            else:
+                found_policy = policy_name in ret[lgpo_top_level]
+            self.assertTrue(
+                found_policy, msg="The configured policy is not in the lgpo.get output"
+            )
+            if isinstance(policy_config, list):
+                for this_item in policy_config:
+                    self.assertTrue(
+                        this_item in ret[lgpo_top_level][output_policy_name],
+                        msg="Item {} not found in policy configuration".format(
+                            this_item
+                        ),
+                    )
+            elif isinstance(policy_config, dict):
+                for this_item, this_val in policy_config.items():
+                    item_correct = False
+                    actual_val = None
+                    if (
+                        "policy_elements" in this_policy_info
+                        and this_policy_info["policy_elements"]
+                    ):
+                        for policy_element in this_policy_info["policy_elements"]:
+                            if item_correct:
+                                break
+                            if (
+                                "element_aliases" in policy_element
+                                and policy_element["element_aliases"]
+                            ):
+                                if this_item in policy_element["element_aliases"]:
+                                    for element_alias in policy_element[
+                                        "element_aliases"
+                                    ]:
+                                        if (
+                                            element_alias
+                                            in ret[lgpo_top_level][output_policy_name]
+                                        ):
+                                            actual_val = ret[lgpo_top_level][
+                                                output_policy_name
+                                            ][element_alias]
+                                            if (
+                                                ret[lgpo_top_level][output_policy_name][
+                                                    element_alias
+                                                ]
+                                                == this_val
+                                            ):
+                                                item_correct = True
+                                                break
+                    self.assertTrue(
+                        item_correct,
+                        msg='Item "{}" does not have the expected value of "{}"{}'.format(
+                            this_item,
+                            this_val,
+                            ' value found: "{}"'.format(actual_val)
+                            if actual_val
+                            else "",
+                        ),
+                    )
+            else:
+                self.assertEqual(
+                    ret[lgpo_top_level][output_policy_name],
+                    policy_config,
+                    msg="lgpo did not return the expected value for the policy",
                 )
         else:
             # expecting it to fail
@@ -347,7 +433,6 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Configure Offer Remote Access": "Enabled",
                 "Permit remote control of this computer": "Allow helpers to remotely control the computer",
                 "Helpers": ["administrators", "user1"],
             },
@@ -669,7 +754,6 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Configure Offer Remote Access": "Enabled",
                 "Permit remote control of this computer": "Allow helpers to remotely control the computer",
                 "Helpers": ["administrators", "user1"],
             },
@@ -977,6 +1061,62 @@ class WinLgpoTest(ModuleCase):
             None,
             None,
             False,
+        )
+
+    @destructiveTest
+    def test_set_sxs_servicing_policy(self):
+        """
+        Test setting/unsetting/changing sxs-servicing policy
+        """
+
+        # Disable sxs-servicing
+        log.debug("Attempting to disable sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            "Disabled",
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DELETE",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        # configure sxs-servicing
+        log.debug("Attempting to enable sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": "",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        log.debug("Attempting to set different values on sxs-servicing")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            {
+                "Alternate source file path": r"\\some\fake\server",
+                "Never attempt to download payload from Windows Update": True,
+                "CheckBox_SidestepWSUS": False,
+            },
+            [
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*LocalSourcePath[\s]*EXSZ:\\\\\\\\some\\\\fake\\\\server",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*UseWindowsUpdate[\s]*DWORD:2",
+                r"Computer[\s]*Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Servicing[\s]*RepairContentServerSource[\s]*DELETE",
+            ],
+        )
+        # Not Configure sxs-servicing
+        log.debug("Attempting to set sxs-servicing to Not Configured")
+        self._testAdmxPolicy(
+            "Specify settings for optional component installation and component repair",
+            "Not Configured",
+            [
+                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+            ],
         )
 
     def tearDown(self):

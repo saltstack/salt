@@ -1,51 +1,57 @@
-# -*- coding: utf-8 -*-
 """
 Decorators for salt.state
 
 :codeauthor: :email:`Bo Maryniuk (bo@suse.de)`
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.stringutils
 from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
 
-class OutputUnifier(object):
+class OutputUnifier:
     def __init__(self, *policies):
         self.policies = []
         for pls in policies:
             if not hasattr(self, pls):
-                raise SaltException("Unknown policy: {0}".format(pls))
+                raise SaltException("Unknown policy: {}".format(pls))
             else:
                 self.policies.append(getattr(self, pls))
+
+    def _run_policies(self, data):
+        for pls in self.policies:
+            try:
+                data = pls(data)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug(
+                    "An exception occurred in this state: %s",
+                    exc,
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+                data = {
+                    "result": False,
+                    "name": "later",
+                    "changes": {},
+                    "comment": "An exception occurred in this state: {}".format(exc),
+                }
+        return data
 
     def __call__(self, func):
         def _func(*args, **kwargs):
             result = func(*args, **kwargs)
-            for pls in self.policies:
-                try:
-                    result = pls(result)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.debug(
-                        "An exception occurred in this state: %s",
-                        exc,
-                        exc_info_on_loglevel=logging.DEBUG,
-                    )
-                    result = {
-                        "result": False,
-                        "name": "later",
-                        "changes": {},
-                        "comment": "An exception occurred in this state: {0}".format(
-                            exc
-                        ),
-                    }
+            sub_state_run = None
+            if isinstance(result, dict):
+                sub_state_run = result.get("sub_state_run", ())
+            result = self._run_policies(result)
+            if sub_state_run:
+                result["sub_state_run"] = [
+                    self._run_policies(sub_state_data)
+                    for sub_state_data in sub_state_run
+                ]
             return result
 
         return _func
@@ -68,7 +74,7 @@ class OutputUnifier(object):
                 if val not in result:
                     missing.append(val)
             if missing:
-                err_msg = "The following keys were not present in the state return: {0}.".format(
+                err_msg = "The following keys were not present in the state return: {}.".format(
                     ", ".join(missing)
                 )
             else:
@@ -76,6 +82,9 @@ class OutputUnifier(object):
 
         if err_msg:
             raise SaltException(err_msg)
+
+        for sub_state in result.get("sub_state_run", ()):
+            self.content_check(sub_state)
 
         return result
 

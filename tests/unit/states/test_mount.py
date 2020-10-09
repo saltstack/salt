@@ -43,15 +43,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
         mock = MagicMock(
-            side_effect=[
-                "new",
-                "present",
-                "new",
-                "change",
-                "bad config",
-                "salt",
-                "present",
-            ]
+            side_effect=["new", "present", "new", "change", "bad config", "salt"]
         )
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -231,6 +223,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test no change for uid provided as a name #25293
         with patch.dict(mount.__grains__, {"os": "CentOS"}):
+            set_fstab_mock = MagicMock(autospec=True, return_value="present")
             with patch.dict(
                 mount.__salt__,
                 {
@@ -239,7 +232,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     "mount.umount": mock_f,
                     "mount.read_mount_cache": mock_read_cache,
                     "mount.write_mount_cache": mock_write_cache,
-                    "mount.set_fstab": mock,
+                    "mount.set_fstab": set_fstab_mock,
                     "user.info": mock_user,
                     "group.info": mock_group,
                 },
@@ -257,6 +250,18 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                 opts=["uid=user1", "gid=group1"],
                             ),
                             ret,
+                        )
+                        # Test to check the options order #57520
+                        set_fstab_mock.assert_called_with(
+                            name2,
+                            "//SERVER/SHARE/",
+                            "cifs",
+                            ["gid=group1", "uid=user1"],
+                            0,
+                            0,
+                            "/etc/fstab",
+                            test=True,
+                            match_on="auto",
                         )
 
         with patch.dict(mount.__grains__, {"os": "AIX"}):

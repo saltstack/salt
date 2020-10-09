@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
 import salt.utils.path
 import salt.utils.platform
@@ -31,3 +27,7 @@ class ChocolateyModuleTest(ModuleCase):
     def test_list_(self):
         ret = self.run_function("chocolatey.list", narrow="adobereader", exact=True)
         self.assertTrue("adobereader" in ret)
+
+    def test_list_sources(self):
+        ret = self.run_function("chocolatey.list_sources")
+        self.assertTrue("chocolatey" in ret.keys())
