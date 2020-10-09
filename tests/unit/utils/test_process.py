@@ -562,7 +562,8 @@ class TestProcessList(TestCase):
         plist.add(proc2)
         assert proc in plist.processes
         assert proc2 in plist.processes
-        plist.terminate()
+        time.sleep(1)
+        plist.terminate(timeout=10)
         assert not proc.is_alive()
         assert not proc2.is_alive()
         assert proc not in plist.processes

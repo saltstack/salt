@@ -1049,12 +1049,17 @@ class SubprocessList:
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)
 
-    def terminate(self):
+    def terminate(self, timeout=None):
         with self.lock:
             for proc in self.processes:
                 proc.terminate()
                 log.debug("Subprocess %s terminated", proc.name)
             for proc in self.processes:
-                proc.join()
-            self.processes.clear()
-            self.count = 0
+                proc.join(timeout)
+            for proc in self.processes.copy():
+                if proc.is_alive():
+                    log.warning("Subprocess %s could not be terminated", proc.name)
+                    continue
+                self.processes.remove(proc)
+                self.count -= 1
+                log.debug("Subprocess %s cleaned up", proc.name)
