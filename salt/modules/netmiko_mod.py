@@ -579,9 +579,9 @@ def send_config(
         if __proxy__["netmiko.conn"]().is_alive():
             conn = __proxy__["netmiko.conn"]()
         else:
-            conn, kwargs = _prepare_connection(**__proxy__["netmiko.args"]())
+            conn, _ = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
-        conn, _ = _prepare_connection(**kwargs)
+        conn, kwargs = _prepare_connection(**kwargs)
     if commit:
         kwargs["exit_config_mode"] = False  # don't exit config mode after
         # loading the commands, wait for explicit commit
