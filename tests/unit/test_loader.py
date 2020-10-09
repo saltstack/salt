@@ -8,6 +8,7 @@
 import collections
 import compileall
 import copy
+import gc
 import imp
 import inspect
 import logging
@@ -21,19 +22,11 @@ import salt.config
 import salt.loader
 import salt.utils.files
 import salt.utils.stringutils
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-# pylint: enable=no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1240,6 +1233,134 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self._verify_libs()
 
 
+class LoaderMultipleGlobalTest(ModuleCase):
+    """
+    Tests when using multiple lazyloaders
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+        self.loader2 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+
+    def tearDown(self):
+        del self.loader1
+        del self.loader2
+
+    def test_loader_globals(self):
+        """
+        Test to ensure loaders do not edit
+        each others loader's namespace
+        """
+        self.loader1.pack["__foo__"] = "bar1"
+        func1 = self.loader1["test.ping"]
+
+        self.loader2.pack["__foo__"] = "bar2"
+        func2 = self.loader2["test.ping"]
+
+        assert func1.__globals__["__foo__"] == "bar1"
+        assert func2.__globals__["__foo__"] == "bar2"
+
+
+class LoaderCleanupTest(ModuleCase):
+    """
+    Tests the loader cleanup procedures
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+        )
+
+    def tearDown(self):
+        del self.loader1
+
+    def test_loader_gc_cleanup(self):
+        loaded_base_name = self.loader1.loaded_base_name
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+
+        # Assert that the weakref.finalizer is alive
+        assert self.loader1._gc_finalizer.alive is True
+
+        gc.collect()
+        # Even after a gc.collect call, we should still have our module in sys.modules
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                if sys.modules[name] is None:
+                    self.fail(
+                        "Found at least one module in sys.modules matching {!r} prematurely set to None".format(
+                            loaded_base_name
+                        )
+                    )
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+        # Should still be true because there's still at least one reference to self.loader1
+        assert self.loader1._gc_finalizer.alive is True
+
+        # Now we remove our refence to loader and trigger GC, thus triggering the loader weakref finalizer
+        self.loader1 = None
+        gc.collect()
+
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                if sys.modules[name] is not None:
+                    self.fail(
+                        "Found a real module reference in sys.modules matching {!r}.".format(
+                            loaded_base_name,
+                        )
+                    )
+                break
+        else:
+            self.fail(
+                "Did not find any modules in sys.modules matching {!r}".format(
+                    loaded_base_name
+                )
+            )
+
+    def test_loader_clean_modules(self):
+        loaded_base_name = self.loader1.loaded_base_name
+        self.loader1.clean_modules()
+
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                self.fail(
+                    "Found a real module reference in sys.modules matching {!r}".format(
+                        loaded_base_name
+                    )
+                )
+                break
+
+        # Additionally, assert that the weakref.finalizer is now dead
+        assert self.loader1._gc_finalizer.alive is False
+
+
 class LoaderGlobalsTest(ModuleCase):
     """
     Test all of the globals that the loader is responsible for adding to modules
@@ -1558,7 +1679,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         self.loader = self._get_loader()
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
-        expected = "lazyloadertest.py" if six.PY3 else "lazyloadertest.pyc"
+        expected = "lazyloadertest.py"
         assert basename == expected, basename
 
 
@@ -1640,3 +1761,29 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         func_mock.assert_called()
         assert len(func_mock.call_args_list) == len(lock_mock.__enter__.call_args_list)
         del loader
+
+    def test_lazyloader_zip_modules(self):
+        self.opts["enable_zip_modules"] = True
+        try:
+            loader = self.__init_loader()
+            assert ".zip" in loader.suffix_map
+            assert ".zip" in loader.suffix_order
+        finally:
+            self.opts["enable_zip_modules"] = False
+        loader = self.__init_loader()
+        assert ".zip" not in loader.suffix_map
+        assert ".zip" not in loader.suffix_order
+
+    def test_lazyloader_pyx_modules(self):
+        self.opts["cython_enable"] = True
+        try:
+            loader = self.__init_loader()
+            # Don't assert if the current environment has no pyximport
+            if salt.loader.pyximport is not None:
+                assert ".pyx" in loader.suffix_map
+                assert ".pyx" in loader.suffix_order
+        finally:
+            self.opts["cython_enable"] = False
+        loader = self.__init_loader()
+        assert ".pyx" not in loader.suffix_map
+        assert ".pyx" not in loader.suffix_order

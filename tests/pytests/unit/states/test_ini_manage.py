@@ -4,12 +4,16 @@ import os
 import pytest
 import salt.modules.ini_manage as mod_ini_manage
 import salt.states.ini_manage as ini_manage
+from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
 
-@pytest.fixture()
+@pytest.fixture
 def sections():
-    sections = {"general": {"hostname": "myserver.com", "port": "1234"}}
+    sections = OrderedDict()
+    sections["general"] = OrderedDict()
+    sections["general"]["hostname"] = "myserver.com"
+    sections["general"]["port"] = "1234"
     return sections
 
 

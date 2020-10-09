@@ -155,7 +155,7 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -624,12 +624,12 @@ def integration_files_dir(salt_factories):
     Creates the directory if it does not yet exist.
     """
     dirname = salt_factories.root_dir / "integration-files"
-    int_files = os.path.join(
-        salt_factories.code_dir, "tests", "pytests", "integration", "files"
-    )
-    if not os.path.exists(dirname):
-        shutil.copytree(int_files, dirname)
     dirname.mkdir(exist_ok=True)
+    for child in (PYTESTS_DIR / "integration" / "files").iterdir():
+        if child.is_dir():
+            shutil.copytree(str(child), str(dirname / child.name))
+        else:
+            shutil.copyfile(str(child), str(dirname / child.name))
     return dirname
 
 
@@ -1330,13 +1330,15 @@ def ssl_webserver(integration_files_dir, scope="module"):
     """
     spins up an https webserver.
     """
-    context = ssl.SSLContext()
-    root_dir = os.path.join(integration_files_dir, "https")
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
-        os.path.join(root_dir, "cert.pem"), os.path.join(root_dir, "key.pem")
+        str(integration_files_dir / "https" / "cert.pem"),
+        str(integration_files_dir / "https" / "key.pem"),
     )
 
-    webserver = Webserver(root=integration_files_dir, ssl_opts=context)
+    webserver = Webserver(root=str(integration_files_dir), ssl_opts=context)
     webserver.start()
     yield webserver
     webserver.stop()

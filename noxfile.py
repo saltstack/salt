@@ -185,51 +185,59 @@ def _get_pip_requirements_file(session, transport, crypto=None):
     if IS_WINDOWS:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-windows.txt".format(transport)
+                "requirements",
+                "static",
+                "ci",
+                pydir,
+                "{}-windows.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "windows.txt"
+                "requirements", "static", "ci", pydir, "windows.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", pydir, "windows-crypto.txt"
+            "requirements", "static", "ci", pydir, "windows-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-darwin.txt".format(transport)
+                "requirements", "static", "ci", pydir, "{}-darwin.txt".format(transport)
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "darwin.txt"
+                "requirements", "static", "ci", pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", pydir, "darwin-crypto.txt"
+            "requirements", "static", "ci", pydir, "darwin-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-freebsd.txt".format(transport)
+                "requirements",
+                "static",
+                "ci",
+                pydir,
+                "{}-freebsd.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "freebsd.txt"
+                "requirements", "static", "ci", pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", pydir, "freebsd-crypto.txt"
+            "requirements", "static", "ci", pydir, "freebsd-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -237,17 +245,17 @@ def _get_pip_requirements_file(session, transport, crypto=None):
         _install_system_packages(session)
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "{}-linux.txt".format(transport)
+                "requirements", "static", "ci", pydir, "{}-linux.txt".format(transport)
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", pydir, "linux.txt"
+                "requirements", "static", "ci", pydir, "linux.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", pydir, "linux-crypto.txt"
+            "requirements", "static", "ci", pydir, "linux-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -632,7 +640,7 @@ def runtests_cloud(session, coverage):
     _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
 
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "cloud.txt"
+        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
     )
 
     install_command = ["--progress-bar=off", "-r", requirements_file]
@@ -865,7 +873,7 @@ def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, "zeromq")
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "cloud.txt"
+        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
     )
 
     install_command = ["--progress-bar=off", "-r", requirements_file]
@@ -998,7 +1006,7 @@ class Tee:
 def _lint(session, rcfile, flags, paths, tee_output=True):
     _install_requirements(session, "zeromq")
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "lint.txt"
+        "requirements", "static", "ci", _get_pydir(session), "lint.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1135,9 +1143,10 @@ def lint_tests_pre_commit(session):
 
 
 @nox.session(python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("update", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs(session, compress, update):
+def docs(session, compress, update, clean):
     """
     Build Salt's Documentation
     """
@@ -1148,24 +1157,27 @@ def docs(session, compress, update):
             "docs-man-{}".format(session.python),
             compress=compress,
             update=update,
+            clean=clean,
         )
     )
 
 
 @nox.session(name="docs-html", python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs_html(session, compress):
+def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
     pydir = _get_pydir(session)
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "docs.txt"
+        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
-    session.run("make", "clean", external=True)
+    if clean:
+        session.run("make", "clean", external=True)
     session.run("make", "html", "SPHINXOPTS=-W", external=True)
     if compress:
         session.run("tar", "-cJvf", "html-archive.tar.xz", "_build/html", external=True)
@@ -1173,20 +1185,22 @@ def docs_html(session, compress):
 
 
 @nox.session(name="docs-man", python="3")
+@nox.parametrize("clean", [False, True])
 @nox.parametrize("update", [False, True])
 @nox.parametrize("compress", [False, True])
-def docs_man(session, compress, update):
+def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
     pydir = _get_pydir(session)
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "docs.txt"
+        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
-    session.run("make", "clean", external=True)
+    if clean:
+        session.run("make", "clean", external=True)
     session.run("make", "man", "SPHINXOPTS=-W", external=True)
     if update:
         session.run("rm", "-rf", "man/", external=True)
@@ -1201,7 +1215,7 @@ def _invoke(session):
     Run invoke tasks
     """
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "invoke.txt"
+        "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
@@ -1277,7 +1291,7 @@ def changelog(session, draft):
     Generate salt's changelog
     """
     requirements_file = os.path.join(
-        "requirements", "static", _get_pydir(session), "changelog.txt"
+        "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
     )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)

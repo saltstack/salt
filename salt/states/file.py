@@ -7216,6 +7216,14 @@ def copy_(
         <salt.states.file.managed>` and :mod:`states.file.recurse
         <salt.states.file.recurse>`.
 
+    Usage:
+
+    .. code-block:: yaml
+
+        # Use 'copy', not 'copy_'
+        /etc/example.conf:
+          file.copy:
+            - source: /tmp/example.conf
     """
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
