@@ -92,7 +92,7 @@ python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pythonnet==2.4.0
-pytz==2019.3
+pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pywin32==227
 pyyaml==5.3.1

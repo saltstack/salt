@@ -98,7 +98,7 @@ python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, vcert
 python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
-pytz==2019.1              # via moto, tempora
+pytz==2020.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
 pyzmq==18.0.1
