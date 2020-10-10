@@ -748,7 +748,7 @@ def check(table="filter", chain=None, rule=None, family="ipv4"):
             "{} -t {} -A {} {}".format(ipt_cmd, table, _chain_name, rule)
         )
 
-        out = __salt__["cmd.run"]("{}-save".format(ipt_cmd))
+        out = __salt__["cmd.run_stdout"]("{}-save".format(ipt_cmd))
 
         # Clean up temporary table
         __salt__["cmd.run"]("{} -t {} -F {}".format(ipt_cmd, table, _chain_name))
