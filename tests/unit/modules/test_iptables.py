@@ -357,7 +357,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             )
 
             mock = MagicMock(return_value=True)
-            with patch.dict(iptables.__salt__, {"cmd.run": mock}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock}):
                 self.assertTrue(
                     iptables.set_policy(
                         table="filter", chain="INPUT", policy="ACCEPT", family="ipv4"
@@ -377,7 +377,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 iptables.__salt__,
                 {
-                    "cmd.run": mock,
+                    "cmd.run_stdout": mock,
                     "file.write": mock,
                     "config.option": MagicMock(return_value=[]),
                 },
@@ -411,7 +411,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(iptables, "_has_option", mock_not):
             with patch.object(uuid, "getnode", MagicMock(return_value=mock_uuid)):
-                with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+                with patch.dict(iptables.__salt__, {"cmd.run_stdout": mock_cmd}):
                     self.assertTrue(
                         iptables.check(
                             table="filter",
@@ -426,7 +426,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(iptables, "_has_option", mock_not):
             with patch.object(uuid, "getnode", MagicMock(return_value=mock_uuid)):
                 with patch.dict(
-                    iptables.__salt__, {"cmd.run": MagicMock(return_value="")}
+                    iptables.__salt__, {"cmd.run_stdout": MagicMock(return_value="")}
                 ):
                     self.assertFalse(
                         iptables.check(
@@ -438,7 +438,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
         with patch.object(iptables, "_has_option", mock_has):
-            with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
                 self.assertTrue(
                     iptables.check(
                         table="filter", chain="INPUT", rule=mock_rule, family="ipv4"
@@ -450,7 +450,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(iptables, "_has_option", mock_has):
             with patch.object(uuid, "getnode", mock_uuid):
-                with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+                with patch.dict(iptables.__salt__, {"cmd.run_stdout": mock_cmd}):
                     self.assertTrue(
                         iptables.check(
                             table="filter", chain="0x4d2", rule=mock_rule, family="ipv4"
@@ -469,7 +469,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         mock_cmd = MagicMock(return_value="")
-        with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+        with patch.dict(iptables.__salt__, {"cmd.run_stdout": mock_cmd}):
             self.assertFalse(
                 iptables.check_chain(table="filter", chain="INPUT", family="ipv4")
             )
@@ -486,7 +486,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         mock_cmd = MagicMock(return_value="")
-        with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+        with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
             self.assertTrue(
                 iptables.new_chain(table="filter", chain="INPUT", family="ipv4")
             )
@@ -503,7 +503,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         mock_cmd = MagicMock(return_value="")
-        with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+        with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
             self.assertTrue(
                 iptables.delete_chain(table="filter", chain="INPUT", family="ipv4")
             )
@@ -531,7 +531,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
             _rule = "m state --state RELATED,ESTABLISHED -j ACCEPT"
             mock = MagicMock(side_effect=["", "SALT"])
-            with patch.dict(iptables.__salt__, {"cmd.run": mock}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock}):
                 self.assertTrue(
                     iptables.append(
                         table="filter", chain="INPUT", rule=_rule, family="ipv4"
@@ -582,7 +582,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
             _rule = "m state --state RELATED,ESTABLISHED -j ACCEPT"
             mock = MagicMock(return_value=True)
-            with patch.dict(iptables.__salt__, {"cmd.run": mock}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock}):
                 self.assertTrue(
                     iptables.insert(
                         table="filter",
@@ -609,7 +609,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             )
 
             mock = MagicMock(return_value=True)
-            with patch.dict(iptables.__salt__, {"cmd.run": mock}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock}):
                 self.assertTrue(
                     iptables.delete(
                         table="filter",
@@ -629,7 +629,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         """
         with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
             mock_cmd = MagicMock(return_value=True)
-            with patch.dict(iptables.__salt__, {"cmd.run": mock_cmd}):
+            with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
                 self.assertTrue(
                     iptables.flush(table="filter", chain="INPUT", family="ipv4")
                 )
