@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import uuid
 
-# Import Salt Libs
 import salt.modules.iptables as iptables
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -404,7 +398,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         mock_chain = "INPUT"
         mock_uuid = 31337
         mock_cmd = MagicMock(
-            return_value="-A {0}\n-A {1}".format(mock_chain, hex(mock_uuid))
+            return_value="-A {}\n-A {}".format(mock_chain, hex(mock_uuid))
         )
         mock_has = MagicMock(return_value=True)
         mock_not = MagicMock(return_value=False)
