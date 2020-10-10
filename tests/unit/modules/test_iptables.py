@@ -408,7 +408,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(uuid, "getnode", MagicMock(return_value=mock_uuid)):
                 with patch.dict(
                     iptables.__salt__,
-                    {"cmd.run_stdout": mock_cmd_rule, "cmd.run": mock_cmd_nooutput,},
+                    {"cmd.run_stdout": mock_cmd_rule, "cmd.run": mock_cmd_nooutput},
                 ):
                     self.assertTrue(
                         iptables.check(
