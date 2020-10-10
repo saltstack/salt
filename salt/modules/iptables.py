@@ -36,7 +36,6 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.path
 from salt.exceptions import SaltException
-from salt.ext import six
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
