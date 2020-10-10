@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os.path
 import random
 import string
-import sys
 
 import salt.config
 import salt.states.boto_vpc as boto_vpc
@@ -151,7 +147,7 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    " or equal to version {}".format(required_boto_version),
 )
 class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     """
@@ -244,7 +240,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
         self.assertTrue(resource_present_result["result"])
@@ -261,7 +257,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self._create_resource(vpc_id=vpc.id, name="test")
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
         self.assertTrue(resource_present_result["result"])
         self.assertEqual(resource_present_result["changes"], {})
@@ -270,11 +266,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     def test_present_with_failure(self):
         vpc = self._create_vpc(name="test")
         with patch(
-            "moto.ec2.models.{0}".format(self.backend_create),
+            "moto.ec2.models.{}".format(self.backend_create),
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_present_result = self.salt_states[
-                "boto_vpc.{0}_present".format(self.resource_type)
+                "boto_vpc.{}_present".format(self.resource_type)
             ](name="test", vpc_name="test", **self.extra_kwargs)
 
             self.assertFalse(resource_present_result["result"])
@@ -288,7 +284,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         """
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(resource_absent_result["changes"], {})
@@ -301,7 +297,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
 
         with patch.dict(botomod.__salt__, self.funcs):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
         self.assertTrue(resource_absent_result["result"])
         self.assertEqual(
@@ -318,11 +314,11 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self._create_resource(vpc_id=vpc.id, name="test")
 
         with patch(
-            "moto.ec2.models.{0}".format(self.backend_delete),
+            "moto.ec2.models.{}".format(self.backend_delete),
             side_effect=BotoServerError(400, "Mocked error"),
         ):
             resource_absent_result = self.salt_states[
-                "boto_vpc.{0}_absent".format(self.resource_type)
+                "boto_vpc.{}_absent".format(self.resource_type)
             ]("test")
             self.assertFalse(resource_absent_result["result"])
             self.assertTrue("Mocked error" in resource_absent_result["comment"])
@@ -333,7 +329,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
 @skipIf(
     _has_required_boto() is False,
     "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    " or equal to version {}".format(required_boto_version),
 )
 class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "subnet"
@@ -347,7 +343,7 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
 @skipIf(
     _has_required_boto() is False,
     "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    " or equal to version {}".format(required_boto_version),
 )
 class BotoVpcInternetGatewayTestCase(
     BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin
@@ -368,7 +364,7 @@ class BotoVpcInternetGatewayTestCase(
 @skipIf(
     _has_required_boto() is False,
     "The boto module must be greater than"
-    " or equal to version {0}".format(required_boto_version),
+    " or equal to version {}".format(required_boto_version),
 )
 class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
     resource_type = "route_table"
@@ -397,7 +393,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         ]
 
         assoc_subnets = [x["subnet_id"] for x in associations]
-        self.assertEqual(set(assoc_subnets), set([subnet1.id, subnet2.id]))
+        self.assertEqual(set(assoc_subnets), {subnet1.id, subnet2.id})
 
         route_table_present_result = self.salt_states["boto_vpc.route_table_present"](
             name="test", vpc_name="test", subnet_ids=[subnet2.id]
@@ -432,7 +428,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
             for x in route_table_present_result["changes"]["new"]["routes"]
         ]
 
-        self.assertEqual(set(routes), set(["local", igw.id]))
+        self.assertEqual(set(routes), {"local", igw.id})
 
         route_table_present_result = self.salt_states["boto_vpc.route_table_present"](
             name="test",
