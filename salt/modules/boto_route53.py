@@ -51,8 +51,8 @@ import time
 import salt.utils.compat
 import salt.utils.odict as odict
 import salt.utils.versions
-from salt.utils.data import exactly_one
 from salt.exceptions import SaltInvocationError
+from salt.utils.data import exactly_one
 
 log = logging.getLogger(__name__)
 

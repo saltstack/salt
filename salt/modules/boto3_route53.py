@@ -54,9 +54,9 @@ import time
 
 import salt.utils.compat
 import salt.utils.versions
-from salt.utils.data import exactly_one
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
+from salt.utils.data import exactly_one
 
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 

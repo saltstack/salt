@@ -131,8 +131,8 @@ import time
 
 import salt.utils.compat
 import salt.utils.versions
-from salt.utils.data import exactly_one
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.data import exactly_one
 
 PROVISIONING = "provisioning"
 PENDING_ACCEPTANCE = "pending-acceptance"

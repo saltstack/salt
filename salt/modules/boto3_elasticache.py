@@ -81,7 +81,7 @@ def __init__(opts):
             __name__,
             "elasticache",
             get_conn_funcname="_get_conn",
-            cache_id_funcname="_cache_id"
+            cache_id_funcname="_cache_id",
         )
 
 

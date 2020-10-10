@@ -33,7 +33,6 @@ from functools import partial
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # pylint: disable=import-error
 try:
@@ -250,7 +249,7 @@ def assign_funcs(
     service,
     module=None,
     get_conn_funcname="_get_conn",
-    cache_id_funcname="_cache_id"
+    cache_id_funcname="_cache_id",
 ):
     """
     Assign _get_conn and _cache_id functions to the named module.
@@ -262,6 +261,7 @@ def assign_funcs(
     mod = sys.modules[modname]
     setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
     setattr(mod, cache_id_funcname, cache_id_func(service))
+
 
 def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
