@@ -32,7 +32,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return version from iptables --version
         """
         mock = MagicMock(return_value="iptables v1.4.21")
-        with patch.dict(iptables.__salt__, {"cmd.run": mock}):
+        with patch.dict(iptables.__salt__, {"cmd.run_stdout": mock}):
             self.assertEqual(iptables.version(), "v1.4.21")
 
     # 'build_rule' function tests: 1

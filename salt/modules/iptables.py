@@ -74,7 +74,7 @@ def _has_option(option, family="ipv4"):
         _has_option('--check', family='ipv6')
     """
     cmd = "{} --help".format(_iptables_cmd(family))
-    if option in __salt__["cmd.run"](cmd, output_loglevel="quiet"):
+    if option in __salt__["cmd.run_stdout"](cmd, output_loglevel="quiet"):
         return True
     return False
 
@@ -187,7 +187,7 @@ def version(family="ipv4"):
         salt '*' iptables.version family=ipv6
     """
     cmd = "{} --version".format(_iptables_cmd(family))
-    out = __salt__["cmd.run"](cmd).split()
+    out = __salt__["cmd.run_stdout"](cmd).split()
     return out[1]
 
 
