@@ -591,7 +591,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_creation_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
         """
         tests False VPC not created.
@@ -673,7 +672,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(describe_vpc["vpc"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_error(self):
         """
         Tests describing parameters failure
@@ -803,7 +801,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(subnet_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_error(
         self,
     ):
@@ -937,7 +934,6 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(subnet_exists_result["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_checking_if_a_subnet_exists_but_providing_no_filters_the_subnet_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -1308,7 +1304,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_options_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_error(
         self,
     ):
@@ -1386,7 +1381,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_creation_result["created"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
         self,
     ):
@@ -1405,7 +1399,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue("error" in r)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
         self,
     ):
@@ -1460,7 +1453,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(r["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -1621,7 +1613,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(network_acl_deletion_result["exists"])
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_checking_if_network_acl_exists_but_providing_no_filters_the_network_acl_exists_method_raises_a_salt_invocation_error(
         self,
     ):
@@ -2018,7 +2009,6 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(route_table_existence_result)
 
     @mock_ec2_deprecated
-    @skipIf(True, "Disabled pending https://github.com/spulec/moto/issues/493")
     def test_that_when_checking_if_a_route_table_exists_but_providing_no_filters_the_route_table_exists_method_raises_a_salt_invocation_error(
         self,
     ):
