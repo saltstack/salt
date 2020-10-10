@@ -1381,42 +1381,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_creation_result["created"])
 
     @mock_ec2_deprecated
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
-        self,
-    ):
-        """
-        Tests creation failure during creation/association of dchp options to an existing vpc
-        """
-        vpc = self._create_vpc()
-
-        with patch(
-            "moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options",
-            side_effect=BotoServerError(400, "Mocked error"),
-        ):
-            r = boto_vpc.associate_new_dhcp_options_to_vpc(
-                vpc.id, **dhcp_options_parameters
-            )
-            self.assertTrue("error" in r)
-
-    @mock_ec2_deprecated
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
-        self,
-    ):
-        """
-        Tests association failure during creation/association of dchp options to existing vpc
-        """
-        vpc = self._create_vpc()
-
-        with patch(
-            "moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options",
-            side_effect=BotoServerError(400, "Mocked error"),
-        ):
-            r = boto_vpc.associate_new_dhcp_options_to_vpc(
-                vpc.id, **dhcp_options_parameters
-            )
-            self.assertTrue("error" in r)
-
-    @mock_ec2_deprecated
     def test_that_when_creating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
         self,
     ):
@@ -1771,73 +1735,6 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
         self.assertFalse(network_acl_association_result)
-
-    @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
-    def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
-        self,
-    ):
-        """
-        Tests creating/associating a network acl to a subnet to a new network
-        """
-        vpc = self._create_vpc()
-        subnet = self._create_subnet(vpc.id)
-
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, **conn_parameters
-        )
-
-        self.assertTrue(network_acl_creation_and_association_result)
-
-    @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
-    def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_a_name_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
-        self,
-    ):
-        """
-        Tests creation/association of a network acl to subnet via name successfully
-        """
-        vpc = self._create_vpc()
-        subnet = self._create_subnet(vpc.id)
-
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, network_acl_name="test", **conn_parameters
-        )
-
-        self.assertTrue(network_acl_creation_and_association_result)
-
-    @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
-    def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_tags_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
-        self,
-    ):
-        """
-        Tests creating/association of a network acl to a subnet via tag successfully
-        """
-        vpc = self._create_vpc()
-        subnet = self._create_subnet(vpc.id)
-
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
-        )
-
-        self.assertTrue(network_acl_creation_and_association_result)
-
-    @mock_ec2_deprecated
-    @skipIf(True, "Moto has not implemented this feature. Skipping for now.")
-    def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_subnet_the_associate_new_network_acl_to_subnet_method_returns_false(
-        self,
-    ):
-        """
-        Tests creation/association of a network acl to a non-existent vpc
-        """
-        vpc = self._create_vpc()
-
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, "fake", **conn_parameters
-        )
-
-        self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
