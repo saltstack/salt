@@ -12,11 +12,11 @@ Nornir Proxy module
 Dependencies
 ------------
 
-Nornir `2.5.0 <https://github.com/nornir-automation/nornir/releases/tag/v2.5.0>`_ 
+Nornir `2.5.0 <https://github.com/nornir-automation/nornir/releases/tag/v2.5.0>`_
 
 This proxy module uses `Nornir <https://nornir.readthedocs.io/en/latest/index.html>`_
 library to interact with devices over SSH, Telnet or NETCONF. Nornir module need
-to be installed on proxy-minion machine - ``pip install nornir==2.5.0``, Nornir 
+to be installed on proxy-minion machine - ``pip install nornir==2.5.0``, Nornir
 3.0.0 not supported yet.
 
 Introduction
@@ -54,17 +54,17 @@ Proxy parameters:
 - ``process_count_max`` maximum number of processes to use to limit
   a number of simultaneous tasks and maximum number of active connections
   to devices
-- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory 
-  for tasks executed by this proxy-minion. Nornir has access to multiple devices, 
-  by default, if no filter provided, task will run for all devices. ``nornir_filter_required`` 
-  allows to change behavior to opposite, if no filter provided, no devices matched, 
+- ``nornir_filter_required`` boolean, to indicate if Nornir filter is mandatory
+  for tasks executed by this proxy-minion. Nornir has access to multiple devices,
+  by default, if no filter provided, task will run for all devices. ``nornir_filter_required``
+  allows to change behavior to opposite, if no filter provided, no devices matched,
   task will not run. It is a safety measure against running task accidentally for
   many devices. ``FB="*"`` filter can be used to run task on all devices.
 
 Nornir uses `inventory <https://nornir.readthedocs.io/en/latest/tutorials/intro/inventory.html>`_
 to store information about devices to interact with. Inventory can contain
-information about ``hosts``, ``groups`` and ``defaults``. Conveniently, Nornir 
-inventory is nothing more than a nested, Python dictionary, as a result it is 
+information about ``hosts``, ``groups`` and ``defaults``. Conveniently, Nornir
+inventory is nothing more than a nested, Python dictionary, as a result it is
 easy to define it in proxy-minion pillar.
 
 Nornir proxy-minion pillar example:
@@ -348,8 +348,8 @@ def _filter_FL(ret, names_list):
         else names_list
     )
     return ret.filter(filter_func=lambda h: h.name in names_list)
-    
-    
+
+
 def _filters_dispatcher(kwargs):
     """
     Inventory filters dispatcher function
@@ -419,7 +419,7 @@ def run(task, *args, **kwargs):
     hosts = _filters_dispatcher(kwargs=kwargs)
     # check if nornir_filter_required is True but no filter
     if (
-        nornir_data["nornir_filter_required"] == True and 
+        nornir_data["nornir_filter_required"] == True and
         nornir_data.get("has_filter") == False
     ):
         log.warning("nornir_filter_required is True but no filter provided")

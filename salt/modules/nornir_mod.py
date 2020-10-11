@@ -31,11 +31,47 @@ Things to keep in mind:
 
 Commands timeout
 ----------------
+
 It is recommended to increase
 `salt command timeout <https://docs.saltstack.com/en/latest/ref/configuration/master.html#timeout>`_
 or use ``--timeout=60`` option to wait for minion return, as on each call Nornir
 has to initiate connections to devices and all together it might take more than
 5 seconds for task to complete.
+
+AAA considerations
+------------------
+
+Quiet often, AAA servers (Radius, Tacacs) might get overloaded with authentication
+and authorization requests coming from devices due to Nornir tries to establish
+connections with them, that effectively results in jobs failures. This problem
+equally true for jobs executed from CLI as well as for scheduled jobs. There are
+several things can be done to mitigate such a problem:
+
+- ``splay`` parameter can be supplied to ``nr.cli`` and ``nr.cfg`` commands to
+ distributed threads start time in attempt to decrease load on AAA servers, default
+ threads splay value is 500ms, meaning threads will randomly start in between 0
+ and 500ms interval
+- ``num_workers`` proxy settings parameter can be changed from default 100 to
+ lower values, that way overall execution time would increase, at the same time
+ decreasing the amount of simultaneous requests to AAA servers
+- Various Netmiko module connection timeouts can be tuned, for instance
+ ``conn_timeout`` or ``auth_timeout`` parameters
+- For scheduled tasks, consider using scheduler ``splay`` parameter to randomize
+ tasks start time
+- Using devices local authentication and authorization as apposed to AAA servers
+ is against best practices, but might be the option one can attempt
+
+Devices connections limits
+--------------------------
+
+As Nornir proxy has to initiate new connection to devices for each task, running
+too many tasks might hit certain devices' limits, such as:
+
+- maximum allowed number of simultaneous VTY connections
+- maximum allowed number of simultaneous connections per user
+
+As a result, it make sense to increase above numbers and/or engineer tasks execution
+to work within these limits.
 
 Filtering Hosts
 ---------------
@@ -101,7 +137,7 @@ Match only hosts with names in provided list::
     salt nornir-proxy-1  nr.inventory FL="IOL1, IOL2"
     salt nornir-proxy-1  nr.inventory FL='["IOL1", "IOL2"]'
 
-jumphosts or bastions
+Jumphosts or Bastions
 ---------------------
 
 ``nr.cli`` function and ``nr.cfg`` with ``plugin="netmiko"`` can interact with devices
@@ -125,6 +161,11 @@ Sample jumphost definition in host's inventory data in proxy-minion pillar::
 
 # Import python libs
 import logging
+import random
+import time
+import sys
+import traceback
+
 
 # import salt libs
 from salt.exceptions import CommandExecutionError
@@ -143,7 +184,6 @@ __virtualname__ = "nr"
 __proxyenabled__ = ["nornir"]
 log = logging.getLogger(__name__)
 jumphosts_connections = {}
-
 
 def __virtual__():
     if HAS_NORNIR:
@@ -193,14 +233,25 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
     """
     Establish connection to devices behind jumphost/bastion
     """
-    try:
-        import paramiko
+    import paramiko
+    global jumphosts_connections
 
-        global jumphosts_connections
-        jumphost = {"timeout": 3, "look_for_keys": False, "allow_agent": False}
-        jumphost.update(task.host["jumphost"])
-        # initiate connection to jumphost
-        if not jumphosts_connections.get(jumphost["hostname"]):
+    jumphost = {"timeout": 3, "look_for_keys": False, "allow_agent": False}
+    jumphost.update(task.host["jumphost"])
+    # Initiate connection to jumphost if not initiated already.
+    #
+    # jumphosts_connections dictionary shared between threads,
+    # first thread to start will detect that no connection to
+    # jumphost exists and will try to establish it, while doing
+    # so, jumphost key will be added to jumphosts_connections
+    # dictionary with '__connecting__' value, next to start threads
+    # will see '__connecting__' as value for jumphost and will
+    # continue sleeping until either connection succeded or
+    # failed. On connection failure, first thread will set value
+    # to '__failed__' to signal other threads to exit.
+    if not jumphost["hostname"] in jumphosts_connections:
+        try:
+            jumphosts_connections[jumphost["hostname"]] = "__connecting__"
             jumphost_ssh_client = paramiko.client.SSHClient()
             jumphost_ssh_client.set_missing_host_key_policy(
                 paramiko.AutoAddPolicy()
@@ -210,8 +261,31 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
                 "jumphost_ssh_client": jumphost_ssh_client,
                 "jumphost_ssh_transport": jumphost_ssh_client.get_transport(),
             }
-        dest_addr = (task.host.hostname, task.host.port or 22)
-        # open new ssh channel to jumphost for this device
+        except Exception as e:
+            jumphosts_connections[jumphost["hostname"]] = "__failed__"
+            # add exception info to host data to include in results
+            error_msg = "Jumphost {} connection failed, error - {}".format(
+                task.host["jumphost"]["hostname"], e
+            )
+            task.host["exception"] = error_msg
+            log.error(error_msg)
+            return
+    else:
+        # sleep random time waiting for connection to jumphost to establish
+        while jumphosts_connections[jumphost["hostname"]] == "__connecting__":
+            time.sleep(random.randrange(0, 1000) / 1000)
+        if jumphosts_connections[jumphost["hostname"]] == "__failed__":
+            # add exception info to host data to include in results
+            error_msg = "Jumphost {} connection failed in another thread".format(
+                task.host["jumphost"]["hostname"]
+            )
+            task.host["exception"] = error_msg
+            log.error(error_msg)
+            return
+    # connect to device
+    dest_addr = (task.host.hostname, task.host.port or 22)
+    try:
+        # open new port-forwarding channel via jumphost
         channel = jumphosts_connections[jumphost["hostname"]][
             "jumphost_ssh_transport"
         ].open_channel(
@@ -220,17 +294,45 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
             src_addr=("localhost", 7777),
             timeout=3,
         )
-        # open connection to device behind jumphost
+        # open Netmiko connection to device behind jumphost
         task.host.open_connection(
             connection_plugin,
             configuration=task.nornir.config,
             extras={"sock": channel},
         )
-    except Exception as e:
-        # add exception info to host data to include in results
-        task.host["exception"] = "Jumphost {}, error - {}".format(
-            task.host["jumphost"]["hostname"], e
-        )
+    except Exception as e1:
+        # try one more time after sleeping between 5 and 10 seconds, as it
+        # might be the case that too many authentication attempts overload
+        # AAA server and it rejects them
+        try:
+            channel.close()
+            nap_time = random.randrange(5000, 10000) / 1000
+            time.sleep(nap_time)
+            # open new port-forwarding channel via jumphost
+            channel = jumphosts_connections[jumphost["hostname"]][
+                "jumphost_ssh_transport"
+            ].open_channel(
+                kind="direct-tcpip",
+                dest_addr=dest_addr,
+                src_addr=("localhost", 7777),
+                timeout=10,
+            )
+            # open Netmiko connection to device behind jumphost, attempt - 2
+            task.host.open_connection(
+                connection_plugin,
+                configuration=task.nornir.config,
+                extras={"sock": channel, "conn_timeout": 10, "auth_timeout": 10}
+            )
+        except:
+            # Give up, add exception info to host data to include in results
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            error_msg = "Jumphost {}, host {} connection failed, errors: attempt-1 - '{}', slept - {}s, attempt-2:\n{}".format(
+                task.host["jumphost"]["hostname"], dest_addr, e1, nap_time, traceback_msg
+            )
+            task.host["exception"] = error_msg
+            log.error(error_msg)
+
 
 
 # -----------------------------------------------------------------------------
@@ -239,25 +341,29 @@ def _connect_to_device_behind_jumphost(task, connection_plugin):
 
 
 def _task_group_netmiko_send_commands(task, commands, **kwargs):
+    # splay task execution
+    splay = int(kwargs.pop("splay", 500))
+    time.sleep(random.randrange(0, splay) / 1000)
     # connect to devices behind jumphost
     if task.host.get("jumphost"):
         _connect_to_device_behind_jumphost(task, connection_plugin="netmiko")
     # run commands
-    [
+    for command in commands:
         task.run(
             task=netmiko_send_command,
             command_string=command,
             name=command,
             **kwargs.get("netmiko_kwargs", {})
         )
-        for command in commands
-    ]
     task.host.close_connections()
 
 
 def _napalm_configure(task, config, **kwargs):
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
+    # splay task execution
+    splay = int(kwargs.pop("splay", 500))
+    time.sleep(random.randrange(0, splay) / 1000)
     # push config to devices
     task.run(task=napalm_configure, configuration=rendered_config, **kwargs)
     task.host.close_connections()
@@ -266,6 +372,9 @@ def _napalm_configure(task, config, **kwargs):
 def _netmiko_send_config(task, config, **kwargs):
     # render configuration
     rendered_config = _render_config_template(task, config, kwargs)
+    # splay task execution
+    splay = int(kwargs.pop("splay", 500))
+    time.sleep(random.randrange(0, splay) / 1000)
     # connect to devices behind jumphost
     if task.host.get("jumphost"):
         _connect_to_device_behind_jumphost(task, connection_plugin="netmiko")
@@ -340,11 +449,13 @@ def cli(*commands, **kwargs):
     :param commands: list of commands
     :param Fx: filters to filter hosts
     :param netmiko_kwargs: kwargs to pass on to netmiko send_command methos
+    :param splay: int, random time in milliseconds between 0 and "splay" to sleep
+                  before running task, default is 500ms
 
     Sample Usage::
 
-         salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]"
-         salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}'
+         salt nornir-proxy-1 nr.cli "show clock" "show run" FB="IOL[12]" netmiko_kwargs='{"use_timing": True, "delay_factor": 4}'
+         salt nornir-proxy-1 nr.cli commands='["show clock", "show run"]' FB="IOL[12]" netmiko_kwargs='{"strip_prompt": False}' splay=600
     """
     commands = commands if commands else kwargs.pop("commands")
     commands = [commands] if isinstance(commands, str) else commands
@@ -363,10 +474,12 @@ def task(plugin, *args, **kwargs):
 
     :param plugin: *plugin_name.task_name* to import from *nornir.plugins.tasks*
     :param Fx: filters to filter hosts
+    :param splay: int, random time in milliseconds between 0 and "splay" to sleep
+                  before running task, default is 500ms
 
     Sample usage::
 
-        salt nornir-proxy-1 nr.task "networking.napalm_cli" commands='["show ip arp"]' FB="IOL1"
+        salt nornir-proxy-1 nr.task "networking.napalm_cli" commands='["show ip arp"]' FB="IOL1" splay=500
         salt nornir-proxy-1 nr.task "networking.netmiko_send_config" config_commands='["ip scp server enable"]'
     """
     # import task function, below two lines are the same as
@@ -394,6 +507,8 @@ def cfg(*commands, **kwargs):
     :param plugin: name of configuration task plugin to use - NAPALM (default) or Netmiko
     :param dry_run: boolean, default False, controls whether to apply changes to device or simulate them
     :param Fx: filters to filter hosts
+    :param splay: int, random time in milliseconds between 0 and "splay" to sleep
+                  before running task, default is 500ms
 
     .. warning:: dry_run not supported by Netmiko plugin
 
@@ -406,7 +521,7 @@ def cfg(*commands, **kwargs):
         salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" FB="R[12]" dry_run=True
         salt nornir-proxy-1 nr.cfg commands='["logging host 1.1.1.1", "ntp server 1.1.1.2"]' FB="R[12]"
         salt nornir-proxy-1 nr.cfg "logging host 1.1.1.1" "ntp server 1.1.1.2" plugin="netmiko"
-        salt nornir-proxy-1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]"
+        salt nornir-proxy-1 nr.cfg filename=salt://template/template_cfg.j2 FB="R[12]" splay=500
     """
     # get arguments
     filename = kwargs.pop("filename", None)
