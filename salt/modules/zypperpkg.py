@@ -535,7 +535,7 @@ def list_upgrades(refresh=True, root=None, **kwargs):
             repos = [repos]
         for repo in repos:
             cmd.extend(
-                ["--repo", repo if isinstance(repo, str) else str(repo), ]
+                ["--repo", repo if isinstance(repo, str) else str(repo),]
             )
         log.debug("Targeting repos: %s", repos)
     for update_node in (
