@@ -2,14 +2,9 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python libs
-
-# Import Salt Libs
 import salt.modules.mac_brew_pkg as mac_brew
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
