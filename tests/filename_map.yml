@@ -1,5 +1,5 @@
 '*':
-  - integration.modules.test_sysmod
+  - pytests.integration.modules.test_sysmod
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
@@ -89,7 +89,7 @@ salt/modules/ssh.py:
   - unit.states.test_ssh_known_hosts
 
 salt/auth/*:
-  - integration.shell.test_auth
+  - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
   - unit.cache.test_cache
@@ -98,19 +98,19 @@ salt/cli/*:
   - integration.shell.test_arguments
 
 salt/cli/call.py:
-  - integration.shell.test_call
+  - pytests.integration.cli.test_salt_call
 
 salt/cli/cp.py:
-  - integration.shell.test_cp
+  - pytests.integration.cli.test_salt_cp
 
 salt/cli/key.py:
-  - integration.shell.test_key
+  - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
   - integration.cli.test_grains
   - integration.shell.test_enabled
   - integration.shell.test_matcher
-  - integration.shell.test_saltcli
+  - pytests.integration.cli.test_salt
 
 salt/client/*:
   - integration.client.test_kwarg
@@ -127,8 +127,8 @@ salt/grains/*:
   - integration.grains.test_custom
 
 salt/proxy/*:
-  - integration.proxy.test_shell
-  - integration.proxy.test_simple
+  - pytests.integration.proxy.test_shell
+  - pytests.integration.proxy.test_simple
 
 salt/state.py:
   - integration.modules.test_state_jinja_filters
@@ -152,10 +152,10 @@ salt/utils/reactor.py:
   - integration.reactor.test_reactor
 
 salt/cli/daemons.py:
-  - integration.shell.test_master
-  - integration.shell.test_minion
-  - integration.shell.test_proxy
-  - integration.shell.test_syndic
+  - pytests.integration.cli.test_salt_master
+  - pytests.integration.cli.test_salt_minion
+  - pytests.integration.cli.test_salt_proxy
+  - pytests.integration.cli.test_salt_syndic
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
@@ -204,7 +204,7 @@ salt/pillar/__init__.py:
   - integration.pillar.test_pillar_include
 
 salt/(cli/run\.py|runner\.py):
-  - integration.shell.test_runner
+  - pytests.integration.cli.test_salt_run
   - integration.runners.test_runner_returns
 
 salt/runners/venafiapi.py:

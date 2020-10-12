@@ -8,13 +8,11 @@ Homebrew for macOS
     <module-provider-override>`.
 """
 
-# Import python libs
 import copy
 import functools
 import logging
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.json
@@ -583,48 +581,6 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     """
     return _info(*names)
-
-
-def _fix_cask_namespace(name=None, pkgs=None):
-    """
-    Check if provided packages contains the old version of brew-cask namespace
-    and replace it by the new one.
-
-    This function also warns about the correct namespace for this packages
-    and it will stop working with the release of 3001.
-
-    :param name: The name of the package to check
-    :param pkgs: A list of packages to check
-
-    :return: name and pkgs with the mocked namespace
-    """
-
-    show_warning = False
-
-    if name and name.startswith("caskroom/cask/"):
-        show_warning = True
-        name = name.replace("caskroom/cask/", "homebrew/cask/")
-
-    if pkgs:
-        pkgs_ = []
-        for pkg in pkgs:
-            if isinstance(pkg, str) and pkg.startswith("caskroom/cask/"):
-                show_warning = True
-                pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
-                pkgs_.append(pkg)
-            else:
-                pkgs_.append(pkg)
-                continue
-        pkgs = pkgs_
-
-    if show_warning:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "The 'caskroom/cask/' namespace for brew-cask packages "
-            "is deprecated. Use 'homebrew/cask/' instead.",
-        )
-
-    return name, pkgs
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613

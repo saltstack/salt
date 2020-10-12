@@ -41,7 +41,17 @@ yaml_utf8: True
 
 external_auth:
   pam:
-    saltdev:
+    saltdev-auth:
+      - test.*
+    saltdev-netapi:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-key:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-runner:
       - '@wheel'
       - '@runner'
       - test.*
@@ -132,5 +142,9 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
 venafi:
   fake: "true"

@@ -15,7 +15,11 @@ import os
 import pathlib
 import pprint
 import re
+import shutil
+import ssl
+import stat
 import sys
+import textwrap
 from functools import partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
@@ -33,11 +37,15 @@ import salt.utils.platform
 import salt.utils.win_functions
 import saltfactories.utils.compat
 from salt.serializers import yaml
-from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT, PRE_PYTEST_SKIP_REASON
-from tests.support.pytest.fixtures import *  # pylint: disable=unused-wildcard-import
+from salt.utils.immutabletypes import freeze
+from tests.support.helpers import (
+    PRE_PYTEST_SKIP_OR_NOT,
+    PRE_PYTEST_SKIP_REASON,
+    Webserver,
+    get_virtualenv_binary_path,
+)
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.saltfactories_compat import LogServer
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
 TESTS_DIR = pathlib.Path(__file__).resolve().parent
@@ -147,7 +155,7 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -232,38 +240,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
     )
+    config.addinivalue_line(
+        "markers", "requires_sshd_server: Mark test that require an SSH server running"
+    )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
 
     # "Flag" the slotTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
-
-    # If PyTest has no logging configured, default to ERROR level
-    levels = [logging.ERROR]
-    logging_plugin = config.pluginmanager.get_plugin("logging-plugin")
-    try:
-        level = logging_plugin.log_cli_handler.level
-        if level is not None:
-            levels.append(level)
-    except AttributeError:
-        # PyTest CLI logging not configured
-        pass
-    try:
-        level = logging_plugin.log_file_level
-        if level is not None:
-            levels.append(level)
-    except AttributeError:
-        # PyTest Log File logging not configured
-        pass
-
-    if logging.NOTSET in levels:
-        # We don't want the NOTSET level on the levels
-        levels.pop(levels.index(logging.NOTSET))
-
-    log_level = logging.getLevelName(min(levels))
-
-    log_server = LogServer(log_level=log_level)
-    config.pluginmanager.register(log_server, "salt-saltfactories-log-server")
 
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
@@ -464,29 +448,6 @@ def pytest_runtest_protocol(item, nextitem):
     del used_fixture_defs
 
 
-@pytest.hookimpl(tryfirst=True)
-def pytest_sessionstart(session):
-    log_server = session.config.pluginmanager.get_plugin(
-        "salt-saltfactories-log-server"
-    )
-    log_server.start()
-
-
-@pytest.hookimpl(trylast=True)
-def pytest_sessionfinish(session):
-    log_server = session.config.pluginmanager.get_plugin(
-        "salt-saltfactories-log-server"
-    )
-    log_server.stop()
-
-
-@pytest.fixture(scope="session")
-def log_server():
-    """
-    Just overriding the fixture
-    """
-
-
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
@@ -508,6 +469,13 @@ def pytest_runtest_setup(item):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
+
+    requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
+    if requires_sshd_server_marker is not None:
+        if not item.config.getoption("--ssh-tests"):
+            item._skipped_by_mark = True
+            pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
+        item.fixturenames.append("sshd_server")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:
@@ -628,30 +596,570 @@ def groups_collection_modifyitems(config, items):
 
 # <---- Test Groups Selection ----------------------------------------------------------------------------------------
 
+
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
-def salt_factories_config(request):
+def salt_factories_config():
     """
-    Return a dictionary with the keyworkd arguments for SaltFactoriesManager
+    Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    log_server = request.config.pluginmanager.get_plugin(
-        "salt-saltfactories-log-server"
-    )
     return {
-        "executable": sys.executable,
         "code_dir": str(CODE_DIR),
         "inject_coverage": MAYBE_RUN_COVERAGE,
         "inject_sitecustomize": MAYBE_RUN_COVERAGE,
         "start_timeout": 120
         if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
         else 60,
-        "log_server_host": log_server.log_host,
-        "log_server_port": log_server.log_port,
-        "log_server_level": log_server.log_level,
     }
 
 
-# <---- Pytest Helpers -----------------------------------------------------------------------------------------------
+# <---- Fixtures Overrides -------------------------------------------------------------------------------------------
+
+
+# ----- Salt Factories ---------------------------------------------------------------------------------------------->
+@pytest.fixture(scope="session")
+def integration_files_dir(salt_factories):
+    """
+    Fixture which returns the salt integration files directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = salt_factories.root_dir / "integration-files"
+    dirname.mkdir(exist_ok=True)
+    for child in (PYTESTS_DIR / "integration" / "files").iterdir():
+        if child.is_dir():
+            shutil.copytree(str(child), str(dirname / child.name))
+        else:
+            shutil.copyfile(str(child), str(dirname / child.name))
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def state_tree_root_dir(integration_files_dir):
+    """
+    Fixture which returns the salt state tree root directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = integration_files_dir / "state-tree"
+    dirname.mkdir(exist_ok=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def pillar_tree_root_dir(integration_files_dir):
+    """
+    Fixture which returns the salt pillar tree root directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = integration_files_dir / "pillar-tree"
+    dirname.mkdir(exist_ok=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def base_env_state_tree_root_dir(state_tree_root_dir):
+    """
+    Fixture which returns the salt base environment state tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = state_tree_root_dir / "base"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_STATE_TREE = str(dirname.resolve())
+    RUNTIME_VARS.TMP_BASEENV_STATE_TREE = RUNTIME_VARS.TMP_STATE_TREE
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def prod_env_state_tree_root_dir(state_tree_root_dir):
+    """
+    Fixture which returns the salt prod environment state tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = state_tree_root_dir / "prod"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = str(dirname.resolve())
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt base environment pillar tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir / "base"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PILLAR_TREE = str(dirname.resolve())
+    RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE = RUNTIME_VARS.TMP_PILLAR_TREE
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt prod environment pillar tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir / "prod"
+    dirname.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = str(dirname.resolve())
+    return dirname
+
+
+@pytest.fixture(scope="session")
+def salt_syndic_master_factory(
+    request,
+    salt_factories,
+    base_env_state_tree_root_dir,
+    base_env_pillar_tree_root_dir,
+    prod_env_state_tree_root_dir,
+    prod_env_pillar_tree_root_dir,
+):
+    root_dir = salt_factories.get_root_dir_for_daemon("syndic_master")
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
+
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "syndic_master")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+        tests_known_hosts_file = str(root_dir / "salt_ssh_known_hosts")
+        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
+            known_hosts.write("")
+
+    config_defaults["root_dir"] = str(root_dir)
+    config_defaults["known_hosts_file"] = tests_known_hosts_file
+    config_defaults["syndic_master"] = "localhost"
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {}
+    ext_pillar = []
+    if salt.utils.platform.is_windows():
+        ext_pillar.append(
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+    else:
+        ext_pillar.append(
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = str(root_dir / "extension_modules")
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = str(root_dir / "autosign_file")
+    shutil.copyfile(
+        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = (
+        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    )
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    config_overrides.update(
+        {
+            "ext_pillar": ext_pillar,
+            "extension_modules": extension_modules_path,
+            "file_roots": {
+                "base": [
+                    str(base_env_state_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+                ],
+                # Alternate root to test __env__ choices
+                "prod": [
+                    str(prod_env_state_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+                ],
+            },
+            "pillar_roots": {
+                "base": [
+                    str(base_env_pillar_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+                ],
+                "prod": [str(prod_env_pillar_tree_root_dir)],
+            },
+        }
+    )
+
+    factory = salt_factories.get_salt_master_daemon(
+        "syndic_master",
+        order_masters=True,
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
+    config_defaults = {"master": None, "minion": None, "syndic": None}
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic")) as rfh:
+        opts = yaml.deserialize(rfh.read())
+
+        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+        opts["transport"] = salt_syndic_master_factory.config["transport"]
+        config_defaults["syndic"] = opts
+    factory = salt_syndic_master_factory.get_salt_syndic_daemon(
+        "syndic",
+        config_defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_master_factory(
+    salt_factories,
+    salt_syndic_master_factory,
+    base_env_state_tree_root_dir,
+    base_env_pillar_tree_root_dir,
+    prod_env_state_tree_root_dir,
+    prod_env_pillar_tree_root_dir,
+):
+    root_dir = salt_factories.get_root_dir_for_daemon("master")
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(exist_ok=True)
+
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "master")) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+        tests_known_hosts_file = str(root_dir / "salt_ssh_known_hosts")
+        with salt.utils.files.fopen(tests_known_hosts_file, "w") as known_hosts:
+            known_hosts.write("")
+
+    config_defaults["root_dir"] = str(root_dir)
+    config_defaults["known_hosts_file"] = tests_known_hosts_file
+    config_defaults["syndic_master"] = "localhost"
+    config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
+    config_defaults["reactor"] = [
+        {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
+    ]
+
+    config_overrides = {}
+    ext_pillar = []
+    if salt.utils.platform.is_windows():
+        ext_pillar.append(
+            {"cmd_yaml": "type {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+    else:
+        ext_pillar.append(
+            {"cmd_yaml": "cat {}".format(os.path.join(RUNTIME_VARS.FILES, "ext.yaml"))}
+        )
+    ext_pillar.append(
+        {
+            "file_tree": {
+                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
+                "follow_dir_links": False,
+                "keep_newline": True,
+            }
+        }
+    )
+    config_overrides["pillar_opts"] = True
+
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = str(root_dir / "extension_modules")
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(RUNTIME_VARS.FILES, "extension_modules"),
+            extension_modules_path,
+        )
+
+    # Copy the autosign_file to the new  master root_dir
+    autosign_file_path = str(root_dir / "autosign_file")
+    shutil.copyfile(
+        os.path.join(RUNTIME_VARS.FILES, "autosign_file"), autosign_file_path
+    )
+    # all read, only owner write
+    autosign_file_permissions = (
+        stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
+    )
+    os.chmod(autosign_file_path, autosign_file_permissions)
+
+    config_overrides.update(
+        {
+            "ext_pillar": ext_pillar,
+            "extension_modules": extension_modules_path,
+            "file_roots": {
+                "base": [
+                    str(base_env_state_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+                ],
+                # Alternate root to test __env__ choices
+                "prod": [
+                    str(prod_env_state_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+                ],
+            },
+            "pillar_roots": {
+                "base": [
+                    str(base_env_pillar_tree_root_dir),
+                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+                ],
+                "prod": [str(prod_env_pillar_tree_root_dir)],
+            },
+        }
+    )
+
+    # Let's copy over the test cloud config files and directories into the running master config directory
+    for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
+        if not entry.startswith("cloud"):
+            continue
+        source = os.path.join(RUNTIME_VARS.CONF_DIR, entry)
+        dest = str(conf_dir / entry)
+        if os.path.isdir(source):
+            shutil.copytree(source, dest)
+        else:
+            shutil.copyfile(source, dest)
+
+    factory = salt_syndic_master_factory.get_salt_master_daemon(
+        "master",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_minion_factory(salt_master_factory):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = salt_master_factory.config["transport"]
+
+    config_overrides = {
+        "file_roots": salt_master_factory.config["file_roots"].copy(),
+        "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+    }
+
+    virtualenv_binary = get_virtualenv_binary_path()
+    if virtualenv_binary:
+        config_overrides["venv_bin"] = virtualenv_binary
+    factory = salt_master_factory.get_salt_minion_daemon(
+        "minion",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_sub_minion_factory(salt_master_factory):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = salt_master_factory.config["transport"]
+
+    config_overrides = {
+        "file_roots": salt_master_factory.config["file_roots"].copy(),
+        "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+    }
+
+    virtualenv_binary = get_virtualenv_binary_path()
+    if virtualenv_binary:
+        config_overrides["venv_bin"] = virtualenv_binary
+    factory = salt_master_factory.get_salt_minion_daemon(
+        "sub_minion",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_proxy_factory(salt_factories, salt_master_factory):
+    proxy_minion_id = "proxytest"
+    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(parents=True, exist_ok=True)
+    RUNTIME_VARS.TMP_PROXY_CONF_DIR = str(conf_dir)
+
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+    config_defaults["root_dir"] = str(root_dir)
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = salt_master_factory.config["transport"]
+
+    factory = salt_master_factory.get_salt_proxy_minion_daemon(
+        proxy_minion_id,
+        config_defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    factory.register_after_terminate_callback(
+        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_cli(salt_master_factory):
+    return salt_master_factory.get_salt_cli()
+
+
+@pytest.fixture(scope="session")
+def salt_cp_cli(salt_master_factory):
+    return salt_master_factory.get_salt_cp_cli()
+
+
+@pytest.fixture(scope="session")
+def salt_key_cli(salt_master_factory):
+    return salt_master_factory.get_salt_key_cli()
+
+
+@pytest.fixture(scope="session")
+def salt_run_cli(salt_master_factory):
+    return salt_master_factory.get_salt_run_cli()
+
+
+@pytest.fixture(scope="session")
+def salt_ssh_cli(salt_master_factory):
+    return salt_master_factory.get_salt_ssh_cli()
+
+
+@pytest.fixture(scope="session")
+def salt_call_cli(salt_minion_factory):
+    return salt_minion_factory.get_salt_call_cli()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def bridge_pytest_and_runtests(
+    reap_stray_processes,
+    salt_factories,
+    salt_syndic_master_factory,
+    salt_syndic_factory,
+    salt_master_factory,
+    salt_minion_factory,
+    salt_sub_minion_factory,
+    sshd_config_dir,
+):
+    # Make sure unittest2 uses the pytest generated configuration
+    RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_factory.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_factory.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["sub_minion"] = freeze(salt_sub_minion_factory.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["syndic_master"] = freeze(
+        salt_syndic_master_factory.config
+    )
+    RUNTIME_VARS.RUNTIME_CONFIGS["syndic"] = freeze(salt_syndic_factory.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["client_config"] = freeze(
+        salt.config.client_config(salt_master_factory.config["conf_file"])
+    )
+
+    # Make sure unittest2 classes know their paths
+    RUNTIME_VARS.TMP_ROOT_DIR = str(salt_factories.root_dir.resolve())
+    RUNTIME_VARS.TMP_CONF_DIR = os.path.dirname(salt_master_factory.config["conf_file"])
+    RUNTIME_VARS.TMP_MINION_CONF_DIR = os.path.dirname(
+        salt_minion_factory.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = os.path.dirname(
+        salt_sub_minion_factory.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = os.path.dirname(
+        salt_syndic_master_factory.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR = os.path.dirname(
+        salt_syndic_factory.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+
+
+@pytest.fixture(scope="session")
+def sshd_config_dir(salt_factories):
+    config_dir = salt_factories.get_root_dir_for_daemon("sshd")
+    yield config_dir
+    shutil.rmtree(str(config_dir), ignore_errors=True)
+
+
+@pytest.fixture(scope="module")
+def sshd_server(salt_factories, sshd_config_dir, salt_master):
+    sshd_config_dict = {
+        "Protocol": "2",
+        # Turn strict modes off so that we can operate in /tmp
+        "StrictModes": "no",
+        # Logging
+        "SyslogFacility": "AUTH",
+        "LogLevel": "INFO",
+        # Authentication:
+        "LoginGraceTime": "120",
+        "PermitRootLogin": "without-password",
+        "PubkeyAuthentication": "yes",
+        # Don't read the user's ~/.rhosts and ~/.shosts files
+        "IgnoreRhosts": "yes",
+        "HostbasedAuthentication": "no",
+        # To enable empty passwords, change to yes (NOT RECOMMENDED)
+        "PermitEmptyPasswords": "no",
+        # Change to yes to enable challenge-response passwords (beware issues with
+        # some PAM modules and threads)
+        "ChallengeResponseAuthentication": "no",
+        # Change to no to disable tunnelled clear text passwords
+        "PasswordAuthentication": "no",
+        "X11Forwarding": "no",
+        "X11DisplayOffset": "10",
+        "PrintMotd": "no",
+        "PrintLastLog": "yes",
+        "TCPKeepAlive": "yes",
+        "AcceptEnv": "LANG LC_*",
+        "Subsystem": "sftp /usr/lib/openssh/sftp-server",
+        "UsePAM": "yes",
+    }
+    factory = salt_factories.get_sshd_daemon(
+        sshd_config_dict=sshd_config_dict, config_dir=sshd_config_dir,
+    )
+    # We also need a salt-ssh roster config file
+    roster_path = pathlib.Path(salt_master.config_dir) / "roster"
+    roster_contents = textwrap.dedent(
+        """\
+        localhost:
+          host: 127.0.0.1
+          port: {}
+          user: {}
+          mine_functions:
+            test.arg: ['itworked']
+        """.format(
+            factory.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
+        )
+    )
+    if salt.utils.platform.is_darwin():
+        roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
+    log.debug(
+        "Writing to configuration file %s. Configuration:\n%s",
+        roster_path,
+        roster_contents,
+    )
+    with salt.utils.files.fopen(str(roster_path), "w") as wfh:
+        wfh.write(roster_contents)
+
+    with factory.started():
+        yield factory
+    if roster_path.exists():
+        roster_path.unlink()
+
+
+# <---- Salt Factories -----------------------------------------------------------------------------------------------
+
 
 # ----- From Filenames Test Selection ------------------------------------------------------------------------------->
 def _match_to_test_file(match):
@@ -808,9 +1316,32 @@ def reap_stray_processes():
 
 
 @pytest.fixture(scope="session")
-def grains(request):
-    sminion = create_sminion()
+def sminion():
+    return create_sminion()
+
+
+@pytest.fixture(scope="session")
+def grains(sminion):
     return sminion.opts["grains"].copy()
+
+
+@pytest.fixture
+def ssl_webserver(integration_files_dir, scope="module"):
+    """
+    spins up an https webserver.
+    """
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+    context.load_cert_chain(
+        str(integration_files_dir / "https" / "cert.pem"),
+        str(integration_files_dir / "https" / "key.pem"),
+    )
+
+    webserver = Webserver(root=str(integration_files_dir), ssl_opts=context)
+    webserver.start()
+    yield webserver
+    webserver.stop()
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 A non-blocking REST API for Salt
 ================================
@@ -186,7 +185,6 @@ a return like::
 .. |500| replace:: internal server error
 """
 # Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # pylint: disable=import-error
 import cgi
@@ -200,7 +198,6 @@ import salt.auth
 import salt.client
 
 # salt imports
-import salt.ext.six as six
 import salt.ext.tornado.escape
 import salt.ext.tornado.gen
 import salt.ext.tornado.httpserver
@@ -264,7 +261,7 @@ class Any(Future):
     """
 
     def __init__(self, futures):
-        super(Any, self).__init__()
+        super().__init__()
         for future in futures:
             future.add_done_callback(self.done_callback)
 
@@ -274,7 +271,7 @@ class Any(Future):
             self.set_result(future)
 
 
-class EventListener(object):
+class EventListener:
     """
     Class responsible for listening to the salt master event bus and updating
     futures. This is the core of what makes this asynchronous, this allows us to do
@@ -392,7 +389,7 @@ class EventListener(object):
         mtag, data = self.event.unpack(raw, self.event.serial)
 
         # see if we have any futures that need this info:
-        for (tag, matcher), futures in six.iteritems(self.tag_map):
+        for (tag, matcher), futures in self.tag_map.items():
             try:
                 is_matched = matcher(mtag, tag)
             except Exception:  # pylint: disable=broad-except
@@ -771,12 +768,10 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             if "groups" in token and token["groups"]:
                 user_groups = set(token["groups"])
-                eauth_groups = set(
-                    [i.rstrip("%") for i in eauth.keys() if i.endswith("%")]
-                )
+                eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
 
                 for group in user_groups & eauth_groups:
-                    perms.extend(eauth["{0}%".format(group)])
+                    perms.extend(eauth["{}%".format(group)])
 
             perms = sorted(list(set(perms)))
         # If we can't find the creds, then they aren't authorized
@@ -958,7 +953,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
 
             # disbatch to the correct handler
             try:
-                chunk_ret = yield getattr(self, "_disbatch_{0}".format(low["client"]))(
+                chunk_ret = yield getattr(self, "_disbatch_{}".format(low["client"]))(
                     low
                 )
                 ret.append(chunk_ret)
@@ -966,9 +961,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 ret.append("Failed to authenticate")
                 break
             except Exception as ex:  # pylint: disable=broad-except
-                ret.append(
-                    "Unexpected exception while handling request: {0}".format(ex)
-                )
+                ret.append("Unexpected exception while handling request: {}".format(ex))
                 log.error("Unexpected exception while handling request:", exc_info=True)
 
         self.write(self.serialize({"return": ret}))
@@ -1048,9 +1041,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             )
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
-        is_finished = salt.ext.tornado.gen.sleep(
-            self.application.opts["gather_job_timeout"]
-        )
+        is_finished = Future()
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
@@ -1067,7 +1058,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             """
             Check if there are any more minions we are waiting on returns from
             """
-            return any(x is False for x in six.itervalues(minions))
+            return any(x is False for x in minions.values())
 
         # here we want to follow the behavior of LocalClient.get_iter_returns
         # namely we want to wait at least syndic_wait (assuming we are a syndic)
@@ -1122,7 +1113,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Return a future which will complete once jid (passed in) is no longer
         running on tgt
         """
-        ping_pub_data = yield self.saltclients["local"](
+        local_client = self.saltclients["local"]
+        ping_pub_data = yield local_client(
             tgt, "saltutil.find_job", [jid], tgt_type=tgt_type
         )
         ping_tag = tagify([ping_pub_data["jid"], "ret"], "job")
@@ -1135,18 +1127,15 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     tag=ping_tag,
                     timeout=self.application.opts["gather_job_timeout"],
                 )
-                f = yield Any([event, is_finished])
-                # When finished entire routine, cleanup other futures and return result
-                if f is is_finished:
-                    if not event.done():
-                        event.set_result(None)
-                    raise salt.ext.tornado.gen.Return(True)
-                event = f.result()
+                event = yield event
             except TimeoutException:
+                if not event.done():
+                    event.set_result(None)
+
                 if not minion_running:
                     raise salt.ext.tornado.gen.Return(True)
                 else:
-                    ping_pub_data = yield self.saltclients["local"](
+                    ping_pub_data = yield local_client(
                         tgt, "saltutil.find_job", [jid], tgt_type=tgt_type
                     )
                     ping_tag = tagify([ping_pub_data["jid"], "ret"], "job")
@@ -1615,15 +1604,15 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.set_header("Cache-Control", "no-cache")
         self.set_header("Connection", "keep-alive")
 
-        self.write("retry: {0}\n".format(400))
+        self.write("retry: {}\n".format(400))
         self.flush()
 
         while True:
             try:
                 event = yield self.application.event_listener.get_event(self)
-                self.write("tag: {0}\n".format(event.get("tag", "")))
+                self.write("tag: {}\n".format(event.get("tag", "")))
                 self.write(
-                    str("data: {0}\n\n").format(_json_dumps(event))
+                    "data: {}\n\n".format(_json_dumps(event))
                 )  # future lint: disable=blacklisted-function
                 self.flush()
             except TimeoutException:

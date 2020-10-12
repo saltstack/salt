@@ -51,7 +51,6 @@ integration.modules.test_service
 integration.modules.test_ssh
 integration.modules.test_state
 integration.modules.test_status
-integration.modules.test_sysmod
 integration.modules.test_system
 integration.modules.test_test
 integration.modules.test_useradd
@@ -72,21 +71,11 @@ integration.runners.test_runner_returns
 integration.runners.test_salt
 integration.sdb.test_env
 integration.shell.test_arguments
-integration.shell.test_auth
-integration.shell.test_call
 integration.shell.test_cloud
-integration.shell.test_cp
 integration.shell.test_enabled
-integration.shell.test_key
-integration.shell.test_master
 integration.shell.test_master_tops
 integration.shell.test_matcher
-integration.shell.test_minion
-integration.shell.test_proxy
-integration.shell.test_runner
-integration.shell.test_saltcli
 integration.shell.test_spm
-integration.shell.test_syndic
 integration.spm.test_build
 integration.spm.test_files
 integration.spm.test_info
@@ -101,6 +90,5 @@ integration.states.test_reg
 integration.states.test_renderers
 integration.states.test_service
 integration.states.test_user
-integration.utils.testprogram
 integration.wheel.test_client
 integration.wheel.test_key
