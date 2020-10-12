@@ -9,9 +9,24 @@ import salt.modules.mysql as mysql_mod
 import salt.states.mysql_query as mysql_query
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
+NO_MYSQL = False
+NO_PyMYSQL = False
+try:
+    import MySQLdb  # pylint: disable=W0611
+except ImportError:
+    NO_MYSQL = True
+
+try:
+    # MySQLdb import failed, try to import PyMySQL
+    import pymysql
+
+    pymysql.install_as_MySQLdb()
+    import MySQLdb
+except ImportError:
+    NO_PyMYSQL = True
 
 
 class MockMySQLConnect:
@@ -157,6 +172,10 @@ class MysqlQueryTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({"comment": "salt", "changes": {"query": "Executed"}})
                 self.assertDictEqual(mysql_query.run(name, database, query), ret)
 
+    @skipIf(
+        NO_MYSQL and NO_PyMYSQL,
+        "Install MySQL bindings before running MySQL unit tests.",
+    )
     def test_run_multiple_statements(self):
         """
         Test to execute an arbitrary query on the specified database
