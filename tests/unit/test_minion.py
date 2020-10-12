@@ -12,6 +12,7 @@ import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
@@ -19,7 +20,7 @@ from salt.ext.six.moves import range
 from tests.support.helpers import skip_if_not_root, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
@@ -692,3 +693,76 @@ class MinionAsyncTestCase(
             except SaltSystemExit:
                 result = False
         self.assertTrue(result)
+
+    @salt.ext.tornado.testing.gen_test
+    @skipIf(
+        salt.utils.platform.is_windows(), "Skipping, no Salt master running on Windows."
+    )
+    def test_master_type_failover(self):
+        """
+        Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
+        """
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "retry_dns": 0,
+            }
+        )
+
+        class MockPubChannel:
+            def connect(self):
+                raise SaltClientError("MockedChannel")
+
+            def close(self):
+                return
+
+        def mock_resolve_dns(opts, fallback=False):
+            self.assertFalse(fallback)
+
+            if opts["master"] == "master1":
+                raise SaltClientError("Cannot resolve {}".format(opts["master"]))
+
+            return {
+                "master_ip": "192.168.2.1",
+                "master_uri": "tcp://192.168.2.1:4505",
+            }
+
+        def mock_transport_factory(opts, **kwargs):
+            self.assertEqual(opts["master"], "master2")
+            return MockPubChannel()
+
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
+        ), patch("salt.loader.grains", MagicMock(return_value=[])):
+            with self.assertRaises(SaltClientError, msg="MockedChannel"):
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
+
+    @salt.ext.tornado.testing.gen_test
+    def test_master_type_failover_no_masters(self):
+        """
+        Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
+        """
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        mock_opts.update(
+            {
+                "master_type": "failover",
+                "master": ["master1", "master2"],
+                "__role": "",
+                "retry_dns": 0,
+            }
+        )
+
+        def mock_resolve_dns(opts, fallback=False):
+            self.assertFalse(fallback)
+            raise SaltClientError("Cannot resolve {}".format(opts["master"]))
+
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.loader.grains", MagicMock(return_value=[])
+        ):
+            with self.assertRaises(SaltClientError, msg="No master could be resolved"):
+                minion = salt.minion.Minion(mock_opts)
+                yield minion.connect_master()
