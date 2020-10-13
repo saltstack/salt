@@ -23,6 +23,7 @@ jinja2==2.10.1
 linode-python==1.1.1
 mako==1.0.7
 markupsafe==1.1.1
+marshmallow==3.8.0
 more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==1.0.0
 portend==2.6              # via cherrypy

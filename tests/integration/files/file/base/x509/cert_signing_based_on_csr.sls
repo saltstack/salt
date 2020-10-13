@@ -26,7 +26,7 @@
     - authorityKeyIdentifier: keyid,issuer:always
     - days_valid: 3650
     - days_remaining: 0
-    - backup: True
+    - backup: minion
     - require:
       - file: {{ tmp_dir  }}/pki
       - x509: {{ tmp_dir  }}/pki/ca.key
@@ -35,7 +35,7 @@
   x509.private_key_managed:
     # speed this up
     - bits: 1024
-    - backup: True
+    - backup: minion
 
 {{ tmp_dir  }}/pki/test.csr:
   x509.csr_managed:
@@ -56,7 +56,7 @@ test_crt:
     - csr: {{ tmp_dir  }}/pki/test.csr
     - CN: minion
     - days_remaining: 30
-    - backup: True
+    - backup: minion
     - require:
         - x509: {{ tmp_dir  }}/pki/ca.crt
         - x509: {{ tmp_dir  }}/pki/test.csr

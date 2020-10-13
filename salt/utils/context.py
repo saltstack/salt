@@ -23,6 +23,9 @@ def func_globals_inject(func, **overrides):
     # recognize methods
     if hasattr(func, "im_func"):
         func = func.__func__
+    # recognize decorators
+    while hasattr(func, "__wrapped__"):
+        func = func.__wrapped__
 
     # Get a reference to the function globals dictionary
     func_globals = func.__globals__

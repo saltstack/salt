@@ -597,7 +597,7 @@ def file(
             user=user,
             group=group,
             mode=mode,
-            attrs=[],  # no special attrs for cron
+            attrs=None,  # no special attrs for cron
             template=template,
             context=context,
             defaults=defaults,
@@ -622,7 +622,7 @@ def file(
             user=user,
             group=group,
             mode=mode,
-            attrs=[],
+            attrs=None,
             saltenv=__env__,
             context=context,
             defaults=defaults,
@@ -651,7 +651,7 @@ def file(
             user=user,
             group=group,
             mode=mode,
-            attrs=[],
+            attrs=None,
             saltenv=__env__,
             backup=backup,
         )

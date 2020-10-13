@@ -10,6 +10,7 @@ distro==1.5.0
 idna==2.8                 # via requests
 jinja2==2.10.1
 markupsafe==1.1.1
+marshmallow==3.8.0
 msgpack==1.0.0
 pycryptodomex==3.9.8
 pyyaml==5.3.1

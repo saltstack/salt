@@ -22,7 +22,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six.moves import range
 from tests.support.helpers import destructiveTest, slowTest
 from tests.support.mixins import LoaderModuleMockMixin
@@ -1299,24 +1299,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         )
 
                     with patch.object(os.path, "isdir", mock_f):
-                        comt = "Context must be formed as a dict"
-                        ret.update({"comment": comt})
-                        self.assertDictEqual(
-                            filestate.managed(
-                                name, user=user, group=group, context=True
-                            ),
-                            ret,
-                        )
-
-                        comt = "Defaults must be formed as a dict"
-                        ret.update({"comment": comt})
-                        self.assertDictEqual(
-                            filestate.managed(
-                                name, user=user, group=group, defaults=True
-                            ),
-                            ret,
-                        )
-
                         comt = (
                             "Only one of 'contents', 'contents_pillar', "
                             "and 'contents_grains' is permitted"
@@ -1463,6 +1445,26 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                             ),
                                             ret,
                                         )
+
+    def test_managed_validation(self):
+        name = "/etc/grub.conf"
+        user = "salt"
+        group = "saltstack"
+
+        with self.assertRaises(
+            SaltInvocationError,
+            msg="An exception occurred in this state: "
+            "Arguments validation failed for 'salt.loaded.int.states.file.managed': "
+            "context: Not a valid mapping type.",
+        ):
+            filestate.managed(name, user=user, group=group, context=True)
+        with self.assertRaises(
+            SaltInvocationError,
+            msg="An exception occurred in this state: "
+            "Arguments validation failed for 'salt.loaded.int.states.file.managed': "
+            "defaults: Not a valid mapping type.",
+        ):
+            filestate.managed(name, user=user, group=group, defaults=True)
 
     # 'directory' function tests: 1
 

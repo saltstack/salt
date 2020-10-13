@@ -54,6 +54,12 @@ from salt.ext import six
 from salt.ext.six.moves import range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.utils.files import HASHES, HASHES_REVMAP
+from salt.validation import fields, validator
+
+try:
+    import marshmallow
+except ModuleNotFoundError:
+    marshmallow = None
 
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -4447,6 +4453,27 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
     return contents
 
 
+class GetManagedSchema(marshmallow.Schema):
+    name = fields.Str(required=True)
+    template = fields.Str(required=True, allow_none=True)
+    source = fields.Str(required=True, allow_none=True)
+    source_hash = fields.Str(required=True, allow_none=True)
+    source_hash_name = fields.Str(required=True, allow_none=True)
+    user = fields.Str(required=True, allow_none=True)
+    group = fields.Str(required=True, allow_none=True)
+    mode = fields.FileMode(required=True, allow_none=True)
+    attrs = fields.Charset("aAcCdDeijPsStTu", allow_none=True)
+    saltenv = fields.Str(required=True, allow_none=True)
+    context = fields.Dict(required=True, allow_none=True)
+    defaults = fields.Dict(required=True, allow_none=True)
+    skip_verify = fields.Bool()
+
+    class Meta:
+        unknown = marshmallow.INCLUDE
+        register = False
+
+
+@validator(GetManagedSchema)
 def get_managed(
     name,
     template,

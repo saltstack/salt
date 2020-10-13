@@ -46,7 +46,12 @@ import salt.utils.url
 
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
-from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeoutError
+from salt.exceptions import (
+    CommandExecutionError,
+    SaltInvocationError,
+    SaltRenderError,
+    SaltReqTimeoutError,
+)
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves import map, range, reload_module
@@ -2175,11 +2180,13 @@ class State:
             if not name:
                 name = low.get("name", low.get("__id__"))
 
+            # Put the only exception message in case of SaltInvocationError else put the traceback
+            cmt = exc if isinstance(exc, SaltInvocationError) else trb
             ret = {
                 "result": False,
                 "name": name,
                 "changes": {},
-                "comment": "An exception occurred in this state: {}".format(trb),
+                "comment": "An exception occurred in this state: {}".format(cmt),
             }
         finally:
             if low.get("__prereq__"):

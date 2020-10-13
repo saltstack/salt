@@ -61,6 +61,7 @@ libnacl==1.7.1
 lxml==4.3.3               # via junos-eznc, napalm, ncclient
 mako==1.1.0
 markupsafe==1.1.1
+marshmallow==3.8.0
 mock==3.0.5
 more-itertools==5.0.0     # via cheroot, cherrypy, jaraco.functools
 moto==1.3.7

@@ -311,6 +311,12 @@ from salt.ext.six.moves import zip_longest
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
+from salt.validation import fields, validator
+
+try:
+    import marshmallow
+except ModuleNotFoundError:
+    marshmallow = None
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -2222,6 +2228,51 @@ def missing(name, **kwargs):
     return ret
 
 
+class ManagedSchema(marshmallow.Schema):
+    name = fields.Str(required=True)
+    source = fields.Str(allow_none=True)
+    source_hash = fields.Str(allow_none=True)
+    source_hash_name = fields.Str(allow_none=True)
+    keep_source = fields.Bool()
+    user = fields.Str(allow_none=True)
+    group = fields.Str(allow_none=True)
+    mode = fields.FileMode(allow_none=True)
+    attrs = fields.Charset("aAcCdDeijPsStTu", allow_none=True)
+    template = fields.Str(allow_none=True)
+    makedirs = fields.Bool()
+    dir_mode = fields.FileMode(allow_none=True)
+    context = fields.Dict(allow_none=True)
+    replace = fields.Bool()
+    defaults = fields.Dict(allow_none=True)
+    backup = fields.Str(allow_none=True)
+    show_changes = fields.Bool()
+    create = fields.Bool()
+    contents = fields.Raw(allow_none=True)
+    tmp_dir = fields.Str()
+    tmp_ext = fields.Str()
+    contents_pillar = fields.StringList(allow_none=True)
+    contents_grains = fields.StringList(allow_none=True)
+    contents_newline = fields.Bool()
+    contents_delimiter = fields.Str()
+    encoding = fields.Str(allow_none=True)
+    encoding_errors = fields.Str()
+    allow_empty = fields.Bool()
+    follow_symlinks = fields.Bool()
+    check_cmd = fields.Str(allow_none=True)
+    skip_verify = fields.Bool()
+    selinux = fields.Dict(allow_none=True)
+    win_owner = fields.Str(allow_none=True)
+    win_perms = fields.Dict(allow_none=True)
+    win_deny_perms = fields.Dict(allow_none=True)
+    win_inheritance = fields.Bool()
+    win_perms_reset = fields.Bool()
+
+    class Meta:
+        unknown = marshmallow.INCLUDE
+        register = False
+
+
+@validator(ManagedSchema)
 def managed(
     name,
     source=None,

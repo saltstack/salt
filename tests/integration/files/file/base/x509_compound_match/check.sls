@@ -11,6 +11,6 @@ test_crt:
     - signing_policy: {{ pillar['signing_policy'] }}
     - CN: {{ grains.get('id') }}
     - days_remaining: 30
-    - backup: True
+    - backup: minion
     - require:
         - test_priv_key

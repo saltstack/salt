@@ -11,7 +11,6 @@ import salt.utils.args
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
-from tests.support.mock import DEFAULT, patch
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
@@ -127,44 +126,31 @@ class ArgsTestCase(TestCase):
         self.assertEqual(expected_dict, ret)
 
     def test_format_call(self):
-        with patch("salt.utils.args.arg_lookup") as arg_lookup:
+        def dummy_func(first, second, third, fourth="fifth"):
+            pass
 
-            def dummy_func(first=None, second=None, third=None):
-                pass
+        # Make sure we raise an error if we don't pass in the requisite number of arguments
+        self.assertRaises(
+            SaltInvocationError, salt.utils.args.format_call, dummy_func, {"1": 2}
+        )
 
-            arg_lookup.return_value = {
-                "args": ["first", "second", "third"],
-                "kwargs": {},
-            }
-            get_function_argspec = DEFAULT
-            get_function_argspec.return_value = namedtuple(
-                "ArgSpec", "args varargs keywords defaults"
-            )(
-                args=["first", "second", "third", "fourth"],
-                varargs=None,
-                keywords=None,
-                defaults=("fifth",),
-            )
+        def dummy_func():
+            pass
 
-            # Make sure we raise an error if we don't pass in the requisite number of arguments
-            self.assertRaises(
-                SaltInvocationError, salt.utils.args.format_call, dummy_func, {"1": 2}
-            )
+        # Make sure we warn on invalid kwargs
+        self.assertRaises(
+            SaltInvocationError,
+            salt.utils.args.format_call,
+            dummy_func,
+            {"first": 2, "seconds": 2, "third": 3},
+        )
 
-            # Make sure we warn on invalid kwargs
-            self.assertRaises(
-                SaltInvocationError,
-                salt.utils.args.format_call,
-                dummy_func,
-                {"first": 2, "seconds": 2, "third": 3},
-            )
-
-            ret = salt.utils.args.format_call(
-                dummy_func,
-                {"first": 2, "second": 2, "third": 3},
-                expected_extra_kws=("first", "second", "third"),
-            )
-            self.assertDictEqual(ret, {"args": [], "kwargs": {}})
+        ret = salt.utils.args.format_call(
+            dummy_func,
+            {"first": 2, "second": 2, "third": 3},
+            expected_extra_kws=("first", "second", "third"),
+        )
+        self.assertDictEqual(ret, {"args": [], "kwargs": {}})
 
     def test_format_call_simple_args(self):
         def foo(one, two=2, three=3):
@@ -181,6 +167,15 @@ class ArgsTestCase(TestCase):
         self.assertEqual(
             salt.utils.args.format_call(foo, dict(one=2)),
             {"args": [2], "kwargs": dict(two=2, three=3)},
+        )
+        # Expected extras not dropped if match args/kwargs
+        self.assertEqual(
+            salt.utils.args.format_call(
+                foo,
+                dict(one=1, two=2, three=3),
+                expected_extra_kws=("one", "two", "three"),
+            ),
+            {"args": [1], "kwargs": {"two": 2, "three": 3}},
         )
 
     def test_format_call_mimic_typeerror_exceptions(self):

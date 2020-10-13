@@ -25,11 +25,11 @@
     - authorityKeyIdentifier: keyid,issuer:always
     - days_valid: 3650
     - days_remaining: 0
-    - backup: True
+    - backup: minion
     - managed_private_key:
         name: {{ tmp_dir  }}/pki/ca.key
         bits: 4096
-        backup: True
+        backup: minion
     - require:
       - file: {{ tmp_dir  }}/pki
       - {{ tmp_dir  }}/pki/ca.key
@@ -45,7 +45,7 @@ mine.send:
 {{ tmp_dir  }}/pki/test.key:
   x509.private_key_managed:
     - bits: 4096
-    - backup: True
+    - backup: minion
 
 test_crt:
   x509.certificate_managed:
@@ -56,11 +56,11 @@ test_crt:
     - CN: minion
     - days_remaining: 30
     - not_after: 2020-05-05 14:30:00
-    - backup: True
+    - backup: minion
     - managed_private_key:
         name: {{ tmp_dir  }}/pki/test.key
         bits: 4096
-        backup: True
+        backup: minion
     - require:
         - {{ tmp_dir  }}/pki/ca.crt
         - {{ tmp_dir  }}/pki/test.key

@@ -242,7 +242,7 @@ def yamlify_arg(arg):
         return original_arg
 
 
-def get_function_argspec(func, is_class_method=None):
+def get_function_argspec(func, is_class_method=False):
     """
     A small wrapper around getargspec that also supports callable classes and wrapped functions
 
@@ -264,7 +264,7 @@ def get_function_argspec(func, is_class_method=None):
     if hasattr(func, "__wrapped__"):
         func = func.__wrapped__
 
-    if is_class_method is True:
+    if is_class_method:
         aspec = _getargspec(func)
         del aspec.args[0]  # self
     elif inspect.isfunction(func):
@@ -413,7 +413,7 @@ def test_mode(**kwargs):
 
 
 def format_call(
-    fun, data, initial_ret=None, expected_extra_kws=(), is_class_method=None
+    fun, data, initial_ret=None, expected_extra_kws=(), is_class_method=False
 ):
     """
     Build the required arguments and keyword arguments required for the passed
@@ -436,10 +436,7 @@ def format_call(
     :returns: A dictionary with the function required arguments and keyword
               arguments.
     """
-    ret = initial_ret is not None and initial_ret or {}
-
-    ret["args"] = []
-    ret["kwargs"] = {}
+    ret = initial_ret or {}
 
     aspec = get_function_argspec(fun, is_class_method=is_class_method)
 
@@ -447,81 +444,50 @@ def format_call(
     args = arg_data["args"]
     kwargs = arg_data["kwargs"]
 
-    # Since we WILL be changing the data dictionary, let's change a copy of it
+    # Since we WILL be changing the data dictionary, let's change a copy of it.
     data = data.copy()
 
-    missing_args = []
+    # Remove unknown expected_extra_kws to not fail on validation.
+    for key in expected_extra_kws:
+        if not (key in kwargs or key in args):
+            data.pop(key, None)
 
-    for key in kwargs:
-        try:
-            kwargs[key] = data.pop(key)
-        except KeyError:
-            # Let's leave the default value in place
-            pass
-
-    while args:
-        arg = args.pop(0)
-        try:
-            ret["args"].append(data.pop(arg))
-        except KeyError:
-            missing_args.append(arg)
-
-    if missing_args:
-        used_args_count = len(ret["args"]) + len(args)
-        args_count = used_args_count + len(missing_args)
-        raise SaltInvocationError(
-            "{0} takes at least {1} argument{2} ({3} given)".format(
-                fun.__name__, args_count, args_count > 1 and "s" or "", used_args_count
+    # Validate cleaned up data.
+    if hasattr(fun, "__validator__"):
+        # Function has a validator and will be validated on call.
+        ret["args"] = [data.pop(arg) for arg in args]
+        ret["kwargs"] = data
+    else:
+        # No validation schema provided.
+        # Check for missing args.
+        missing_args = [arg for arg in args if arg not in data]
+        if missing_args:
+            args_count = len(args)
+            args_used = args_count - len(missing_args)
+            raise SaltInvocationError(
+                "{} takes at least {} argument{} ({} given)".format(
+                    fun.__name__, args_count, args_count > 1 and "s" or "", args_used
+                )
             )
-        )
+        # Check for extra kwargs
+        ret["args"] = [data.pop(arg) for arg in args]
+        if not aspec.keywords:
+            extra = {k: copy.deepcopy(v) for k, v in data.items() if k not in kwargs}
+            if extra:
+                msg = "{}{} are invalid keyword arguments for '{}'".format(
+                    ", ".join(["'{}'".format(e) for e in extra][:-1]),
+                    len(extra) > 1 and " and '{}'".format(list(extra)[-1]) or "",
+                    ret.get(
+                        # In case this is being called for a state module
+                        "full",
+                        # Not a state module, build the name
+                        "{}.{}".format(fun.__module__, fun.__name__),
+                    ),
+                )
+                raise SaltInvocationError(msg)
+        ret["kwargs"] = kwargs
+        ret["kwargs"].update(data)
 
-    ret["kwargs"].update(kwargs)
-
-    if aspec.keywords:
-        # The function accepts **kwargs, any non expected extra keyword
-        # arguments will made available.
-        for key, value in data.items():
-            if key in expected_extra_kws:
-                continue
-            ret["kwargs"][key] = value
-
-        # No need to check for extra keyword arguments since they are all
-        # **kwargs now. Return
-        return ret
-
-    # Did not return yet? Lets gather any remaining and unexpected keyword
-    # arguments
-    extra = {}
-    for key, value in data.items():
-        if key in expected_extra_kws:
-            continue
-        extra[key] = copy.deepcopy(value)
-
-    if extra:
-        # Found unexpected keyword arguments, raise an error to the user
-        if len(extra) == 1:
-            msg = "'{0[0]}' is an invalid keyword argument for '{1}'".format(
-                list(extra.keys()),
-                ret.get(
-                    # In case this is being called for a state module
-                    "full",
-                    # Not a state module, build the name
-                    "{0}.{1}".format(fun.__module__, fun.__name__),
-                ),
-            )
-        else:
-            msg = "{0} and '{1}' are invalid keyword arguments for '{2}'".format(
-                ", ".join(["'{0}'".format(e) for e in extra][:-1]),
-                list(extra.keys())[-1],
-                ret.get(
-                    # In case this is being called for a state module
-                    "full",
-                    # Not a state module, build the name
-                    "{0}.{1}".format(fun.__module__, fun.__name__),
-                ),
-            )
-
-        raise SaltInvocationError(msg)
     return ret
 
 
