@@ -505,6 +505,7 @@ class LinodeAPIv4(LinodeAPI):
             headers = {}
         headers["Authorization"] = "Bearer {}".format(api_key)
         headers["Content-Type"] = "application/json"
+        headers["User-Agent"] = "salt-cloud-linode"
 
         url = "https://api.linode.com/{}{}".format(api_version, path)
 

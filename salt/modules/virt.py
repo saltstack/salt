@@ -71,13 +71,57 @@ The calls not using the libvirt connection setup are:
 - `libvirt URI format <http://libvirt.org/uri.html#URI_config>`_
 - `libvirt authentication configuration <http://libvirt.org/auth.html#Auth_client_config>`_
 
+Units
+==========
+.. _virt-units:
+.. rubric:: Units specification
+.. versionadded:: 3002
+
+The string should contain a number optionally followed
+by a unit. The number may have a decimal fraction. If
+the unit is not given then MiB are set by default.
+Units can optionally be given in IEC style (such as MiB),
+although the standard single letter style (such as M) is
+more convenient.
+
+Valid units include:
+
+========== =====    ==========  ==========  ======
+Standard   IEC      Standard    IEC
+  Unit     Unit     Name        Name        Factor
+========== =====    ==========  ==========  ======
+    B               Bytes                   1
+    K       KiB     Kilobytes   Kibibytes   2**10
+    M       MiB     Megabytes   Mebibytes   2**20
+    G       GiB     Gigabytes   Gibibytes   2**30
+    T       TiB     Terabytes   Tebibytes   2**40
+    P       PiB     Petabytes   Pebibytes   2**50
+    E       EiB     Exabytes    Exbibytes   2**60
+    Z       ZiB     Zettabytes  Zebibytes   2**70
+    Y       YiB     Yottabytes  Yobibytes   2**80
+========== =====    ==========  ==========  ======
+
+Additional decimal based units:
+
+======  =======
+Unit     Factor
+======  =======
+KB      10**3
+MB      10**6
+GB      10**9
+TB      10**12
+PB      10**15
+EB      10**18
+ZB      10**21
+YB      10**24
+======  =======
 """
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
-# Import python libs
 
 import base64
+import collections
 import copy
 import datetime
 import logging
@@ -91,10 +135,7 @@ import time
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
-# Import third party libs
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -458,6 +499,8 @@ def _get_disks(conn, dom):
     """
     disks = {}
     doc = ElementTree.fromstring(dom.XMLDesc(0))
+    # Get the path, pool, volume name of each volume we can
+    all_volumes = _get_all_volumes_paths(conn)
     for elem in doc.findall("devices/disk"):
         source = elem.find("source")
         if source is None:
@@ -470,13 +513,61 @@ def _get_disks(conn, dom):
         extra_properties = None
         if "dev" in target.attrib:
             disk_type = elem.get("type")
+
+            def _get_disk_volume_data(pool_name, volume_name):
+                qemu_target = "{}/{}".format(pool_name, volume_name)
+                pool = conn.storagePoolLookupByName(pool_name)
+                vol = pool.storageVolLookupByName(volume_name)
+                vol_info = vol.info()
+                extra_properties = {
+                    "virtual size": vol_info[1],
+                    "disk size": vol_info[2],
+                }
+
+                backing_files = [
+                    {
+                        "file": node.find("source").get("file"),
+                        "file format": node.find("format").get("type"),
+                    }
+                    for node in elem.findall(".//backingStore[source]")
+                ]
+
+                if backing_files:
+                    # We had the backing files in a flat list, nest them again.
+                    extra_properties["backing file"] = backing_files[0]
+                    parent = extra_properties["backing file"]
+                    for sub_backing_file in backing_files[1:]:
+                        parent["backing file"] = sub_backing_file
+                        parent = sub_backing_file
+
+                else:
+                    # In some cases the backing chain is not displayed by the domain definition
+                    # Try to see if we have some of it in the volume definition.
+                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                    backing_path = vol_desc.find("./backingStore/path")
+                    backing_format = vol_desc.find("./backingStore/format")
+                    if backing_path is not None:
+                        extra_properties["backing file"] = {"file": backing_path.text}
+                        if backing_format is not None:
+                            extra_properties["backing file"][
+                                "file format"
+                            ] = backing_format.get("type")
+                return (qemu_target, extra_properties)
+
             if disk_type == "file":
                 qemu_target = source.get("file", "")
                 if qemu_target.startswith("/dev/zvol/"):
                     disks[target.get("dev")] = {"file": qemu_target, "zfs": True}
                     continue
-                # Extract disk sizes, snapshots, backing files
-                if elem.get("device", "disk") != "cdrom":
+
+                if qemu_target in all_volumes.keys():
+                    # If the qemu_target is a known path, output a volume
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
+                elif elem.get("device", "disk") != "cdrom":
+                    # Extract disk sizes, snapshots, backing files
                     try:
                         stdout = subprocess.Popen(
                             [
@@ -498,6 +589,12 @@ def _get_disks(conn, dom):
                         disk.update({"file": "Does not exist"})
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
+                # If the qemu_target is a known path, output a volume
+                if qemu_target in all_volumes.keys():
+                    volume = all_volumes[qemu_target]
+                    qemu_target, extra_properties = _get_disk_volume_data(
+                        volume["pool"], volume["name"]
+                    )
             elif disk_type == "network":
                 qemu_target = source.get("protocol")
                 source_name = source.get("name")
@@ -536,43 +633,9 @@ def _get_disks(conn, dom):
             elif disk_type == "volume":
                 pool_name = source.get("pool")
                 volume_name = source.get("volume")
-                qemu_target = "{}/{}".format(pool_name, volume_name)
-                pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
-                    }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
-
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
-
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                qemu_target, extra_properties = _get_disk_volume_data(
+                    pool_name, volume_name
+                )
 
             if not qemu_target:
                 continue
@@ -621,14 +684,14 @@ def _migrate(dom, dst_uri, **kwargs):
     :param dom: domain object to migrate
     :param dst_uri: destination URI
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
@@ -767,6 +830,106 @@ def _migrate(dom, dst_uri, **kwargs):
         raise CommandExecutionError(err.get_error_message())
 
 
+def _get_volume_path(pool, volume_name):
+    """
+    Get the path to a volume. If the volume doesn't exist, compute its path from the pool one.
+    """
+    if volume_name in pool.listVolumes():
+        volume = pool.storageVolLookupByName(volume_name)
+        volume_xml = ElementTree.fromstring(volume.XMLDesc())
+        return volume_xml.find("./target/path").text
+
+    # Get the path from the pool if the volume doesn't exist yet
+    pool_xml = ElementTree.fromstring(pool.XMLDesc())
+    pool_path = pool_xml.find("./target/path").text
+    return pool_path + "/" + volume_name
+
+
+def _disk_from_pool(conn, pool, pool_xml, volume_name):
+    """
+    Create a disk definition out of the pool XML and volume name.
+    The aim of this function is to replace the volume-based definition when not handled by libvirt.
+    It returns the disk Jinja context to be used when creating the VM
+    """
+    pool_type = pool_xml.get("type")
+    disk_context = {}
+
+    # handle dir, fs and netfs
+    if pool_type in ["dir", "netfs", "fs"]:
+        disk_context["type"] = "file"
+        disk_context["source_file"] = _get_volume_path(pool, volume_name)
+
+    elif pool_type in ["logical", "disk", "iscsi", "scsi"]:
+        disk_context["type"] = "block"
+        disk_context["format"] = "raw"
+        disk_context["source_file"] = _get_volume_path(pool, volume_name)
+
+    elif pool_type in ["rbd", "gluster", "sheepdog"]:
+        # libvirt can't handle rbd, gluster and sheepdog as volumes
+        disk_context["type"] = "network"
+        disk_context["protocol"] = pool_type
+        # Copy the hosts from the pool definition
+        disk_context["hosts"] = [
+            {"name": host.get("name"), "port": host.get("port")}
+            for host in pool_xml.findall(".//host")
+        ]
+        dir_node = pool_xml.find("./source/dir")
+        # Gluster and RBD need pool/volume name
+        name_node = pool_xml.find("./source/name")
+        if name_node is not None:
+            disk_context["volume"] = "{}/{}".format(name_node.text, volume_name)
+        # Copy the authentication if any for RBD
+        auth_node = pool_xml.find("./source/auth")
+        if auth_node is not None:
+            username = auth_node.get("username")
+            secret_node = auth_node.find("./secret")
+            usage = secret_node.get("usage")
+            if not usage:
+                # Get the usage from the UUID
+                uuid = secret_node.get("uuid")
+                usage = conn.secretLookupByUUIDString(uuid).usageID()
+            disk_context["auth"] = {
+                "type": "ceph",
+                "username": username,
+                "usage": usage,
+            }
+
+    return disk_context
+
+
+def _handle_unit(s, def_unit="m"):
+    """
+    Handle the unit conversion, return the value in bytes
+    """
+    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
+    value = m.group("value")
+    # default unit
+    unit = m.group("unit").lower() or def_unit
+    try:
+        value = int(value)
+    except ValueError:
+        try:
+            value = float(value)
+        except ValueError:
+            raise SaltInvocationError("invalid number")
+    # flag for base ten
+    dec = False
+    if re.match(r"[kmgtpezy]b$", unit):
+        dec = True
+    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
+        raise SaltInvocationError("invalid units")
+    p = "bkmgtpezy".index(unit[0])
+    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
+    return int(value)
+
+
+def nesthash():
+    """
+    create default dict that allows arbitrary level of nesting
+    """
+    return collections.defaultdict(nesthash)
+
+
 def _gen_xml(
     conn,
     name,
@@ -785,13 +948,25 @@ def _gen_xml(
     """
     Generate the XML string to define a libvirt VM
     """
-    mem = int(mem) * 1024  # MB
     context = {
         "hypervisor": hypervisor,
         "name": name,
         "cpu": str(cpu),
-        "mem": str(mem),
     }
+
+    context["mem"] = nesthash()
+    if isinstance(mem, int):
+        mem = int(mem) * 1024  # MB
+        context["mem"]["boot"] = str(mem)
+        context["mem"]["current"] = str(mem)
+    elif isinstance(mem, dict):
+        for tag, val in mem.items():
+            if val:
+                if tag == "slots":
+                    context["mem"]["slots"] = "{}='{}'".format(tag, val)
+                else:
+                    context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+
     if hypervisor in ["qemu", "kvm"]:
         context["controller_model"] = False
     elif hypervisor == "vmware":
@@ -872,41 +1047,16 @@ def _gen_xml(
         elif disk.get("pool"):
             disk_context["volume"] = disk["filename"]
             # If we had no source_file, then we want a volume
-            pool_xml = ElementTree.fromstring(
-                conn.storagePoolLookupByName(disk["pool"]).XMLDesc()
-            )
+            pool = conn.storagePoolLookupByName(disk["pool"])
+            pool_xml = ElementTree.fromstring(pool.XMLDesc())
             pool_type = pool_xml.get("type")
-            if pool_type in ["rbd", "gluster", "sheepdog"]:
-                # libvirt can't handle rbd, gluster and sheepdog as volumes
-                disk_context["type"] = "network"
-                disk_context["protocol"] = pool_type
-                # Copy the hosts from the pool definition
-                disk_context["hosts"] = [
-                    {"name": host.get("name"), "port": host.get("port")}
-                    for host in pool_xml.findall(".//host")
-                ]
-                dir_node = pool_xml.find("./source/dir")
-                # Gluster and RBD need pool/volume name
-                name_node = pool_xml.find("./source/name")
-                if name_node is not None:
-                    disk_context["volume"] = "{}/{}".format(
-                        name_node.text, disk_context["volume"]
-                    )
-                # Copy the authentication if any for RBD
-                auth_node = pool_xml.find("./source/auth")
-                if auth_node is not None:
-                    username = auth_node.get("username")
-                    secret_node = auth_node.find("./secret")
-                    usage = secret_node.get("usage")
-                    if not usage:
-                        # Get the usage from the UUID
-                        uuid = secret_node.get("uuid")
-                        usage = conn.secretLookupByUUIDString(uuid).usageID()
-                    disk_context["auth"] = {
-                        "type": "ceph",
-                        "username": username,
-                        "usage": usage,
-                    }
+
+            # For Xen VMs convert all pool types (issue #58333)
+            if hypervisor == "xen" or pool_type in ["rbd", "gluster", "sheepdog"]:
+                disk_context.update(
+                    _disk_from_pool(conn, pool, pool_xml, disk_context["volume"])
+                )
+
             else:
                 if pool_type in ["disk", "logical"]:
                     # The volume format for these types doesn't match the driver format in the VM
@@ -936,7 +1086,6 @@ def _gen_xml(
     except jinja2.exceptions.TemplateNotFound:
         log.error("Could not load template %s", fn_)
         return ""
-
     return template.render(**context)
 
 
@@ -1744,7 +1893,28 @@ def init(
 
     :param name: name of the virtual machine to create
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
+        contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
+        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
+        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
+        an integer.
+
+        .. code-block:: python
+
+            {
+                'boot': 1g,
+                'current': 1g,
+                'max': 1g,
+                'slots': 10,
+                'hard_limit': '1024'
+                'soft_limit': '512m'
+                'swap_hard_limit': '1g'
+                'min_guarantee': '512mib'
+            }
+
+        .. versionchanged:: 3002
+
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
                 If set to ``None``, no profile will be used.
@@ -1856,6 +2026,36 @@ def init(
        A boolean value.
 
        .. versionadded:: sodium
+
+    .. _init-mem-def:
+
+    .. rubric:: Memory parameter definition
+
+    Memory parameter can contain the following properties:
+
+    boot
+        The maximum allocation of memory for the guest at boot time
+
+    current
+        The actual allocation of memory for the guest
+
+    max
+        The run time maximum memory allocation of the guest
+
+    slots
+         specifies the number of slots available for adding memory to the guest
+
+    hard_limit
+        the maximum memory the guest can use
+
+    soft_limit
+        memory limit to enforce during memory contention
+
+    swap_hard_limit
+        the maximum memory plus swap the guest can use
+
+    min_guarantee
+        the guaranteed minimum memory allocation for the guest
 
     .. _init-nic-def:
 
@@ -2387,7 +2587,24 @@ def update(
 
     :param name: Name of the domain to update
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB.
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
+        contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
+        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
+        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
+        an integer.
+
+        To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
+        is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
+
+        .. code-block:: yaml
+
+            - mem:
+                hard_limit: null
+                soft_limit: null
+
+        .. versionchanged:: 3002
+
     :param disk_profile: disk profile to use
     :param disks:
         Disk definitions as documented in the :func:`init` function.
@@ -2442,7 +2659,7 @@ def update(
 
         By default, the value will ``"hd"``.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
 
     :param test: run in dry-run mode if set to True
 
@@ -2527,9 +2744,18 @@ def update(
     def _set_nvram(node, value):
         node.set("template", value)
 
-    def _set_with_mib_unit(node, value):
+    def _set_with_byte_unit(node, value):
         node.text = str(value)
-        node.set("unit", "MiB")
+        node.set("unit", "bytes")
+
+    def _get_with_unit(node):
+        unit = node.get("unit", "KiB")
+        # _handle_unit treats bytes as invalid unit for the purpose of consistency
+        unit = unit if unit != "bytes" else "b"
+        value = node.get("memory") or node.text
+        return _handle_unit("{}{}".format(value, unit)) if value else None
+
+    old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
 
     # Update the kernel boot parameters
     params_mapping = [
@@ -2542,14 +2768,72 @@ def update(
         {
             "path": "mem",
             "xpath": "memory",
-            "get": lambda n: int(n.text) / 1024,
-            "set": _set_with_mib_unit,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
         },
         {
             "path": "mem",
             "xpath": "currentMemory",
-            "get": lambda n: int(n.text) / 1024,
-            "set": _set_with_mib_unit,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:max",
+            "convert": _handle_unit,
+            "xpath": "maxMemory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:boot",
+            "convert": _handle_unit,
+            "xpath": "memory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:current",
+            "convert": _handle_unit,
+            "xpath": "currentMemory",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:slots",
+            "xpath": "maxMemory",
+            "get": lambda n: n.get("slots"),
+            "set": lambda n, v: n.set("slots", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("slots", ["unit"]),
+        },
+        {
+            "path": "mem:hard_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/hard_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:soft_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/soft_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:swap_hard_limit",
+            "convert": _handle_unit,
+            "xpath": "memtune/swap_hard_limit",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
+        },
+        {
+            "path": "mem:min_guarantee",
+            "convert": _handle_unit,
+            "xpath": "memtune/min_guarantee",
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit,
         },
         {
             "path": "boot_dev:{dev}",
@@ -2563,8 +2847,8 @@ def update(
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
         data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
-    need_update = need_update or salt.utils.xmlutil.change_xml(
-        desc, data, params_mapping
+    need_update = (
+        salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
 
     # Update the XML definition with the new disks and diff changes
@@ -2635,13 +2919,24 @@ def update(
                     }
                 )
             if mem:
-                commands.append(
-                    {
-                        "device": "mem",
-                        "cmd": "setMemoryFlags",
-                        "args": [mem * 1024, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                    }
-                )
+                if isinstance(mem, dict):
+                    # setMemoryFlags takes memory amount in KiB
+                    new_mem = (
+                        int(_handle_unit(mem.get("current")) / 1024)
+                        if "current" in mem
+                        else None
+                    )
+                elif isinstance(mem, int):
+                    new_mem = int(mem * 1024)
+
+                if old_mem != new_mem and new_mem is not None:
+                    commands.append(
+                        {
+                            "device": "mem",
+                            "cmd": "setMemoryFlags",
+                            "args": [new_mem, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                        }
+                    )
 
             # Look for removable device source changes
             new_disks = []
@@ -3863,14 +4158,14 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -3929,14 +4224,14 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -3995,14 +4290,14 @@ def migrate(vm_, target, ssh=False, **kwargs):
        .. deprecated:: 3002
 
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
@@ -4261,7 +4556,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
@@ -6779,29 +7074,33 @@ def _is_valid_volume(vol):
 
 def _get_all_volumes_paths(conn):
     """
-    Extract the path and backing stores path of all volumes.
+    Extract the path, name, pool name and backing stores path of all volumes.
 
     :param conn: libvirt connection to use
     """
-    volumes = [
-        vol
-        for l in [
-            obj.listAllVolumes()
-            for obj in conn.listAllStoragePools()
-            if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
-        ]
-        for vol in l
+    pools = [
+        pool
+        for pool in conn.listAllStoragePools()
+        if pool.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING
     ]
-    return {
-        vol.path(): [
-            path.text
-            for path in ElementTree.fromstring(vol.XMLDesc()).findall(
-                ".//backingStore/path"
-            )
-        ]
-        for vol in volumes
-        if _is_valid_volume(vol)
-    }
+    volumes = {}
+    for pool in pools:
+        pool_volumes = {
+            volume.path(): {
+                "pool": pool.name(),
+                "name": volume.name(),
+                "backing_stores": [
+                    path.text
+                    for path in ElementTree.fromstring(volume.XMLDesc()).findall(
+                        ".//backingStore/path"
+                    )
+                ],
+            }
+            for volume in pool.listAllVolumes()
+            if _is_valid_volume(volume)
+        }
+        volumes.update(pool_volumes)
+    return volumes
 
 
 def volume_infos(pool=None, volume=None, **kwargs):
@@ -6872,8 +7171,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
             if vol.path():
                 as_backing_store = {
                     path
-                    for (path, all_paths) in backing_stores.items()
-                    if vol.path() in all_paths
+                    for (path, volume) in backing_stores.items()
+                    if vol.path() in volume.get("backing_stores")
                 }
                 used_by = [
                     vm_name

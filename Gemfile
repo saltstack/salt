@@ -19,7 +19,7 @@ group :windows do
 end
 
 group :ec2 do
-  gem 'kitchen-ec2'
+  gem 'kitchen-ec2', '3.6'
 end
 
 group :vagrant do

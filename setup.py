@@ -3,22 +3,18 @@
 The setup script for salt
 """
 
-# pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
-# pylint: disable=3rd-party-local-module-not-gated,resource-leakage,blacklisted-module
-# pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
-
-# For Python 2.5.  A no-op on 2.6 and above.
-
+# pylint: disable=file-perms,resource-leakage
 import contextlib
 import distutils.dist
 import glob
-import inspect
 import operator
 import os
 import platform
 import sys
 from ctypes.util import find_library
 from datetime import datetime
+
+# pylint: disable=no-name-in-module
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
@@ -27,14 +23,15 @@ from distutils.command.install_lib import install_lib
 from distutils.errors import DistutilsArgError
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 
-# pylint: disable=E0611
 import setuptools
 from setuptools import setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
-from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
 from setuptools.command.sdist import sdist
+
+# pylint: enable=no-name-in-module
+
 
 try:
     from urllib2 import urlopen
@@ -48,7 +45,6 @@ try:
     HAS_BDIST_WHEEL = True
 except ImportError:
     HAS_BDIST_WHEEL = False
-# pylint: enable=E0611
 
 try:
     import zmq
@@ -95,16 +91,19 @@ else:
         "joyent_"
     )
 
-# Store a reference whether if we're running under Python 3 and above
-IS_PY3 = sys.version_info > (3,)
+USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
+if USE_STATIC_REQUIREMENTS is not None:
+    USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
+# Are we running pop-build
+if "TIAMAT_BUILD" in os.environ:
+    USE_STATIC_REQUIREMENTS = True
 
 try:
     # Add the esky bdist target if the module is available
     # may require additional modules depending on platform
-    from esky import bdist_esky
-
     # bbfreeze chosen for its tight integration with distutils
-    import bbfreeze
+    import bbfreeze  # pylint: disable=unused-import
+    from esky import bdist_esky  # pylint: disable=unused-import
 
     HAS_ESKY = True
 except ImportError:
@@ -117,22 +116,56 @@ SALT_VERSION_HARDCODED = os.path.join(
 SALT_SYSPATHS_HARDCODED = os.path.join(
     os.path.abspath(SETUP_DIRNAME), "salt", "_syspaths.py"
 )
-SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt")
-SALT_CRYPTO_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"
-)
-SALT_ZEROMQ_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"
-)
+SALT_BASE_REQUIREMENTS = [
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt"),
+    # pyzmq needs to be installed regardless of the salt transport
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"),
+]
+SALT_LINUX_LOCKED_REQS = [
+    # Linux packages defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "linux.txt",
+    )
+]
+SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
+    os.path.abspath(SETUP_DIRNAME),
+    "requirements",
+    "darwin.txt",
+]
+SALT_OSX_LOCKED_REQS = [
+    # OSX packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "darwin.txt",
+    )
+]
+SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
+    os.path.abspath(SETUP_DIRNAME),
+    "requirements",
+    "windows.txt",
+]
+SALT_WINDOWS_LOCKED_REQS = [
+    # Windows packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "windows.txt",
+    )
+]
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
-SALT_OSX_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
-]
-SALT_WINDOWS_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req_win.txt"),
-]
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(
@@ -213,11 +246,8 @@ def _check_ver(pyver, op, wanted):
     """
     pyver = distutils.version.LooseVersion(pyver)
     wanted = distutils.version.LooseVersion(wanted)
-    if IS_PY3:
-        if not isinstance(pyver, str):
-            pyver = str(pyver)
-        if not isinstance(wanted, str):
-            wanted = str(wanted)
+    if not isinstance(pyver, str):
+        pyver = str(pyver)
     return getattr(operator, "__{}__".format(op))(pyver, wanted)
 
 
@@ -226,15 +256,11 @@ def _parse_requirements_file(requirements_file):
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
             line = line.strip()
-            if not line or line.startswith(("#", "-r")):
+            if not line or line.startswith(("#", "-r", "--")):
                 continue
             if IS_WINDOWS_PLATFORM:
                 if "libcloud" in line:
                     continue
-            if IS_PY3 and "futures" in line.lower():
-                # Python 3 already has futures, installing it will only break
-                # the current python installation whenever futures is imported
-                continue
             try:
                 pkg, pyverspec = line.rsplit(";", 1)
             except ValueError:
@@ -469,9 +495,9 @@ class DownloadWindowsDlls(Command):
 
                 # pylint: enable=no-name-in-module
             else:
-                from pip._internal.utils.logging import (
+                from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
                     indent_log,
-                )  # pylint: disable=no-name-in-module
+                )
         except ImportError:
             # TODO: Impliment indent_log here so we don't require pip
             @contextlib.contextmanager
@@ -493,8 +519,9 @@ class DownloadWindowsDlls(Command):
                         "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
                     )
                     try:
-                        import requests
                         from contextlib import closing
+
+                        import requests
 
                         with closing(requests.get(furl, stream=True)) as req:
                             if req.status_code == 200:
@@ -514,20 +541,12 @@ class DownloadWindowsDlls(Command):
 
                         if req.getcode() == 200:
                             with open(fdest, "wb") as wfh:
-                                if IS_PY3:
-                                    while True:
-                                        chunk = req.read(4096)
-                                        if not chunk:
-                                            break
-                                        wfh.write(chunk)
-                                        wfh.flush()
-                                else:
-                                    while True:
-                                        for chunk in req.read(4096):
-                                            if not chunk:
-                                                break
-                                            wfh.write(chunk)
-                                            wfh.flush()
+                                while True:
+                                    chunk = req.read(4096)
+                                    if not chunk:
+                                        break
+                                    wfh.write(chunk)
+                                    wfh.flush()
                         else:
                             log.error(
                                 "Failed to download {}.dll to {} from {}".format(
@@ -543,10 +562,6 @@ class Sdist(sdist):
             self.run_command("write_salt_ssh_packaging_file")
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
-        if not IS_PY3 and not isinstance(base_dir, str):
-            # Work around some bad code in distutils which logs unicode paths
-            # against a str format string.
-            base_dir = base_dir.encode("utf-8")
         sdist.make_release_tree(self, base_dir, files)
 
         # Let's generate salt/_version.py to include in the sdist tarball
@@ -999,10 +1014,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = "Portable, distributed, remote execution and configuration management system"
-        kwargs = {}
-        if IS_PY3:
-            kwargs["encoding"] = "utf-8"
-        with open(SALT_LONG_DESCRIPTION_FILE, **kwargs) as f:
+        with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
         self.author = "Thomas S Hatch"
@@ -1167,24 +1179,42 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_install_requires(self):
+        install_requires = []
+        if USE_STATIC_REQUIREMENTS is True:
+            # We've been explicitly asked to use static requirements
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
 
-        if IS_OSX_PLATFORM:
-            install_requires = []
-            for reqfile in SALT_OSX_REQS:
-                install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_LINUX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
             return install_requires
-
-        if IS_WINDOWS_PLATFORM:
-            install_requires = []
-            for reqfile in SALT_WINDOWS_REQS:
-                install_requires += _parse_requirements_file(reqfile)
-            return install_requires
-
-        install_requires = _parse_requirements_file(SALT_REQS)
-
-        if self.salt_transport == "zeromq":
-            install_requires += _parse_requirements_file(SALT_CRYPTO_REQS)
-            install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
+        elif USE_STATIC_REQUIREMENTS is False:
+            # We've been explicitly asked NOT to use static requirements
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_BASE_REQUIREMENTS:
+                    install_requires += _parse_requirements_file(reqfile)
+        else:
+            # This is the old and default behavior
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_BASE_REQUIREMENTS:
+                    install_requires += _parse_requirements_file(reqfile)
         return install_requires
 
     @property
@@ -1357,7 +1387,7 @@ class SaltDistribution(distutils.dist.Distribution):
         elif sys.platform.startswith("linux"):
             freezer_includes.append("spwd")
             try:
-                import yum  # pylint: disable=unused-variable
+                import yum  # pylint: disable=unused-import
 
                 freezer_includes.append("yum")
             except ImportError:
