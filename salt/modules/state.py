@@ -1332,6 +1332,9 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         except KeyError:
             log.warning("Invalid custom module type '%s', ignoring", module_type)
 
+    if "all" in sync_mods or "grains" in sync_mods:
+        opts.pop("grains", None)
+
     try:
         st_ = salt.state.HighState(
             opts,
