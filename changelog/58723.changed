@@ -1,0 +1,1 @@
+Refactor `salt.modules.boto_sns` to use AWS boto3.

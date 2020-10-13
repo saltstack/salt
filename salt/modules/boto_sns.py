@@ -55,24 +55,25 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     # pylint: disable=unused-import
-    import boto
-    import boto.sns
+    import boto3
 
     # pylint: enable=unused-import
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
-    HAS_BOTO = True
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
+    HAS_BOTO3 = False
 
 
 def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
-    if has_boto_reqs is True:
-        __utils__["boto.assign_funcs"](__name__, "sns", pack=__salt__)
-    return has_boto_reqs
+    return salt.utils.versions.check_boto_reqs(check_boto=False)
+
+
+def __init__(opts):
+    if HAS_BOTO3:
+        __utils__["boto3.assign_funcs"](__name__, "sns")
 
 
 def get_all_topics(region=None, key=None, keyid=None, profile=None):
@@ -91,11 +92,19 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     __context__[cache_key] = {}
-    # TODO: support >100 SNS topics (via NextToken)
-    topics = conn.get_all_topics()
-    for t in topics["ListTopicsResponse"]["ListTopicsResult"]["Topics"]:
+
+
+    resp = conn.list_topics()
+    for t in resp["Topics"]:
         short_name = t["TopicArn"].split(":")[-1]
         __context__[cache_key][short_name] = t["TopicArn"]
+
+    while "NextToken" in resp:
+        resp = conn.list_topics(NextToken=resp["NextToken"])
+        for t in resp["Topics"]:
+            short_name = t["TopicArn"].split(":")[-1]
+            __context__[cache_key][short_name] = t["TopicArn"]
+
     return __context__[cache_key]
 
 
@@ -123,7 +132,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_sns.create mytopic region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    conn.create_topic(name)
+    conn.create_topic(Name=name)
     log.info("Created SNS topic %s", name)
     _invalidate_cache()
     return True
@@ -138,10 +147,14 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_sns.delete mytopic region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    conn.delete_topic(get_arn(name, region, key, keyid, profile))
-    log.info("Deleted SNS topic %s", name)
-    _invalidate_cache()
-    return True
+    try:
+        conn.delete_topic(TopicArn=get_arn(name, region, key, keyid, profile))
+        log.info("Deleted SNS topic %s", name)
+        _invalidate_cache()
+        return True
+    except conn.exceptions.NotFoundException:
+        return True
+    return False
 
 
 def get_all_subscriptions_by_topic(
@@ -161,12 +174,14 @@ def get_all_subscriptions_by_topic(
         pass
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    ret = conn.get_all_subscriptions_by_topic(
-        get_arn(name, region, key, keyid, profile)
-    )
-    __context__[cache_key] = ret["ListSubscriptionsByTopicResponse"][
-        "ListSubscriptionsByTopicResult"
-    ]["Subscriptions"]
+    topic_arn = get_arn(name, region, key, keyid, profile)
+    resp = conn.list_subscriptions_by_topic(TopicArn=topic_arn)
+    __context__[cache_key] = resp["Subscriptions"]
+    while "NextToken" in resp:
+        resp = conn.list_subscriptions_by_topic(
+            TopicArn=topic_arn, NextToken=resp["NextToken"]
+        )
+        __context__[cache_key].extend(resp["Subscriptions"])
     return __context__[cache_key]
 
 
@@ -181,8 +196,18 @@ def subscribe(
         salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
-    log.info("Subscribe %s %s to %s topic", protocol, endpoint, topic)
+
+    try:
+        conn.subscribe(
+            TopicArn=get_arn(topic, region, key, keyid, profile),
+            Protocol=protocol,
+            Endpoint=endpoint,
+        )
+        log.info("Subscribe %s %s to %s topic", protocol, endpoint, topic)
+    except conn.exceptions.NotFoundException as e:
+        log.error(e)
+        return False
+
     try:
         del __context__[_subscriptions_cache_key(topic)]
     except KeyError:
@@ -200,24 +225,27 @@ def unsubscribe(
 
     .. code-block:: bash
 
-        salt myminion boto_sns.unsubscribe my_topic my_subscription_arn region=us-east-1
+        salt myminion boto_sns.unsubscribe my_subscription_arn region=us-east-1
 
     .. versionadded:: 2016.11.0
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if subscription_arn.startswith("arn:aws:sns:") is False:
+    try:
+        if subscription_arn not in get_all_subscriptions_by_topic(
+            topic, region, key, keyid, profile
+        ):
+            return True
+    except conn.exceptions.NotFoundException as e:
         return False
 
     try:
-        conn.unsubscribe(subscription_arn)
-        log.info("Unsubscribe %s to %s topic", subscription_arn, topic)
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Unsubscribe Error", exc_info=True)
-        return False
-    else:
-        __context__.pop(_subscriptions_cache_key(topic), None)
+        conn.unsubscribe(SubscriptionArn=subscription_arn)
+        log.info("Unsubscribe %s", subscription_arn)
         return True
+    except (KeyError, conn.exceptions.NotFoundException) as e:
+        log.debug("Unsubscribe Error", exc_info=True)
+        return False
 
 
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
