@@ -61,6 +61,8 @@ def cmp(x, y):
 
     Return negative if x<y, zero if x==y, positive if x>y.
     """
+    if isinstance(x, dict) and isinstance(y, dict):
+        return 0 if x == y else -1
     return (x > y) - (x < y)
 
 
