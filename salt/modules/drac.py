@@ -19,6 +19,11 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
+    cur_path = __salt__['environ.get']('PATH')
+    if 'srvadmin' not in cur_path:
+        srvadmin_path = ('/opt/dell/srvadmin/bin:/opt/dell/srvadmin/sbin')
+        new_path = '{}:{}'.format(cur_path, srvadmin_path)
+        __salt__['environ.setval']('PATH', new_path)
     if salt.utils.path.which("racadm"):
         return True
 
