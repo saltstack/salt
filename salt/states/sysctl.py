@@ -52,7 +52,6 @@ def present(name, value, config=None):
             config = "/etc/sysctl.conf"
 
     if __opts__["test"]:
-        current = __salt__["sysctl.show"]()
         configured = __salt__["sysctl.show"](config_file=config)
         if configured is None:
             ret["result"] = None
@@ -62,9 +61,10 @@ def present(name, value, config=None):
                 "missing.".format(name, config)
             )
             return ret
-        if name in current and name not in configured:
-            if re.sub(" +|\t+", " ", current[name]) != re.sub(
-                " +|\t+", " ", str(value)
+        current = __salt__["sysctl.get"](name)
+        if current != "" and name not in configured:
+            if re.sub(" +|\t+", " ", current) != \
+               re.sub(" +|\t+", " ", str(value)
             ):
                 ret["result"] = None
                 ret["comment"] = "Sysctl option {} set to be changed to {}".format(
@@ -79,7 +79,7 @@ def present(name, value, config=None):
                     "changed to {} in config file.".format(name, value)
                 )
                 return ret
-        elif name in configured and name not in current:
+        elif name in configured and current == "":
             ret["result"] = None
             ret["comment"] = (
                 "Sysctl value {0} is present in configuration file but is not "
@@ -87,8 +87,8 @@ def present(name, value, config=None):
                 "changed to {1}".format(name, value)
             )
             return ret
-        elif name in configured and name in current:
-            if str(value).split() == __salt__["sysctl.get"](name).split():
+        elif name in configured and current != "":
+            if str(value).split() == current.split():
                 ret["result"] = True
                 ret["comment"] = "Sysctl value {} = {} is already set".format(
                     name, value

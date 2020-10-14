@@ -45,6 +45,9 @@ def show(config_file=False):
     """
     Return a list of sysctl parameters for this minion
 
+    config: Pull the data from the system configuration file
+        instead of the live data.
+
     CLI Example:
 
     .. code-block:: bash
