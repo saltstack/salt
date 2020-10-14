@@ -3506,6 +3506,7 @@ def update(
 
     # Update the kernel boot parameters
     data = {k: v for k, v in locals().items() if bool(v)}
+    data["stop_on_reboot"] = stop_on_reboot
     if boot_dev:
         data["boot_dev"] = boot_dev.split()
 
