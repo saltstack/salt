@@ -8,6 +8,7 @@ import os
 import re
 
 import salt.utils.decorators.path
+import salt.utils.files
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
