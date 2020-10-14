@@ -88,14 +88,17 @@ def show(config_file=False):
             return None
     else:
         out = __salt__["cmd.run"](cmd, output_loglevel="trace")
+        value = None
         for line in out.splitlines():
             if any([line.startswith("{0}.".format(root)) for root in roots]):
-                comps = line.split("=", 1)
-                ret[comps[0]] = comps[1]
-            elif comps[0]:
-                ret[comps[0]] += "{0}\n".format(line)
-            else:
-                continue
+                if value is not None:
+                    ret[key] = "\n".join(value)
+                (key, firstvalue) = line.split("=", 1)
+                value = [firstvalue]
+            elif value is not None:
+                value.append("{0}".format(line))
+        if value is not None:
+            ret[key] = "\n".join(value)
         return ret
 
 
