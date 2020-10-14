@@ -4,7 +4,7 @@ Idem Support
 
 This util provides access to an idem-ready hub
 
-.. versionadded:: Magnesium
+.. versionadded:: 3002
 """
 import logging
 import sys

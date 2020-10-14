@@ -27,6 +27,7 @@ def master_id():
 
 
 @slowTest
+@pytest.mark.skip_on_windows(reason="Windows does not do user checks")
 def test_exit_status_unknown_user(salt_factories, master_id):
     """
     Ensure correct exit status when the master is configured to run as an unknown user.
@@ -35,7 +36,9 @@ def test_exit_status_unknown_user(salt_factories, master_id):
         factory = salt_factories.get_salt_master_daemon(
             master_id, config_overrides={"user": "unknown-user"}
         )
-        factory.start(start_timeout=10, max_start_attempts=1)
+        with factory.started(start_timeout=10, max_start_attempts=1):
+            # We should not get here
+            pass
 
     assert exc.value.exitcode == salt.defaults.exitcodes.EX_NOUSER, exc.value
     assert "The user is not available." in exc.value.stderr, exc.value

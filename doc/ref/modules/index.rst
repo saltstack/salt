@@ -97,7 +97,7 @@ included libraries.
 
 Then, create the zip:
 
-.. code-block:: bash
+.. code-block:: console
 
     modules $ zip -r lumberjack lumberjack
       adding: lumberjack/ (stored 0%)

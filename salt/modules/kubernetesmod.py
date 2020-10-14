@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for handling kubernetes calls.
 
@@ -44,8 +43,6 @@ provided `kubeconfig` entry is preferred.
 
 """
 
-# Import Python Futures
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import errno
@@ -60,10 +57,8 @@ from time import sleep
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates
-import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, TimeoutError
-from salt.ext import six
 from salt.ext.six import iteritems
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
@@ -217,11 +212,6 @@ def _setup_conn(**kwargs):
 
     if not (kubeconfig and context):
         if kwargs.get("api_url") or __salt__["config.option"]("kubernetes.api_url"):
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "Kubernetes configuration via url, certificate, username and password will be removed in Sodiom. "
-                "Use 'kubeconfig' and 'context' instead.",
-            )
             try:
                 return _setup_conn_old(**kwargs)
             except Exception:  # pylint: disable=broad-except
@@ -270,7 +260,7 @@ def _cleanup(**kwargs):
         if kubeconfig and os.path.basename(kubeconfig).startswith("salt-kubeconfig-"):
             try:
                 os.unlink(kubeconfig)
-            except (IOError, OSError) as err:
+            except OSError as err:
                 if err.errno != errno.ENOENT:
                     log.exception(err)
 
@@ -1403,7 +1393,7 @@ def __create_object_body(
             or src_obj["kind"] != kind
         ):
             raise CommandExecutionError(
-                "The source file should define only " "a {0} object".format(kind)
+                "The source file should define only " "a {} object".format(kind)
             )
 
         if "metadata" in src_obj:
@@ -1424,7 +1414,7 @@ def __read_and_render_yaml_file(source, template, saltenv):
     """
     sfn = __salt__["cp.cache_file"](source, saltenv)
     if not sfn:
-        raise CommandExecutionError("Source file '{0}' not found".format(source))
+        raise CommandExecutionError("Source file '{}' not found".format(source))
 
     with salt.utils.files.fopen(sfn, "r") as src:
         contents = src.read()
@@ -1449,13 +1439,13 @@ def __read_and_render_yaml_file(source, template, saltenv):
                     # Failed to render the template
                     raise CommandExecutionError(
                         "Failed to render file path with error: "
-                        "{0}".format(data["data"])
+                        "{}".format(data["data"])
                     )
 
                 contents = data["data"].encode("utf-8")
             else:
                 raise CommandExecutionError(
-                    "Unknown template specified: {0}".format(template)
+                    "Unknown template specified: {}".format(template)
                 )
 
         return salt.utils.yaml.safe_load(contents)
@@ -1542,6 +1532,6 @@ def __enforce_only_strings_dict(dictionary):
     ret = {}
 
     for key, value in iteritems(dictionary):
-        ret[six.text_type(key)] = six.text_type(value)
+        ret[str(key)] = str(value)
 
     return ret
