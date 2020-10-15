@@ -118,7 +118,8 @@ def list_users(verbose=True, hashes=False):
                 user_data[label] = data
 
         if user_data:
-            users[user_data["unix username"]] = user_data
+            if "unix username" in user_data:
+                users[user_data["unix username"]] = user_data
     else:
         # list users
         res = __salt__["cmd.run_all"]("pdbedit --list")
