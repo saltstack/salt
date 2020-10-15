@@ -163,7 +163,7 @@ def _options_browser(cfg, ret_config, defaults, virtualname, options):
         # Attribute not found, check for a default value
         if defaults:
             if option in defaults:
-                log.info("Using default for %s %s", virtualname, option)
+                log.debug("Using default for %s %s", virtualname, option)
                 yield option, defaults[option]
                 continue
 
@@ -190,7 +190,7 @@ def _fetch_profile_opts(
     creds = {}
     profile = _options[profile_attr]
     if profile:
-        log.info("Using profile %s", profile)
+        log.debug("Using profile %s", profile)
 
         if "config.option" in __salt__:
             creds = cfg(profile)
