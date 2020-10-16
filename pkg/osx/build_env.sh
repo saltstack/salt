@@ -61,13 +61,14 @@ sysctl -w kern.maxfilesperproc=$SET_ULIMIT
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
 ulimit -n $SET_ULIMIT
 
+PY_VERSION=3.7
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
 SHADIR=$SCRIPTDIR/shasums
 INSTALL_DIR=/opt/salt
 PKG_CONFIG=$INSTALL_DIR/bin/pkg-config
 PKG_CONFIG_PATH=$INSTALL_DIR/lib/pkgconfig
-PYDIR=$INSTALL_DIR/lib/python3.7
+PYDIR=$INSTALL_DIR/lib/python$PY_VERSION
 PYTHON=$INSTALL_DIR/bin/python3
 PIP=$INSTALL_DIR/bin/pip3
 
@@ -284,7 +285,7 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt -r $SRCDIR/pkg/osx/req_pyobjc.txt \
+$PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
              --no-cache-dir

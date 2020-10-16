@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for Sending Messages via SMTP
 
@@ -41,13 +40,11 @@ Module for Sending Messages via SMTP
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import socket
 
-# Import salt libs
 import salt.utils.files
 
 log = logging.getLogger(__name__)
@@ -89,13 +86,16 @@ def send_msg(
     attachments=None,
 ):
     """
-    Send a message to an SMTP recipient. Designed for use in states.
+    Send a message to an SMTP recipient. To send a message to multiple \
+    recipients, the recipients should be in a comma-seperated Python string. \
+    Designed for use in states.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' profile='my-smtp-account'
+        salt '*' smtp.send_msg 'admin@example.com,admin2@example.com' 'This is a salt module test for multiple recipients' profile='my-smtp-account'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com' attachments="['/var/log/messages']"
     """
@@ -161,7 +161,7 @@ def send_msg(
             name = os.path.basename(f)
             with salt.utils.files.fopen(f, "rb") as fin:
                 att = email.mime.application.MIMEApplication(fin.read(), Name=name)
-            att["Content-Disposition"] = 'attachment; filename="{0}"'.format(name)
+            att["Content-Disposition"] = 'attachment; filename="{}"'.format(name)
             msg.attach(att)
 
     try:
