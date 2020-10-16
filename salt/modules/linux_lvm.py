@@ -359,6 +359,7 @@ def vgcreate(vgname, devices, force=False, **kwargs):
         cmd.append("-qq")
 
     valid = (
+        "addtag",
         "clustered",
         "maxlogicalvolumes",
         "maxphysicalvolumes",
