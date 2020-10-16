@@ -18,6 +18,7 @@ markupsafe==1.1.1
 more-itertools==5.0.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==1.0.0
 portend==2.4              # via cherrypy
+psutil==5.6.7
 pycryptodomex==3.9.8
 pytz==2020.1              # via tempora
 pyyaml==5.3.1
