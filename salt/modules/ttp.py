@@ -166,7 +166,8 @@ try:
     HAS_TTP = True
 except ImportError:
     HAS_TTP = False
-
+except ModuleNotFoundError:
+    HAS_TTP = False
 log = logging.getLogger(__name__)
 
 __virtualname__ = "ttp"
@@ -217,7 +218,7 @@ def _elasticsearch_return(data, **kwargs):
                         post_to_elk(salt.utils.json.dumps(i))
             # handle normal named groups case
             elif isinstance(input_res, dict):
-                post_to_elk(salt.utils.json.dumps(input_res))
+                post_to_elk(salt.utils.json.dumps(item))
     # handle per_template case
     elif isinstance(data, dict):
         post_to_elk(salt.utils.json.dumps(data))

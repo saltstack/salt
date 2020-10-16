@@ -89,7 +89,11 @@ Operating System: CentOS Linux 7 (Core)
         """
         This test returns None for "cp.get_file_str" simulating
         wrong path to or non existing template raising CommandExecutionError
+<<<<<<< HEAD
         due to "template_text" is None
+=======
+        dues to "template_text" is None
+>>>>>>> 2a368deaa7 (Added test for ttp execution module.)
         """
         mock_cp_get_file_str = MagicMock(return_value=None)
         with patch.dict(
@@ -130,8 +134,13 @@ Operating System: CentOS Linux 7 (Core)
 
     def test_ttp_run_fail_to_parse(self):
         """
+<<<<<<< HEAD
         This template raises exception within template macro triggering
         CommandExecutionError for "parser.parse(one=True)" call
+=======
+        This template raises exception withoint template macro trigerring
+        causing CommandExecutionError fpr "parser.parse(one=True)" call
+>>>>>>> 2a368deaa7 (Added test for ttp execution module.)
         """
         ttp_template = """
 <macro>
