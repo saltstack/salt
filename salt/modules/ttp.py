@@ -155,19 +155,18 @@ Sample template::
 """
 # Import python libs
 import logging
-import sys
-import traceback
+import sys, traceback
+from salt.exceptions import CommandExecutionError
 
 # Import third party modules
 try:
     from ttp import ttp
 
     HAS_TTP = True
-except ModuleNotFoundError:
-    HAS_TTP = False
 except ImportError:
     HAS_TTP = False
-
+except ModuleNotFoundError:
+    HAS_TTP = False
 log = logging.getLogger(__name__)
 
 __virtualname__ = "ttp"
@@ -218,7 +217,7 @@ def _elasticsearch_return(data, **kwargs):
                         post_to_elk(salt.utils.json.dumps(i))
             # handle normal named groups case
             elif isinstance(input_res, dict):
-                post_to_elk(salt.utils.json.dumps(input_res))
+                post_to_elk(salt.utils.json.dumps(item))
     # handle per_template case
     elif isinstance(data, dict):
         post_to_elk(salt.utils.json.dumps(data))
@@ -229,7 +228,7 @@ def _elasticsearch_return(data, **kwargs):
 # -----------------------------------------------------------------------------
 
 
-def _get_text_from_run_result(run_results, **kwargs):
+def _get_text_from_run_result(run_results, function_name=None):
     """
     Helper function to extract text from command run results.
 
@@ -237,7 +236,6 @@ def _get_text_from_run_result(run_results, **kwargs):
     """
     results_data = []
     proxytype = __pillar__.get("proxy", {}).get("proxytype", None)
-    function_name = kwargs.get("function_name", None)
     if function_name == "net.cli":
         # run_results structure is:
         # {"out": {command1: "result1", command2: "result2"}}
@@ -351,14 +349,16 @@ def run(*args, **kwargs):
         template, saltenv=kwargs.pop("saltenv", "base")
     )
     if not template_text:
-        return "Failed to get TTP template '{}'".format(template)
+        raise CommandExecutionError("Failed to get TTP template '{}'".format(template))
     try:
         parser.add_template(template_text)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        return "Failed to load TTP template: {}\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
+        raise CommandExecutionError(
+            "Failed to load TTP template: {}\n{}".format(
+                template,
+                "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
+            )
         )
     # get inputs load
     input_load = parser.get_input_load()
@@ -397,8 +397,10 @@ def run(*args, **kwargs):
         ret = parser.result(**ttp_res_kwargs)
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        return "Failed to parse output with TTP template '{}'\n\n{}".format(
-            template,
-            "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
+        raise CommandExecutionError(
+            "Failed to parse output with TTP template '{}'\n\n{}".format(
+                template,
+                "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)),
+            )
         )
     return ret

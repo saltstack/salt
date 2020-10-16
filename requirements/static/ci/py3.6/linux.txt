@@ -216,6 +216,7 @@ textfsm==1.1.0            # via napalm, netmiko, ntc-templates
 timelib==0.2.5
 toml==0.10.0
 transitions==0.8.1        # via junos-eznc
+ttp==0.5.0
 urllib3==1.24.2
 vcert==0.7.3
 virtualenv==20.0.20
