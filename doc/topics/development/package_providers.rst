@@ -82,6 +82,7 @@ Deprecated and destined to be removed. For now, should just do the following:
 
 .. code-block:: python
 
+    def myfunc():
         return __salt__["pkg.latest_version"](name) != ""
 
 
@@ -138,7 +139,8 @@ return the output of ``salt.utils.data.compare_dicts()``:
 
 .. code-block:: python
 
-    return salt.utils.data.compare_dicts(old, new)
+    def myfunc():
+        return salt.utils.data.compare_dicts(old, new)
 
 
 remove
@@ -174,7 +176,7 @@ Lists the repositories that are currently configured on this system.
 
 Returns a dictionary, in the following format:
 
-.. code-block:: python
+.. code-block:: pycon
 
     {'reponame': 'config_key_1': 'config value 1',
                  'config_key_2': 'config value 2',
@@ -192,7 +194,7 @@ Displays all local configuration for a specific repository.
 The information is formatted in much the same way as list_repos, but is
 specific to only one repo.
 
-.. code-block:: python
+.. code-block:: pycon
 
     {'config_key_1': 'config value 1',
      'config_key_2': 'config value 2',

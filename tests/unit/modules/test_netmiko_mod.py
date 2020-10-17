@@ -1,3 +1,4 @@
+# pylint: disable=W0223,W0231,W0221
 import logging
 
 import salt.modules.netmiko_mod as netmiko_mod
@@ -9,6 +10,10 @@ log = logging.getLogger(__name__)
 
 
 class MockNetmikoConnection:
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs["username"]
+        self.password = kwargs["password"]
+
     def is_alive(self):
         return False
 
@@ -17,15 +22,19 @@ class MockNetmikoConnection:
 
 
 def mock_netmiko_args():
-    return {"user": "salt", "password": "password"}
+    return {"username": "salt", "password": "password"}
 
 
-def mock_prepare_connection(**kwargs):
-    return MockNetmikoConnection(), kwargs
+def mock_netmiko_conn():
+    return MockNetmikoConnection(**mock_netmiko_args())
 
 
 def mock_file_apply_template_on_contents(*args):
     return args[0]
+
+
+def mock_prepare_connection(**kwargs):
+    return MockNetmikoConnection(**kwargs), {}
 
 
 class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
@@ -33,10 +42,10 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
         return {
             netmiko_mod: {
                 "__salt__": {
-                    "file.apply_template_on_contents": mock_file_apply_template_on_contents
+                    "file.apply_template_on_contents": mock_file_apply_template_on_contents,
                 },
                 "__proxy__": {
-                    "netmiko.conn": MockNetmikoConnection,
+                    "netmiko.conn": mock_netmiko_conn,
                     "netmiko.args": mock_netmiko_args,
                 },
                 "_prepare_connection": mock_prepare_connection,
@@ -47,10 +56,12 @@ class NetmikoTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test netmiko.send_config function
         """
-        _, ret = netmiko_mod.send_config(config_commands=["ls", "echo hello world"])
+        _, ret = netmiko_mod.send_config(
+            config_commands=["ls", "echo hello world"],
+            config_mode_command="config config-sess",
+        )
         self.assertEqual(ret.get("config_commands"), ["ls", "echo hello world"])
-        self.assertEqual(ret.get("user"), "salt")
-        self.assertEqual(ret.get("password"), "password")
+        self.assertEqual(ret.get("config_mode_command"), "config config-sess")
 
     def test_virtual(self):
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
