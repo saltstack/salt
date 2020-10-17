@@ -391,6 +391,11 @@ def run(**kwargs):
         elif __opts__["test"]:
             tests.append(func)
 
+    if not functions:
+        ret["comment"] = "No function provided."
+        ret["result"] = False
+        return ret
+
     if tests or missing:
         ret["comment"] = " ".join(
             [
