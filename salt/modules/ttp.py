@@ -155,7 +155,8 @@ Sample template::
 """
 # Import python libs
 import logging
-import sys, traceback
+import sys
+import traceback
 from salt.exceptions import CommandExecutionError
 
 # Import third party modules
@@ -163,10 +164,11 @@ try:
     from ttp import ttp
 
     HAS_TTP = True
-except ImportError:
-    HAS_TTP = False
 except ModuleNotFoundError:
     HAS_TTP = False
+except ImportError:
+    HAS_TTP = False
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = "ttp"
@@ -217,7 +219,7 @@ def _elasticsearch_return(data, **kwargs):
                         post_to_elk(salt.utils.json.dumps(i))
             # handle normal named groups case
             elif isinstance(input_res, dict):
-                post_to_elk(salt.utils.json.dumps(item))
+                post_to_elk(salt.utils.json.dumps(input_res))
     # handle per_template case
     elif isinstance(data, dict):
         post_to_elk(salt.utils.json.dumps(data))
@@ -372,10 +374,8 @@ def run(*args, **kwargs):
         output = __salt__[function](*arguments, **function_kwargs)
         default_input_data = _get_text_from_run_result(output, function_name=function)
         for template_name, template_inputs in input_load.items():
-            [
+            for i in default_input_data:
                 parser.add_input(data=i, template_name=template_name)
-                for i in default_input_data
-            ]
     # run inputs if any
     for template_name, template_inputs in input_load.items():
         for inpt_name, input_params in template_inputs.items():
