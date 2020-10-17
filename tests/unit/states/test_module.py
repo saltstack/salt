@@ -139,10 +139,10 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ):
             ret = module.run(**{CMD: None})
         if (
-            ret["comment"] != "Unavailable function: {0}.".format(CMD)
+            ret["comment"] != "Unavailable function: {}.".format(CMD)
             or ret["result"] is not False
         ):
-            self.fail("module.run did not fail as expected: {0}".format(ret))
+            self.fail("module.run did not fail as expected: {}".format(ret))
 
     def test_run_module_noop(self):
         """
@@ -153,11 +153,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             module.__opts__, {"test": True, "use_superseded": ["module.run"]}
         ):
             ret = module.run(**{})
-        if (
-            ret["comment"] != "No function provided."
-            or ret["result"] is not False
-        ):
-            self.fail("module.run did not fail as expected: {0}".format(ret))
+        if ret["comment"] != "No function provided." or ret["result"] is not False:
+            self.fail("module.run did not fail as expected: {}".format(ret))
 
     def test_module_run_hidden_varargs(self):
         """
