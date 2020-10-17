@@ -14,6 +14,11 @@ Complete Example
 .. code-block:: yaml
 
     postgres:
+      # the usage of dsn is optional and provides more flexibility. Other
+      # connection variables (user, pass, etc.) will then be ignored
+      # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+      dsn: 'host=localhost dbname=salt'
+
       user: 'salt'
       pass: 'super_secret_password'
       db: 'salt_db'
@@ -92,13 +97,18 @@ class POSTGRESExtPillar(SqlBaseExtPillar):
         Yield a POSTGRES cursor
         """
         _options = self._get_options()
-        conn = psycopg2.connect(
-            host=_options["host"],
-            user=_options["user"],
-            password=_options["pass"],
-            dbname=_options["db"],
-            port=_options["port"],
-        )
+        if _options.get('dsn'):
+            conn = psycopg2.connect(
+                dsn=_options.get('dsn'),
+            )
+        else:
+            conn = psycopg2.connect(
+                host=_options["host"],
+                user=_options["user"],
+                password=_options["pass"],
+                dbname=_options["db"],
+                port=_options["port"],
+            )
         cursor = conn.cursor()
         try:
             yield cursor
