@@ -128,6 +128,37 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         if ret["comment"] != "Unavailable function: {}.".format(CMD) or ret["result"]:
             self.fail("module.run did not fail as expected: {}".format(ret))
 
+    def test_run_module_not_available_testmode(self):
+        """
+        Tests the return of module.run state when the module function is not available
+        when run with test=True
+        :return:
+        """
+        with patch.dict(module.__salt__, {}, clear=True), patch.dict(
+            module.__opts__, {"test": True, "use_superseded": ["module.run"]}
+        ):
+            ret = module.run(**{CMD: None})
+        if (
+            ret["comment"] != "Unavailable function: {0}.".format(CMD)
+            or ret["result"] is not False
+        ):
+            self.fail("module.run did not fail as expected: {0}".format(ret))
+
+    def test_run_module_noop(self):
+        """
+        Tests the return of module.run state when no module function is provided
+        :return:
+        """
+        with patch.dict(module.__salt__, {}, clear=True), patch.dict(
+            module.__opts__, {"test": True, "use_superseded": ["module.run"]}
+        ):
+            ret = module.run(**{})
+        if (
+            ret["comment"] != "No function provided."
+            or ret["result"] is not False
+        ):
+            self.fail("module.run did not fail as expected: {0}".format(ret))
+
     def test_module_run_hidden_varargs(self):
         """
         Tests the return of module.run state when hidden varargs are used with
@@ -150,7 +181,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module.run(**{CMD: None})
         if (
             ret["comment"] != "Function {} to be executed.".format(CMD)
-            or not ret["result"]
+            or ret["result"] is not None
         ):
             self.fail("module.run failed: {}".format(ret))
 
@@ -329,9 +360,9 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             module.__salt__,
             {
-                "first": _mocked_none_return,
-                "second": _mocked_none_return,
-                "third": _mocked_none_return,
+                "first.one": _mocked_none_return,
+                "second.one": _mocked_none_return,
+                "third.one": _mocked_none_return,
             },
             clear=True,
         ):
