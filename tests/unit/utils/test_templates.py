@@ -273,7 +273,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_init_implicit(self):
-        """ generate_sls_context - Basic one level with impliocit init.sls """
+        """ generate_sls_context - Basic one level with implicit init.sls """
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo",
