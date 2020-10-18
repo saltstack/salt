@@ -93,7 +93,7 @@ azure-storage-common==1.4.0  # via azure-cosmosdb-table, azure-storage-blob, azu
 azure-storage-file==1.4.0  # via azure
 azure-storage-queue==1.4.0  # via azure
 azure==4.0.0
-backports.functools-lru-cache==1.5  # via cheroot
+backports.functools-lru-cache==1.5
 bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
 boto==2.49.0
@@ -105,12 +105,12 @@ certvalidator==0.11.1     # via vcert
 cffi==1.12.2
 chardet==3.0.4
 cheetah3==3.1.0
-cheroot==6.5.4            # via cherrypy
+cheroot==6.5.4
 cherrypy==17.3.0
 ciscoconfparse==1.5.19    # via napalm
 click==7.1.1              # via geomet
 colorama==0.4.3           # via ciscoconfparse
-contextlib2==0.5.5        # via cherrypy
+contextlib2==0.5.5
 croniter==0.3.29
 cryptography==2.6.1       # via adal, azure-cosmosdb-table, azure-keyvault, azure-storage-common, moto, paramiko, pyopenssl, vcert
 distlib==0.3.0            # via virtualenv
@@ -134,7 +134,7 @@ importlib-resources==1.5.0  # via virtualenv
 iniconfig==1.0.1          # via pytest
 ipaddress==1.0.22         # via kubernetes
 isodate==0.6.0            # via msrest
-jaraco.functools==2.0     # via tempora
+jaraco.functools==2.0
 jinja2==2.10.1
 jmespath==0.9.4
 jsondiff==1.1.1           # via moto
@@ -150,7 +150,7 @@ lxml==4.3.3               # via junos-eznc, napalm, ncclient
 mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5
-more-itertools==5.0.0     # via cheroot, cherrypy, jaraco.functools, zipp
+more-itertools==5.0.0
 moto==1.3.7
 msgpack==1.0.0
 msrest==0.6.14            # via azure-applicationinsights, azure-eventgrid, azure-keyvault, azure-loganalytics, azure-mgmt-cdn, azure-mgmt-compute, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-dns, azure-mgmt-eventhub, azure-mgmt-keyvault, azure-mgmt-media, azure-mgmt-network, azure-mgmt-rdbms, azure-mgmt-resource, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-servicefabric, msrestazure
@@ -167,7 +167,7 @@ paramiko==2.7.1
 passlib==1.7.2
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
-portend==2.4              # via cherrypy
+portend==2.4
 psutil==5.6.7
 py==1.9.0                 # via pytest
 pyaml==19.4.1             # via moto
@@ -194,7 +194,7 @@ python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common
 python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
-pytz==2019.1              # via moto, tempora
+pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
 pyzmq==18.0.1
@@ -207,10 +207,10 @@ s3transfer==0.3.3         # via boto3
 scp==0.13.2               # via junos-eznc, napalm, netmiko
 setproctitle==1.1.10
 setuptools-scm==3.2.0
-six==1.15.0               # via bcrypt, cassandra-driver, cheroot, cherrypy, cryptography, docker, docker-pycreds, geomet, google-auth, isodate, junos-eznc, kazoo, kubernetes, mock, more-itertools, moto, ncclient, packaging, pygit2, pynacl, pyopenssl, python-dateutil, python-jose, pyvmomi, responses, tempora, textfsm, transitions, vcert, virtualenv, websocket-client
+six==1.15.0
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
-tempora==1.14.1           # via portend
+tempora==1.14.1
 terminal==0.4.0           # via ntc-templates
 textfsm==1.1.0            # via napalm, netmiko, ntc-templates
 timelib==0.2.5
@@ -225,5 +225,5 @@ werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
 yamlordereddictloader==0.4.0  # via junos-eznc
-zc.lockfile==1.4          # via cherrypy
+zc.lockfile==1.4
 zipp==0.6.0               # via importlib-metadata, importlib-resources
