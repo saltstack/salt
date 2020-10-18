@@ -4,7 +4,7 @@ SLS Template Variable Reference
 
 
 .. warning::
-   In the 3002 release sls_path, tplfile, and tpldir have had some significate
+   In the 3002 release ``sls_path``, ``tplfile``, and ``tpldir`` have had some significant
    improvements which have the potential to break states that rely on old and
    broken functionality. These fixes can be enabled by setting the
    ``use_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
@@ -165,7 +165,7 @@ tplpath
 
 Full path to sls template file being process on local disk. This is usually
 pointing to a copy of the sls file in a cache directory. This will be in OS
-specific format (windows vs posix). (It is probably best not to use this.)
+specific format (Windows vs POSIX). (It is probably best not to use this.)
 
 .. code-block:: jinja
 

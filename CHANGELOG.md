@@ -226,7 +226,7 @@ Added
 - Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
 - Added features config option for feature flags. Added a feature flag
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
-  This flag will be depricated in the Phosphorus release when this functionality
+  This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
 
 
