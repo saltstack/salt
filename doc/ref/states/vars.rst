@@ -7,13 +7,13 @@ SLS Template Variable Reference
    In the 3002 release ``sls_path``, ``tplfile``, and ``tpldir`` have had some significant
    improvements which have the potential to break states that rely on old and
    broken functionality. These fixes can be enabled by setting the
-   ``use_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
+   ``enable_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
    This functionality will become the default in the 3005 release.
 
    .. code-block:: yaml
 
        features:
-         use_slsvars_fixes: True
+         enable_slsvars_fixes: True
 
 
 
