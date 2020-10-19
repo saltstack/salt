@@ -26,7 +26,7 @@ use the -git package. Installing the -git package as follows:
 
 .. code-block:: bash
 
-    wget https://aur.archlinux.org/packages/sa/salt-git/salt-git.tar.gz
+    wget https://aur.archlinux.org/cgit/aur.git/snapshot/salt-git.tar.gz 
     tar xf salt-git.tar.gz
     cd salt-git/
     makepkg -is
