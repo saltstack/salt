@@ -85,7 +85,7 @@ py==1.9.0                 # via pytest
 pyaml==19.4.1             # via moto
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5             # via pyasn1-modules, rsa
-pycparser==2.20
+pycparser==2.17
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.8
 pyeapi==0.8.3             # via napalm
