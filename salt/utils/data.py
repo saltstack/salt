@@ -797,20 +797,34 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
             try:
                 idx = int(each)
             except ValueError:
-                idx = each
-
-            embed_match = False
-            # Index was not numeric, lets look at any embedded dicts
-            for embedded in (x for x in ptr if isinstance(x, dict)):
-                try:
-                    ptr = embedded[idx]
-                    embed_match = True
-                    break
-                except KeyError:
-                    pass
-            if not embed_match:
-                # No embedded dicts matched, return the default
-                return default
+                embed_match = False
+                # Index was not numeric, lets look at any embedded dicts
+                for embedded in (x for x in ptr if isinstance(x, dict)):
+                    try:
+                        ptr = embedded[each]
+                        embed_match = True
+                        break
+                    except KeyError:
+                        pass
+                if not embed_match:
+                    # No embedded dicts matched, return the default
+                    return default
+            else:
+                embed_match = False
+                # Index was numeric, lets look at any embedded dicts
+                # using the converted version of each.
+                for embedded in (x for x in ptr if isinstance(x, dict)):
+                    try:
+                        ptr = embedded[idx]
+                        embed_match = True
+                        break
+                    except KeyError:
+                        pass
+                if not embed_match:
+                    try:
+                        ptr = ptr[idx]
+                    except IndexError:
+                        return default
         else:
             try:
                 ptr = ptr[each]
