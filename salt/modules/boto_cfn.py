@@ -35,36 +35,31 @@ Connection module for Amazon Cloud Formation
 import logging
 
 import salt.utils.versions
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
-    import boto
-    import boto.cloudformation
+    import boto3
 
-    # pylint: enable=unused-import
-    from boto.exception import BotoServerError
-
-    logging.getLogger("boto").setLevel(logging.CRITICAL)
-    HAS_BOTO = True
+    logging.getLogger("boto3").setLevel(logging.CRITICAL)
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
+    HAS_BOTO3 = False
 
 
 def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    return salt.utils.versions.check_boto_reqs(check_boto3=False)
+    return salt.utils.versions.check_boto_reqs(check_boto=False)
 
 
 def __init__(opts):
-    if HAS_BOTO:
-        __utils__["boto.assign_funcs"](
-            __name__, "cfn", module="cloudformation", pack=__salt__
-        )
+    if HAS_BOTO3:
+        __utils__["boto3.assign_funcs"](__name__, "cfn", module="cloudformation")
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -81,10 +76,10 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
     try:
         # Returns an object if stack exists else an exception
-        exists = conn.describe_stacks(name)
+        exists = conn.describe_stacks(StackName=name)
         log.debug("Stack %s exists.", name)
         return True
-    except BotoServerError as e:
+    except conn.exceptions.ClientError as e:
         log.debug("boto_cfn.exists raised an exception", exc_info=True)
         return False
 
@@ -105,37 +100,14 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
 
     try:
         # Returns an object if stack exists else an exception
-        r = conn.describe_stacks(name)
-        if r:
-            stack = r[0]
-            log.debug("Found VPC: %s", stack.stack_id)
-            keys = (
-                "stack_id",
-                "description",
-                "stack_status",
-                "stack_status_reason",
-                "tags",
-            )
-
-            ret = {k: getattr(stack, k) for k in keys if hasattr(stack, k)}
-            o = getattr(stack, "outputs")
-            p = getattr(stack, "parameters")
-            outputs = {}
-            parameters = {}
-            for i in o:
-                outputs[i.key] = i.value
-            ret["outputs"] = outputs
-            for j in p:
-                parameters[j.key] = j.value
-            ret["parameters"] = parameters
-
-            return {"stack": ret}
-
-        log.debug("Stack %s exists.", name)
-        return True
-    except BotoServerError as e:
+        resp = conn.describe_stacks(StackName=name)
+        if resp["Stacks"]:
+            stack = resp["Stacks"][0]
+            log.debug("Found VPC: %s", stack["StackId"])
+            return {"stack": stack}
+    except conn.exceptions.ClientError as e:
         log.warning("Could not describe stack %s.\n%s", name, e)
-        return False
+        return None
 
 
 def create(
@@ -166,24 +138,41 @@ def create(
         salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     """
+    if all((template_body, template_url)):
+        raise SaltInvocationError(
+            "Only one of the following may be specified: template_body, template_url"
+        )
+
+    if all((stack_policy_body, stack_policy_url)):
+        raise SaltInvocationError(
+            "Only one of the following may be specified: stack_policy_body, stack_policy_url"
+        )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        return conn.create_stack(
-            name,
-            template_body,
-            template_url,
-            parameters,
-            notification_arns,
-            disable_rollback,
-            timeout_in_minutes,
-            capabilities,
-            tags,
-            on_failure,
-            stack_policy_body,
-            stack_policy_url,
-        )
-    except BotoServerError as e:
+        kwargs = {"StackName": name}
+        if template_body is not None:
+            kwargs.update({"TemplateBody": template_body})
+        if template_url is not None:
+            kwargs.update({"TemplateURL": template_url})
+        if parameters is not None:
+            kwargs.update({"Parameters": parameters})
+        if notification_arns is not None:
+            kwargs.update({"NotificationARNs": notification_arns})
+        if disable_rollback is not None:
+            kwargs.update({"DisableRollback": disable_rollback})
+        if timeout_in_minutes is not None:
+            kwargs.update({"TimeoutInMinutes": timeout_in_minutes})
+        if capabilities is not None:
+            kwargs.update({"Capabilities": capabilities})
+        if tags is not None:
+            kwargs.update({"Tags": tags})
+            kwargs.update({"StackPolicyBody": stack_policy_body})
+        if stack_policy_url is not None:
+            kwargs.update({"StackPolicyURL": stack_policy_url})
+        return conn.create_stack(**kwargs)
+    except conn.exceptions.ClientError as e:
         msg = "Failed to create stack {}.\n{}".format(name, e)
         log.error(msg)
         log.debug(e)
@@ -225,25 +214,41 @@ def update_stack(
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        update = conn.update_stack(
-            name,
-            template_body,
-            template_url,
-            parameters,
-            notification_arns,
-            disable_rollback,
-            timeout_in_minutes,
-            capabilities,
-            tags,
-            use_previous_template,
-            stack_policy_during_update_body,
-            stack_policy_during_update_url,
-            stack_policy_body,
-            stack_policy_url,
-        )
+        kwargs = {"StackName": name}
+        if template_body is not None:
+            kwargs.update({"TemplateBody": template_body})
+        if template_url is not None:
+            kwargs.update({"TemplateURL": template_url})
+        if parameters is not None:
+            kwargs.update({"Parameters": parameters})
+        if notification_arns is not None:
+            kwargs.update({"NotificationARNs": notification_arns})
+        if disable_rollback is not None:
+            kwargs.update({"DisableRollback": disable_rollback})
+        if timeout_in_minutes is not None:
+            kwargs.update({"TimeoutInMinutes": timeout_in_minutes})
+        if capabilities is not None:
+            kwargs.update({"Capabilities": capabilities})
+        if tags is not None:
+            kwargs.update({"Tags": tags})
+        if use_previous_template is not None:
+            kwargs.update({"UsePreviousTemplate": use_previous_template})
+        if stack_policy_during_update_body is not None:
+            kwargs.update(
+                {"StackPolicyDuringUpdateBody": stack_policy_during_update_body}
+            )
+        if stack_policy_during_update_url is not None:
+            kwargs.update(
+                {"StackPolicyDuringUpdateURL": stack_policy_during_update_url}
+            )
+        if stack_policy_body is not None:
+            kwargs.update({"StackPolicyBody": stack_policy_body})
+        if stack_policy_url is not None:
+            kwargs.update({"StackPolicyURL": stack_policy_url})
+        update = conn.update_stack(**kwargs)
         log.debug("Updated result is : %s.", update)
         return update
-    except BotoServerError as e:
+    except conn.exceptions.ClientError as e:
         msg = "Failed to update stack {}.".format(name)
         log.debug(e)
         log.error(msg)
@@ -263,8 +268,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        return conn.delete_stack(name)
-    except BotoServerError as e:
+        return conn.delete_stack(StackName=name)
+    except conn.exceptions.ClientError as e:
         msg = "Failed to create stack {}.".format(name)
         log.error(msg)
         log.debug(e)
@@ -284,10 +289,10 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        template = conn.get_template(name)
+        template = conn.get_template(StackName=name)
         log.info("Retrieved template for stack %s", name)
         return template
-    except BotoServerError as e:
+    except conn.exceptions.ClientError as e:
         log.debug(e)
         msg = "Template {} does not exist".format(name)
         log.error(msg)
@@ -317,8 +322,10 @@ def validate_template(
 
     try:
         # Returns an object if json is validated and an exception if its not
-        return conn.validate_template(template_body, template_url)
-    except BotoServerError as e:
+        return conn.validate_template(
+            TemplateBody=template_body, TemplateURL=template_url
+        )
+    except conn.exceptions.ClientError as e:
         log.debug(e)
         msg = "Error while trying to validate template {}.".format(template_body)
         log.error(msg)
