@@ -841,3 +841,154 @@ def checksum(*paths, **kwargs):
         )
 
     return ret
+
+
+def list_gpg_keys(info=False, root=None):
+    """Return the list of all the GPG keys stored in the RPM database
+
+    .. versionadded:: 3003
+
+    info
+       get the key information, returing a dictionary instead of a
+       list
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.list_gpg_keys
+        salt '*' lowpkg.list_gpg_keys info=True
+
+    """
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["-qa", "gpg-pubkey*"])
+    keys = __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines()
+    if info:
+        return {key: info_gpg_key(key, root=root) for key in keys}
+    else:
+        return keys
+
+
+def info_gpg_key(key, root=None):
+    """Return a dictionary with the information of a GPG key parsed
+
+    .. versionadded:: 3003
+
+    key
+       key identificatior
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info_gpg_key gpg-pubkey-3dbdc284-53674dd4
+
+    """
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["-qi", key])
+    info = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+
+    res = {}
+    # The parser algorithm is very ad-hoc.  Works under the
+    # expectation that all the fields are of the type "key: value" in
+    # a single line, except "Description", that will be composed of
+    # multiple lines.  Note that even if the official `rpm` makes this
+    # field the last one, other (like openSUSE) exted it with more
+    # fields.
+    in_description = False
+    description = []
+    for line in info.splitlines():
+        if line.startswith("Description"):
+            in_description = True
+        elif in_description:
+            description.append(line)
+            if line.startswith("-----END"):
+                res["Description"] = "\n".join(description)
+                in_description = False
+        elif line:
+            key, _, value = line.partition(":")
+            value = value.strip()
+            if "Date" in key:
+                try:
+                    value = datetime.datetime.strptime(
+                        value, "%a %d %b %Y %H:%M:%S %p %Z"
+                    )
+                except ValueError:
+                    pass
+            elif "Size" in key:
+                try:
+                    value = int(value)
+                except TypeError:
+                    pass
+            elif "(none)" in value:
+                value = None
+            res[key.strip()] = value
+    return res
+
+
+def import_gpg_key(key, root=None):
+    """Import a new key into the key storage
+
+    .. versionadded:: 3003
+
+    key
+       public key block content
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.import_gpg_key "-----BEGIN ..."
+
+    """
+    key_file = salt.utils.files.mkstemp()
+    with salt.utils.files.fopen(key_file, "w") as f:
+        f.write("{}\n".format(key))
+
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["--import", key_file])
+    ret = __salt__["cmd.retcode"](cmd)
+
+    os.remove(key_file)
+
+    return ret == 0
+
+
+def remove_gpg_key(key, root=None):
+    """Remove a key from the key storage
+
+    .. versionadded:: 3003
+
+    key
+       key identificatior
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.remove_gpg_key gpg-pubkey-3dbdc284-53674dd4
+
+    """
+    cmd = ["rpm"]
+    if root:
+        cmd.extend(["--root", root])
+    cmd.extend(["-e", key])
+    return __salt__["cmd.retcode"](cmd) == 0

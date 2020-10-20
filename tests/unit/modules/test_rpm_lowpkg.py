@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import datetime
 
 import salt.modules.rpm_lowpkg as rpm
 from tests.support.mixins import LoaderModuleMockMixin
@@ -264,3 +265,217 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
             mock_log.warning.mock_calls[1][1][0],
             "Falling back on salt.utils.versions.version_cmp() for version comparisons",
         )
+
+    def test_list_gpg_keys_no_info(self):
+        """
+        Test list_gpg_keys with no extra information
+        """
+        mock = MagicMock(return_value="\n".join(["gpg-pubkey-1", "gpg-pubkey-2"]))
+        with patch.dict(rpm.__salt__, {"cmd.run_stdout": mock}):
+            self.assertEqual(rpm.list_gpg_keys(), ["gpg-pubkey-1", "gpg-pubkey-2"])
+            self.assertFalse(_called_with_root(mock))
+
+    def test_list_gpg_keys_no_info_root(self):
+        """
+        Test list_gpg_keys with no extra information and root
+        """
+        mock = MagicMock(return_value="\n".join(["gpg-pubkey-1", "gpg-pubkey-2"]))
+        with patch.dict(rpm.__salt__, {"cmd.run_stdout": mock}):
+            self.assertEqual(
+                rpm.list_gpg_keys(root="/mnt"), ["gpg-pubkey-1", "gpg-pubkey-2"]
+            )
+            self.assertTrue(_called_with_root(mock))
+
+    @patch("salt.modules.rpm_lowpkg.info_gpg_key")
+    def test_list_gpg_keys_info(self, info_gpg_key):
+        """
+        Test list_gpg_keys with extra information
+        """
+        info_gpg_key.side_effect = lambda x, root: {
+            "Description": "key for {}".format(x)
+        }
+        mock = MagicMock(return_value="\n".join(["gpg-pubkey-1", "gpg-pubkey-2"]))
+        with patch.dict(rpm.__salt__, {"cmd.run_stdout": mock}):
+            self.assertEqual(
+                rpm.list_gpg_keys(info=True),
+                {
+                    "gpg-pubkey-1": {"Description": "key for gpg-pubkey-1"},
+                    "gpg-pubkey-2": {"Description": "key for gpg-pubkey-2"},
+                },
+            )
+            self.assertFalse(_called_with_root(mock))
+
+    def test_info_gpg_key(self):
+        """
+        Test info_gpg_keys from a normal output
+        """
+        info = """Name        : gpg-pubkey
+Version     : 3dbdc284
+Release     : 53674dd4
+Architecture: (none)
+Install Date: Fri 08 Mar 2019 11:57:44 AM UTC
+Group       : Public Keys
+Size        : 0
+License     : pubkey
+Signature   : (none)
+Source RPM  : (none)
+Build Date  : Mon 05 May 2014 10:37:40 AM UTC
+Build Host  : localhost
+Packager    : openSUSE Project Signing Key <opensuse@opensuse.org>
+Summary     : gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)
+Description :
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: rpm-4.14.2.1 (NSS-3)
+
+mQENBEkUTD8BCADWLy5d5IpJedHQQSXkC1VK/oAZlJEeBVpSZjMCn8LiHaI9Wq3G
+3Vp6wvsP1b3kssJGzVFNctdXt5tjvOLxvrEfRJuGfqHTKILByqLzkeyWawbFNfSQ
+93/8OunfSTXC1Sx3hgsNXQuOrNVKrDAQUqT620/jj94xNIg09bLSxsjN6EeTvyiO
+mtE9H1J03o9tY6meNL/gcQhxBvwuo205np0JojYBP0pOfN8l9hnIOLkA0yu4ZXig
+oKOVmf4iTjX4NImIWldT+UaWTO18NWcCrujtgHueytwYLBNV5N0oJIP2VYuLZfSD
+VYuPllv7c6O2UEOXJsdbQaVuzU1HLocDyipnABEBAAG0NG9wZW5TVVNFIFByb2pl
+Y3QgU2lnbmluZyBLZXkgPG9wZW5zdXNlQG9wZW5zdXNlLm9yZz6JATwEEwECACYC
+GwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAUCU2dN1AUJHR8ElQAKCRC4iy/UPb3C
+hGQrB/9teCZ3Nt8vHE0SC5NmYMAE1Spcjkzx6M4r4C70AVTMEQh/8BvgmwkKP/qI
+CWo2vC1hMXRgLg/TnTtFDq7kW+mHsCXmf5OLh2qOWCKi55Vitlf6bmH7n+h34Sha
+Ei8gAObSpZSF8BzPGl6v0QmEaGKM3O1oUbbB3Z8i6w21CTg7dbU5vGR8Yhi9rNtr
+hqrPS+q2yftjNbsODagaOUb85ESfQGx/LqoMePD+7MqGpAXjKMZqsEDP0TbxTwSk
+4UKnF4zFCYHPLK3y/hSH5SEJwwPY11l6JGdC1Ue8Zzaj7f//axUs/hTC0UZaEE+a
+5v4gbqOcigKaFs9Lc3Bj8b/lE10Y
+=i2TA
+-----END PGP PUBLIC KEY BLOCK-----
+
+"""
+        mock = MagicMock(return_value=info)
+        with patch.dict(rpm.__salt__, {"cmd.run_stdout": mock}):
+            self.assertEqual(
+                rpm.info_gpg_key("key"),
+                {
+                    "Name": "gpg-pubkey",
+                    "Version": "3dbdc284",
+                    "Release": "53674dd4",
+                    "Architecture": None,
+                    "Install Date": datetime.datetime(2019, 3, 8, 11, 57, 44),
+                    "Group": "Public Keys",
+                    "Size": 0,
+                    "License": "pubkey",
+                    "Signature": None,
+                    "Source RPM": None,
+                    "Build Date": datetime.datetime(2014, 5, 5, 10, 37, 40),
+                    "Build Host": "localhost",
+                    "Packager": "openSUSE Project Signing Key <opensuse@opensuse.org>",
+                    "Summary": "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)",
+                    "Description": """-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: rpm-4.14.2.1 (NSS-3)
+
+mQENBEkUTD8BCADWLy5d5IpJedHQQSXkC1VK/oAZlJEeBVpSZjMCn8LiHaI9Wq3G
+3Vp6wvsP1b3kssJGzVFNctdXt5tjvOLxvrEfRJuGfqHTKILByqLzkeyWawbFNfSQ
+93/8OunfSTXC1Sx3hgsNXQuOrNVKrDAQUqT620/jj94xNIg09bLSxsjN6EeTvyiO
+mtE9H1J03o9tY6meNL/gcQhxBvwuo205np0JojYBP0pOfN8l9hnIOLkA0yu4ZXig
+oKOVmf4iTjX4NImIWldT+UaWTO18NWcCrujtgHueytwYLBNV5N0oJIP2VYuLZfSD
+VYuPllv7c6O2UEOXJsdbQaVuzU1HLocDyipnABEBAAG0NG9wZW5TVVNFIFByb2pl
+Y3QgU2lnbmluZyBLZXkgPG9wZW5zdXNlQG9wZW5zdXNlLm9yZz6JATwEEwECACYC
+GwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAUCU2dN1AUJHR8ElQAKCRC4iy/UPb3C
+hGQrB/9teCZ3Nt8vHE0SC5NmYMAE1Spcjkzx6M4r4C70AVTMEQh/8BvgmwkKP/qI
+CWo2vC1hMXRgLg/TnTtFDq7kW+mHsCXmf5OLh2qOWCKi55Vitlf6bmH7n+h34Sha
+Ei8gAObSpZSF8BzPGl6v0QmEaGKM3O1oUbbB3Z8i6w21CTg7dbU5vGR8Yhi9rNtr
+hqrPS+q2yftjNbsODagaOUb85ESfQGx/LqoMePD+7MqGpAXjKMZqsEDP0TbxTwSk
+4UKnF4zFCYHPLK3y/hSH5SEJwwPY11l6JGdC1Ue8Zzaj7f//axUs/hTC0UZaEE+a
+5v4gbqOcigKaFs9Lc3Bj8b/lE10Y
+=i2TA
+-----END PGP PUBLIC KEY BLOCK-----""",
+                },
+            )
+            self.assertFalse(_called_with_root(mock))
+
+    def test_info_gpg_key_extended(self):
+        """
+        Test info_gpg_keys from an extended output
+        """
+        info = """Name        : gpg-pubkey
+Version     : 3dbdc284
+Release     : 53674dd4
+Architecture: (none)
+Install Date: Fri 08 Mar 2019 11:57:44 AM UTC
+Group       : Public Keys
+Size        : 0
+License     : pubkey
+Signature   : (none)
+Source RPM  : (none)
+Build Date  : Mon 05 May 2014 10:37:40 AM UTC
+Build Host  : localhost
+Packager    : openSUSE Project Signing Key <opensuse@opensuse.org>
+Summary     : gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)
+Description :
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: rpm-4.14.2.1 (NSS-3)
+
+mQENBEkUTD8BCADWLy5d5IpJedHQQSXkC1VK/oAZlJEeBVpSZjMCn8LiHaI9Wq3G
+3Vp6wvsP1b3kssJGzVFNctdXt5tjvOLxvrEfRJuGfqHTKILByqLzkeyWawbFNfSQ
+93/8OunfSTXC1Sx3hgsNXQuOrNVKrDAQUqT620/jj94xNIg09bLSxsjN6EeTvyiO
+mtE9H1J03o9tY6meNL/gcQhxBvwuo205np0JojYBP0pOfN8l9hnIOLkA0yu4ZXig
+oKOVmf4iTjX4NImIWldT+UaWTO18NWcCrujtgHueytwYLBNV5N0oJIP2VYuLZfSD
+VYuPllv7c6O2UEOXJsdbQaVuzU1HLocDyipnABEBAAG0NG9wZW5TVVNFIFByb2pl
+Y3QgU2lnbmluZyBLZXkgPG9wZW5zdXNlQG9wZW5zdXNlLm9yZz6JATwEEwECACYC
+GwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAUCU2dN1AUJHR8ElQAKCRC4iy/UPb3C
+hGQrB/9teCZ3Nt8vHE0SC5NmYMAE1Spcjkzx6M4r4C70AVTMEQh/8BvgmwkKP/qI
+CWo2vC1hMXRgLg/TnTtFDq7kW+mHsCXmf5OLh2qOWCKi55Vitlf6bmH7n+h34Sha
+Ei8gAObSpZSF8BzPGl6v0QmEaGKM3O1oUbbB3Z8i6w21CTg7dbU5vGR8Yhi9rNtr
+hqrPS+q2yftjNbsODagaOUb85ESfQGx/LqoMePD+7MqGpAXjKMZqsEDP0TbxTwSk
+4UKnF4zFCYHPLK3y/hSH5SEJwwPY11l6JGdC1Ue8Zzaj7f//axUs/hTC0UZaEE+a
+5v4gbqOcigKaFs9Lc3Bj8b/lE10Y
+=i2TA
+-----END PGP PUBLIC KEY BLOCK-----
+
+Distribution: (none)
+"""
+        mock = MagicMock(return_value=info)
+        with patch.dict(rpm.__salt__, {"cmd.run_stdout": mock}):
+            self.assertEqual(
+                rpm.info_gpg_key("key"),
+                {
+                    "Name": "gpg-pubkey",
+                    "Version": "3dbdc284",
+                    "Release": "53674dd4",
+                    "Architecture": None,
+                    "Install Date": datetime.datetime(2019, 3, 8, 11, 57, 44),
+                    "Group": "Public Keys",
+                    "Size": 0,
+                    "License": "pubkey",
+                    "Signature": None,
+                    "Source RPM": None,
+                    "Build Date": datetime.datetime(2014, 5, 5, 10, 37, 40),
+                    "Build Host": "localhost",
+                    "Packager": "openSUSE Project Signing Key <opensuse@opensuse.org>",
+                    "Summary": "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)",
+                    "Description": """-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: rpm-4.14.2.1 (NSS-3)
+
+mQENBEkUTD8BCADWLy5d5IpJedHQQSXkC1VK/oAZlJEeBVpSZjMCn8LiHaI9Wq3G
+3Vp6wvsP1b3kssJGzVFNctdXt5tjvOLxvrEfRJuGfqHTKILByqLzkeyWawbFNfSQ
+93/8OunfSTXC1Sx3hgsNXQuOrNVKrDAQUqT620/jj94xNIg09bLSxsjN6EeTvyiO
+mtE9H1J03o9tY6meNL/gcQhxBvwuo205np0JojYBP0pOfN8l9hnIOLkA0yu4ZXig
+oKOVmf4iTjX4NImIWldT+UaWTO18NWcCrujtgHueytwYLBNV5N0oJIP2VYuLZfSD
+VYuPllv7c6O2UEOXJsdbQaVuzU1HLocDyipnABEBAAG0NG9wZW5TVVNFIFByb2pl
+Y3QgU2lnbmluZyBLZXkgPG9wZW5zdXNlQG9wZW5zdXNlLm9yZz6JATwEEwECACYC
+GwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAUCU2dN1AUJHR8ElQAKCRC4iy/UPb3C
+hGQrB/9teCZ3Nt8vHE0SC5NmYMAE1Spcjkzx6M4r4C70AVTMEQh/8BvgmwkKP/qI
+CWo2vC1hMXRgLg/TnTtFDq7kW+mHsCXmf5OLh2qOWCKi55Vitlf6bmH7n+h34Sha
+Ei8gAObSpZSF8BzPGl6v0QmEaGKM3O1oUbbB3Z8i6w21CTg7dbU5vGR8Yhi9rNtr
+hqrPS+q2yftjNbsODagaOUb85ESfQGx/LqoMePD+7MqGpAXjKMZqsEDP0TbxTwSk
+4UKnF4zFCYHPLK3y/hSH5SEJwwPY11l6JGdC1Ue8Zzaj7f//axUs/hTC0UZaEE+a
+5v4gbqOcigKaFs9Lc3Bj8b/lE10Y
+=i2TA
+-----END PGP PUBLIC KEY BLOCK-----""",
+                    "Distribution": None,
+                },
+            )
+            self.assertFalse(_called_with_root(mock))
+
+    def test_remove_gpg_key(self):
+        """
+        Test remove_gpg_key
+        """
+        mock = MagicMock(return_value=0)
+        with patch.dict(rpm.__salt__, {"cmd.retcode": mock}):
+            self.assertTrue(rpm.remove_gpg_key("gpg-pubkey-1"))
+            self.assertFalse(_called_with_root(mock))
