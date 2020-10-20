@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Cloud Formation
 
@@ -32,19 +31,13 @@ Connection module for Amazon Cloud Formation
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.versions
 
-# Import Salt libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
-# Import third party libs
 # pylint: disable=import-error
 try:
     # pylint: disable=unused-import
@@ -124,7 +117,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
                 "tags",
             )
 
-            ret = dict([(k, getattr(stack, k)) for k in keys if hasattr(stack, k)])
+            ret = {k: getattr(stack, k) for k in keys if hasattr(stack, k)}
             o = getattr(stack, "outputs")
             p = getattr(stack, "parameters")
             outputs = {}
@@ -191,7 +184,7 @@ def create(
             stack_policy_url,
         )
     except BotoServerError as e:
-        msg = "Failed to create stack {0}.\n{1}".format(name, e)
+        msg = "Failed to create stack {}.\n{}".format(name, e)
         log.error(msg)
         log.debug(e)
         return False
@@ -251,10 +244,10 @@ def update_stack(
         log.debug("Updated result is : %s.", update)
         return update
     except BotoServerError as e:
-        msg = "Failed to update stack {0}.".format(name)
+        msg = "Failed to update stack {}.".format(name)
         log.debug(e)
         log.error(msg)
-        return six.text_type(e)
+        return str(e)
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
@@ -272,10 +265,10 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     try:
         return conn.delete_stack(name)
     except BotoServerError as e:
-        msg = "Failed to create stack {0}.".format(name)
+        msg = "Failed to create stack {}.".format(name)
         log.error(msg)
         log.debug(e)
-        return six.text_type(e)
+        return str(e)
 
 
 def get_template(name, region=None, key=None, keyid=None, profile=None):
@@ -296,9 +289,9 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         return template
     except BotoServerError as e:
         log.debug(e)
-        msg = "Template {0} does not exist".format(name)
+        msg = "Template {} does not exist".format(name)
         log.error(msg)
-        return six.text_type(e)
+        return str(e)
 
 
 def validate_template(
@@ -327,6 +320,6 @@ def validate_template(
         return conn.validate_template(template_body, template_url)
     except BotoServerError as e:
         log.debug(e)
-        msg = "Error while trying to validate template {0}.".format(template_body)
+        msg = "Error while trying to validate template {}.".format(template_body)
         log.error(msg)
-        return six.text_type(e)
+        return str(e)
