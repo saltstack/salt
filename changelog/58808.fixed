@@ -1,0 +1,1 @@
+disallow passing `template_body` and `template_url` to `boto_cfn.create()` (disallowed by boto/boto3)
