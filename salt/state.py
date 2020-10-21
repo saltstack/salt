@@ -4032,8 +4032,8 @@ class BaseHighState:
                             levels, include = match.groups()
                         else:
                             msg = (
-                                "Badly formatted include {0} found in include "
-                                "in SLS '{2}:{3}'".format(inc_sls, saltenv, sls)
+                                "Badly formatted include {} found in include "
+                                "in SLS '{}:{}'".format(inc_sls, saltenv, sls)
                             )
                             log.error(msg)
                             errors.append(msg)
