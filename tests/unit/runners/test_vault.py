@@ -290,6 +290,30 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertTrue("error" in result)
             self.assertEqual(result["error"], "Test Exception Reason")
 
+    @patch("salt.runners.vault._validate_signature", MagicMock(return_value=None))
+    @patch(
+        "salt.runners.vault._get_token_create_url",
+        MagicMock(return_value="http://fake_url"),
+    )
+    def test_generate_token_with_namespace(self):
+        """
+        Basic tests for test_generate_token: all exits
+        """
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
+        supplied_config = {'namespace': 'test_namespace'}
+        with patch("requests.post", mock):
+            with patch.dict(vault.__opts__['vault'], supplied_config):
+                result = vault.generate_token("test-minion", "signature")
+                log.debug("generate_token result: %s", result)
+                self.assertTrue(isinstance(result, dict))
+                self.assertFalse("error" in result)
+                self.assertTrue("token" in result)
+                self.assertEqual(result["token"], "test")
+                mock.assert_called_with(
+                    "http://fake_url", headers={'X-Vault-Token': 'test', 'X-Vault-Namespace': 'test_namespace'}, json=ANY, verify=ANY
+                )
 
 class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
     """

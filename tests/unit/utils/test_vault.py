@@ -407,6 +407,26 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             function_return = vault.is_v2("secret/mything")
             self.assertEqual(function_return, expected_return)
 
+    def test_request_with_namespace(self):
+        """
+        Test request with namespace configured
+        """
+        mock = self._mock_json_response(self.json_success)
+        expected_headers = {"X-Vault-Token": "test", "X-Vault-Namespace": "test_namespace", "Content-Type": "application/json"}
+        supplied_config = {'namespace': 'test_namespace'}
+        supplied_context = {"vault_token": copy(self.cache_single)}
+        with patch.dict(vault.__context__, supplied_context):
+            with patch.dict(vault.__opts__['vault'], supplied_config):
+                with patch("requests.request", mock):
+                    vault_return = vault.make_request("/secret/my/secret", "key")
+                    mock.assert_called_with(
+                        "/secret/my/secret",
+                        "http://127.0.0.1:8200/key",
+                        headers=expected_headers,
+                        verify=ANY,
+                    )
+                    self.assertEqual(vault_return.json(), self.json_success)
+
     def test_get_secret_path_metadata_no_cache(self):
         """
         test with no cache file
