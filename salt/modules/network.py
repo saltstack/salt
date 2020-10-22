@@ -3,7 +3,6 @@ Module for gathering and managing network information
 """
 
 # Import python libs
-
 import datetime
 import hashlib
 import logging
@@ -17,6 +16,7 @@ from multiprocessing.pool import ThreadPool
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
+import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
@@ -32,7 +32,7 @@ def __virtual__():
     Only work on POSIX-like systems
     """
     # Disable on Windows, a specific file module exists:
-    if __utils__["platform.is_windows"]():
+    if salt.utils.platform.is_windows():
         return (
             False,
             "The network execution module cannot be loaded on Windows: use win_network instead.",
@@ -88,8 +88,8 @@ def ping(host, timeout=False, return_boolean=False):
     """
     if timeout:
         if __grains__["kernel"] == "SunOS":
-            cmd = "ping -c 4 {1} {0}".format(
-                timeout, __utils__["network.sanitize_host"](host)
+            cmd = "ping -c 4 {} {}".format(
+                __utils__["network.sanitize_host"](host), timeout
             )
         else:
             cmd = "ping -W {} -c 4 {}".format(
@@ -1467,13 +1467,17 @@ def mod_hostname(hostname):
                 if net.startswith("HOSTNAME"):
                     old_hostname = net.split("=", 1)[1].rstrip()
                     quote_type = __utils__["stringutils.is_quoted"](old_hostname)
+                    # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
-                            "HOSTNAME={1}{0}{1}\n".format(
-                                __utils__["stringutils.dequote"](hostname), quote_type
+                            "HOSTNAME={}{}{}\n".format(
+                                __utils__["stringutils.dequote"](hostname),
+                                quote_type,
+                                __utils__["stringutils.dequote"](hostname),
                             )
                         )
                     )
+                    # fmt: on
                 else:
                     fh_.write(__utils__["stringutils.to_str"](net))
     elif __grains__["os_family"] in ("Debian", "NILinuxRT"):

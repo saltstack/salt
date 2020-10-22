@@ -509,6 +509,9 @@ def connect(host, port=None, **kwargs):
     else:
         address = "{}".format(salt.utils.network.sanitize_host(host))
 
+    # just in case we encounter error on getaddrinfo
+    _address = ("unknown",)
+
     try:
         if proto == "udp":
             __proto = socket.SOL_UDP

@@ -666,8 +666,9 @@ class MaintenanceTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     """
 
     def setUp(self):
-        self.opts = self.get_temp_config("master", git_pillar_update_interval=180)
-        self.main_class = salt.master.Maintenance(self.opts)
+        opts = self.get_temp_config("master", git_pillar_update_interval=180)
+        self.main_class = salt.master.Maintenance(opts)
+        self.main_class._after_fork_methods = self.main_class._finalize_methods = []
 
     def tearDown(self):
         del self.main_class
