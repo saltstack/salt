@@ -157,7 +157,7 @@ def get_vault_connection():
                     ]
             return {
                 "url": __opts__["vault"]["url"],
-                "namespace": __opts__["vault"]["namespace"],
+                "namespace": namespace,
                 "token": __opts__["vault"]["auth"]["token"],
                 "verify": __opts__["vault"].get("verify", None),
                 "issued": int(round(time.time())),

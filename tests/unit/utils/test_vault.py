@@ -62,15 +62,6 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "lease_duration": 100,
         "issued": 3000,
     }
-    cache_single_namespace = {
-        "url": "http://127.0.0.1:8200",
-        "token": "test",
-        "verify": None,
-        "namespace": "test_namespace",
-        "uses": 1,
-        "lease_duration": 100,
-        "issued": 3000,
-    }
     cache_uses = {
         "url": "http://127.0.0.1:8200",
         "token": "test",
