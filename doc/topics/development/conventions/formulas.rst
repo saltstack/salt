@@ -85,7 +85,7 @@ or zip file of the repository. The directory structure is designed to work with
 
         mkdir -p /srv/formulas
         cd /srv/formulas
-        wget https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
+        wget -O apache-formula-master.tar.gz https://github.com/saltstack-formulas/apache-formula/archive/master.tar.gz
         tar xf apache-formula-master.tar.gz
 
 2.  Add the new directory to :conf_master:`file_roots`:
