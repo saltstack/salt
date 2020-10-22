@@ -118,11 +118,11 @@ def get_vault_connection():
 
     def _use_local_config():
         log.debug("Using Vault connection details from local config")
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace", None)
         try:
             if __opts__["vault"]["auth"]["method"] == "approle":
                 verify = __opts__["vault"].get("verify", None)
-                # Vault Enterprise requires a namespace
-                namespace = __opts__["vault"].get("namespace", None)
                 if _selftoken_expired():
                     log.debug("Vault token expired. Recreating one")
                     # Requesting a short ttl token
@@ -143,8 +143,6 @@ def get_vault_connection():
                     ]
             if __opts__["vault"]["auth"]["method"] == "wrapped_token":
                 verify = __opts__["vault"].get("verify", None)
-                # Vault Enterprise requires a namespace
-                namespace = __opts__["vault"].get("namespace", None)
                 if _wrapped_token_valid():
                     url = "{}/v1/sys/wrapping/unwrap".format(__opts__["vault"]["url"])
                     headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
@@ -309,6 +307,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
+    namespace = connection["namespace"] if not namespace else namespace
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
@@ -319,15 +318,6 @@ def make_request(
             pass
     url = "{}/{}".format(vault_url, resource)
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
-    # Vault Enterprise requires a namespace
-    if "namespace" in args:
-        namespace = args["namespace"]
-    else:
-        try:
-            namespace = __opts__.get("vault").get("namespace", None)
-        except (TypeError, AttributeError):
-            # Don't worry about setting verify if it doesn't exist
-            pass 
     if namespace is not None:
         headers["X-Vault-Namespace"] = namespace
     response = requests.request(method, url, headers=headers, **args)
