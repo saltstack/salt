@@ -34,9 +34,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
 import tests.support.paths
-
-# Import 3rd-party libs
-from salt.ext import six
 from tests.support import processes
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
