@@ -373,6 +373,10 @@ class SaltTestingParser(optparse.OptionParser):
         self.add_option_group(self.fs_cleanup_options_group)
         self.setup_additional_options()
 
+        self.preexisting_children_pids = {
+            process.pid for process in processes.collect_child_processes(os.getpid())
+        }
+
     @staticmethod
     def _expand_paths(paths):
         """
@@ -933,8 +937,14 @@ class SaltTestingParser(optparse.OptionParser):
         """
         Run the finalization procedures. Show report, clean-up file-system, etc
         """
-        # Collect any child processes still laying around
-        children = processes.collect_child_processes(os.getpid())
+        # Collect any child processes still laying around, but skip childern
+        # that pre-existed. autopkgtest can cause those children by:
+        # bash -c 'python3 ./tests/runtests.py' 2> >(tee -a stderr >&2) > >(tee -a stdout)
+        children = [
+            process
+            for process in processes.collect_child_processes(os.getpid())
+            if process.pid not in self.preexisting_children_pids
+        ]
         if self.options.no_report is False:
             self.print_overall_testsuite_report()
         self.post_execution_cleanup()
@@ -942,7 +952,11 @@ class SaltTestingParser(optparse.OptionParser):
         if children:
             log.info("Terminating test suite child processes: %s", children)
             processes.terminate_process(children=children, kill_children=True)
-            children = processes.collect_child_processes(os.getpid())
+            children = [
+                process
+                for process in processes.collect_child_processes(os.getpid())
+                if process.pid not in self.preexisting_children_pids
+            ]
             if children:
                 log.info(
                     "Second run at terminating test suite child processes: %s", children
