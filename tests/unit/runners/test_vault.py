@@ -332,7 +332,7 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertTrue("token" in result)
             self.assertEqual(result["token"], "test")
             calls = [
-                call("http://127.0.0.1/v1/auth/approle/login", json=ANY, verify=ANY),
+                call("http://127.0.0.1/v1/auth/approle/login", headers=ANY, json=ANY, verify=ANY),
                 call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
             ]
             mock.assert_has_calls(calls)
