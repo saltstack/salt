@@ -414,7 +414,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         mock = self._mock_json_response(self.json_success)
         expected_headers = {"X-Vault-Token": "test", "X-Vault-Namespace": "test_namespace", "Content-Type": "application/json"}
         supplied_config = {'namespace': 'test_namespace'}
-        supplied_context = {"vault_token": copy(self.cache_single_namespace)}
+        supplied_context = {"vault_token": copy(self.cache_single)}
         with patch.dict(vault.__context__, supplied_context):
             with patch.dict(vault.__opts__['vault'], supplied_config):
                 with patch("requests.request", mock):
