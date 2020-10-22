@@ -72,11 +72,10 @@ def generate_token(
                 if "secret_id" in config["auth"]:
                     payload["secret_id"] = config["auth"]["secret_id"]
                 # Vault Enterprise call requires headers
+                headers = None
                 if namespace is not None:
                     headers = {"X-Vault-Namespace": namespace}
-                    response = requests.post(url, headers=headers, json=payload, verify=verify)
-                else:
-                    response = requests.post(url, json=payload, verify=verify)
+                response = requests.post(url, headers=headers, json=payload, verify=verify)
                 if response.status_code != 200:
                     return {"error": response.reason}
                 config["auth"]["token"] = response.json()["auth"]["client_token"]
