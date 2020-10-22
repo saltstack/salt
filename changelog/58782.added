@@ -1,0 +1,1 @@
+Add GPG key functions in "lowpkg" and a "migrated" function in the "pkgrepo" state for repository and GPG key migration.
