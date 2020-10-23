@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: `Gareth J. Greenaway <gareth@saltstack.com>`
 
@@ -6,12 +5,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.cloud.clouds import digitalocean
 from salt.exceptions import SaltCloudSystemExit
 from tests.support.unit import TestCase
