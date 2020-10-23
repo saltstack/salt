@@ -425,7 +425,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             if "out" in data:
                 out = data["out"]
             ret_retcode = self._get_retcode(data)
-            if ret_retcode > retcode:
+            if ret_retcode and ret_retcode > retcode:
                 retcode = ret_retcode
         return ret, out, retcode
 
