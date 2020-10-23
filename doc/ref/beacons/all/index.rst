@@ -21,6 +21,7 @@ beacon modules
     haproxy
     inotify
     journald
+    junos_rre_keys
     load
     log_beacon
     memusage

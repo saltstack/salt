@@ -918,7 +918,7 @@ def _iostat_aix(interval, count, disks):
     """
     AIX support to gather and return (averaged) IO stats.
     """
-    log.debug("DGM disk iostat entry")
+    log.debug("AIX disk iostat entry")
 
     if disks is None:
         iostat_cmd = "iostat -dD {} {} ".format(interval, count)
