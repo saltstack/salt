@@ -331,6 +331,11 @@ def lv_present(
             else:
                 # ignore percentage "extents" if the logical volume already exists
                 if "%" in str(extents):
+                    ret[
+                        "comment"
+                    ] = "Logical Volume {} already present, {} won't be resized.".format(
+                        name, extents
+                    )
                     extents = old_extents
                 size_mb = old_size_mb
 
