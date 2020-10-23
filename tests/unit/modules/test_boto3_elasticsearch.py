@@ -383,6 +383,20 @@ class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
                 {"result": True},
             )
 
+    def test_add_tags_default(self):
+        """
+        Test that when tags are not provided, no error is raised.
+        """
+        with patch.object(
+            self.conn,
+            "describe_elasticsearch_domain",
+            return_value={"DomainStatus": DOMAIN_RET},
+        ):
+            self.assertEqual(
+                boto3_elasticsearch.add_tags("testdomain", **CONN_PARAMETERS),
+                {"result": True},
+            )
+
     def test_add_tags_error(self):
         """
         Test that when adding tags fails, and boto3 returns an error,
