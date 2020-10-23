@@ -315,6 +315,7 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
                     "http://fake_url", headers={'X-Vault-Token': 'test', 'X-Vault-Namespace': 'test_namespace'}, json=ANY, verify=ANY
                 )
 
+
 class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
     """
     Tests for the runner module of the Vault with approle setup
