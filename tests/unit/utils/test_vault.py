@@ -62,6 +62,15 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "lease_duration": 100,
         "issued": 3000,
     }
+    cache_single_namespace = {
+        "url": "http://127.0.0.1:8200",
+        "token": "test",
+        "verify": None,
+        "namespace": "test_namespace",
+        "uses": 1,
+        "lease_duration": 100,
+        "issued": 3000,
+    }
     cache_uses = {
         "url": "http://127.0.0.1:8200",
         "token": "test",
@@ -414,7 +423,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         mock = self._mock_json_response(self.json_success)
         expected_headers = {"X-Vault-Token": "test", "X-Vault-Namespace": "test_namespace", "Content-Type": "application/json"}
         supplied_config = {'namespace': 'test_namespace'}
-        supplied_context = {"vault_token": copy(self.cache_single)}
+        supplied_context = {"vault_token": copy(self.cache_single_namespace)}
         with patch.dict(vault.__context__, supplied_context):
             with patch.dict(vault.__opts__['vault'], supplied_config):
                 with patch("requests.request", mock):
