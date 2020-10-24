@@ -244,15 +244,22 @@ def unsubscribe(
     if subscription_arn.startswith("arn:aws:sns:") is False:
         return False
 
+    if not exists(topic, region, key, keyid, profile):
+        return False
+
     try:
         conn.unsubscribe(subscription_arn)
-        log.info("Unsubscribe %s to %s topic", subscription_arn, topic)
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Unsubscribe Error", exc_info=True)
-        return False
-    else:
+        log.info("Unsubscribe %s from %s topic", subscription_arn, topic)
         __context__.pop(_subscriptions_cache_key(topic), None)
+    except KeyError as e:
+        log.debug(e)
+        # not subscribed?
         return True
+    except boto.exception.BotoServerError as e:  # pylint: disable=broad-except
+        log.debug(e)
+        return False
+    # not subscribed?
+    return True
 
 
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
