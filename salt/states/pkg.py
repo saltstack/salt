@@ -1488,9 +1488,14 @@ def installed(
 
     :param bool hold:
         Force the package to be held at the current installed version.
-        Currently works with YUM/DNF & APT based systems.
+
+        Supported on YUM/DNF & APT based systems.
 
         .. versionadded:: 2014.7.0
+
+        Supported on Zypper-based systems.
+
+        .. versionadded:: 3003
 
     :param bool update_holds:
         If ``True``, and this function would update the package version, any
@@ -1499,9 +1504,13 @@ def installed(
         package, the held package(s) will be skipped and the state will fail.
         By default, this parameter is set to ``False``.
 
-        Currently works with YUM/DNF & APT based systems.
+        Supported on YUM/DNF & APT based systems.
 
         .. versionadded:: 2016.11.0
+
+        Supported on Zypper-based systems.
+
+        .. versionadded:: 3003
 
     :param list names:
         A list of packages to install from a software repository. Each package
