@@ -2084,11 +2084,13 @@ def unhold(name=None, pkgs=None, **kwargs):
     Remove a package hold.
 
     name
-        A package name, or a comma-separated list of package names.  Specify
-        one of ``name`` or ``pkgs``.
+        A package name to unhold, or a comma-separated list of package names to
+        unhold.
 
     pkgs
-        A list of packages.  Specify one of ``name`` or ``pkgs``.
+        A list of packages to unhold.  The ``name`` parameter will be ignored if
+        this option is passed.
+
 
     CLI Example:
 
@@ -2099,25 +2101,30 @@ def unhold(name=None, pkgs=None, **kwargs):
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     """
     ret = {}
-    if (not name and not pkgs) or (name and pkgs):
+    if not name and not pkgs:
         raise CommandExecutionError("Name or packages must be specified.")
 
-    locks = list_locks()
-    try:
-        pkgs = list(__salt__["pkg_resource.parse_targets"](name, pkgs)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
+    targets = []
+    if pkgs:
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
+            targets.append(pkg)
+    else:
+        targets.append(name)
 
+    locks = list_locks()
     removed = []
     missing = []
-    for pkg in pkgs:
-        ret[pkg] = {"name": pkg, "changes": {}, "result": True, "comment": ""}
-        if locks.get(pkg):
-            removed.append(pkg)
-            ret[pkg]["comment"] = "Package {} is no longer held.".format(pkg)
+
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if locks.get(target):
+            removed.append(target)
+            ret[target]["changes"]["new"] = ""
+            ret[target]["changes"]["old"] = "hold"
+            ret[target]["comment"] = "Package {} is no longer held.".format(target)
         else:
-            missing.append(pkg)
-            ret[pkg]["comment"] = "Package {} was already unheld.".format(pkg)
+            missing.append(target)
+            ret[target]["comment"] = "Package {} was already unheld.".format(target)
 
     if removed:
         __zypper__.call("rl", *removed)
@@ -2176,11 +2183,13 @@ def hold(name=None, pkgs=None, **kwargs):
     Add a package hold.  Specify one of ``name`` and ``pkgs``.
 
     name
-        A package name, or a comma-separated list of package names.  Specify
-        one of ``name`` or ``pkgs``.
+        A package name to hold, or a comma-separated list of package names to
+        hold.
 
     pkgs
-        A list of packages.  Specify one of ``name`` or ``pkgs``.
+        A list of packages to hold.  The ``name`` parameter will be ignored if
+        this option is passed.
+
 
     CLI Example:
 
@@ -2191,23 +2200,30 @@ def hold(name=None, pkgs=None, **kwargs):
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     """
     ret = {}
-    if (not name and not pkgs) or (name and pkgs):
+    if not name and not pkgs:
         raise CommandExecutionError("Name or packages must be specified.")
+
+    targets = []
+    if pkgs:
+        for pkg in salt.utils.data.repack_dictlist(pkgs):
+            targets.append(pkg)
+    else:
+        targets.append(name)
 
     locks = list_locks()
     added = []
-    try:
-        pkgs = list(__salt__["pkg_resource.parse_targets"](name, pkgs)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
 
-    for pkg in pkgs:
-        ret[pkg] = {"name": pkg, "changes": {}, "result": True, "comment": ""}
-        if not locks.get(pkg):
-            added.append(pkg)
-            ret[pkg]["comment"] = "Package {} is now being held.".format(pkg)
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if not locks.get(target):
+            added.append(target)
+            ret[target]["changes"]["new"] = "hold"
+            ret[target]["changes"]["old"] = ""
+            ret[target]["comment"] = "Package {} is now being held.".format(target)
         else:
-            ret[pkg]["comment"] = "Package {} is already set to be held.".format(pkg)
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
+                target
+            )
 
     if added:
         __zypper__.call("al", *added)
