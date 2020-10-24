@@ -2079,6 +2079,8 @@ def clean_locks(root=None):
 
 def unhold(name=None, pkgs=None, **kwargs):
     """
+    .. versionadded:: 3003
+
     Remove a package hold.
 
     name
@@ -2169,6 +2171,8 @@ def remove_lock(name, root=None, **kwargs):
 
 def hold(name=None, pkgs=None, **kwargs):
     """
+    .. versionadded:: 3003
+
     Add a package hold.  Specify one of ``name`` and ``pkgs``.
 
     name
