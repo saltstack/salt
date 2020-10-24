@@ -4,15 +4,35 @@
 #
 #    pip-compile -o requirements/static/pkg/py3.8/linux.txt -v requirements/base.txt requirements/zeromq.txt requirements/static/pkg/linux.in
 #
+backports.functools-lru-cache==1.5  # via cheroot
 certifi==2020.6.20        # via requests
+cffi==1.14.3              # via cryptography
 chardet==3.0.4            # via requests
+cheroot==6.5.4            # via cherrypy
+cherrypy==17.3.0
+contextlib2==0.5.5        # via cherrypy
+cryptography==3.1.1       # via pyopenssl
 distro==1.5.0
 idna==2.8                 # via requests
+jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
 markupsafe==1.1.1
+more-itertools==5.0.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==1.0.0
+portend==2.4              # via cherrypy
+psutil==5.6.7
+pycparser==2.17           # via cffi
 pycryptodomex==3.9.8
+pyopenssl==19.1.0
+python-dateutil==2.8.1
+python-gnupg==0.4.4
+pytz==2020.1              # via tempora
 pyyaml==5.3.1
 pyzmq==19.0.0
 requests==2.21.0
+setproctitle==1.1.10
+six==1.15.0               # via cheroot, cherrypy, cryptography, more-itertools, pyopenssl, python-dateutil, tempora
+tempora==1.14.1           # via portend
+timelib==0.2.5
 urllib3==1.24.2           # via requests
+zc.lockfile==1.4          # via cherrypy
