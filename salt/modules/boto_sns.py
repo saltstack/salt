@@ -150,9 +150,12 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_sns.delete mytopic region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    conn.delete_topic(get_arn(name, region, key, keyid, profile))
-    log.info("Deleted SNS topic %s", name)
-    _invalidate_cache()
+    try:
+        conn.delete_topic(get_arn(name, region, key, keyid, profile))
+        log.info("Deleted SNS topic %s", name)
+        _invalidate_cache()
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
     return True
 
 
