@@ -210,8 +210,14 @@ def subscribe(
         salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
     """
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
-    log.info("Subscribe %s %s to %s topic", protocol, endpoint, topic)
+
+    try:
+        conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
+        log.info("Subscribe %s %s to %s topic", protocol, endpoint, topic)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
     try:
         del __context__[_subscriptions_cache_key(topic)]
     except KeyError:
