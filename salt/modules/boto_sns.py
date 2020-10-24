@@ -175,13 +175,27 @@ def get_all_subscriptions_by_topic(
     except KeyError:
         pass
 
+    __context__[cache_key] = []
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    ret = conn.get_all_subscriptions_by_topic(
-        get_arn(name, region, key, keyid, profile)
-    )
-    __context__[cache_key] = ret["ListSubscriptionsByTopicResponse"][
-        "ListSubscriptionsByTopicResult"
-    ]["Subscriptions"]
+
+    next_token = None
+    while True:  # do/while
+        resp = conn.get_all_subscriptions_by_topic(
+            get_arn(name, region, key, keyid, profile), next_token
+        )
+        resp = resp["ListSubscriptionsByTopicResponse"][
+            "ListSubscriptionsByTopicResult"
+        ]
+
+        __context__[cache_key].extend(resp["Subscriptions"])
+
+        try:
+            next_token = resp["NextToken"]
+        except KeyError:
+            break
+        if next_token is None:
+            break
+
     return __context__[cache_key]
 
 

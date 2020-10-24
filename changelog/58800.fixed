@@ -1,1 +1,1 @@
-Fix `boto_sns.__init__()` such that we can run test cases.  Fix support for returning more than 100 topics in `boto_sns.get_all_topics()`. Do not fail in `boto_sns.delete()` if topic is already deleted (does not exist).
+Fix `boto_sns.__init__()` such that we can run test cases.  Fix support for returning more than 100 topics in `boto_sns.get_all_topics()`. Do not fail in `boto_sns.delete()` if topic is already deleted (does not exist). Fix support for returning more than topics from `boto_sns.get_all_subscriptions()`.
