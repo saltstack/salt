@@ -69,10 +69,12 @@ def __virtual__():
     """
     Only load if boto libraries exist.
     """
-    has_boto_reqs = salt.utils.versions.check_boto_reqs(check_boto3=False)
-    if has_boto_reqs is True:
+    return salt.utils.versions.check_boto_reqs(check_boto3=False)
+
+
+def __init__(opts):
+    if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "sns", pack=__salt__)
-    return has_boto_reqs
 
 
 def get_all_topics(region=None, key=None, keyid=None, profile=None):

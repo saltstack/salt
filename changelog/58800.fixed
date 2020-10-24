@@ -1,0 +1,1 @@
+`boto_sns.__init__()` such that we can run test cases.
