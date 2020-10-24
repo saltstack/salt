@@ -7,12 +7,17 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3002 (2020-10-08)
+Salt 3002 (2020-10-19)
 ======================
 
 Removed
 -------
 
+- removed boto_vpc.describe_route_table please use boto_vpc.describe_route_tables (#58636)
+- removed show_ipv4 arg from all functions in from salt.runners.manage (#58638)
+- removed kwargs from mandrill.send if you use "async" please use "asynchronous" (#58640)
+- removed salt/modules/mac_brew_pkg.__fix_cask_namespace (#58641)
+- zfs.mount Passing '-a' as name is deprecated please just pass 'None' (#58642)
 - Remove include_localhost kwarg for connected_ids method in salt/utils/minions.py (#58224)
 - deprecated opts default argument of none and removed deprecation warnings (#58635)
 
@@ -44,6 +49,8 @@ Changed
 Fixed
 -----
 
+- `file.read` exec module function no longer fails on binary data. (#58033)
+- Remove py2 support from winrepo execution module and runner (#58596)
 - Create ini file if does not exist when using ini.options_present state module. (#34236)
 - Added an bool "strict" argument to sdb.get module to force module to fail if the sdb uri is not correct. (#39163)
 - Fixed issue with postgres.has_privilege breaking on ALL. (#48465)
@@ -226,7 +233,7 @@ Added
 - Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
 - Added features config option for feature flags. Added a feature flag
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
-  This flag will be depricated in the Phosphorus release when this functionality
+  This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
 
 

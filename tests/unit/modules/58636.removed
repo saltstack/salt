@@ -1,1 +1,0 @@
-removed boto_vpc.describe_route_table please use boto_vpc.describe_route_tables

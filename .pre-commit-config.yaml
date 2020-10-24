@@ -1066,6 +1066,15 @@ repos:
           - requirements/static/ci/invoke.in
   # <---- Invoke -----------------------------------------------------------------------------------------------------
 
+  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
+  - repo: local
+    hooks:
+      - id: check-changelog-entries
+        name: Check Changelog Entries
+        entry: .pre-commit-hooks/check-changelog-entries.py
+        language: script
+  # <---- Local Hooks ------------------------------------------------------------------------------------------------
+
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
     # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
