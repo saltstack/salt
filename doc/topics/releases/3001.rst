@@ -32,7 +32,22 @@ The ``creates`` state requisite has been migrated from the
 states to become a global option. This acts similar to an equivalent
 ``unless: test -f filename`` but can also accept a list of filenames. This allows
 all states to take advantage of the enhanced functionality released in Neon, of allowing
-salt execution modules for requisite checks. 
+salt execution modules for requisite checks.
+
+When using salt functions ``onlyif`` or ``unless`` requisites, a ``get_return`` key can
+now be used to specify a key to evaluate for truthiness. This can be used for execution modules
+which return status in a nested key.
+
+  .. code-block:: yaml
+
+    test:
+      test.nop:
+        - name: foo
+        - onlyif:
+          - fun: consul.get
+            consul_url: http://127.0.0.1:8500
+            key:  not-existing
+            get_return: res
 
 State Execution Module
 ======================

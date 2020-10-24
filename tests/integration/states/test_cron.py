@@ -3,16 +3,18 @@ Tests for the cron state
 """
 
 import logging
+import pprint
 
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
+from tests.support.helpers import skip_if_binaries_missing, slowTest
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 @skipIf(salt.utils.platform.is_windows(), "minion is windows")
+@skip_if_binaries_missing("crontab")
 class CronTest(ModuleCase):
     """
     Validate the file state
@@ -22,7 +24,8 @@ class CronTest(ModuleCase):
         """
         Setup
         """
-        self.run_state("user.present", name="test_cron_user")
+        ret = self.run_state("user.present", name="test_cron_user")
+        assert ret
 
     def tearDown(self):
         """
@@ -45,20 +48,26 @@ class CronTest(ModuleCase):
         ret = self.run_state(
             "cron.file", name="salt://issue-46881/cron", user="test_cron_user"
         )
-        _expected = "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n"
+        assert ret
+        self.assertIn(
+            "cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file",
+            ret,
+            msg="Assertion failed. run_state retuned: {}".format(pprint.pformat(ret)),
+        )
+        state = ret["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"]
         self.assertIn(
             "changes",
-            ret["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"],
+            state,
+            msg="Assertion failed. ret: {}".format(pprint.pformat(ret)),
         )
         self.assertIn(
             "diff",
-            ret["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"][
-                "changes"
-            ],
+            state["changes"],
+            msg="Assertion failed. ret: {}".format(pprint.pformat(ret)),
         )
+        expected = "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n"
         self.assertEqual(
-            _expected,
-            ret["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"][
-                "changes"
-            ]["diff"],
+            expected,
+            state["changes"]["diff"],
+            msg="Assertion failed. ret: {}".format(pprint.pformat(ret)),
         )

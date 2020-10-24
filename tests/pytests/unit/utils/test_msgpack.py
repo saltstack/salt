@@ -57,3 +57,47 @@ def test_load_multiple_versions(version, encoding, tmpdir):
                     assert "encoding" in mock_load.call_args.kwargs
                 else:
                     assert "encoding" not in mock_load.call_args.kwargs
+
+
+@pytest.mark.parametrize(
+    "version,exp_kwargs",
+    [
+        ((0, 6, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
+        ((0, 5, 2), {"raw": True, "use_bin_type": True}),
+        ((0, 4, 0), {"use_bin_type": True}),
+        ((0, 3, 0), {}),
+    ],
+)
+def test_sanitize_msgpack_kwargs(version, exp_kwargs):
+    """
+    Test helper function _sanitize_msgpack_kwargs
+    """
+    kwargs = {"strict_map_key": True, "raw": True, "use_bin_type": True}
+
+    with patch.object(salt.utils.msgpack, "version", version):
+        assert salt.utils.msgpack._sanitize_msgpack_kwargs(kwargs.copy()) == exp_kwargs
+
+
+@pytest.mark.parametrize(
+    "version,exp_kwargs",
+    [
+        ((1, 0, 0), {"raw": True, "strict_map_key": True, "use_bin_type": True}),
+        (
+            (0, 6, 0),
+            {"strict_map_key": True, "use_bin_type": True, "encoding": "utf-8"},
+        ),
+        ((0, 5, 2), {"use_bin_type": True, "encoding": "utf-8"}),
+        ((0, 4, 0), {"use_bin_type": True, "encoding": "utf-8"}),
+        ((0, 3, 0), {"encoding": "utf-8"}),
+    ],
+)
+def test_sanitize_msgpack_unpack_kwargs(version, exp_kwargs):
+    """
+    Test helper function _sanitize_msgpack_unpack_kwargs
+    """
+    kwargs = {"strict_map_key": True, "use_bin_type": True, "encoding": "utf-8"}
+    with patch.object(salt.utils.msgpack, "version", version):
+        assert (
+            salt.utils.msgpack._sanitize_msgpack_unpack_kwargs(kwargs.copy())
+            == exp_kwargs
+        )

@@ -12,12 +12,13 @@
 
 import logging
 
-from saltfactories.utils.processes.helpers import (  # pylint: disable=unused-import
+from saltfactories.utils.processes import (  # pylint: disable=unused-import
     collect_child_processes,
     terminate_process,
     terminate_process_list,
 )
-from tests.support.cli_scripts import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin, get_script_path
+from tests.support.runtests import RUNTIME_VARS
 
 try:
     from pytestsalt.fixtures.daemons import Salt as PytestSalt
@@ -32,14 +33,14 @@ except ImportError:
     # If this happens, we are running under pytest which uninstalls pytest-salt due to impatabilites
     # These imports won't actually work but these classes are only used when running under runtests,
     # so, we're just making sure we also don't hit NameError's
-    from saltfactories.utils.processes.salts import SaltCallCLI as PytestSaltCall
-    from saltfactories.utils.processes.salts import SaltCLI as PytestSalt
-    from saltfactories.utils.processes.salts import SaltKeyCLI as PytestSaltKey
-    from saltfactories.utils.processes.salts import SaltMaster as PytestSaltMaster
-    from saltfactories.utils.processes.salts import SaltMinion as PytestSaltMinion
-    from saltfactories.utils.processes.salts import SaltProxyMinion as PytestSaltProxy
-    from saltfactories.utils.processes.salts import SaltRunCLI as PytestSaltRun
-    from saltfactories.utils.processes.salts import SaltSyndic as PytestSaltSyndic
+    from tests.support.saltfactories_compat import SaltCallCLI as PytestSaltCall
+    from tests.support.saltfactories_compat import SaltCLI as PytestSalt
+    from tests.support.saltfactories_compat import SaltKeyCLI as PytestSaltKey
+    from tests.support.saltfactories_compat import SaltMaster as PytestSaltMaster
+    from tests.support.saltfactories_compat import SaltMinion as PytestSaltMinion
+    from tests.support.saltfactories_compat import SaltProxyMinion as PytestSaltProxy
+    from tests.support.saltfactories_compat import SaltRunCLI as PytestSaltRun
+    from tests.support.saltfactories_compat import SaltSyndic as PytestSaltSyndic
 
 log = logging.getLogger(__name__)
 
@@ -144,6 +145,7 @@ def start_daemon(
     log.info("[%s] Starting pytest %s(%s)", daemon_name, daemon_log_prefix, daemon_id)
     attempts = 0
     process = None
+    get_script_path(RUNTIME_VARS.TMP_SCRIPT_DIR, daemon_cli_script_name)
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
         try:
