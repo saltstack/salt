@@ -93,11 +93,21 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     __context__[cache_key] = {}
-    # TODO: support >100 SNS topics (via NextToken)
-    topics = conn.get_all_topics()
-    for t in topics["ListTopicsResponse"]["ListTopicsResult"]["Topics"]:
-        short_name = t["TopicArn"].split(":")[-1]
-        __context__[cache_key][short_name] = t["TopicArn"]
+
+    next_token = None
+    while True:  # do/while
+        resp = conn.get_all_topics(next_token)
+        resp = resp["ListTopicsResponse"]["ListTopicsResult"]
+        for t in resp["Topics"]:
+            name = t["TopicArn"].split(":")[-1]
+            __context__[cache_key][name] = t["TopicArn"]
+        try:
+            next_token = resp["NextToken"]
+        except KeyError:
+            break
+        if not next_token:
+            break
+
     return __context__[cache_key]
 
 

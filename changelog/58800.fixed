@@ -1,1 +1,1 @@
-`boto_sns.__init__()` such that we can run test cases.
+Fix `boto_sns.__init__()` such that we can run test cases.  Fix support for returning more than 100 topics in `boto_sns.get_all_topics()`.
