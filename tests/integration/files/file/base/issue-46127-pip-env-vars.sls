@@ -10,12 +10,20 @@
     - python: {{ salt.runtests_helpers.get_python_executable() }}
     {%- endif %}
 
+install-working-setuptools:
+  pip.installed:
+    - name: 'setuptools<50.0.0'
+    - bin_env: {{ virtualenv_base }}
+    - require:
+      - virtualenv: {{ virtualenv_base }}
+
 install_older_venv_1:
   pip.installed:
     - name: 'virtualenv < 13.0'
     - bin_env: {{ virtualenv_base }}
+    - upgrade: True
     - require:
-      - virtualenv: {{ virtualenv_base }}
+      - pip: install-working-setuptools
 
 # For this test we need to make sure that the virtualenv used in the
 # 'issue-46127-setup' pip.installed state below was created using

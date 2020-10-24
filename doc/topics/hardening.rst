@@ -72,7 +72,7 @@ Salt hardening tips
   particularly sensitive minions. There is also :ref:`salt-ssh` or the
   :mod:`modules.sudo <salt.modules.sudo>` if you need to further restrict
   a minion.
-- Monitor specific security releated log messages. Salt ``salt-master`` logs
+- Monitor specific security related log messages. Salt ``salt-master`` logs
   attempts to access methods which are not exposed to network clients. These log
   messages are logged at the ``error`` log level and start with ``Requested
   method not exposed``.

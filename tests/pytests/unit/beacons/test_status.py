@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     tests.pytests.unit.beacons.test_status
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Status beacon test cases
 """
-from __future__ import absolute_import
 
 import pytest
 import salt.modules.status as status_module
@@ -13,14 +11,14 @@ from salt.beacons import status
 
 
 @pytest.fixture(autouse=True)
-def setup_loader(request):
+def setup_loader():
     setup_loader_modules = {
         status: {
             "__salt__": pytest.helpers.salt_loader_module_functions(status_module)
         },
         status_module: {"__grains__": {"kernel": "Linux"}, "__salt__": {}},
     }
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
+    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
 
 

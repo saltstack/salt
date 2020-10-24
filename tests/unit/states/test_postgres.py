@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.modules.postgres as postgresmod
-import salt.states.postgres_database as postgres_database
 import salt.states.postgres_extension as postgres_extension
 import salt.states.postgres_group as postgres_group
 import salt.states.postgres_schema as postgres_schema
@@ -18,10 +14,6 @@ class PostgresUserTestCase(TestCase, LoaderModuleMockMixin):
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
-            postgres_database: {},
-            postgres_group: {},
-            postgres_extension: {},
-            postgres_schema: {},
             postgres_user: {
                 "__grains__": {"os_family": "Linux"},
                 "__salt__": {
@@ -216,10 +208,6 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
-            postgres_database: {},
-            postgres_user: {},
-            postgres_extension: {},
-            postgres_schema: {},
             postgres_group: {
                 "__grains__": {"os_family": "Linux"},
                 "__salt__": {
@@ -253,7 +241,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
                 self.assertEqual(
-                    postgres_user.__salt__["postgres.group_create"].call_count, 0
+                    postgres_group.__salt__["postgres.group_create"].call_count, 0
                 )
 
             # test=False
@@ -267,7 +255,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            postgres_user.__salt__["postgres.group_create"].assert_called_once_with(
+            postgres_group.__salt__["postgres.group_create"].assert_called_once_with(
                 superuser=None,
                 replication=None,
                 encrypted=True,
@@ -320,7 +308,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
                 self.assertEqual(
-                    postgres_user.__salt__["postgres.group_update"].call_count, 0
+                    postgres_group.__salt__["postgres.group_update"].call_count, 0
                 )
 
             # test=False
@@ -334,7 +322,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     "result": True,
                 },
             )
-            postgres_user.__salt__["postgres.group_update"].assert_called_once_with(
+            postgres_group.__salt__["postgres.group_update"].assert_called_once_with(
                 superuser=None,
                 replication=False,
                 encrypted=True,
@@ -387,7 +375,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
                 self.assertEqual(
-                    postgres_user.__salt__["postgres.group_update"].call_count, 0
+                    postgres_group.__salt__["postgres.group_update"].call_count, 0
                 )
 
             # test=False
@@ -402,7 +390,7 @@ class PostgresGroupTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
             self.assertEqual(
-                postgres_user.__salt__["postgres.group_update"].call_count, 0
+                postgres_group.__salt__["postgres.group_update"].call_count, 0
             )
 
 
@@ -412,10 +400,6 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
-            postgres_database: {},
-            postgres_user: {},
-            postgres_group: {},
-            postgres_schema: {},
             postgres_extension: {
                 "__grains__": {"os_family": "Linux"},
                 "__salt__": {
@@ -660,10 +644,6 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
         patcher.start()
         self.addCleanup(patcher.stop)
         return {
-            postgres_database: {},
-            postgres_user: {},
-            postgres_extension: {},
-            postgres_group: {},
             postgres_schema: {
                 "__grains__": {"os_family": "Linux"},
                 "__salt__": {
@@ -696,7 +676,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
             self.assertEqual(
-                postgres_user.__salt__["postgres.schema_create"].call_count, 1
+                postgres_schema.__salt__["postgres.schema_create"].call_count, 1
             )
 
     def test_present_nocreation(self):
@@ -721,7 +701,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
             self.assertEqual(
-                postgres_user.__salt__["postgres.schema_create"].call_count, 0
+                postgres_schema.__salt__["postgres.schema_create"].call_count, 0
             )
 
     def test_absent_remove(self):
@@ -744,7 +724,7 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
             self.assertEqual(
-                postgres_user.__salt__["postgres.schema_remove"].call_count, 1
+                postgres_schema.__salt__["postgres.schema_remove"].call_count, 1
             )
 
     def test_absent_noremove(self):
@@ -768,5 +748,5 @@ class PostgresSchemaTestCase(TestCase, LoaderModuleMockMixin):
                 },
             )
             self.assertEqual(
-                postgres_user.__salt__["postgres.schema_remove"].call_count, 0
+                postgres_schema.__salt__["postgres.schema_remove"].call_count, 0
             )

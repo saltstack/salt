@@ -292,7 +292,7 @@ A new :py:func:`state <salt.states.keystore>` and
 Keystore files is now included. It allows for adding/removing/listing
 as well as managing keystore files.
 
-.. code-block:: bash
+.. code-block:: console
 
   # salt-call keystore.list /path/to/keystore.jks changeit
   local:
