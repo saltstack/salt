@@ -2109,12 +2109,13 @@ def unhold(name=None, pkgs=None, **kwargs):
     removed = []
     missing = []
     for pkg in pkgs:
+        ret[pkg] = {"name": pkg, "changes": {}, "result": True, "comment": ""}
         if locks.get(pkg):
             removed.append(pkg)
             ret[pkg]["comment"] = "Package {} is no longer held.".format(pkg)
         else:
             missing.append(pkg)
-            ret[pkg]["comment"] = "Package {} unable to be unheld.".format(pkg)
+            ret[pkg]["comment"] = "Package {} was already unheld.".format(pkg)
 
     if removed:
         __zypper__.call("rl", *removed)
@@ -2197,7 +2198,7 @@ def hold(name=None, pkgs=None, **kwargs):
         raise CommandExecutionError(exc)
 
     for pkg in pkgs:
-        ret[pkg] = {"name": pkg, "changes": {}, "result": False, "comment": ""}
+        ret[pkg] = {"name": pkg, "changes": {}, "result": True, "comment": ""}
         if not locks.get(pkg):
             added.append(pkg)
             ret[pkg]["comment"] = "Package {} is now being held.".format(pkg)
