@@ -2,7 +2,6 @@
 Module for gathering and managing network information
 """
 
-# Import python libs
 import datetime
 import hashlib
 import logging
@@ -12,7 +11,6 @@ import socket
 import time
 from multiprocessing.pool import ThreadPool
 
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
@@ -20,8 +18,6 @@ import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
