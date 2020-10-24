@@ -556,7 +556,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat" or grains["os"] == "FreeBSD":
+        if (
+            grains["os_family"] == "RedHat"
+            or grains["os"] == "FreeBSD"
+            or grains["os_family"] == "Suse"
+        ):
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
