@@ -238,7 +238,7 @@ def lv_present(
         The size of the Logical Volume
 
     extents
-        The number of extents the Logical Volume
+        The number of logical extents allocated to the Logical Volume
         It can be a percentage allowed by lvcreate's syntax, in this case
         it will set the Logical Volume initial size and won't be resized.
 
