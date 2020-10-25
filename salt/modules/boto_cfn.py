@@ -166,6 +166,11 @@ def create(
         salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     """
+    if all((template_body, template_url)):
+        raise salt.exceptions.SaltInvocationError(
+            "Only one of the following arguments may be: template_body, template_url"
+        )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
@@ -222,6 +227,11 @@ def update_stack(
         salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     """
+    if all((template_body, template_url)):
+        raise salt.exceptions.SaltInvocationError(
+            "Only one of the following arguments may be: template_body, template_url"
+        )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
@@ -313,6 +323,11 @@ def validate_template(
 
         salt myminion boto_cfn.validate_template mystack-template
     """
+    if all((template_body, template_url)):
+        raise salt.exceptions.SaltInvocationError(
+            "Only one of the following arguments may be: template_body, template_url"
+        )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
