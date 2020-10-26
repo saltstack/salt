@@ -15,6 +15,7 @@ Support for Opkg
     must be installed.
 
 """
+
 import copy
 import errno
 import logging
@@ -31,7 +32,8 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.ext.six.moves import map, shlex_quote as _cmd_quote  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
