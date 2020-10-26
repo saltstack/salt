@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Salt returner to return highstate stats to AppOptics Metrics
 
 To enable this returner the minion will need the AppOptics Metrics
@@ -70,17 +69,12 @@ the name of the state that was invoked, e.g. ``role_salt_master.netapi``.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 
-# Import third party libs
 try:
     import appoptics_metrics
 
@@ -183,7 +177,7 @@ def _state_metrics(ret, options, tags):
 
     log.debug(
         "Batching with  Metric total states {}".format(
-            (stats["num_failed_states"] + stats["num_passed_states"])
+            stats["num_failed_states"] + stats["num_passed_states"]
         )
     )
     q.add(
