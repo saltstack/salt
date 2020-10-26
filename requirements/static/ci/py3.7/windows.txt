@@ -72,7 +72,7 @@ patch==1.16
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
 portend==2.6
-psutil==5.6.7
+psutil==5.7.3
 py==1.9.0                 # via pytest
 pyasn1-modules==0.2.4     # via google-auth
 pyasn1==0.4.5
