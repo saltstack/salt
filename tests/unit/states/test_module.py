@@ -196,6 +196,18 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ret = module.run(**{"name": "state.apply", "mods": "test2"})
         self.assertFalse(ret["result"])
 
+    def test_run_service_status_dead(self):
+        """
+        Tests the 'result' of module.run that calls service.status when
+        service is dead or does not exist
+        """
+        func = "service.status"
+        with patch.dict(
+            module.__salt__, {func: MagicMock(return_value=False)}
+        ), patch.dict(module.__opts__, {"use_superseded": ["module.run"]}):
+            ret = module.run(**{"name": "test_service_state", "service.status": {"name": "doesnotexist"}})
+            self.assertEqual(ret, {'name': ['service.status'], 'changes': {}, 'comment': "'service.status': False", 'result': False})
+
     def test_run_unexpected_keywords(self):
         with patch.dict(module.__salt__, {CMD: _mocked_func_args}), patch.dict(
             module.__opts__, {"use_superseded": ["module.run"]}
@@ -294,7 +306,11 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             ):
                 log.debug("test_run_typed_return: trying %s", val)
                 ret = module.run(**{CMD: [{"ret": val}]})
-            self.assertTrue(ret["result"])
+            if val is False:
+                self.assertFalse(ret["result"])
+                self.assertEqual(ret["comment"], "'foo.bar': False")
+            else:
+                self.assertTrue(ret["result"])
 
     def test_run_batch_call(self):
         """
