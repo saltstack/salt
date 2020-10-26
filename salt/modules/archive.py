@@ -473,7 +473,7 @@ def _expand_sources(sources):
 
 
 @salt.utils.decorators.path.which("tar")
-def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None):
+def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None, exclude=None):
     """
     .. note::
 
@@ -526,6 +526,9 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
 
             salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
 
+    exclude
+        exclude from tarfile option
+
     CLI Examples:
 
     .. code-block:: bash
@@ -551,6 +554,8 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
     cmd.extend(_expand_sources(sources))
     if dest:
         cmd.extend(["-C", "{0}".format(dest)])
+    if exclude:
+        cmd.extend(["--exclude {0}".format(exclude)])
 
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
