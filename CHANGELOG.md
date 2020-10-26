@@ -7,27 +7,25 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3001.3 (2020-09-16)
-========================
+Salt 3001.3
+===========
 
 Fixed
 -----
 
-- CVE-2020-16804 - Properly validate eauth credentials and tokens along with
-  their ACLs. Prior to this change eauth was not properly validated when calling
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
   Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
   to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
 
-
-Salt 3001.2 (2020-08-18)
-========================
+Salt 3001.2
+===========
 
 Fixed
 -----
 
-- CVE-2020-16804 - Prevent shell injections in netapi ssh client (cve-2020-16846)
-- Fix CVE-2020-17490 Prevent creating world readable private keys with the tls execution module. (#58216)
-
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
 
 Salt 3001.1 (2020-07-27)
 ========================
@@ -445,8 +443,26 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 
+Salt 3000.5
+===========
 
-## 3000.1
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3000.4
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+
 ### 3000.3
 
 ### Fixed
