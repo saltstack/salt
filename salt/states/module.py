@@ -432,6 +432,12 @@ def run(**kwargs):
                                 func, func_ret.get("comment", "(error message N/A)")
                             )
                         )
+                    if func_ret is False:
+                        failures.append(
+                            "'{}': {}".format(
+                                func, func_ret
+                            )
+                        )
                 else:
                     success.append(
                         "{0}: {1}".format(
