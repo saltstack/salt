@@ -4,13 +4,18 @@ Make api awesomeness
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import copy
+
 # Import Python libs
 import inspect
+import logging
 import os
 
+import salt.auth
 import salt.client
 import salt.client.ssh.client
 import salt.config
+import salt.daemons.masterapi
 import salt.exceptions
 
 # Import Salt libs
@@ -18,10 +23,14 @@ import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
+import salt.utils.minions
 import salt.wheel
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 # Import third party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 class NetapiClient(object):
@@ -36,6 +45,15 @@ class NetapiClient(object):
 
     def __init__(self, opts):
         self.opts = opts
+        apiopts = copy.deepcopy(self.opts)
+        apiopts["enable_ssh_minions"] = True
+        apiopts["cachedir"] = os.path.join(opts["cachedir"], "saltapi")
+        if not os.path.exists(apiopts["cachedir"]):
+            os.makedirs(apiopts["cachedir"])
+        self.resolver = salt.auth.Resolver(apiopts)
+        self.loadauth = salt.auth.LoadAuth(apiopts)
+        self.key = salt.daemons.masterapi.access_keys(apiopts)
+        self.ckminions = salt.utils.minions.CkMinions(apiopts)
 
     def _is_master_running(self):
         """
@@ -54,6 +72,49 @@ class NetapiClient(object):
         else:
             ipc_file = "workers.ipc"
         return os.path.exists(os.path.join(self.opts["sock_dir"], ipc_file))
+
+    def _prep_auth_info(self, clear_load):
+        sensitive_load_keys = []
+        key = None
+        if "token" in clear_load:
+            auth_type = "token"
+            err_name = "TokenAuthenticationError"
+            sensitive_load_keys = ["token"]
+            return auth_type, err_name, key, sensitive_load_keys
+        elif "eauth" in clear_load:
+            auth_type = "eauth"
+            err_name = "EauthAuthenticationError"
+            sensitive_load_keys = ["username", "password"]
+            return auth_type, err_name, key, sensitive_load_keys
+        raise salt.exceptions.EauthAuthenticationError(
+            "No authentication credentials given"
+        )
+
+    def _authorize_ssh(self, low):
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(low)
+        auth_check = self.loadauth.check_authentication(low, auth_type, key=key)
+        auth_list = auth_check.get("auth_list", [])
+        error = auth_check.get("error")
+        if error:
+            raise salt.exceptions.EauthAuthenticationError(error)
+        delimiter = low.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
+        _res = self.ckminions.check_minions(
+            low["tgt"], low.get("tgt_type", "glob"), delimiter
+        )
+        minions = _res.get("minions", list())
+        missing = _res.get("missing", list())
+        authorized = self.ckminions.auth_check(
+            auth_list,
+            low["fun"],
+            low.get("arg", []),
+            low["tgt"],
+            low.get("tgt_type", "glob"),
+            minions=minions,
+        )
+        if not authorized:
+            raise salt.exceptions.EauthAuthenticationError(
+                "Authorization error occurred."
+            )
 
     def run(self, low):
         """
@@ -80,6 +141,9 @@ class NetapiClient(object):
             raise salt.exceptions.EauthAuthenticationError(
                 "Raw shell option not allowed."
             )
+
+        if low["client"] == "ssh":
+            self._authorize_ssh(low)
 
         l_fun = getattr(self, low["client"])
         f_call = salt.utils.args.format_call(l_fun, low)

@@ -45,6 +45,8 @@ Changed
   arguments. ``formatter`` is still supported, but using both ``serializer`` and
   ``formatter`` will cause the state to fail. (#57858)
 
+Salt 3001.3 (2020-09-16)
+========================
 
 Fixed
 -----
@@ -235,6 +237,20 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+- CVE-2020-16804 - Properly validate eauth credentials and tokens along with
+  their ACLs. Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+
+Salt 3001.2 (2020-08-18)
+========================
+
+Fixed
+-----
+
+- CVE-2020-16804 - Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Fix CVE-2020-17490 Prevent creating world readable private keys with the tls execution module. (#58216)
 
 
 Salt 3001.1 (2020-07-27)
