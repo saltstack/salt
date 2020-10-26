@@ -10,6 +10,8 @@ This module provides access to idem execution modules
 
 .. versionadded:: 3002
 """
+import os
+
 # Function alias to make sure not to shadow built-in's
 __func_alias__ = {"exec_": "exec"}
 __virtualname__ = "idem"
@@ -63,8 +65,8 @@ def exec_(path, acct_file=None, acct_key=None, acct_profile=None, *args, **kwarg
         path,
         args,
         {k: v for k, v in kwargs.items() if not k.startswith("__")},
-        acct_file=acct_file or hub.OPT.acct.acct_file,
-        acct_key=acct_key or hub.OPT.acct.acct_key,
+        acct_file=acct_file or os.environ.get("ACCT_FILE", hub.OPT.acct.acct_file),
+        acct_key=acct_key or os.environ.get("ACCT_KEY", hub.OPT.acct.acct_key),
         acct_profile=acct_profile or hub.OPT.acct.acct_profile or "default",
     )
 
