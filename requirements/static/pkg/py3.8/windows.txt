@@ -30,7 +30,7 @@ more-itertools==8.2.0     # via cheroot, cherrypy, jaraco.functools
 msgpack==0.6.2
 pathtools==0.1.2          # via watchdog
 portend==2.6              # via cherrypy
-psutil==5.6.7
+psutil==5.7.3
 pyasn1==0.4.5
 pycparser==2.19
 pycryptodomex==3.9.7
