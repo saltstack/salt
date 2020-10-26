@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The status beacon is intended to send a basic health check event up to the
 master, this allows for event driven routines based on presence to be set up.
@@ -89,15 +88,12 @@ markers for specific list items:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, unicode_literals
 
 import datetime
 import logging
 
 import salt.exceptions
-
-# Import salt libs
+import salt.utils.beacons
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -125,6 +121,9 @@ def beacon(config):
     log.debug(config)
     ctime = datetime.datetime.utcnow().isoformat()
 
+    whitelist = []
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
+
     if not config:
         config = [
             {
@@ -145,7 +144,7 @@ def beacon(config):
         for func in entry:
             ret[func] = {}
             try:
-                data = __salt__["status.{0}".format(func)]()
+                data = __salt__["status.{}".format(func)]()
             except salt.exceptions.CommandExecutionError as exc:
                 log.debug(
                     "Status beacon attempted to process function %s "
@@ -170,6 +169,6 @@ def beacon(config):
                     except KeyError as exc:
                         ret[
                             func
-                        ] = "Status beacon is incorrectly configured: {0}".format(exc)
+                        ] = "Status beacon is incorrectly configured: {}".format(exc)
 
     return [{"tag": ctime, "data": ret}]

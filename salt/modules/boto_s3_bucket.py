@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon S3 Buckets
 
@@ -51,8 +50,6 @@ The dependencies listed above can be installed via package or pip.
 #  disable complaints about perfectly valid non-assignment code
 # pylint: disable=W0106
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -60,14 +57,10 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import Salt libs
-from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
 
 # pylint: disable=import-error
 try:
@@ -97,7 +90,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto3.assign_funcs"](__name__, "s3")
 
@@ -260,7 +252,7 @@ def delete_objects(
 
     """
 
-    if isinstance(Delete, six.string_types):
+    if isinstance(Delete, str):
         Delete = salt.utils.json.loads(Delete)
     if not isinstance(Delete, dict):
         raise SaltInvocationError("Malformed Delete request.")
@@ -320,7 +312,7 @@ def describe(Bucket, region=None, key=None, keyid=None, profile=None):
             "Website": conn.get_bucket_website,
         }
 
-        for key, query in six.iteritems(conn_dict):
+        for key, query in conn_dict.items():
             try:
                 data = query(Bucket=Bucket)
             except ClientError as e:
@@ -555,7 +547,7 @@ def put_acl(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         if AccessControlPolicy is not None:
-            if isinstance(AccessControlPolicy, six.string_types):
+            if isinstance(AccessControlPolicy, str):
                 AccessControlPolicy = salt.utils.json.loads(AccessControlPolicy)
             kwargs["AccessControlPolicy"] = AccessControlPolicy
         for arg in (
@@ -599,7 +591,7 @@ def put_cors(Bucket, CORSRules, region=None, key=None, keyid=None, profile=None)
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if CORSRules is not None and isinstance(CORSRules, six.string_types):
+        if CORSRules is not None and isinstance(CORSRules, str):
             CORSRules = salt.utils.json.loads(CORSRules)
         conn.put_bucket_cors(Bucket=Bucket, CORSConfiguration={"CORSRules": CORSRules})
         return {"updated": True, "name": Bucket}
@@ -634,7 +626,7 @@ def put_lifecycle_configuration(
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if Rules is not None and isinstance(Rules, six.string_types):
+        if Rules is not None and isinstance(Rules, str):
             Rules = salt.utils.json.loads(Rules)
         conn.put_bucket_lifecycle_configuration(
             Bucket=Bucket, LifecycleConfiguration={"Rules": Rules}
@@ -676,14 +668,14 @@ def put_logging(
             "TargetGrants": TargetGrants,
             "TargetPrefix": TargetPrefix,
         }
-        for key, val in six.iteritems(targets):
+        for key, val in targets.items():
             if val is not None:
                 logstate[key] = val
         if logstate:
             logstatus = {"LoggingEnabled": logstate}
         else:
             logstatus = {}
-        if TargetGrants is not None and isinstance(TargetGrants, six.string_types):
+        if TargetGrants is not None and isinstance(TargetGrants, str):
             TargetGrants = salt.utils.json.loads(TargetGrants)
         conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {"updated": True, "name": Bucket}
@@ -722,15 +714,15 @@ def put_notification_configuration(
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if TopicConfigurations is None:
             TopicConfigurations = []
-        elif isinstance(TopicConfigurations, six.string_types):
+        elif isinstance(TopicConfigurations, str):
             TopicConfigurations = salt.utils.json.loads(TopicConfigurations)
         if QueueConfigurations is None:
             QueueConfigurations = []
-        elif isinstance(QueueConfigurations, six.string_types):
+        elif isinstance(QueueConfigurations, str):
             QueueConfigurations = salt.utils.json.loads(QueueConfigurations)
         if LambdaFunctionConfigurations is None:
             LambdaFunctionConfigurations = []
-        elif isinstance(LambdaFunctionConfigurations, six.string_types):
+        elif isinstance(LambdaFunctionConfigurations, str):
             LambdaFunctionConfigurations = salt.utils.json.loads(
                 LambdaFunctionConfigurations
             )
@@ -767,7 +759,7 @@ def put_policy(Bucket, Policy, region=None, key=None, keyid=None, profile=None):
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Policy is None:
             Policy = "{}"
-        elif not isinstance(Policy, six.string_types):
+        elif not isinstance(Policy, str):
             Policy = salt.utils.json.dumps(Policy)
         conn.put_bucket_policy(Bucket=Bucket, Policy=Policy)
         return {"updated": True, "name": Bucket}
@@ -786,7 +778,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{0}:role/{1}".format(account_id, name)
+    return "arn:aws:iam::{}:role/{}".format(account_id, name)
 
 
 def put_replication(
@@ -813,7 +805,7 @@ def put_replication(
         )
         if Rules is None:
             Rules = []
-        elif isinstance(Rules, six.string_types):
+        elif isinstance(Rules, str):
             Rules = salt.utils.json.loads(Rules)
         conn.put_bucket_replication(
             Bucket=Bucket, ReplicationConfiguration={"Role": Role, "Rules": Rules}
@@ -866,10 +858,10 @@ def put_tagging(Bucket, region=None, key=None, keyid=None, profile=None, **kwarg
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         tagslist = []
-        for k, v in six.iteritems(kwargs):
-            if six.text_type(k).startswith("__"):
+        for k, v in kwargs.items():
+            if str(k).startswith("__"):
                 continue
-            tagslist.append({"Key": six.text_type(k), "Value": six.text_type(v)})
+            tagslist.append({"Key": str(k), "Value": str(v)})
         conn.put_bucket_tagging(Bucket=Bucket, Tagging={"TagSet": tagslist})
         return {"updated": True, "name": Bucket}
     except ClientError as e:
@@ -952,7 +944,7 @@ def put_website(
         ):
             val = locals()[key]
             if val is not None:
-                if isinstance(val, six.string_types):
+                if isinstance(val, str):
                     WebsiteConfiguration[key] = salt.utils.json.loads(val)
                 else:
                     WebsiteConfiguration[key] = val

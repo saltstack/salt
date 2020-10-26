@@ -1158,7 +1158,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = _list_availability_zones(vm_)
+    zones = list_availability_zones(vm_)
 
     # Validate user-specified AZ
     if avz not in zones:
@@ -1354,7 +1354,7 @@ def get_provider(vm_=None):
     return provider
 
 
-def _list_availability_zones(vm_=None):
+def list_availability_zones(vm_=None):
     """
     List all availability zones in the current region
     """

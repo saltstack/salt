@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for Amazon Route53 written against Boto 3
 
@@ -48,23 +47,18 @@ Execution module for Amazon Route53 written against Boto 3
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602,W0106
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 import time
 
-# Import Salt libs
 import salt.utils.compat
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)  # pylint: disable=W1699
 
-# Import third party libs
 try:
     # pylint: disable=unused-import
     import boto3
@@ -87,7 +81,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO3:
         __utils__["boto3.assign_funcs"](__name__, "route53")
 
@@ -126,7 +119,7 @@ def _wait_for_sync(change, conn, tries=10, sleep=20):
             if e.response.get("Error", {}).get("Code") == "Throttling":
                 log.debug("Throttled by AWS API.")
             else:
-                six.reraise(*sys.exc_info())
+                raise
         if status == "INSYNC":
             return True
         time.sleep(sleep)
@@ -1066,7 +1059,7 @@ def get_resource_records(
                 log.debug("Throttled by AWS API.")
                 time.sleep(3)
                 continue
-            six.reraise(*sys.exc_info())
+            raise
 
 
 def change_resource_record_sets(
@@ -1186,7 +1179,7 @@ def change_resource_record_sets(
             log.error(
                 "Failed to apply requested changes to the hosted zone %s: %s",
                 (Name or HostedZoneId),
-                six.text_type(e),
+                str(e),
             )
             raise e
     return False

@@ -11,7 +11,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.5-zmq-requirements
         name: Linux Packaging Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/linux\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.5/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -25,7 +25,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.6-zmq-requirements
         name: Linux Packaging Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/linux\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.6/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -38,7 +38,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.7-zmq-requirements
         name: Linux Packaging Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/linux\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.7/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -51,7 +51,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.8-zmq-requirements
         name: Linux Packaging Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/linux\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -64,7 +64,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-linux-3.9-zmq-requirements
         name: Linux Packaging Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/linux\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -77,7 +77,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.5-zmq-requirements
         name: FreeBSD Packaging Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/freebsd\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.5/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -90,7 +90,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.6-zmq-requirements
         name: FreeBSD Packaging Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/freebsd\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.6/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -103,7 +103,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.7-zmq-requirements
         name: FreeBSD Packaging Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/freebsd\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.7/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -116,7 +116,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.8-zmq-requirements
         name: FreeBSD Packaging Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/freebsd\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.8/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -129,7 +129,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-freebsd-3.9-zmq-requirements
         name: FreeBSD Packaging Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/freebsd\.in)$
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.9/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -142,7 +142,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.5-zmq-requirements
         name: Darwin Packaging Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto)\.txt|static/pkg/darwin\.in))$
+        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.5/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -156,7 +156,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.6-zmq-requirements
         name: Darwin Packaging Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto)\.txt|static/pkg/darwin\.in))$
+        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.6/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -170,7 +170,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.7-zmq-requirements
         name: Darwin Packaging Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto)\.txt|static/pkg/darwin\.in))$
+        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -184,7 +184,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.8-zmq-requirements
         name: Darwin Packaging Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto)\.txt|static/pkg/darwin\.in))$
+        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -198,7 +198,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-darwin-3.9-zmq-requirements
         name: Darwin Packaging Py3.9 ZeroMQ Requirements
-        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto)\.txt|static/pkg/darwin\.in))$
+        files: ^(pkg/osx/req_pyobjc\.txt|requirements/((base|zeromq|crypto|darwin)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -212,7 +212,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.5-zmq-requirements
         name: Windows Packaging Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/windows\.in)$
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.5/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -224,7 +224,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.6-zmq-requirements
         name: Windows Packaging Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/windows\.in)$
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.6/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -236,7 +236,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.7-zmq-requirements
         name: Windows Packaging Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/windows\.in)$
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.7/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -249,7 +249,7 @@ repos:
 #      - id: pip-tools-compile
 #        alias: compile-pkg-windows-3.8-zmq-requirements
 #        name: Windows Packaging Py3.8 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/windows\.in)$
+#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -262,7 +262,7 @@ repos:
 #      - id: pip-tools-compile
 #        alias: compile-pkg-windows-3.9-zmq-requirements
 #        name: Windows Packaging Py3.9 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/windows\.in)$
+#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -277,7 +277,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.5-zmq-requirements
         name: Linux CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.5/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -290,7 +290,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.6-zmq-requirements
         name: Linux CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.6/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -303,7 +303,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.7-zmq-requirements
         name: Linux CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.7/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -316,7 +316,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.8-zmq-requirements
         name: Linux CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.8/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -329,7 +329,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-py3.9-zmq-requirements
         name: Linux CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/linux\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/linux\.in|pkg/py3\.9/linux\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -403,7 +403,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.5-zmq-requirements
         name: FreeBSD CI Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/freebsd\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.5/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -416,7 +416,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.6-zmq-requirements
         name: FreeBSD CI Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/freebsd\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.6/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -429,7 +429,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.7-zmq-requirements
         name: FreeBSD CI Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/freebsd\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.7/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -442,7 +442,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.8-zmq-requirements
         name: FreeBSD CI Py3.8 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/freebsd\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.8/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -455,7 +455,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-py3.9-zmq-requirements
         name: FreeBSD CI Py3.9 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/freebsd\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/freebsd\.in|pkg/py3\.9/freebsd\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -529,7 +529,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.5-zmq-requirements
         name: Darwin CI Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/ci/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.5/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -543,7 +543,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.6-zmq-requirements
         name: Darwin CI Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/ci/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.6/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -557,7 +557,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.7-zmq-requirements
         name: Darwin CI Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/ci/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.7/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -571,7 +571,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.8-zmq-requirements
         name: Darwin CI Py3.8 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/ci/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.8/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -585,7 +585,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-py3.9-zmq-requirements
         name: Darwin CI Py3.9 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/ci/darwin\.in))$
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/darwin\.in|pkg/py3\.9/darwin\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -660,7 +660,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.5-zmq-requirements
         name: Windows CI Py3.5 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/ci/windows\.in)$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.5/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -673,7 +673,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.6-zmq-requirements
         name: Windows CI Py3.6 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/ci/windows\.in)$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.6/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -686,7 +686,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.7-zmq-requirements
         name: Windows CI Py3.7 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/ci/windows\.in)$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.7/windows\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -700,7 +700,7 @@ repos:
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-py3.8-zmq-requirements
 #        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/ci/windows\.in)$
+#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -714,7 +714,7 @@ repos:
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-py3.9-zmq-requirements
 #        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/ci/windows\.in)$
+#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -1066,6 +1066,15 @@ repos:
           - requirements/static/ci/invoke.in
   # <---- Invoke -----------------------------------------------------------------------------------------------------
 
+  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
+  - repo: local
+    hooks:
+      - id: check-changelog-entries
+        name: Check Changelog Entries
+        entry: .pre-commit-hooks/check-changelog-entries.py
+        language: script
+  # <---- Local Hooks ------------------------------------------------------------------------------------------------
+
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
     # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
@@ -1080,18 +1089,10 @@ repos:
             salt/client/ssh/ssh_py_shim.py
           )$
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
+  - repo: https://github.com/saltstack/pre-commit-remove-import-headers
+    rev: 1.0.0
     hooks:
-      - id: nox
-        alias: remove-import-comments
-        name: Remove import comments
-        files: .*\.py$
-        args:
-          - -e
-          - invoke-pre-commit
-          - --
-          - imports.remove-comments
+      - id: remove-import-headers
 
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
@@ -1119,6 +1120,16 @@ repos:
                 salt/ext/.*|
                 tests/kitchen/.*
             )$
+
+  - repo: https://github.com/myint/rstcheck
+    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
+    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
+    rev: 3f92957
+    hooks:
+      - id: rstcheck
+        name: Check reST files using rstcheck
+        args: [--report=warning]
+        additional_dependencies: [sphinx]
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.7.0

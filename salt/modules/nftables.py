@@ -2,7 +2,6 @@
 Support for nftables
 """
 
-# Import python libs
 import json
 import logging
 import re
@@ -11,8 +10,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
-
-# Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 # Set up logging
@@ -396,7 +393,7 @@ def get_rules(family="ipv4"):
 
 def get_rules_json(family="ipv4"):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Return a list of dictionaries comprising the current, in-memory rules
 
@@ -431,7 +428,7 @@ def get_rules_json(family="ipv4"):
 
 def save(filename=None, family="ipv4"):
     """
-    .. versionchanged:: Magnesium
+    .. versionchanged:: 3002
 
     Save the current in-memory rules to disk. On systems where /etc/nftables is
     a directory, a file named salt-all-in-one.nft will be dropped inside by default.
@@ -1149,7 +1146,7 @@ def flush(table="filter", chain="", family="ipv4"):
 
 def get_policy(table="filter", chain=None, family="ipv4"):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Return the current policy for the specified table/chain
 
@@ -1191,7 +1188,7 @@ def get_policy(table="filter", chain=None, family="ipv4"):
 
 def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Set the current policy for the specified table/chain. This only works on
     chains with an existing base chain.
