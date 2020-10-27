@@ -10,7 +10,6 @@ This state provides access to idem states
 
 .. versionadded:: 3002
 """
-import os
 import pathlib
 import re
 
@@ -130,8 +129,8 @@ def state(
         cache_dir=cache_dir or hub.OPT.idem.cache_dir,
         sls=SLSs,
         test=test,
-        acct_file=acct_file or os.environ.get("ACCT_FILE", hub.OPT.acct.acct_file),
-        acct_key=acct_key or os.environ.get("ACCT_KEY", hub.OPT.acct.acct_key),
+        acct_file=acct_file or hub.OPT.acct.acct_file,
+        acct_key=acct_key or hub.OPT.acct.acct_key,
         acct_profile=acct_profile or hub.OPT.acct.acct_profile or "default",
     )
     hub.pop.Loop.run_until_complete(coro)
