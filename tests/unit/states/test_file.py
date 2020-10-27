@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import collections
 import logging
 import os
 import plistlib
@@ -24,7 +25,7 @@ import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import destructiveTest, slowTest, with_tempfile, dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -2751,6 +2752,77 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+    @with_tempfile()
+    def test_file_keyvalue_key_values(self, fpath):
+        """
+        test file.keyvalue when using key_values kwarg
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(name=fpath, key_values=collections.OrderedDict(PermitRootLogin="yes"),
+                                 separator=" ", uncomment="#", key_ignore_case=True)
+
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
+
+    @with_tempfile()
+    def test_file_keyvalue_empty(self, fpath):
+        """
+        test file.keyvalue when key_values is empty
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(name=fpath, key_values={},
+                                 separator=" ", uncomment="#", key_ignore_case=True)
+
+        self.assertEqual(ret["comment"], "file.keyvalue key and value not supplied and key_values is empty")
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertNotIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
+
+    @with_tempfile()
+    def test_file_keyvalue_not_dict(self, fpath):
+        """
+        test file.keyvalue when key_values not a dict
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(name=fpath, key_values=["PermiteRootLogin", "yes"],
+                                 separator=" ", uncomment="#", key_ignore_case=True)
+
+        self.assertEqual(ret["comment"], "file.keyvalue key and value not supplied and key_values is not a dictionary")
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertNotIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
 
 
 class TestFindKeepFiles(TestCase):
