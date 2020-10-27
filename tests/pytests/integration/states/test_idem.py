@@ -10,8 +10,9 @@ import salt.utils.idem as idem
 import salt.utils.path
 import tests.support.sminion
 
+pytestmark = pytest.mark.skipif(not idem.HAS_POP[0], reason=idem.HAS_POP[1])
 
-@pytest.mark.skipif(not idem.HAS_POP[0], reason="idem is not installed")
+
 @contextmanager
 def test_state(salt_call_cli):
     with tempfile.NamedTemporaryFile(suffix=".sls", delete=True, mode="w+") as fh:
