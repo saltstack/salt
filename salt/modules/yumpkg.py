@@ -3399,13 +3399,10 @@ def services_need_restart(**kwargs):
 
     services = set()
     for line in dnf_output.split("\n"):
-        try:
-            pid, _ = line.split(":")
-        # Skip lines that can't be parsed
-        except ValueError:
-            continue
-        service = salt.utils.systemd.pid_to_service(pid.strip())
-        if service:
-            services.add(service)
+        pid, has_delim, _ = line.partition(":")
+        if has_delim:
+            service = salt.utils.systemd.pid_to_service(pid.strip())
+            if service:
+                services.add(service)
 
     return list(services)
