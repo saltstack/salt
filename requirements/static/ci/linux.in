@@ -23,21 +23,16 @@ moto
 napalm; python_version >= '3.6'
 passlib
 paramiko>=2.1.6
-psutil
 pygit2<=0.28.2; python_version < '3.8'
 pygit2>=1.2.0; python_version >= '3.8'
 pyiface
 pyinotify
-pyopenssl
 python-etcd>0.4.2
-python-gnupg
 pyvmomi
 requests
 rfc3987
-setproctitle
 setuptools-scm
 strict_rfc3339
-timelib
 toml
 vcert~=0.7.0
 virtualenv>=20.0.20

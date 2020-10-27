@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage DNS records and zones using libcloud
 
@@ -47,21 +46,11 @@ Example:
 :depends: apache-libcloud
 """
 
-# Import Python Libs
-from __future__ import absolute_import
-
-# Import salt libs
-import salt.utils.compat
-
 
 def __virtual__():
     if "libcloud_dns.list_zones" in __salt__:
         return True
     return (False, "libcloud_dns module could not be loaded")
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def state_result(result, message, name, changes=None):
@@ -196,8 +185,6 @@ def record_absent(name, zone, type, data, profile):
                     matching_zone["id"], record["id"], profile
                 )
             )
-        return state_result(
-            all(result), "Removed {0} records".format(len(result)), name
-        )
+        return state_result(all(result), "Removed {} records".format(len(result)), name)
     else:
         return state_result(True, "Records already absent", name)

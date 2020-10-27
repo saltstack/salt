@@ -1,7 +1,6 @@
 """
 Routines to set up a minion
 """
-# Import python libs
 
 import contextlib
 import copy
@@ -20,7 +19,6 @@ from binascii import crc32
 from random import randint, shuffle
 from stat import S_IMODE
 
-# Import salt libs
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -74,7 +72,6 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 
-# Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
@@ -110,7 +107,6 @@ try:
 except ImportError:
     HAS_WIN_FUNCTIONS = False
 # pylint: enable=import-error
-
 
 log = logging.getLogger(__name__)
 
@@ -264,7 +260,10 @@ def prep_ip_port(opts):
     if opts["master_uri_format"] == "ip_only":
         ret["master"] = ipaddress.ip_address(opts["master"])
     else:
-        host, port = parse_host_port(opts["master"])
+        try:
+            host, port = parse_host_port(opts["master"])
+        except ValueError as exc:
+            raise SaltClientError(exc)
         ret = {"master": host}
         if port:
             ret.update({"master_port": port})
@@ -689,7 +688,20 @@ class MinionBase:
             for master in opts["local_masters"]:
                 opts["master"] = master
                 opts.update(prep_ip_port(opts))
-                opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+                if opts["master_type"] == "failover":
+                    try:
+                        opts["master_uri_list"].append(
+                            resolve_dns(opts, False)["master_uri"]
+                        )
+                    except SaltClientError:
+                        continue
+                else:
+                    opts["master_uri_list"].append(resolve_dns(opts)["master_uri"])
+
+            if not opts["master_uri_list"]:
+                msg = "No master could be resolved"
+                log.error(msg)
+                raise SaltClientError(msg)
 
             pub_channel = None
             while True:
@@ -707,7 +719,13 @@ class MinionBase:
                 for master in opts["local_masters"]:
                     opts["master"] = master
                     opts.update(prep_ip_port(opts))
-                    opts.update(resolve_dns(opts))
+                    if opts["master_type"] == "failover":
+                        try:
+                            opts.update(resolve_dns(opts, False))
+                        except SaltClientError:
+                            continue
+                    else:
+                        opts.update(resolve_dns(opts))
 
                     # on first run, update self.opts with the whole master list
                     # to enable a minion to re-use old masters if they get fixed
@@ -1459,7 +1477,9 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False, notify=False, grains=None, opts=None):
+    def _load_modules(
+        self, force_refresh=False, notify=False, grains=None, opts=None, context=None
+    ):
         """
         Return the functions and the returners loaded up from the loader
         module
@@ -1498,9 +1518,14 @@ class Minion(MinionBase):
         else:
             proxy = None
 
+        if context is None:
+            context = {}
+
         if grains is None:
-            opts["grains"] = salt.loader.grains(opts, force_refresh, proxy=proxy)
-        self.utils = salt.loader.utils(opts, proxy=proxy)
+            opts["grains"] = salt.loader.grains(
+                opts, force_refresh, proxy=proxy, context=context
+            )
+        self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
             s_opts = copy.deepcopy(opts)
@@ -1510,12 +1535,13 @@ class Minion(MinionBase):
                 proxy=proxy,
                 loaded_base_name=self.loaded_base_name,
                 notify=notify,
+                context=context,
             )
         else:
             functions = salt.loader.minion_mods(
-                opts, utils=self.utils, notify=notify, proxy=proxy
+                opts, utils=self.utils, notify=notify, proxy=proxy, context=context,
             )
-        returners = salt.loader.returners(opts, functions, proxy=proxy)
+        returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
         errors = {}
         if "_errors" in functions:
             errors = functions["_errors"]
@@ -1525,7 +1551,7 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        executors = salt.loader.executors(opts, functions, proxy=proxy)
+        executors = salt.loader.executors(opts, functions, proxy=proxy, context=context)
 
         if opt_in:
             self.opts = opts
@@ -2554,29 +2580,36 @@ class Minion(MinionBase):
         if not self.ready:
             raise salt.ext.tornado.gen.Return()
         tag, data = salt.utils.event.SaltEvent.unpack(package)
+
+        if "proxy_target" in data and self.opts.get("metaproxy") == "deltaproxy":
+            proxy_target = data["proxy_target"]
+            _minion = self.deltaproxy_objs[proxy_target]
+        else:
+            _minion = self
+
         log.debug("Minion of '%s' is handling event tag '%s'", self.opts["master"], tag)
         if tag.startswith("module_refresh"):
-            self.module_refresh(
+            _minion.module_refresh(
                 force_refresh=data.get("force_refresh", False),
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield self.pillar_refresh(force_refresh=data.get("force_refresh", False))
+            yield _minion.pillar_refresh(force_refresh=data.get("force_refresh", False))
         elif tag.startswith("beacons_refresh"):
-            self.beacons_refresh()
+            _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
-            self.matchers_refresh()
+            _minion.matchers_refresh()
         elif tag.startswith("manage_schedule"):
-            self.manage_schedule(tag, data)
+            _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
-            self.manage_beacons(tag, data)
+            _minion.manage_beacons(tag, data)
         elif tag.startswith("grains_refresh"):
             if (
                 data.get("force_refresh", False)
-                or self.grains_cache != self.opts["grains"]
+                or _minion.grains_cache != _minion.opts["grains"]
             ):
-                self.pillar_refresh(force_refresh=True)
-                self.grains_cache = self.opts["grains"]
+                _minion.pillar_refresh(force_refresh=True)
+                _minion.grains_cache = _minion.opts["grains"]
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
         elif tag.startswith("_minion_mine"):
@@ -3590,7 +3623,8 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    metaproxy = salt.loader.metaproxy(opts)
+    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
+    metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
         metaproxy_name = opts["metaproxy"]
     except KeyError:
@@ -3601,7 +3635,7 @@ def _metaproxy_call(opts, fn_name):
             + ". "
             + "Defaulting to standard proxy minion"
         )
-        log.trace(errmsg)
+        log.error(errmsg)
 
     metaproxy_fn = metaproxy_name + "." + fn_name
     return metaproxy[metaproxy_fn]
@@ -3631,6 +3665,14 @@ class ProxyMinion(Minion):
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
         return mp_call(self, master)
+
+    def tune_in(self, start=True):
+        """
+        Lock onto the publisher. This is the main event loop for the minion
+        :rtype : None
+        """
+        mp_call = _metaproxy_call(self.opts, "tune_in")
+        return mp_call(self, start)
 
     def _target_load(self, load):
         """
@@ -3719,7 +3761,7 @@ class SProxyMinion(SMinion):
         self.matchers = salt.loader.matchers(self.opts)
         self.functions["sys.reload_modules"] = self.gen_modules
         self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+            self.opts, functions=self.functions, proxy=self.proxy, context=context,
         )
 
         fq_proxyname = self.opts["proxy"]["proxytype"]

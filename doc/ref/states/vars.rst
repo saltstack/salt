@@ -2,6 +2,21 @@
 SLS Template Variable Reference
 ===============================
 
+
+.. warning::
+   In the 3002 release ``sls_path``, ``tplfile``, and ``tpldir`` have had some significant
+   improvements which have the potential to break states that rely on old and
+   broken functionality. These fixes can be enabled by setting the
+   ``enable_slsvars_fixes`` feature flag to ``True`` in your minion's config file.
+   This functionality will become the default in the 3005 release.
+
+   .. code-block:: yaml
+
+       features:
+         enable_slsvars_fixes: True
+
+
+
 The template engines available to sls files and file templates come loaded
 with a number of context variables. These variables contain information and
 functions to assist in the generation of templates.  See each variable below
@@ -81,8 +96,13 @@ from an environment.
 
     {{ saltenv }}
 
+SLS Only Variables
+==================
+The following are only available when processing sls files. If you need these
+in other templates, you can usually pass them in as template context.
+
 sls
-====
+---
 
 The `sls` variable contains the sls reference value, and is only available in
 the actual SLS file (not in any files referenced in that SLS). The sls
@@ -94,14 +114,96 @@ include option.
     {{ sls }}
 
 slspath
-=======
+-------
 
 The `slspath` variable contains the path to the directory of the current sls
 file. The value of `slspath` in files referenced in the current sls depends on
 the reference method. For jinja includes `slspath` is the path to the current
 directory of the file. For salt includes `slspath` is the path to the directory
-of the included file.
+of the included file. If current sls file is in root of the file roots, this
+will return ""
 
 .. code-block:: jinja
 
     {{ slspath }}
+
+
+sls_path
+--------
+
+A version of `slspath` with underscores as path separators instead of slashes.
+So, if `slspath` is `path/to/state` then `sls_path` is `path_to_state`
+
+.. code-block:: jinja
+
+    {{ sls_path }}
+
+slsdotpath
+----------
+
+A version of `slspath` with dots as path separators instead of slashes. So, if
+`slspath` is `path/to/state` then `slsdotpath` is `path.to.state`. This is same
+as `sls` if `sls` points to a directory instead if a file.
+
+.. code-block:: jinja
+
+    {{ slsdotpath }}
+
+
+slscolonpath
+------------
+
+A version of `slspath` with colons (`:`) as path separators instead of slashes.
+So, if `slspath` is `path/to/state` then `slscolonpath` is `path:to:state`.
+
+.. code-block:: jinja
+
+    {{ slscolonpath }}
+
+tplpath
+-------
+
+Full path to sls template file being process on local disk. This is usually
+pointing to a copy of the sls file in a cache directory. This will be in OS
+specific format (Windows vs POSIX). (It is probably best not to use this.)
+
+.. code-block:: jinja
+
+    {{ tplpath }}
+
+
+tplfile
+-------
+
+Relative path to exact sls template file being processed relative to file
+roots.
+
+.. code-block:: jinja
+
+    {{ tplfile }}
+
+tpldir
+------
+
+Directory, relative to file roots, of the current sls file. If current sls file
+is in root of the file roots, this will return ".". This is usually identical
+to `slspath` except in case of root-level sls, where this will return a "`.`".
+
+A Common use case for this variable is to generate relative salt urls like:
+.. code-block:: jinja
+
+    my-file:
+      file.managed:
+        source: salt://{{ tpldir }}/files/my-template
+
+
+tpldot
+------
+
+A version of `tpldir` with dots as path separators instead of slashes. So, if
+`tpldir` is `path/to/state` then `tpldot` is `path.to.state`. NOTE: if `tpldir`
+is `.`, this will be set to ""
+
+.. code-block:: jinja
+
+    {{ tpldot }}

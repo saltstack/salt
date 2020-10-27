@@ -22,9 +22,9 @@ newIssueWelcomeComment: >
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com or reach out directly to the
-  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
-  look forward to doing awesome things with you!
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
@@ -48,9 +48,9 @@ newPRWelcomeComment: >
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com or reach out directly to the
-  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
-  look forward to doing awesome things with you!
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >
