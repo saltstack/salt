@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only runs on Linux systems
     '''
-    return __grains__['kernel'] == 'Linux'
+    return __grains__.get('kernel') == 'Linux'
 
 
 def _new_mods(pre_mods, post_mods):

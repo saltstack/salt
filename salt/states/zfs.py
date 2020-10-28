@@ -68,7 +68,7 @@ def __virtual__():
     '''
     Provides zfs state
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
         return (False, "The zfs state cannot be loaded: zfs not supported")

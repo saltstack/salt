@@ -261,7 +261,7 @@ class LoadAuth(object):
 
     def list_tokens(self):
         '''
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         '''
         return self.tokens["{0}.list_tokens".format(self.opts['eauth_tokens'])](self.opts)
 
@@ -330,6 +330,7 @@ class LoadAuth(object):
                 return auth_user.sudo_name()
             elif load['user'] == self.opts.get('user', 'root') or load['user'] == 'root':
                 if auth_key != key[self.opts.get('user', 'root')]:
+                    log.warning('Master runs as %r, but user in payload is %r', self.opts.get('user', 'root'), load['user'])
                     log.warning(error_msg)
                     return False
             elif auth_user.is_running_user():
@@ -485,8 +486,8 @@ class Authorize(object):
         salt.utils.versions.warn_until(
             'Neon',
             'The \'Authorize\' class has been deprecated. Please use the '
-            '\'LoadAuth\', \'Reslover\', or \'AuthUser\' classes instead. '
-            'Support for the \'Authorze\' class will be removed in Salt '
+            '\'LoadAuth\', \'Resolver\', or \'AuthUser\' classes instead. '
+            'Support for the \'Authorize\' class will be removed in Salt '
             '{version}.'
         )
         self.opts = salt.config.master_config(opts['conf_file'])
@@ -769,7 +770,7 @@ class AuthUser(object):
         '''
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         '''
         self.user = user
 

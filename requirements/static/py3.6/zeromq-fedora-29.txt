@@ -106,11 +106,12 @@ strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 timelib==0.2.4
 tornado==4.5.3 ; python_version >= "3.4"
-urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests, requests-unixsocket
+urllib3==1.24.3           # via botocore, kubernetes, python-etcd, requests, requests-unixsocket
 virtualenv==16.4.3
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.2          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
 ws4py==0.5.1              # via pylxd
 xmltodict==0.12.0         # via moto
+yamlordereddictloader==0.4.0
 zc.lockfile==1.4          # via cherrypy

@@ -88,7 +88,7 @@ def __virtual__():
     '''
     Provides zpool state
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
         return False, 'The zpool state cannot be loaded: zfs not supported'

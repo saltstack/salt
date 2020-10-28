@@ -30,7 +30,7 @@ def __virtual__():
     Confirm this module is on a Debian based system and that debconf-utils
     is installed.
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family') != 'Debian':
         return (False, 'The debconfmod module could not be loaded: '
                 'unsupported OS family')
 

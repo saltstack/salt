@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Only work on Gentoo systems with gentoolkit installed
     '''
-    if __grains__['os_family'] == 'Gentoo' and HAS_GENTOOLKIT:
+    if __grains__.get('os_family') == 'Gentoo' and HAS_GENTOOLKIT:
         return __virtualname__
     return (False, 'The gentoolkitmod execution module cannot be loaded: '
        'either the system is not Gentoo or the gentoolkit.eclean python module not available')

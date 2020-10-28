@@ -508,6 +508,7 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_event_viewer
     win_file
     win_firewall
     win_groupadd

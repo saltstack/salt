@@ -178,6 +178,7 @@ Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 .. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
 
+Make sure you have yappi installed.
 
 Commands Time Out or Do Not Return Output
 =========================================

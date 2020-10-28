@@ -23,7 +23,7 @@ def __virtual__():
     '''
     Only load the module if apache is installed.
     '''
-    if salt.utils.path.which('apache2ctl') and __grains__['os_family'] == 'Suse':
+    if salt.utils.path.which('apache2ctl') and __grains__.get('os_family') == 'Suse':
         return __virtualname__
     return (False, 'apache execution module not loaded: apache not installed.')
 

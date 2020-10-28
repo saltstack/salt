@@ -9,7 +9,7 @@ cherrypy==17.3.0
 clustershell
 croniter>=0.3.0,!=0.3.22
 dnspython
-docker
+docker<4.0
 futures>=2.0; python_version < '3.0'
 GitPython
 hgtools  # XXX: Find out if we can remove this dependency
@@ -41,3 +41,4 @@ supervisor==3.3.5; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
+yamlordereddictloader

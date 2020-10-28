@@ -39,7 +39,7 @@ def __virtual__():
     '''
     Confine this module to RHEL/Fedora based distros
     '''
-    if __grains__['os_family'] == 'RedHat':
+    if __grains__.get('os_family') == 'RedHat':
         return __virtualname__
     return (False, 'The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.')
 

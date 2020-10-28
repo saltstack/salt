@@ -40,7 +40,7 @@ azure-mgmt-devspaces==0.1.0  # via azure-mgmt
 azure-mgmt-devtestlabs==2.2.0  # via azure-mgmt
 azure-mgmt-dns==2.1.0     # via azure-mgmt
 azure-mgmt-eventgrid==1.0.0  # via azure-mgmt
-azure-mgmt-eventhub==2.5.0  # via azure-mgmt
+azure-mgmt-eventhub==2.6.0  # via azure-mgmt
 azure-mgmt-hanaonazure==0.1.1  # via azure-mgmt
 azure-mgmt-iotcentral==0.1.0  # via azure-mgmt
 azure-mgmt-iothub==0.5.0  # via azure-mgmt
@@ -50,26 +50,26 @@ azure-mgmt-loganalytics==0.2.0  # via azure-mgmt
 azure-mgmt-logic==3.0.0   # via azure-mgmt
 azure-mgmt-machinelearningcompute==0.4.1  # via azure-mgmt
 azure-mgmt-managementgroups==0.1.0  # via azure-mgmt
-azure-mgmt-managementpartner==0.1.0  # via azure-mgmt
+azure-mgmt-managementpartner==0.1.1  # via azure-mgmt
 azure-mgmt-maps==0.1.0    # via azure-mgmt
 azure-mgmt-marketplaceordering==0.1.0  # via azure-mgmt
 azure-mgmt-media==1.0.0   # via azure-mgmt
 azure-mgmt-monitor==0.5.2  # via azure-mgmt
 azure-mgmt-msi==0.2.0     # via azure-mgmt
-azure-mgmt-network==2.6.0  # via azure-mgmt
-azure-mgmt-notificationhubs==2.0.0  # via azure-mgmt
-azure-mgmt-nspkg==3.0.2   # via azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-consumption, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-nspkg, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
+azure-mgmt-network==2.7.0  # via azure-mgmt
+azure-mgmt-notificationhubs==2.1.0  # via azure-mgmt
+azure-mgmt-nspkg==3.0.2   # via azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-consumption, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-nspkg, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-scheduler, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
 azure-mgmt-policyinsights==0.1.0  # via azure-mgmt
 azure-mgmt-powerbiembedded==2.0.0  # via azure-mgmt
-azure-mgmt-rdbms==1.8.0   # via azure-mgmt
+azure-mgmt-rdbms==1.9.0   # via azure-mgmt
 azure-mgmt-recoveryservices==0.3.0  # via azure-mgmt
 azure-mgmt-recoveryservicesbackup==0.3.0  # via azure-mgmt
 azure-mgmt-redis==5.0.0   # via azure-mgmt
 azure-mgmt-relay==0.1.0   # via azure-mgmt
 azure-mgmt-reservations==0.2.1  # via azure-mgmt
-azure-mgmt-resource==2.1.0  # via azure-mgmt
+azure-mgmt-resource==2.2.0  # via azure-mgmt
 azure-mgmt-scheduler==2.0.0  # via azure-mgmt
-azure-mgmt-search==2.0.0  # via azure-mgmt
+azure-mgmt-search==2.1.0  # via azure-mgmt
 azure-mgmt-servicebus==0.5.3  # via azure-mgmt
 azure-mgmt-servicefabric==0.2.0  # via azure-mgmt
 azure-mgmt-signalr==0.1.1  # via azure-mgmt
@@ -84,18 +84,18 @@ azure-servicebus==0.21.1  # via azure
 azure-servicefabric==6.3.0.0  # via azure
 azure-servicemanagement-legacy==0.20.6  # via azure
 azure-storage-blob==1.5.0  # via azure
-azure-storage-common==1.4.0  # via azure-cosmosdb-table, azure-storage-blob, azure-storage-file, azure-storage-queue
+azure-storage-common==1.4.2  # via azure-cosmosdb-table, azure-storage-blob, azure-storage-file, azure-storage-queue
 azure-storage-file==1.4.0  # via azure
 azure-storage-queue==1.4.0  # via azure
 azure==4.0.0
-certifi==2019.3.9         # via msrest, requests
-cffi==1.12.2              # via azure-datalake-store, cryptography
+certifi==2019.6.16        # via msrest, requests
+cffi==1.12.3              # via azure-datalake-store, cryptography
 chardet==3.0.4            # via requests
-cryptography==2.6.1       # via adal, azure-cosmosdb-table, azure-keyvault, azure-storage-common, requests-ntlm
+cryptography==2.7         # via adal, azure-cosmosdb-table, azure-keyvault, azure-storage-common, requests-ntlm
 idna==2.8                 # via requests
 isodate==0.6.0            # via msrest
-msrest==0.6.6             # via azure-applicationinsights, azure-eventgrid, azure-keyvault, azure-loganalytics, azure-mgmt-cdn, azure-mgmt-compute, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-dns, azure-mgmt-eventhub, azure-mgmt-keyvault, azure-mgmt-media, azure-mgmt-network, azure-mgmt-rdbms, azure-mgmt-resource, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-servicefabric, msrestazure
-msrestazure==0.6.0        # via azure-batch, azure-eventgrid, azure-graphrbac, azure-keyvault, azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cdn, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-compute, azure-mgmt-consumption, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-analytics, azure-mgmt-datalake-store, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-eventhub, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-media, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-rdbms, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-resource, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
+msrest==0.6.8             # via azure-applicationinsights, azure-eventgrid, azure-keyvault, azure-loganalytics, azure-mgmt-cdn, azure-mgmt-compute, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-dns, azure-mgmt-eventhub, azure-mgmt-keyvault, azure-mgmt-managementpartner, azure-mgmt-media, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-rdbms, azure-mgmt-resource, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-servicefabric, msrestazure
+msrestazure==0.6.1        # via azure-batch, azure-eventgrid, azure-graphrbac, azure-keyvault, azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cdn, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-compute, azure-mgmt-consumption, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-analytics, azure-mgmt-datalake-store, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-eventhub, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-media, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-rdbms, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-resource, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
 netaddr==0.7.19
 ntlm-auth==1.3.0          # via requests-ntlm
 oauthlib==3.0.1           # via requests-oauthlib
@@ -106,7 +106,7 @@ python-dateutil==2.8.0    # via adal, azure-cosmosdb-table, azure-storage-common
 pywinrm==0.3.0
 requests-ntlm==1.1.0      # via pywinrm
 requests-oauthlib==1.2.0  # via msrest
-requests==2.21.0          # via adal, azure-cosmosdb-table, azure-datalake-store, azure-keyvault, azure-servicebus, azure-servicemanagement-legacy, azure-storage-common, msrest, profitbricks, pywinrm, requests-ntlm, requests-oauthlib
+requests==2.22.0          # via adal, azure-cosmosdb-table, azure-datalake-store, azure-keyvault, azure-servicebus, azure-servicemanagement-legacy, azure-storage-common, msrest, profitbricks, pywinrm, requests-ntlm, requests-oauthlib
 six==1.12.0               # via cryptography, isodate, profitbricks, python-dateutil, pywinrm
-urllib3==1.24.2           # via requests
+urllib3==1.25.3           # via requests
 xmltodict==0.12.0         # via pywinrm

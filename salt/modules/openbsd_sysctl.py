@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only run on OpenBSD systems
     '''
-    if __grains__['os'] == 'OpenBSD':
+    if __grains__.get('os') == 'OpenBSD':
         return __virtualname__
     return (False, 'The openbsd_sysctl execution module cannot be loaded: '
             'only available on OpenBSD systems.')
