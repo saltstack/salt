@@ -5221,10 +5221,12 @@ def _parse_caps_guest(guest):
     # Some guests may also have no feature at all (xen pv for instance)
     features_nodes = guest.find("features")
     if features_nodes is not None and child is not None:
-        toggle = child.get("toggle", "no") == "yes"
-        default = child.get("default", "no") == "yes"
+        log.error(child.get("toggle"))
         result["features"] = {
-            child.tag: {"toggle": toggle, "default": default}
+            child.tag: {
+                "toggle": child.get("toggle") == "yes",
+                "default": child.get("default") == "on",
+            }
             for child in features_nodes
         }
     return result
