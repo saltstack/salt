@@ -1809,6 +1809,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
             yumpkg, "list_pkgs", list_pkgs_mock
         ), patch.object(
             yumpkg, "_yum", MagicMock(return_value="dnf")
+        ), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
         ):
             ret = yumpkg.update(name)
             expected = {name: {"old": old, "new": new}}
