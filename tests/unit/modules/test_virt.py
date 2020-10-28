@@ -3586,7 +3586,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
       <deviceboot/>
       <disksnapshot default='on' toggle='no'/>
       <acpi default='on' toggle='yes'/>
-      <apic default='on' toggle='no'/>
+      <apic default='off' toggle='no'/>
     </features>
   </guest>
 
@@ -3736,13 +3736,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     "features": {
-                        "cpuselection": {"default": True, "toggle": False},
-                        "deviceboot": {"default": True, "toggle": False},
+                        "cpuselection": {"default": False, "toggle": False},
+                        "deviceboot": {"default": False, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
                         "acpi": {"default": True, "toggle": True},
                         "apic": {"default": True, "toggle": False},
-                        "pae": {"default": True, "toggle": False},
-                        "nonpae": {"default": True, "toggle": False},
+                        "pae": {"default": False, "toggle": False},
+                        "nonpae": {"default": False, "toggle": False},
                     },
                 },
                 {
@@ -3773,11 +3773,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     "features": {
-                        "cpuselection": {"default": True, "toggle": False},
-                        "deviceboot": {"default": True, "toggle": False},
+                        "cpuselection": {"default": False, "toggle": False},
+                        "deviceboot": {"default": False, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
                         "acpi": {"default": True, "toggle": True},
-                        "apic": {"default": True, "toggle": False},
+                        "apic": {"default": False, "toggle": False},
                     },
                 },
                 {
@@ -3792,7 +3792,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ],
         }
-
         self.assertEqual(expected, caps)
 
     def test_network(self):
