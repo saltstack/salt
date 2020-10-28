@@ -388,7 +388,7 @@ def _get_on_poweroff(dom):
     """
     Return `on_poweroff` setting from the named vm
 
-    CLI Example:
+    CLsudo apt install python-libvirtI Example:
 
     .. code-block:: bash
 
@@ -5197,6 +5197,7 @@ def _parse_caps_guest(guest):
         "arch": {"name": arch_node.get("name"), "machines": {}, "domains": {}},
     }
 
+    child = None
     for child in arch_node:
         if child.tag == "wordsize":
             result["arch"]["wordsize"] = int(child.text)
@@ -5219,15 +5220,13 @@ def _parse_caps_guest(guest):
     # without possibility to toggle them.
     # Some guests may also have no feature at all (xen pv for instance)
     features_nodes = guest.find("features")
-    if features_nodes is not None:
+    if features_nodes is not None and child is not None:
+        toggle = child.get("toggle", "no") == "yes"
+        default = child.get("default", "no") == "yes"
         result["features"] = {
-            child.tag: {
-                "toggle": True if child.get("toggle") == "yes" else False,
-                "default": False if child.get("default") == "no" else True,
-            }
+            child.tag: {"toggle": toggle, "default": default}
             for child in features_nodes
         }
-
     return result
 
 
@@ -5625,7 +5624,6 @@ def all_capabilities(**kwargs):
 
     """
     conn = __get_conn(**kwargs)
-    result = {}
     try:
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
@@ -5654,10 +5652,9 @@ def all_capabilities(**kwargs):
                 for (arch, domain) in flattened
             ],
         }
+        return result
     finally:
         conn.close()
-
-    return result
 
 
 def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
