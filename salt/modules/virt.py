@@ -388,7 +388,7 @@ def _get_on_poweroff(dom):
     """
     Return `on_poweroff` setting from the named vm
 
-    CLsudo apt install python-libvirtI Example:
+    CLI Example:
 
     .. code-block:: bash
 
