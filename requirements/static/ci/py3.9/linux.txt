@@ -145,7 +145,7 @@ kazoo==2.6.1
 keyring==5.7.1
 kubernetes==3.0.0
 libnacl==1.7.1
-lxml==4.3.3               # via junos-eznc, napalm, ncclient
+lxml==4.5.2               # via junos-eznc, napalm, ncclient
 mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5
@@ -197,7 +197,7 @@ python-jose==2.0.2        # via moto
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==19.0.0
+pyzmq==19.0.2 ; python_version >= "3.9"
 requests-oauthlib==1.3.0  # via msrest
 requests==2.21.0
 responses==0.10.6         # via moto
