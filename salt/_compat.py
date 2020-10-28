@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Salt compatibility code
 """
 # pylint: disable=import-error,unused-import,invalid-name,W0231,W0233
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import binascii
 import logging
 import sys
 
-# Import 3rd-party libs
 from salt.exceptions import SaltException
 from salt.ext.six import binary_type, integer_types, string_types, text_type
 from salt.ext.six.moves import StringIO, cStringIO
