@@ -5224,8 +5224,8 @@ def _parse_caps_guest(guest):
         log.error(child.get("toggle"))
         result["features"] = {
             child.tag: {
-                "toggle": child.get("toggle") == "yes",
-                "default": child.get("default") == "on",
+                "toggle": child.get("toggle", "no") == "yes",
+                "default": child.get("default", "on") == "on",
             }
             for child in features_nodes
         }

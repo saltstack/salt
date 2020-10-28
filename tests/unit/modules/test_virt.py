@@ -3558,7 +3558,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
       <cpuselection/>
       <deviceboot/>
       <disksnapshot default='on' toggle='no'/>
-      <acpi default='on' toggle='yes'/>
+      <acpi default='off' toggle='yes'/>
       <apic default='on' toggle='no'/>
       <pae/>
       <nonpae/>
@@ -3736,13 +3736,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     "features": {
-                        "cpuselection": {"default": False, "toggle": False},
-                        "deviceboot": {"default": False, "toggle": False},
+                        "cpuselection": {"default": True, "toggle": False},
+                        "deviceboot": {"default": True, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
-                        "acpi": {"default": True, "toggle": True},
+                        "acpi": {"default": False, "toggle": True},
                         "apic": {"default": True, "toggle": False},
-                        "pae": {"default": False, "toggle": False},
-                        "nonpae": {"default": False, "toggle": False},
+                        "pae": {"default": True, "toggle": False},
+                        "nonpae": {"default": True, "toggle": False},
                     },
                 },
                 {
@@ -3773,8 +3773,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     "features": {
-                        "cpuselection": {"default": False, "toggle": False},
-                        "deviceboot": {"default": False, "toggle": False},
+                        "cpuselection": {"default": True, "toggle": False},
+                        "deviceboot": {"default": True, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
                         "acpi": {"default": True, "toggle": True},
                         "apic": {"default": False, "toggle": False},
