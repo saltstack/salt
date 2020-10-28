@@ -5223,7 +5223,7 @@ def _parse_caps_guest(guest):
         result["features"] = {
             child.tag: {
                 "toggle": True if child.get("toggle") == "yes" else False,
-                "default": True if child.get("default") == "no" else True,
+                "default": False if child.get("default") == "no" else True,
             }
             for child in features_nodes
         }
