@@ -1,8 +1,8 @@
-@Library('salt@master-1.7') _
+@Library('salt@master-1.9') _
 
 runTestSuite(
     ami_image_id: 'ami-07ae2d818a072b021',
-    concurrent_builds: 2,
+    concurrent_builds: 1,
     distro_name: 'ubuntu',
     distro_version: '2004',
     env: env,

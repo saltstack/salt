@@ -77,6 +77,7 @@ from salt.utils.gitfs import (
     LIBGIT2_VERSION,
     PYGIT2_MINVER,
     PYGIT2_VERSION,
+    FileserverConfigError,
 )
 from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
@@ -87,7 +88,12 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import destructiveTest, skip_if_not_root, slowTest
+from tests.support.helpers import (
+    destructiveTest,
+    requires_system_grains,
+    skip_if_not_root,
+    slowTest,
+)
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -624,6 +630,61 @@ class GitPythonMixin:
                 },
             },
         )
+
+    @slowTest
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: gitpython
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: gitpython
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
 @destructiveTest
@@ -2146,6 +2207,137 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         )
         self.assertEqual(ret, expected)
 
+    @slowTest
+    @requires_system_grains
+    def test_base(self, grains):
+        """
+        Test per-remote base parameter.
+        """
+        expected = {
+            "branch": "dev",
+            "motd": "The force will be with you. Always.",
+            "mylist": ["dev"],
+            "mydict": {
+                "dev": True,
+                "nested_list": ["dev"],
+                "nested_dict": {"dev": True},
+            },
+        }
+        # Test with passphraseless key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_nopass}
+            git_pillar_privkey: {privkey_nopass}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphraseless key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        if grains["os_family"] == "Debian":
+            # passphrase-protected currently does not work here
+            return
+
+        # Test with passphrase-protected key and global credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_pubkey: {pubkey_withpass}
+            git_pillar_privkey: {privkey_withpass}
+            git_pillar_passphrase: {passphrase}
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(ret, expected)
+
+        # Test with passphrase-protected key and per-repo credential options
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+                  - pubkey: {pubkey_nopass}
+                  - privkey: {privkey_nopass}
+                  - passphrase: {passphrase}
+            """
+        )
+        self.assertEqual(ret, expected)
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: gitpython
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
+
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skip_if_not_root
@@ -2655,6 +2847,61 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 },
             },
         )
+
+    @slowTest
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: pygit2
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")
 
 
 @skipIf(_windows_or_mac(), "minion is windows or mac")
@@ -3411,3 +3658,64 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 },
             },
         )
+
+    @slowTest
+    def test_base(self):
+        """
+        Test per-remote base parameter.
+        """
+        ret = self.get_pillar(
+            """\
+            file_ignore_regex: []
+            file_ignore_glob: []
+            git_pillar_provider: pygit2
+            git_pillar_user: {username}
+            git_pillar_password: {password}
+            git_pillar_insecure_auth: True
+            cachedir: {cachedir}
+            extension_modules: {extmods}
+            ext_pillar:
+              - git:
+                - __env__ {url_extra_repo}:
+                  - base: master
+                - __env__ {url}:
+                  - mountpoint: nowhere
+                  - base: dev
+            """
+        )
+        self.assertEqual(
+            ret,
+            {
+                "branch": "dev",
+                "motd": "The force will be with you. Always.",
+                "mylist": ["dev"],
+                "mydict": {
+                    "dev": True,
+                    "nested_list": ["dev"],
+                    "nested_dict": {"dev": True},
+                },
+            },
+        )
+
+    def test_base_failhard(self):
+        """
+        Test per-remote base parameter to fail hard when branch is not __env__.
+        """
+        with self.assertRaises(FileserverConfigError) as excinfo:
+            self.get_pillar(
+                """\
+                file_ignore_regex: []
+                file_ignore_glob: []
+                git_pillar_provider: pygit2
+                git_pillar_user: {username}
+                git_pillar_password: {password}
+                git_pillar_insecure_auth: True
+                cachedir: {cachedir}
+                extension_modules: {extmods}
+                ext_pillar:
+                  - git:
+                    - master {url}:
+                      - base: foo
+                """
+            )
+        self.assertEqual(excinfo.exception.strerror, "Failed to load git_pillar")

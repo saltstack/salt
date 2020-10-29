@@ -2,12 +2,10 @@
 Various XML utilities
 """
 
-# Import Python libs
 import re
 import string  # pylint: disable=deprecated-module
 from xml.etree import ElementTree
 
-# Import salt libs
 import salt.utils.data
 
 
@@ -300,7 +298,7 @@ def change_xml(doc, data, mapping):
                 if convert_fn:
                     new_value = convert_fn(new_value)
 
-                if current_value != new_value:
+                if str(current_value) != str(new_value):
                     set_fn(node, new_value)
                     need_update = True
             else:

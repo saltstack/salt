@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
 # Import Salt Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 from salt.cloud.clouds import proxmox
@@ -140,3 +138,27 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 "post", "nodes/otherhost/qemu/123/clone", {"newid": ANY},
             )
             assert result == {}
+
+    def test__authenticate_with_custom_port(self):
+        """
+        Test the use of a custom port for Proxmox connection
+        """
+        get_cloud_config_mock = [
+            "proxmox.connection.url",
+            "9999",
+            "fakeuser",
+            "secretpassword",
+            True,
+        ]
+        requests_post_mock = MagicMock()
+        with patch(
+            "salt.config.get_cloud_config_value",
+            autospec=True,
+            side_effect=get_cloud_config_mock,
+        ), patch("requests.post", requests_post_mock):
+            proxmox._authenticate()
+            requests_post_mock.assert_called_with(
+                "https://proxmox.connection.url:9999/api2/json/access/ticket",
+                verify=True,
+                data={"username": ("fakeuser",), "password": "secretpassword"},
+            )

@@ -1,15 +1,10 @@
 """
     :codeauthor: Piter Punk <piterpunk@slackware.com>
 """
-# Import python libs
 import os
 
 import pytest
-
-# Import Salt Libs
 import salt.modules.slackware_service as slackware_service
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 
 
@@ -45,9 +40,9 @@ def mocked_rcd():
 
 
 @pytest.fixture(autouse=True)
-def setup_loader(request):
+def setup_loader():
     setup_loader_modules = {slackware_service: {}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
+    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
 
 
