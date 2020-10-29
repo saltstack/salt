@@ -251,7 +251,7 @@ def call_hook(
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
-    :param attachment:  The message to send to the Slacke WebHook.
+    :param attachment:  The message to send to the Slack WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
