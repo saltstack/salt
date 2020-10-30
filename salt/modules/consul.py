@@ -1061,8 +1061,7 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
             if "Interval" in check_dd:
                 del check_dd["Interval"]  # not required, so ignore it
 
-        if check_dd > 0:
-
+        if check_dd:
             data["Check"] = check_dd  # if empty, ignore it
 
     function = "agent/service/register"
