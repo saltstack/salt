@@ -2,16 +2,11 @@
 tests for pkgrepo states
 """
 
-# Import Python libs
 
 import os
 
 import salt.utils.files
-
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
