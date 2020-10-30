@@ -2,6 +2,7 @@
 {%- macro opt_attribute(obj, name, conv=none) %}
 {%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
+{%- import 'libvirt_chardevs.jinja' as libvirt_chardevs -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         {%- if cpu %}
@@ -302,34 +303,24 @@
                             address='{{ graphics.listen.address }}'
                             {% endif %}/>
                 </graphics>
+
+                  {% if graphics.type == "spice" -%}
+                  <channel type='spicevmc'>
+                    <target type='virtio' name='com.redhat.spice.0'/>
+                  </channel>
+                  {%- endif %}
                 {% endif %}
 
-                {% for serial in serials %}
-                {% if serial.type == 'pty' %}
-                <serial type='pty'>
-                        <target port='0'/>
+                {%- for serial in serials %}
+                <serial type='{{ serial.type }}'>
+                  {{ libvirt_chardevs.chardev(serial) }}
                 </serial>
-                {% elif serial.type == 'tcp' %}
-                <serial type='tcp'>
-                        <source mode='bind' host='' service='{{ serial.port }}'/>
-                        <protocol type='{{ serial.protocol }}'/>
-                        <target port='0'/>
-                </serial>
-                {% endif %}
-                {% endfor %}
+                {%- endfor %}
 
-                {% for console in consoles %}
-                {% if console.type == 'pty' %}
-                <console type='pty'>
-                        <target type='serial' port='0'/>
+                {%- for console in consoles %}
+                <console type='{{ console.type }}'>
+                  {{ libvirt_chardevs.chardev(console) }}
                 </console>
-                {% elif console.type == 'tcp' %}
-                <console type='tcp'>
-                        <source mode='bind' host='' service='{{ console.port }}'/>
-                        <protocol type='{{ console.protocol }}'/>
-                        <target type='serial' port='0'/>
-                </console>
-                {% endif %}
                 {% endfor %}
 {%- if hypervisor in ["qemu", "kvm"] %}
         <channel type='unix'>
