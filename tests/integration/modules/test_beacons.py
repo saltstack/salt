@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -352,6 +350,49 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
                 {"processes": {"apache2": "stopped"}},
                 {"beacon_module": "ps"},
             ],
+            "enabled": True,
+        }
+        if "enabled" in ret:
+            self.assertEqual(ret, _enabled_expected)
+        else:
+            self.assertEqual(ret, _expected)
+
+        # Pass include_opts as True, should only include ones from opts
+        ret = self.run_function(
+            "beacons.list",
+            return_yaml=False,
+            f_timeout=300,
+            include_opts=True,
+            include_pillar=False,
+        )
+        _expected = {
+            "watch_apache": [
+                {"processes": {"apache2": "stopped"}},
+                {"beacon_module": "ps"},
+            ]
+        }
+        _enabled_expected = {
+            "watch_apache": [
+                {"processes": {"apache2": "stopped"}},
+                {"beacon_module": "ps"},
+            ],
+            "enabled": True,
+        }
+        if "enabled" in ret:
+            self.assertEqual(ret, _enabled_expected)
+        else:
+            self.assertEqual(ret, _expected)
+
+        # Pass include_pillar as True, should by empty.
+        ret = self.run_function(
+            "beacons.list",
+            return_yaml=False,
+            f_timeout=300,
+            include_opts=False,
+            include_pillar=True,
+        )
+        _expected = {}
+        _enabled_expected = {
             "enabled": True,
         }
         if "enabled" in ret:
