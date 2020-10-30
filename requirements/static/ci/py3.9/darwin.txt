@@ -18,7 +18,7 @@ cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.6.20
 certvalidator==0.11.1     # via vcert
-cffi==1.12.2
+cffi==1.14.3
 chardet==3.0.4
 cheetah3==3.1.0
 cheroot==8.3.0
