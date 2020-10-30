@@ -567,12 +567,12 @@ def defined(
 
     :param serials:
         Dictionary providing details on the serials connection to create. (Default: ``None``)
-        See :ref:`init-serials-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
-        See :ref:`init-consoles-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
@@ -841,12 +841,12 @@ def running(
         .. versionadded:: 3000
     :param serials:
         Dictionary providing details on the serials connection to create. (Default: ``None``)
-        See :ref:`init-serials-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
-        See :ref:`init-consoles-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
