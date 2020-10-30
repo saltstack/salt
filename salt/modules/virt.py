@@ -184,10 +184,6 @@ VIRT_STATE_NAME_MAP = {
     6: "crashed",
 }
 
-default_port = 23023
-default_serial_type = "tcp"
-default_console_type = "tcp"
-
 
 def __virtual__():
     if not HAS_LIBVIRT:
@@ -1027,70 +1023,57 @@ def _gen_xml(
                 context["boot"]["kernel"] = "/usr/lib/grub2/x86_64-xen/grub.xen"
                 context["boot_dev"] = []
 
-    context["serials"] = []
-    if serials is not None:
-        for serial in serials:
-            serial_type = serial.get("type") or default_serial_type
-            if not serial_type:
-                raise SaltInvocationError("Missing type in serial")
+    default_port = 23023
+    default_chardev_type = "tcp"
 
-            serial_context = {"type": serial_type}
-            if serial_context["type"] == "tcp":
-                serial_context["port"] = serial.get("port", default_port)
-                serial_context["protocol"] = serial.get("protocol", "telnet")
-            context["serials"].append(serial_context)
+    chardev_types = ["serial", "console"]
+    for chardev_type in chardev_types:
+        context[chardev_type + "s"] = []
+        parameter_value = locals()[chardev_type + "s"]
+        if parameter_value is not None:
+            for chardev in parameter_value:
+                chardev_context = chardev
+                chardev_context["type"] = chardev.get("type", default_chardev_type)
 
-    context["consoles"] = []
-    if consoles is not None:
-        for console in consoles:
-            console_type = console.get("type") or default_console_type
-            if not console_type:
-                raise SaltInvocationError("Missing type in console")
-
-            console_context = {"type": console_type}
-            if console_context["type"] == "tcp":
-                console_context["port"] = console.get("port", default_port)
-                console_context["protocol"] = console.get("protocol", "telnet")
-            context["consoles"].append(console_context)
+                if chardev_context["type"] == "tcp":
+                    chardev_context["port"] = chardev.get("port", default_port)
+                    chardev_context["protocol"] = chardev.get("protocol", "telnet")
+                context[chardev_type + "s"].append(chardev_context)
 
     # processing of deprecated parameters
     old_port = kwargs.get("telnet_port")
     if old_port:
         salt.utils.versions.warn_until(
-            "Aluminium",
+            "Phosphorus",
             "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "It will be removed in {version}.",
+            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_port),
         )
 
     old_serial_type = kwargs.get("serial_type")
     if old_serial_type:
         salt.utils.versions.warn_until(
-            "Aluminium",
-            "'serial_type' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "It will be removed in {version}.",
+            "Phosphorus",
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_serial_type),
         )
-        serial_context = {"type": serial_type}
+        serial_context = {"type": old_serial_type}
         if serial_context["type"] == "tcp":
-            serial_context["port"] = old_port if old_port is not None else default_port
-            serial_context["protocol"] = serial.get("protocol", "telnet")
+            serial_context["port"] = old_port or default_port
+            serial_context["protocol"] = "telnet"
         context["serials"].append(serial_context)
 
-    old_console = kwargs.get("console")
-    if old_console:
-        salt.utils.versions.warn_until(
-            "Aluminium",
-            "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "It will be removed in {version}.",
-        )
-        if old_console is True:
-            console_context = {
-                "type": old_serial_type if old_serial_type else default_console_type
-            }
-            if console_context["type"] == "tcp":
-                console_context["port"] = old_port if old_port else default_port
-                console_context["protocol"] = console.get("protocol", "telnet")
-            context["consoles"].append(console_context)
-    # end processing of deprecated parameters
+        old_console = kwargs.get("console")
+        if old_console:
+            salt.utils.versions.warn_until(
+                "Phosphorus",
+                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
+                "It will be removed in {version}.",
+            )
+            if old_console is True:
+                context["consoles"].append(serial_context)
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
@@ -2275,13 +2258,13 @@ def init(
 
     :param serials:
         Dictionary providing details on the serials connection to create. (Default: ``None``)
-        See :ref:`init-serials-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
-        See :ref:`init-consoles-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
@@ -2657,39 +2640,41 @@ def init(
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
 
-    .. _init-serials-def:
+    .. _init-chardevs-def:
 
-    .. rubric:: Serials Definitions
+    .. rubric:: Serials and Consoles Definitions
 
     Serial dictionaries can contain the following properties:
 
     type
-        Type of the serial connection, like ``'tcp'``, ``'pty'``.
+        Type of the serial connection, like ``'tcp'``, ``'pty'``, ``'file'``, ``'udp'``, ``'dev'``,
+        ``'pipe'``, ``'unix'``.
 
-    port
-        The serial port number.
+    path
+        Path to the source device. Can be a log file, a host character device to pass through,
+        a unix socket, a named pipe path.
+
+    host
+        The serial UDP or TCP host name.
         (Default: 23023)
 
-    Protocol
-        Name of connection protocol.
-        (Default: telnet)
-
-    .. _init-consoles-def:
-
-    .. rubric:: Consoles Definitions
-
-    Consol dictionaries can contain the following properties:
-
-    type
-        Type of the serial connection, like ``'tcp'``, ``'pty'``.
-
     port
-        The serial port number.
+        The serial UDP or TCP port number.
         (Default: 23023)
 
-    Protocol
-        Name of connection protocol.
+    protocol
+        Name of the TCP connection protocol.
         (Default: telnet)
+
+    tls
+        Boolean value indicating whether to use hypervisor TLS certificates environment for TCP devices.
+
+    target_port
+        The guest device port number starting from 0
+
+    target_type
+        The guest device type. Common values are ``serial``, ``virtio`` or ``usb-serial``, but more are documented in
+        `the libvirt documentation <https://libvirt.org/formatdomain.html#consoles-serial-parallel-channel-devices>`_.
 
     .. rubric:: CLI Example
 
@@ -3135,21 +3120,21 @@ def _serial_or_concole_equal(old, new):
 
 def _diff_serial_list(old, new):
     """
-        Compare serial definitions to extract the changes
+    Compare serial definitions to extract the changes
 
-        :param old: list of ElementTree nodes representing the old serials
-        :param new: list of ElementTree nodes representing the new serials
-        """
+    :param old: list of ElementTree nodes representing the old serials
+    :param new: list of ElementTree nodes representing the new serials
+    """
     return _diff_lists(old, new, _serial_or_concole_equal)
 
 
 def _diff_console_list(old, new):
     """
-        Compare console definitions to extract the changes
+    Compare console definitions to extract the changes
 
-        :param old: list of ElementTree nodes representing the old consoles
-        :param new: list of ElementTree nodes representing the new consoles
-        """
+    :param old: list of ElementTree nodes representing the old consoles
+    :param new: list of ElementTree nodes representing the new consoles
+    """
     return _diff_lists(old, new, _serial_or_concole_equal)
 
 
@@ -3273,13 +3258,13 @@ def update(
 
     :param serials:
         Dictionary providing details on the serials connection to create. (Default: ``None``)
-        See :ref:`init-serials-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
-        See :ref:`init-consoles-def` for more details on the possible values.
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
