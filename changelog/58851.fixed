@@ -1,0 +1,1 @@
+Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner.
