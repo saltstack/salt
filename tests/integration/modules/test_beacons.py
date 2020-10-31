@@ -391,7 +391,7 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
             include_opts=False,
             include_pillar=True,
         )
-        _expected = {}
+        _expected = {"beacons": {}}
         _enabled_expected = {
             "enabled": True,
         }
