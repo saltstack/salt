@@ -489,7 +489,7 @@ class LocalClient(object):
         """
 
         # Support legacy parameter name:
-        subset = kwargs.get("sub", subset)
+        subset = kwargs.pop("sub", subset)
 
         minion_ret = self.cmd(tgt, "sys.list_functions", tgt_type=tgt_type, **kwargs)
         minions = list(minion_ret)
