@@ -6,10 +6,11 @@ import salt.runners.ttp as ttp_module
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from salt.exceptions import CommandExecutionError
 
 
+@skipIf(not ttp_module.HAS_TTP, "TTP module required for this test")
 class TTPRunnerModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         module_globals = {

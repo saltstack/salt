@@ -6,10 +6,11 @@ import salt.modules.ttp as ttp_module
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from salt.exceptions import CommandExecutionError
 
 
+@skipIf(not ttp_module.HAS_TTP, "TTP module required for this test")
 class TTPModuleTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         module_globals = {"__salt__": {}, "__opts__": {"id": "test_minion_id"}}
