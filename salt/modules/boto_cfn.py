@@ -131,11 +131,9 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
 
             return {"stack": ret}
 
-        log.debug("Stack %s exists.", name)
-        return True
+        return {"status": False, "error": "boto returned no data for {}".format(name)}
     except BotoServerError as e:
-        log.warning("Could not describe stack %s.\n%s", name, e)
-        return False
+        return {"status": False, "error": e}
 
 
 def create(
@@ -189,10 +187,8 @@ def create(
             stack_policy_url,
         )
     except BotoServerError as e:
-        msg = "Failed to create stack {}.\n{}".format(name, e)
-        log.error(msg)
         log.debug(e)
-        return False
+        return {"status": False, "error": str(e)}
 
 
 def update_stack(
@@ -254,10 +250,8 @@ def update_stack(
         log.debug("Updated result is : %s.", update)
         return update
     except BotoServerError as e:
-        msg = "Failed to update stack {}.".format(name)
         log.debug(e)
-        log.error(msg)
-        return str(e)
+        return {"status": False, "error": str(e)}
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
@@ -270,15 +264,16 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cfn.delete mystack region=us-east-1
     """
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         return conn.delete_stack(name)
     except BotoServerError as e:
-        msg = "Failed to create stack {}.".format(name)
+        msg = "Failed to delete stack {}.".format(name)
         log.error(msg)
         log.debug(e)
-        return str(e)
+        return {"status": False, "error": str(e)}
 
 
 def get_template(name, region=None, key=None, keyid=None, profile=None):
@@ -301,7 +296,7 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         log.debug(e)
         msg = "Template {} does not exist".format(name)
         log.error(msg)
-        return str(e)
+        return {"status": False, "error": str(e)}
 
 
 def validate_template(
@@ -337,4 +332,4 @@ def validate_template(
         log.debug(e)
         msg = "Error while trying to validate template {}.".format(template_body)
         log.error(msg)
-        return str(e)
+        return {"status": False, "error": e}

@@ -146,16 +146,19 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
             boto_cfn.create(name, self.template_body, **self.conn_parameters)
         )
 
-    def test_stack_create_existing_stack_returns_false(self):
+    def test_stack_create_existing_stack_returns_true(self):
         name = _random_stack_name()
-        resp = self.conn.create_stack(name, self.template_body)
-        self.assertFalse(
-            boto_cfn.create(name, self.template_body, **self.conn_parameters)
+        stack = self.conn.create_stack(name, self.template_body)
+        self.assertTrue(
+            boto_cfn.create(name, self.template_body, **self.conn_parameters),
         )
 
-    def test_delete_none_existant_stack_returns_failure(self):
+    def test_delete_none_existant_stack_returns_success(self):
         name = _random_stack_name()
-        self.assertFalse(boto_cfn.delete(name, **self.conn_parameters))
+        self.assertEqual(
+            {"status": True},
+            boto_cfn.delete(name, **self.conn_parameters),
+        )
 
     def test_delete_existing_stack_returns_success(self):
         name = _random_stack_name()
