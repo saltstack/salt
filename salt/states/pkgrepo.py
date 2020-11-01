@@ -374,7 +374,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(disabled)
         )
 
-    elif __grains__["os_family"] in ("RedHat", "Suse", "VMware Photon"):
+    elif __grains__["os_family"] in ("RedHat", "Suse", "VMware Photon OS",):
         if __grains__["os_family"] in "RedHat":
             if copr is not None:
                 repo = ":".join(("copr", copr))
@@ -433,7 +433,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                     # not explicitly set, so we don't need to update the repo
                     # if it's desired to be enabled and the 'enabled' key is
                     # missing from the repo definition
-                    if __grains__["os_family"] in ("RedHat", "VMware Photon"):
+                    if __grains__["os_family"] in ("RedHat", "VMware Photon OS",):
                         if not salt.utils.data.is_true(sanitizedkwargs[kwarg]):
                             break
                     else:
@@ -462,7 +462,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                         break
             elif kwarg == "comments" and __grains__["os_family"] in (
                 "RedHat",
-                "VMware Photon",
+                "VMware Photon OS",
             ):
                 precomments = salt.utils.pkg.rpm.combine_comments(pre[kwarg])
                 kwargcomments = salt.utils.pkg.rpm.combine_comments(
@@ -477,7 +477,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 if __grains__["os_family"] in (
                     "RedHat",
                     "Suse",
-                    "VMware Photon",
+                    "VMware Photon OS",
                 ) and any(
                     isinstance(x, bool) for x in (sanitizedkwargs[kwarg], pre[kwarg])
                 ):
