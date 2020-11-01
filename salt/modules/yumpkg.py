@@ -79,7 +79,7 @@ def __virtual__():
         "xenserver",
         "virtuozzolinux",
         "virtuozzo",
-        "vmware photon",
+        "vmware photon os",
     )
 
     if os_family == "redhat" or os_grain in enabled:
