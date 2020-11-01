@@ -129,7 +129,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
                 parameters[j.key] = j.value
             ret["parameters"] = parameters
 
-            return {"stack": ret}
+            return {"status": True, "stack": ret}
 
         return {"status": False, "error": "boto returned no data for {}".format(name)}
     except BotoServerError as e:
