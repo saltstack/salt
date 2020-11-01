@@ -268,7 +268,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        return conn.delete_stack(name)
+        resp = conn.delete_stack(name)
+        return {"status": True}
     except BotoServerError as e:
         msg = "Failed to delete stack {}.".format(name)
         log.error(msg)

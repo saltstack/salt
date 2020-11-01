@@ -129,7 +129,7 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
         for j in p:
             parameters[j.key] = j.value
         data["parameters"] = parameters
-        stack = {"stack": data}
+        stack = {"stack": data, "status": True}
 
         self.assertEqual(boto_cfn.describe(name, **self.conn_parameters), stack)
 
@@ -140,24 +140,23 @@ class BotoSnsTestCase(TestCase, LoaderModuleMockMixin):
                 name, self.template_body, "s3://anywhere", **self.conn_parameters
             )
 
-    def test_stack_create_new_stack_returns_true(self):
+    def test_stack_create_new_stack_returns_stack_arn(self):
         name = _random_stack_name()
-        self.assertTrue(
-            boto_cfn.create(name, self.template_body, **self.conn_parameters)
+        self.assertIsInstance(
+            boto_cfn.create(name, self.template_body, **self.conn_parameters), str
         )
 
-    def test_stack_create_existing_stack_returns_true(self):
+    def test_stack_create_existing_stack_returns_stack_arn(self):
         name = _random_stack_name()
         stack = self.conn.create_stack(name, self.template_body)
-        self.assertTrue(
-            boto_cfn.create(name, self.template_body, **self.conn_parameters),
+        self.assertIsInstance(
+            boto_cfn.create(name, self.template_body, **self.conn_parameters), str
         )
 
     def test_delete_none_existant_stack_returns_success(self):
         name = _random_stack_name()
         self.assertEqual(
-            {"status": True},
-            boto_cfn.delete(name, **self.conn_parameters),
+            {"status": True}, boto_cfn.delete(name, **self.conn_parameters),
         )
 
     def test_delete_existing_stack_returns_success(self):
