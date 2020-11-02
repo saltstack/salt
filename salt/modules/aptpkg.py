@@ -2322,7 +2322,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             "Error: repo '{}' not a well formatted definition".format(repo)
         )
 
-    full_comp_list = set(repo_comps)
+    full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
     if "keyid" in kwargs:
@@ -2401,7 +2401,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             )
 
     if "comps" in kwargs:
-        kwargs["comps"] = kwargs["comps"].split(",")
+        kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
         full_comp_list |= set(kwargs["comps"])
     else:
         kwargs["comps"] = list(full_comp_list)
@@ -2547,7 +2547,9 @@ def expand_repo_def(**kwargs):
     source_entry = sourceslist.SourceEntry(repo)
     for list_args in ("architectures", "comps"):
         if list_args in kwargs:
-            kwargs[list_args] = kwargs[list_args].split(",")
+            kwargs[list_args] = [
+                kwarg.strip() for kwarg in kwargs[list_args].split(",")
+            ]
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
