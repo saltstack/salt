@@ -491,6 +491,7 @@ def query(
         headers = {}
 
     attempts = 0
+    data = None
     while attempts < AWS_MAX_RETRIES:
         log.debug("AWS Request: %s", requesturl)
         log.trace("AWS Request Parameters: %s", params_with_headers)
@@ -532,9 +533,7 @@ def query(
             return {"error": data}
     else:
         log.error(
-            "AWS Response Status Code and Error: [%s %s] %s",
-            exc.response.status_code,
-            exc,
+            "AWS_MAX_RETRIES exceeded %s",
             data,
         )
         if return_url is True:
