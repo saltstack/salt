@@ -106,6 +106,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_domain.name.return_value = name
         return mock_domain
 
+    def assertEqualUnit(self, actual, expected, unit="KiB"):
+        self.assertEqual(actual.get("unit"), unit)
+        self.assertEqual(actual.text, str(expected))
+
     def test_disk_profile_merge(self):
         """
         Test virt._disk_profile() when merging with user-defined disks
@@ -458,6 +462,41 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse("listen" in root.find("devices/graphics").attrib)
         self.assertEqual(root.find("devices/graphics/listen").attrib["type"], "none")
         self.assertFalse("address" in root.find("devices/graphics/listen").attrib)
+
+    def test_gen_xml_memory(self):
+        """
+        Test virt._gen_xml() with advanced memory settings
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            {
+                "boot": "512m",
+                "current": "256m",
+                "max": "1g",
+                "hard_limit": "1024",
+                "soft_limit": "512m",
+                "swap_hard_limit": "1g",
+                "min_guarantee": "256m",
+            },
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqualUnit(root.find("memory"), 512 * 1024)
+        self.assertEqualUnit(root.find("currentMemory"), 256 * 1024)
+        self.assertEqualUnit(root.find("maxMemory"), 1024 * 1024)
+        self.assertFalse("slots" in root.find("maxMemory").keys())
+        self.assertEqualUnit(root.find("memtune/hard_limit"), 1024 * 1024)
+        self.assertEqualUnit(root.find("memtune/soft_limit"), 512 * 1024)
+        self.assertEqualUnit(root.find("memtune/swap_hard_limit"), 1024 ** 2)
+        self.assertEqualUnit(root.find("memtune/min_guarantee"), 256 * 1024)
 
     def test_default_disk_profile_hypervisor_esxi(self):
         """
@@ -2037,18 +2076,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual(
-            setxml.find("memtune").find("soft_limit").text, str(int(0.5 * 1024 ** 3))
+        self.assertEqualUnit(
+            setxml.find("memtune").find("soft_limit"), int(0.5 * 1024 ** 3), "bytes"
         )
-        self.assertEqual(setxml.find("memtune").find("soft_limit").get("unit"), "bytes")
-        self.assertEqual(
-            setxml.find("memtune").find("hard_limit").text, str(1024 * 1024 ** 2)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("hard_limit"), 1024 * 1024 ** 2, "bytes"
         )
-        self.assertEqual(
-            setxml.find("memtune").find("swap_hard_limit").text, str(2048 * 1024 ** 2)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("swap_hard_limit"), 2048 * 1024 ** 2, "bytes"
         )
-        self.assertEqual(
-            setxml.find("memtune").find("min_guarantee").text, str(1 * 1024 ** 3)
+        self.assertEqualUnit(
+            setxml.find("memtune").find("min_guarantee"), 1 * 1024 ** 3, "bytes"
         )
 
         invalid_unit = {"soft_limit": "2HB"}
