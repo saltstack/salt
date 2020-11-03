@@ -3,7 +3,6 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
 
-# Import python libs
 
 import collections
 import copy
@@ -23,8 +22,6 @@ import salt.acl
 import salt.auth
 import salt.client
 import salt.client.ssh.client
-
-# Import salt libs
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -89,7 +86,6 @@ except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
 
-# Import halite libs
 try:
     import halite  # pylint: disable=import-error
 
@@ -239,6 +235,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         # init things that need to be done after the process is forked
         self._post_fork_init()
+        self.clean_expired_tokens = salt.daemons.masterapi.CleanExpiredTokens(self.opts)
+        self.clean_old_jobs = salt.daemons.masterapi.CleanOldJobs(self.opts)
 
         # Make Start Times
         last = int(time.time())
@@ -247,11 +245,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
         old_present = set()
+        mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False,)
         while True:
             now = int(time.time())
             if (now - last) >= self.loop_interval:
-                salt.daemons.masterapi.clean_old_jobs(self.opts)
-                salt.daemons.masterapi.clean_expired_tokens(self.opts)
+                self.clean_old_jobs()
+                self.clean_expired_tokens()
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
             if (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
