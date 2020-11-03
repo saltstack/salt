@@ -1,21 +1,24 @@
-# -*- coding: utf-8 -*-
 """
 Encapsulate the different transports available to Salt.
 
 This includes server side transport, for the ReqServer and the Publisher
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
+import multiprocessing
+
+log = logging.getLogger(__name__)
 
 
-class ReqServerChannel(object):
+class ReqServerChannel:
     """
     Factory class to create a communication channels to the ReqServer
     """
 
     def __init__(self, opts):
         self.opts = opts
+        self.running_event = multiprocessing.Event()
 
     @staticmethod
     def factory(opts, **kwargs):
@@ -59,10 +62,14 @@ class ReqServerChannel(object):
         """
 
 
-class PubServerChannel(object):
+class PubServerChannel:
     """
     Factory class to create subscription channels to the master's Publisher
     """
+
+    def __init__(self, opts):
+        self.opts = opts
+        self.running_event = multiprocessing.Event()
 
     @staticmethod
     def factory(opts, **kwargs):
@@ -104,6 +111,3 @@ class PubServerChannel(object):
         Publish "load" to minions
         """
         raise NotImplementedError()
-
-
-# EOF

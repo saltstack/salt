@@ -709,7 +709,11 @@ class ZeroMQReqServerChannel(
         self.clients.bind(self.uri)
         self.workers.bind(self.w_uri)
 
+        self.running_event.set()
+
         while True:
+            if self.running_event.is_set() is False:
+                break
             if self.clients.closed or self.workers.closed:
                 break
             try:
@@ -729,6 +733,7 @@ class ZeroMQReqServerChannel(
             return
         log.info("MWorkerQueue under PID %s is closing", os.getpid())
         self._closing = True
+        self.running_event.clear()
         # pylint: disable=E0203
         if getattr(self, "_monitor", None) is not None:
             self._monitor.stop()
@@ -808,6 +813,7 @@ class ZeroMQReqServerChannel(
             self._socket, io_loop=self.io_loop
         )
         self.stream.on_recv_stream(self.handle_message)
+        self.running_event.set()
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, payload):
@@ -941,7 +947,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     _sock_data = threading.local()
 
     def __init__(self, opts):
-        self.opts = opts
+        super().__init__(opts)
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
@@ -1008,10 +1014,13 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         with salt.utils.files.set_umask(0o177):
             pull_sock.bind(pull_uri)
 
+        self.running_event.set()
         try:
             while True:
                 # Catch and handle EINTR from when this process is sent
                 # SIGUSR1 gracefully so we don't choke and die horribly
+                if self.running_event.is_set() is False:
+                    break
                 try:
                     log.debug("Publish daemon getting data from puller %s", pull_uri)
                     package = pull_sock.recv()
@@ -1173,6 +1182,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             self.pub_connect()
         self.pub_sock.send(payload)
         log.debug("Sent payload to publish daemon.")
+
+    def close(self):
+        self.running_event.clear()
+        self.pub_close()
 
 
 class AsyncReqMessageClientPool(salt.transport.MessageClientPool):

@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import socket
 import threading
+import time
 
 import salt.config
 import salt.exceptions
@@ -17,8 +16,6 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase, gen_test
 from salt.transport.tcp import (
     SaltMessageClient,
@@ -26,7 +23,8 @@ from salt.transport.tcp import (
     TCPPubServerChannel,
 )
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.helpers import flaky, slowTest
+from saltfactories.utils.processes import terminate_process
+from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -74,7 +72,7 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "transport": "tcp",
                 "master_ip": "127.0.0.1",
                 "master_port": ret_port,
-                "master_uri": "tcp://127.0.0.1:{0}".format(ret_port),
+                "master_uri": "tcp://127.0.0.1:{}".format(ret_port),
             }
         )
 
@@ -93,14 +91,35 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
             target=run_loop_in_thread, args=(cls.io_loop, cls.stop,),
         )
         cls.server_thread.start()
+        if cls.server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the ReqServerChannel")
 
     @classmethod
     def tearDownClass(cls):
+        cls.process_manager.stop_restarting()
+        cls.process_manager.kill_children()
+        stop_at = time.time() + 5
+        while True:
+            if not cls.process_manager._process_map:
+                break
+            if time.time() >= stop_at:
+                break
+            time.sleep(1)
+        else:
+            log.warning("Second run at killing children")
+            for pid in cls.process_manager._process_map:
+                terminate_process(pid, kill_children=True, slow_stop=False)
+            cls.process_manager._process_map.clear()
         cls.server_channel.close()
         cls.stop.set()
         cls.server_thread.join()
-        cls.process_manager.kill_children()
         del cls.server_channel
+        del cls.io_loop
+        del cls.process_manager
+        del cls.server_thread
+        del cls.master_config
+        del cls.minion_config
 
     @classmethod
     @salt.ext.tornado.gen.coroutine
@@ -154,7 +173,6 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
-    @flaky
     @slowTest
     def test_badload(self):
         """
@@ -200,7 +218,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 "master_ip": "127.0.0.1",
                 "auth_timeout": 1,
                 "master_port": ret_port,
-                "master_uri": "tcp://127.0.0.1:{0}".format(ret_port),
+                "master_uri": "tcp://127.0.0.1:{}".format(ret_port),
             }
         )
 
@@ -225,6 +243,12 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             target=run_loop_in_thread, args=(cls.io_loop, cls.stop,),
         )
         cls.server_thread.start()
+        if cls.server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the PubServerChannel")
+        if cls.req_server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the ReqServerChannel")
 
     @classmethod
     def _handle_payload(cls, payload):
@@ -235,25 +259,44 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod
     def tearDownClass(cls):
-        cls.req_server_channel.close()
+        cls.process_manager.stop_restarting()
+        cls.process_manager.kill_children()
+        stop_at = time.time() + 5
+        while True:
+            if not cls.process_manager._process_map:
+                break
+            if time.time() >= stop_at:
+                break
+            time.sleep(1)
+        else:
+            log.warning("Second run at killing children")
+            for pid in cls.process_manager._process_map:
+                terminate_process(pid, kill_children=True, slow_stop=False)
+            cls.process_manager._process_map.clear()
         cls.server_channel.close()
         cls.stop.set()
         cls.server_thread.join()
-        cls.process_manager.kill_children()
+        cls.req_server_channel.close()
+        del cls.server_channel
         del cls.req_server_channel
+        del cls.io_loop
+        del cls.process_manager
+        del cls.server_thread
+        del cls.master_config
+        del cls.minion_config
 
     def setUp(self):
-        super(BaseTCPPubCase, self).setUp()
+        super().setUp()
         self._start_handlers = dict(self.io_loop._handlers)
 
     def tearDown(self):
-        super(BaseTCPPubCase, self).tearDown()
+        super().tearDown()
         failures = []
-        for k, v in six.iteritems(self.io_loop._handlers):
+        for k, v in self.io_loop._handlers.items():
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
         if failures:
-            raise Exception("FDs still attached to the IOLoop: {0}".format(failures))
+            raise Exception("FDs still attached to the IOLoop: {}".format(failures))
         del self.channel
         del self._start_handlers
 
@@ -287,7 +330,7 @@ class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
 
 class SaltMessageClientPoolTest(AsyncTestCase):
     def setUp(self):
-        super(SaltMessageClientPoolTest, self).setUp()
+        super().setUp()
         sock_pool_size = 5
         with patch(
             "salt.transport.tcp.SaltMessageClient.__init__",
@@ -306,7 +349,7 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             "salt.transport.tcp.SaltMessageClient.close", MagicMock(return_value=None)
         ):
             del self.original_message_clients
-        super(SaltMessageClientPoolTest, self).tearDown()
+        super().tearDown()
 
     def test_send(self):
         for message_client_mock in self.message_client_pool.message_clients:

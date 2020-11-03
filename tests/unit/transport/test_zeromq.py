@@ -3,8 +3,8 @@
 """
 
 import ctypes
+import logging
 import multiprocessing
-import os
 import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -18,16 +18,15 @@ import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 import zmq.eventloop.ioloop
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import flaky, not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, call, patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.processes import terminate_process
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
     PubChannelMixin,
@@ -40,6 +39,8 @@ x = "fix pre"
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
+
+log = logging.getLogger(__name__)
 
 
 class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -99,20 +100,30 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
             target=run_loop_in_thread, args=(cls.io_loop, cls.evt)
         )
         cls.server_thread.start()
+        if cls.server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the ReqServerChannel")
 
     @classmethod
     def tearDownClass(cls):
         if not hasattr(cls, "_handle_payload"):
             return
-        # Attempting to kill the children hangs the test suite.
-        # Let the test suite handle this instead.
         cls.process_manager.stop_restarting()
         cls.process_manager.kill_children()
+        stop_at = time.time() + 5
+        while True:
+            if not cls.process_manager._process_map:
+                break
+            if time.time() >= stop_at:
+                break
+            time.sleep(1)
+        else:
+            log.warning("Second run at killing children")
+            for pid in cls.process_manager._process_map:
+                terminate_process(pid, kill_children=True, slow_stop=False)
+            cls.process_manager._process_map.clear()
         cls.evt.set()
         cls.server_thread.join()
-        time.sleep(
-            2
-        )  # Give the procs a chance to fully close before we stop the io_loop
         cls.server_channel.close()
         del cls.server_channel
         del cls.io_loop
@@ -203,9 +214,6 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         """
         Test a variety of bad requests, make sure that we get some sort of error
         """
-        # TODO: This test should be re-enabled when Jenkins moves to C7.
-        # Once the version of salt-testing is increased to something newer than the September
-        # release of salt-testing, the @flaky decorator should be applied to this test.
         msgs = ["", [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
@@ -239,9 +247,6 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             }
         )
 
-        cls.minion_config = salt.config.minion_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
-        )
         cls.minion_config = cls.get_temp_config(
             "minion",
             **{
@@ -276,14 +281,29 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt)
         )
         cls.server_thread.start()
+        if cls.server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the PubServerChannel")
+        if cls.req_server_channel.running_event.wait(10) is None:
+            cls.evt.set()
+            raise AssertionError("Failed to start the ReqServerChannel")
 
     @classmethod
     def tearDownClass(cls):
         cls.process_manager.kill_children()
         cls.process_manager.stop_restarting()
-        time.sleep(
-            2
-        )  # Give the procs a chance to fully close before we stop the io_loop
+        stop_at = time.time() + 5
+        while True:
+            if not cls.process_manager._process_map:
+                break
+            if time.time() >= stop_at:
+                break
+            time.sleep(1)
+        else:
+            log.warning("Second run at killing children")
+            for pid in cls.process_manager._process_map:
+                terminate_process(pid, kill_children=True, slow_stop=False)
+            cls.process_manager._process_map.clear()
         cls.evt.set()
         cls.server_thread.join()
         cls.req_server_channel.close()
@@ -410,7 +430,7 @@ class ZMQConfigTest(TestCase):
             ) == "tcp://0.0.0.0:{};{}:{}".format(s_port, m_ip, m_port)
 
 
-class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
+class PubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
     @classmethod
     def setUpClass(cls):
         ret_port = get_unused_localhost_port()
@@ -435,7 +455,10 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         )
         salt.master.SMaster.secrets["aes"] = {
             "secret": multiprocessing.Array(
-                ctypes.c_char, six.b(salt.crypt.Crypticle.generate_key_string()),
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
             ),
         }
         cls.minion_config = cls.get_temp_config(
@@ -472,41 +495,80 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         self.io_loop_thread.join()
         self.process_manager.stop_restarting()
         self.process_manager.kill_children()
+        stop_at = time.time() + 5
+        while True:
+            if not self.process_manager._process_map:
+                break
+            if time.time() >= stop_at:
+                break
+            time.sleep(1)
+        else:
+            log.warning("Second run at killing children")
+            for pid in self.process_manager._process_map:
+                terminate_process(pid, kill_children=True, slow_stop=False)
+            self.process_manager._process_map.clear()
         del self.io_loop
         del self.io_loop_thread
         del self.process_manager
 
     @staticmethod
-    def _gather_results(opts, pub_uri, results, timeout=120, messages=None):
+    def _gather_results(
+        opts, pub_uri, started_event, results, timeout=120, skip_messages=None
+    ):
         """
-        Gather results until then number of seconds specified by timeout passes
-        without reveiving a message
+        Gather results until the number of seconds specified by timeout passes
+        without receiving a message or until 'stop' is received
         """
         ctx = zmq.Context()
         sock = ctx.socket(zmq.SUB)
+        sock.set_hwm(1000000)
         sock.setsockopt(zmq.LINGER, -1)
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(pub_uri)
-        last_msg = time.time()
         serial = salt.payload.Serial(opts)
         crypticle = salt.crypt.Crypticle(
             opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
-        while time.time() - last_msg < timeout:
+        if skip_messages:
+            log.info("Should skip %s messages", skip_messages)
+        skipped_messages = 0
+        start_time = time.time()
+        timeout_at = start_time + timeout
+        while True:
+            if not started_event.is_set():
+                started_event.set()
+            if time.time() >= timeout_at:
+                log.info(
+                    "Hit the %s seconds timeout without receiving the stop message",
+                    timeout,
+                )
+                break
             try:
                 payload = sock.recv(zmq.NOBLOCK)
             except zmq.ZMQError:
                 time.sleep(0.01)
             else:
-                if messages:
-                    if messages != 1:
-                        messages -= 1
-                        continue
-                payload = crypticle.loads(serial.loads(payload)["load"])
-                if "stop" in payload:
-                    break
-                last_msg = time.time()
-                results.append(payload["jid"])
+                log.debug("Got a message")
+                if skip_messages and skipped_messages < skip_messages:
+                    skipped_messages += 1
+                    log.info(
+                        "Skipped %s of %s messages", skipped_messages, skip_messages
+                    )
+                    continue
+                try:
+                    payload = crypticle.loads(serial.loads(payload)["load"])
+                except salt.exceptions.SaltDeserializationError:
+                    log.info("Failed to deserialize: %s", payload)
+                else:
+                    if "stop" in payload:
+                        log.info(
+                            "Got stop after %f(out of %s) seconds",
+                            time.time() - start_time,
+                            timeout,
+                        )
+                        break
+                    results.append(payload["jid"])
+        log.info("Gather results thread is done")
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
     @slowTest
@@ -522,24 +584,36 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
         )
+        if server_channel.running_event.wait(10) is None:
+            self.fail("Failed to start the ZeroMQPubServerChannel")
         pub_uri = "tcp://{interface}:{publish_port}".format(**server_channel.opts)
         send_num = 10000
         expect = []
         results = []
+
+        started_event = threading.Event()
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, started_event, results,),
         )
         gather.start()
         # Allow time for server channel to start, especially on windows
-        time.sleep(2)
+        started = started_event.wait(5)
+        if started is None:
+            self.fail("Failed to start gather results server")
+        time.sleep(0.5)
+
         for i in range(send_num):
             expect.append(i)
             load = {"tgt_type": "glob", "tgt": "*", "jid": i}
             server_channel.publish(load)
         server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
+        server_channel.close()
+        msg = "Expected {} results, got {}. Missed: {}".format(
+            send_num, len(results), list(set(expect).difference(results))
+        )
+        assert len(results) == send_num, msg
 
     @skipIf(salt.utils.platform.is_linux(), "Skip on Linux")
     @slowTest
@@ -668,20 +742,28 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
         )
+        if server_channel.running_event.wait(10) is None:
+            self.fail("Failed to start the ZeroMQPubServerChannel")
         pub_uri = "tcp://{interface}:{publish_port}".format(**server_channel.opts)
         send_num = 1
-        expect = []
+        expect = [send_num]
         results = []
+        started_event = threading.Event()
         gather = threading.Thread(
             target=self._gather_results,
-            args=(self.minion_config, pub_uri, results,),
-            kwargs={"messages": 2},
+            args=(self.minion_config, pub_uri, started_event, results,),
         )
         gather.start()
         # Allow time for server channel to start, especially on windows
-        time.sleep(2)
-        expect.append(send_num)
-        load = {"tgt_type": "glob", "tgt": "*", "jid": send_num}
+        started = started_event.wait(5)
+        if started is None:
+            self.fail("Failed to start gather results server")
+        time.sleep(0.5)
+
+        # This next message will be filtered out
+        load = {"tgt_type": "glob", "tgt": "*", "jid": send_num + 1}
+        server_channel.publish(load)
+
         with patch(
             "salt.utils.minions.CkMinions.check_minions",
             MagicMock(
@@ -692,11 +774,18 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 }
             ),
         ):
+            # These messages, since we're bypassing the filter, won't
+            load = {"tgt_type": "glob", "tgt": "*", "jid": send_num + 1}
+            log.info("Sending %s to server channel", load)
             server_channel.publish(load)
-        server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
+            log.info("Sending stop message to gather queue")
+            server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
+        server_channel.close()
+        msg = "Expected {} results, got {}. Missed: {}".format(
+            send_num, len(results), list(set(expect).difference(results))
+        )
+        assert len(results) == send_num, msg
 
     @slowTest
     def test_publish_to_pubserv_tcp(self):
@@ -709,23 +798,36 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
         )
+        if server_channel.running_event.wait(10) is None:
+            self.fail("Failed to start the ZeroMQPubServerChannel")
         pub_uri = "tcp://{interface}:{publish_port}".format(**server_channel.opts)
         send_num = 10000
         expect = []
         results = []
+
+        started_event = threading.Event()
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, started_event, results,),
         )
         gather.start()
         # Allow time for server channel to start, especially on windows
-        time.sleep(2)
+        started = started_event.wait(5)
+        if started is None:
+            self.fail("Failed to start gather results server")
+        time.sleep(0.5)
+
         for i in range(send_num):
             expect.append(i)
             load = {"tgt_type": "glob", "tgt": "*", "jid": i}
             server_channel.publish(load)
+        server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
+        server_channel.close()
+        msg = "Expected {} results, got {}. Missed: {}".format(
+            send_num, len(results), list(set(expect).difference(results))
+        )
+        assert len(results) == send_num, msg
 
     @staticmethod
     def _send_small(opts, sid, num=10):
@@ -762,27 +864,38 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
         )
+        if server_channel.running_event.wait(10) is None:
+            self.fail("Failed to start the ZeroMQPubServerChannel")
         send_num = 10 * 4
         expect = []
         results = []
         pub_uri = "tcp://{interface}:{publish_port}".format(**opts)
-        # Allow time for server channel to start, especially on windows
-        time.sleep(2)
+
+        started_event = threading.Event()
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, started_event, results,),
         )
         gather.start()
+        # Allow time for server channel to start, especially on windows
+        started = started_event.wait(5)
+        if started is None:
+            self.fail("Failed to start gather results server")
+        time.sleep(0.5)
+
         with ThreadPoolExecutor(max_workers=4) as executor:
             executor.submit(self._send_small, opts, 1)
             executor.submit(self._send_small, opts, 2)
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
         expect = ["{}-{}".format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
-        time.sleep(0.1)
         server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
+        server_channel.close()
+        msg = "Expected {} results, got {}. Missed: {}".format(
+            send_num, len(results), list(set(expect).difference(results))
+        )
+        assert len(results) == send_num, msg
 
 
 class AsyncZeroMQReqChannelTests(TestCase):
