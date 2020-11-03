@@ -46,8 +46,17 @@ from salt._logging.impl import (
     SaltLogRecord,
 )
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
+from salt.utils.versions import warn_until_date
 
 # pylint: enable=unused-import
+
+warn_until_date(
+    "20240101",
+    "Please stop using '{name}' and instead use 'salt._logging'. "
+    "'{name}' will go away after {{date}}. Do note however that "
+    "'salt._logging' is now considered a non public implementation "
+    "and is subject to change without deprecations.".format(name=__name__),
+)
 
 __CONSOLE_CONFIGURED = False
 __LOGGING_CONSOLE_HANDLER = None
