@@ -954,6 +954,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
+        # Disable clients in the Salt API
+        "netapi_disable_clients": list,
         "disabled_requisites": (str, list),
         # Feature flag config
         "features": dict,
@@ -1616,6 +1618,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pass_strict_fetch": False,
         "pass_gnupghome": "",
         "pass_dir": "",
+        "netapi_disable_clients": [],
     }
 )
 
