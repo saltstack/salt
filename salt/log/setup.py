@@ -52,9 +52,15 @@ from salt._logging.impl import (
 )
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
 from salt.exceptions import LoggingRuntimeError
+from salt.utils.versions import warn_until_date
 
 # pylint: enable=unused-import
 
+warn_until_date(
+    "20230101",
+    "Please stop using '{name}' and instead use 'salt._logging'. "
+    "'{name}' will go away after {{date}}.".format(name=__name__),
+)
 
 __CONSOLE_CONFIGURED = False
 __LOGGING_CONSOLE_HANDLER = None

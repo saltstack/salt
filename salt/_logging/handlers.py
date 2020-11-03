@@ -15,8 +15,7 @@ from collections import deque
 import msgpack
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin, NewStyleClassMixin
 from salt.ext.six.moves import queue
-
-# from salt.utils.versions import warn_until_date
+from salt.utils.versions import warn_until_date
 
 try:
     import zmq
@@ -45,12 +44,12 @@ class TemporaryLoggingHandler(logging.NullHandler):
     """
 
     def __init__(self, level=logging.NOTSET, max_queue_size=10000):
-        # warn_until_date(
-        #    '20220101',
-        #    'Please stop using \'{name}.TemporaryLoggingHandler\'. '
-        #    '\'{name}.TemporaryLoggingHandler\' will go away after '
-        #    '{{date}}.'.format(name=__name__)
-        # )
+        warn_until_date(
+            "20230101",
+            "Please stop using '{name}.TemporaryLoggingHandler'. "
+            "'{name}.TemporaryLoggingHandler' will go away after "
+            "{{date}}.".format(name=__name__),
+        )
         self.__max_queue_size = max_queue_size
         super().__init__(level=level)
         self.__messages = deque(maxlen=max_queue_size)
@@ -198,13 +197,13 @@ if sys.version_info < (3, 2):
             """
             Initialise an instance, using the passed queue.
             """
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
+            warn_until_date(
+                "20230101",
+                "Please stop using '{name}.QueueHandler' and instead "
+                "use 'logging.handlers.QueueHandler'. "
+                "'{name}.QueueHandler' will go away after "
+                "{{date}}.".format(name=__name__),
+            )
             logging.Handler.__init__(self)
             self.queue = queue
 
@@ -271,13 +270,13 @@ elif sys.version_info < (3, 7):
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super().__init__(queue)
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
+            warn_until_date(
+                "20230101",
+                "Please stop using '{name}.QueueHandler' and instead "
+                "use 'logging.handlers.QueueHandler'. "
+                "'{name}.QueueHandler' will go away after "
+                "{{date}}.".format(name=__name__),
+            )
 
         def enqueue(self, record):
             """
@@ -330,13 +329,13 @@ else:
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super().__init__(queue)
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
+            warn_until_date(
+                "20230101",
+                "Please stop using '{name}.QueueHandler' and instead "
+                "use 'logging.handlers.QueueHandler'. "
+                "'{name}.QueueHandler' will go away after "
+                "{{date}}.".format(name=__name__),
+            )
 
         def enqueue(self, record):
             """
