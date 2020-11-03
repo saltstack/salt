@@ -3,7 +3,7 @@
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
         {%- if mem.max %}
-        <maxMemory {{ mem.slots }} unit='KiB'> {{ mem.max }}</maxMemory>
+        <maxMemory {{ mem.get('slots', '') }} unit='KiB'>{{ mem.max }}</maxMemory>
         {%- endif %}
         {%- if mem.boot %}
         <memory unit='KiB'>{{ mem.boot }}</memory>
