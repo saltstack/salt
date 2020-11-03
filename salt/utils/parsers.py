@@ -137,7 +137,8 @@ class OptionParser(optparse.OptionParser):
     description = None
 
     # Private attributes
-    _mixin_prio_ = 100
+    # We want this class order to be right before LogLevelMixIn
+    _mixin_prio_ = sys.maxsize - 200
 
     # Setup multiprocessing logging queue listener
     _setup_log_forwarding_consumer_ = False
@@ -304,6 +305,7 @@ class MergeConfigMixIn(metaclass=MixInMeta):
     This mix-in should run last.
     """
 
+    # We want this class order to be the last one
     _mixin_prio_ = sys.maxsize
 
     def _mixin_setup(self):
@@ -574,7 +576,9 @@ class ConfigDirMixIn(metaclass=MixInMeta):
 
 
 class LogLevelMixIn(metaclass=MixInMeta):
-    _mixin_prio_ = 10
+    # We want this class order to be right before MergeConfigMixIn
+    _mixin_prio_ = sys.maxsize - 100
+
     _default_logging_level_ = "warning"
     _default_logging_logfile_ = None
     _logfile_config_setting_name_ = "log_file"
@@ -582,7 +586,7 @@ class LogLevelMixIn(metaclass=MixInMeta):
     _logfile_loglevel_config_setting_name_ = (
         "log_level_logfile"  # pylint: disable=invalid-name
     )
-    _skip_console_logging_config_ = False
+    _console_log_level_cli_flags = ("-l", "--log-level")
 
     def _mixin_setup(self):
         if self._default_logging_logfile_ is None:
@@ -601,19 +605,15 @@ class LogLevelMixIn(metaclass=MixInMeta):
         )
         self.add_option_group(group)
 
-        if not getattr(self, "_skip_console_logging_config_", False):
-            group.add_option(
-                "-l",
-                "--log-level",
-                dest=self._loglevel_config_setting_name_,
-                choices=list(salt._logging.LOG_LEVELS),
-                help="Console logging log level. One of {}. Default: '{}'.".format(
-                    ", ".join(
-                        ["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]
-                    ),
-                    self._default_logging_level_,
-                ),
-            )
+        group.add_option(
+            *self._console_log_level_cli_flags,
+            dest=self._loglevel_config_setting_name_,
+            choices=list(salt._logging.LOG_LEVELS),
+            help="Console logging log level. One of {}. Default: '{}'.".format(
+                ", ".join(["'{}'".format(n) for n in salt._logging.SORTED_LEVEL_NAMES]),
+                self._default_logging_level_,
+            ),
+        )
 
         def _logfile_callback(option, opt, value, parser, *args, **kwargs):
             if not os.path.dirname(value):
@@ -688,10 +688,10 @@ class LogLevelMixIn(metaclass=MixInMeta):
 
     def __shutdown_logging(self):
         if self._setup_log_forwarding_consumer_ is True:
-            # Stop the logging process
-            salt._logging.shutdown_log_forwarding_consumer()
             # Stop log forwarding
             salt._logging.shutdown_log_forwarding()
+            # Stop the logging process
+            salt._logging.shutdown_log_forwarding_consumer()
         # In case we never got logging properly set up
         temp_log_handler = salt._logging.get_temp_handler()
         if temp_log_handler is not None:
@@ -2549,7 +2549,7 @@ class SaltKeyOptionParser(
     _config_filename_ = "master"
 
     # LogLevelMixIn attributes
-    _skip_console_logging_config_ = True
+    _console_log_level_cli_flags = ("--log-level",)
     _logfile_config_setting_name_ = "key_logfile"
     _default_logging_logfile_ = config.DEFAULT_MASTER_OPTS[
         _logfile_config_setting_name_
@@ -2812,7 +2812,6 @@ class SaltKeyOptionParser(
         if self.options.gen_keys:
             # Since we're generating the keys, some defaults can be assumed
             # or tweaked
-            keys_config[self._logfile_config_setting_name_] = os.devnull
             keys_config["pki_dir"] = self.options.gen_keys_dir
         salt.features.setup_features(keys_config)
         return keys_config
@@ -2856,11 +2855,6 @@ class SaltKeyOptionParser(
         self._mixin_after_parsed_funcs.append(
             self.__create_keys_dir
         )  # pylint: disable=no-member
-
-    def _mixin_after_parsed(self):
-        # It was decided to always set this to info, since it really all is
-        # info or error.
-        self.config["loglevel"] = "info"
 
     def __create_keys_dir(self):
         if not os.path.isdir(self.config["gen_keys_dir"]):

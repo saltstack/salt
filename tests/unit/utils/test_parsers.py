@@ -178,8 +178,6 @@ class ParserBase:
 
     args = []
 
-    skip_console_logging_config = False
-
     log_impl = None
 
     # Set config option names
@@ -338,16 +336,15 @@ class ParserBase:
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
@@ -375,16 +372,15 @@ class ParserBase:
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
@@ -409,16 +405,15 @@ class ParserBase:
 
         log_file_option = getattr(parser.options, self.logfile_config_setting_name)
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_config_setting_name], log_file
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_config_setting_name], log_file
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file setting
@@ -452,18 +447,16 @@ class ParserBase:
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, default_log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name],
-                default_log_level,
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, default_log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], default_log_level,
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
@@ -493,17 +486,16 @@ class ParserBase:
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
@@ -531,17 +523,16 @@ class ParserBase:
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
@@ -576,17 +567,16 @@ class ParserBase:
             parser.options, self.logfile_loglevel_config_setting_name
         )
 
-        if not self.skip_console_logging_config:
-            # Check console loggger
-            self.assertEqual(self.log_impl.log_level, log_level)
-            # Check extended logger
-            self.assertEqual(
-                self.log_impl.config[self.loglevel_config_setting_name], log_level
-            )
-            self.assertEqual(
-                self.log_impl.config[self.logfile_loglevel_config_setting_name],
-                log_level_logfile,
-            )
+        # Check console loggger
+        self.assertEqual(self.log_impl.log_level, log_level)
+        # Check extended logger
+        self.assertEqual(
+            self.log_impl.config[self.loglevel_config_setting_name], log_level
+        )
+        self.assertEqual(
+            self.log_impl.config[self.logfile_loglevel_config_setting_name],
+            log_level_logfile,
+        )
         # Check temp logger
         self.assertEqual(self.log_impl.temp_log_level, "error")
         # Check log file level setting
@@ -605,9 +595,6 @@ class ParserBase:
         opts.update({"log_file": log_file})
         if log_file_name != "log_file":
             opts.update({log_file_name: getattr(self, log_file_name)})
-
-        if log_file_name == "key_logfile":
-            self.skipTest("salt-key creates log file outside of parse_args.")
 
         parser = self.parser()
         with patch(self.config_func, MagicMock(return_value=opts)):
@@ -892,8 +879,6 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         """
         Setting up
         """
-        self.skip_console_logging_config = True
-
         # Set config option names
         self.logfile_config_setting_name = "key_logfile"
 
@@ -929,91 +914,6 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         # Assign parser
         self.parser = salt.utils.parsers.SaltKeyOptionParser
         self.addCleanup(delattr, self, "parser")
-
-    # log level configuration tests
-
-    def test_get_log_level_cli(self):
-        """
-        Tests that console log level option is not recognized
-        """
-        # No console log level will be actually set
-        log_level = default_log_level = None
-
-        option = "--log-level"
-        args = self.args + [option, "error"]
-
-        parser = self.parser()
-        mock_err = ErrorMock()
-
-        with patch("salt.utils.parsers.OptionParser.error", mock_err.error):
-            parser.parse_args(args)
-
-        # Check error msg
-        self.assertEqual(mock_err.msg, "no such option: {}".format(option))
-        # Check console loggger has not been set
-        self.assertEqual(self.log_impl.log_level, log_level)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_impl.config)
-        # Check temp logger
-        self.assertEqual(self.log_impl.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_impl.log_level_logfile, default_log_level)
-
-    def test_get_log_level_config(self):
-        """
-        Tests that log level set in config is ignored
-        """
-        log_level = "info"
-        args = self.args
-
-        # Set log level in config and set additional mocked opts keys
-        opts = self.testing_config.copy()
-        opts.update(
-            {
-                self.loglevel_config_setting_name: log_level,
-                # self.logfile_config_setting_name: 'key_logfile',
-                "log_fmt_logfile": None,
-                "log_datefmt_logfile": None,
-                "log_rotate_max_bytes": None,
-                "log_rotate_backup_count": None,
-            }
-        )
-
-        parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=opts)):
-            parser.parse_args(args)
-
-        # Check config name absence in options
-        self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
-        # Check console loggger has not been set
-        self.assertEqual(self.log_impl.log_level, None)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_impl.config)
-        # Check temp logger
-        self.assertEqual(self.log_impl.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_impl.log_level_logfile, log_level)
-
-    def test_get_log_level_default(self):
-        """
-        Tests that log level default value is ignored
-        """
-        # Set defaults
-        default_log_level = self.testing_config[self.loglevel_config_setting_name]
-
-        log_level = None
-        args = self.args
-
-        parser = self.parser()
-        parser.parse_args(args)
-
-        # Check config name absence in options
-        self.assertNotIn(self.loglevel_config_setting_name, parser.options.__dict__)
-        # Check console loggger has not been set
-        self.assertEqual(self.log_impl.log_level, log_level)
-        self.assertNotIn(self.loglevel_config_setting_name, self.log_impl.config)
-        # Check temp logger
-        self.assertEqual(self.log_impl.temp_log_level, "error")
-        # Check log file logger log level
-        self.assertEqual(self.log_impl.log_level_logfile, default_log_level)
 
 
 class SaltCallOptionParserTestCase(ParserBase, TestCase):
