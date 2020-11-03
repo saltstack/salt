@@ -942,6 +942,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Allow raw_shell option when using the ssh
         # client via the Salt API
         "netapi_allow_raw_shell": bool,
+        # Disable clients in the Salt API
+        "netapi_disable_clients": list,
         "disabled_requisites": (str, list),
         # Feature flag config
         "features": dict,
@@ -1578,6 +1580,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "minion_data_cache_events": True,
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
+        "netapi_disable_clients": [],
     }
 )
 

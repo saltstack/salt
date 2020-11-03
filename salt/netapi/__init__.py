@@ -1,10 +1,7 @@
-# encoding: utf-8
 """
 Make api awesomeness
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import inspect
 import os
 
@@ -12,19 +9,15 @@ import salt.client
 import salt.client.ssh.client
 import salt.config
 import salt.exceptions
-
-# Import Salt libs
 import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args
 import salt.wheel
-
-# Import third party libs
 from salt.ext import six
 
 
-class NetapiClient(object):
+class NetapiClient:
     """
     Provide a uniform method of accessing the various client interfaces in Salt
     in the form of low-data data structures. For example:
@@ -68,7 +61,12 @@ class NetapiClient(object):
 
         if low.get("client") not in CLIENTS:
             raise salt.exceptions.SaltInvocationError(
-                "Invalid client specified: '{0}'".format(low.get("client"))
+                "Invalid client specified: '{}'".format(low.get("client"))
+            )
+
+        if low.get("client") in self.opts.get("netapi_disable_clients"):
+            raise salt.exceptions.SaltInvocationError(
+                "Client disabled: '{}'".format(low.get("client"))
             )
 
         if not ("token" in low or "eauth" in low):

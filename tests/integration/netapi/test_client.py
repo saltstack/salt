@@ -5,7 +5,7 @@ import time
 import pytest
 import salt.config
 import salt.netapi
-from salt.exceptions import EauthAuthenticationError
+from salt.exceptions import EauthAuthenticationError, SaltInvocationError
 from tests.support.case import SSHCase
 from tests.support.helpers import (
     SKIP_IF_NOT_RUNNING_PYTEST,
@@ -64,6 +64,17 @@ class NetapiClientTest(TestCase):
         self.assertIn({"sub_minion": True}, rets)
         self.assertIn({"minion": True}, rets)
 
+    def test_local_batch_disabled(self):
+        low = {"client": "local_batch", "tgt": "*", "fun": "test.ping", "timeout": 300}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["local_batch"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+
     def test_local_async(self):
         low = {"client": "local_async", "tgt": "*", "fun": "test.ping"}
         low.update(self.eauth_creds)
@@ -89,6 +100,28 @@ class NetapiClientTest(TestCase):
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
+
+    def test_local_disabled(self):
+        low = {"client": "local", "tgt": "*", "fun": "test.ping"}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["local"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+
+    def test_local_subset_disabled(self):
+        low = {"client": "local_subset", "tgt": "*", "fun": "test.ping", "subset": 1}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["local_subset"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
 
     @slowTest
     def test_wheel(self):
@@ -133,6 +166,28 @@ class NetapiClientTest(TestCase):
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
 
+    def test_wheel_disabled(self):
+        low = {"client": "wheel", "tgt": "*", "fun": "test.ping"}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["wheel"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+
+    def test_wheel_async_disabled(self):
+        low = {"client": "wheel_async", "tgt": "*", "fun": "test.ping"}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["wheel_async"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
+
     @skipIf(True, "This is not testing anything. Skipping for now.")
     def test_runner(self):
         # TODO: fix race condition in init of event-- right now the event class
@@ -157,6 +212,17 @@ class NetapiClientTest(TestCase):
 
         with self.assertRaises(EauthAuthenticationError) as excinfo:
             ret = self.netapi.run(low)
+
+    def test_runner_disabled(self):
+        low = {"client": "runner", "tgt": "*", "fun": "test.ping"}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["runner"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
 
 
 @SKIP_IF_NOT_RUNNING_PYTEST
@@ -268,3 +334,14 @@ class NetapiSSHClientTest(SSHCase):
 
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists("badfile.txt"))
+
+    def test_ssh_disabled(self):
+        low = {"client": "ssh", "tgt": "localhost", "fun": "test.ping"}
+        low.update(self.eauth_creds)
+
+        ret = None
+        with patch.dict(self.netapi.opts, {"netapi_disable_clients": ["ssh"]}):
+            with self.assertRaises(SaltInvocationError) as excinfo:
+                ret = self.netapi.run(low)
+
+        self.assertEqual(ret, None)
