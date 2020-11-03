@@ -14,7 +14,7 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 .. note::
 
     For Python 2/3 compatibility, it is more recommended to
-    install the ``jtextfsm`` library: ``pip install jtextfsm``.
+    install the ``textfsm`` library: ``pip install textfsm``.
 """
 
 import logging
@@ -33,7 +33,7 @@ except ImportError:
     HAS_TEXTFSM = False
 
 try:
-    import clitable
+    from textfsm import clitable
 
     HAS_CLITABLE = True
 except ImportError:
