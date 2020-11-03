@@ -256,7 +256,7 @@ class TestProcessCallbacks(TestCase):
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
+        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             evt = multiprocessing.Event()
             proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
@@ -277,7 +277,7 @@ class TestProcessCallbacks(TestCase):
                 self.evt.set()
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
+        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             proc = MyProcess()
             proc.run()
@@ -430,7 +430,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
+        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         evt = multiprocessing.Event()
@@ -456,7 +456,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
                 self.evt.set()
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
+        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
