@@ -3,5 +3,5 @@
 
 def myfunction():
     grains = {}
-    grains['match'] = 'maker'
+    grains["match"] = "maker"
     return grains

@@ -34,7 +34,7 @@ ${StrStrAdv}
 !ifdef PythonVersion
     !define PYTHON_VERSION "${PythonVersion}"
 !else
-    !define PYTHON_VERSION "2"
+    !define PYTHON_VERSION "3"
 !endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
@@ -72,21 +72,6 @@ ${StrStrAdv}
 !define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
-
-# This entire if block can be removed for the Sodium release... including the !define MUI_WELCOMEPAGE_TEXT
-# NSIS will just use the default like it does for Python 3, which should be the same test
-!if "${PYTHON_VERSION}" == "2"
-    !define MUI_WELCOMEPAGE_TEXT "\
-        WARNING: Python 2 Support will be discontinued in Sodium. Salt will only ship Python 3 \
-        installers starting with the Sodium release.$\r$\n\
-        $\r$\n\
-        Setup will guide you through the installation of ${PRODUCT_NAME} ${PRODUCT_VERSION}.$\r$\n\
-        $\r$\n\
-        It is recommended that you close all other applications before starting Setup. This will make it possible to \
-        update relevant system files without having to reboot your computer.$\r$\n\
-        $\r$\n\
-        Click Next to continue."
-!endif
 
 # Welcome page
 !insertmacro MUI_PAGE_WELCOME
@@ -410,37 +395,29 @@ FunctionEnd
 ###############################################################################
 # Installation Settings
 ###############################################################################
-!if ${PYTHON_VERSION} == 3
-    Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
-!else
-    Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-!endif
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (Python ${PYTHON_VERSION})"
 OutFile "${OutFile}"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
+
 Section -copy_prereqs
     # Copy prereqs to the Plugins Directory
-    # These files will be vcredist 2008 and KB2999226 for Win8.1 and below
     # These files are downloaded by build_pkg.bat
     # This directory gets removed upon completion
     SetOutPath "$PLUGINSDIR\"
     File /r "..\prereqs\"
 SectionEnd
 
-# Check and install the Windows 10 Universal C Runtime (KB2999226)
-# ucrt is needed on Windows 8.1 and lower
-# They are installed as a Microsoft Update package (.msu)
-# ucrt for Windows 8.1 RT is only available via Windows Update
+# Check if the  Windows 10 Universal C Runtime (KB2999226) is installed
+# Python 3 needs the updated ucrt on Windows 8.1 / 2012R2 and lower
+# They are installed via KB2999226, but we're not going to patch the system here
+# Instead, we're going to copy the .dll files to the \salt\bin directory
 Section -install_ucrt
 
-    Var /GLOBAL MsuPrefix
-    Var /GLOBAL MsuFileName
-
-    # UCRT only needs to be installed for Python 3
-    StrCmp ${PYTHON_VERSION} 2 lbl_done
+    Var /GLOBAL UcrtFileName
 
     # Get the Major.Minor version Number
     # Windows 10 introduced CurrentMajorVersionNumber
@@ -463,7 +440,7 @@ Section -install_ucrt
     ClearErrors
 
     # Use WMI to check if it's installed
-    detailPrint "Checking for existing KB2999226 installation"
+    detailPrint "Checking for existing UCRT (KB2999226) installation"
     nsExec::ExecToStack 'cmd /q /c wmic qfe get hotfixid | findstr "^KB2999226"'
     # Clean up the stack
     Pop $R0 # Gets the ErrorCode
@@ -472,50 +449,31 @@ Section -install_ucrt
     # If it returned KB2999226 it's already installed
     StrCmp $R1 'KB2999226' lbl_done
 
-    detailPrint "KB2999226 not found"
-
-    # All lower versions of Windows
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" \
-        CurrentVersion
-
-    # Get the name of the .msu file based on the value of $R0
-    ${Switch} "$R0"
-        ${Case} "6.3"
-            StrCpy $MsuPrefix "Windows8.1"
-            ${break}
-        ${Case} "6.2"
-            StrCpy $MsuPrefix "Windows8-RT"
-            ${break}
-        ${Case} "6.1"
-            StrCpy $MsuPrefix "Windows6.1"
-            ${break}
-        ${Case} "6.0"
-            StrCpy $MsuPrefix "Windows6.0"
-            ${break}
-    ${EndSwitch}
+    detailPrint "UCRT (KB2999226) not found"
 
     # Use RunningX64 here to get the Architecture for the system running the installer
     # CPUARCH is defined when the installer is built and is based on the machine that
     # built the installer, not the target system as we need here.
     ${If} ${RunningX64}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x64.msu"
+        StrCpy $UcrtFileName "ucrt_x64.zip"
     ${Else}
-        StrCpy $MsuFileName "$MsuPrefix-KB2999226-x86.msu"
+        StrCpy $UcrtFileName "ucrt_x86.zip"
     ${EndIf}
 
     ClearErrors
 
-    detailPrint "Installing KB2999226 using file $MsuFileName"
-    nsExec::ExecToStack 'cmd /c wusa "$PLUGINSDIR\$MsuFileName" /quiet /norestart'
+    detailPrint "Unzipping UCRT dll files to $INSTDIR\bin"
+    CreateDirectory $INSTDIR\bin
+    nsisunz::UnzipToLog "$PLUGINSDIR\$UcrtFileName" "$INSTDIR\bin"
+
     # Clean up the stack
     Pop $R0  # Get Error
-    Pop $R1  # Get stdout
-    ${IfNot} $R0 == 0
+
+    ${IfNot} $R0 == "success"
         detailPrint "error: $R0"
-        detailPrint "output: $R2"
         Sleep 3000
     ${Else}
-        detailPrint "KB2999226 installed successfully"
+        detailPrint "UCRT dll files copied successfully"
     ${EndIf}
 
     lbl_done:
@@ -523,82 +481,81 @@ Section -install_ucrt
 SectionEnd
 
 
-# Check and install Visual C++ redist packages
-# See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
+# Check and install Visual C++ redist 2013 packages
 # Hidden section (-) to install VCRedist
-Section -install_vcredist
+Section -install_vcredist_2013
 
     Var /GLOBAL VcRedistName
     Var /GLOBAL VcRedistGuid
     Var /GLOBAL NeedVcRedist
-    Var /GLOBAL CheckVcRedist
-    StrCpy $CheckVcRedist "False"
 
-    # Visual C++ 2008 SP1 MFC Security Update redist packages
-    !define PY2_VC_REDIST_NAME "VC_Redist_2008_SP1_MFC"
-    !define PY2_VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
-    !define PY2_VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+    # GUIDs can be found by installing them and then running the following command:
+    # wmic product where "Name like '%2013%minimum runtime%'" get Name, Version, IdentifyingNumber
+    !define VCREDIST_X86_NAME "vcredist_x86_2013"
+    !define VCREDIST_X86_GUID "{8122DAB1-ED4D-3676-BB0A-CA368196543E}"
+    !define VCREDIST_X64_NAME "vcredist_x64_2013"
+    !define VCREDIST_X64_GUID "{53CF6934-A98D-3D84-9146-FC4EDF3D5641}"
 
-    # VCRedist only needs to be installed for Python 2
-    ${If} ${PYTHON_VERSION} == 2
-
-        StrCpy $VcRedistName ${PY2_VC_REDIST_NAME}
-        ${If} ${CPUARCH} == "AMD64"
-            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X64_GUID}
-        ${Else}
-            StrCpy $VcRedistGuid ${PY2_VC_REDIST_X86_GUID}
-        ${EndIf}
-
-        # VCRedist 2008 only needed on Windows Server 2008R2/Windows 7 and below
-        ${If} ${AtMostWin2008R2}
-            StrCpy $CheckVcRedist "True"
-        ${EndIf}
-
-    ${EndIf}
-
-    ${If} $CheckVcRedist == "True"
-
-        Push $VcRedistGuid
-        Call MsiQueryProductState
-        ${If} $NeedVcRedist == "True"
-            MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-                "$VcRedistName is currently not installed. Would you like to install?" \
-                /SD IDYES IDNO endVcRedist
-
-            # If an output variable is specified ($0 in the case below),
-            # ExecWait sets the variable with the exit code (and only sets the
-            # error flag if an error occurs; if an error occurs, the contents
-            # of the user variable are undefined).
-            # http://nsis.sourceforge.net/Reference/ExecWait
-            ClearErrors
-            ExecWait '"$PLUGINSDIR\vcredist.exe" /q' $0
-            IfErrors 0 CheckVcRedistErrorCode
-                MessageBox MB_OK \
-                    "$VcRedistName failed to install. Try installing the package manually." \
-                    /SD IDOK
-                Goto endVcRedist
-
-            CheckVcRedistErrorCode:
-            # Check for Reboot Error Code (3010)
-            ${If} $0 == 3010
-                MessageBox MB_OK \
-                    "$VcRedistName installed but requires a restart to complete." \
-                    /SD IDOK
-
-            # Check for any other errors
-            ${ElseIfNot} $0 == 0
-                MessageBox MB_OK \
-                    "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
-                    /SD IDOK
-            ${EndIf}
-
-            endVcRedist:
-
-        ${EndIf}
-
+    # Only install 64bit VCRedist on 64bit machines
+    ${If} ${CPUARCH} == "AMD64"
+        StrCpy $VcRedistName ${VCREDIST_X64_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X64_GUID}
+        Call InstallVCRedist
+    ${Else}
+        # Install 32bit VCRedist on all machines
+        StrCpy $VcRedistName ${VCREDIST_X86_NAME}
+        StrCpy $VcRedistGuid ${VCREDIST_X86_GUID}
+        Call InstallVCRedist
     ${EndIf}
 
 SectionEnd
+
+
+Function InstallVCRedist
+    # Check to see if it's already installed
+    Call MsiQueryProductState
+    ${If} $NeedVcRedist == "True"
+        detailPrint "System requires $VcRedistName"
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "$VcRedistName is currently not installed. Would you like to install?" \
+            /SD IDYES IDNO endVCRedist
+
+        # If an output variable is specified ($0 in the case below),
+        # ExecWait sets the variable with the exit code (and only sets the
+        # error flag if an error occurs; if an error occurs, the contents
+        # of the user variable are undefined).
+        # http://nsis.sourceforge.net/Reference/ExecWait
+        ClearErrors
+        detailPrint "Installing $VcRedistName..."
+        ExecWait '"$PLUGINSDIR\$VcRedistName.exe" /install /quiet /norestart' $0
+        IfErrors 0 CheckVcRedistErrorCode
+            MessageBox MB_OK \
+                "$VcRedistName failed to install. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+
+        CheckVcRedistErrorCode:
+        # Check for Reboot Error Code (3010)
+        ${If} $0 == 3010
+            MessageBox MB_OK \
+                "$VcRedistName installed but requires a restart to complete." \
+                /SD IDOK
+            detailPrint "Reboot and run Salt install again"
+
+        # Check for any other errors
+        ${ElseIfNot} $0 == 0
+            MessageBox MB_OK \
+                "$VcRedistName failed with ErrorCode: $0. Try installing the package manually." \
+                /SD IDOK
+            detailPrint "An error occurred during installation of $VcRedistName"
+            detailPrint "Error: $0"
+        ${EndIf}
+
+        endVCRedist:
+
+    ${EndIf}
+
+FunctionEnd
 
 
 Section "MainSection" SEC01
@@ -615,7 +572,25 @@ SectionEnd
 
 Function .onInit
 
+    InitPluginsDir
     Call parseCommandLineSwitches
+
+    # Uninstall msi-installed salt
+    # Source    https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
+    !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}    ;Salt upgrade code
+    StrCpy $0 0
+    loop:
+    System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
+    ${If} $2 = 0
+	# Now $1 contains the product code
+        DetailPrint product:$1
+        push $R0
+          StrCpy $R0 $1
+          Call UninstallMSI
+        pop $R0
+        IntOp $0 $0 + 1
+        goto loop
+    ${Endif}
 
     # If custom config passed, verify its existence before continuing so we
     # don't uninstall an existing installation and then fail
@@ -625,17 +600,17 @@ Function .onInit
     ${EndIf}
 
     customConfigExists:
-    # Check for existing installation
-    ReadRegStr $R0 HKLM \
-        "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
-        "UninstallString"
-    StrCmp $R0 "" checkOther
-    # Found existing installation, prompt to uninstall
-    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is already installed.$\n$\n\
-        Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK uninst
-    Abort
+        # Check for existing installation
+        ReadRegStr $R0 HKLM \
+            "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
+            "UninstallString"
+        StrCmp $R0 "" checkOther
+        # Found existing installation, prompt to uninstall
+        MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+            "${PRODUCT_NAME} is already installed.$\n$\n\
+            Click `OK` to remove the existing installation." \
+            /SD IDOK IDOK uninst
+        Abort
 
     checkOther:
         # Check for existing installation of full salt
@@ -763,13 +738,15 @@ Section -Post
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion Start SERVICE_AUTO_START"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodConsole 24000"
     nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppStopMethodWindow 2000"
+    nsExec::Exec "$INSTDIR\bin\ssm.exe set salt-minion AppRestartDelay 60000"
 
     ${IfNot} $ConfigType_State == "Existing Config"  # If not using Existing Config
         Call updateMinionConfig
     ${EndIf}
 
-    Push "C:\salt"
-    Call AddToPath
+    # Add $INSTDIR in the Path
+    EnVar::SetHKLM
+    EnVar::AddValue Path "$INSTDIR"
 
 SectionEnd
 
@@ -813,9 +790,9 @@ Section Uninstall
 
     Call un.uninstallSalt
 
-    # Remove C:\salt from the Path
-    Push "C:\salt"
-    Call un.RemoveFromPath
+    # Remove $INSTDIR from the Path
+    EnVar::SetHKLM
+    EnVar::DeleteValue Path "$INSTDIR"
 
 SectionEnd
 
@@ -894,14 +871,12 @@ Function MsiQueryProductState
     # Used for detecting VCRedist Installation
     !define INSTALLSTATE_DEFAULT "5"
 
-    Pop $R0
     StrCpy $NeedVcRedist "False"
-    System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
+    System::Call "msi::MsiQueryProductStateA(t '$VcRedistGuid') i.r0"
     StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
     StrCpy $NeedVcRedist "True"
 
 FunctionEnd
-
 
 #------------------------------------------------------------------------------
 # Trim Function
@@ -1041,232 +1016,26 @@ FunctionEnd
 
 
 #------------------------------------------------------------------------------
-# StrStr Function
-# - find substring in a string
+# UninstallMSI Function
+# - Uninstalls MSI by product code
 #
 # Usage:
-#   Push "this is some string"
-#   Push "some"
-#   Call StrStr
-#   Pop $0 # "some string"
-#------------------------------------------------------------------------------
-!macro StrStr un
-Function ${un}StrStr
-
-    Exch $R1 # $R1=substring, stack=[old$R1,string,...]
-    Exch     #                stack=[string,old$R1,...]
-    Exch $R2 # $R2=string,    stack=[old$R2,old$R1,...]
-    Push $R3 # $R3=strlen(substring)
-    Push $R4 # $R4=count
-    Push $R5 # $R5=tmp
-    StrLen $R3 $R1 # Get the length of the Search String
-    StrCpy $R4 0 # Set the counter to 0
-
-    loop:
-        StrCpy $R5 $R2 $R3 $R4 # Create a moving window of the string that is
-                               # the size of the length of the search string
-        StrCmp $R5 $R1 done    # Is the contents of the window the same as
-                               # search string, then done
-        StrCmp $R5 "" done     # Is the window empty, then done
-        IntOp $R4 $R4 + 1      # Shift the windows one character
-        Goto loop              # Repeat
-
-    done:
-        StrCpy $R1 $R2 "" $R4
-        Pop $R5
-        Pop $R4
-        Pop $R3
-        Pop $R2
-        Exch $R1 # $R1=old$R1, stack=[result,...]
-
-FunctionEnd
-!macroend
-!insertmacro StrStr ""
-!insertmacro StrStr "un."
-
-
-#------------------------------------------------------------------------------
-# AddToPath Function
-# - Adds item to Path for All Users
-# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-#   Windows Commands
+#   Push product code
+#   Call UninstallMSI
 #
-# Usage:
-#   Push "C:\path\to\add"
-#   Call AddToPath
+# Source:
+#   https://nsis.sourceforge.io/Uninstalling_a_previous_MSI_(Windows_installer_package)
 #------------------------------------------------------------------------------
-!define Environ 'HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"'
-Function AddToPath
+Function UninstallMSI
+    ; $R0 === product code
+    MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
+        Click `OK` to remove the existing installation." \
+        /SD IDOK IDOK UninstallMSI
+    Abort
 
-    Exch $0 # Path to add
-    Push $1 # Current Path
-    Push $2 # Results of StrStr / Length of Path + Path to Add
-    Push $3 # Handle to Reg / Length of Path
-    Push $4 # Result of Registry Call
-
-    # Open a handle to the key in the registry, handle in $3, Error in $4
-    System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    # Make sure registry handle opened successfully (returned 0)
-    IntCmp $4 0 0 done done
-
-    # Load the contents of path into $1, Error Code into $4, Path length into $2
-    System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
-
-    # Close the handle to the registry ($3)
-    System::Call "advapi32::RegCloseKey(i $3)"
-
-    # Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath Failed: original length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK \
-            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
-            /SD IDOK
-        Goto done
-
-    # If no error, continue
-    IntCmp $4 0 +5 # $4 != NO_ERROR
-        # Error 2 means the Key was not found
-        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
-            DetailPrint "AddToPath: unexpected error code $4"
-            Goto done
-        StrCpy $1 ""
-
-    # Check if already in PATH
-    Push "$1;"          # The string to search
-    Push "$0;"          # The string to find
-    Call StrStr
-    Pop $2              # The result of the search
-    StrCmp $2 "" 0 done # String not found, try again with ';' at the end
-                        # Otherwise, it's already in the path
-    Push "$1;"          # The string to search
-    Push "$0\;"         # The string to find
-    Call StrStr
-    Pop $2              # The result
-    StrCmp $2 "" 0 done # String not found, continue (add)
-                        # Otherwise, it's already in the path
-
-    # Prevent NSIS string overflow
-    StrLen $2 $0        # Length of path to add ($2)
-    StrLen $3 $1        # Length of current path ($3)
-    IntOp $2 $2 + $3    # Length of current path + path to add ($2)
-    IntOp $2 $2 + 2     # Account for the additional ';'
-                        # $2 = strlen(dir) + strlen(PATH) + sizeof(";")
-
-    # Make sure the new length isn't over the NSIS_MAX_STRLEN
-    IntCmp $2 ${NSIS_MAX_STRLEN} +4 +4 0
-        DetailPrint "AddToPath Failed: new length $2 > ${NSIS_MAX_STRLEN}"
-        MessageBox MB_OK \
-            "You may add C:\salt to the %PATH% for convenience when issuing local salt commands from the command line." \
-            /SD IDOK
-        Goto done
-
-    # Append dir to PATH
-    DetailPrint "Add to PATH: $0"
-    StrCpy $2 $1 1 -1       # Copy the last character of the existing path
-    StrCmp $2 ";" 0 +2      # Check for trailing ';'
-        StrCpy $1 $1 -1     # remove trailing ';'
-    StrCmp $1 "" +2         # Make sure Path is not empty
-        StrCpy $0 "$1;$0"   # Append new path at the end ($0)
-
-    # We can use the NSIS command here. Only 'ReadRegStr' is affected
-    WriteRegExpandStr ${Environ} "PATH" $0
-
-    # Broadcast registry change to open programs
-    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-
-    done:
-        Pop $4
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
-
-FunctionEnd
-
-
-#------------------------------------------------------------------------------
-# RemoveFromPath Function
-# - Removes item from Path for All Users
-# - Overcomes NSIS ReadRegStr limitation of 1024 characters by using Native
-#   Windows Commands
-#
-# Usage:
-#   Push "C:\path\to\add"
-#   Call un.RemoveFromPath
-#------------------------------------------------------------------------------
-Function un.RemoveFromPath
-
-    Exch $0
-    Push $1
-    Push $2
-    Push $3
-    Push $4
-    Push $5
-    Push $6
-
-    # Open a handle to the key in the registry, handle in $3, Error in $4
-    System::Call "advapi32::RegOpenKey(i 0x80000002, t'SYSTEM\CurrentControlSet\Control\Session Manager\Environment', *i.r3) i.r4"
-    # Make sure registry handle opened successfully (returned 0)
-    IntCmp $4 0 0 done done
-
-    # Load the contents of path into $1, Error Code into $4, Path length into $2
-    System::Call "advapi32::RegQueryValueEx(i $3, t'PATH', i 0, i 0, t.r1, *i ${NSIS_MAX_STRLEN} r2) i.r4"
-
-    # Close the handle to the registry ($3)
-    System::Call "advapi32::RegCloseKey(i $3)"
-
-    # Check for Error Code 234, Path too long for the variable
-    IntCmp $4 234 0 +4 +4 # $4 == ERROR_MORE_DATA
-        DetailPrint "AddToPath: original length $2 > ${NSIS_MAX_STRLEN}"
-        Goto done
-
-    # If no error, continue
-    IntCmp $4 0 +5 # $4 != NO_ERROR
-        # Error 2 means the Key was not found
-        IntCmp $4 2 +3 # $4 != ERROR_FILE_NOT_FOUND
-            DetailPrint "AddToPath: unexpected error code $4"
-            Goto done
-        StrCpy $1 ""
-
-    # Ensure there's a trailing ';'
-    StrCpy $5 $1 1 -1   # Copy the last character of the path
-    StrCmp $5 ";" +2    # Check for trailing ';', if found continue
-        StrCpy $1 "$1;" # ensure trailing ';'
-
-    # Check for our directory inside the path
-    Push $1             # String to Search
-    Push "$0;"          # Dir to Find
-    Call un.StrStr
-    Pop $2              # The results of the search
-    StrCmp $2 "" done   # If results are empty, we're done, otherwise continue
-
-    # Remove our Directory from the Path
-    DetailPrint "Remove from PATH: $0"
-    StrLen $3 "$0;"       # Get the length of our dir ($3)
-    StrLen $4 $2          # Get the length of the return from StrStr ($4)
-    StrCpy $5 $1 -$4      # $5 is now the part before the path to remove
-    StrCpy $6 $2 "" $3    # $6 is now the part after the path to remove
-    StrCpy $3 "$5$6"      # Combine $5 and $6
-
-    # Check for Trailing ';'
-    StrCpy $5 $3 1 -1     # Load the last character of the string
-    StrCmp $5 ";" 0 +2    # Check for ';'
-        StrCpy $3 $3 -1   # remove trailing ';'
-
-    # Write the new path to the registry
-    WriteRegExpandStr ${Environ} "PATH" $3
-
-    # Broadcast the change to all open applications
-    SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-
-    done:
-        Pop $6
-        Pop $5
-        Pop $4
-        Pop $3
-        Pop $2
-        Pop $1
-        Pop $0
+    UninstallMSI:
+        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
 
 FunctionEnd
 

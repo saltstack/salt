@@ -25,6 +25,7 @@ state modules
     augeas
     aws_sqs
     azurearm_compute
+    azurearm_dns
     azurearm_network
     azurearm_resource
     beacon
@@ -33,6 +34,7 @@ state modules
     boto3_elasticache
     boto3_elasticsearch
     boto3_route53
+    boto3_sns
     boto_apigateway
     boto_asg
     boto_cfn
@@ -57,12 +59,14 @@ state modules
     boto_lc
     boto_rds
     boto_route53
+    boto_s3
     boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
     bower
+    btrfs
     cabal
     ceph
     chef
@@ -74,6 +78,7 @@ state modules
     cmd
     composer
     cron
+    cryptdev
     csf
     cyg
     ddns
@@ -85,14 +90,18 @@ state modules
     docker_network
     docker_volume
     drac
+    dvs
     elasticsearch
     elasticsearch_index
     elasticsearch_index_template
     environ
     eselect
+    esxcluster
+    esxdatacenter
+    esxi
+    esxvm
     etcd_mod
     ethtool
-    esxi
     event
     file
     firewall
@@ -102,6 +111,7 @@ state modules
     github
     glance
     glance_image
+    glassfish
     glusterfs
     gnomedesktop
     gpg
@@ -115,10 +125,13 @@ state modules
     grains
     group
     heat
+    helm
     hg
+    highstate_doc
     host
     http
     icinga2
+    idem
     ifttt
     incron
     influxdb08_database
@@ -167,11 +180,15 @@ state modules
     lvs_server
     lvs_service
     lxc
+    lxd
+    lxd_container
+    lxd_image
+    lxd_profile
     mac_assistive
-    macdefaults
     mac_keychain
-    macpackage
     mac_xattr
+    macdefaults
+    macpackage
     makeconf
     marathon_app
     mdadm_raid
@@ -183,27 +200,33 @@ state modules
     mongodb_user
     monit
     mount
+    mssql_database
+    mssql_login
+    mssql_role
+    mssql_user
     msteams
     mysql_database
     mysql_grants
     mysql_query
     mysql_user
+    net_napalm_yang
     netacl
     netconfig
     netntp
     netsnmp
     netusers
     network
-    net_napalm_yang
     neutron_network
     neutron_secgroup
     neutron_secgroup_rule
     neutron_subnet
+    nexus
     nfs_export
     nftables
     npm
     ntp
     nxos
+    nxos_upgrade
     openstack_config
     openvswitch_bridge
     openvswitch_port
@@ -214,9 +237,10 @@ state modules
     pagerduty_service
     pagerduty_user
     panos
+    pbm
     pcs
-    pecl
     pdbedit
+    pecl
     pip_state
     pkg
     pkgbuild
@@ -316,6 +340,7 @@ state modules
     win_wua
     win_wusa
     winrepo
+    wordpress
     x509
     xml
     xmpp
@@ -326,11 +351,12 @@ state modules
     zabbix_template
     zabbix_user
     zabbix_usergroup
+    zabbix_usermacro
     zabbix_valuemap
     zcbuildout
     zenoss
-    zk_concurrency
     zfs
+    zk_concurrency
     zone
     zookeeper
     zpool

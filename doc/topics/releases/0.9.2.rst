@@ -50,7 +50,7 @@ state system is ready for early testers to start playing with. If you are
 interested in working with the state system please check out the (still very
 small) salt-states GitHub repo:
 
-https://github.com/saltstack/salt-states
+https://github.com/SS-archive/salt-states
 
 This git repo is the active development branch for determining how a clean
 salt-state database should look and act. Since the salt state system is still

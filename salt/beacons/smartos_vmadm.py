@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Beacon that fires events on vm state changes
 
 .. code-block:: yaml
@@ -17,84 +17,85 @@ Beacon that fires events on vm state changes
       vmadm:
         - interval: 60
         - startup_create_event: True
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals
+
 import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error
 from salt.ext.six.moves import map
+
 # pylint: enable=import-error
 
-__virtualname__ = 'vmadm'
+__virtualname__ = "vmadm"
 VMADM_STATE = {
-  'first_run': True,
-  'vms': [],
+    "first_run": True,
+    "vms": [],
 }
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Provides vmadm beacon on SmartOS
-    '''
-    if 'vmadm.list' in __salt__:
+    """
+    if "vmadm.list" in __salt__:
         return True
     else:
         return (
             False,
-            '{0} beacon can only be loaded on SmartOS compute nodes'.format(
+            "{0} beacon can only be loaded on SmartOS compute nodes".format(
                 __virtualname__
-            )
+            ),
         )
 
 
 def validate(config):
-    '''
+    """
     Validate the beacon configuration
-    '''
+    """
     vcfg_ret = True
-    vcfg_msg = 'Valid beacon configuration'
+    vcfg_msg = "Valid beacon configuration"
 
     if not isinstance(config, list):
         vcfg_ret = False
-        vcfg_msg = 'Configuration for vmadm beacon must be a list!'
+        vcfg_msg = "Configuration for vmadm beacon must be a list!"
 
     return vcfg_ret, vcfg_msg
 
 
 def beacon(config):
-    '''
+    """
     Poll vmadm for changes
-    '''
+    """
     ret = []
 
     # NOTE: lookup current images
-    current_vms = __salt__['vmadm.list'](
-        keyed=True,
-        order='uuid,state,alias,hostname,dns_domain',
+    current_vms = __salt__["vmadm.list"](
+        keyed=True, order="uuid,state,alias,hostname,dns_domain",
     )
 
     # NOTE: apply configuration
-    if VMADM_STATE['first_run']:
-        log.info('Applying configuration for vmadm beacon')
+    if VMADM_STATE["first_run"]:
+        log.info("Applying configuration for vmadm beacon")
 
         _config = {}
         list(map(_config.update, config))
 
-        if 'startup_create_event' not in _config or not _config['startup_create_event']:
-            VMADM_STATE['vms'] = current_vms
+        if "startup_create_event" not in _config or not _config["startup_create_event"]:
+            VMADM_STATE["vms"] = current_vms
 
     # NOTE: create events
     for uuid in current_vms:
         event = {}
-        if uuid not in VMADM_STATE['vms']:
-            event['tag'] = "created/{}".format(uuid)
+        if uuid not in VMADM_STATE["vms"]:
+            event["tag"] = "created/{}".format(uuid)
             for label in current_vms[uuid]:
-                if label == 'state':
+                if label == "state":
                     continue
                 event[label] = current_vms[uuid][label]
 
@@ -102,14 +103,14 @@ def beacon(config):
             ret.append(event)
 
     # NOTE: deleted events
-    for uuid in VMADM_STATE['vms']:
+    for uuid in VMADM_STATE["vms"]:
         event = {}
         if uuid not in current_vms:
-            event['tag'] = "deleted/{}".format(uuid)
-            for label in VMADM_STATE['vms'][uuid]:
-                if label == 'state':
+            event["tag"] = "deleted/{}".format(uuid)
+            for label in VMADM_STATE["vms"][uuid]:
+                if label == "state":
                     continue
-                event[label] = VMADM_STATE['vms'][uuid][label]
+                event[label] = VMADM_STATE["vms"][uuid][label]
 
         if event:
             ret.append(event)
@@ -117,12 +118,17 @@ def beacon(config):
     # NOTE: state change events
     for uuid in current_vms:
         event = {}
-        if VMADM_STATE['first_run'] or \
-           uuid not in VMADM_STATE['vms'] or \
-           current_vms[uuid].get('state', 'unknown') != VMADM_STATE['vms'][uuid].get('state', 'unknown'):
-            event['tag'] = "{}/{}".format(current_vms[uuid].get('state', 'unknown'), uuid)
+        if (
+            VMADM_STATE["first_run"]
+            or uuid not in VMADM_STATE["vms"]
+            or current_vms[uuid].get("state", "unknown")
+            != VMADM_STATE["vms"][uuid].get("state", "unknown")
+        ):
+            event["tag"] = "{}/{}".format(
+                current_vms[uuid].get("state", "unknown"), uuid
+            )
             for label in current_vms[uuid]:
-                if label == 'state':
+                if label == "state":
                     continue
                 event[label] = current_vms[uuid][label]
 
@@ -130,12 +136,13 @@ def beacon(config):
             ret.append(event)
 
     # NOTE: update stored state
-    VMADM_STATE['vms'] = current_vms
+    VMADM_STATE["vms"] = current_vms
 
     # NOTE: disable first_run
-    if VMADM_STATE['first_run']:
-        VMADM_STATE['first_run'] = False
+    if VMADM_STATE["first_run"]:
+        VMADM_STATE["first_run"] = False
 
     return ret
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

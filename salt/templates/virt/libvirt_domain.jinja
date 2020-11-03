@@ -1,9 +1,33 @@
+{%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         <vcpu>{{ cpu }}</vcpu>
-        <memory unit='KiB'>{{ mem }}</memory>
-        <currentMemory unit='KiB'>{{ mem }}</currentMemory>
-        <os>
+        {%- if mem.max %}
+        <maxMemory {{ mem.slots }} unit='KiB'> {{ mem.max }}</maxMemory>
+        {%- endif %}
+        {%- if mem.boot %}
+        <memory unit='KiB'>{{ mem.boot }}</memory>
+        {%- endif %}
+        {%- if mem.current %}
+        <currentMemory unit='KiB'>{{ mem.current }}</currentMemory>
+        {%- endif %}
+        {%- if mem %}
+        <memtune>
+            {%- if 'hard_limit' in mem and mem.hard_limit %}
+                <hard_limit unit="KiB">{{ mem.hard_limit }}</hard_limit>
+            {%- endif %}
+            {%- if 'soft_limit' in mem and mem.soft_limit %}
+                <soft_limit unit="KiB">{{ mem.soft_limit }}</soft_limit>
+            {%- endif %}
+            {%- if 'swap_hard_limit' in mem and mem.swap_hard_limit %}
+                <swap_hard_limit unit="KiB">{{ mem.swap_hard_limit }}</swap_hard_limit>
+            {%- endif %}
+            {%- if 'min_guarantee' in mem and mem.min_guarantee %}
+                <min_guarantee unit="KiB">{{ mem.min_guarantee }}</min_guarantee>
+            {%- endif %}
+        </memtune>
+        {%- endif %}
+        <os {{ boot.os_attrib }}>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
                 {% if boot %}
                   {% if 'kernel' in boot %}
@@ -15,6 +39,12 @@
                   {% if 'cmdline' in boot %}
                     <cmdline>{{ boot.cmdline }}</cmdline>
                   {% endif %}
+                  {% if 'loader' in boot %}
+                    <loader readonly='yes' type='pflash'>{{ boot.loader }}</loader>
+                  {% endif %}
+                  {% if 'nvram' in boot %}
+                    <nvram template='{{boot.nvram}}'></nvram>
+                  {% endif %}
                 {% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
@@ -22,16 +52,23 @@
         </os>
         <devices>
                 {% for disk in disks %}
-                <disk type='file' device='{{ disk.device }}'>
-                        {% if 'source_file' in disk %}
+                <disk type='{{ disk.type }}' device='{{ disk.device }}'>
+                        {% if disk.type == 'file' and 'source_file' in disk -%}
                         <source file='{{ disk.source_file }}' />
                         {% endif %}
+                        {% if disk.type == 'block' -%}
+                        <source dev='{{ disk.source_file }}' />
+                        {% endif %}
+                        {% if disk.type == 'volume' and 'pool' in disk -%}
+                        <source pool='{{ disk.pool }}' volume='{{ disk.volume }}' />
+                        {% endif %}
+                        {%- if disk.type == 'network' %}{{ libvirt_disks.network_source(disk) }}{%- endif %}
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />
                         {% if disk.address -%}
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.type }}' cache='none' io='native'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='native'/>
                         {% endif %}
                 </disk>
                 {% endfor %}
@@ -43,7 +80,9 @@
                 {% for nic in nics %}
                 <interface type='{{ nic.type }}'>
                     <source {{ nic.type }}='{{ nic.source }}'/>
+                    {% if nic.get('mac') -%}
                     <mac address='{{ nic.mac }}'/>
+                    {%- endif %}
                     {% if nic.model %}<model type='{{ nic.model }}'/>{% endif %}
                 </interface>
                 {% endfor %}

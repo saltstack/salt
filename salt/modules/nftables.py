@@ -1,74 +1,70 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Support for nftables
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import python libs
+import json
 import logging
 import re
 
-# Import salt libs
-from salt.ext import six
 import salt.utils.data
 import salt.utils.files
 import salt.utils.path
+from salt.exceptions import CommandExecutionError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.exceptions import (
-    CommandExecutionError
-)
-
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 _NFTABLES_FAMILIES = {
-        'ipv4': 'ip',
-        'ip4': 'ip',
-        'ip': 'ip',
-        'ipv6': 'ip6',
-        'ip6': 'ip6',
-        'inet': 'inet',
-        'arp': 'arp',
-        'bridge': 'bridge',
-        'netdev': 'netdev'
-        }
+    "ipv4": "ip",
+    "ip4": "ip",
+    "ip": "ip",
+    "ipv6": "ip6",
+    "ip6": "ip6",
+    "inet": "inet",
+    "arp": "arp",
+    "bridge": "bridge",
+    "netdev": "netdev",
+}
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if nftables is installed
-    '''
-    if salt.utils.path.which('nft'):
-        return 'nftables'
-    return (False, 'The nftables execution module failed to load: nftables is not installed.')
+    """
+    if salt.utils.path.which("nft"):
+        return "nftables"
+    return (
+        False,
+        "The nftables execution module failed to load: nftables is not installed.",
+    )
 
 
 def _nftables_cmd():
-    '''
+    """
     Return correct command
-    '''
-    return 'nft'
+    """
+    return "nft"
 
 
-def _conf(family='ip'):
-    '''
+def _conf(family="ip"):
+    """
     Use the same file for rules for now.
-    '''
-    if __grains__['os_family'] == 'RedHat':
-        return '/etc/nftables'
-    elif __grains__['os_family'] == 'Arch':
-        return '/etc/nftables'
-    elif __grains__['os_family'] == 'Debian':
-        return '/etc/nftables'
-    elif __grains__['os'] == 'Gentoo':
-        return '/etc/nftables'
+    """
+    if __grains__["os_family"] == "RedHat":
+        return "/etc/nftables"
+    elif __grains__["os_family"] == "Arch":
+        return "/etc/nftables"
+    elif __grains__["os_family"] == "Debian":
+        return "/etc/nftables"
+    elif __grains__["os"] == "Gentoo":
+        return "/etc/nftables"
     else:
         return False
 
 
 def version():
-    '''
+    """
     Return version from nftables --version
 
     CLI Example:
@@ -77,15 +73,22 @@ def version():
 
         salt '*' nftables.version
 
-    '''
-    cmd = '{0} --version' . format(_nftables_cmd())
-    out = __salt__['cmd.run'](cmd).split()
+    """
+    cmd = "{} --version".format(_nftables_cmd())
+    out = __salt__["cmd.run"](cmd).split()
     return out[1]
 
 
-def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
-               **kwargs):
-    '''
+def build_rule(
+    table=None,
+    chain=None,
+    command=None,
+    position="",
+    full=None,
+    family="ipv4",
+    **kwargs
+):
+    """
     Build a well-formatted nftables rule based on kwargs.
     A `table` and `chain` are not required, unless `full` is True.
 
@@ -116,107 +119,140 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             full=True match=state state=related,established jump=accept \\
             family=ipv6
 
-    '''
-    ret = {'comment': '',
-           'rule': '',
-           'result': False}
+    """
+    ret = {"comment": "", "rule": "", "result": False}
 
-    if 'target' in kwargs:
-        kwargs['jump'] = kwargs['target']
-        del kwargs['target']
+    if "target" in kwargs:
+        kwargs["jump"] = kwargs["target"]
+        del kwargs["target"]
 
-    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
+    for ignore in list(_STATE_INTERNAL_KEYWORDS) + ["chain", "save", "table"]:
         if ignore in kwargs:
             del kwargs[ignore]
 
-    rule = ''
-    proto = ''
+    rule = ""
+    proto = ""
 
     nft_family = _NFTABLES_FAMILIES[family]
 
-    if 'if' in kwargs:
-        rule += 'meta iifname {0} '.format(kwargs['if'])
-        del kwargs['if']
+    if "if" in kwargs:
+        rule += "meta iifname {} ".format(kwargs["if"])
+        del kwargs["if"]
 
-    if 'of' in kwargs:
-        rule += 'meta oifname {0} '.format(kwargs['of'])
-        del kwargs['of']
+    if "of" in kwargs:
+        rule += "meta oifname {} ".format(kwargs["of"])
+        del kwargs["of"]
 
-    if 'proto' in kwargs:
-        proto = kwargs['proto']
+    if "proto" in kwargs:
+        proto = kwargs["proto"]
 
-    if 'state' in kwargs:
-        del kwargs['state']
+    if "state" in kwargs:
+        del kwargs["state"]
 
-    if 'connstate' in kwargs:
-        rule += 'ct state {{ {0}}} '.format(kwargs['connstate'])
-        del kwargs['connstate']
+    if "connstate" in kwargs:
+        rule += "ct state {{ {0} }} ".format(kwargs["connstate"])
+        del kwargs["connstate"]
 
-    if 'dport' in kwargs:
-        kwargs['dport'] = six.text_type(kwargs['dport'])
-        if ':' in kwargs['dport']:
-            kwargs['dport'] = kwargs['dport'].replace(':', '-')
-        rule += 'dport {{ {0} }} '.format(kwargs['dport'])
-        del kwargs['dport']
+    if "icmp-type" in kwargs:
+        rule += "icmp type {{ {0} }} ".format(kwargs["icmp-type"])
+        del kwargs["icmp-type"]
 
-    if 'sport' in kwargs:
-        kwargs['sport'] = six.text_type(kwargs['sport'])
-        if ':' in kwargs['sport']:
-            kwargs['sport'] = kwargs['sport'].replace(':', '-')
-        rule += 'sport {{ {0} }} '.format(kwargs['sport'])
-        del kwargs['sport']
+    if "pkttype" in kwargs:
+        rule += "meta pkttype {{ {0} }} ".format(kwargs["pkttype"])
+        del kwargs["pkttype"]
 
-    if 'dports' in kwargs:
+    if "counter" in kwargs:
+        rule += "counter "
+        del kwargs["counter"]
+
+    if "saddr" in kwargs or "source" in kwargs:
+        rule += "ip saddr {}".format(kwargs.get("saddr") or kwargs.get("source"))
+        if "saddr" in kwargs:
+            del kwargs["saddr"]
+        if "source" in kwargs:
+            del kwargs["source"]
+
+    if "daddr" in kwargs or "destination" in kwargs:
+        rule += "ip daddr {}".format(kwargs.get("daddr") or kwargs.get("destination"))
+        if "daddr" in kwargs:
+            del kwargs["daddr"]
+        if "destination" in kwargs:
+            del kwargs["destination"]
+
+    if "dport" in kwargs:
+        kwargs["dport"] = str(kwargs["dport"])
+        if ":" in kwargs["dport"]:
+            kwargs["dport"] = kwargs["dport"].replace(":", "-")
+        rule += "dport {{ {0} }} ".format(kwargs["dport"])
+        del kwargs["dport"]
+
+    if "sport" in kwargs:
+        kwargs["sport"] = str(kwargs["sport"])
+        if ":" in kwargs["sport"]:
+            kwargs["sport"] = kwargs["sport"].replace(":", "-")
+        rule += "sport {{ {0} }} ".format(kwargs["sport"])
+        del kwargs["sport"]
+
+    if "dports" in kwargs:
         # nftables reverse sorts the ports from
         # high to low, create rule like this
         # so that the check will work
-        _dports = kwargs['dports'].split(',')
+        _dports = kwargs["dports"].split(",")
         _dports = [int(x) for x in _dports]
         _dports.sort(reverse=True)
-        kwargs['dports'] = ', '.join(six.text_type(x) for x in _dports)
+        kwargs["dports"] = ", ".join(str(x) for x in _dports)
 
-        rule += 'dport {{ {0} }} '.format(kwargs['dports'])
-        del kwargs['dports']
+        rule += "dport {{ {0} }} ".format(kwargs["dports"])
+        del kwargs["dports"]
 
-    if 'sports' in kwargs:
+    if "sports" in kwargs:
         # nftables reverse sorts the ports from
         # high to low, create rule like this
         # so that the check will work
-        _sports = kwargs['sports'].split(',')
+        _sports = kwargs["sports"].split(",")
         _sports = [int(x) for x in _sports]
         _sports.sort(reverse=True)
-        kwargs['sports'] = ', '.join(six.text_type(x) for x in _sports)
+        kwargs["sports"] = ", ".join(str(x) for x in _sports)
 
-        rule += 'sport {{ {0} }} '.format(kwargs['sports'])
-        del kwargs['sports']
+        rule += "sport {{ {0} }} ".format(kwargs["sports"])
+        del kwargs["sports"]
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
 
-    if 'jump' in kwargs:
-        after_jump.append('{0} '.format(kwargs['jump']))
-        del kwargs['jump']
+    if "jump" in kwargs:
+        after_jump.append("{} ".format(kwargs["jump"]))
+        del kwargs["jump"]
 
-    if 'j' in kwargs:
-        after_jump.append('{0} '.format(kwargs['j']))
-        del kwargs['j']
+    if "j" in kwargs:
+        after_jump.append("{} ".format(kwargs["j"]))
+        del kwargs["j"]
 
-    if 'to-port' in kwargs:
-        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
-        del kwargs['to-port']
+    if "redirect-to" in kwargs or "to-port" in kwargs:
+        after_jump.append(
+            "redirect to {} ".format(kwargs.get("redirect-to") or kwargs.get("to-port"))
+        )
+        if "redirect-to" in kwargs:
+            del kwargs["redirect-to"]
+        if "to-port" in kwargs:
+            del kwargs["to-port"]
 
-    if 'to-ports' in kwargs:
-        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
-        del kwargs['to-ports']
+    if "to-ports" in kwargs:
+        after_jump.append("--to-ports {} ".format(kwargs["to-ports"]))
+        del kwargs["to-ports"]
 
-    if 'to-destination' in kwargs:
-        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
-        del kwargs['to-destination']
+    if "to-source" in kwargs:
+        after_jump.append("{} ".format(kwargs["to-source"]))
+        del kwargs["to-source"]
 
-    if 'reject-with' in kwargs:
-        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
-        del kwargs['reject-with']
+    if "to-destination" in kwargs:
+        after_jump.append("{} ".format(kwargs["to-destination"]))
+        del kwargs["to-destination"]
+
+    if "reject-with" in kwargs:
+        after_jump.append("reject with {} ".format(kwargs["reject-with"]))
+        del kwargs["reject-with"]
 
     for item in after_jump:
         rule += item
@@ -225,57 +261,47 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     rule = rule.strip()
 
     # Insert the protocol prior to dport or sport
-    rule = rule.replace('dport', '{0} dport'.format(proto))
-    rule = rule.replace('sport', '{0} sport'.format(proto))
+    rule = rule.replace("dport", "{} dport".format(proto))
+    rule = rule.replace("sport", "{} sport".format(proto))
 
-    ret['rule'] = rule
+    ret["rule"] = rule
 
-    if full in ['True', 'true']:
+    if full in ["True", "true"]:
 
         if not table:
-            ret['comment'] = 'Table needs to be specified'
+            ret["comment"] = "Table needs to be specified"
             return ret
 
         if not chain:
-            ret['comment'] = 'Chain needs to be specified'
+            ret["comment"] = "Chain needs to be specified"
             return ret
 
         if not command:
-            ret['comment'] = 'Command needs to be specified'
+            ret["comment"] = "Command needs to be specified"
             return ret
 
-        if command in ['Insert', 'insert', 'INSERT']:
+        if command in ["Insert", "insert", "INSERT"]:
             if position:
-                ret['rule'] = '{0} insert rule {1} {2} {3} ' \
-                              'position {4} {5}'.format(_nftables_cmd(),
-                                                        nft_family,
-                                                        table,
-                                                        chain,
-                                                        position,
-                                                        rule)
+                ret["rule"] = "{} insert rule {} {} {} " "position {} {}".format(
+                    _nftables_cmd(), nft_family, table, chain, position, rule
+                )
             else:
-                ret['rule'] = '{0} insert rule ' \
-                              '{1} {2} {3} {4}'.format(_nftables_cmd(),
-                                                       nft_family,
-                                                       table,
-                                                       chain,
-                                                       rule)
+                ret["rule"] = "{} insert rule " "{} {} {} {}".format(
+                    _nftables_cmd(), nft_family, table, chain, rule
+                )
         else:
-            ret['rule'] = '{0} {1} rule {2} {3} {4} {5}'.format(_nftables_cmd(),
-                                                                command,
-                                                                nft_family,
-                                                                table,
-                                                                chain,
-                                                                rule)
+            ret["rule"] = "{} {} rule {} {} {} {}".format(
+                _nftables_cmd(), command, nft_family, table, chain, rule
+            )
 
-    if ret['rule']:
-        ret['comment'] = 'Successfully built rule'
-    ret['result'] = True
+    if ret["rule"]:
+        ret["comment"] = "Successfully built rule"
+    ret["result"] = True
     return ret
 
 
 def get_saved_rules(conf_file=None):
-    '''
+    """
     Return a data structure of the rules in the conf file
 
     CLI Example:
@@ -284,7 +310,7 @@ def get_saved_rules(conf_file=None):
 
         salt '*' nftables.get_saved_rules
 
-    '''
+    """
     if _conf() and not conf_file:
         conf_file = _conf()
 
@@ -295,14 +321,51 @@ def get_saved_rules(conf_file=None):
         tmpline = line.strip()
         if not tmpline:
             continue
-        if tmpline.startswith('#'):
+        if tmpline.startswith("#"):
             continue
         rules.append(line)
     return rules
 
 
-def get_rules(family='ipv4'):
-    '''
+def list_tables(family="ipv4"):
+    """
+    Return a data structure of the current, in-memory tables
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nftables.list_tables
+
+        salt '*' nftables.list_tables family=ipv6
+
+    """
+    nft_family = _NFTABLES_FAMILIES[family]
+    tables = []
+    cmd = "{} --json --numeric --numeric --numeric list tables {}".format(
+        _nftables_cmd(), nft_family
+    )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
+    if not out:
+        return tables
+
+    try:
+        data = json.loads(out)
+    except ValueError:
+        return tables
+
+    if not data or not data.get("nftables"):
+        return tables
+
+    for item in data.get("nftables", []):
+        if "metainfo" not in item:
+            tables.append(item["table"])
+    log.debug(tables)
+    return tables
+
+
+def get_rules(family="ipv4"):
+    """
     Return a data structure of the current, in-memory rules
 
     CLI Example:
@@ -313,62 +376,102 @@ def get_rules(family='ipv4'):
 
         salt '*' nftables.get_rules family=ipv6
 
-    '''
+    """
+    tables = list_tables(family)
     nft_family = _NFTABLES_FAMILIES[family]
-    rules = []
-    cmd = '{0} --numeric --numeric --numeric ' \
-          'list tables {1}'. format(_nftables_cmd(),
-                                    nft_family)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
-    if not out:
-        return rules
 
-    tables = re.split('\n+', out)
+    rules = []
     for table in tables:
-        table_name = table.split(' ')[1]
-        cmd = '{0} --numeric --numeric --numeric ' \
-              'list table {1} {2}'.format(_nftables_cmd(),
-                                          nft_family, table_name)
-        out = __salt__['cmd.run'](cmd, python_shell=False)
+        table_name = table["name"]
+        cmd = "{} --numeric --numeric --numeric " "list table {} {}".format(
+            _nftables_cmd(), nft_family, table_name
+        )
+        out = __salt__["cmd.run"](cmd, python_shell=False)
         rules.append(out)
     return rules
 
 
-def save(filename=None, family='ipv4'):
-    '''
-    Save the current in-memory rules to disk
+def get_rules_json(family="ipv4"):
+    """
+    .. versionadded:: 3002
+
+    Return a list of dictionaries comprising the current, in-memory rules
+
+    family
+        Networking family, either ipv4 or ipv6
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nftables.get_rules_json
+
+        salt '*' nftables.get_rules_json family=ipv6
+
+    """
+    nft_family = _NFTABLES_FAMILIES[family]
+    rules = []
+    cmd = "{} --numeric --numeric --numeric --json list ruleset {}".format(
+        _nftables_cmd(), nft_family
+    )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
+    if not out:
+        return rules
+
+    try:
+        rules = (json.loads(out))["nftables"]
+    except (KeyError, ValueError):
+        return rules
+
+    return rules
+
+
+def save(filename=None, family="ipv4"):
+    """
+    .. versionchanged:: 3002
+
+    Save the current in-memory rules to disk. On systems where /etc/nftables is
+    a directory, a file named salt-all-in-one.nft will be dropped inside by default.
+    The main nftables configuration will need to include this file.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' nftables.save /etc/nftables
-    '''
+    """
     if _conf() and not filename:
         filename = _conf()
 
-    nft_families = ['ip', 'ip6', 'arp', 'bridge']
+    # Not a typo. Invert the dictionary twice to get unique values only.
+    nft_families = {v: k for k, v in _NFTABLES_FAMILIES.items()}
+    nft_families = {v: k for k, v in _NFTABLES_FAMILIES.items()}
+
     rules = "#! nft -f\n"
+
     for family in nft_families:
         out = get_rules(family)
         if out:
-            rules += '\n'
-        rules = rules + '\n'.join(out)
-    rules = rules + '\n'
+            rules += "\n"
+        rules = rules + "\n".join(out)
+    rules = rules + "\n"
+
+    if __salt__["file.directory_exists"](filename):
+        filename = "{}/salt-all-in-one.nft".format(filename)
 
     try:
-        with salt.utils.files.fopen(filename, 'wb') as _fh:
+        with salt.utils.files.fopen(filename, "wb") as _fh:
             # Write out any changes
-            _fh.writelines(salt.utils.data.encode(rules))
-    except (IOError, OSError) as exc:
+            _fh.write(salt.utils.data.encode(rules))
+    except OSError as exc:
         raise CommandExecutionError(
-            'Problem writing to configuration file: {0}'.format(exc)
+            "Problem writing to configuration file: {}".format(exc)
         )
     return rules
 
 
-def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
-    '''
+def get_rule_handle(table="filter", chain=None, rule=None, family="ipv4"):
+    """
     Get the handle for a particular rule
 
     This function accepts a rule in a standard nftables command format,
@@ -387,47 +490,46 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
         salt '*' nftables.get_rule_handle filter input \\
             rule='tcp dport 22 log accept' \\
             family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     if not rule:
-        ret['comment'] = 'Rule needs to be specified'
+        ret["comment"] = "Rule needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check(table, chain, rule, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} --numeric --numeric --numeric --handle list chain {1} {2} {3}'.\
-        format(_nftables_cmd(), nft_family, table, chain)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
-    rules = re.split('\n+', out)
+    cmd = "{} --numeric --numeric --numeric --handle list chain {} {} {}".format(
+        _nftables_cmd(), nft_family, table, chain
+    )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
+    rules = re.split("\n+", out)
 
-    pat = re.compile(r'{0} # handle (?P<handle>\d+)'.format(rule))
+    pat = re.compile(r"{} # handle (?P<handle>\d+)".format(rule))
     for r in rules:
         match = pat.search(r)
         if match:
-            return {'result': True, 'handle': match.group('handle')}
-    return {'result': False,
-            'comment': 'Could not find rule {0}'.format(rule)}
+            return {"result": True, "handle": match.group("handle")}
+    return {"result": False, "comment": "Could not find rule {}".format(rule)}
 
 
-def check(table='filter', chain=None, rule=None, family='ipv4'):
-    '''
+def check(table="filter", chain=None, rule=None, family="ipv4"):
+    """
     Check for the existence of a rule in the table and chain
 
     This function accepts a rule in a standard nftables command format,
@@ -446,44 +548,48 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         salt '*' nftables.check filter input \\
             rule='tcp dport 22 log accept' \\
             family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     if not rule:
-        ret['comment'] = 'Rule needs to be specified'
+        ret["comment"] = "Rule needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} --handle --numeric --numeric --numeric list chain {1} {2} {3}'.\
-          format(_nftables_cmd(), nft_family, table, chain)
-    search_rule = '{0} #'.format(rule)
-    out = __salt__['cmd.run'](cmd, python_shell=False).find(search_rule)
+    cmd = "{} --handle --numeric --numeric --numeric list chain {} {} {}".format(
+        _nftables_cmd(), nft_family, table, chain
+    )
+    search_rule = "{} #".format(rule)
+    out = __salt__["cmd.run"](cmd, python_shell=False).find(search_rule)
 
     if out == -1:
-        ret['comment'] = 'Rule {0} in chain {1} in table {2} in family {3} does not exist'.\
-                         format(rule, chain, table, family)
+        ret[
+            "comment"
+        ] = "Rule {} in chain {} in table {} in family {} does not exist".format(
+            rule, chain, table, family
+        )
     else:
-        ret['comment'] = 'Rule {0} in chain {1} in table {2} in family {3} exists'.\
-                         format(rule, chain, table, family)
-        ret['result'] = True
+        ret["comment"] = "Rule {} in chain {} in table {} in family {} exists".format(
+            rule, chain, table, family
+        )
+        ret["result"] = True
     return ret
 
 
-def check_chain(table='filter', chain=None, family='ipv4'):
-    '''
+def check_chain(table="filter", chain=None, family="ipv4"):
+    """
     .. versionadded:: 2014.7.0
 
     Check for the existence of a chain in the table
@@ -496,60 +602,62 @@ def check_chain(table='filter', chain=None, family='ipv4'):
 
         IPv6:
         salt '*' nftables.check_chain filter input family=ipv6
-    '''
+    """
 
-    ret = {'comment': '',
-           'result': False}
+    ret = {"comment": "", "result": False}
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} list table {1} {2}' . format(_nftables_cmd(), nft_family, table)
-    out = __salt__['cmd.run'](cmd, python_shell=False).find('chain {0} {{'.format(chain))
+    cmd = "{} list table {} {}".format(_nftables_cmd(), nft_family, table)
+    out = __salt__["cmd.run"](cmd, python_shell=False).find(
+        "chain {0} {{".format(chain)
+    )
 
     if out == -1:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} does not exist'.\
-                         format(chain, table, family)
+        ret["comment"] = "Chain {} in table {} in family {} does not exist".format(
+            chain, table, family
+        )
     else:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} exists'.\
-                         format(chain, table, family)
-        ret['result'] = True
+        ret["comment"] = "Chain {} in table {} in family {} exists".format(
+            chain, table, family
+        )
+        ret["result"] = True
     return ret
 
 
-def check_table(table=None, family='ipv4'):
-    '''
+def check_table(table=None, family="ipv4"):
+    """
     Check for the existence of a table
 
     CLI Example::
 
         salt '*' nftables.check_table nat
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not table:
-        ret['comment'] = 'Table needs to be specified'
+        ret["comment"] = "Table needs to be specified"
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} list tables {1}' . format(_nftables_cmd(), nft_family)
-    out = __salt__['cmd.run'](cmd, python_shell=False).find('table {0} {1}'.format(nft_family, table))
+    cmd = "{} list tables {}".format(_nftables_cmd(), nft_family)
+    out = __salt__["cmd.run"](cmd, python_shell=False).find(
+        "table {} {}".format(nft_family, table)
+    )
 
     if out == -1:
-        ret['comment'] = 'Table {0} in family {1} does not exist'.\
-                         format(table, family)
+        ret["comment"] = "Table {} in family {} does not exist".format(table, family)
     else:
-        ret['comment'] = 'Table {0} in family {1} exists'.\
-                         format(table, family)
-        ret['result'] = True
+        ret["comment"] = "Table {} in family {} exists".format(table, family)
+        ret["result"] = True
     return ret
 
 
-def new_table(table, family='ipv4'):
-    '''
+def new_table(table, family="ipv4"):
+    """
     .. versionadded:: 2014.7.0
 
     Create new custom table.
@@ -562,34 +670,33 @@ def new_table(table, family='ipv4'):
 
         IPv6:
         salt '*' nftables.new_table filter family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not table:
-        ret['comment'] = 'Table needs to be specified'
+        ret["comment"] = "Table needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if res['result']:
+    if res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} add table {1} {2}'.format(_nftables_cmd(), nft_family, table)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = "{} add table {} {}".format(_nftables_cmd(), nft_family, table)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        ret['comment'] = 'Table {0} in family {1} created'.\
-                         format(table, family)
-        ret['result'] = True
+        ret["comment"] = "Table {} in family {} created".format(table, family)
+        ret["result"] = True
     else:
-        ret['comment'] = 'Table {0} in family {1} could not be created'.\
-                         format(table, family)
+        ret["comment"] = "Table {} in family {} could not be created".format(
+            table, family
+        )
     return ret
 
 
-def delete_table(table, family='ipv4'):
-    '''
+def delete_table(table, family="ipv4"):
+    """
     .. versionadded:: 2014.7.0
 
     Create new custom table.
@@ -602,34 +709,35 @@ def delete_table(table, family='ipv4'):
 
         IPv6:
         salt '*' nftables.delete_table filter family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not table:
-        ret['comment'] = 'Table needs to be specified'
+        ret["comment"] = "Table needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} delete table {1} {2}'.format(_nftables_cmd(), nft_family, table)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = "{} delete table {} {}".format(_nftables_cmd(), nft_family, table)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        ret['comment'] = 'Table {0} in family {1} deleted'.\
-                         format(table, family)
-        ret['result'] = True
+        ret["comment"] = "Table {} in family {} deleted".format(table, family)
+        ret["result"] = True
     else:
-        ret['comment'] = 'Table {0} in family {1} could not be deleted'.\
-                         format(table, family)
+        ret["comment"] = "Table {} in family {} could not be deleted".format(
+            table, family
+        )
     return ret
 
 
-def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=None, family='ipv4'):
-    '''
+def new_chain(
+    table="filter", chain=None, table_type=None, hook=None, priority=None, family="ipv4"
+):
+    """
     .. versionadded:: 2014.7.0
 
     Create new chain to the specified table.
@@ -652,50 +760,54 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
                 table_type=filter hook=input priority=0 family=ipv6
 
         salt '*' nftables.new_chain filter foo family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if res['result']:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} already exists'.\
-                format(chain, table, family)
+    if res["result"]:
+        ret["comment"] = "Chain {} in table {} in family {} already exists".format(
+            chain, table, family
+        )
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} add chain {1} {2} {3}'.\
-          format(_nftables_cmd(), nft_family, table, chain)
+    cmd = "{} -- add chain {} {} {}".format(_nftables_cmd(), nft_family, table, chain)
     if table_type or hook or priority:
-        if table_type and hook and six.text_type(priority):
-            cmd = r'{0} \{{ type {1} hook {2} priority {3}\; \}}'.\
-                    format(cmd, table_type, hook, priority)
+        if table_type and hook and str(priority):
+            cmd = r"{0} \{{ type {1} hook {2} priority {3}\; \}}".format(
+                cmd, table_type, hook, priority
+            )
         else:
             # Specify one, require all
-            ret['comment'] = 'Table_type, hook, and priority required.'
+            ret["comment"] = "Table_type, hook, and priority required."
             return ret
 
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} created'.\
-                         format(chain, table, family)
-        ret['result'] = True
+        ret["comment"] = "Chain {} in table {} in family {} created".format(
+            chain, table, family
+        )
+        ret["result"] = True
     else:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} could not be created'.\
-                         format(chain, table, family)
+        ret[
+            "comment"
+        ] = "Chain {} in table {} in family {} could not be created".format(
+            chain, table, family
+        )
     return ret
 
 
-def delete_chain(table='filter', chain=None, family='ipv4'):
-    '''
+def delete_chain(table="filter", chain=None, family="ipv4"):
+    """
     .. versionadded:: 2014.7.0
 
     Delete the chain from the specified table.
@@ -712,39 +824,41 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
         salt '*' nftables.delete_chain filter input family=ipv6
 
         salt '*' nftables.delete_chain filter foo family=ipv6
-    '''
-    ret = {'comment': '',
-           'result': False}
+    """
+    ret = {"comment": "", "result": False}
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} delete chain {1} {2} {3}'.\
-          format(_nftables_cmd(), nft_family, table, chain)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = "{} delete chain {} {} {}".format(_nftables_cmd(), nft_family, table, chain)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} deleted'.\
-                         format(chain, table, family)
-        ret['result'] = True
+        ret["comment"] = "Chain {} in table {} in family {} deleted".format(
+            chain, table, family
+        )
+        ret["result"] = True
     else:
-        ret['comment'] = 'Chain {0} in table {1} in family {2} could not be deleted'.\
-                         format(chain, table, family)
+        ret[
+            "comment"
+        ] = "Chain {} in table {} in family {} could not be deleted".format(
+            chain, table, family
+        )
     return ret
 
 
-def append(table='filter', chain=None, rule=None, family='ipv4'):
-    '''
+def append(table="filter", chain=None, rule=None, family="ipv4"):
+    """
     Append a rule to the specified table & chain.
 
     This function accepts a rule in a standard nftables command format,
@@ -763,49 +877,61 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         salt '*' nftables.append filter input \\
             rule='tcp dport 22 log accept' \\
             family=ipv6
-    '''
-    ret = {'comment': 'Failed to append rule {0} to chain {1} in table {2}.'.format(rule, chain, table),
-           'result': False}
+    """
+    ret = {
+        "comment": "Failed to append rule {} to chain {} in table {}.".format(
+            rule, chain, table
+        ),
+        "result": False,
+    }
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     if not rule:
-        ret['comment'] = 'Rule needs to be specified'
+        ret["comment"] = "Rule needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check(table, chain, rule, family=family)
-    if res['result']:
-        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} already exists'.\
-                         format(rule, chain, table, family)
+    if res["result"]:
+        ret[
+            "comment"
+        ] = "Rule {} chain {} in table {} in family {} already exists".format(
+            rule, chain, table, family
+        )
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} add rule {1} {2} {3} {4}'.\
-          format(_nftables_cmd(), nft_family, table, chain, rule)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = "{} add rule {} {} {} {}".format(
+        _nftables_cmd(), nft_family, table, chain, rule
+    )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
-        ret['result'] = True
-        ret['comment'] = 'Added rule "{0}" chain {1} in table {2} in family {3}.'.\
-                         format(rule, chain, table, family)
+    if not out:
+        ret["result"] = True
+        ret["comment"] = 'Added rule "{}" chain {} in table {} in family {}.'.format(
+            rule, chain, table, family
+        )
     else:
-        ret['comment'] = 'Failed to add rule "{0}" chain {1} in table {2} in family {3}.'.\
-                         format(rule, chain, table, family)
+        ret[
+            "comment"
+        ] = 'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
+            rule, chain, table, family
+        )
     return ret
 
 
-def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
-    '''
+def insert(table="filter", chain=None, position=None, rule=None, family="ipv4"):
+    """
     Insert a rule into the specified table & chain, at the specified position.
 
     If position is not specified, rule will be inserted in first position.
@@ -833,53 +959,64 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         salt '*' nftables.insert filter input position=3 \\
             rule='tcp dport 22 log accept' \\
             family=ipv6
-    '''
-    ret = {'comment': 'Failed to insert rule {0} to table {1}.'.format(rule, table),
-           'result': False}
+    """
+    ret = {
+        "comment": "Failed to insert rule {} to table {}.".format(rule, table),
+        "result": False,
+    }
 
     if not chain:
-        ret['comment'] = 'Chain needs to be specified'
+        ret["comment"] = "Chain needs to be specified"
         return ret
 
     if not rule:
-        ret['comment'] = 'Rule needs to be specified'
+        ret["comment"] = "Rule needs to be specified"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check(table, chain, rule, family=family)
-    if res['result']:
-        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} already exists'.\
-                         format(rule, chain, table, family)
+    if res["result"]:
+        ret[
+            "comment"
+        ] = "Rule {} chain {} in table {} in family {} already exists".format(
+            rule, chain, table, family
+        )
         return ret
 
     nft_family = _NFTABLES_FAMILIES[family]
     if position:
-        cmd = '{0} insert rule {1} {2} {3} position {4} {5}'.\
-                format(_nftables_cmd(), nft_family, table, chain, position, rule)
+        cmd = "{} insert rule {} {} {} position {} {}".format(
+            _nftables_cmd(), nft_family, table, chain, position, rule
+        )
     else:
-        cmd = '{0} insert rule {1} {2} {3} {4}'.\
-                format(_nftables_cmd(), nft_family, table, chain, rule)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+        cmd = "{} insert rule {} {} {} {}".format(
+            _nftables_cmd(), nft_family, table, chain, rule
+        )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
-        ret['result'] = True
-        ret['comment'] = 'Added rule "{0}" chain {1} in table {2} in family {3}.'.\
-                         format(rule, chain, table, family)
+    if not out:
+        ret["result"] = True
+        ret["comment"] = 'Added rule "{}" chain {} in table {} in family {}.'.format(
+            rule, chain, table, family
+        )
     else:
-        ret['comment'] = 'Failed to add rule "{0}" chain {1} in table {2} in family {3}.'.\
-                         format(rule, chain, table, family)
+        ret[
+            "comment"
+        ] = 'Failed to add rule "{}" chain {} in table {} in family {}.'.format(
+            rule, chain, table, family
+        )
     return ret
 
 
-def delete(table, chain=None, position=None, rule=None, family='ipv4'):
-    '''
+def delete(table, chain=None, position=None, rule=None, family="ipv4"):
+    """
     Delete a rule from the specified table & chain, specifying either the rule
         in its entirety, or the rule's position in the chain.
 
@@ -903,26 +1040,31 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
         salt '*' nftables.delete filter input \\
             rule='tcp dport 22 log accept' \\
             family=ipv6
-    '''
-    ret = {'comment': 'Failed to delete rule {0} in table {1}.'.format(rule, table),
-           'result': False}
+    """
+    ret = {
+        "comment": "Failed to delete rule {} in table {}.".format(rule, table),
+        "result": False,
+    }
 
     if position and rule:
-        ret['comment'] = 'Only specify a position or a rule, not both'
+        ret["comment"] = "Only specify a position or a rule, not both"
         return ret
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check_chain(table, chain, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     res = check(table, chain, rule, family=family)
-    if not res['result']:
-        ret['comment'] = 'Rule {0} chain {1} in table {2} in family {3} does not exist'.\
-                         format(rule, chain, table, family)
+    if not res["result"]:
+        ret[
+            "comment"
+        ] = "Rule {} chain {} in table {} in family {} does not exist".format(
+            rule, chain, table, family
+        )
         return ret
 
     # nftables rules can only be deleted using the handle
@@ -931,22 +1073,29 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
         position = get_rule_handle(table, chain, rule, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
-    cmd = '{0} delete rule {1} {2} {3} handle {4}'.\
-          format(_nftables_cmd(), nft_family, table, chain, position)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+    cmd = "{} delete rule {} {} {} handle {}".format(
+        _nftables_cmd(), nft_family, table, chain, position
+    )
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
-        ret['result'] = True
-        ret['comment'] = 'Deleted rule "{0}" in chain {1} in table {2} in family {3}.'.\
-                         format(rule, chain, table, family)
+    if not out:
+        ret["result"] = True
+        ret[
+            "comment"
+        ] = 'Deleted rule "{}" in chain {} in table {} in family {}.'.format(
+            rule, chain, table, family
+        )
     else:
-        ret['comment'] = 'Failed to delete rule "{0}" in chain {1}  table {2} in family {3}'.\
-                         format(rule, chain, table, family)
+        ret[
+            "comment"
+        ] = 'Failed to delete rule "{}" in chain {}  table {} in family {}'.format(
+            rule, chain, table, family
+        )
     return ret
 
 
-def flush(table='filter', chain='', family='ipv4'):
-    '''
+def flush(table="filter", chain="", family="ipv4"):
+    """
     Flush the chain in the specified table, flush all chains in the specified
     table if chain is not specified.
 
@@ -960,34 +1109,147 @@ def flush(table='filter', chain='', family='ipv4'):
 
         IPv6:
         salt '*' nftables.flush filter input family=ipv6
-    '''
-    ret = {'comment': 'Failed to flush rules from chain {0} in table {1}.'.format(chain, table),
-           'result': False}
+    """
+    ret = {
+        "comment": "Failed to flush rules from chain {} in table {}.".format(
+            chain, table
+        ),
+        "result": False,
+    }
 
     res = check_table(table, family=family)
-    if not res['result']:
+    if not res["result"]:
         return res
 
     nft_family = _NFTABLES_FAMILIES[family]
 
     if chain:
         res = check_chain(table, chain, family=family)
-        if not res['result']:
+        if not res["result"]:
             return res
-        cmd = '{0} flush chain {1} {2} {3}'.\
-              format(_nftables_cmd(), nft_family, table, chain)
-        comment = 'from chain {0} in table {1} in family {2}.'.\
-                  format(chain, table, family)
+        cmd = "{} flush chain {} {} {}".format(
+            _nftables_cmd(), nft_family, table, chain
+        )
+        comment = "from chain {} in table {} in family {}.".format(chain, table, family)
     else:
-        cmd = '{0} flush table {1} {2}'.\
-                format(_nftables_cmd(), nft_family, table)
-        comment = 'from table {0} in family {1}.'.\
-                  format(table, family)
-    out = __salt__['cmd.run'](cmd, python_shell=False)
+        cmd = "{} flush table {} {}".format(_nftables_cmd(), nft_family, table)
+        comment = "from table {} in family {}.".format(table, family)
+    out = __salt__["cmd.run"](cmd, python_shell=False)
 
-    if len(out) == 0:
-        ret['result'] = True
-        ret['comment'] = 'Flushed rules {0}'.format(comment)
+    if not out:
+        ret["result"] = True
+        ret["comment"] = "Flushed rules {}".format(comment)
     else:
-        ret['comment'] = 'Failed to flush rules {0}'.format(comment)
+        ret["comment"] = "Failed to flush rules {}".format(comment)
     return ret
+
+
+def get_policy(table="filter", chain=None, family="ipv4"):
+    """
+    .. versionadded:: 3002
+
+    Return the current policy for the specified table/chain
+
+    table
+        Name of the table containing the chain to check
+
+    chain
+        Name of the chain to get the policy for
+
+    family
+        Networking family, either ipv4 or ipv6
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nftables.get_policy filter input
+
+        IPv6:
+        salt '*' nftables.get_policy filter input family=ipv6
+    """
+    if not chain:
+        return "Error: Chain needs to be specified"
+
+    nft_family = _NFTABLES_FAMILIES[family]
+
+    rules = get_rules_json(family=nft_family)
+
+    try:
+        for rule in rules["nftables"]:
+            if (
+                rule.get("chain", {}).get("name") == chain
+                and rule.get("chain", {}).get("type") == table
+            ):
+                return rule["chain"]["policy"]
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def set_policy(table="filter", chain=None, policy=None, family="ipv4"):
+    """
+    .. versionadded:: 3002
+
+    Set the current policy for the specified table/chain. This only works on
+    chains with an existing base chain.
+
+    table
+        Name of the table containing the chain to modify
+
+    chain
+        Name of the chain to set the policy for
+
+    policy
+        accept or drop
+
+    family
+        Networking family, either ipv4 or ipv6
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nftables.set_policy filter input accept
+
+        IPv6:
+        salt '*' nftables.set_policy filter input accept family=ipv6
+    """
+    if not chain:
+        return "Error: Chain needs to be specified"
+    if not policy:
+        return "Error: Policy needs to be specified"
+
+    nft_family = _NFTABLES_FAMILIES[family]
+
+    chain_info = {}
+    rules = get_rules_json(family=nft_family)
+
+    if not rules:
+        return False
+
+    for rule in rules:
+        try:
+            if rule["chain"]["table"] == table and rule["chain"]["name"] == chain:
+                chain_info = rule["chain"]
+                break
+        except KeyError:
+            continue
+
+    if not chain_info:
+        return False
+
+    cmd = "{} add chain {} {} {}".format(_nftables_cmd(), nft_family, table, chain)
+
+    # We can't infer the base chain parameters. Bail out if they're not present.
+    if "type" not in chain_info or "hook" not in chain_info or "prio" not in chain_info:
+        return False
+
+    params = "type {} hook {} priority {};".format(
+        chain_info["type"], chain_info["hook"], chain_info["prio"]
+    )
+
+    cmd = '{0} "{{ {1} policy {2}; }}"'.format(cmd, params, policy)
+
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+
+    return not out["retcode"]

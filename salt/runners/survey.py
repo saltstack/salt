@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 A general map/reduce style salt runner for aggregating results
 returned by several different minions.
 
@@ -10,7 +10,7 @@ matching results.
 
 Useful for playing the game: *"some of these things are not like the others..."*
 when identifying discrepancies in a large infrastructure managed by salt.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -25,7 +25,7 @@ from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
-    '''
+    """
     Return the MATCHING minion pools from the aggregated and sorted results of
     a salt command
 
@@ -50,13 +50,13 @@ def hash(*args, **kwargs):
     .. code-block:: bash
 
         salt-run survey.hash "*" file.get_hash /etc/salt/minion survey_sort=up
-    '''
+    """
 
     return _get_pool_results(*args, **kwargs)
 
 
 def diff(*args, **kwargs):
-    '''
+    """
     Return the DIFFERENCE of the result sets returned by each matching minion
     pool
 
@@ -85,7 +85,7 @@ def diff(*args, **kwargs):
     .. code-block:: bash
 
         salt-run survey.diff survey_sort=up "*" cp.get_file_str file:///etc/hosts
-    '''
+    """
     # TODO: The salt execution module "cp.get_file_str file:///..." is a
     # non-obvious way to display the differences between files using
     # survey.diff .  A more obvious method needs to be found or developed.
@@ -96,36 +96,36 @@ def diff(*args, **kwargs):
 
     is_first_time = True
     for k in bulk_ret:
-        print('minion pool :\n'
-              '------------')
-        print(k['pool'])
-        print('pool size :\n'
-              '----------')
-        print('    ' + six.text_type(len(k['pool'])))
+        print("minion pool :\n" "------------")
+        print(k["pool"])
+        print("pool size :\n" "----------")
+        print("    " + six.text_type(len(k["pool"])))
         if is_first_time:
             is_first_time = False
-            print('pool result :\n'
-                  '------------')
-            print('    ' + bulk_ret[0]['result'])
+            print("pool result :\n" "------------")
+            print("    " + bulk_ret[0]["result"])
             print()
             continue
 
-        outs = ('differences from "{0}" results :').format(
-            bulk_ret[0]['pool'][0])
+        outs = ('differences from "{0}" results :').format(bulk_ret[0]["pool"][0])
         print(outs)
-        print('-' * (len(outs) - 1))
-        from_result = bulk_ret[0]['result'].splitlines()
+        print("-" * (len(outs) - 1))
+        from_result = bulk_ret[0]["result"].splitlines()
         for i in range(0, len(from_result)):
-            from_result[i] += '\n'
-        to_result = k['result'].splitlines()
+            from_result[i] += "\n"
+        to_result = k["result"].splitlines()
         for i in range(0, len(to_result)):
-            to_result[i] += '\n'
-        outs = ''
-        outs += ''.join(difflib.unified_diff(from_result,
-                                             to_result,
-                                             fromfile=bulk_ret[0]['pool'][0],
-                                             tofile=k['pool'][0],
-                                             n=0))
+            to_result[i] += "\n"
+        outs = ""
+        outs += "".join(
+            difflib.unified_diff(
+                from_result,
+                to_result,
+                fromfile=bulk_ret[0]["pool"][0],
+                tofile=k["pool"][0],
+                n=0,
+            )
+        )
         print(outs)
         print()
 
@@ -133,7 +133,7 @@ def diff(*args, **kwargs):
 
 
 def _get_pool_results(*args, **kwargs):
-    '''
+    """
     A helper function which returns a dictionary of minion pools along with
     their matching result sets.
     Useful for developing other "survey style" functions.
@@ -141,7 +141,7 @@ def _get_pool_results(*args, **kwargs):
     specifying sort order.
     Because the kwargs namespace of the "salt" and "survey" command are shared,
     the name "survey_sort" was chosen to help avoid option conflicts.
-    '''
+    """
     # TODO: the option "survey.sort=" would be preferred for namespace
     # separation but the kwargs parser for the salt-run command seems to
     # improperly pass the options containing a "." in them for later modules to
@@ -153,34 +153,45 @@ def _get_pool_results(*args, **kwargs):
     cmd = args[1]
     ret = {}
 
-    sort = kwargs.pop('survey_sort', 'down')
-    direction = sort != 'up'
+    sort = kwargs.pop("survey_sort", "down")
+    direction = sort != "up"
 
-    tgt_type = kwargs.pop('tgt_type', 'compound')
-    if tgt_type not in ['compound', 'pcre']:
-        tgt_type = 'compound'
+    tgt_type = kwargs.pop("tgt_type", "compound")
+    if tgt_type not in ["compound", "pcre"]:
+        tgt_type = "compound"
 
-    kwargs_passthru = dict((k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith('_'))
+    kwargs_passthru = dict(
+        (k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith("_")
+    )
 
-    client = salt.client.get_local_client(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__["conf_file"])
     try:
-        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], tgt_type=tgt_type, kwarg=kwargs_passthru)
+        minions = client.cmd(
+            tgt,
+            cmd,
+            args[2:],
+            timeout=__opts__["timeout"],
+            tgt_type=tgt_type,
+            kwarg=kwargs_passthru,
+        )
     except SaltClientError as client_error:
         print(client_error)
         return ret
 
     # hash minion return values as a string
     for minion in sorted(minions):
-        digest = hashlib.sha256(six.text_type(minions[minion]).encode(__salt_system_encoding__)).hexdigest()
+        digest = hashlib.sha256(
+            six.text_type(minions[minion]).encode(__salt_system_encoding__)
+        ).hexdigest()
         if digest not in ret:
             ret[digest] = {}
-            ret[digest]['pool'] = []
-            ret[digest]['result'] = six.text_type(minions[minion])
+            ret[digest]["pool"] = []
+            ret[digest]["result"] = six.text_type(minions[minion])
 
-        ret[digest]['pool'].append(minion)
+        ret[digest]["pool"].append(minion)
 
     sorted_ret = []
-    for k in sorted(ret, key=lambda k: len(ret[k]['pool']), reverse=direction):
+    for k in sorted(ret, key=lambda k: len(ret[k]["pool"]), reverse=direction):
         # return aggregated results, sorted by size of the hash pool
 
         sorted_ret.append(ret[k])

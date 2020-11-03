@@ -93,9 +93,9 @@ releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 .. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
 .. _pygit2-install-instructions: http://www.pygit2.org/install.html
-.. _libgit2: https://libgit2.github.com/
-.. _libssh2: http://www.libssh2.org/
-.. _python-cffi: https://pypi.python.org/pypi/cffi
+.. _libgit2: https://libgit2.org/
+.. _libssh2: https://www.libssh2.org/
+.. _python-cffi: https://pypi.org/project/cffi
 .. _libffi: http://sourceware.org/libffi/
 
 
@@ -156,6 +156,12 @@ including by installing XCode_.
 .. _XCode: https://developer.apple.com/xcode/
 
 .. warning::
+    GitPython advises against the use of its library for long-running processes
+    (such as a salt-master or salt-minion). Please see their warning on potential
+    leaks of system resources:
+    https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
+
+.. warning::
 
     Keep in mind that if GitPython has been previously installed on the master
     using pip (even if it was subsequently uninstalled), then it may still
@@ -180,7 +186,6 @@ including by installing XCode_.
         GitPython:
           pip.installed:
             - name: 'GitPython < 2.0.9'
-
 
 Simple Configuration
 ====================
@@ -481,7 +486,7 @@ be useful to fetch custom refs (such as those created for `GitHub pull
 requests`__). To change the refspecs GitFS fetches, use the
 :conf_master:`gitfs_refspecs` config option:
 
-.. __: https://help.github.com/articles/checking-out-pull-requests-locally/
+.. __: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/checking-out-pull-requests-locally
 
 .. code-block:: yaml
 
@@ -527,7 +532,7 @@ would only fetch branches and tags (the default).
 Global Remotes
 ==============
 
-.. versionadded:: 2018.3.0
+.. versionadded:: 2018.3.0 for all_saltenvs, 3001 for fallback
 
 The ``all_saltenvs`` per-remote configuration parameter overrides the logic
 Salt uses to map branches/tags to fileserver environments (i.e. saltenvs). This
@@ -538,6 +543,8 @@ allows a single branch/tag to appear in *all* GitFS saltenvs.
    configured using ``all_saltenvs`` will *not* show up in a fileserver
    environment defined via some other fileserver backend (e.g.
    :conf_master:`file_roots`).
+
+The ``fallback`` global or per-remote configuration can also be used.
 
 This is very useful in particular when working with :ref:`salt formulas
 <conventions-formula>`. Prior to the addition of this feature, it was necessary
@@ -554,6 +561,15 @@ single branch.
     gitfs_remotes:
       - http://foo.com/quux.git:
         - all_saltenvs: anything
+
+If you want to also test working branches of the formula repository, use
+``fallback``:
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - http://foo.com/quux.git:
+        - fallback: anything
 
 .. _gitfs-update-intervals:
 
@@ -996,7 +1012,7 @@ host key in the ``~/.ssh/known_hosts`` file. If the master is also a minion,
 this can be done using the :mod:`ssh.set_known_host
 <salt.modules.ssh.set_known_host>` function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt mymaster ssh.set_known_host user=root hostname=github.com
     mymaster:
@@ -1040,7 +1056,7 @@ Verifying the Fingerprint
 To verify that the correct fingerprint was added, it is a good idea to look it
 up. One way to do this is to use ``nmap``:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ nmap -p 22 github.com --script ssh-hostkey
 
@@ -1122,7 +1138,7 @@ steps to this process:
    all users to fire the event.  Add the following policy to the sudoers file
    on the git server.
 
-   .. code-block:: bash
+   .. code-block:: console
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty
@@ -1139,7 +1155,7 @@ anything, so long as the usage is consistent.
 The ``root`` user name in the hook script and sudo policy should be changed to
 match the user under which the minion is running.
 
-.. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
+.. _`post-receive hook`: https://www.git-scm.com/book/en/v2/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
 .. _git-as-ext_pillar:
 

@@ -86,11 +86,11 @@ function ensures that a software package is installed via the system's native
 package manager. The ``service.running`` state module function ensures that a
 given system daemon is running.
 
-Finally, on line five, is the word ``require``. This is called a Requisite
+Finally, on line four, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
-.. _`YAML`: http://yaml.org/spec/1.1/
+.. _`YAML`: https://yaml.org/spec/1.1/
 
 
 Adding Configs and Users
@@ -336,10 +336,10 @@ provides a flexible, domain-specific language for authoring SLS data in Python;
 and the :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 gives you a `"Pythonic"`_ interface to building state data.
 
-.. _`Jinja2`: http://jinja.pocoo.org/
-.. _`Mako`: http://www.makotemplates.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
+.. _`Mako`: https://www.makotemplates.org/
 .. _`Wempy`: https://fossil.secution.com/u/gcw/wempy/doc/tip/README.wiki
-.. _`"Pythonic"`: http://legacy.python.org/dev/peps/pep-0008/
+.. _`"Pythonic"`: https://legacy.python.org/dev/peps/pep-0008/
 
 .. note::
 
@@ -356,7 +356,7 @@ Getting to Know the Default - jinja|yaml
 
 The default renderer - ``jinja|yaml``, allows for use of the jinja
 templating system. A guide to the Jinja templating system can be found here:
-http://jinja.pocoo.org/docs
+https://jinja.palletsprojects.com/en/2.11.x/
 
 When working with renderers a few very useful bits of data are passed in. In
 the case of templating engine based renderers, three critical components are
@@ -484,12 +484,12 @@ This example shows a very basic Python SLS file:
 
     #!py
 
+
     def run():
-        '''
+        """
         Install the django package
-        '''
-        return {'include': ['python'],
-                'django': {'pkg': ['installed']}}
+        """
+        return {"include": ["python"], "django": {"pkg": ["installed"]}}
 
 This is a very simple example; the first line has an SLS shebang that
 tells Salt to not use the default renderer, but to use the ``py`` renderer.
@@ -504,8 +504,8 @@ renderer, the above example can be written more succinctly as:
 
     #!pydsl
 
-    include('python', delayed=True)
-    state('django').pkg.installed()
+    include("python", delayed=True)
+    state("django").pkg.installed()
 
 The :mod:`pyobjects<salt.renderers.pyobjects>` renderer
 provides an `"Pythonic"`_ object based approach for building the state data.
@@ -515,7 +515,7 @@ The above example could be written as:
 
     #!pyobjects
 
-    include('python')
+    include("python")
     Pkg.installed("django")
 
 

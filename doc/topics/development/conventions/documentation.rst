@@ -26,8 +26,8 @@ writing guidelines. Those guidelines are not strictly enforced but rather serve
 as an excellent resource for technical writing questions. The `NCBI style
 guide`_ is another very approachable resource.
 
-.. _`IEEE style guide`: https://development.standards.ieee.org/myproject/Public/mytools/draft/styleman.pdf
-.. _`NCBI style guide`: http://www.ncbi.nlm.nih.gov/books/NBK993/
+.. _`IEEE style guide`: https://mentor.ieee.org/myproject/Public/mytools/draft/styleman.pdf
+.. _`NCBI style guide`: https://www.ncbi.nlm.nih.gov/books/NBK993/
 
 Point-of-view
 -------------
@@ -97,7 +97,7 @@ code and can contain special formatting. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         Usage:
@@ -110,7 +110,7 @@ code and can contain special formatting. For example:
 
         :param value: a string
         :return: a copy of ``value`` that has been upper-cased
-        '''
+        """
         return value.upper()
 
 Specify a release for additions or changes
@@ -122,13 +122,13 @@ denotes what Salt release will be affected. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         .. versionadded:: 2014.7.0
 
         <...snip...>
-        '''
+        """
         return value.upper()
 
 For changes to a function:
@@ -136,14 +136,14 @@ For changes to a function:
 .. code-block:: python
 
     def my_function(value, strip=False):
-        '''
+        """
         Upper-case the given value
 
         .. versionchanged:: 2016.3.0
             Added a flag to also strip whitespace from the string.
 
         <...snip...>
-        '''
+        """
         if strip:
             return value.upper().strip()
         return value.upper()
@@ -306,7 +306,7 @@ Documentation Changes and Fixes
 Documentation changes and fixes should be made against the earliest supported
 release branch that the update applies to. The practice of updating a release
 branch instead of making all documentation changes against Salt's main, default
-branch, ``develop``, is necessary in order for the docs to be as up-to-date as
+branch, ``master``, is necessary in order for the docs to be as up-to-date as
 possible when the docs are built.
 
 The workflow mentioned above is also in line with the recommendations outlined

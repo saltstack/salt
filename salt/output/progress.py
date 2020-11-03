@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Display return data as a progress bar
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import 3rd-party libs
 try:
     import progressbar
+
     HAS_PROGRESSBAR = True
 except ImportError:
     HAS_PROGRESSBAR = False
@@ -19,11 +20,11 @@ def __virtual__():
 
 
 def output(ret, bar, **kwargs):  # pylint: disable=unused-argument
-    '''
+    """
     Update the progress bar
-    '''
-    if 'return_count' in ret:
-        val = ret['return_count']
+    """
+    if "return_count" in ret:
+        val = ret["return_count"]
         # Avoid to fail if targets are behind a syndic. In this case actual return count will be
         # higher than targeted by MoM itself.
         # TODO: implement a way to get the proper target minions count and remove this workaround.
@@ -31,14 +32,23 @@ def output(ret, bar, **kwargs):  # pylint: disable=unused-argument
         if val > bar.maxval:
             bar.maxval = val
         bar.update(val)
-    return ''
+    return ""
 
 
 def progress_iter(progress):
-    '''
+    """
     Initialize and return a progress bar iter
-    '''
-    widgets = [progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.Timer(), ' Returns: [', progressbar.Counter(), '/{0}]'.format(progress['minion_count'])]
-    bar = progressbar.ProgressBar(widgets=widgets, maxval=progress['minion_count'])
+    """
+    widgets = [
+        progressbar.Percentage(),
+        " ",
+        progressbar.Bar(),
+        " ",
+        progressbar.Timer(),
+        " Returns: [",
+        progressbar.Counter(),
+        "/{0}]".format(progress["minion_count"]),
+    ]
+    bar = progressbar.ProgressBar(widgets=widgets, maxval=progress["minion_count"])
     bar.start()
     return bar

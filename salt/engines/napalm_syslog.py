@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 NAPALM syslog engine
 ====================
 
@@ -167,11 +167,16 @@ by the user in their environment and the complete OpenConfig object under
 the variable name ``openconfig_structure``. Inside the Jinja template, the user
 can process the object from ``openconfig_structure`` and define the bussiness
 logic as required.
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
 import logging
+
+# Import salt libs
+import salt.utils.event as event
+import salt.utils.network
+import salt.utils.stringutils
 
 # Import third party libraries
 from salt.utils.zeromq import zmq
@@ -180,22 +185,19 @@ try:
     # pylint: disable=W0611
     import napalm_logs
     import napalm_logs.utils
+
     # pylint: enable=W0611
     HAS_NAPALM_LOGS = True
 except ImportError:
     HAS_NAPALM_LOGS = False
 
-# Import salt libs
-import salt.utils.event as event
-import salt.utils.network
-import salt.utils.stringutils
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'napalm_syslog'
+__virtualname__ = "napalm_syslog"
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helpers
@@ -203,12 +205,15 @@ __virtualname__ = 'napalm_syslog'
 
 
 def __virtual__():
-    '''
+    """
     Load only if napalm-logs is installed.
-    '''
+    """
     if not HAS_NAPALM_LOGS or not zmq:
-        return (False, 'napalm_syslog could not be loaded. \
-            Please install napalm-logs library amd ZeroMQ.')
+        return (
+            False,
+            "napalm_syslog could not be loaded. \
+            Please install napalm-logs library amd ZeroMQ.",
+        )
     return True
 
 
@@ -217,48 +222,41 @@ def _zmq(address, port, **kwargs):
     socket = context.socket(zmq.SUB)
     if salt.utils.network.is_ipv6(address):
         socket.ipv6 = True
-    socket.connect('tcp://{addr}:{port}'.format(
-        addr=address,
-        port=port)
-    )
-    socket.setsockopt(zmq.SUBSCRIBE, b'')
+    socket.connect("tcp://{addr}:{port}".format(addr=address, port=port))
+    socket.setsockopt(zmq.SUBSCRIBE, b"")
     return socket.recv
 
 
-def _get_transport_recv(name='zmq',
-                        address='0.0.0.0',
-                        port=49017,
-                        **kwargs):
+def _get_transport_recv(name="zmq", address="0.0.0.0", port=49017, **kwargs):
     if name not in TRANSPORT_FUN_MAP:
-        log.error('Invalid transport: %s. Falling back to ZeroMQ.', name)
-        name = 'zmq'
+        log.error("Invalid transport: %s. Falling back to ZeroMQ.", name)
+        name = "zmq"
     return TRANSPORT_FUN_MAP[name](address, port, **kwargs)
 
 
-TRANSPORT_FUN_MAP = {
-    'zmq': _zmq,
-    'zeromq': _zmq
-}
+TRANSPORT_FUN_MAP = {"zmq": _zmq, "zeromq": _zmq}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # main
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def start(transport='zmq',
-          address='0.0.0.0',
-          port=49017,
-          auth_address='0.0.0.0',
-          auth_port=49018,
-          disable_security=False,
-          certificate=None,
-          os_whitelist=None,
-          os_blacklist=None,
-          error_whitelist=None,
-          error_blacklist=None,
-          host_whitelist=None,
-          host_blacklist=None):
-    '''
+def start(
+    transport="zmq",
+    address="0.0.0.0",
+    port=49017,
+    auth_address="0.0.0.0",
+    auth_port=49018,
+    disable_security=False,
+    certificate=None,
+    os_whitelist=None,
+    os_blacklist=None,
+    error_whitelist=None,
+    error_blacklist=None,
+    host_whitelist=None,
+    host_blacklist=None,
+):
+    """
     Listen to napalm-logs and publish events into the Salt event bus.
 
     transport: ``zmq``
@@ -304,75 +302,73 @@ def start(transport='zmq',
 
     host_blacklist: ``None``
         List of hosts of IPs to be ignored.
-    '''
+    """
     if not disable_security:
         if not certificate:
-            log.critical('Please use a certificate, or disable the security.')
+            log.critical("Please use a certificate, or disable the security.")
             return
-        auth = napalm_logs.utils.ClientAuth(certificate,
-                                            address=auth_address,
-                                            port=auth_port)
+        auth = napalm_logs.utils.ClientAuth(
+            certificate, address=auth_address, port=auth_port
+        )
 
-    transport_recv_fun = _get_transport_recv(name=transport,
-                                             address=address,
-                                             port=port)
+    transport_recv_fun = _get_transport_recv(name=transport, address=address, port=port)
     if not transport_recv_fun:
-        log.critical('Unable to start the engine', exc_info=True)
+        log.critical("Unable to start the engine", exc_info=True)
         return
     master = False
-    if __opts__['__role'] == 'master':
+    if __opts__["__role"] == "master":
         master = True
     while True:
-        log.debug('Waiting for napalm-logs to send anything...')
+        log.debug("Waiting for napalm-logs to send anything...")
         raw_object = transport_recv_fun()
-        log.debug('Received from napalm-logs:')
+        log.debug("Received from napalm-logs:")
         log.debug(raw_object)
         if not disable_security:
             dict_object = auth.decrypt(raw_object)
         else:
             dict_object = napalm_logs.utils.unserialize(raw_object)
         try:
-            event_os = dict_object['os']
+            event_os = dict_object["os"]
             if os_blacklist or os_whitelist:
                 valid_os = salt.utils.stringutils.check_whitelist_blacklist(
-                    event_os,
-                    whitelist=os_whitelist,
-                    blacklist=os_blacklist)
+                    event_os, whitelist=os_whitelist, blacklist=os_blacklist
+                )
                 if not valid_os:
-                    log.info('Ignoring NOS %s as per whitelist/blacklist', event_os)
+                    log.info("Ignoring NOS %s as per whitelist/blacklist", event_os)
                     continue
-            event_error = dict_object['error']
+            event_error = dict_object["error"]
             if error_blacklist or error_whitelist:
                 valid_error = salt.utils.stringutils.check_whitelist_blacklist(
-                    event_error,
-                    whitelist=error_whitelist,
-                    blacklist=error_blacklist)
+                    event_error, whitelist=error_whitelist, blacklist=error_blacklist
+                )
                 if not valid_error:
-                    log.info('Ignoring error %s as per whitelist/blacklist', event_error)
+                    log.info(
+                        "Ignoring error %s as per whitelist/blacklist", event_error
+                    )
                     continue
-            event_host = dict_object.get('host') or dict_object.get('ip')
+            event_host = dict_object.get("host") or dict_object.get("ip")
             if host_blacklist or host_whitelist:
                 valid_host = salt.utils.stringutils.check_whitelist_blacklist(
-                    event_host,
-                    whitelist=host_whitelist,
-                    blacklist=host_blacklist)
+                    event_host, whitelist=host_whitelist, blacklist=host_blacklist
+                )
                 if not valid_host:
-                    log.info('Ignoring messages from %s as per whitelist/blacklist', event_host)
+                    log.info(
+                        "Ignoring messages from %s as per whitelist/blacklist",
+                        event_host,
+                    )
                     continue
-            tag = 'napalm/syslog/{os}/{error}/{host}'.format(
-                os=event_os,
-                error=event_error,
-                host=event_host
+            tag = "napalm/syslog/{os}/{error}/{host}".format(
+                os=event_os, error=event_error, host=event_host
             )
         except KeyError as kerr:
-            log.warning('Missing keys from the napalm-logs object:', exc_info=True)
+            log.warning("Missing keys from the napalm-logs object:", exc_info=True)
             log.warning(dict_object)
             continue  # jump to the next object in the queue
-        log.debug('Sending event %s', tag)
+        log.debug("Sending event %s", tag)
         log.debug(raw_object)
         if master:
-            event.get_master_event(__opts__,
-                                   __opts__['sock_dir']
-                                   ).fire_event(dict_object, tag)
+            event.get_master_event(__opts__, __opts__["sock_dir"]).fire_event(
+                dict_object, tag
+            )
         else:
-            __salt__['event.send'](tag, dict_object)
+            __salt__["event.send"](tag, dict_object)

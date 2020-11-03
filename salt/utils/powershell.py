@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Common functions for working with powershell
 
 .. note:: The PSModulePath environment variable should be set to the default
@@ -7,9 +7,10 @@ Common functions for working with powershell
     powershell. If not set, then Salt will attempt to use some default paths.
     If Salt can't find your modules, ensure that the PSModulePath is set and
     pointing to all locations of your Powershell modules.
-'''
+"""
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -19,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def module_exists(name):
-    '''
+    """
     Check if a module exists on the system.
 
     Use this utility instead of attempting to import the module with powershell.
@@ -39,12 +40,12 @@ def module_exists(name):
 
         import salt.utils.powershell
         exists = salt.utils.powershell.module_exists('ServerManager')
-    '''
+    """
     return name in get_modules()
 
 
 def get_modules():
-    '''
+    """
     Get a list of the PowerShell modules which are potentially available to be
     imported. The intent is to mimic the functionality of ``Get-Module
     -ListAvailable | Select-Object -Expand Name``, without the delay of loading
@@ -59,9 +60,9 @@ def get_modules():
 
         import salt.utils.powershell
         modules = salt.utils.powershell.get_modules()
-    '''
+    """
     ret = list()
-    valid_extensions = ('.psd1', '.psm1', '.cdxml', '.xaml', '.dll')
+    valid_extensions = (".psd1", ".psm1", ".cdxml", ".xaml", ".dll")
     # need to create an info function to get PS information including version
     # __salt__ is not available from salt.utils... need to create a salt.util
     # for the registry to avoid loading powershell to get the version
@@ -71,30 +72,31 @@ def get_modules():
     # ps_version = info()['version_raw']
     root_paths = []
 
-    home_dir = os.environ.get('HOME', os.environ.get('HOMEPATH'))
-    system_dir = '{0}\\System32'.format(os.environ.get('WINDIR', 'C:\\Windows'))
-    program_files = os.environ.get('ProgramFiles', 'C:\\Program Files')
+    home_dir = os.environ.get("HOME", os.environ.get("HOMEPATH"))
+    system_dir = "{0}\\System32".format(os.environ.get("WINDIR", "C:\\Windows"))
+    program_files = os.environ.get("ProgramFiles", "C:\\Program Files")
     default_paths = [
-        '{0}/.local/share/powershell/Modules'.format(home_dir),
+        "{0}/.local/share/powershell/Modules".format(home_dir),
         # Once version is available, these can be enabled
         # '/opt/microsoft/powershell/{0}/Modules'.format(ps_version),
         # '/usr/local/microsoft/powershell/{0}/Modules'.format(ps_version),
-        '/usr/local/share/powershell/Modules',
-        '{0}\\WindowsPowerShell\\v1.0\\Modules\\'.format(system_dir),
-        '{0}\\WindowsPowerShell\\Modules'.format(program_files)]
-    default_paths = ';'.join(default_paths)
+        "/usr/local/share/powershell/Modules",
+        "{0}\\WindowsPowerShell\\v1.0\\Modules\\".format(system_dir),
+        "{0}\\WindowsPowerShell\\Modules".format(program_files),
+    ]
+    default_paths = ";".join(default_paths)
 
-    ps_module_path = os.environ.get('PSModulePath', default_paths)
+    ps_module_path = os.environ.get("PSModulePath", default_paths)
 
     # Check if defaults exist, add them if they do
-    ps_module_path = ps_module_path.split(';')
+    ps_module_path = ps_module_path.split(";")
     for item in ps_module_path:
         if os.path.exists(item):
             root_paths.append(item)
 
     # Did we find any, if not log the error and return
     if not root_paths:
-        log.error('Default paths not found')
+        log.error("Default paths not found")
         return ret
 
     for root_path in root_paths:
@@ -116,8 +118,7 @@ def get_modules():
 
                     # Stop recursion once we find a match, and use
                     # the capitalization from the directory name.
-                    if dir_name not in ret and \
-                            base_name.lower() == dir_name.lower():
+                    if dir_name not in ret and base_name.lower() == dir_name.lower():
                         del sub_dirs[:]
                         ret.append(dir_name)
 

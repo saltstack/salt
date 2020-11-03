@@ -7,4 +7,4 @@ following the :ref:`installation` and the
     There are many ways to :ref:`get help from the Salt community
     <salt-community>` including our
     `mailing list <https://groups.google.com/forum/#!forum/salt-users>`_
-    and our `IRC channel <http://webchat.freenode.net/?channels=salt>`_ #salt.
+    and our `IRC channel <https://webchat.freenode.net/#salt>`_ #salt.

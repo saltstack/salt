@@ -21,3 +21,27 @@
 	compress
 	notifempty
 }
+
+/var/log/salt/api {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
+
+/var/log/salt/syndic {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}
+
+/var/log/salt/proxy {
+	weekly
+	missingok
+	rotate 7
+	compress
+	notifempty
+}

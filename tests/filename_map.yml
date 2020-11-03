@@ -1,8 +1,13 @@
 '*':
+  - pytests.integration.modules.test_sysmod
   - unit.test_module_names
-  - unit.test_doc
   - unit.test_virtualname
-  - integration.modules.test_sysmod
+  - unit.utils.test_doc
+  - unit.utils.test_versions
+
+setup.py:
+  - unit.setup.test_man
+  - unit.setup.test_install
 
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - unit.states.test_pkg
@@ -17,8 +22,9 @@ salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
 
-salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|service|smf_service|systemd_service|upstart_service|win_service)\.py:
+salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - unit.states.test_service
+  - integration.modules.test_service
   - integration.states.test_service
 
 salt/modules/*apache.py:
@@ -39,7 +45,7 @@ salt/modules/cp.py:
 salt/modules/dockermod.py:
   - unit.states.test_docker_image
   - unit.states.test_docker_volume
-  - unit.utils.test_docker
+  - unit.utils.test_dockermod
   - integration.states.test_docker_container
   - integration.states.test_docker_network
 
@@ -83,7 +89,7 @@ salt/modules/ssh.py:
   - unit.states.test_ssh_known_hosts
 
 salt/auth/*:
-  - integration.shell.test_auth
+  - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
   - unit.cache.test_cache
@@ -92,19 +98,19 @@ salt/cli/*:
   - integration.shell.test_arguments
 
 salt/cli/call.py:
-  - integration.shell.test_call
+  - pytests.integration.cli.test_salt_call
 
 salt/cli/cp.py:
-  - integration.shell.test_cp
+  - pytests.integration.cli.test_salt_cp
 
 salt/cli/key.py:
-  - integration.shell.test_key
+  - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
   - integration.cli.test_grains
   - integration.shell.test_enabled
   - integration.shell.test_matcher
-  - integration.shell.test_saltcli
+  - pytests.integration.cli.test_salt
 
 salt/client/*:
   - integration.client.test_kwarg
@@ -121,8 +127,8 @@ salt/grains/*:
   - integration.grains.test_custom
 
 salt/proxy/*:
-  - integration.proxy.test_shell
-  - integration.proxy.test_simple
+  - pytests.integration.proxy.test_shell
+  - pytests.integration.proxy.test_simple
 
 salt/state.py:
   - integration.modules.test_state_jinja_filters
@@ -146,10 +152,10 @@ salt/utils/reactor.py:
   - integration.reactor.test_reactor
 
 salt/cli/daemons.py:
-  - integration.shell.test_master
-  - integration.shell.test_minion
-  - integration.shell.test_proxy
-  - integration.shell.test_syndic
+  - pytests.integration.cli.test_salt_master
+  - pytests.integration.cli.test_salt_minion
+  - pytests.integration.cli.test_salt_proxy
+  - pytests.integration.cli.test_salt_syndic
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
@@ -198,7 +204,7 @@ salt/pillar/__init__.py:
   - integration.pillar.test_pillar_include
 
 salt/(cli/run\.py|runner\.py):
-  - integration.shell.test_runner
+  - pytests.integration.cli.test_salt_run
   - integration.runners.test_runner_returns
 
 salt/runners/venafiapi.py:
@@ -221,15 +227,16 @@ salt/transport/*:
   - unit.test_transport
 
 salt/utils/docker/*:
-  - unit.utils.test_docker
+  - unit.utils.test_dockermod
 
 salt/utils/schedule.py:
-  - integration.scheduler.test_error
-  - integration.scheduler.test_eval
-  - integration.scheduler.test_postpone
-  - integration.scheduler.test_skip
-  - integration.scheduler.test_maxrunning
-  - integration.scheduler.test_helpers
+  - unit.utils.scheduler.test_error
+  - unit.utils.scheduler.test_eval
+  - unit.utils.scheduler.test_postpone
+  - unit.utils.scheduler.test_skip
+  - unit.utils.scheduler.test_maxrunning
+  - unit.utils.scheduler.test_helpers
+  - unit.utils.scheduler.test_schedule
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module

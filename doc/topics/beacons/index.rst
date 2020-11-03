@@ -53,6 +53,23 @@ minion pillar, grains, or local config file.
 
 All beacon configuration is done using list based configuration.
 
+.. versionadded:: Neon
+
+Multiple copies of a particular Salt beacon can be configured by including the ``beacon_module`` parameter in the beacon configuration.
+
+.. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
+
+
 Beacon Monitoring Interval
 --------------------------
 
@@ -224,7 +241,7 @@ Add the following to ``/srv/reactor/revert.sls``:
     In addition to :ref:`setting <avoid-beacon-event-loops>`
     ``disable_during_state_run: True`` for an inotify beacon whose reaction is
     to modify the watched file, it is important to ensure the state applied is
-    also :term:`idempotent`.
+    also :term:`idempotent <Idempotent>`.
 
 .. note::
 
@@ -343,8 +360,7 @@ The return data structure would look something like this:
 
 .. code-block:: python
 
-    [{'changes': ['/foo/bar'], 'tag': 'foo'},
-     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+    [{"changes": ["/foo/bar"], "tag": "foo"}, {"changes": ["/foo/baz"], "tag": "bar"}]
 
 Calling Execution Modules
 -------------------------

@@ -9,7 +9,7 @@ Remote execution tutorial
 Order your minions around
 =========================
 
-Now that you have a :term:`master` and at least one :term:`minion`
+Now that you have a :term:`master <Master>` and at least one :term:`minion <Minion>`
 communicating with each other you can perform commands on the minion via the
 :command:`salt` command. Salt calls are comprised of three main components:
 

@@ -13,7 +13,7 @@ us access to their cloud so that we could develop the Parallels driver! Without
 their help, this driver would not exist. Please take a moment to take a look at
 their cloud offering:
 
-http://xmission.com/cloud_hosting
+https://xmission.com/cloud_hosting
 
 We would also like to thank DigitalOcean for their help and resources while
 developing the driver for their cloud offering. The folks over there have been

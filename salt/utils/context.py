@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :codeauthor: Thomas Jackson (jacksontj.89@gmail.com)
 
@@ -8,29 +7,21 @@
     ~~~~~~~~~~~~~~~~~~
 
     Context managers used throughout Salt's source code.
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import python libs
 import copy
 import threading
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping
-
+from collections.abc import MutableMapping
 from contextlib import contextmanager
-
-from salt.ext import six
 
 
 @contextmanager
 def func_globals_inject(func, **overrides):
-    '''
+    """
     Override specific variables within a function's global context.
-    '''
+    """
     # recognize methods
-    if hasattr(func, 'im_func'):
+    if hasattr(func, "im_func"):
         func = func.__func__
 
     # Get a reference to the function globals dictionary
@@ -49,26 +40,27 @@ def func_globals_inject(func, **overrides):
     func_globals.update(overrides)
 
     # The context is now ready to be used
-    yield
+    try:
+        yield
+    finally:
+        # We're now done with the context
 
-    # We're now done with the context
+        # Restore the overwritten function globals
+        func_globals.update(overridden_func_globals)
 
-    # Restore the overwritten function globals
-    func_globals.update(overridden_func_globals)
-
-    # Remove any entry injected in the function globals
-    for injected in injected_func_globals:
-        del func_globals[injected]
+        # Remove any entry injected in the function globals
+        for injected in injected_func_globals:
+            del func_globals[injected]
 
 
 class ContextDict(MutableMapping):
-    '''
+    """
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
 
     Provide arbitrary data as kwargs upon creation,
     then allow any children to override the values of the parent.
-    '''
+    """
 
     def __init__(self, threadsafe=False, **data):
         # state should be thread local, so this object can be threadsafe
@@ -82,10 +74,10 @@ class ContextDict(MutableMapping):
 
     @property
     def active(self):
-        '''Determine if this ContextDict is currently overridden
+        """Determine if this ContextDict is currently overridden
         Since the ContextDict can be overridden in each thread, we check whether
         the _state.data is set or not.
-        '''
+        """
         try:
             return self._state.data is not None
         except AttributeError:
@@ -93,10 +85,12 @@ class ContextDict(MutableMapping):
 
     # TODO: rename?
     def clone(self, **kwargs):
-        '''
+        """
         Clone this context, and return the ChildContextDict
-        '''
-        child = ChildContextDict(parent=self, threadsafe=self._threadsafe, overrides=kwargs)
+        """
+        child = ChildContextDict(
+            parent=self, threadsafe=self._threadsafe, overrides=kwargs
+        )
         return child
 
     def __setitem__(self, key, val):
@@ -147,9 +141,10 @@ class ContextDict(MutableMapping):
 
 
 class ChildContextDict(MutableMapping):
-    '''An overrideable child of ContextDict
+    """An overrideable child of ContextDict
 
-    '''
+    """
+
     def __init__(self, parent, overrides=None, threadsafe=False):
         self.parent = parent
         self._data = {} if overrides is None else overrides
@@ -157,7 +152,7 @@ class ChildContextDict(MutableMapping):
 
         # merge self.global_data into self._data
         if threadsafe:
-            for k, v in six.iteritems(self.parent.global_data):
+            for k, v in self.parent.global_data.items():
                 if k not in self._data:
                     # A deepcopy is necessary to avoid using the same
                     # objects in globals as we do in thread local storage.
@@ -165,7 +160,7 @@ class ChildContextDict(MutableMapping):
                     # the other.
                     self._data[k] = copy.deepcopy(v)
         else:
-            for k, v in six.iteritems(self.parent.global_data):
+            for k, v in self.parent.global_data.items():
                 if k not in self._data:
                     self._data[k] = v
 
@@ -185,7 +180,7 @@ class ChildContextDict(MutableMapping):
         return iter(self._data)
 
     def __enter__(self):
-        if hasattr(self.parent._state, 'data'):
+        if hasattr(self.parent._state, "data"):
             # Save old data to support nested calls
             self._old_data = self.parent._state.data
         self.parent._state.data = self._data
@@ -195,27 +190,19 @@ class ChildContextDict(MutableMapping):
 
 
 class NamespacedDictWrapper(MutableMapping, dict):
-    '''
+    """
     Create a dict which wraps another dict with a specific prefix of key(s)
 
     MUST inherit from dict to serialize through msgpack correctly
-    '''
+    """
 
-    def __init__(self, d, pre_keys, override_name=None):  # pylint: disable=W0231
+    def __init__(self, d, pre_keys):  # pylint: disable=W0231
         self.__dict = d
-        if isinstance(pre_keys, six.string_types):
+        if isinstance(pre_keys, str):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys
-        if override_name is not None:
-            import salt.utils.versions
-            salt.utils.versions.warn_until(
-                'Sodium',
-                'Overriding the class name is no longer supported. Please '
-                'remove the override_name argument before it is removed in '
-                'Salt Sodium.'
-            )
-        super(NamespacedDictWrapper, self).__init__(self._dict())
+        super().__init__(self._dict())
 
     def _dict(self):
         r = self.__dict
@@ -242,12 +229,12 @@ class NamespacedDictWrapper(MutableMapping, dict):
         return iter(self._dict())
 
     def __copy__(self):
-        return type(self)(copy.copy(self.__dict),
-                          copy.copy(self.pre_keys))
+        return type(self)(copy.copy(self.__dict), copy.copy(self.pre_keys))
 
     def __deepcopy__(self, memo):
-        return type(self)(copy.deepcopy(self.__dict, memo),
-                          copy.deepcopy(self.pre_keys, memo))
+        return type(self)(
+            copy.deepcopy(self.__dict, memo), copy.deepcopy(self.pre_keys, memo)
+        )
 
     def __str__(self):
         return self._dict().__str__()

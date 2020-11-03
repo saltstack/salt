@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Extract the pillar data for this minion
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
-import collections
-
-# Import third party libs
 import copy
-import os
 import logging
-from salt.ext import six
+import os
+from collections.abc import Mapping
 
-# Import salt libs
 import salt.pillar
 import salt.utils.crypt
 import salt.utils.data
@@ -24,19 +19,21 @@ import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
-__proxyenabled__ = ['*']
+__proxyenabled__ = ["*"]
 
 log = logging.getLogger(__name__)
 
 
-def get(key,
-        default=KeyError,
-        merge=False,
-        merge_nested_lists=None,
-        delimiter=DEFAULT_TARGET_DELIM,
-        pillarenv=None,
-        saltenv=None):
-    '''
+def get(
+    key,
+    default=KeyError,
+    merge=False,
+    merge_nested_lists=None,
+    delimiter=DEFAULT_TARGET_DELIM,
+    pillarenv=None,
+    saltenv=None,
+):
+    """
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from :ref:`in-memory pillar data
@@ -64,7 +61,7 @@ def get(key,
         The value specified by this option will be returned if the desired
         pillar key does not exist.
 
-        If a default value is specified, then it will be an empty string,
+        If a default value is not specified, then it will be an empty string,
         unless :conf_minion:`pillar_raise_on_missing` is set to ``True``, in
         which case an error will be raised.
 
@@ -126,71 +123,74 @@ def get(key,
 
         salt '*' pillar.get pkg:apache
         salt '*' pillar.get abc::def|ghi delimiter='|'
-    '''
-    if not __opts__.get('pillar_raise_on_missing'):
+    """
+    if not __opts__.get("pillar_raise_on_missing"):
         if default is KeyError:
-            default = ''
-    opt_merge_lists = __opts__.get('pillar_merge_lists', False) if \
-        merge_nested_lists is None else merge_nested_lists
-    pillar_dict = __pillar__ \
-        if all(x is None for x in (saltenv, pillarenv)) \
+            default = ""
+    opt_merge_lists = (
+        __opts__.get("pillar_merge_lists", False)
+        if merge_nested_lists is None
+        else merge_nested_lists
+    )
+    pillar_dict = (
+        __pillar__
+        if all(x is None for x in (saltenv, pillarenv))
         else items(saltenv=saltenv, pillarenv=pillarenv)
+    )
 
     if merge:
         if isinstance(default, dict):
             ret = salt.utils.data.traverse_dict_and_list(
-                pillar_dict,
-                key,
-                {},
-                delimiter)
-            if isinstance(ret, collections.Mapping):
+                pillar_dict, key, {}, delimiter
+            )
+            if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
                 return salt.utils.dictupdate.update(
-                    default,
-                    ret,
-                    merge_lists=opt_merge_lists)
+                    default, ret, merge_lists=opt_merge_lists
+                )
             else:
                 log.error(
-                    'pillar.get: Default (%s) is a dict, but the returned '
-                    'pillar value (%s) is of type \'%s\'. Merge will be '
-                    'skipped.', default, ret, type(ret).__name__
+                    "pillar.get: Default (%s) is a dict, but the returned "
+                    "pillar value (%s) is of type '%s'. Merge will be "
+                    "skipped.",
+                    default,
+                    ret,
+                    type(ret).__name__,
                 )
         elif isinstance(default, list):
             ret = salt.utils.data.traverse_dict_and_list(
-                pillar_dict,
-                key,
-                [],
-                delimiter)
+                pillar_dict, key, [], delimiter
+            )
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
                 return default
             else:
                 log.error(
-                    'pillar.get: Default (%s) is a list, but the returned '
-                    'pillar value (%s) is of type \'%s\'. Merge will be '
-                    'skipped.', default, ret, type(ret).__name__
+                    "pillar.get: Default (%s) is a list, but the returned "
+                    "pillar value (%s) is of type '%s'. Merge will be "
+                    "skipped.",
+                    default,
+                    ret,
+                    type(ret).__name__,
                 )
         else:
             log.error(
-                'pillar.get: Default (%s) is of type \'%s\', must be a dict '
-                'or list to merge. Merge will be skipped.',
-                default, type(default).__name__
+                "pillar.get: Default (%s) is of type '%s', must be a dict "
+                "or list to merge. Merge will be skipped.",
+                default,
+                type(default).__name__,
             )
 
-    ret = salt.utils.data.traverse_dict_and_list(
-        pillar_dict,
-        key,
-        default,
-        delimiter)
+    ret = salt.utils.data.traverse_dict_and_list(pillar_dict, key, default, delimiter)
     if ret is KeyError:
-        raise KeyError('Pillar key not found: {0}'.format(key))
+        raise KeyError("Pillar key not found: {0}".format(key))
 
     return ret
 
 
 def items(*args, **kwargs):
-    '''
+    """
     Calls the master for a fresh pillar and generates the pillar data on the
     fly
 
@@ -239,20 +239,20 @@ def items(*args, **kwargs):
     .. code-block:: bash
 
         salt '*' pillar.items
-    '''
+    """
     # Preserve backwards compatibility
     if args:
         return item(*args)
 
-    pillarenv = kwargs.get('pillarenv')
+    pillarenv = kwargs.get("pillarenv")
     if pillarenv is None:
-        if __opts__.get('pillarenv_from_saltenv', False):
-            pillarenv = kwargs.get('saltenv') or __opts__['saltenv']
+        if __opts__.get("pillarenv_from_saltenv", False):
+            pillarenv = kwargs.get("saltenv") or __opts__["saltenv"]
         else:
-            pillarenv = __opts__['pillarenv']
+            pillarenv = __opts__["pillarenv"]
 
-    pillar_override = kwargs.get('pillar')
-    pillar_enc = kwargs.get('pillar_enc')
+    pillar_override = kwargs.get("pillar")
+    pillar_enc = kwargs.get("pillar_enc")
 
     if pillar_override and pillar_enc:
         try:
@@ -261,45 +261,46 @@ def items(*args, **kwargs):
                 pillar_enc,
                 translate_newlines=True,
                 opts=__opts__,
-                valid_rend=__opts__['decrypt_pillar_renderers'])
+                valid_rend=__opts__["decrypt_pillar_renderers"],
+            )
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
-                'Failed to decrypt pillar override: {0}'.format(exc)
+                "Failed to decrypt pillar override: {0}".format(exc)
             )
 
     pillar = salt.pillar.get_pillar(
         __opts__,
         __grains__,
-        __opts__['id'],
+        __opts__["id"],
         pillar_override=pillar_override,
-        pillarenv=pillarenv)
+        pillarenv=pillarenv,
+    )
 
     return pillar.compile_pillar()
 
 
 # Allow pillar.data to also be used to return pillar data
-data = salt.utils.functools.alias_function(items, 'data')
+data = salt.utils.functools.alias_function(items, "data")
 
 
 def _obfuscate_inner(var):
-    '''
+    """
     Recursive obfuscation of collection types.
 
     Leaf or unknown Python types get replaced by the type name
     Known collection types trigger recursion.
     In the special case of mapping types, keys are not obfuscated
-    '''
+    """
     if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
-        return var.__class__((key, _obfuscate_inner(val))
-                             for key, val in six.iteritems(var))
+        return var.__class__((key, _obfuscate_inner(val)) for key, val in var.items())
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
-        return '<{0}>'.format(var.__class__.__name__)
+        return "<{0}>".format(var.__class__.__name__)
 
 
 def obfuscate(*args):
-    '''
+    """
     .. versionadded:: 2015.8.0
 
     Same as :py:func:`items`, but replace pillar values with a simple type indication.
@@ -324,14 +325,14 @@ def obfuscate(*args):
 
         salt '*' pillar.obfuscate
 
-    '''
+    """
     return _obfuscate_inner(items(*args))
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
 # identifier rule.
 def ls(*args):
-    '''
+    """
     .. versionadded:: 2015.8.0
 
     Calls the master for a fresh pillar, generates the pillar data on the
@@ -342,13 +343,13 @@ def ls(*args):
     .. code-block:: bash
 
         salt '*' pillar.ls
-    '''
+    """
 
     return list(items(*args))
 
 
 def item(*args, **kwargs):
-    '''
+    """
     .. versionadded:: 0.16.2
 
     Return one or more pillar entries from the :ref:`in-memory pillar data
@@ -399,24 +400,24 @@ def item(*args, **kwargs):
         salt '*' pillar.item foo
         salt '*' pillar.item foo:bar
         salt '*' pillar.item foo bar baz
-    '''
+    """
     ret = {}
-    default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
-    pillarenv = kwargs.get('pillarenv', None)
-    saltenv = kwargs.get('saltenv', None)
+    default = kwargs.get("default", "")
+    delimiter = kwargs.get("delimiter", DEFAULT_TARGET_DELIM)
+    pillarenv = kwargs.get("pillarenv", None)
+    saltenv = kwargs.get("saltenv", None)
 
-    pillar_dict = __pillar__ \
-        if all(x is None for x in (saltenv, pillarenv)) \
+    pillar_dict = (
+        __pillar__
+        if all(x is None for x in (saltenv, pillarenv))
         else items(saltenv=saltenv, pillarenv=pillarenv)
+    )
 
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
-                pillar_dict,
-                arg,
-                default,
-                delimiter)
+                pillar_dict, arg, default, delimiter
+            )
     except KeyError:
         pass
 
@@ -424,7 +425,7 @@ def item(*args, **kwargs):
 
 
 def raw(key=None):
-    '''
+    """
     Return the raw pillar data that is currently loaded into the minion.
 
     Contrast with :py:func:`items` which calls the master to fetch the most
@@ -440,7 +441,7 @@ def raw(key=None):
     pillar raw data.::
 
         salt '*' pillar.raw key='roles'
-    '''
+    """
     if key:
         ret = __pillar__.get(key, {})
     else:
@@ -501,15 +502,16 @@ def ext(external, pillar=None):
         salt '*' pillar.ext "{'git': ['master https://github.com/myuser/myrepo']}"
         salt '*' pillar.ext "{'git': [{'mybranch https://github.com/myuser/myrepo': [{'env': 'base'}]}]}"
     '''
-    if isinstance(external, six.string_types):
+    if isinstance(external, str):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
         __grains__,
-        __opts__['id'],
-        __opts__['saltenv'],
+        __opts__["id"],
+        __opts__["saltenv"],
         ext=external,
-        pillar_override=pillar)
+        pillar_override=pillar,
+    )
 
     ret = pillar_obj.compile_pillar()
 
@@ -517,7 +519,7 @@ def ext(external, pillar=None):
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
-    '''
+    """
     .. versionadded:: 2015.8.0
 
     Attempt to retrieve a list of keys from the named value from the pillar.
@@ -533,9 +535,8 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' pillar.keys web:sites
-    '''
-    ret = salt.utils.data.traverse_dict_and_list(
-        __pillar__, key, KeyError, delimiter)
+    """
+    ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:
         raise KeyError("Pillar key not found: {0}".format(key))
@@ -547,7 +548,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
 
 
 def file_exists(path, saltenv=None):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     This is a master-only function. Calling from the minion is not supported.
@@ -573,11 +574,12 @@ def file_exists(path, saltenv=None):
     .. code-block:: bash
 
         salt '*' pillar.file_exists foo/bar.sls
-    '''
-    pillar_roots = __opts__.get('pillar_roots')
+    """
+    pillar_roots = __opts__.get("pillar_roots")
     if not pillar_roots:
-        raise CommandExecutionError('No pillar_roots found. Are you running '
-                                    'this on the master?')
+        raise CommandExecutionError(
+            "No pillar_roots found. Are you running " "this on the master?"
+        )
 
     if saltenv:
         if saltenv in pillar_roots:
@@ -588,7 +590,7 @@ def file_exists(path, saltenv=None):
     for env in pillar_roots:
         for pillar_dir in pillar_roots[env]:
             full_path = os.path.join(pillar_dir, path)
-            if __salt__['file.file_exists'](full_path):
+            if __salt__["file.file_exists"](full_path):
                 return True
 
     return False
@@ -598,12 +600,8 @@ def file_exists(path, saltenv=None):
 fetch = get
 
 
-def filter_by(lookup_dict,
-              pillar,
-              merge=None,
-              default='default',
-              base=None):
-    '''
+def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
+    """
     .. versionadded:: 2017.7.0
 
     Look up the given pillar in a given dictionary and return the result
@@ -649,10 +647,12 @@ def filter_by(lookup_dict,
     .. code-block:: bash
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
-    '''
-    return salt.utils.data.filter_by(lookup_dict=lookup_dict,
-                                     lookup=pillar,
-                                     traverse=__pillar__,
-                                     merge=merge,
-                                     default=default,
-                                     base=base)
+    """
+    return salt.utils.data.filter_by(
+        lookup_dict=lookup_dict,
+        lookup=pillar,
+        traverse=__pillar__,
+        merge=merge,
+        default=default,
+        base=base,
+    )

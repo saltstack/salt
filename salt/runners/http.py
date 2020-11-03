@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for making various web calls. Primarily designed for webhooks and the
 like, but also useful for basic http testing.
 
 .. versionadded:: 2015.5.0
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 # Import Python libs
 import logging
 
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 def query(url, output=True, **kwargs):
-    '''
+    """
     Query a resource, and decode the return data
 
     Passes through all the parameters described in the
@@ -31,22 +32,22 @@ def query(url, output=True, **kwargs):
             params='key1=val1&key2=val2'
         salt-run http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
-    '''
+    """
     if output is not True:
-        log.warning('Output option has been deprecated. Please use --quiet.')
-    if 'node' not in kwargs:
-        kwargs['node'] = 'master'
+        log.warning("Output option has been deprecated. Please use --quiet.")
+    if "node" not in kwargs:
+        kwargs["node"] = "master"
     opts = __opts__.copy()
-    if 'opts' in kwargs:
-        opts.update(kwargs['opts'])
-        del kwargs['opts']
+    if "opts" in kwargs:
+        opts.update(kwargs["opts"])
+        del kwargs["opts"]
 
     ret = salt.utils.http.query(url=url, opts=opts, **kwargs)
     return ret
 
 
 def update_ca_bundle(target=None, source=None, merge_files=None):
-    '''
+    """
     Update the local CA bundle file from a URL
 
     .. versionadded:: 2015.5.0
@@ -77,7 +78,5 @@ def update_ca_bundle(target=None, source=None, merge_files=None):
     .. code-block:: bash
 
         salt-run http.update_ca_bundle merge_files=/path/to/mycert.pem
-    '''
-    return salt.utils.http.update_ca_bundle(
-        target, source, __opts__, merge_files
-    )
+    """
+    return salt.utils.http.update_ca_bundle(target, source, __opts__, merge_files)

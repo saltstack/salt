@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Python renderer that includes a Pythonic Object based interface
 
 :maintainer: Evan Borgstrom <evan@borgstrom.ca>
@@ -295,38 +295,39 @@ file ``samba/map.sls``, you could do the following.
     with Pkg.installed("samba", names=[Samba.server, Samba.client]):
         Service.running("samba", name=Samba.service)
 
-'''
+"""
 # TODO: Interface for working with reactor files
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 import re
 
+import salt.loader
+import salt.utils.files
+
 # Import Salt Libs
 from salt.ext import six
-import salt.utils.files
-import salt.loader
 from salt.fileclient import get_file_client
-from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
-from salt.ext import six
+from salt.utils.pyobjects import Map, Registry, SaltObject, StateFactory
 
 # our import regexes
-FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
-IMPORT_RE = re.compile(r'^\s*import\s+(salt:\/\/.*)$')
-FROM_AS_RE = re.compile(r'^(.*) as (.*)$')
+FROM_RE = re.compile(r"^\s*from\s+(salt:\/\/.*)\s+import (.*)$")
+IMPORT_RE = re.compile(r"^\s*import\s+(salt:\/\/.*)$")
+FROM_AS_RE = re.compile(r"^(.*) as (.*)$")
 
 log = logging.getLogger(__name__)
 
 try:
-    __context__['pyobjects_loaded'] = True
+    __context__["pyobjects_loaded"] = True
 except NameError:
     __context__ = {}
 
 
 class PyobjectsModule(object):
-    '''This provides a wrapper for bare imports.'''
+    """This provides a wrapper for bare imports."""
 
     def __init__(self, name, attrs):
         self.name = name
@@ -337,85 +338,76 @@ class PyobjectsModule(object):
 
 
 def load_states():
-    '''
+    """
     This loads our states into the salt __context__
-    '''
+    """
     states = {}
 
     # the loader expects to find pillar & grain data
-    __opts__['grains'] = salt.loader.grains(__opts__)
-    __opts__['pillar'] = __pillar__
+    __opts__["grains"] = salt.loader.grains(__opts__)
+    __opts__["pillar"] = __pillar__
     lazy_utils = salt.loader.utils(__opts__)
     lazy_funcs = salt.loader.minion_mods(__opts__, utils=lazy_utils)
     lazy_serializers = salt.loader.serializers(__opts__)
-    lazy_states = salt.loader.states(__opts__,
-            lazy_funcs,
-            lazy_utils,
-            lazy_serializers)
+    lazy_states = salt.loader.states(__opts__, lazy_funcs, lazy_utils, lazy_serializers)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):
-        if '.' not in key:
+        if "." not in key:
             continue
-        mod_name, func_name = key.split('.', 1)
+        mod_name, func_name = key.split(".", 1)
         if mod_name not in states:
             states[mod_name] = {}
         states[mod_name][func_name] = func
 
-    __context__['pyobjects_states'] = states
+    __context__["pyobjects_states"] = states
 
 
-def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
-    if 'pyobjects_states' not in __context__:
+def render(template, saltenv="base", sls="", salt_data=True, **kwargs):
+    if "pyobjects_states" not in __context__:
         load_states()
 
     # these hold the scope that our sls file will be executed with
     _globals = {}
 
     # create our StateFactory objects
-    mod_globals = {'StateFactory': StateFactory}
-    for mod in __context__['pyobjects_states']:
+    mod_globals = {"StateFactory": StateFactory}
+    for mod in __context__["pyobjects_states"]:
         mod_locals = {}
-        mod_camel = ''.join([
-            part.capitalize()
-            for part in mod.split('_')
-        ])
-        valid_funcs = "','".join(
-            __context__['pyobjects_states'][mod]
-        )
+        mod_camel = "".join([part.capitalize() for part in mod.split("_")])
+        valid_funcs = "','".join(__context__["pyobjects_states"][mod])
         mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
-            mod_camel,
-            mod,
-            valid_funcs
+            mod_camel, mod, valid_funcs
         )
         six.exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
     # add our include and extend functions
-    _globals['include'] = Registry.include
-    _globals['extend'] = Registry.make_extend
+    _globals["include"] = Registry.include
+    _globals["extend"] = Registry.make_extend
 
     # add our map class
     Map.__salt__ = __salt__
-    _globals['Map'] = Map
+    _globals["Map"] = Map
 
     # add some convenience methods to the global scope as well as the "dunder"
     # format of all of the salt objects
     try:
-        _globals.update({
-            # salt, pillar & grains all provide shortcuts or object interfaces
-            'salt': SaltObject(__salt__),
-            'pillar': __salt__['pillar.get'],
-            'grains': __salt__['grains.get'],
-            'mine': __salt__['mine.get'],
-            'config': __salt__['config.get'],
-
-            # the "dunder" formats are still available for direct use
-            '__salt__': __salt__,
-            '__pillar__': __pillar__,
-            '__grains__': __grains__
-        })
+        _globals.update(
+            {
+                # salt, pillar & grains all provide shortcuts or object interfaces
+                "salt": SaltObject(__salt__),
+                "pillar": __salt__["pillar.get"],
+                "grains": __salt__["grains.get"],
+                "mine": __salt__["mine.get"],
+                "config": __salt__["config.get"],
+                # the "dunder" formats are still available for direct use
+                "__salt__": __salt__,
+                "__pillar__": __pillar__,
+                "__grains__": __grains__,
+            }
+        )
     except NameError:
         pass
 
@@ -440,7 +432,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         # Do not pass our globals to the modules we are including and keep the root _globals untouched
         template_globals = dict(_globals)
         for line in template.readlines():
-            line = line.rstrip('\r\n')
+            line = line.rstrip("\r\n")
             matched = False
             for RE in (IMPORT_RE, FROM_RE):
                 matches = RE.match(line)
@@ -449,7 +441,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
                 import_file = matches.group(1).strip()
                 try:
-                    imports = matches.group(2).split(',')
+                    imports = matches.group(2).split(",")
                 except IndexError:
                     # if we don't have a third group in the matches object it means
                     # that we're importing everything
@@ -458,7 +450,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 state_file = client.cache_file(import_file, saltenv)
                 if not state_file:
                     raise ImportError(
-                        'Could not find the file \'{0}\''.format(import_file)
+                        "Could not find the file '{0}'".format(import_file)
                     )
 
                 with salt.utils.files.fopen(state_file) as state_fh:
@@ -470,7 +462,9 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 # under the name of the module -> i.e. foo.MapClass
                 if imports is None:
                     import_name = os.path.splitext(os.path.basename(state_file))[0]
-                    template_globals[import_name] = PyobjectsModule(import_name, state_globals)
+                    template_globals[import_name] = PyobjectsModule(
+                        import_name, state_globals
+                    )
                 else:
                     for name in imports:
                         name = alias = name.strip()
@@ -482,10 +476,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
                         if name not in state_globals:
                             raise ImportError(
-                                '\'{0}\' was not found in \'{1}\''.format(
-                                    name,
-                                    import_file
-                                )
+                                "'{0}' was not found in '{1}'".format(name, import_file)
                             )
                         template_globals[alias] = state_globals[name]
 

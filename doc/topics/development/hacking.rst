@@ -32,7 +32,7 @@ Create a new `virtualenv`_:
 
     virtualenv /path/to/your/virtualenv
 
-.. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
+.. _`virtualenv`: https://pypi.org/project/virtualenv/
 
 Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
 
@@ -172,7 +172,7 @@ If you would like to log to the console instead of to the log file, remove the
 
     Once the minion starts, you may see an error like the following:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
         var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"

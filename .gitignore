@@ -1,5 +1,6 @@
 /build
 /src
+__pycache__/
 *.py[co]
 pkg/arch/*.tar.xz
 *.sw[a-p]
@@ -114,3 +115,4 @@ kitchen.local.yml
 .bundle/
 Gemfile.lock
 /artifacts/
+requirements/static/py*/*.log

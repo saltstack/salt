@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon S3
 
 .. highlight:: yaml
@@ -70,8 +70,8 @@ Connection module for Amazon S3
 .. highlight:: bash
 
 :depends: requests
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -80,16 +80,27 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Should work on any modern Python installation
-    '''
+    """
     return True
 
 
-def delete(bucket, path=None, action=None, key=None, keyid=None,
-           service_url=None, verify_ssl=None, kms_keyid=None, location=None,
-           role_arn=None, path_style=None, https_enable=None):
-    '''
+def delete(
+    bucket,
+    path=None,
+    action=None,
+    key=None,
+    keyid=None,
+    service_url=None,
+    verify_ssl=None,
+    kms_keyid=None,
+    location=None,
+    role_arn=None,
+    path_style=None,
+    https_enable=None,
+):
+    """
     Delete a bucket, or delete an object from a bucket.
 
 
@@ -100,8 +111,18 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
     CLI Example to delete an object from a bucket::
 
         salt myminion s3.delete mybucket remoteobject
-    '''
-    key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
+    """
+    (
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+        role_arn,
+        path_style,
+        https_enable,
+    ) = _get_key(
         key,
         keyid,
         service_url,
@@ -113,26 +134,40 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
         https_enable,
     )
 
-    return __utils__['s3.query'](method='DELETE',
-                                 bucket=bucket,
-                                 path=path,
-                                 action=action,
-                                 key=key,
-                                 keyid=keyid,
-                                 kms_keyid=kms_keyid,
-                                 service_url=service_url,
-                                 verify_ssl=verify_ssl,
-                                 location=location,
-                                 role_arn=role_arn,
-                                 path_style=path_style,
-                                 https_enable=https_enable)
+    return __utils__["s3.query"](
+        method="DELETE",
+        bucket=bucket,
+        path=path,
+        action=action,
+        key=key,
+        keyid=keyid,
+        kms_keyid=kms_keyid,
+        service_url=service_url,
+        verify_ssl=verify_ssl,
+        location=location,
+        role_arn=role_arn,
+        path_style=path_style,
+        https_enable=https_enable,
+    )
 
 
-def get(bucket='', path='', return_bin=False, action=None,
-        local_file=None, key=None, keyid=None, service_url=None,
-        verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
-        path_style=None, https_enable=None):
-    '''
+def get(
+    bucket="",
+    path="",
+    return_bin=False,
+    action=None,
+    local_file=None,
+    key=None,
+    keyid=None,
+    service_url=None,
+    verify_ssl=None,
+    kms_keyid=None,
+    location=None,
+    role_arn=None,
+    path_style=None,
+    https_enable=None,
+):
+    """
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
     Salt will attempt to parse an XML response.
@@ -172,8 +207,18 @@ def get(bucket='', path='', return_bin=False, action=None,
     To perform an action on a bucket:
 
         salt myminion s3.get mybucket myfile.png action=acl
-    '''
-    key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
+    """
+    (
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+        role_arn,
+        path_style,
+        https_enable,
+    ) = _get_key(
         key,
         keyid,
         service_url,
@@ -185,35 +230,57 @@ def get(bucket='', path='', return_bin=False, action=None,
         https_enable,
     )
 
-    return __utils__['s3.query'](method='GET',
-                                 bucket=bucket,
-                                 path=path,
-                                 return_bin=return_bin,
-                                 local_file=local_file,
-                                 action=action,
-                                 key=key,
-                                 keyid=keyid,
-                                 kms_keyid=kms_keyid,
-                                 service_url=service_url,
-                                 verify_ssl=verify_ssl,
-                                 location=location,
-                                 role_arn=role_arn,
-                                 path_style=path_style,
-                                 https_enable=https_enable)
+    return __utils__["s3.query"](
+        method="GET",
+        bucket=bucket,
+        path=path,
+        return_bin=return_bin,
+        local_file=local_file,
+        action=action,
+        key=key,
+        keyid=keyid,
+        kms_keyid=kms_keyid,
+        service_url=service_url,
+        verify_ssl=verify_ssl,
+        location=location,
+        role_arn=role_arn,
+        path_style=path_style,
+        https_enable=https_enable,
+    )
 
 
-def head(bucket, path='', key=None, keyid=None, service_url=None,
-         verify_ssl=None, kms_keyid=None, location=None, role_arn=None,
-         path_style=None, https_enable=None):
-    '''
+def head(
+    bucket,
+    path="",
+    key=None,
+    keyid=None,
+    service_url=None,
+    verify_ssl=None,
+    kms_keyid=None,
+    location=None,
+    role_arn=None,
+    path_style=None,
+    https_enable=None,
+):
+    """
     Return the metadata for a bucket, or an object in a bucket.
 
     CLI Examples:
 
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
-    '''
-    key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
+    """
+    (
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+        role_arn,
+        path_style,
+        https_enable,
+    ) = _get_key(
         key,
         keyid,
         service_url,
@@ -225,26 +292,40 @@ def head(bucket, path='', key=None, keyid=None, service_url=None,
         https_enable,
     )
 
-    return __utils__['s3.query'](method='HEAD',
-                                 bucket=bucket,
-                                 path=path,
-                                 key=key,
-                                 keyid=keyid,
-                                 kms_keyid=kms_keyid,
-                                 service_url=service_url,
-                                 verify_ssl=verify_ssl,
-                                 location=location,
-                                 full_headers=True,
-                                 role_arn=role_arn,
-                                 path_style=path_style,
-                                 https_enable=https_enable)
+    return __utils__["s3.query"](
+        method="HEAD",
+        bucket=bucket,
+        path=path,
+        key=key,
+        keyid=keyid,
+        kms_keyid=kms_keyid,
+        service_url=service_url,
+        verify_ssl=verify_ssl,
+        location=location,
+        full_headers=True,
+        role_arn=role_arn,
+        path_style=path_style,
+        https_enable=https_enable,
+    )
 
 
-def put(bucket, path=None, return_bin=False, action=None, local_file=None,
-        key=None, keyid=None, service_url=None, verify_ssl=None,
-        kms_keyid=None, location=None, role_arn=None, path_style=None,
-        https_enable=None):
-    '''
+def put(
+    bucket,
+    path=None,
+    return_bin=False,
+    action=None,
+    local_file=None,
+    key=None,
+    keyid=None,
+    service_url=None,
+    verify_ssl=None,
+    kms_keyid=None,
+    location=None,
+    role_arn=None,
+    path_style=None,
+    https_enable=None,
+):
+    """
     Create a new bucket, or upload an object to a bucket.
 
     CLI Example to create a bucket:
@@ -254,8 +335,18 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
     CLI Example to upload an object to a bucket:
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
-    '''
-    key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable = _get_key(
+    """
+    (
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+        role_arn,
+        path_style,
+        https_enable,
+    ) = _get_key(
         key,
         keyid,
         service_url,
@@ -267,64 +358,89 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
         https_enable,
     )
 
-    return __utils__['s3.query'](method='PUT',
-                                 bucket=bucket,
-                                 path=path,
-                                 return_bin=return_bin,
-                                 local_file=local_file,
-                                 action=action,
-                                 key=key,
-                                 keyid=keyid,
-                                 kms_keyid=kms_keyid,
-                                 service_url=service_url,
-                                 verify_ssl=verify_ssl,
-                                 location=location,
-                                 role_arn=role_arn,
-                                 path_style=path_style,
-                                 https_enable=https_enable)
+    return __utils__["s3.query"](
+        method="PUT",
+        bucket=bucket,
+        path=path,
+        return_bin=return_bin,
+        local_file=local_file,
+        action=action,
+        key=key,
+        keyid=keyid,
+        kms_keyid=kms_keyid,
+        service_url=service_url,
+        verify_ssl=verify_ssl,
+        location=location,
+        role_arn=role_arn,
+        path_style=path_style,
+        https_enable=https_enable,
+    )
 
 
-def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable):
-    '''
+def _get_key(
+    key,
+    keyid,
+    service_url,
+    verify_ssl,
+    kms_keyid,
+    location,
+    role_arn,
+    path_style,
+    https_enable,
+):
+    """
     Examine the keys, and populate as necessary
-    '''
-    if not key and __salt__['config.option']('s3.key'):
-        key = __salt__['config.option']('s3.key')
+    """
+    if not key and __salt__["config.option"]("s3.key"):
+        key = __salt__["config.option"]("s3.key")
 
-    if not keyid and __salt__['config.option']('s3.keyid'):
-        keyid = __salt__['config.option']('s3.keyid')
+    if not keyid and __salt__["config.option"]("s3.keyid"):
+        keyid = __salt__["config.option"]("s3.keyid")
 
-    if not kms_keyid and __salt__['config.option']('aws.kms.keyid'):
-        kms_keyid = __salt__['config.option']('aws.kms.keyid')
+    if not kms_keyid and __salt__["config.option"]("aws.kms.keyid"):
+        kms_keyid = __salt__["config.option"]("aws.kms.keyid")
 
-    if not service_url and __salt__['config.option']('s3.service_url'):
-        service_url = __salt__['config.option']('s3.service_url')
+    if not service_url and __salt__["config.option"]("s3.service_url"):
+        service_url = __salt__["config.option"]("s3.service_url")
 
     if not service_url:
-        service_url = 's3.amazonaws.com'
+        service_url = "s3.amazonaws.com"
 
-    if verify_ssl is None and __salt__['config.option']('s3.verify_ssl') is not None:
-        verify_ssl = __salt__['config.option']('s3.verify_ssl')
+    if verify_ssl is None and __salt__["config.option"]("s3.verify_ssl") is not None:
+        verify_ssl = __salt__["config.option"]("s3.verify_ssl")
 
     if verify_ssl is None:
         verify_ssl = True
 
-    if location is None and __salt__['config.option']('s3.location') is not None:
-        location = __salt__['config.option']('s3.location')
+    if location is None and __salt__["config.option"]("s3.location") is not None:
+        location = __salt__["config.option"]("s3.location")
 
-    if role_arn is None and __salt__['config.option']('s3.role_arn'):
-        role_arn = __salt__['config.option']('s3.role_arn')
+    if role_arn is None and __salt__["config.option"]("s3.role_arn"):
+        role_arn = __salt__["config.option"]("s3.role_arn")
 
-    if path_style is None and __salt__['config.option']('s3.path_style') is not None:
-        path_style = __salt__['config.option']('s3.path_style')
+    if path_style is None and __salt__["config.option"]("s3.path_style") is not None:
+        path_style = __salt__["config.option"]("s3.path_style")
 
     if path_style is None:
         path_style = False
 
-    if https_enable is None and __salt__['config.option']('s3.https_enable') is not None:
-        https_enable = __salt__['config.option']('s3.https_enable')
+    if (
+        https_enable is None
+        and __salt__["config.option"]("s3.https_enable") is not None
+    ):
+        https_enable = __salt__["config.option"]("s3.https_enable")
 
     if https_enable is None:
         https_enable = True
 
-    return key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn, path_style, https_enable
+    return (
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+        role_arn,
+        path_style,
+        https_enable,
+    )

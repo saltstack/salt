@@ -10,6 +10,20 @@ heavily on how you use Salt, where you use Salt, how your team is structured,
 where you get data from, and what kinds of access (internal and external) you
 require.
 
+.. warning::
+
+    For historical reasons, Salt requires PyCrypto as a "lowest common
+    denominator". However, `PyCrypto is unmaintained`_ and best practice is to
+    manually upgrade to use a more maintained library such as `PyCryptodome`_. See
+    `Issue #52674`_ and `Issue #54115`_ for more info
+
+
+.. _PyCrypto is unmaintained: https://github.com/dlitz/pycrypto/issues/301#issue-551975699
+.. _PyCryptodome: https://pypi.org/project/pycryptodome/
+.. _Issue #52674: https://github.com/saltstack/salt/issues/52674
+.. _Issue #54115: https://github.com/saltstack/salt/issues/54115
+
+
 General hardening tips
 ======================
 
@@ -22,7 +36,8 @@ General hardening tips
 - Don't expose the Salt master any more than what is required.
 - Harden the system as you would with any high-priority target.
 - Keep the system patched and up-to-date.
-- Use tight firewall rules.
+- Use tight firewall rules. Pay particular attention to TCP/4505 and TCP/4506
+  on the salt master and avoid exposing these ports unnecessarily.
 
 Salt hardening tips
 ===================
@@ -57,6 +72,10 @@ Salt hardening tips
   particularly sensitive minions. There is also :ref:`salt-ssh` or the
   :mod:`modules.sudo <salt.modules.sudo>` if you need to further restrict
   a minion.
+- Monitor specific security related log messages. Salt ``salt-master`` logs
+  attempts to access methods which are not exposed to network clients. These log
+  messages are logged at the ``error`` log level and start with ``Requested
+  method not exposed``.
 
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce

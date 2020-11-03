@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage the password database on BSD systems
 
 .. important::
@@ -7,34 +7,40 @@ Manage the password database on BSD systems
     minion, and it is using a different module (or gives an error similar to
     *'shadow.info' is not available*), see :ref:`here
     <module-provider-override>`.
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+import salt.utils.files
+import salt.utils.stringutils
+from salt.exceptions import SaltInvocationError
+
+# Import salt libs
+from salt.ext import six
+
 try:
     import pwd
 except ImportError:
     pass
 
-# Import salt libs
-from salt.ext import six
-import salt.utils.files
-import salt.utils.stringutils
-from salt.exceptions import SaltInvocationError
 
 # Define the module's virtual name
-__virtualname__ = 'shadow'
+__virtualname__ = "shadow"
 
 
 def __virtual__():
-    if 'BSD' in __grains__.get('os', ''):
+    if "BSD" in __grains__.get("os", ""):
         return __virtualname__
-    return (False, 'The bsd_shadow execution module cannot be loaded: '
-            'only available on BSD family systems.')
+    return (
+        False,
+        "The bsd_shadow execution module cannot be loaded: "
+        "only available on BSD family systems.",
+    )
 
 
 def default_hash():
-    '''
+    """
     Returns the default hash used for unset passwords
 
     CLI Example:
@@ -42,12 +48,12 @@ def default_hash():
     .. code-block:: bash
 
         salt '*' shadow.default_hash
-    '''
-    return '*' if __grains__['os'].lower() == 'freebsd' else '*************'
+    """
+    return "*" if __grains__["os"].lower() == "freebsd" else "*************"
 
 
 def info(name):
-    '''
+    """
     Return information for the specified user
 
     CLI Example:
@@ -55,35 +61,31 @@ def info(name):
     .. code-block:: bash
 
         salt '*' shadow.info someuser
-    '''
+    """
     try:
         data = pwd.getpwnam(name)
-        ret = {
-            'name': data.pw_name,
-            'passwd': data.pw_passwd}
+        ret = {"name": data.pw_name, "passwd": data.pw_passwd}
     except KeyError:
-        return {
-            'name': '',
-            'passwd': ''}
+        return {"name": "", "passwd": ""}
 
     if not isinstance(name, six.string_types):
         name = six.text_type(name)
-    if ':' in name:
-        raise SaltInvocationError('Invalid username \'{0}\''.format(name))
+    if ":" in name:
+        raise SaltInvocationError("Invalid username '{0}'".format(name))
 
-    if __salt__['cmd.has_exec']('pw'):
-        change, expire = __salt__['cmd.run_stdout'](
-            ['pw', 'user', 'show', name],
-            python_shell=False).split(':')[5:7]
-    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
+    if __salt__["cmd.has_exec"]("pw"):
+        change, expire = __salt__["cmd.run_stdout"](
+            ["pw", "user", "show", name], python_shell=False
+        ).split(":")[5:7]
+    elif __grains__["kernel"] in ("NetBSD", "OpenBSD"):
         try:
-            with salt.utils.files.fopen('/etc/master.passwd', 'r') as fp_:
+            with salt.utils.files.fopen("/etc/master.passwd", "r") as fp_:
                 for line in fp_:
                     line = salt.utils.stringutils.to_unicode(line)
-                    if line.startswith('{0}:'.format(name)):
-                        key = line.split(':')
+                    if line.startswith("{0}:".format(name)):
+                        key = line.split(":")
                         change, expire = key[5:7]
-                        ret['passwd'] = six.text_type(key[1])
+                        ret["passwd"] = six.text_type(key[1])
                         break
         except IOError:
             change = expire = None
@@ -91,12 +93,12 @@ def info(name):
         change = expire = None
 
     try:
-        ret['change'] = int(change)
+        ret["change"] = int(change)
     except ValueError:
         pass
 
     try:
-        ret['expire'] = int(expire)
+        ret["expire"] = int(expire)
     except ValueError:
         pass
 
@@ -104,7 +106,7 @@ def info(name):
 
 
 def set_change(name, change):
-    '''
+    """
     Sets the time at which the password expires (in seconds since the UNIX
     epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
     FreeBSD.
@@ -116,22 +118,22 @@ def set_change(name, change):
     .. code-block:: bash
 
         salt '*' shadow.set_change username 1419980400
-    '''
+    """
     pre_info = info(name)
-    if change == pre_info['change']:
+    if change == pre_info["change"]:
         return True
-    if __grains__['kernel'] == 'FreeBSD':
-        cmd = ['pw', 'user', 'mod', name, '-f', change]
+    if __grains__["kernel"] == "FreeBSD":
+        cmd = ["pw", "user", "mod", name, "-f", change]
     else:
-        cmd = ['usermod', '-f', change, name]
-    __salt__['cmd.run'](cmd, python_shell=False)
+        cmd = ["usermod", "-f", change, name]
+    __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
-    if post_info['change'] != pre_info['change']:
-        return post_info['change'] == change
+    if post_info["change"] != pre_info["change"]:
+        return post_info["change"] == change
 
 
 def set_expire(name, expire):
-    '''
+    """
     Sets the time at which the account expires (in seconds since the UNIX
     epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
     FreeBSD.
@@ -143,22 +145,22 @@ def set_expire(name, expire):
     .. code-block:: bash
 
         salt '*' shadow.set_expire username 1419980400
-    '''
+    """
     pre_info = info(name)
-    if expire == pre_info['expire']:
+    if expire == pre_info["expire"]:
         return True
-    if __grains__['kernel'] == 'FreeBSD':
-        cmd = ['pw', 'user', 'mod', name, '-e', expire]
+    if __grains__["kernel"] == "FreeBSD":
+        cmd = ["pw", "user", "mod", name, "-e", expire]
     else:
-        cmd = ['usermod', '-e', expire, name]
-    __salt__['cmd.run'](cmd, python_shell=False)
+        cmd = ["usermod", "-e", expire, name]
+    __salt__["cmd.run"](cmd, python_shell=False)
     post_info = info(name)
-    if post_info['expire'] != pre_info['expire']:
-        return post_info['expire'] == expire
+    if post_info["expire"] != pre_info["expire"]:
+        return post_info["expire"] == expire
 
 
 def del_password(name):
-    '''
+    """
     .. versionadded:: 2015.8.2
 
     Delete the password from name user
@@ -168,15 +170,15 @@ def del_password(name):
     .. code-block:: bash
 
         salt '*' shadow.del_password username
-    '''
-    cmd = 'pw user mod {0} -w none'.format(name)
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='quiet')
+    """
+    cmd = "pw user mod {0} -w none".format(name)
+    __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="quiet")
     uinfo = info(name)
-    return not uinfo['passwd']
+    return not uinfo["passwd"]
 
 
 def set_password(name, password):
-    '''
+    """
     Set the password for a named user. The password must be a properly defined
     hash. The password hash can be generated with this command:
 
@@ -202,15 +204,12 @@ def set_password(name, password):
     .. code-block:: bash
 
         salt '*' shadow.set_password someuser '$1$UYCIxa628.9qXjpQCjM4a..'
-    '''
-    if __grains__.get('os', '') == 'FreeBSD':
-        cmd = ['pw', 'user', 'mod', name, '-H', '0']
+    """
+    if __grains__.get("os", "") == "FreeBSD":
+        cmd = ["pw", "user", "mod", name, "-H", "0"]
         stdin = password
     else:
-        cmd = ['usermod', '-p', password, name]
+        cmd = ["usermod", "-p", password, name]
         stdin = None
-    __salt__['cmd.run'](cmd,
-                        stdin=stdin,
-                        output_loglevel='quiet',
-                        python_shell=False)
-    return info(name)['passwd'] == password
+    __salt__["cmd.run"](cmd, stdin=stdin, output_loglevel="quiet", python_shell=False)
+    return info(name)["passwd"] == password

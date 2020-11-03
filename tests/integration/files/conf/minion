@@ -95,6 +95,9 @@ config_test:
 
 mine_functions:
   test.ping: []
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'
 
 # sdb env module
 osenv:
@@ -112,3 +115,14 @@ autosign_grains:
 discovery: false
 sdbvault:
   driver: vault
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+  policies:
+  - testpolicy
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379

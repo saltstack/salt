@@ -1,734 +1,215 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     tests.multimaster.conftest
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Multimaster PyTest prep routines
-'''
-from __future__ import absolute_import, print_function, unicode_literals
-import os
-import shutil
+"""
+
 import logging
-from collections import OrderedDict
+import os
+import pathlib
+import shutil
 
 import pytest
-import psutil
-
 import salt.utils.files
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.runtests import RUNTIME_VARS
-from pytestsalt.fixtures.ports import get_unused_localhost_port
-from pytestsalt.fixtures.config import apply_master_config, apply_minion_config
-from pytestsalt.fixtures.daemons import SaltMaster, SaltMinion, start_daemon
 
 log = logging.getLogger(__name__)
 
-SESSION_ROOT_DIR = 'session-mm-root'
-SESSION_SECONDARY_ROOT_DIR = 'session-secondary-mm-root'
 
+@pytest.fixture(scope="package")
+def ext_pillar_file_tree():
+    pillar_file_tree = {
+        "root_dir": str(pathlib.Path(RUNTIME_VARS.PILLAR_DIR) / "base" / "file_tree"),
+        "follow_dir_links": False,
+        "keep_newline": True,
+    }
+    return {"file_tree": pillar_file_tree}
+
+
+@pytest.fixture(scope="package")
+def salt_mm_master(request, salt_factories, ext_pillar_file_tree):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_master")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+    master_id = "mm-master"
+    root_dir = salt_factories.get_root_dir_for_daemon(master_id)
+    config_defaults["root_dir"] = str(root_dir)
+    config_defaults["ext_pillar"] = [ext_pillar_file_tree]
+    config_defaults["open_mode"] = True
+    config_defaults["transport"] = request.config.getoption("--transport")
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+    factory = salt_factories.get_salt_master_daemon(
+        master_id,
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    with factory.started():
+        yield factory
+
+
+@pytest.fixture(scope="package")
+def salt_mm_sub_master(salt_factories, salt_mm_master, ext_pillar_file_tree):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_master")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+
+    master_id = "mm-sub-master"
+    root_dir = salt_factories.get_root_dir_for_daemon(master_id)
+    config_defaults["root_dir"] = str(root_dir)
+    config_defaults["ext_pillar"] = [ext_pillar_file_tree]
+    config_defaults["open_mode"] = True
+    config_defaults["transport"] = salt_mm_master.config["transport"]
+
+    config_overrides = {
+        "file_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+            ],
+            # Alternate root to test __env__ choices
+            "prod": [
+                RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+            ],
+        },
+        "pillar_roots": {
+            "base": [
+                RUNTIME_VARS.TMP_PILLAR_TREE,
+                os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+            ],
+            "prod": [RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE],
+        },
+    }
+
+    factory = salt_factories.get_salt_master_daemon(
+        master_id,
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
 
-@pytest.fixture(scope='session')
-def session_mm_root_dir(tempdir):
-    '''
-    Return the session scoped salt root dir
-    '''
-    return tempdir.mkdir(SESSION_ROOT_DIR)
-
-
-@pytest.fixture(scope='session')
-def session_mm_conf_dir(session_mm_root_dir):
-    '''
-    Return the session scoped salt root dir
-    '''
-    return session_mm_root_dir.join('conf').ensure(dir=True)
-
-
-# ----- Master Fixtures --------------------------------------------------------------------------------------------->
-@pytest.fixture(scope='session')
-def session_mm_master_id():
-    '''
-    Returns the session scoped master id
-    '''
-    return 'mm-master'
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_publish_port():
-    '''
-    Returns an unused localhost port for the master publish interface
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_return_port():
-    '''
-    Returns an unused localhost port for the master return interface
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_engine_port():
-    '''
-    Returns an unused localhost port for the pytest session salt master engine
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_tcp_master_pub_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_tcp_master_pull_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_tcp_master_publish_pull():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_tcp_master_workers():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_log_prefix(session_mm_master_id):
-    return 'salt-master/{}'.format(session_mm_master_id)
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_config_file(session_mm_conf_dir):
-    '''
-    Returns the path to the salt master configuration file
-    '''
-    return session_mm_conf_dir.join('master').realpath().strpath
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_default_options(session_master_default_options):
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_master')) as rfh:
-        config_file_opts = yaml.deserialize(rfh.read())
-        opts = session_master_default_options.copy()
-        if config_file_opts:
-            opts.update(config_file_opts)
-        return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_config_overrides(session_master_config_overrides,
-                                       session_mm_root_dir):
-    overrides = session_master_config_overrides.copy()
-    pytest_stop_sending_events_file = session_mm_root_dir.join('pytest_mm_stop_sending_events_file').strpath
-    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
-        wfh.write('')
-    overrides['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
-    return overrides
-
-
-@pytest.fixture(scope='session')
-def session_mm_master_config(session_mm_root_dir,
-                             session_mm_master_default_options,
-                             session_mm_master_config_file,
-                             session_mm_master_publish_port,
-                             session_mm_master_return_port,
-                             session_mm_master_engine_port,
-                             session_mm_master_config_overrides,
-                             session_mm_master_id,
-                             session_base_env_state_tree_root_dir,
-                             session_prod_env_state_tree_root_dir,
-                             session_base_env_pillar_tree_root_dir,
-                             session_prod_env_pillar_tree_root_dir,
-                             running_username,
-                             log_server_port,
-                             log_server_level,
-                             engines_dir,
-                             log_handlers_dir,
-                             session_mm_master_log_prefix,
-                             session_mm_master_tcp_master_pub_port,
-                             session_mm_master_tcp_master_pull_port,
-                             session_mm_master_tcp_master_publish_pull,
-                             session_mm_master_tcp_master_workers):
-    '''
-    This fixture will return the salt master configuration options after being
-    overridden with any options passed from ``session_master_config_overrides``
-    '''
-    return apply_master_config(session_mm_master_default_options,
-                               session_mm_root_dir,
-                               session_mm_master_config_file,
-                               session_mm_master_publish_port,
-                               session_mm_master_return_port,
-                               session_mm_master_engine_port,
-                               session_mm_master_config_overrides,
-                               session_mm_master_id,
-                               [session_base_env_state_tree_root_dir.strpath],
-                               [session_prod_env_state_tree_root_dir.strpath],
-                               [session_base_env_pillar_tree_root_dir.strpath],
-                               [session_prod_env_pillar_tree_root_dir.strpath],
-                               running_username,
-                               log_server_port,
-                               log_server_level,
-                               engines_dir,
-                               log_handlers_dir,
-                               session_mm_master_log_prefix,
-                               session_mm_master_tcp_master_pub_port,
-                               session_mm_master_tcp_master_pull_port,
-                               session_mm_master_tcp_master_publish_pull,
-                               session_mm_master_tcp_master_workers)
-
-
-@pytest.fixture(scope='session')
-def session_mm_salt_master(request,
-                           session_mm_conf_dir,
-                           session_mm_master_id,
-                           session_mm_master_config,
-                           log_server,  # pylint: disable=unused-argument
-                           session_mm_master_log_prefix,
-                           cli_master_script_name,
-                           _cli_bin_dir,
-                           _salt_fail_hard,
-                           ):
-    '''
-    Returns a running salt-master
-    '''
-    return start_daemon(request,
-                        daemon_name='salt-master',
-                        daemon_id=session_mm_master_id,
-                        daemon_log_prefix=session_mm_master_log_prefix,
-                        daemon_cli_script_name=cli_master_script_name,
-                        daemon_config=session_mm_master_config,
-                        daemon_config_dir=session_mm_conf_dir,
-                        daemon_class=SaltMaster,
-                        bin_dir_path=_cli_bin_dir,
-                        fail_hard=_salt_fail_hard,
-                        event_listener_config_dir=session_mm_conf_dir,
-                        start_timeout=60)
-# <---- Master Fixtures ----------------------------------------------------------------------------------------------
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_root_dir(tempdir):
-    '''
-    Return the session scoped salt secondary root dir
-    '''
-    return tempdir.mkdir(SESSION_SECONDARY_ROOT_DIR)
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_conf_dir(session_mm_secondary_root_dir):
-    '''
-    Return the session scoped salt root dir
-    '''
-    return session_mm_secondary_root_dir.join('conf').ensure(dir=True)
-
-
-# ----- Sub Master Fixtures ----------------------------------------------------------------------------------------->
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_id():
-    '''
-    Returns the session scoped master id
-    '''
-    return 'mm-sub-master'
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_publish_port():
-    '''
-    Returns an unused localhost port for the master publish interface
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_return_port():
-    '''
-    Returns an unused localhost port for the master return interface
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_engine_port():
-    '''
-    Returns an unused localhost port for the pytest session salt master engine
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_tcp_master_pub_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_tcp_master_pull_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_tcp_master_publish_pull():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_tcp_master_workers():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_log_prefix(session_mm_secondary_master_id):
-    return 'salt-master/{}'.format(session_mm_secondary_master_id)
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_config_file(session_mm_secondary_conf_dir):
-    '''
-    Returns the path to the salt master configuration file
-    '''
-    return session_mm_secondary_conf_dir.join('master').realpath().strpath
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_default_options(session_master_default_options):
-    opts = session_master_default_options.copy()
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_master')) as rfh:
-        opts.update(yaml.deserialize(rfh.read()))
-        return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_config_overrides(session_master_config_overrides,
-                                                 session_mm_secondary_root_dir):
-    overrides = session_master_config_overrides.copy()
-    pytest_stop_sending_events_file = session_mm_secondary_root_dir.join('pytest_mm_stop_sending_events_file').strpath
-    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
-        wfh.write('')
-    overrides['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
-    return overrides
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_master_config(session_mm_secondary_root_dir,
-                                       session_mm_secondary_master_default_options,
-                                       session_mm_secondary_master_config_file,
-                                       session_mm_secondary_master_publish_port,
-                                       session_mm_secondary_master_return_port,
-                                       session_mm_secondary_master_engine_port,
-                                       session_mm_secondary_master_config_overrides,
-                                       session_mm_secondary_master_id,
-                                       session_base_env_state_tree_root_dir,
-                                       session_prod_env_state_tree_root_dir,
-                                       session_base_env_pillar_tree_root_dir,
-                                       session_prod_env_pillar_tree_root_dir,
-                                       running_username,
-                                       log_server_port,
-                                       log_server_level,
-                                       engines_dir,
-                                       log_handlers_dir,
-                                       session_mm_secondary_master_log_prefix,
-                                       session_mm_secondary_master_tcp_master_pub_port,
-                                       session_mm_secondary_master_tcp_master_pull_port,
-                                       session_mm_secondary_master_tcp_master_publish_pull,
-                                       session_mm_secondary_master_tcp_master_workers):
-    '''
-    This fixture will return the salt master configuration options after being
-    overridden with any options passed from ``session_master_config_overrides``
-    '''
-    return apply_master_config(session_mm_secondary_master_default_options,
-                               session_mm_secondary_root_dir,
-                               session_mm_secondary_master_config_file,
-                               session_mm_secondary_master_publish_port,
-                               session_mm_secondary_master_return_port,
-                               session_mm_secondary_master_engine_port,
-                               session_mm_secondary_master_config_overrides,
-                               session_mm_secondary_master_id,
-                               [session_base_env_state_tree_root_dir.strpath],
-                               [session_prod_env_state_tree_root_dir.strpath],
-                               [session_base_env_pillar_tree_root_dir.strpath],
-                               [session_prod_env_pillar_tree_root_dir.strpath],
-                               running_username,
-                               log_server_port,
-                               log_server_level,
-                               engines_dir,
-                               log_handlers_dir,
-                               session_mm_secondary_master_log_prefix,
-                               session_mm_secondary_master_tcp_master_pub_port,
-                               session_mm_secondary_master_tcp_master_pull_port,
-                               session_mm_secondary_master_tcp_master_publish_pull,
-                               session_mm_secondary_master_tcp_master_workers)
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_salt_master(request,
-                                     session_mm_secondary_conf_dir,
-                                     session_mm_secondary_master_id,
-                                     session_mm_secondary_master_config,
-                                     log_server,  # pylint: disable=unused-argument
-                                     session_mm_secondary_master_log_prefix,
-                                     cli_master_script_name,
-                                     _cli_bin_dir,
-                                     _salt_fail_hard,
-                                     session_mm_master_config,
-                                     session_mm_salt_master
-                                     ):
-    '''
-    Returns a running salt-master
-    '''
     # The secondary salt master depends on the primarily salt master fixture
     # because we need to clone the keys
-    for keyfile in ('master.pem', 'master.pub'):
+    for keyfile in ("master.pem", "master.pub"):
         shutil.copyfile(
-            os.path.join(session_mm_master_config['pki_dir'], keyfile),
-            os.path.join(session_mm_secondary_master_config['pki_dir'], keyfile)
+            os.path.join(salt_mm_master.config["pki_dir"], keyfile),
+            os.path.join(factory.config["pki_dir"], keyfile),
         )
-    return start_daemon(request,
-                        daemon_name='salt-master',
-                        daemon_id=session_mm_secondary_master_id,
-                        daemon_log_prefix=session_mm_secondary_master_log_prefix,
-                        daemon_cli_script_name=cli_master_script_name,
-                        daemon_config=session_mm_secondary_master_config,
-                        daemon_config_dir=session_mm_secondary_conf_dir,
-                        daemon_class=SaltMaster,
-                        bin_dir_path=_cli_bin_dir,
-                        fail_hard=_salt_fail_hard,
-                        event_listener_config_dir=session_mm_secondary_conf_dir,
-                        start_timeout=60)
-# <---- Sub Master Fixtures ------------------------------------------------------------------------------------------
-
-# ----- Sub Minion Fixtures --------------------------------------------------------------------------------------------->
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_id():
-    '''
-    Returns the session scoped minion id
-    '''
-    return 'mm-sub-minion'
+    with factory.started():
+        yield factory
 
 
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_tcp_pub_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
+@pytest.fixture(scope="package")
+def salt_mm_minion(salt_mm_master, salt_mm_sub_master):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = salt_mm_master.config["transport"]
+
+    mm_master_port = salt_mm_master.config["ret_port"]
+    mm_sub_master_port = salt_mm_sub_master.config["ret_port"]
+    config_overrides = {
+        "master": [
+            "localhost:{}".format(mm_master_port),
+            "localhost:{}".format(mm_sub_master_port),
+        ],
+        "test.foo": "baz",
+    }
+    factory = salt_mm_master.get_salt_minion_daemon(
+        "mm-minion",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    with factory.started():
+        yield factory
 
 
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_tcp_pull_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
+@pytest.fixture(scope="package")
+def salt_mm_sub_minion(salt_mm_master, salt_mm_sub_master):
+    with salt.utils.files.fopen(
+        os.path.join(RUNTIME_VARS.CONF_DIR, "mm_sub_minion")
+    ) as rfh:
+        config_defaults = yaml.deserialize(rfh.read())
+    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
+    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
+    config_defaults["transport"] = salt_mm_master.config["transport"]
+
+    mm_master_port = salt_mm_master.config["ret_port"]
+    mm_sub_master_port = salt_mm_sub_master.config["ret_port"]
+    config_overrides = {
+        "master": [
+            "localhost:{}".format(mm_master_port),
+            "localhost:{}".format(mm_sub_master_port),
+        ],
+        "test.foo": "baz",
+    }
+    factory = salt_mm_sub_master.get_salt_minion_daemon(
+        "mm-sub-minion",
+        config_defaults=config_defaults,
+        config_overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    with factory.started():
+        yield factory
 
 
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_log_prefix(session_mm_secondary_minion_id):
-    return 'salt-minion/{}'.format(session_mm_secondary_minion_id)
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_config_file(session_mm_secondary_conf_dir):
-    '''
-    Returns the path to the salt minion configuration file
-    '''
-    return session_mm_secondary_conf_dir.join('minion').realpath().strpath
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_default_options(session_secondary_minion_default_options):
-    opts = session_secondary_minion_default_options.copy()
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_minion')) as rfh:
-        opts.update(yaml.deserialize(rfh.read()))
-    return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_config_overrides(session_secondary_minion_config_overrides,
-                                                 session_mm_master_return_port,
-                                                 session_mm_secondary_master_return_port):
-    if session_secondary_minion_config_overrides:
-        opts = session_secondary_minion_config_overrides.copy()
-    else:
-        opts = {}
-    opts['master_port'] = None
-    opts['master'] = [
-        'localhost:{}'.format(session_mm_master_return_port),
-        'localhost:{}'.format(session_mm_secondary_master_return_port)
-    ]
-    return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_minion_config(session_mm_secondary_root_dir,
-                                       session_mm_secondary_minion_config_file,
-                                       session_mm_secondary_master_return_port,
-                                       session_mm_secondary_minion_default_options,
-                                       session_mm_secondary_minion_config_overrides,
-                                       session_mm_secondary_minion_id,
-                                       running_username,
-                                       log_server_port,
-                                       log_server_level,
-                                       log_handlers_dir,
-                                       session_mm_secondary_minion_log_prefix,
-                                       session_mm_secondary_minion_tcp_pub_port,
-                                       session_mm_secondary_minion_tcp_pull_port):
-    '''
-    This fixture will return the session salt minion configuration options after being
-    overrided with any options passed from ``session_secondary_minion_config_overrides``
-    '''
-    return apply_minion_config(session_mm_secondary_minion_default_options,
-                               session_mm_secondary_root_dir,
-                               session_mm_secondary_minion_config_file,
-                               session_mm_secondary_master_return_port,
-                               session_mm_secondary_minion_config_overrides,
-                               session_mm_secondary_minion_id,
-                               running_username,
-                               log_server_port,
-                               log_server_level,
-                               log_handlers_dir,
-                               session_mm_secondary_minion_log_prefix,
-                               session_mm_secondary_minion_tcp_pub_port,
-                               session_mm_secondary_minion_tcp_pull_port)
-
-
-@pytest.fixture(scope='session')
-def session_mm_secondary_salt_minion(request,
-                                     session_mm_salt_master,
-                                     session_mm_secondary_salt_master,
-                                     session_mm_secondary_minion_id,
-                                     session_mm_secondary_minion_config,
-                                     session_mm_secondary_minion_log_prefix,
-                                     cli_minion_script_name,
-                                     log_server,
-                                     _cli_bin_dir,
-                                     _salt_fail_hard,
-                                     session_mm_secondary_conf_dir):
-    '''
-    Returns a running salt-minion
-    '''
-    return start_daemon(request,
-                        daemon_name='salt-minion',
-                        daemon_id=session_mm_secondary_minion_id,
-                        daemon_log_prefix=session_mm_secondary_minion_log_prefix,
-                        daemon_cli_script_name=cli_minion_script_name,
-                        daemon_config=session_mm_secondary_minion_config,
-                        daemon_config_dir=session_mm_secondary_conf_dir,
-                        daemon_class=SaltMinion,
-                        bin_dir_path=_cli_bin_dir,
-                        fail_hard=_salt_fail_hard,
-                        event_listener_config_dir=session_mm_secondary_conf_dir,
-                        start_timeout=60)
-# <---- Minion Fixtures ----------------------------------------------------------------------------------------------
-
-# ----- Minion Fixtures ----------------------------------------------------------------------------------------->
-@pytest.fixture(scope='session')
-def session_mm_minion_id():
-    '''
-    Returns the session scoped minion id
-    '''
-    return 'mm-minion'
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_tcp_pub_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_tcp_pull_port():
-    '''
-    Returns an unused localhost port
-    '''
-    return get_unused_localhost_port()
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_log_prefix(session_mm_minion_id):
-    return 'salt-minion/{}'.format(session_mm_minion_id)
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_config_file(session_mm_conf_dir):
-    '''
-    Returns the path to the salt minion configuration file
-    '''
-    return session_mm_conf_dir.join('minion').realpath().strpath
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_default_options(session_minion_default_options):
-    opts = session_minion_default_options.copy()
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_minion')) as rfh:
-        opts.update(yaml.deserialize(rfh.read()))
-    return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_config_overrides(session_minion_config_overrides,
-                                       session_mm_master_return_port,
-                                       session_mm_secondary_master_return_port):
-    if session_minion_config_overrides:
-        opts = session_minion_config_overrides.copy()
-    else:
-        opts = {}
-    opts['master_port'] = None
-    opts['master'] = [
-        'localhost:{}'.format(session_mm_master_return_port),
-        'localhost:{}'.format(session_mm_secondary_master_return_port)
-    ]
-    return opts
-
-
-@pytest.fixture(scope='session')
-def session_mm_minion_config(session_mm_root_dir,
-                             session_mm_minion_config_file,
-                             session_mm_master_return_port,
-                             session_mm_minion_default_options,
-                             session_mm_minion_config_overrides,
-                             session_mm_minion_id,
-                             running_username,
-                             log_server_port,
-                             log_server_level,
-                             log_handlers_dir,
-                             session_mm_minion_log_prefix,
-                             session_mm_minion_tcp_pub_port,
-                             session_mm_minion_tcp_pull_port):
-    '''
-    This fixture will return the session salt minion configuration options after being
-    overrided with any options passed from ``session_minion_config_overrides``
-    '''
-    return apply_minion_config(session_mm_minion_default_options,
-                               session_mm_root_dir,
-                               session_mm_minion_config_file,
-                               session_mm_master_return_port,
-                               session_mm_minion_config_overrides,
-                               session_mm_minion_id,
-                               running_username,
-                               log_server_port,
-                               log_server_level,
-                               log_handlers_dir,
-                               session_mm_minion_log_prefix,
-                               session_mm_minion_tcp_pub_port,
-                               session_mm_minion_tcp_pull_port)
-
-
-@pytest.fixture(scope='session')
-def session_mm_salt_minion(request,
-                           session_mm_salt_master,
-                           session_mm_secondary_salt_master,
-                           session_mm_minion_id,
-                           session_mm_minion_config,
-                           session_mm_minion_log_prefix,
-                           cli_minion_script_name,
-                           log_server,
-                           _cli_bin_dir,
-                           _salt_fail_hard,
-                           session_mm_conf_dir):
-    '''
-    Returns a running salt-minion
-    '''
-    return start_daemon(request,
-                        daemon_name='salt-minion',
-                        daemon_id=session_mm_minion_id,
-                        daemon_log_prefix=session_mm_minion_log_prefix,
-                        daemon_cli_script_name=cli_minion_script_name,
-                        daemon_config=session_mm_minion_config,
-                        daemon_config_dir=session_mm_conf_dir,
-                        daemon_class=SaltMinion,
-                        bin_dir_path=_cli_bin_dir,
-                        fail_hard=_salt_fail_hard,
-                        event_listener_config_dir=session_mm_conf_dir,
-                        start_timeout=60)
-# <---- Sub Minion Fixtures ------------------------------------------------------------------------------------------
-
-
-@pytest.fixture(scope='session')
-def default_session_daemons(request,
-                            log_server,
-                            session_mm_salt_master,
-                            session_mm_secondary_salt_master,
-                            session_mm_salt_minion,
-                            session_mm_secondary_salt_minion,
-                            ):
-
-    request.session.stats_processes.update(OrderedDict((
-        ('Salt MM Master', psutil.Process(session_mm_salt_master.pid)),
-        ('Salt MM Minion', psutil.Process(session_mm_salt_minion.pid)),
-        ('Salt MM Sub Master', psutil.Process(session_mm_secondary_salt_master.pid)),
-        ('Salt MM Sub Minion', psutil.Process(session_mm_secondary_salt_minion.pid)),
-    )).items())
-
-    # Run tests
-    yield
-
-    # Stop daemons now(they would be stopped at the end of the test run session
-    for daemon in (session_mm_secondary_salt_minion,
-                   session_mm_secondary_salt_master,
-                   session_mm_salt_minion,
-                   session_mm_salt_master
-                   ):
-        try:
-            daemon.terminate()
-        except Exception as exc:  # pylint: disable=broad-except
-            log.warning('Failed to terminate daemon: %s', daemon.__class__.__name__)
-
-
-@pytest.fixture(scope='session', autouse=True)
-def mm_bridge_pytest_and_runtests(reap_stray_processes,
-                                  session_mm_conf_dir,
-                                  session_mm_secondary_conf_dir,
-                                  session_base_env_pillar_tree_root_dir,
-                                  session_base_env_state_tree_root_dir,
-                                  session_prod_env_state_tree_root_dir,
-                                  session_mm_master_config,
-                                  session_mm_minion_config,
-                                  session_mm_secondary_master_config,
-                                  session_mm_secondary_minion_config,
-                                  default_session_daemons):
+@pytest.fixture(scope="package", autouse=True)
+def bridge_pytest_and_runtests(  # pylint: disable=function-redefined
+    reap_stray_processes,
+    base_env_state_tree_root_dir,
+    prod_env_state_tree_root_dir,
+    base_env_pillar_tree_root_dir,
+    prod_env_pillar_tree_root_dir,
+    salt_mm_master,
+    salt_mm_sub_master,
+    salt_mm_minion,
+    salt_mm_sub_minion,
+):
+    # Make sure unittest2 uses the pytest generated configuration
+    RUNTIME_VARS.RUNTIME_CONFIGS["mm_master"] = freeze(salt_mm_master.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["mm_minion"] = freeze(salt_mm_minion.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["mm_sub_master"] = freeze(salt_mm_sub_master.config)
+    RUNTIME_VARS.RUNTIME_CONFIGS["mm_sub_minion"] = freeze(salt_mm_sub_minion.config)
 
     # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP_MM_CONF_DIR = session_mm_conf_dir.realpath().strpath
-    RUNTIME_VARS.TMP_MM_SUB_CONF_DIR = session_mm_secondary_conf_dir.realpath().strpath
-    RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = session_mm_secondary_conf_dir.realpath().strpath
-    RUNTIME_VARS.TMP_PILLAR_TREE = session_base_env_pillar_tree_root_dir.realpath().strpath
-    RUNTIME_VARS.TMP_STATE_TREE = session_base_env_state_tree_root_dir.realpath().strpath
-    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = session_prod_env_state_tree_root_dir.realpath().strpath
-
-    # Make sure unittest2 uses the pytest generated configuration
-    RUNTIME_VARS.RUNTIME_CONFIGS['mm_master'] = freeze(session_mm_master_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS['mm_minion'] = freeze(session_mm_minion_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS['mm_sub_master'] = freeze(session_mm_secondary_master_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS['mm_sub_minion'] = freeze(session_mm_secondary_minion_config)
+    RUNTIME_VARS.TMP_MM_CONF_DIR = os.path.dirname(salt_mm_master.config["conf_file"])
+    RUNTIME_VARS.TMP_MM_MINION_CONF_DIR = os.path.dirname(
+        salt_mm_minion.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_MM_SUB_CONF_DIR = os.path.dirname(
+        salt_mm_sub_master.config["conf_file"]
+    )
+    RUNTIME_VARS.TMP_MM_SUB_MINION_CONF_DIR = os.path.dirname(
+        salt_mm_sub_minion.config["conf_file"]
+    )

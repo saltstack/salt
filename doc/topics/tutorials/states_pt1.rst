@@ -116,7 +116,7 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
     default format. The default can be changed by editing
     :conf_master:`renderer` in the master configuration file.
 
-.. _`DSLs`: http://en.wikipedia.org/wiki/Domain-specific_language
+.. _`DSLs`: https://en.wikipedia.org/wiki/Domain-specific_language
 
 .. _running-highstate:
 

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Connection module for Amazon Elasticsearch Service
 
 .. versionadded:: Natrium
@@ -46,32 +45,29 @@ Connection module for Amazon Elasticsearch Service
 
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 :depends: boto3
-'''
+"""
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import Salt libs
-from salt.ext import six
 import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
 from salt.utils.decorators import depends
 
-# Import third party libs
-
 try:
     # Disable unused import-errors as these are only used for dependency checking
     # pylint: disable=unused-import
     import boto3
     import botocore
+
     # pylint: enable=unused-import
     from botocore.exceptions import ClientError, ParamValidationError, WaiterError
-    logging.getLogger('boto3').setLevel(logging.INFO)
+
+    logging.getLogger("boto3").setLevel(logging.INFO)
 except ImportError:
     pass
 
@@ -79,25 +75,28 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
-    '''
-    return salt.utils.versions.check_boto_reqs(boto3_ver='1.2.7')
+    """
+    return salt.utils.versions.check_boto_reqs(boto3_ver="1.2.7")
 
 
 def __init__(opts):
     _ = opts
-    salt.utils.compat.pack_dunder(__name__)
-    __utils__['boto3.assign_funcs'](__name__, 'es')
+    __utils__["boto3.assign_funcs"](__name__, "es")
 
 
 def add_tags(
-        domain_name=None,
-        arn=None,
-        tags=None,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    domain_name=None,
+    arn=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Attaches tags to an existing Elasticsearch domain.
     Tags are a set of case-sensitive key value pairs.
     An Elasticsearch domain may have up to 10 tags.
@@ -118,39 +117,51 @@ def add_tags(
     .. code-block:: bash
 
         salt myminion boto3_elasticsearch.add_tags domain_name=mydomain tags='{"foo": "bar", "baz": "qux"}'
-    '''
+    """
     if not any((arn, domain_name)):
-        raise SaltInvocationError('At least one of domain_name or arn must be specified.')
-    ret = {'result': False}
+        raise SaltInvocationError(
+            "At least one of domain_name or arn must be specified."
+        )
+    ret = {"result": False}
     if arn is None:
         res = describe_elasticsearch_domain(
             domain_name=domain_name,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if 'error' in res:
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if "error" in res:
             ret.update(res)
-        elif not res['result']:
-            ret.update({'error': 'The domain with name "{}" does not exist.'.format(domain_name)})
+        elif not res["result"]:
+            ret.update(
+                {
+                    "error": 'The domain with name "{}" does not exist.'.format(
+                        domain_name
+                    )
+                }
+            )
         else:
-            arn = res['response'].get('ARN')
+            arn = res["response"].get("ARN")
     if arn:
         boto_params = {
-            'ARN': arn,
-            'TagList': [{'Key': k, 'Value': value} for k, value in six.iteritems(tags or {})]
+            "ARN": arn,
+            "TagList": [{"Key": k, "Value": tags[k]} for k in tags or {}.items()],
         }
         try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             conn.add_tags(**boto_params)
-            ret['result'] = True
+            ret["result"] = True
         except (ParamValidationError, ClientError) as exp:
-            ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+            ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.12.21')
+@depends("botocore", version="1.12.21")
 def cancel_elasticsearch_service_software_update(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name, region=None, keyid=None, key=None, profile=None
+):
+    """
     Cancels a scheduled service software update for an Amazon ES domain. You can
     only perform this operation before the AutomatedUpdateDate and when the UpdateStatus
     is in the PENDING_UPDATE state.
@@ -165,34 +176,38 @@ def cancel_elasticsearch_service_software_update(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.cancel_elasticsearch_service_software_update(DomainName=domain_name)
-        ret['result'] = True
-        res['response'] = res['ServiceSoftwareOptions']
+        ret["result"] = True
+        res["response"] = res["ServiceSoftwareOptions"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def create_elasticsearch_domain(
-        domain_name,
-        elasticsearch_version=None,
-        elasticsearch_cluster_config=None,
-        ebs_options=None,
-        access_policies=None,
-        snapshot_options=None,
-        vpc_options=None,
-        cognito_options=None,
-        encryption_at_rest_options=None,
-        node_to_node_encryption_options=None,
-        advanced_options=None,
-        log_publishing_options=None,
-        blocking=False,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    domain_name,
+    elasticsearch_version=None,
+    elasticsearch_cluster_config=None,
+    ebs_options=None,
+    access_policies=None,
+    snapshot_options=None,
+    vpc_options=None,
+    cognito_options=None,
+    encryption_at_rest_options=None,
+    node_to_node_encryption_options=None,
+    advanced_options=None,
+    log_publishing_options=None,
+    blocking=False,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Given a valid config, create a domain.
 
     :param str domain_name: The name of the Elasticsearch domain that you are creating.
@@ -319,43 +334,48 @@ def create_elasticsearch_domain(
              "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]}' \\
         snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
         advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
-    '''
-    boto_kwargs = salt.utils.data.filter_falsey({
-        'DomainName': domain_name,
-        'ElasticsearchVersion': six.text_type(elasticsearch_version or ''),
-        'ElasticsearchClusterConfig': elasticsearch_cluster_config,
-        'EBSOptions': ebs_options,
-        'AccessPolicies': (salt.utils.json.dumps(access_policies)
-                           if isinstance(access_policies, dict)
-                           else access_policies),
-        'SnapshotOptions': snapshot_options,
-        'VPCOptions': vpc_options,
-        'CognitoOptions': cognito_options,
-        'EncryptionAtRestOptions': encryption_at_rest_options,
-        'NodeToNodeEncryptionOptions': node_to_node_encryption_options,
-        'AdvancedOptions': advanced_options,
-        'LogPublishingOptions': log_publishing_options,
-    })
-    ret = {'result': False}
+    """
+    boto_kwargs = salt.utils.data.filter_falsey(
+        {
+            "DomainName": domain_name,
+            "ElasticsearchVersion": str(elasticsearch_version or ""),
+            "ElasticsearchClusterConfig": elasticsearch_cluster_config,
+            "EBSOptions": ebs_options,
+            "AccessPolicies": (
+                salt.utils.json.dumps(access_policies)
+                if isinstance(access_policies, dict)
+                else access_policies
+            ),
+            "SnapshotOptions": snapshot_options,
+            "VPCOptions": vpc_options,
+            "CognitoOptions": cognito_options,
+            "EncryptionAtRestOptions": encryption_at_rest_options,
+            "NodeToNodeEncryptionOptions": node_to_node_encryption_options,
+            "AdvancedOptions": advanced_options,
+            "LogPublishingOptions": log_publishing_options,
+        }
+    )
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         res = conn.create_elasticsearch_domain(**boto_kwargs)
-        if res and 'DomainStatus' in res:
-            ret['result'] = True
-            ret['response'] = res['DomainStatus']
+        if res and "DomainStatus" in res:
+            ret["result"] = True
+            ret["response"] = res["DomainStatus"]
         if blocking:
-            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESDomainAvailable')
+            waiter = __utils__["boto3_elasticsearch.get_waiter"](
+                conn, waiter="ESDomainAvailable"
+            )
             waiter.wait(DomainName=domain_name)
     except (ParamValidationError, ClientError, WaiterError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def delete_elasticsearch_domain(
-        domain_name,
-        blocking=False,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    domain_name, blocking=False, region=None, key=None, keyid=None, profile=None
+):
+    """
     Permanently deletes the specified Elasticsearch domain and all of its data.
     Once a domain is deleted, it cannot be recovered.
 
@@ -369,24 +389,25 @@ def delete_elasticsearch_domain(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.delete_elasticsearch_domain(DomainName=domain_name)
-        ret['result'] = True
+        ret["result"] = True
         if blocking:
-            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESDomainDeleted')
+            waiter = __utils__["boto3_elasticsearch.get_waiter"](
+                conn, waiter="ESDomainDeleted"
+            )
             waiter.wait(DomainName=domain_name)
     except (ParamValidationError, ClientError, WaiterError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.7.30')
-def delete_elasticsearch_service_role(
-        region=None, keyid=None, key=None, profile=None):
-    '''
+@depends("botocore", version="1.7.30")
+def delete_elasticsearch_service_role(region=None, keyid=None, key=None, profile=None):
+    """
     Deletes the service-linked role that Elasticsearch Service uses to manage and
     maintain VPC domains. Role deletion will fail if any existing VPC domains use
     the role. You must delete any such Elasticsearch domains before deleting the role.
@@ -397,21 +418,21 @@ def delete_elasticsearch_service_role(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         conn.delete_elasticsearch_service_role()
-        ret['result'] = True
+        ret["result"] = True
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def describe_elasticsearch_domain(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name, region=None, keyid=None, key=None, profile=None
+):
+    """
     Given a domain name gets its status description.
 
     :param str domain_name: The name of the domain to get the status of.
@@ -423,23 +444,23 @@ def describe_elasticsearch_domain(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         res = conn.describe_elasticsearch_domain(DomainName=domain_name)
-        if res and 'DomainStatus' in res:
-            ret['result'] = True
-            ret['response'] = res['DomainStatus']
+        if res and "DomainStatus" in res:
+            ret["result"] = True
+            ret["response"] = res["DomainStatus"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def describe_elasticsearch_domain_config(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name, region=None, keyid=None, key=None, profile=None
+):
+    """
     Provides cluster configuration information about the specified Elasticsearch domain,
     such as the state, creation date, update version, and update date for cluster options.
 
@@ -452,23 +473,23 @@ def describe_elasticsearch_domain_config(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         res = conn.describe_elasticsearch_domain_config(DomainName=domain_name)
-        if res and 'DomainConfig' in res:
-            ret['result'] = True
-            ret['response'] = res['DomainConfig']
+        if res and "DomainConfig" in res:
+            ret["result"] = True
+            ret["response"] = res["DomainConfig"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def describe_elasticsearch_domains(
-        domain_names,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_names, region=None, keyid=None, key=None, profile=None
+):
+    """
     Returns domain configuration information about the specified Elasticsearch
     domains, including the domain ID, domain endpoint, and domain ARN.
 
@@ -486,26 +507,30 @@ def describe_elasticsearch_domains(
     .. code-block:: bash
 
         salt myminion boto3_elasticsearch.describe_elasticsearch_domains '["domain_a", "domain_b"]'
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.describe_elasticsearch_domains(DomainNames=domain_names)
-        if res and 'DomainStatusList' in res:
-            ret['result'] = True
-            ret['response'] = res['DomainStatusList']
+        if res and "DomainStatusList" in res:
+            ret["result"] = True
+            ret["response"] = res["DomainStatusList"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.5.18')
+@depends("botocore", version="1.5.18")
 def describe_elasticsearch_instance_type_limits(
-        instance_type,
-        elasticsearch_version,
-        domain_name=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    instance_type,
+    elasticsearch_version,
+    domain_name=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Describe Elasticsearch Limits for a given InstanceType and ElasticsearchVersion.
     When modifying existing Domain, specify the `` DomainName `` to know what Limits
     are supported for modifying.
@@ -532,29 +557,35 @@ def describe_elasticsearch_instance_type_limits(
         salt myminion boto3_elasticsearch.describe_elasticsearch_instance_type_limits \\
           instance_type=r3.8xlarge.elasticsearch \\
           elasticsearch_version='6.2'
-    '''
-    ret = {'result': False}
-    boto_params = salt.utils.data.filter_falsey({
-        'DomainName': domain_name,
-        'InstanceType': instance_type,
-        'ElasticsearchVersion': six.text_type(elasticsearch_version),
-    })
+    """
+    ret = {"result": False}
+    boto_params = salt.utils.data.filter_falsey(
+        {
+            "DomainName": domain_name,
+            "InstanceType": instance_type,
+            "ElasticsearchVersion": str(elasticsearch_version),
+        }
+    )
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.describe_elasticsearch_instance_type_limits(**boto_params)
-        if res and 'LimitsByRole' in res:
-            ret['result'] = True
-            ret['response'] = res['LimitsByRole']
+        if res and "LimitsByRole" in res:
+            ret["result"] = True
+            ret["response"] = res["LimitsByRole"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.15')
+@depends("botocore", version="1.10.15")
 def describe_reserved_elasticsearch_instance_offerings(
-        reserved_elasticsearch_instance_offering_id=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    reserved_elasticsearch_instance_offering_id=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Lists available reserved Elasticsearch instance offerings.
 
     :param str reserved_elasticsearch_instance_offering_id: The offering identifier
@@ -568,31 +599,35 @@ def describe_reserved_elasticsearch_instance_offerings(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         boto_params = {
-            'ReservedElasticsearchInstanceOfferingId': reserved_elasticsearch_instance_offering_id
+            "ReservedElasticsearchInstanceOfferingId": reserved_elasticsearch_instance_offering_id
         }
         res = []
         for page in conn.get_paginator(
-                    'describe_reserved_elasticsearch_instance_offerings'
-                ).paginate(**boto_params):
-            res.extend(page['ReservedElasticsearchInstanceOfferings'])
+            "describe_reserved_elasticsearch_instance_offerings"
+        ).paginate(**boto_params):
+            res.extend(page["ReservedElasticsearchInstanceOfferings"])
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.15')
+@depends("botocore", version="1.10.15")
 def describe_reserved_elasticsearch_instances(
-        reserved_elasticsearch_instance_id=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    reserved_elasticsearch_instance_id=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Returns information about reserved Elasticsearch instances for this account.
 
     :param str reserved_elasticsearch_instance_id: The reserved instance identifier
@@ -610,31 +645,31 @@ def describe_reserved_elasticsearch_instances(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         boto_params = {
-            'ReservedElasticsearchInstanceId': reserved_elasticsearch_instance_id,
+            "ReservedElasticsearchInstanceId": reserved_elasticsearch_instance_id,
         }
         res = []
         for page in conn.get_paginator(
-                    'describe_reserved_elasticsearch_instances'
-                ).paginate(**boto_params):
-            res.extend(page['ReservedElasticsearchInstances'])
+            "describe_reserved_elasticsearch_instances"
+        ).paginate(**boto_params):
+            res.extend(page["ReservedElasticsearchInstances"])
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.77')
+@depends("botocore", version="1.10.77")
 def get_compatible_elasticsearch_versions(
-        domain_name=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name=None, region=None, keyid=None, key=None, profile=None
+):
+    """
     Returns a list of upgrade compatible Elastisearch versions. You can optionally
     pass a ``domain_name`` to get all upgrade compatible Elasticsearch versions
     for that specific domain.
@@ -648,27 +683,23 @@ def get_compatible_elasticsearch_versions(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
-    boto_params = salt.utils.data.filter_falsey({
-        'DomainName': domain_name,
-    })
+    """
+    ret = {"result": False}
+    boto_params = salt.utils.data.filter_falsey({"DomainName": domain_name})
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.get_compatible_elasticsearch_versions(**boto_params)
-        if res and 'CompatibleElasticsearchVersions' in res:
-            ret['result'] = True
-            ret['response'] = res['CompatibleElasticsearchVersions']
+        if res and "CompatibleElasticsearchVersions" in res:
+            ret["result"] = True
+            ret["response"] = res["CompatibleElasticsearchVersions"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.77')
-def get_upgrade_history(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+@depends("botocore", version="1.10.77")
+def get_upgrade_history(domain_name, region=None, keyid=None, key=None, profile=None):
+    """
     Retrieves the complete history of the last 10 upgrades that were performed on the domain.
 
     :param str domain_name: The name of an Elasticsearch domain. Domain names are
@@ -683,27 +714,25 @@ def get_upgrade_history(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
-        boto_params = {'DomainName': domain_name}
+        boto_params = {"DomainName": domain_name}
         res = []
-        for page in conn.get_paginator('get_upgrade_history').paginate(**boto_params):
-            res.extend(page['UpgradeHistories'])
+        for page in conn.get_paginator("get_upgrade_history").paginate(**boto_params):
+            res.extend(page["UpgradeHistories"])
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.77')
-def get_upgrade_status(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+@depends("botocore", version="1.10.77")
+def get_upgrade_status(domain_name, region=None, keyid=None, key=None, profile=None):
+    """
     Retrieves the latest status of the last upgrade or upgrade eligibility check
     that was performed on the domain.
 
@@ -719,23 +748,22 @@ def get_upgrade_status(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
-    boto_params = {'DomainName': domain_name}
+    """
+    ret = {"result": False}
+    boto_params = {"DomainName": domain_name}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.get_upgrade_status(**boto_params)
-        ret['result'] = True
-        ret['response'] = res
-        del res['ResponseMetadata']
+        ret["result"] = True
+        ret["response"] = res
+        del res["ResponseMetadata"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-def list_domain_names(
-        region=None, keyid=None, key=None, profile=None):
-    '''
+def list_domain_names(region=None, keyid=None, key=None, profile=None):
+    """
     Returns the name of all Elasticsearch domains owned by the current user's account.
 
     :rtype: dict
@@ -745,25 +773,29 @@ def list_domain_names(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.list_domain_names()
-        if res and 'DomainNames' in res:
-            ret['result'] = True
-            ret['response'] = [item['DomainName'] for item in res['DomainNames']]
+        if res and "DomainNames" in res:
+            ret["result"] = True
+            ret["response"] = [item["DomainName"] for item in res["DomainNames"]]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.5.18')
+@depends("botocore", version="1.5.18")
 def list_elasticsearch_instance_types(
-        elasticsearch_version,
-        domain_name=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    elasticsearch_version,
+    domain_name=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     List all Elasticsearch instance types that are supported for given ElasticsearchVersion.
 
     :param str elasticsearch_version: Version of Elasticsearch for which list of
@@ -779,29 +811,32 @@ def list_elasticsearch_instance_types(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
-        boto_params = salt.utils.data.filter_falsey({
-            'ElasticsearchVersion': six.text_type(elasticsearch_version),
-            'DomainName': domain_name,
-        })
+        boto_params = salt.utils.data.filter_falsey(
+            {
+                "ElasticsearchVersion": str(elasticsearch_version),
+                "DomainName": domain_name,
+            }
+        )
         res = []
-        for page in conn.get_paginator('list_elasticsearch_instance_types').paginate(**boto_params):
-            res.extend(page['ElasticsearchInstanceTypes'])
+        for page in conn.get_paginator("list_elasticsearch_instance_types").paginate(
+            **boto_params
+        ):
+            res.extend(page["ElasticsearchInstanceTypes"])
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.5.18')
-def list_elasticsearch_versions(
-        region=None, keyid=None, key=None, profile=None):
-    '''
+@depends("botocore", version="1.5.18")
+def list_elasticsearch_versions(region=None, keyid=None, key=None, profile=None):
+    """
     List all supported Elasticsearch versions.
 
     :rtype: dict
@@ -811,26 +846,25 @@ def list_elasticsearch_versions(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = []
-        for page in conn.get_paginator('list_elasticsearch_versions').paginate():
-            res.extend(page['ElasticsearchVersions'])
+        for page in conn.get_paginator("list_elasticsearch_versions").paginate():
+            res.extend(page["ElasticsearchVersions"])
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def list_tags(
-        domain_name=None,
-        arn=None,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    domain_name=None, arn=None, region=None, key=None, keyid=None, profile=None
+):
+    """
     Returns all tags for the given Elasticsearch domain.
 
     :rtype: dict
@@ -840,38 +874,56 @@ def list_tags(
 
     .. versionadded:: Natrium
 
-    '''
+    """
     if not any((arn, domain_name)):
-        raise SaltInvocationError('At least one of domain_name or arn must be specified.')
-    ret = {'result': False}
+        raise SaltInvocationError(
+            "At least one of domain_name or arn must be specified."
+        )
+    ret = {"result": False}
     if arn is None:
         res = describe_elasticsearch_domain(
             domain_name=domain_name,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if 'error' in res:
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if "error" in res:
             ret.update(res)
-        elif not res['result']:
-            ret.update({'error': 'The domain with name "{}" does not exist.'.format(domain_name)})
+        elif not res["result"]:
+            ret.update(
+                {
+                    "error": 'The domain with name "{}" does not exist.'.format(
+                        domain_name
+                    )
+                }
+            )
         else:
-            arn = res['response'].get('ARN')
+            arn = res["response"].get("ARN")
     if arn:
         try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             res = conn.list_tags(ARN=arn)
-            ret['result'] = True
-            ret['response'] = {item['Key']: item['Value'] for item in res.get('TagList', [])}
+            ret["result"] = True
+            ret["response"] = {
+                item["Key"]: item["Value"] for item in res.get("TagList", [])
+            }
         except (ParamValidationError, ClientError) as exp:
-            ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+            ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.15')
+@depends("botocore", version="1.10.15")
 def purchase_reserved_elasticsearch_instance_offering(
-        reserved_elasticsearch_instance_offering_id,
-        reservation_name,
-        instance_count=None,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    reserved_elasticsearch_instance_offering_id,
+    reservation_name,
+    instance_count=None,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Allows you to purchase reserved Elasticsearch instances.
 
     :param str reserved_elasticsearch_instance_offering_id: The ID of the reserved
@@ -886,30 +938,36 @@ def purchase_reserved_elasticsearch_instance_offering(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
-    boto_params = salt.utils.data.filter_falsey({
-        'ReservedElasticsearchInstanceOfferingId': reserved_elasticsearch_instance_offering_id,
-        'ReservationName': reservation_name,
-        'InstanceCount': instance_count,
-    })
+    """
+    ret = {"result": False}
+    boto_params = salt.utils.data.filter_falsey(
+        {
+            "ReservedElasticsearchInstanceOfferingId": reserved_elasticsearch_instance_offering_id,
+            "ReservationName": reservation_name,
+            "InstanceCount": instance_count,
+        }
+    )
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.purchase_reserved_elasticsearch_instance_offering(**boto_params)
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def remove_tags(
-        tag_keys,
-        domain_name=None,
-        arn=None,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    tag_keys,
+    domain_name=None,
+    arn=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Removes the specified set of tags from the specified Elasticsearch domain.
 
     :param list tag_keys: List with tag keys you want to remove from the Elasticsearch domain.
@@ -928,36 +986,47 @@ def remove_tags(
     .. code-block:: bash
 
         salt myminion boto3_elasticsearch.remove_tags '["foo", "bar"]' domain_name=my_domain
-    '''
+    """
     if not any((arn, domain_name)):
-        raise SaltInvocationError('At least one of domain_name or arn must be specified.')
-    ret = {'result': False}
+        raise SaltInvocationError(
+            "At least one of domain_name or arn must be specified."
+        )
+    ret = {"result": False}
     if arn is None:
         res = describe_elasticsearch_domain(
             domain_name=domain_name,
-            region=region, key=key, keyid=keyid, profile=profile)
-        if 'error' in res:
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
+        if "error" in res:
             ret.update(res)
-        elif not res['result']:
-            ret.update({'error': 'The domain with name "{}" does not exist.'.format(domain_name)})
+        elif not res["result"]:
+            ret.update(
+                {
+                    "error": 'The domain with name "{}" does not exist.'.format(
+                        domain_name
+                    )
+                }
+            )
         else:
-            arn = res['response'].get('ARN')
+            arn = res["response"].get("ARN")
     if arn:
         try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            conn.remove_tags(ARN=arn,
-                             TagKeys=tag_keys)
-            ret['result'] = True
+            conn.remove_tags(ARN=arn, TagKeys=tag_keys)
+            ret["result"] = True
         except (ParamValidationError, ClientError) as exp:
-            ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+            ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.12.21')
+@depends("botocore", version="1.12.21")
 def start_elasticsearch_service_software_update(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name, region=None, keyid=None, key=None, profile=None
+):
+    """
     Schedules a service software update for an Amazon ES domain.
 
     :param str domain_name: The name of the domain that you want to update to the
@@ -970,33 +1039,37 @@ def start_elasticsearch_service_software_update(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
-    boto_params = {'DomainName': domain_name}
+    """
+    ret = {"result": False}
+    boto_params = {"DomainName": domain_name}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.start_elasticsearch_service_software_update(**boto_params)
-        if res and 'ServiceSoftwareOptions' in res:
-            ret['result'] = True
-            ret['response'] = res['ServiceSoftwareOptions']
+        if res and "ServiceSoftwareOptions" in res:
+            ret["result"] = True
+            ret["response"] = res["ServiceSoftwareOptions"]
     except (ParamValidationError, ClientError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
 def update_elasticsearch_domain_config(
-        domain_name,
-        elasticsearch_cluster_config=None,
-        ebs_options=None,
-        vpc_options=None,
-        access_policies=None,
-        snapshot_options=None,
-        cognito_options=None,
-        advanced_options=None,
-        log_publishing_options=None,
-        blocking=False,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+    domain_name,
+    elasticsearch_cluster_config=None,
+    ebs_options=None,
+    vpc_options=None,
+    access_policies=None,
+    snapshot_options=None,
+    cognito_options=None,
+    advanced_options=None,
+    log_publishing_options=None,
+    blocking=False,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
+):
+    """
     Modifies the cluster configuration of the specified Elasticsearch domain,
     for example setting the instance type and the number of instances.
 
@@ -1102,45 +1175,55 @@ def update_elasticsearch_domain_config(
             "Condition": {"IpAddress": {"aws:SourceIp": ["127.0.0.1"]}}}]}' \\
           snapshot_options='{"AutomatedSnapshotStartHour": 0}' \\
           advanced_options='{"rest.action.multi.allow_explicit_index": "true"}'
-    '''
-    ret = {'result': False}
-    boto_kwargs = salt.utils.data.filter_falsey({
-        'DomainName': domain_name,
-        'ElasticsearchClusterConfig': elasticsearch_cluster_config,
-        'EBSOptions': ebs_options,
-        'SnapshotOptions': snapshot_options,
-        'VPCOptions': vpc_options,
-        'CognitoOptions': cognito_options,
-        'AdvancedOptions': advanced_options,
-        'AccessPolicies': (salt.utils.json.dumps(access_policies)
-                           if isinstance(access_policies, dict)
-                           else access_policies),
-        'LogPublishingOptions': log_publishing_options,
-    })
+    """
+    ret = {"result": False}
+    boto_kwargs = salt.utils.data.filter_falsey(
+        {
+            "DomainName": domain_name,
+            "ElasticsearchClusterConfig": elasticsearch_cluster_config,
+            "EBSOptions": ebs_options,
+            "SnapshotOptions": snapshot_options,
+            "VPCOptions": vpc_options,
+            "CognitoOptions": cognito_options,
+            "AdvancedOptions": advanced_options,
+            "AccessPolicies": (
+                salt.utils.json.dumps(access_policies)
+                if isinstance(access_policies, dict)
+                else access_policies
+            ),
+            "LogPublishingOptions": log_publishing_options,
+        }
+    )
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.update_elasticsearch_domain_config(**boto_kwargs)
-        if not res or 'DomainConfig' not in res:
-            log.warning('Domain was not updated')
+        if not res or "DomainConfig" not in res:
+            log.warning("Domain was not updated")
         else:
-            ret['result'] = True
-            ret['response'] = res['DomainConfig']
+            ret["result"] = True
+            ret["response"] = res["DomainConfig"]
         if blocking:
-            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESDomainAvailable')
+            waiter = __utils__["boto3_elasticsearch.get_waiter"](
+                conn, waiter="ESDomainAvailable"
+            )
             waiter.wait(DomainName=domain_name)
     except (ParamValidationError, ClientError, WaiterError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.77')
+@depends("botocore", version="1.10.77")
 def upgrade_elasticsearch_domain(
-        domain_name,
-        target_version,
-        perform_check_only=None,
-        blocking=False,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name,
+    target_version,
+    perform_check_only=None,
+    blocking=False,
+    region=None,
+    keyid=None,
+    key=None,
+    profile=None,
+):
+    """
     Allows you to either upgrade your domain or perform an Upgrade eligibility
     check to a compatible Elasticsearch version.
 
@@ -1170,31 +1253,33 @@ def upgrade_elasticsearch_domain(
         salt myminion boto3_elasticsearch.upgrade_elasticsearch_domain mydomain \\
         target_version='6.7' \\
         perform_check_only=True
-    '''
-    ret = {'result': False}
-    boto_params = salt.utils.data.filter_falsey({
-        'DomainName': domain_name,
-        'TargetVersion': six.text_type(target_version),
-        'PerformCheckOnly': perform_check_only,
-    })
+    """
+    ret = {"result": False}
+    boto_params = salt.utils.data.filter_falsey(
+        {
+            "DomainName": domain_name,
+            "TargetVersion": str(target_version),
+            "PerformCheckOnly": perform_check_only,
+        }
+    )
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         res = conn.upgrade_elasticsearch_domain(**boto_params)
         if res:
-            ret['result'] = True
-            ret['response'] = res
+            ret["result"] = True
+            ret["response"] = res
         if blocking:
-            waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished')
+            waiter = __utils__["boto3_elasticsearch.get_waiter"](
+                conn, waiter="ESUpgradeFinished"
+            )
             waiter.wait(DomainName=domain_name)
     except (ParamValidationError, ClientError, WaiterError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-def exists(
-        domain_name,
-        region=None, key=None, keyid=None, profile=None):
-    '''
+def exists(domain_name, region=None, key=None, keyid=None, profile=None):
+    """
     Given a domain name, check to see if the given domain exists.
 
     :param str domain_name: The name of the domain to check.
@@ -1205,22 +1290,20 @@ def exists(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.describe_elasticsearch_domain(DomainName=domain_name)
-        ret['result'] = True
+        ret["result"] = True
     except (ParamValidationError, ClientError) as exp:
-        if exp.response.get('Error', {}).get('Code') != 'ResourceNotFoundException':
-            ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        if exp.response.get("Error", {}).get("Code") != "ResourceNotFoundException":
+            ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-def wait_for_upgrade(
-        domain_name,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+def wait_for_upgrade(domain_name, region=None, keyid=None, key=None, profile=None):
+    """
     Block until an upgrade-in-progress for domain ``name`` is finished.
 
     :param str name: The name of the domain to wait for.
@@ -1231,24 +1314,25 @@ def wait_for_upgrade(
 
     .. versionadded:: Natrium
 
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     try:
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
-        waiter = __utils__['boto3_elasticsearch.get_waiter'](conn, waiter='ESUpgradeFinished')
+        waiter = __utils__["boto3_elasticsearch.get_waiter"](
+            conn, waiter="ESUpgradeFinished"
+        )
         waiter.wait(DomainName=domain_name)
-        ret['result'] = True
+        ret["result"] = True
     except (ParamValidationError, ClientError, WaiterError) as exp:
-        ret.update({'error': __utils__['boto3.get_error'](exp)['message']})
+        ret.update({"error": __utils__["boto3.get_error"](exp)["message"]})
     return ret
 
 
-@depends('botocore', version='1.10.77')
+@depends("botocore", version="1.10.77")
 def check_upgrade_eligibility(
-        domain_name,
-        elasticsearch_version,
-        region=None, keyid=None, key=None, profile=None):
-    '''
+    domain_name, elasticsearch_version, region=None, keyid=None, key=None, profile=None
+):
+    """
     Helper function to determine in one call if an Elasticsearch domain can be
     upgraded to the specified Elasticsearch version.
 
@@ -1281,20 +1365,21 @@ def check_upgrade_eligibility(
     .. code-block:: bash
 
         salt myminion boto3_elasticsearch.check_upgrade_eligibility mydomain '6.7'
-    '''
-    ret = {'result': False}
+    """
+    ret = {"result": False}
     # Check if the desired version is in the list of compatible versions
     res = get_compatible_elasticsearch_versions(
-        domain_name,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
+        domain_name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if "error" in res:
         return res
-    compatible_versions = res['response'][0]['TargetVersions']
-    if six.text_type(elasticsearch_version) not in compatible_versions:
-        ret['result'] = True
-        ret['response'] = False
-        ret['error'] = ('Desired version "{}" not in compatible versions: {}.'
-                        ''.format(elasticsearch_version, compatible_versions))
+    compatible_versions = res["response"][0]["TargetVersions"]
+    if str(elasticsearch_version) not in compatible_versions:
+        ret["result"] = True
+        ret["response"] = False
+        ret["error"] = 'Desired version "{}" not in compatible versions: {}.' "".format(
+            elasticsearch_version, compatible_versions
+        )
         return ret
     # Check if the domain is eligible to upgrade to the desired version
     res = upgrade_elasticsearch_domain(
@@ -1302,14 +1387,24 @@ def check_upgrade_eligibility(
         elasticsearch_version,
         perform_check_only=True,
         blocking=True,
-        region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
+        region=region,
+        keyid=keyid,
+        key=key,
+        profile=profile,
+    )
+    if "error" in res:
         return res
-    res = wait_for_upgrade(domain_name, region=region, keyid=keyid, key=key, profile=profile)
-    if 'error' in res:
+    res = wait_for_upgrade(
+        domain_name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    if "error" in res:
         return res
-    res = get_upgrade_status(domain_name, region=region, keyid=keyid, key=key, profile=profile)
-    ret['result'] = True
-    ret['response'] = (res['response']['UpgradeStep'] == 'PRE_UPGRADE_CHECK' and
-                       res['response']['StepStatus'] == 'SUCCEEDED')
+    res = get_upgrade_status(
+        domain_name, region=region, keyid=keyid, key=key, profile=profile
+    )
+    ret["result"] = True
+    ret["response"] = (
+        res["response"]["UpgradeStep"] == "PRE_UPGRADE_CHECK"
+        and res["response"]["StepStatus"] == "SUCCEEDED"
+    )
     return ret

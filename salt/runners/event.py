@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for sending events using the runner system.
 
 .. versionadded:: 2016.11.0
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.event
 
-
 log = logging.getLogger(__name__)
 
 
 def send(tag, data=None):
-    '''
+    """
     Send an event with the given tag and data.
 
     This is useful for sending events directly to the master from the shell
@@ -73,8 +72,9 @@ def send(tag, data=None):
 
         salt-run state.orchestrate orch.command pillar='{"exit_code": 0}'
         salt-run state.orchestrate orch.command pillar='{"exit_code": 1}'
-    '''
+    """
     data = data or {}
-    event = salt.utils.event.get_master_event(__opts__, __opts__['sock_dir'],
-                                              listen=False)
+    event = salt.utils.event.get_master_event(
+        __opts__, __opts__["sock_dir"], listen=False
+    )
     return event.fire_event(data, tag)

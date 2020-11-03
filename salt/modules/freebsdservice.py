@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 The service module for FreeBSD
 
 .. important::
@@ -7,123 +7,126 @@ The service module for FreeBSD
     minion, and it is using a different module (or gives an error similar to
     *'service.start' is not available*), see :ref:`here
     <module-provider-override>`.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
+import fnmatch
 
 # Import python libs
 import logging
 import os
-import fnmatch
 import re
+
+import salt.utils.decorators as decorators
+import salt.utils.files
 
 # Import salt libs
 import salt.utils.path
-import salt.utils.decorators as decorators
-import salt.utils.files
 from salt.exceptions import CommandNotFoundError
 
-__func_alias__ = {
-    'reload_': 'reload'
-}
+__func_alias__ = {"reload_": "reload"}
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'service'
+__virtualname__ = "service"
 
 
 def __virtual__():
-    '''
+    """
     Only work on FreeBSD
-    '''
+    """
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__["os"] == "FreeBSD":
         return __virtualname__
-    return (False, 'The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.')
+    return (
+        False,
+        "The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.",
+    )
 
 
 @decorators.memoize
 def _cmd(jail=None):
-    '''
+    """
     Return full path to service command
 
     .. versionchanged:: 2016.3.4
 
     Support for jail (representing jid or jail name) keyword argument in kwargs
-    '''
-    service = salt.utils.path.which('service')
+    """
+    service = salt.utils.path.which("service")
     if not service:
-        raise CommandNotFoundError('\'service\' command not found')
+        raise CommandNotFoundError("'service' command not found")
     if jail:
-        jexec = salt.utils.path.which('jexec')
+        jexec = salt.utils.path.which("jexec")
         if not jexec:
-            raise CommandNotFoundError('\'jexec\' command not found')
-        service = '{0} {1} {2}'.format(jexec, jail, service)
+            raise CommandNotFoundError("'jexec' command not found")
+        service = "{0} {1} {2}".format(jexec, jail, service)
     return service
 
 
 def _get_jail_path(jail):
-    '''
+    """
     .. versionadded:: 2016.3.4
 
     Return the jail's root directory (path) as shown in jls
 
     jail
         The jid or jail name
-    '''
-    jls = salt.utils.path.which('jls')
+    """
+    jls = salt.utils.path.which("jls")
     if not jls:
-        raise CommandNotFoundError('\'jls\' command not found')
-    jails = __salt__['cmd.run_stdout']('{0} -n jid name path'.format(jls))
+        raise CommandNotFoundError("'jls' command not found")
+    jails = __salt__["cmd.run_stdout"]("{0} -n jid name path".format(jls))
     for j in jails.splitlines():
-        jid, jname, path = (x.split('=')[1].strip() for x in j.split())
+        jid, jname, path = (x.split("=")[1].strip() for x in j.split())
         if jid == jail or jname == jail:
-            return path.rstrip('/')
+            return path.rstrip("/")
     # XΧΧ, TODO, not sure how to handle nonexistent jail
-    return ''
+    return ""
 
 
 def _get_rcscript(name, jail=None):
-    '''
+    """
     Return full path to service rc script
 
     .. versionchanged:: 2016.3.4
 
     Support for jail (representing jid or jail name) keyword argument in kwargs
-    '''
-    cmd = '{0} -r'.format(_cmd(jail))
-    prf = _get_jail_path(jail) if jail else ''
-    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
-        if line.endswith('{0}{1}'.format(os.path.sep, name)):
+    """
+    cmd = "{0} -r".format(_cmd(jail))
+    prf = _get_jail_path(jail) if jail else ""
+    for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
+        if line.endswith("{0}{1}".format(os.path.sep, name)):
             return os.path.join(prf, line.lstrip(os.path.sep))
     return None
 
 
 def _get_rcvar(name, jail=None):
-    '''
+    """
     Return rcvar
 
     .. versionchanged:: 2016.3.4
 
     Support for jail (representing jid or jail name) keyword argument in kwargs
-    '''
+    """
     if not available(name, jail):
-        log.error('Service %s not found', name)
+        log.error("Service %s not found", name)
         return False
 
-    cmd = '{0} {1} rcvar'.format(_cmd(jail), name)
+    cmd = "{0} {1} rcvar".format(_cmd(jail), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
+    for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
             continue
-        rcvar, _ = line.split('=', 1)
+        rcvar, _ = line.split("=", 1)
         return rcvar
 
     return None
 
 
 def get_enabled(jail=None):
-    '''
+    """
     Return what services are set to run on boot
 
     .. versionchanged:: 2016.3.4
@@ -135,18 +138,18 @@ def get_enabled(jail=None):
     .. code-block:: bash
 
         salt '*' service.get_enabled
-    '''
+    """
     ret = []
     service = _cmd(jail)
-    prf = _get_jail_path(jail) if jail else ''
-    for svc in __salt__['cmd.run']('{0} -e'.format(service)).splitlines():
+    prf = _get_jail_path(jail) if jail else ""
+    for svc in __salt__["cmd.run"]("{0} -e".format(service)).splitlines():
         ret.append(os.path.basename(svc))
 
     # This is workaround for bin/173454 bug
     for svc in get_all(jail):
         if svc in ret:
             continue
-        if not os.path.exists('{0}/etc/rc.conf.d/{1}'.format(prf, svc)):
+        if not os.path.exists("{0}/etc/rc.conf.d/{1}".format(prf, svc)):
             continue
         if enabled(svc, jail=jail):
             ret.append(svc)
@@ -155,7 +158,7 @@ def get_enabled(jail=None):
 
 
 def get_disabled(jail=None):
-    '''
+    """
     Return what services are available but not enabled to start at boot
 
     .. versionchanged:: 2016.3.4
@@ -167,16 +170,14 @@ def get_disabled(jail=None):
     .. code-block:: bash
 
         salt '*' service.get_disabled
-    '''
+    """
     en_ = get_enabled(jail)
     all_ = get_all(jail)
     return sorted(set(all_) - set(en_))
 
 
-def _switch(name,                   # pylint: disable=C0103
-            on,                     # pylint: disable=C0103
-            **kwargs):
-    '''
+def _switch(name, on, **kwargs):  # pylint: disable=C0103  # pylint: disable=C0103
+    """
     Switch on/off service start at boot.
 
     .. versionchanged:: 2016.3.4
@@ -184,15 +185,15 @@ def _switch(name,                   # pylint: disable=C0103
     Support for jail (representing jid or jail name) and chroot keyword argument
     in kwargs. chroot should be used when jail's /etc is mounted read-only and
     should point to a root directory where jail's /etc is mounted read-write.
-    '''
-    jail = kwargs.get('jail', '')
-    chroot = kwargs.get('chroot', '').rstrip('/')
+    """
+    jail = kwargs.get("jail", "")
+    chroot = kwargs.get("chroot", "").rstrip("/")
     if not available(name, jail):
         return False
 
     rcvar = _get_rcvar(name, jail)
     if not rcvar:
-        log.error('rcvar for service %s not found', name)
+        log.error("rcvar for service %s not found", name)
         return False
 
     if jail and not chroot:
@@ -201,44 +202,45 @@ def _switch(name,                   # pylint: disable=C0103
         # is mounted read-only
         chroot = _get_jail_path(jail)
 
-    config = kwargs.get('config',
-                        __salt__['config.option']('service.config',
-                                                  default='{0}/etc/rc.conf'.format(chroot)
-                                                  )
-                        )
+    config = kwargs.get(
+        "config",
+        __salt__["config.option"](
+            "service.config", default="{0}/etc/rc.conf".format(chroot)
+        ),
+    )
 
     if not config:
-        rcdir = '{0}/etc/rc.conf.d'.format(chroot)
+        rcdir = "{0}/etc/rc.conf.d".format(chroot)
         if not os.path.exists(rcdir) or not os.path.isdir(rcdir):
-            log.error('%s not exists', rcdir)
+            log.error("%s not exists", rcdir)
             return False
-        config = os.path.join(rcdir, rcvar.replace('_enable', ''))
+        config = os.path.join(rcdir, rcvar.replace("_enable", ""))
 
     nlines = []
     edited = False
 
     if on:
-        val = 'YES'
+        val = "YES"
     else:
-        val = 'NO'
+        val = "NO"
 
     if os.path.exists(config):
-        with salt.utils.files.fopen(config, 'r') as ifile:
+        with salt.utils.files.fopen(config, "r") as ifile:
             for line in ifile:
                 line = salt.utils.stringutils.to_unicode(line)
-                if not line.startswith('{0}='.format(rcvar)):
+                if not line.startswith("{0}=".format(rcvar)):
                     nlines.append(line)
                     continue
-                rest = line[len(line.split()[0]):]  # keep comments etc
+                rest = line[len(line.split()[0]) :]  # keep comments etc
                 nlines.append('{0}="{1}"{2}'.format(rcvar, val, rest))
                 edited = True
     if not edited:
         # Ensure that the file ends in a \n
-        if len(nlines) > 1 and nlines[-1][-1] != '\n':
-            nlines[-1] = '{0}\n'.format(nlines[-1])
+        if len(nlines) > 1 and nlines[-1][-1] != "\n":
+            nlines[-1] = "{0}\n".format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
-    with salt.utils.files.fopen(config, 'w') as ofile:
+    with salt.utils.files.fopen(config, "w") as ofile:
         nlines = [salt.utils.stringutils.to_str(_l) for _l in nlines]
         ofile.writelines(nlines)
 
@@ -246,7 +248,7 @@ def _switch(name,                   # pylint: disable=C0103
 
 
 def enable(name, **kwargs):
-    '''
+    """
     Enable the named service to start at boot
 
     name
@@ -272,12 +274,12 @@ def enable(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.enable <service name>
-    '''
+    """
     return _switch(name, True, **kwargs)
 
 
 def disable(name, **kwargs):
-    '''
+    """
     Disable the named service to start at boot
 
     Arguments the same as for enable()
@@ -295,12 +297,12 @@ def disable(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.disable <service name>
-    '''
+    """
     return _switch(name, False, **kwargs)
 
 
 def enabled(name, **kwargs):
-    '''
+    """
     Return True if the named service is enabled, false otherwise
 
     name
@@ -315,26 +317,26 @@ def enabled(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.enabled <service name>
-    '''
-    jail = kwargs.get('jail', '')
+    """
+    jail = kwargs.get("jail", "")
     if not available(name, jail):
-        log.error('Service %s not found', name)
+        log.error("Service %s not found", name)
         return False
 
-    cmd = '{0} {1} rcvar'.format(_cmd(jail), name)
+    cmd = "{0} {1} rcvar".format(_cmd(jail), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
+    for line in __salt__["cmd.run_stdout"](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
             continue
         _, state, _ = line.split('"', 2)
-        return state.lower() in ('yes', 'true', 'on', '1')
+        return state.lower() in ("yes", "true", "on", "1")
 
     # probably will never reached
     return False
 
 
 def disabled(name, **kwargs):
-    '''
+    """
     Return True if the named service is enabled, false otherwise
 
     CLI Example:
@@ -342,12 +344,12 @@ def disabled(name, **kwargs):
     .. code-block:: bash
 
         salt '*' service.disabled <service name>
-    '''
+    """
     return not enabled(name, **kwargs)
 
 
 def available(name, jail=None):
-    '''
+    """
     Check that the given service is available.
 
     .. versionchanged:: 2016.3.4
@@ -359,12 +361,12 @@ def available(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.available sshd
-    '''
+    """
     return name in get_all(jail)
 
 
 def missing(name, jail=None):
-    '''
+    """
     The inverse of service.available.
     Returns ``True`` if the specified service is not available, otherwise returns
     ``False``.
@@ -378,12 +380,12 @@ def missing(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.missing sshd
-    '''
+    """
     return name not in get_all(jail)
 
 
 def get_all(jail=None):
-    '''
+    """
     Return a list of all available services
 
     .. versionchanged:: 2016.3.4
@@ -395,17 +397,17 @@ def get_all(jail=None):
     .. code-block:: bash
 
         salt '*' service.get_all
-    '''
+    """
     ret = []
     service = _cmd(jail)
-    for srv in __salt__['cmd.run']('{0} -l'.format(service)).splitlines():
+    for srv in __salt__["cmd.run"]("{0} -l".format(service)).splitlines():
         if not srv.isupper():
             ret.append(srv)
     return sorted(ret)
 
 
 def start(name, jail=None):
-    '''
+    """
     Start the specified service
 
     .. versionchanged:: 2016.3.4
@@ -417,13 +419,13 @@ def start(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.start <service name>
-    '''
-    cmd = '{0} {1} onestart'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = "{0} {1} onestart".format(_cmd(jail), name)
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def stop(name, jail=None):
-    '''
+    """
     Stop the specified service
 
     .. versionchanged:: 2016.3.4
@@ -435,13 +437,13 @@ def stop(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.stop <service name>
-    '''
-    cmd = '{0} {1} onestop'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = "{0} {1} onestop".format(_cmd(jail), name)
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def restart(name, jail=None):
-    '''
+    """
     Restart the named service
 
     .. versionchanged:: 2016.3.4
@@ -453,13 +455,13 @@ def restart(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.restart <service name>
-    '''
-    cmd = '{0} {1} onerestart'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = "{0} {1} onerestart".format(_cmd(jail), name)
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def reload_(name, jail=None):
-    '''
+    """
     Restart the named service
 
     .. versionchanged:: 2016.3.4
@@ -471,13 +473,13 @@ def reload_(name, jail=None):
     .. code-block:: bash
 
         salt '*' service.reload <service name>
-    '''
-    cmd = '{0} {1} onereload'.format(_cmd(jail), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    """
+    cmd = "{0} {1} onereload".format(_cmd(jail), name)
+    return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
 def status(name, sig=None, jail=None):
-    '''
+    """
     Return the status for a service.
     If the name contains globbing, a dict mapping service name to True/False
     values is returned.
@@ -500,21 +502,21 @@ def status(name, sig=None, jail=None):
     .. code-block:: bash
 
         salt '*' service.status <service name> [service signature]
-    '''
+    """
     if sig:
-        return bool(__salt__['status.pid'](sig))
+        return bool(__salt__["status.pid"](sig))
 
-    contains_globbing = bool(re.search(r'\*|\?|\[.+\]', name))
+    contains_globbing = bool(re.search(r"\*|\?|\[.+\]", name))
     if contains_globbing:
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
     results = {}
     for service in services:
-        cmd = '{0} {1} onestatus'.format(_cmd(jail), service)
-        results[service] = not __salt__['cmd.retcode'](cmd,
-                                        python_shell=False,
-                                        ignore_retcode=True)
+        cmd = "{0} {1} onestatus".format(_cmd(jail), service)
+        results[service] = not __salt__["cmd.retcode"](
+            cmd, python_shell=False, ignore_retcode=True
+        )
     if contains_globbing:
         return results
     return results[name]

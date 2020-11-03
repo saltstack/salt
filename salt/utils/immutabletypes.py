@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
 
@@ -7,21 +6,16 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Immutable types
-'''
-from __future__ import absolute_import, unicode_literals
-import copy
+"""
 
-# Import python libs
-try:
-    from collections.abc import Mapping, Sequence, Set
-except ImportError:
-    from collections import Mapping, Sequence, Set
+import copy
+from collections.abc import Mapping, Sequence, Set
 
 
 class ImmutableDict(Mapping):
-    '''
+    """
     An immutable dictionary implementation
-    '''
+    """
 
     def __init__(self, obj):
         self.__obj = obj
@@ -36,22 +30,22 @@ class ImmutableDict(Mapping):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
 
     def copy(self):
-        '''
+        """
         Return an un-frozen copy of self
-        '''
+        """
         return copy.deepcopy(self.__obj)
 
 
 class ImmutableList(Sequence):
-    '''
+    """
     An immutable list implementation
-    '''
+    """
 
     def __init__(self, obj):
         self.__obj = obj
@@ -72,16 +66,22 @@ class ImmutableList(Sequence):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
 
+    def copy(self):
+        """
+        Return an un-frozen copy of self
+        """
+        return copy.deepcopy(self.__obj)
+
 
 class ImmutableSet(Set):
-    '''
+    """
     An immutable set implementation
-    '''
+    """
 
     def __init__(self, obj):
         self.__obj = obj
@@ -96,16 +96,22 @@ class ImmutableSet(Set):
         return key in self.__obj
 
     def __repr__(self):
-        return '<{0} {1}>'.format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
 
+    def copy(self):
+        """
+        Return an un-frozen copy of self
+        """
+        return copy.deepcopy(self.__obj)
+
 
 def freeze(obj):
-    '''
+    """
     Freeze python types by turning them into immutable structures.
-    '''
+    """
     if isinstance(obj, dict):
         return ImmutableDict(obj)
     if isinstance(obj, list):

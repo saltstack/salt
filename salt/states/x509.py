@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Manage X509 Certificates
 
 .. versionadded:: 2015.8.0
@@ -50,18 +49,24 @@ the mine where it can be easily retrieved by other minions.
     salt-minion:
       service.running:
         - enable: True
-        - listen:
-          - file: /etc/salt/minion.d/signing_policies.conf
+        - watch:
+          - file: /etc/salt/minion.d/x509.conf
 
-    /etc/salt/minion.d/signing_policies.conf:
+    /etc/salt/minion.d/x509.conf:
       file.managed:
-        - source: salt://signing_policies.conf
+        - source: salt://x509.conf
 
     /etc/pki:
       file.directory
 
     /etc/pki/issued_certs:
       file.directory
+
+    /etc/pki/ca.crt:
+      x509.private_key_managed:
+        - name: /etc/pki/ca.key
+        - bits: 4096
+        - backup: True
 
     /etc/pki/ca.crt:
       x509.certificate_managed:
@@ -77,28 +82,19 @@ the mine where it can be easily retrieved by other minions.
         - days_valid: 3650
         - days_remaining: 0
         - backup: True
-        - managed_private_key:
-            name: /etc/pki/ca.key
-            bits: 4096
-            backup: True
         - require:
           - file: /etc/pki
-
-    mine.send:
-      module.run:
-        - func: x509.get_pem_entries
-        - kwargs:
-            glob_path: /etc/pki/ca.crt
-        - onchanges:
-          - x509: /etc/pki/ca.crt
 
 
 The signing policy defines properties that override any property requested or included in a CRL. It also
 can define a restricted list of minions which are allowed to remotely invoke this signing policy.
 
-/srv/salt/signing_policies.conf
+/srv/salt/x509.conf
 
 .. code-block:: yaml
+
+    mine_functions:
+      x509.get_pem_entries: [/etc/pki/ca.crt]
 
     x509_signing_policies:
       www:
@@ -140,6 +136,12 @@ This state creates a private key then requests a certificate signed by ca accord
 .. code-block:: yaml
 
     /etc/pki/www.crt:
+      x509.private_key_managed:
+        - name: /etc/pki/www.key
+        - bits: 4096
+        - backup: True
+
+    /etc/pki/www.crt:
       x509.certificate_managed:
         - ca_server: ca
         - signing_policy: www
@@ -147,57 +149,68 @@ This state creates a private key then requests a certificate signed by ca accord
         - CN: www.example.com
         - days_remaining: 30
         - backup: True
-        - managed_private_key:
-            name: /etc/pki/www.key
-            bits: 4096
-            backup: True
 
-'''
+This other state creates a private key then requests a certificate signed by ca
+according to the www policy but adds a strict date range for the certificate to
+be considered valid.
 
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
+/srv/salt/www-time-limited.sls
+
+.. code-block:: yaml
+
+    /etc/pki/www-time-limited.crt:
+      x509.certificate_managed:
+        - ca_server: ca
+        - signing_policy: www
+        - public_key: /etc/pki/www-time-limited.key
+        - CN: www.example.com
+        - not_before: 2019-05-05 00:00:00
+        - not_after: 2020-05-05 14:30:00
+        - backup: True
+
+"""
+
+import copy
 import datetime
+import logging
 import os
 import re
-import copy
 
-# Import Salt Libs
 import salt.exceptions
-
-# Import 3rd-party libs
-from salt.ext import six
+import salt.utils.versions
 
 try:
     from M2Crypto.RSA import RSAError
 except ImportError:
     pass
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
-    '''
+    """
     only load this module if the corresponding execution module is loaded
-    '''
-    if 'x509.get_pem_entry' in __salt__:
-        return 'x509'
+    """
+    if "x509.get_pem_entry" in __salt__:
+        return "x509"
     else:
-        return (False, 'Could not load x509 state: m2crypto unavailable')
+        return (False, "Could not load x509 state: m2crypto unavailable")
 
 
 def _revoked_to_list(revs):
-    '''
+    """
     Turn the mess of OrderedDicts and Lists into a list of dicts for
     use in the CRL module.
-    '''
+    """
     list_ = []
 
     for rev in revs:
-        for rev_name, props in six.iteritems(
-                rev):             # pylint: disable=unused-variable
+        for props in rev.values():
             dict_ = {}
             for prop in props:
-                for propname, val in six.iteritems(prop):
+                for propname, val in prop.items():
                     if isinstance(val, datetime.datetime):
-                        val = val.strftime('%Y-%m-%d %H:%M:%S')
+                        val = val.strftime("%Y-%m-%d %H:%M:%S")
                     dict_[propname] = val
             list_.append(dict_)
 
@@ -205,15 +218,17 @@ def _revoked_to_list(revs):
 
 
 def _get_file_args(name, **kwargs):
-    valid_file_args = ['user',
-                       'group',
-                       'mode',
-                       'makedirs',
-                       'dir_mode',
-                       'backup',
-                       'create',
-                       'follow_symlinks',
-                       'check_cmd']
+    valid_file_args = [
+        "user",
+        "group",
+        "mode",
+        "makedirs",
+        "dir_mode",
+        "backup",
+        "create",
+        "follow_symlinks",
+        "check_cmd",
+    ]
     file_args = {}
     extra_args = {}
     for k, v in kwargs.items():
@@ -221,36 +236,39 @@ def _get_file_args(name, **kwargs):
             file_args[k] = v
         else:
             extra_args[k] = v
-    file_args['name'] = name
+    file_args["name"] = name
     return file_args, extra_args
 
 
-def _check_private_key(name, bits=2048, passphrase=None,
-                       new=False, overwrite=False):
+def _check_private_key(name, bits=2048, passphrase=None, new=False, overwrite=False):
     current_bits = 0
     if os.path.isfile(name):
         try:
-            current_bits = __salt__['x509.get_private_key_size'](
-                private_key=name, passphrase=passphrase)
+            current_bits = __salt__["x509.get_private_key_size"](
+                private_key=name, passphrase=passphrase
+            )
         except salt.exceptions.SaltInvocationError:
             pass
         except RSAError:
             if not overwrite:
                 raise salt.exceptions.CommandExecutionError(
-                    'The provided passphrase cannot decrypt the private key.')
+                    "The provided passphrase cannot decrypt the private key."
+                )
 
     return current_bits == bits and not new
 
 
-def private_key_managed(name,
-                        bits=2048,
-                        passphrase=None,
-                        cipher='aes_128_cbc',
-                        new=False,
-                        overwrite=False,
-                        verbose=True,
-                        **kwargs):
-    '''
+def private_key_managed(
+    name,
+    bits=2048,
+    passphrase=None,
+    cipher="aes_128_cbc",
+    new=False,
+    overwrite=False,
+    verbose=True,
+    **kwargs
+):
+    """
     Manage a private key's existence.
 
     name:
@@ -267,7 +285,8 @@ def private_key_managed(name,
 
     new:
         Always create a new key. Defaults to ``False``.
-        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a `managed_private_key` can allow key rotation whenever a new certificate is generated.
+        Combining new with :mod:`prereq <salt.states.requsities.preqreq>`
+        can allow key rotation whenever a new certificate is generated.
 
     overwrite:
         Overwrite an existing private key if the provided passphrase cannot decrypt it.
@@ -296,31 +315,33 @@ def private_key_managed(name,
             - prereq:
               - x509: /etc/pki/www.crt
             {%- endif %}
-    '''
+    """
     file_args, kwargs = _get_file_args(name, **kwargs)
     new_key = False
     if _check_private_key(
-            name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite):
-        file_args['contents'] = __salt__['x509.get_pem_entry'](
-            name, pem_type='RSA PRIVATE KEY')
+        name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite
+    ):
+        file_args["contents"] = __salt__["x509.get_pem_entry"](
+            name, pem_type="RSA PRIVATE KEY"
+        )
     else:
         new_key = True
-        file_args['contents'] = __salt__['x509.create_private_key'](
-            text=True, bits=bits, passphrase=passphrase, cipher=cipher, verbose=verbose)
+        file_args["contents"] = __salt__["x509.create_private_key"](
+            text=True, bits=bits, passphrase=passphrase, cipher=cipher, verbose=verbose
+        )
 
     # Ensure the key contents are a string before passing it along
-    file_args['contents'] = salt.utils.stringutils.to_str(file_args['contents'])
+    file_args["contents"] = salt.utils.stringutils.to_str(file_args["contents"])
 
-    ret = __states__['file.managed'](**file_args)
-    if ret['changes'] and new_key:
-        ret['changes'] = {'new': 'New private key generated'}
+    ret = __states__["file.managed"](**file_args)
+    if ret["changes"] and new_key:
+        ret["changes"] = {"new": "New private key generated"}
 
     return ret
 
 
-def csr_managed(name,
-                **kwargs):
-    '''
+def csr_managed(name, **kwargs):
+    """
     Manage a Certificate Signing Request
 
     name:
@@ -345,53 +366,247 @@ def csr_managed(name,
              - ST: Utah
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
-    '''
+    """
     try:
-        old = __salt__['x509.read_csr'](name)
+        old = __salt__["x509.read_csr"](name)
     except salt.exceptions.SaltInvocationError:
-        old = '{0} is not a valid csr.'.format(name)
+        old = "{} is not a valid csr.".format(name)
 
     file_args, kwargs = _get_file_args(name, **kwargs)
-    file_args['contents'] = __salt__['x509.create_csr'](text=True, **kwargs)
+    file_args["contents"] = __salt__["x509.create_csr"](text=True, **kwargs)
 
-    ret = __states__['file.managed'](**file_args)
-    if ret['changes']:
-        new = __salt__['x509.read_csr'](file_args['contents'])
+    ret = __states__["file.managed"](**file_args)
+    if ret["changes"]:
+        new = __salt__["x509.read_csr"](file_args["contents"])
         if old != new:
-            ret['changes'] = {"Old": old, "New": new}
+            ret["changes"] = {"Old": old, "New": new}
 
     return ret
 
 
-def certificate_managed(name,
-                        days_remaining=90,
-                        managed_private_key=None,
-                        append_certs=None,
-                        **kwargs):
-    '''
+def _certificate_info_matches(cert_info, required_cert_info, check_serial=False):
+    """
+    Return true if the provided certificate information matches the
+    required certificate information, i.e. it has the required common
+    name, subject alt name, organization, etc.
+
+    cert_info should be a dict as returned by x509.read_certificate.
+    required_cert_info should be a dict as returned by x509.create_certificate with testrun=True.
+    """
+    # don't modify the incoming dicts
+    cert_info = copy.deepcopy(cert_info)
+    required_cert_info = copy.deepcopy(required_cert_info)
+
+    ignored_keys = [
+        "Not Before",
+        "Not After",
+        "MD5 Finger Print",
+        "SHA1 Finger Print",
+        "SHA-256 Finger Print",
+        # The integrity of the issuer is checked elsewhere
+        "Issuer Public Key",
+    ]
+    for key in ignored_keys:
+        cert_info.pop(key, None)
+        required_cert_info.pop(key, None)
+
+    if not check_serial:
+        cert_info.pop("Serial Number", None)
+        required_cert_info.pop("Serial Number", None)
+        try:
+            cert_info["X509v3 Extensions"]["authorityKeyIdentifier"] = re.sub(
+                r"serial:([0-9A-F]{2}:)*[0-9A-F]{2}",
+                "serial:--",
+                cert_info["X509v3 Extensions"]["authorityKeyIdentifier"],
+            )
+            required_cert_info["X509v3 Extensions"]["authorityKeyIdentifier"] = re.sub(
+                r"serial:([0-9A-F]{2}:)*[0-9A-F]{2}",
+                "serial:--",
+                required_cert_info["X509v3 Extensions"]["authorityKeyIdentifier"],
+            )
+        except KeyError:
+            pass
+
+    diff = []
+    for k, v in required_cert_info.items():
+        try:
+            if v != cert_info[k]:
+                if k == "Subject Hash":
+                    # If we failed the subject hash check but the subject matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Subject"] != cert_info["Subject"]:
+                        diff.append(k)
+                elif k == "Issuer Hash":
+                    # If we failed the issuer hash check but the issuer matches, then this is
+                    # likely a certificate generated under Python 2 where sorting differs and thus
+                    # the hash also differs
+                    if required_cert_info["Issuer"] != cert_info["Issuer"]:
+                        diff.append(k)
+                elif k == "X509v3 Extensions":
+                    v_ext = v.copy()
+                    cert_info_ext = cert_info[k].copy()
+                    # DirName depends on ordering which was different on certificates created
+                    # under Python 2. Remove that from the comparisson
+                    try:
+                        v_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            v_ext["authorityKeyIdentifier"],
+                        )
+                        cert_info_ext["authorityKeyIdentifier"] = re.sub(
+                            r"DirName:([^\n]+)",
+                            "Dirname:--",
+                            cert_info_ext["authorityKeyIdentifier"],
+                        )
+                    except KeyError:
+                        pass
+                    if v_ext != cert_info_ext:
+                        diff.append(k)
+                else:
+                    diff.append(k)
+        except KeyError:
+            diff.append(k)
+
+    return len(diff) == 0, diff
+
+
+def _certificate_days_remaining(cert_info):
+    """
+    Get the days remaining on a certificate, defaulting to 0 if an error occurs.
+    """
+    try:
+        expiry = cert_info["Not After"]
+        return (
+            datetime.datetime.strptime(expiry, "%Y-%m-%d %H:%M:%S")
+            - datetime.datetime.now()
+        ).days
+    except KeyError:
+        return 0
+
+
+def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
+    """
+    Return True if the given certificate file exists, is a certificate, matches the given specification,
+    and has the required days remaining.
+
+    If False, also provide a message explaining why.
+    """
+    if not os.path.isfile(name):
+        return False, "{} does not exist".format(name), {}
+
+    try:
+        cert_info = __salt__["x509.read_certificate"](certificate=name)
+        required_cert_info = __salt__["x509.create_certificate"](
+            testrun=True, **cert_spec
+        )
+        if not isinstance(required_cert_info, dict):
+            raise salt.exceptions.SaltInvocationError(
+                "Unable to create new certificate: x509 module error: {}".format(
+                    required_cert_info
+                )
+            )
+
+        try:
+            issuer_public_key = required_cert_info["Issuer Public Key"]
+            # Verify the certificate has been signed by the ca_server or private_signing_key
+            if not __salt__["x509.verify_signature"](name, issuer_public_key):
+                errmsg = (
+                    "Certificate is not signed by private_signing_key"
+                    if "signing_private_key" in cert_spec
+                    else "Certificate is not signed by the requested issuer"
+                )
+                return False, errmsg, cert_info
+        except KeyError:
+            return (
+                False,
+                "New certificate does not include signing information",
+                cert_info,
+            )
+
+        matches, diff = _certificate_info_matches(
+            cert_info, required_cert_info, check_serial="serial_number" in cert_spec
+        )
+        if not matches:
+            return (
+                False,
+                "Certificate properties are different: {}".format(", ".join(diff)),
+                cert_info,
+            )
+
+        actual_days_remaining = _certificate_days_remaining(cert_info)
+        if days_remaining != 0 and actual_days_remaining < days_remaining:
+            return (
+                False,
+                "Certificate needs renewal: {} days remaining but it needs to be at least {}".format(
+                    actual_days_remaining, days_remaining
+                ),
+                cert_info,
+            )
+
+        return True, "", cert_info
+    except salt.exceptions.SaltInvocationError as e:
+        return False, "{} is not a valid certificate: {}".format(name, str(e)), {}
+
+
+def _certificate_file_managed(ret, file_args):
+    """
+    Run file.managed and merge the result with an existing return dict.
+    The overall True/False result will be the result of the file.managed call.
+    """
+    file_ret = __states__["file.managed"](**file_args)
+
+    ret["result"] = file_ret["result"]
+    if ret["result"]:
+        ret["comment"] = "Certificate {} is valid and up to date".format(ret["name"])
+    else:
+        ret["comment"] = file_ret["comment"]
+
+    if file_ret["changes"]:
+        ret["changes"] = {"File": file_ret["changes"]}
+
+    return ret
+
+
+def certificate_managed(
+    name, days_remaining=90, append_certs=None, managed_private_key=None, **kwargs
+):
+    """
     Manage a Certificate
 
     name
         Path to the certificate
 
     days_remaining : 90
-        The minimum number of days remaining when the certificate should be
-        recreated. A value of 0 disables automatic renewal.
-
-    managed_private_key
-        Manages the private key corresponding to the certificate. All of the
-        arguments supported by :py:func:`x509.private_key_managed
-        <salt.states.x509.private_key_managed>` are supported. If `name` is not
-        specified or is the same as the name of the certificate, the private
-        key and certificate will be written together in the same file.
+        Recreate the certificate if the number of days remaining on it
+        are less than this number. The value should be less than
+        ``days_valid``, otherwise the certificate will be recreated
+        every time the state is run. A value of 0 disables automatic
+        renewal.
 
     append_certs:
         A list of certificates to be appended to the managed file.
+        They must be valid PEM files, otherwise an error will be thrown.
+
+    managed_private_key:
+        Has no effect since v2016.11 and will be removed in Salt Aluminium.
+        Use a separate x509.private_key_managed call instead.
 
     kwargs:
         Any arguments supported by :py:func:`x509.create_certificate
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
         <salt.states.file.managed>` are supported.
+
+    not_before:
+        Initial validity date for the certificate. This date must be specified
+        in the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: 3001
+    not_after:
+        Final validity date for the certificate. This date must be specified in
+        the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: 3001
 
     Examples:
 
@@ -425,170 +640,122 @@ def certificate_managed(name,
             - days_remaining: 30
             - backup: True
 
-    '''
-    if 'path' in kwargs:
-        name = kwargs.pop('path')
+    """
+    if "path" in kwargs:
+        name = kwargs.pop("path")
 
-    file_args, kwargs = _get_file_args(name, **kwargs)
-
-    rotate_private_key = False
-    new_private_key = False
-    if managed_private_key:
-        private_key_args = {
-            'name': name,
-            'new': False,
-            'overwrite': False,
-            'bits': 2048,
-            'passphrase': None,
-            'cipher': 'aes_128_cbc',
-            'verbose': True
-        }
-        private_key_args.update(managed_private_key)
-        kwargs['public_key_passphrase'] = private_key_args['passphrase']
-
-        if private_key_args['new']:
-            rotate_private_key = True
-            private_key_args['new'] = False
-
-        if _check_private_key(private_key_args['name'],
-                              bits=private_key_args['bits'],
-                              passphrase=private_key_args['passphrase'],
-                              new=private_key_args['new'],
-                              overwrite=private_key_args['overwrite']):
-            private_key = __salt__['x509.get_pem_entry'](
-                private_key_args['name'], pem_type='RSA PRIVATE KEY')
-        else:
-            new_private_key = True
-            private_key = __salt__['x509.create_private_key'](text=True, bits=private_key_args['bits'], passphrase=private_key_args[
-                                                              'passphrase'], cipher=private_key_args['cipher'], verbose=private_key_args['verbose'])
-
-        kwargs['public_key'] = private_key
-
-    current_days_remaining = 0
-    current_comp = {}
-
-    if os.path.isfile(name):
-        try:
-            current = __salt__['x509.read_certificate'](certificate=name)
-            current_comp = copy.deepcopy(current)
-            if 'serial_number' not in kwargs:
-                current_comp.pop('Serial Number')
-                if 'signing_cert' not in kwargs:
-                    try:
-                        current_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
-                            re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
-                                   current_comp['X509v3 Extensions']['authorityKeyIdentifier']))
-                    except KeyError:
-                        pass
-            current_comp.pop('Not Before')
-            current_comp.pop('MD5 Finger Print')
-            current_comp.pop('SHA1 Finger Print')
-            current_comp.pop('SHA-256 Finger Print')
-            current_notafter = current_comp.pop('Not After')
-            current_days_remaining = (
-                datetime.datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
-                datetime.datetime.now()).days
-            if days_remaining == 0:
-                days_remaining = current_days_remaining - 1
-        except salt.exceptions.SaltInvocationError:
-            current = '{0} is not a valid Certificate.'.format(name)
-    else:
-        current = '{0} does not exist.'.format(name)
-
-    if 'ca_server' in kwargs and 'signing_policy' not in kwargs:
+    if "ca_server" in kwargs and "signing_policy" not in kwargs:
         raise salt.exceptions.SaltInvocationError(
-            'signing_policy must be specified if ca_server is.')
+            "signing_policy must be specified if ca_server is."
+        )
 
-    new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+    if (
+        "public_key" not in kwargs
+        and "signing_private_key" not in kwargs
+        and "csr" not in kwargs
+    ):
+        raise salt.exceptions.SaltInvocationError(
+            "public_key, signing_private_key, or csr must be specified."
+        )
 
-    if isinstance(new, dict):
-        new_comp = copy.deepcopy(new)
-        new.pop('Issuer Public Key')
-        if 'serial_number' not in kwargs:
-            new_comp.pop('Serial Number')
-            if 'signing_cert' not in kwargs:
-                try:
-                    new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
-                        re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
-                               new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
-                except KeyError:
-                    pass
-        new_comp.pop('Not Before')
-        new_comp.pop('Not After')
-        new_comp.pop('MD5 Finger Print')
-        new_comp.pop('SHA1 Finger Print')
-        new_comp.pop('SHA-256 Finger Print')
-        new_issuer_public_key = new_comp.pop('Issuer Public Key')
-    else:
-        new_comp = new
-
-    new_certificate = False
-    if (current_comp == new_comp and
-            current_days_remaining > days_remaining and
-            __salt__['x509.verify_signature'](name, new_issuer_public_key)):
-        certificate = __salt__['x509.get_pem_entry'](
-            name, pem_type='CERTIFICATE')
-    else:
-        if rotate_private_key and not new_private_key:
-            new_private_key = True
-            private_key = __salt__['x509.create_private_key'](
-                text=True, bits=private_key_args['bits'], verbose=private_key_args['verbose'])
-            kwargs['public_key'] = private_key
-        new_certificate = True
-        certificate = __salt__['x509.create_certificate'](text=True, **kwargs)
-
-    file_args['contents'] = ''
-    private_ret = {}
     if managed_private_key:
-        if private_key_args['name'] == name:
-            file_args['contents'] = private_key
-        else:
-            private_file_args = copy.deepcopy(file_args)
-            unique_private_file_args, _ = _get_file_args(**private_key_args)
-            private_file_args.update(unique_private_file_args)
-            private_file_args['contents'] = private_key
-            private_ret = __states__['file.managed'](**private_file_args)
-            if not private_ret['result']:
-                return private_ret
+        salt.utils.versions.warn_until(
+            "Aluminium",
+            "Passing 'managed_private_key' to x509.certificate_managed has no effect and "
+            "will be removed Salt Aluminium. Use a separate x509.private_key_managed call instead.",
+        )
 
-    file_args['contents'] += salt.utils.stringutils.to_str(certificate)
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    is_valid, invalid_reason, current_cert_info = _certificate_is_valid(
+        name, days_remaining, append_certs, **kwargs
+    )
+
+    if is_valid:
+        file_args, extra_args = _get_file_args(name, **kwargs)
+
+        return _certificate_file_managed(ret, file_args)
+
+    if __opts__["test"]:
+        file_args, extra_args = _get_file_args(name, **kwargs)
+        # Use empty contents for file.managed in test mode.
+        # We don't want generate a new certificate, even in memory,
+        # for security reasons.
+        # Using an empty string instead of omitting it will at least
+        # show the old certificate in the diff.
+        file_args["contents"] = ""
+
+        ret = _certificate_file_managed(ret, file_args)
+
+        ret["result"] = None
+        ret["comment"] = "Certificate {} will be created".format(name)
+        ret["changes"]["Status"] = {
+            "Old": invalid_reason,
+            "New": "Certificate will be valid and up to date",
+        }
+        return ret
+
+    contents = __salt__["x509.create_certificate"](text=True, **kwargs)
+    # Check the module actually returned a cert and not an error message as a string
+    try:
+        __salt__["x509.read_certificate"](contents)
+    except salt.exceptions.SaltInvocationError as e:
+        ret["result"] = False
+        ret[
+            "comment"
+        ] = "An error occurred creating the certificate {}. The result returned from x509.create_certificate is not a valid PEM file:\n{}".format(
+            name, str(e)
+        )
+        return ret
 
     if not append_certs:
         append_certs = []
-    for append_cert in append_certs:
-        file_args[
-            'contents'] += __salt__['x509.get_pem_entry'](append_cert, pem_type='CERTIFICATE')
+    for append_file in append_certs:
+        try:
+            append_file_contents = __salt__["x509.get_pem_entry"](
+                append_file, pem_type="CERTIFICATE"
+            )
+            contents += append_file_contents
+        except salt.exceptions.SaltInvocationError as e:
+            ret["result"] = False
+            ret[
+                "comment"
+            ] = "{} is not a valid certificate file, cannot append it to the certificate {}.\nThe error returned by the x509 module was:\n{}".format(
+                append_file, name, str(e)
+            )
+            return ret
 
-    file_args['show_changes'] = False
-    ret = __states__['file.managed'](**file_args)
+    file_args, extra_args = _get_file_args(name, **kwargs)
+    file_args["contents"] = contents
 
-    if ret['changes']:
-        ret['changes'] = {'Certificate': ret['changes']}
-    else:
-        ret['changes'] = {}
-    if private_ret and private_ret['changes']:
-        ret['changes']['Private Key'] = private_ret['changes']
-    if new_private_key:
-        ret['changes']['Private Key'] = 'New private key generated'
-    if new_certificate:
-        ret['changes']['Certificate'] = {
-            'Old': current,
-            'New': __salt__['x509.read_certificate'](certificate=certificate)}
+    ret = _certificate_file_managed(ret, file_args)
+
+    if ret["result"]:
+        ret["changes"]["Certificate"] = {
+            "Old": current_cert_info,
+            "New": __salt__["x509.read_certificate"](certificate=name),
+        }
+        ret["changes"]["Status"] = {
+            "Old": invalid_reason,
+            "New": "Certificate is valid and up to date",
+        }
 
     return ret
 
 
-def crl_managed(name,
-                signing_private_key,
-                signing_private_key_passphrase=None,
-                signing_cert=None,
-                revoked=None,
-                days_valid=100,
-                digest="",
-                days_remaining=30,
-                include_expired=False,
-                **kwargs):
-    '''
+def crl_managed(
+    name,
+    signing_private_key,
+    signing_private_key_passphrase=None,
+    signing_cert=None,
+    revoked=None,
+    days_valid=100,
+    digest="",
+    days_remaining=30,
+    include_expired=False,
+    **kwargs
+):
+    """
     Manage a Certificate Revocation List
 
     name
@@ -646,7 +813,7 @@ def crl_managed(name,
                 - not_after: 2016-01-01 00:00:00
                 - revocation_date: 2015-02-25 00:00:00
                 - reason: cessationOfOperation
-    '''
+    """
     if revoked is None:
         revoked = []
 
@@ -657,51 +824,59 @@ def crl_managed(name,
 
     if os.path.isfile(name):
         try:
-            current = __salt__['x509.read_crl'](crl=name)
+            current = __salt__["x509.read_crl"](crl=name)
             current_comp = current.copy()
-            current_comp.pop('Last Update')
-            current_notafter = current_comp.pop('Next Update')
+            current_comp.pop("Last Update")
+            current_notafter = current_comp.pop("Next Update")
             current_days_remaining = (
-                datetime.datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
-                datetime.datetime.now()).days
+                datetime.datetime.strptime(current_notafter, "%Y-%m-%d %H:%M:%S")
+                - datetime.datetime.now()
+            ).days
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
         except salt.exceptions.SaltInvocationError:
-            current = '{0} is not a valid CRL.'.format(name)
+            current = "{} is not a valid CRL.".format(name)
     else:
-        current = '{0} does not exist.'.format(name)
+        current = "{} does not exist.".format(name)
 
-    new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key, signing_private_key_passphrase=signing_private_key_passphrase,
-                                          signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, digest=digest, include_expired=include_expired)
+    new_crl = __salt__["x509.create_crl"](
+        text=True,
+        signing_private_key=signing_private_key,
+        signing_private_key_passphrase=signing_private_key_passphrase,
+        signing_cert=signing_cert,
+        revoked=revoked,
+        days_valid=days_valid,
+        digest=digest,
+        include_expired=include_expired,
+    )
 
-    new = __salt__['x509.read_crl'](crl=new_crl)
+    new = __salt__["x509.read_crl"](crl=new_crl)
     new_comp = new.copy()
-    new_comp.pop('Last Update')
-    new_comp.pop('Next Update')
+    new_comp.pop("Last Update")
+    new_comp.pop("Next Update")
 
     file_args, kwargs = _get_file_args(name, **kwargs)
     new_crl_created = False
-    if (current_comp == new_comp and
-            current_days_remaining > days_remaining and
-            __salt__['x509.verify_crl'](name, signing_cert)):
-        file_args['contents'] = __salt__[
-            'x509.get_pem_entry'](name, pem_type='X509 CRL')
+    if (
+        current_comp == new_comp
+        and current_days_remaining > days_remaining
+        and __salt__["x509.verify_crl"](name, signing_cert)
+    ):
+        file_args["contents"] = __salt__["x509.get_pem_entry"](
+            name, pem_type="X509 CRL"
+        )
     else:
         new_crl_created = True
-        file_args['contents'] = new_crl
+        file_args["contents"] = new_crl
 
-    ret = __states__['file.managed'](**file_args)
+    ret = __states__["file.managed"](**file_args)
     if new_crl_created:
-        ret['changes'] = {'Old': current, 'New': __salt__[
-            'x509.read_crl'](crl=new_crl)}
+        ret["changes"] = {"Old": current, "New": __salt__["x509.read_crl"](crl=new_crl)}
     return ret
 
 
-def pem_managed(name,
-                text,
-                backup=False,
-                **kwargs):
-    '''
+def pem_managed(name, text, backup=False, **kwargs):
+    """
     Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
 
     name:
@@ -712,8 +887,8 @@ def pem_managed(name,
 
     kwargs:
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
-    '''
+    """
     file_args, kwargs = _get_file_args(name, **kwargs)
-    file_args['contents'] = __salt__['x509.get_pem_entry'](text=text)
+    file_args["contents"] = __salt__["x509.get_pem_entry"](text=text)
 
-    return __states__['file.managed'](**file_args)
+    return __states__["file.managed"](**file_args)

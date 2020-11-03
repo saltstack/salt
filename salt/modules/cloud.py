@@ -1,56 +1,60 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Salt-specific interface for calling Salt Cloud directly
-'''
+"""
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
-import logging
+
 import copy
+import logging
+import os
+
 import salt.utils.data
-
-# Import salt libs
-try:
-    import salt.cloud
-    HAS_SALTCLOUD = True
-except ImportError:
-    HAS_SALTCLOUD = False
-
 from salt.exceptions import SaltCloudConfigError
 
 # Import 3rd-party libs
 from salt.ext import six
 
+# Import salt libs
+try:
+    import salt.cloud
+
+    HAS_SALTCLOUD = True
+except ImportError:
+    HAS_SALTCLOUD = False
+
+
 log = logging.getLogger(__name__)
 
-__func_alias__ = {
-    'profile_': 'profile'
-}
+__func_alias__ = {"profile_": "profile"}
 
 
 def __virtual__():
-    '''
+    """
     Only work on POSIX-like systems
-    '''
+    """
     if HAS_SALTCLOUD:
         return True
-    return (False, 'The cloud execution module cannot be loaded: only available on non-Windows systems.')
+    return (
+        False,
+        "The cloud execution module cannot be loaded: only available on non-Windows systems.",
+    )
 
 
 def _get_client():
-    '''
+    """
     Return a cloud client
-    '''
+    """
     client = salt.cloud.CloudClient(
-        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud'),
-        pillars=copy.deepcopy(__pillar__.get('cloud', {}))
+        os.path.join(os.path.dirname(__opts__["conf_file"]), "cloud"),
+        pillars=copy.deepcopy(__pillar__.get("cloud", {})),
     )
     return client
 
 
-def list_sizes(provider='all'):
-    '''
+def list_sizes(provider="all"):
+    """
     List cloud provider sizes for the given providers
 
     CLI Example:
@@ -58,14 +62,14 @@ def list_sizes(provider='all'):
     .. code-block:: bash
 
         salt minionname cloud.list_sizes my-gce-config
-    '''
+    """
     client = _get_client()
     sizes = client.list_sizes(provider)
     return sizes
 
 
-def list_images(provider='all'):
-    '''
+def list_images(provider="all"):
+    """
     List cloud provider images for the given providers
 
     CLI Example:
@@ -73,14 +77,14 @@ def list_images(provider='all'):
     .. code-block:: bash
 
         salt minionname cloud.list_images my-gce-config
-    '''
+    """
     client = _get_client()
     images = client.list_images(provider)
     return images
 
 
-def list_locations(provider='all'):
-    '''
+def list_locations(provider="all"):
+    """
     List cloud provider locations for the given providers
 
     CLI Example:
@@ -88,14 +92,14 @@ def list_locations(provider='all'):
     .. code-block:: bash
 
         salt minionname cloud.list_locations my-gce-config
-    '''
+    """
     client = _get_client()
     locations = client.list_locations(provider)
     return locations
 
 
-def query(query_type='list_nodes'):
-    '''
+def query(query_type="list_nodes"):
+    """
     List cloud provider data for all providers
 
     CLI Examples:
@@ -105,14 +109,14 @@ def query(query_type='list_nodes'):
         salt minionname cloud.query
         salt minionname cloud.query list_nodes_full
         salt minionname cloud.query list_nodes_select
-    '''
+    """
     client = _get_client()
     info = client.query(query_type)
     return info
 
 
-def full_query(query_type='list_nodes_full'):
-    '''
+def full_query(query_type="list_nodes_full"):
+    """
     List all available cloud provider data
 
     CLI Example:
@@ -120,12 +124,12 @@ def full_query(query_type='list_nodes_full'):
     .. code-block:: bash
 
         salt minionname cloud.full_query
-    '''
+    """
     return query(query_type=query_type)
 
 
-def select_query(query_type='list_nodes_select'):
-    '''
+def select_query(query_type="list_nodes_select"):
+    """
     List selected nodes
 
     CLI Example:
@@ -133,12 +137,12 @@ def select_query(query_type='list_nodes_select'):
     .. code-block:: bash
 
         salt minionname cloud.select_query
-    '''
+    """
     return query(query_type=query_type)
 
 
 def has_instance(name, provider=None):
-    '''
+    """
     Return true if the instance is found on a provider
 
     CLI Example:
@@ -146,7 +150,7 @@ def has_instance(name, provider=None):
     .. code-block:: bash
 
         salt minionname cloud.has_instance myinstance
-    '''
+    """
     data = get_instance(name, provider)
     if data is None:
         return False
@@ -154,7 +158,7 @@ def has_instance(name, provider=None):
 
 
 def get_instance(name, provider=None):
-    '''
+    """
     Return details on an instance.
 
     Similar to the cloud action show_instance
@@ -172,8 +176,8 @@ def get_instance(name, provider=None):
 
         {{ salt['cloud.get_instance']('myinstance')['mac_address'] }}
 
-    '''
-    data = action(fun='show_instance', names=[name], provider=provider)
+    """
+    data = action(fun="show_instance", names=[name], provider=provider)
     info = salt.utils.data.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
@@ -184,7 +188,7 @@ def get_instance(name, provider=None):
 
 
 def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
-    '''
+    """
     Spin up an instance using Salt Cloud
 
     CLI Example:
@@ -192,7 +196,7 @@ def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
     .. code-block:: bash
 
         salt minionname cloud.profile my-gce-config myinstance
-    '''
+    """
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
@@ -201,7 +205,7 @@ def profile_(profile, names, vm_overrides=None, opts=None, **kwargs):
 
 
 def map_run(path=None, **kwargs):
-    '''
+    """
     Execute a salt cloud map file
 
     Cloud Map data can be retrieved from several sources:
@@ -223,14 +227,14 @@ def map_run(path=None, **kwargs):
         salt minionname cloud.map_run map_pillar='<map_pillar>'
           .. versionchanged:: 2018.3.1
         salt minionname cloud.map_run map_data='<actual map data>'
-    '''
+    """
     client = _get_client()
     info = client.map_run(path, **kwargs)
     return info
 
 
 def destroy(names):
-    '''
+    """
     Destroy the named VM(s)
 
     CLI Example:
@@ -238,20 +242,14 @@ def destroy(names):
     .. code-block:: bash
 
         salt minionname cloud.destroy myinstance
-    '''
+    """
     client = _get_client()
     info = client.destroy(names)
     return info
 
 
-def action(
-        fun=None,
-        cloudmap=None,
-        names=None,
-        provider=None,
-        instance=None,
-        **kwargs):
-    '''
+def action(fun=None, cloudmap=None, names=None, provider=None, instance=None, **kwargs):
+    """
     Execute a single action on the given provider/instance
 
     CLI Example:
@@ -261,7 +259,7 @@ def action(
         salt minionname cloud.action start instance=myinstance
         salt minionname cloud.action stop instance=myinstance
         salt minionname cloud.action show_image provider=my-ec2-config image=ami-1624987f
-    '''
+    """
     client = _get_client()
     try:
         info = client.action(fun, cloudmap, names, provider, instance, kwargs)
@@ -273,7 +271,7 @@ def action(
 
 
 def create(provider, names, opts=None, **kwargs):
-    '''
+    """
     Create an instance using Salt Cloud
 
     CLI Example:
@@ -281,7 +279,7 @@ def create(provider, names, opts=None, **kwargs):
     .. code-block:: bash
 
         salt minionname cloud.create my-ec2-config myinstance image=ami-1624987f size='t1.micro' ssh_username=ec2-user securitygroup=default delvol_on_destroy=True
-    '''
+    """
     client = _get_client()
     if isinstance(opts, dict):
         client.opts.update(opts)
@@ -290,7 +288,7 @@ def create(provider, names, opts=None, **kwargs):
 
 
 def volume_list(provider):
-    '''
+    """
     List block storage volumes
 
     CLI Example:
@@ -299,14 +297,14 @@ def volume_list(provider):
 
         salt minionname cloud.volume_list my-nova
 
-    '''
+    """
     client = _get_client()
-    info = client.extra_action(action='volume_list', provider=provider, names='name')
-    return info['name']
+    info = client.extra_action(action="volume_list", provider=provider, names="name")
+    return info["name"]
 
 
 def volume_delete(provider, names, **kwargs):
-    '''
+    """
     Delete volume
 
     CLI Example:
@@ -315,14 +313,16 @@ def volume_delete(provider, names, **kwargs):
 
         salt minionname cloud.volume_delete my-nova myblock
 
-    '''
+    """
     client = _get_client()
-    info = client.extra_action(provider=provider, names=names, action='volume_delete', **kwargs)
+    info = client.extra_action(
+        provider=provider, names=names, action="volume_delete", **kwargs
+    )
     return info
 
 
 def volume_create(provider, names, **kwargs):
-    '''
+    """
     Create volume
 
     CLI Example:
@@ -331,14 +331,16 @@ def volume_create(provider, names, **kwargs):
 
         salt minionname cloud.volume_create my-nova myblock size=100 voltype=SSD
 
-    '''
+    """
     client = _get_client()
-    info = client.extra_action(action='volume_create', names=names, provider=provider, **kwargs)
+    info = client.extra_action(
+        action="volume_create", names=names, provider=provider, **kwargs
+    )
     return info
 
 
 def volume_attach(provider, names, **kwargs):
-    '''
+    """
     Attach volume to a server
 
     CLI Example:
@@ -347,14 +349,16 @@ def volume_attach(provider, names, **kwargs):
 
         salt minionname cloud.volume_attach my-nova myblock server_name=myserver device='/dev/xvdf'
 
-    '''
+    """
     client = _get_client()
-    info = client.extra_action(provider=provider, names=names, action='volume_attach', **kwargs)
+    info = client.extra_action(
+        provider=provider, names=names, action="volume_attach", **kwargs
+    )
     return info
 
 
 def volume_detach(provider, names, **kwargs):
-    '''
+    """
     Detach volume from a server
 
     CLI Example:
@@ -363,14 +367,16 @@ def volume_detach(provider, names, **kwargs):
 
         salt minionname cloud.volume_detach my-nova myblock server_name=myserver
 
-    '''
+    """
     client = _get_client()
-    info = client.extra_action(provider=provider, names=names, action='volume_detach', **kwargs)
+    info = client.extra_action(
+        provider=provider, names=names, action="volume_detach", **kwargs
+    )
     return info
 
 
 def network_list(provider):
-    '''
+    """
     List private networks
 
     CLI Example:
@@ -379,13 +385,13 @@ def network_list(provider):
 
         salt minionname cloud.network_list my-nova
 
-    '''
+    """
     client = _get_client()
-    return client.extra_action(action='network_list', provider=provider, names='names')
+    return client.extra_action(action="network_list", provider=provider, names="names")
 
 
 def network_create(provider, names, **kwargs):
-    '''
+    """
     Create private network
 
     CLI Example:
@@ -394,13 +400,15 @@ def network_create(provider, names, **kwargs):
 
         salt minionname cloud.network_create my-nova names=['salt'] cidr='192.168.100.0/24'
 
-    '''
+    """
     client = _get_client()
-    return client.extra_action(provider=provider, names=names, action='network_create', **kwargs)
+    return client.extra_action(
+        provider=provider, names=names, action="network_create", **kwargs
+    )
 
 
 def virtual_interface_list(provider, names, **kwargs):
-    '''
+    """
     List virtual interfaces on a server
 
     CLI Example:
@@ -409,13 +417,15 @@ def virtual_interface_list(provider, names, **kwargs):
 
         salt minionname cloud.virtual_interface_list my-nova names=['salt-master']
 
-    '''
+    """
     client = _get_client()
-    return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)
+    return client.extra_action(
+        provider=provider, names=names, action="virtual_interface_list", **kwargs
+    )
 
 
 def virtual_interface_create(provider, names, **kwargs):
-    '''
+    """
     Attach private interfaces to a server
 
     CLI Example:
@@ -424,6 +434,8 @@ def virtual_interface_create(provider, names, **kwargs):
 
         salt minionname cloud.virtual_interface_create my-nova names=['salt-master'] net_name='salt'
 
-    '''
+    """
     client = _get_client()
-    return client.extra_action(provider=provider, names=names, action='virtual_interface_create', **kwargs)
+    return client.extra_action(
+        provider=provider, names=names, action="virtual_interface_create", **kwargs
+    )

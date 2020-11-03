@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Send a message to Slack
 =======================
 
@@ -23,24 +23,26 @@ The api key can be specified in the master or minion configuration like below:
     slack:
       api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 
-'''
+"""
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
-    '''
+    """
     Only load if the slack module is available in __salt__
-    '''
-    return 'slack' if 'slack.post_message' in __salt__ else False
+    """
+    if "slack.post_message" in __salt__:
+        return "slack"
+    return (False, "slack module could not be loaded")
 
 
 def post_message(name, **kwargs):
-    '''
+    """
     Send a message to a Slack channel.
 
     .. code-block:: yaml
@@ -90,8 +92,8 @@ def post_message(name, **kwargs):
             An optional flag indicating whether the value is short
             enough to be displayed side-by-side with other values.
 
-        identifier
-            The identifier of WebHook.
+        webhook
+            The identifier of WebHook (URL or token).
 
         channel
             The channel to use instead of the WebHook default.
@@ -101,64 +103,65 @@ def post_message(name, **kwargs):
 
         icon_emoji
             Icon to use instead of WebHook default.
-    '''
-    ret = {'name': name,
-           'changes': {},
-           'result': False,
-           'comment': ''}
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    if not kwargs.get('api_key') and not kwargs.get('webhook'):
-        ret['comment'] = 'Please specify api_key or webhook.'
+    if not kwargs.get("api_key") and not kwargs.get("webhook"):
+        ret["comment"] = "Please specify api_key or webhook."
         return ret
 
-    if kwargs.get('api_key') and kwargs.get('webhook'):
-        ret['comment'] = 'Please specify only either api_key or webhook.'
+    if kwargs.get("api_key") and kwargs.get("webhook"):
+        ret["comment"] = "Please specify only either api_key or webhook."
         return ret
 
-    if kwargs.get('api_key') and not kwargs.get('channel'):
-        ret['comment'] = 'Slack channel is missing.'
+    if kwargs.get("api_key") and not kwargs.get("channel"):
+        ret["comment"] = "Slack channel is missing."
         return ret
 
-    if kwargs.get('api_key') and not kwargs.get('from_name'):
-        ret['comment'] = 'Slack from name is missing.'
+    if kwargs.get("api_key") and not kwargs.get("from_name"):
+        ret["comment"] = "Slack from name is missing."
         return ret
 
-    if not kwargs.get('message'):
-        ret['comment'] = 'Slack message is missing.'
+    if not kwargs.get("message"):
+        ret["comment"] = "Slack message is missing."
         return ret
 
-    if __opts__['test']:
-        ret['comment'] = 'The following message is to be sent to Slack: {0}'.format(kwargs.get('message'))
-        ret['result'] = None
+    if __opts__["test"]:
+        ret["comment"] = "The following message is to be sent to Slack: {0}".format(
+            kwargs.get("message")
+        )
+        ret["result"] = None
         return ret
 
     try:
-        if kwargs.get('api_key'):
-            result = __salt__['slack.post_message'](
-                channel=kwargs.get('channel'),
-                message=kwargs.get('message'),
-                from_name=kwargs.get('from_name'),
-                api_key=kwargs.get('api_key'),
-                icon=kwargs.get('icon'),
+        if kwargs.get("api_key"):
+            result = __salt__["slack.post_message"](
+                channel=kwargs.get("channel"),
+                message=kwargs.get("message"),
+                from_name=kwargs.get("from_name"),
+                api_key=kwargs.get("api_key"),
+                icon=kwargs.get("icon"),
             )
-        elif kwargs.get('webhook'):
-            result = __salt__['slack.call_hook'](
-                message=kwargs.get('message'),
-                attachment=kwargs.get('attachment'),
-                color=kwargs.get('color', 'good'),
-                short=kwargs.get('short'),
-                identifier=kwargs.get('webhook'),
-                channel=kwargs.get('channel'),
-                username=kwargs.get('username'),
-                icon_emoji=kwargs.get('icon_emoji')
+        elif kwargs.get("webhook"):
+            result = __salt__["slack.call_hook"](
+                message=kwargs.get("message"),
+                attachment=kwargs.get("attachment"),
+                color=kwargs.get("color", "good"),
+                short=kwargs.get("short"),
+                identifier=kwargs.get("webhook"),
+                channel=kwargs.get("channel"),
+                username=kwargs.get("username"),
+                icon_emoji=kwargs.get("icon_emoji"),
             )
     except SaltInvocationError as sie:
-        ret['comment'] = 'Failed to send message ({0}): {1}'.format(sie, name)
+        ret["comment"] = "Failed to send message ({0}): {1}".format(sie, name)
     else:
         if isinstance(result, bool) and result:
-            ret['result'] = True
-            ret['comment'] = 'Sent message: {0}'.format(name)
+            ret["result"] = True
+            ret["comment"] = "Sent message: {0}".format(name)
         else:
-            ret['comment'] = 'Failed to send message ({0}): {1}'.format(result['message'], name)
+            ret["comment"] = "Failed to send message ({0}): {1}".format(
+                result["message"], name
+            )
 
     return ret

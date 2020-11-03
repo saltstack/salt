@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Management of NFS exports
 ===============================================
 
@@ -56,32 +56,29 @@ To ensure an NFS export is absent:
       nfs_export.absent:
         - name: '/srv/nfs'
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
 import salt.utils.path
 
 
 def __virtual__():
-    '''
+    """
     Only work with nfs tools installed
-    '''
-    cmd = 'exportfs'
+    """
+    cmd = "exportfs"
     if salt.utils.path.which(cmd):
         return bool(cmd)
 
-    return(
+    return (
         False,
-        'The nfs_exports state module failed to load: '
-        'the exportfs binary is not in the path'
+        "The nfs_exports state module failed to load: "
+        "the exportfs binary is not in the path",
     )
 
 
-def present(name,
-            clients=None,
-            hosts=None,
-            options=None,
-            exports='/etc/exports'):
-    '''
+def present(name, clients=None, hosts=None, options=None, exports="/etc/exports"):
+    """
     Ensure that the named export is present with the given options
 
     name
@@ -129,90 +126,84 @@ def present(name,
           - 'rw'
           - 'subtree_check'
 
-    '''
+    """
     path = name
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if not clients:
         if not hosts:
-            ret['result'] = False
-            ret['comment'] = 'Either \'clients\' or \'hosts\' must be defined'
+            ret["result"] = False
+            ret["comment"] = "Either 'clients' or 'hosts' must be defined"
             return ret
         # options being None is handled by add_export()
-        clients = [{'hosts': hosts, 'options': options}]
+        clients = [{"hosts": hosts, "options": options}]
 
-    old = __salt__['nfs3.list_exports'](exports)
+    old = __salt__["nfs3.list_exports"](exports)
     if path in old:
         if old[path] == clients:
-            ret['result'] = True
-            ret['comment'] = 'Export {0} already configured'.format(path)
+            ret["result"] = True
+            ret["comment"] = "Export {0} already configured".format(path)
             return ret
 
-        ret['changes']['new'] = clients
-        ret['changes']['old'] = old[path]
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Export {0} would be changed'.format(path)
+        ret["changes"]["new"] = clients
+        ret["changes"]["old"] = old[path]
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Export {0} would be changed".format(path)
             return ret
 
-        __salt__['nfs3.del_export'](exports, path)
+        __salt__["nfs3.del_export"](exports, path)
 
     else:
-        ret['changes']['old'] = None
-        ret['changes']['new'] = clients
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'Export {0} would be added'.format(path)
+        ret["changes"]["old"] = None
+        ret["changes"]["new"] = clients
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"] = "Export {0} would be added".format(path)
             return ret
 
-    add_export = __salt__['nfs3.add_export']
+    add_export = __salt__["nfs3.add_export"]
     for exp in clients:
-        add_export(exports, path, exp['hosts'], exp['options'])
+        add_export(exports, path, exp["hosts"], exp["options"])
 
-    ret['changes']['new'] = clients
+    ret["changes"]["new"] = clients
 
-    try_reload = __salt__['nfs3.reload_exports']()
-    ret['comment'] = try_reload['stderr']
-    ret['result'] = try_reload['result']
+    try_reload = __salt__["nfs3.reload_exports"]()
+    ret["comment"] = try_reload["stderr"]
+    ret["result"] = try_reload["result"]
     return ret
 
 
-def absent(name, exports='/etc/exports'):
-    '''
+def absent(name, exports="/etc/exports"):
+    """
     Ensure that the named path is not exported
 
     name
         The export path to remove
-    '''
+    """
 
     path = name
-    ret = {'name': name,
-           'changes': {},
-           'result': None,
-           'comment': ''}
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
-    old = __salt__['nfs3.list_exports'](exports)
+    old = __salt__["nfs3.list_exports"](exports)
     if path in old:
-        if __opts__['test']:
-            ret['comment'] = 'Export {0} would be removed'.format(path)
-            ret['changes'][path] = old[path]
-            ret['result'] = None
+        if __opts__["test"]:
+            ret["comment"] = "Export {0} would be removed".format(path)
+            ret["changes"][path] = old[path]
+            ret["result"] = None
             return ret
 
-        __salt__['nfs3.del_export'](exports, path)
-        try_reload = __salt__['nfs3.reload_exports']()
-        if not try_reload['result']:
-            ret['comment'] = try_reload['stderr']
+        __salt__["nfs3.del_export"](exports, path)
+        try_reload = __salt__["nfs3.reload_exports"]()
+        if not try_reload["result"]:
+            ret["comment"] = try_reload["stderr"]
         else:
-            ret['comment'] = 'Export {0} removed'.format(path)
+            ret["comment"] = "Export {0} removed".format(path)
 
-        ret['result'] = try_reload['result']
-        ret['changes'][path] = old[path]
+        ret["result"] = try_reload["result"]
+        ret["changes"][path] = old[path]
     else:
-        ret['comment'] = 'Export {0} already absent'.format(path)
-        ret['result'] = True
+        ret["comment"] = "Export {0} already absent".format(path)
+        ret["result"] = True
 
     return ret

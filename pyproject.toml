@@ -1,0 +1,48 @@
+[tool.black]
+exclude= """
+/(
+    salt/ext
+  | tests/kitchen
+  | templates
+)/
+"""
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+ensure_newline_before_comments=true
+skip="salt/ext,tests/kitchen,templates"
+
+[tool.towncrier]
+    package = "salt"
+    filename = "CHANGELOG.md"
+    directory = "changelog/"
+    start_string = "# Changelog\n"
+
+    [[tool.towncrier.type]]
+        directory = "removed"
+        name = "Removed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "deprecated"
+        name = "Deprecated"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "changed"
+        name = "Changed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "fixed"
+        name = "Fixed"
+        showcontent = true
+
+    [[tool.towncrier.type]]
+        directory = "added"
+        name = "Added"
+        showcontent = true

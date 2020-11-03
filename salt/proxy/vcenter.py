@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Proxy Minion interface module for managing VMWare vCenters.
 
-:codeauthor: :email:`Rod McKenzie (roderick.mckenzie@morganstanley.com)`
-:codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
+:codeauthor: `Rod McKenzie (roderick.mckenzie@morganstanley.com)`
+:codeauthor: `Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
 
 Dependencies
 ============
@@ -67,7 +67,7 @@ To use this proxy module, please use on of the following configurations:
       principal: <host kerberos principal>
 
 proxytype
-^^^^^^^^^
+---------
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -75,47 +75,47 @@ own proxy module, for example). To use this Proxy Module, set this to
 ``vcenter``.
 
 vcenter
-^^^^^^^
+-------
 The location of the VMware vCenter server (host of ip). Required
 
 username
-^^^^^^^^
+--------
 The username used to login to the vcenter, such as ``root``.
 Required only for userpass.
 
 mechanism
-^^^^^^^^
+---------
 The mechanism used to connect to the vCenter server. Supported values are
 ``userpass`` and ``sspi``. Required.
 
 passwords
-^^^^^^^^^
+---------
 A list of passwords to be used to try and login to the vCenter server. At least
 one password in this list is required if mechanism is ``userpass``
 
 The proxy integration will try the passwords listed in order.
 
 domain
-^^^^^^
+------
 User domain. Required if mechanism is ``sspi``
 
 principal
-^^^^^^^^
+---------
 Kerberos principal. Rquired if mechanism is ``sspi``
 
 protocol
-^^^^^^^^
+--------
 If the vCenter is not using the default protocol, set this value to an
 alternate protocol. Default is ``https``.
 
 port
-^^^^
+----
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
 
 
 Salt Proxy
-----------
+==========
 
 After your pillar is in place, you can test the proxy. The proxy can run on
 any machine that has network connectivity to your Salt Master and to the
@@ -173,17 +173,18 @@ It's important to understand how this particular proxy works.
 :mod:`Salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>` is a
 standard Salt execution module.
 
- If you pull up the docs for it you'll see
-that almost every function in the module takes credentials and a targets either
-a vcenter or a host. When credentials and a host aren't passed, Salt runs commands
-through ``pyVmomi`` against the local machine. If you wanted, you could run
-functions from this module on any host where an appropriate version of
-``pyVmomi`` is installed, and that host would reach out over the network
-and communicate with the ESXi host.
-'''
+If you pull up the docs for it you'll see that almost every function in the
+module takes credentials and a targets either a vcenter or a host. When
+credentials and a host aren't passed, Salt runs commands through ``pyVmomi``
+against the local machine. If you wanted, you could run functions from this
+module on any host where an appropriate version of ``pyVmomi`` is installed,
+and that host would reach out over the network and communicate with the ESXi
+host.
+"""
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 
@@ -193,11 +194,12 @@ from salt.config.schemas.vcenter import VCenterProxySchema
 from salt.utils.dictupdate import merge
 
 # This must be present or the Salt loader won't load this module.
-__proxyenabled__ = ['vcenter']
+__proxyenabled__ = ["vcenter"]
 
 # External libraries
 try:
     import jsonschema
+
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
@@ -211,84 +213,90 @@ DETAILS = {}
 # Set up logging
 log = logging.getLogger(__name__)
 # Define the module's virtual name
-__virtualname__ = 'vcenter'
+__virtualname__ = "vcenter"
 
 
 def __virtual__():
-    '''
+    """
     Only load if the vsphere execution module is available.
-    '''
+    """
     if HAS_JSONSCHEMA:
         return __virtualname__
 
-    return False, 'The vcenter proxy module did not load.'
+    return False, "The vcenter proxy module did not load."
 
 
 def init(opts):
-    '''
+    """
     This function gets called when the proxy starts up.
     For login the protocol and port are cached.
-    '''
-    log.info('Initting vcenter proxy module in process %s', os.getpid())
-    log.trace('VCenter Proxy Validating vcenter proxy input')
+    """
+    log.info("Initting vcenter proxy module in process %s", os.getpid())
+    log.trace("VCenter Proxy Validating vcenter proxy input")
     schema = VCenterProxySchema.serialize()
-    log.trace('schema = %s', schema)
-    proxy_conf = merge(opts.get('proxy', {}), __pillar__.get('proxy', {}))
-    log.trace('proxy_conf = %s', proxy_conf)
+    log.trace("schema = %s", schema)
+    proxy_conf = merge(opts.get("proxy", {}), __pillar__.get("proxy", {}))
+    log.trace("proxy_conf = %s", proxy_conf)
     try:
         jsonschema.validate(proxy_conf, schema)
     except jsonschema.exceptions.ValidationError as exc:
         raise salt.exceptions.InvalidConfigError(exc)
 
     # Save mandatory fields in cache
-    for key in ('vcenter', 'mechanism'):
+    for key in ("vcenter", "mechanism"):
         DETAILS[key] = proxy_conf[key]
 
     # Additional validation
-    if DETAILS['mechanism'] == 'userpass':
-        if 'username' not in proxy_conf:
+    if DETAILS["mechanism"] == "userpass":
+        if "username" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'userpass\' , but no '
-                '\'username\' key found in proxy config')
-        if 'passwords' not in proxy_conf:
+                "Mechanism is set to 'userpass' , but no "
+                "'username' key found in proxy config"
+            )
+        if "passwords" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'userpass\' , but no '
-                '\'passwords\' key found in proxy config')
-        for key in ('username', 'passwords'):
+                "Mechanism is set to 'userpass' , but no "
+                "'passwords' key found in proxy config"
+            )
+        for key in ("username", "passwords"):
             DETAILS[key] = proxy_conf[key]
     else:
-        if 'domain' not in proxy_conf:
+        if "domain" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'sspi\' , but no '
-                '\'domain\' key found in proxy config')
-        if 'principal' not in proxy_conf:
+                "Mechanism is set to 'sspi' , but no "
+                "'domain' key found in proxy config"
+            )
+        if "principal" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                'Mechanism is set to \'sspi\' , but no '
-                '\'principal\' key found in proxy config')
-        for key in ('domain', 'principal'):
+                "Mechanism is set to 'sspi' , but no "
+                "'principal' key found in proxy config"
+            )
+        for key in ("domain", "principal"):
             DETAILS[key] = proxy_conf[key]
 
     # Save optional
-    DETAILS['protocol'] = proxy_conf.get('protocol')
-    DETAILS['port'] = proxy_conf.get('port')
+    DETAILS["protocol"] = proxy_conf.get("protocol")
+    DETAILS["port"] = proxy_conf.get("port")
 
     # Test connection
-    if DETAILS['mechanism'] == 'userpass':
+    if DETAILS["mechanism"] == "userpass":
         # Get the correct login details
-        log.info('Retrieving credentials and testing vCenter connection for '
-                 'mehchanism \'userpass\'')
+        log.info(
+            "Retrieving credentials and testing vCenter connection for "
+            "mehchanism 'userpass'"
+        )
         try:
             username, password = find_credentials()
         except salt.exceptions.SaltSystemExit as err:
-            log.critical('Error: %s', err)
+            log.critical("Error: %s", err)
             return False
         else:
-            DETAILS['password'] = password
+            DETAILS["password"] = password
     return True
 
 
 def ping():
-    '''
+    """
     Returns True.
 
     CLI Example:
@@ -296,44 +304,45 @@ def ping():
     .. code-block:: bash
 
         salt vcenter test.ping
-    '''
+    """
     return True
 
 
 def shutdown():
-    '''
+    """
     Shutdown the connection to the proxy device. For this proxy,
     shutdown is a no-op.
-    '''
-    log.debug('VCenter proxy shutdown() called...')
+    """
+    log.debug("VCenter proxy shutdown() called...")
 
 
 def find_credentials():
-    '''
+    """
     Cycle through all the possible credentials and return the first one that
     works.
-    '''
+    """
 
     # if the username and password were already found don't fo though the
     # connection process again
-    if 'username' in DETAILS and 'password' in DETAILS:
-        return DETAILS['username'], DETAILS['password']
+    if "username" in DETAILS and "password" in DETAILS:
+        return DETAILS["username"], DETAILS["password"]
 
-    passwords = __pillar__['proxy']['passwords']
+    passwords = __pillar__["proxy"]["passwords"]
     for password in passwords:
-        DETAILS['password'] = password
-        if not __salt__['vsphere.test_vcenter_connection']():
+        DETAILS["password"] = password
+        if not __salt__["vsphere.test_vcenter_connection"]():
             # We are unable to authenticate
             continue
         # If we have data returned from above, we've successfully authenticated.
-        return DETAILS['username'], password
+        return DETAILS["username"], password
     # We've reached the end of the list without successfully authenticating.
-    raise salt.exceptions.VMwareConnectionError('Cannot complete login due to '
-                                                'incorrect credentials.')
+    raise salt.exceptions.VMwareConnectionError(
+        "Cannot complete login due to " "incorrect credentials."
+    )
 
 
 def get_details():
-    '''
+    """
     Function that returns the cached details
-    '''
+    """
     return DETAILS

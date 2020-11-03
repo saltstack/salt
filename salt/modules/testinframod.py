@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This module exposes the functionality of the TestInfra library
 for use with SaltStack in order to verify the state of your minions.
 In order to allow for the addition of new resource types in TestInfra this
 module dynamically generates wrappers for the various resources by iterating
 over the values in the ``__all__`` variable exposed by the testinfra.modules
 namespace.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
+
 import inspect
 import logging
 import operator
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 try:
     import testinfra
     from testinfra import modules
+
     TESTINFRA_PRESENT = True
 except ImportError:
     TESTINFRA_PRESENT = False
@@ -28,8 +30,8 @@ except ImportError:
 __all__ = []
 
 
-__virtualname__ = 'testinfra'
-default_backend = 'local://'
+__virtualname__ = "testinfra"
+default_backend = "local://"
 
 
 class InvalidArgumentError(Exception):
@@ -39,7 +41,7 @@ class InvalidArgumentError(Exception):
 def __virtual__():
     if TESTINFRA_PRESENT:
         return __virtualname__
-    return False, 'The Testinfra package is not available'
+    return False, "The Testinfra package is not available"
 
 
 def _get_module(module_name, backend=default_backend):
@@ -53,7 +55,9 @@ def _get_module(module_name, backend=default_backend):
 
     """
     backend_instance = testinfra.get_backend(backend)
-    return backend_instance.get_module(snake_to_camel_case(module_name, uppercamel=True))
+    return backend_instance.get_module(
+        snake_to_camel_case(module_name, uppercamel=True)
+    )
 
 
 def _get_method_result(module_, module_instance, method_name, method_arg=None):
@@ -69,35 +73,37 @@ def _get_method_result(module_, module_instance, method_name, method_arg=None):
     :rtype: variable
 
     """
-    log.debug('Trying to call %s on %s', method_name, module_)
+    log.debug("Trying to call %s on %s", method_name, module_)
     try:
         method_obj = getattr(module_, method_name)
     except AttributeError:
         try:
             method_obj = getattr(module_instance, method_name)
         except AttributeError:
-            raise InvalidArgumentError('The {0} module does not have any '
-                                       'property or method named {1}'.format(
-                                           module_, method_name))
+            raise InvalidArgumentError(
+                "The {0} module does not have any "
+                "property or method named {1}".format(module_, method_name)
+            )
     if isinstance(method_obj, property):
         return method_obj.fget(module_instance)
     elif isinstance(method_obj, (types.MethodType, types.FunctionType)):
         if not method_arg:
-            raise InvalidArgumentError('{0} is a method of the {1} module. An '
-                                       'argument dict is required.'
-                                       .format(method_name,
-                                               module_))
+            raise InvalidArgumentError(
+                "{0} is a method of the {1} module. An "
+                "argument dict is required.".format(method_name, module_)
+            )
         try:
-            return getattr(module_instance,
-                             method_name)(method_arg['parameter'])
+            return getattr(module_instance, method_name)(method_arg["parameter"])
         except KeyError:
-            raise InvalidArgumentError('The argument dict supplied has no '
-                                       'key named "parameter": {0}'
-                                       .format(method_arg))
+            raise InvalidArgumentError(
+                "The argument dict supplied has no "
+                'key named "parameter": {0}'.format(method_arg)
+            )
         except AttributeError:
-            raise InvalidArgumentError('The {0} module does not have any '
-                                       'property or method named {1}'.format(
-                                           module_, method_name))
+            raise InvalidArgumentError(
+                "The {0} module does not have any "
+                "property or method named {1}".format(module_, method_name)
+            )
     else:
         return method_obj
     return None
@@ -118,28 +124,30 @@ def _apply_assertion(expected, result):
     :rtype: bool
 
     """
-    log.debug('Expected result: %s. Actual result: %s', expected, result)
+    log.debug("Expected result: %s. Actual result: %s", expected, result)
     if isinstance(expected, bool):
         return result is expected
     elif isinstance(expected, dict):
         try:
-            comparison = getattr(operator, expected['comparison'])
+            comparison = getattr(operator, expected["comparison"])
         except AttributeError:
-            if expected.get('comparison') == 'search':
+            if expected.get("comparison") == "search":
                 comparison = re.search
             else:
-                raise InvalidArgumentError('Comparison {0} is not a valid '
-                                           'selection.'.format(
-                                               expected.get('comparison')))
+                raise InvalidArgumentError(
+                    "Comparison {0} is not a valid "
+                    "selection.".format(expected.get("comparison"))
+                )
         except KeyError:
-            log.exception('The comparison dictionary provided is missing '
-                          'expected keys. Either "expected" or "comparison" '
-                          'are not present.')
+            log.exception(
+                "The comparison dictionary provided is missing "
+                'expected keys. Either "expected" or "comparison" '
+                "are not present."
+            )
             raise
-        return comparison(expected['expected'], result)
+        return comparison(expected["expected"], result)
     else:
-        raise TypeError('Expected bool or dict but received {0}'
-                        .format(type(expected)))
+        raise TypeError("Expected bool or dict but received {0}".format(type(expected)))
 
 
 # This does not currently generate documentation from the underlying modules
@@ -188,33 +196,33 @@ def _copy_function(module_name, name=None):
             comparison: eq
     ```
     """
-    log.debug('Generating function for testinfra.%s', module_name)
+    log.debug("Generating function for testinfra.%s", module_name)
 
     def _run_tests(name, **methods):
         success = True
         pass_msgs = []
         fail_msgs = []
         try:
-            log.debug('Retrieving %s module.', module_name)
+            log.debug("Retrieving %s module.", module_name)
             mod = _get_module(module_name)
-            log.debug('Retrieved module is %s', mod.__dict__)
+            log.debug("Retrieved module is %s", mod.__dict__)
         except NotImplementedError:
             log.exception(
-                'The %s module is not supported for this backend and/or '
-                'platform.', module_name)
+                "The %s module is not supported for this backend and/or " "platform.",
+                module_name,
+            )
             success = False
             return success, pass_msgs, fail_msgs
-        if hasattr(inspect, 'signature'):
+        if hasattr(inspect, "signature"):
             mod_sig = inspect.signature(mod)
             parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
-                mod_sig = inspect.getargspec(mod.__init__)
-            elif hasattr(mod, '__call__'):
-                mod_sig = inspect.getargspec(mod.__call__)
+                mod_sig = __utils__["args.get_function_argspec"](mod.__init__)
+            elif hasattr(mod, "__call__"):
+                mod_sig = __utils__["args.get_function_argspec"](mod.__call__)
             parameters = mod_sig.args
-        log.debug('Parameters accepted by module %s: %s',
-                  module_name, parameters)
+        log.debug("Parameters accepted by module %s: %s", module_name, parameters)
         additional_args = {}
         for arg in set(parameters).intersection(set(methods)):
             additional_args[arg] = methods.pop(arg)
@@ -224,29 +232,34 @@ def _copy_function(module_name, name=None):
             else:
                 modinstance = mod()
         except TypeError:
-            log.exception('Module failed to instantiate')
+            log.exception("Module failed to instantiate")
             raise
         valid_methods = {}
-        log.debug('Called methods are: %s', methods)
+        log.debug("Called methods are: %s", methods)
         for meth_name in methods:
-            if not meth_name.startswith('_'):
+            if not meth_name.startswith("_"):
                 valid_methods[meth_name] = methods[meth_name]
-        log.debug('Valid methods are: %s', valid_methods)
+        log.debug("Valid methods are: %s", valid_methods)
         for meth, arg in valid_methods.items():
             result = _get_method_result(mod, modinstance, meth, arg)
             assertion_result = _apply_assertion(arg, result)
             if not assertion_result:
                 success = False
-                fail_msgs.append('Assertion failed: {modname} {n} {m} {a}. '
-                            'Actual result: {r}'.format(
-                                modname=module_name, n=name, m=meth, a=arg, r=result
-                            ))
+                fail_msgs.append(
+                    "Assertion failed: {modname} {n} {m} {a}. "
+                    "Actual result: {r}".format(
+                        modname=module_name, n=name, m=meth, a=arg, r=result
+                    )
+                )
             else:
-                pass_msgs.append('Assertion passed:  {modname} {n} {m} {a}. '
-                            'Actual result: {r}'.format(
-                                modname=module_name, n=name, m=meth, a=arg, r=result
-                            ))
+                pass_msgs.append(
+                    "Assertion passed:  {modname} {n} {m} {a}. "
+                    "Actual result: {r}".format(
+                        modname=module_name, n=name, m=meth, a=arg, r=result
+                    )
+                )
         return success, pass_msgs, fail_msgs
+
     func = _run_tests
     if name is not None:
         # types.FunctionType requires a str for __name__ attribute, using a
@@ -254,11 +267,9 @@ def _copy_function(module_name, name=None):
         name = str(name)  # future lint: disable=blacklisted-function
     else:
         name = func.__name__
-    return types.FunctionType(func.__code__,
-                              func.__globals__,
-                              name,
-                              func.__defaults__,
-                              func.__closure__)
+    return types.FunctionType(
+        func.__code__, func.__globals__, name, func.__defaults__, func.__closure__
+    )
 
 
 def _register_functions():

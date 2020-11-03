@@ -223,7 +223,7 @@ the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
 when there are many minions. Set ``enable_legacy_startup_events: False`` in the
 minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``Sodium`` Salt release this option will default to
+sent. Beginning with the ``3001`` Salt release this option will default to
 ``False``.
 
 .. code-block:: yaml
@@ -657,7 +657,7 @@ FQDN (for instance, Solaris).
 ``minion_id_remove_domain``
 ---------------------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Default: ``False``
 
@@ -710,7 +710,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_master:: color_theme
+.. conf_minion:: color_theme
 
 ``color_theme``
 ---------------
@@ -813,7 +813,7 @@ matches, and regular expressions are supported.
     Some states and execution modules depend on grains. Filtering may cause
     them to be unavailable or run unreliably.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 .. code-block:: yaml
 
@@ -831,11 +831,27 @@ Default: ``False``
 
 The minion can locally cache grain data instead of refreshing the data
 each time the grain is referenced. By default this feature is disabled,
-to enable set grains_cache to ``True``.
+to enable set ``grains_cache`` to ``True``.
 
 .. code-block:: yaml
 
     grains_cache: False
+
+.. conf_minion:: grains_cache_expiration
+
+``grains_cache_expiration``
+---------------------------
+
+Default: ``300``
+
+Grains cache expiration, in seconds. If the cache file is older than this number
+of seconds then the grains cache will be dumped and fully re-populated with
+fresh data. Defaults to 5 minutes. Will have no effect if
+:conf_minion:`grains_cache` is not enabled.
+
+.. code-block:: yaml
+
+    grains_cache_expiration: 300
 
 .. conf_minion:: grains_deep_merge
 
@@ -860,10 +876,11 @@ For example, with these custom grains functions:
 .. code-block:: python
 
     def custom1_k1():
-        return {'custom1': {'k1': 'v1'}}
+        return {"custom1": {"k1": "v1"}}
+
 
     def custom1_k2():
-        return {'custom1': {'k2': 'v2'}}
+        return {"custom1": {"k2": "v2"}}
 
 Without ``grains_deep_merge``, the result would be:
 
@@ -1036,6 +1053,28 @@ The directory where Unix sockets will be kept.
 .. code-block:: yaml
 
     sock_dir: /var/run/salt/minion
+
+.. conf_minion:: enable_fqdns_grains
+
+``enable_fqdns_grains``
+-----------------------
+
+Default: ``True``
+
+In order to calculate the fqdns grain, all the IP addresses from the minion are
+processed with underlying calls to ``socket.gethostbyaddr`` which can take 5 seconds
+to be released (after reaching ``socket.timeout``) when there is no fqdn for that IP.
+These calls to ``socket.gethostbyaddr`` are processed asynchronously, however, it still
+adds 5 seconds every time grains are generated if an IP does not resolve. In Windows
+grains are regenerated each time a new process is spawned. Therefore, the default for
+Windows is ``False``. In many cases this value does not make sense to include for proxy
+minions as it will be FQDN for the host running the proxy minion process, so the default
+for proxy minions is ``False```. All other OSes default to ``True``. This options was
+added `here <https://github.com/saltstack/salt/pull/55581>`_.
+
+.. code-block:: yaml
+
+    enable_fqdns_grains: False
 
 .. conf_minion:: enable_gpu_grains
 
@@ -2207,6 +2246,9 @@ auto-loading modules when states run, set this value to ``False``.
 
 .. conf_minion:: clean_dynamic_modules
 
+``clean_dynamic_modules``
+-------------------------
+
 Default: ``True``
 
 clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -2671,8 +2713,35 @@ the ``extra_minion_data`` parameter will be
 
 .. code-block:: python
 
-    {'opt1': 'value1',
-     'opt2': {'subopt1': 'value2'}}
+    {"opt1": "value1", "opt2": {"subopt1": "value2"}}
+
+``ssh_merge_pillar``
+--------------------
+
+.. versionadded:: 2018.3.2
+
+Default: ``True``
+
+Merges the compiled pillar data with the pillar data already available globally.
+This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
+data in a state file:
+
+.. code-block:: yaml
+
+    apply_showpillar:
+      module.run:
+        - name: state.apply
+        - mods:
+          - showpillar
+        - kwargs:
+              pillar:
+                  test: "foo bar"
+
+If set to ``True``, the ``showpillar`` state will have access to the
+global pillar data.
+
+If set to ``False``, only the overriding pillar data will be available
+to the ``showpillar`` state.
 
 Security Settings
 =================
@@ -2700,7 +2769,7 @@ minion to clean the keys.
 Default: ``''``
 
 Fingerprint of the master public key to validate the identity of your Salt master
-before the initial key exchange. The master fingerprint can be found by running
+before the initial key exchange. The master fingerprint can be found as ``master.pub`` by running
 "salt-key -F master" on the Salt master.
 
 .. code-block:: yaml
@@ -2876,7 +2945,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -3374,6 +3443,14 @@ have other services that need to go with it.
 
     update_restart_services: ['salt-minion']
 
+.. _winrepo-minion-config-opts:
+
+Windows Software Repo Settings
+==============================
+
+These settings apply to all minions, whether running in masterless or
+master-minion mode.
+
 .. conf_minion:: winrepo_cache_expire_min
 
 ``winrepo_cache_expire_min``
@@ -3410,16 +3487,6 @@ the metadata will be refreshed.
 
     winrepo_cache_expire_max: 86400
 
-.. _winrepo-minion-config-opts:
-
-Minion Windows Software Repo Settings
-=====================================
-
-.. important::
-    To use these config options, the minion can be running in master-minion or
-    masterless mode.
-
-
 .. conf_minion:: winrepo_source_dir
 
 ``winrepo_source_dir``
@@ -3436,9 +3503,13 @@ The source location for the winrepo sls files.
 Standalone Minion Windows Software Repo Settings
 ================================================
 
+The following settings are for configuring the Windows Software Repository
+(winrepo) on a masterless minion. To run in masterless minion mode, set the
+:conf_minion:`file_client` to ``local`` or run ``salt-call`` with the
+``--local`` option
+
 .. important::
-    To use these config options, the minion must be running in masterless mode
-    (set :conf_minion:`file_client` to ``local``).
+    These config options are only valid for minions running in masterless mode
 
 .. conf_minion:: winrepo_dir
 .. conf_minion:: win_repo
@@ -3447,13 +3518,14 @@ Standalone Minion Windows Software Repo Settings
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
-    have a default value until this version.
+    Renamed from ``win_repo`` to ``winrepo_dir``. This option did not have a
+    default value until this version.
 
 Default: ``C:\salt\srv\salt\win\repo``
 
-Location on the minion where the :conf_minion:`winrepo_remotes` are checked
-out.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept.
+This is also where the :conf_minion:`winrepo_remotes` are cloned to by
+:mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3467,10 +3539,11 @@ out.
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.
 
-Default: ``/srv/salt/win/repo-ng``
+Default: ``C:\salt\srv\salt\win\repo-ng``
 
-Location on the minion where the :conf_minion:`winrepo_remotes_ng` are checked
-out for 2015.8.0 and later minions.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept
+for 2018.8.0 and later minions. This is also where the
+:conf_minion:`winrepo_remotes` are cloned to by :mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3488,8 +3561,8 @@ out for 2015.8.0 and later minions.
 
 Default: ``winrepo.p``
 
-Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
-created.
+The name of the winrepo cache file. The file will be created at root of
+the directory specified by :conf_minion:`winrepo_dir_ng`.
 
 .. code-block:: yaml
 
@@ -3558,31 +3631,3 @@ URL of the repository:
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the
 event that an error is introduced in the latest revision of the repo.
-
-``ssh_merge_pillar``
---------------------
-
-.. versionadded:: 2018.3.2
-
-Default: ``True``
-
-Merges the compiled pillar data with the pillar data already available globally.
-This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
-data in a state file:
-
-.. code-block:: yaml
-
-    apply_showpillar:
-      module.run:
-        - name: state.apply
-        - mods:
-          - showpillar
-        - kwargs:
-              pillar:
-                  test: "foo bar"
-
-If set to ``True`` the ``showpillar`` state will have access to the
-global pillar data.
-
-If set to ``False`` only the overriding pillar data will be available
-to the ``showpillar`` state.

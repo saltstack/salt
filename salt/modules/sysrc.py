@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 sysrc module for FreeBSD
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import
@@ -10,25 +10,25 @@ from __future__ import absolute_import
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
+__virtualname__ = "sysrc"
 
-__virtualname__ = 'sysrc'
-
-__func_alias__ = {
-    'set_': 'set'
-}
+__func_alias__ = {"set_": "set"}
 
 
 def __virtual__():
-    '''
+    """
     Only runs if sysrc exists
-    '''
-    if salt.utils.path.which('sysrc') is not None:
+    """
+    if salt.utils.path.which("sysrc") is not None:
         return True
-    return (False, 'The sysrc execution module failed to load: the sysrc binary is not in the path.')
+    return (
+        False,
+        "The sysrc execution module failed to load: the sysrc binary is not in the path.",
+    )
 
 
 def get(**kwargs):
-    '''
+    """
     Return system rc configuration variables
 
     CLI Example:
@@ -36,38 +36,38 @@ def get(**kwargs):
      .. code-block:: bash
 
          salt '*' sysrc.get includeDefaults=True
-    '''
+    """
 
-    cmd = 'sysrc -v'
+    cmd = "sysrc -v"
 
-    if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+    if "file" in kwargs:
+        cmd += " -f " + kwargs["file"]
 
-    if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+    if "jail" in kwargs:
+        cmd += " -j " + kwargs["jail"]
 
-    if 'name' in kwargs:
-        cmd += ' '+kwargs['name']
-    elif kwargs.get('includeDefaults', False):
-        cmd += ' -A'
+    if "name" in kwargs:
+        cmd += " " + kwargs["name"]
+    elif kwargs.get("includeDefaults", False):
+        cmd += " -A"
     else:
-        cmd += ' -a'
+        cmd += " -a"
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__["cmd.run"](cmd)
     if "sysrc: unknown variable" in sysrcs:
         # raise CommandExecutionError(sysrcs)
         return None
 
     ret = {}
     for sysrc in sysrcs.split("\n"):
-        line_components = sysrc.split(': ')
+        line_components = sysrc.split(": ")
         rcfile = line_components[0]
         if len(line_components) > 2:
             var = line_components[1]
             val = line_components[2]
         else:
-            var = line_components[1].rstrip(':')
-            val = ''
+            var = line_components[1].rstrip(":")
+            val = ""
         if rcfile not in ret:
             ret[rcfile] = {}
         ret[rcfile][var] = val
@@ -75,7 +75,7 @@ def get(**kwargs):
 
 
 def set_(name, value, **kwargs):
-    '''
+    """
     Set system rc configuration variables
 
     CLI Example:
@@ -83,15 +83,15 @@ def set_(name, value, **kwargs):
      .. code-block:: bash
 
          salt '*' sysrc.set name=sshd_flags value="-p 2222"
-    '''
+    """
 
-    cmd = 'sysrc -v'
+    cmd = "sysrc -v"
 
-    if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+    if "file" in kwargs:
+        cmd += " -f " + kwargs["file"]
 
-    if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+    if "jail" in kwargs:
+        cmd += " -j " + kwargs["jail"]
 
     # This is here because the YAML parser likes to convert the string literals
     # YES, NO, Yes, No, True, False, etc. to boolean types.  However, in this case,
@@ -107,16 +107,16 @@ def set_(name, value, **kwargs):
     if type(value) == int:
         value = str(value)
 
-    cmd += ' '+name+"=\""+value+"\""
+    cmd += " " + name + '="' + value + '"'
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__["cmd.run"](cmd)
 
     ret = {}
     for sysrc in sysrcs.split("\n"):
-        rcfile = sysrc.split(': ')[0]
-        var = sysrc.split(': ')[1]
-        oldval = sysrc.split(': ')[2].strip().split("->")[0]
-        newval = sysrc.split(': ')[2].strip().split("->")[1]
+        rcfile = sysrc.split(": ")[0]
+        var = sysrc.split(": ")[1]
+        oldval = sysrc.split(": ")[2].strip().split("->")[0]
+        newval = sysrc.split(": ")[2].strip().split("->")[1]
         if rcfile not in ret:
             ret[rcfile] = {}
         ret[rcfile][var] = newval
@@ -124,7 +124,7 @@ def set_(name, value, **kwargs):
 
 
 def remove(name, **kwargs):
-    '''
+    """
     Remove system rc configuration variables
 
     CLI Example:
@@ -132,20 +132,20 @@ def remove(name, **kwargs):
      .. code-block:: bash
 
          salt '*' sysrc.remove name=sshd_enable
-    '''
+    """
 
-    cmd = 'sysrc -v'
+    cmd = "sysrc -v"
 
-    if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
+    if "file" in kwargs:
+        cmd += " -f " + kwargs["file"]
 
-    if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
+    if "jail" in kwargs:
+        cmd += " -j " + kwargs["jail"]
 
-    cmd += ' -x '+name
+    cmd += " -x " + name
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__["cmd.run"](cmd)
     if "sysrc: unknown variable" in sysrcs:
         raise CommandExecutionError(sysrcs)
     else:
-        return name+" removed"
+        return name + " removed"

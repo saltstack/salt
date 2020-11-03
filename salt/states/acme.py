@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 ACME / Let's Encrypt certificate management state
 =================================================
 
@@ -24,9 +24,10 @@ See also the module documentation
         - onchanges_in:
           - cmd: reload-gitlab
 
-'''
+"""
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
 # Import salt libs
@@ -36,32 +37,36 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only work when the ACME module agrees
-    '''
-    return 'acme.cert' in __salt__
+    """
+    if "acme.cert" in __salt__:
+        return True
+    return (False, "acme module could not be loaded")
 
 
-def cert(name,
-         aliases=None,
-         email=None,
-         webroot=None,
-         test_cert=False,
-         renew=None,
-         keysize=None,
-         server=None,
-         owner='root',
-         group='root',
-         mode='0640',
-         certname=None,
-         preferred_challenges=None,
-         tls_sni_01_port=None,
-         tls_sni_01_address=None,
-         http_01_port=None,
-         http_01_address=None,
-         dns_plugin=None,
-         dns_plugin_credentials=None):
-    '''
+def cert(
+    name,
+    aliases=None,
+    email=None,
+    webroot=None,
+    test_cert=False,
+    renew=None,
+    keysize=None,
+    server=None,
+    owner="root",
+    group="root",
+    mode="0640",
+    certname=None,
+    preferred_challenges=None,
+    tls_sni_01_port=None,
+    tls_sni_01_address=None,
+    http_01_port=None,
+    http_01_address=None,
+    dns_plugin=None,
+    dns_plugin_credentials=None,
+):
+    """
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
     :param name: Common Name of the certificate (DNS name of certificate)
@@ -90,30 +95,36 @@ def cert(name,
     :param https_01_address: The address the server listens to during http-01 challenge.
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
-    '''
-    ret = {'name': name, 'result': 'changeme', 'comment': [], 'changes': {}}
+    """
+
+    if certname is None:
+        certname = name
+
+    ret = {"name": certname, "result": "changeme", "comment": [], "changes": {}}
     action = None
 
     current_certificate = {}
     new_certificate = {}
-    if not __salt__['acme.has'](name):
-        action = 'obtain'
-    elif __salt__['acme.needs_renewal'](name, renew):
-        action = 'renew'
-        current_certificate = __salt__['acme.info'](name)
+    if not __salt__["acme.has"](certname):
+        action = "obtain"
+    elif __salt__["acme.needs_renewal"](certname, renew):
+        action = "renew"
+        current_certificate = __salt__["acme.info"](certname)
     else:
-        ret['result'] = True
-        ret['comment'].append('Certificate {} exists and does not need renewal.'
-                              ''.format(name))
+        ret["result"] = True
+        ret["comment"].append(
+            "Certificate {} exists and does not need renewal." "".format(certname)
+        )
 
     if action:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'].append('Certificate {} would have been {}ed.'
-                                  ''.format(name, action))
-            ret['changes'] = {'old': 'current certificate', 'new': 'new certificate'}
+        if __opts__["test"]:
+            ret["result"] = None
+            ret["comment"].append(
+                "Certificate {} would have been {}ed." "".format(certname, action)
+            )
+            ret["changes"] = {"old": "current certificate", "new": "new certificate"}
         else:
-            res = __salt__['acme.cert'](
+            res = __salt__["acme.cert"](
                 name,
                 aliases=aliases,
                 email=email,
@@ -134,9 +145,11 @@ def cert(name,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
             )
-            ret['result'] = res['result']
-            ret['comment'].append(res['comment'])
-            if ret['result']:
-                new_certificate = __salt__['acme.info'](name)
-            ret['changes'] = salt.utils.dictdiffer.deep_diff(current_certificate, new_certificate)
+            ret["result"] = res["result"]
+            ret["comment"].append(res["comment"])
+            if ret["result"]:
+                new_certificate = __salt__["acme.info"](certname)
+            ret["changes"] = salt.utils.dictdiffer.deep_diff(
+                current_certificate, new_certificate
+            )
     return ret

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for sending messages to Slack
 
 .. versionadded:: 2015.5.0
@@ -14,60 +14,63 @@ Module for sending messages to Slack
 
         slack:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-'''
+"""
 
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
+
+import salt.ext.six.moves.http_client
 
 # Import Salt libs
 import salt.utils.json
 import salt.utils.slack
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves import range
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-from salt.ext.six.moves import range
-import salt.ext.six.moves.http_client
+
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'slack'
+__virtualname__ = "slack"
 
 
 def __virtual__():
-    '''
+    """
     Return virtual name of the module.
 
     :return: The virtual name of the module.
-    '''
+    """
     return __virtualname__
 
 
 def _get_api_key():
-    api_key = __salt__['config.get']('slack.api_key') or \
-        __salt__['config.get']('slack:api_key')
+    api_key = __salt__["config.get"]("slack.api_key") or __salt__["config.get"](
+        "slack:api_key"
+    )
 
     if not api_key:
-        raise SaltInvocationError('No Slack API key found.')
+        raise SaltInvocationError("No Slack API key found.")
 
     return api_key
 
 
 def _get_hook_id():
-    url = __salt__['config.get']('slack.hook') or \
-        __salt__['config.get']('slack:hook')
+    url = __salt__["config.get"]("slack.hook") or __salt__["config.get"]("slack:hook")
     if not url:
-        raise SaltInvocationError('No Slack WebHook url found')
+        raise SaltInvocationError("No Slack WebHook url found")
 
     return url
 
 
 def list_rooms(api_key=None):
-    '''
+    """
     List all Slack rooms.
 
     :param api_key: The Slack admin api key.
@@ -80,16 +83,14 @@ def list_rooms(api_key=None):
         salt '*' slack.list_rooms
 
         salt '*' slack.list_rooms api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-    '''
+    """
     if not api_key:
         api_key = _get_api_key()
-    return salt.utils.slack.query(function='rooms',
-                                  api_key=api_key,
-                                  opts=__opts__)
+    return salt.utils.slack.query(function="rooms", api_key=api_key, opts=__opts__)
 
 
 def list_users(api_key=None):
-    '''
+    """
     List all Slack users.
 
     :param api_key: The Slack admin api key.
@@ -102,16 +103,14 @@ def list_users(api_key=None):
         salt '*' slack.list_users
 
         salt '*' slack.list_users api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-    '''
+    """
     if not api_key:
         api_key = _get_api_key()
-    return salt.utils.slack.query(function='users',
-                                  api_key=api_key,
-                                  opts=__opts__)
+    return salt.utils.slack.query(function="users", api_key=api_key, opts=__opts__)
 
 
 def find_room(name, api_key=None):
-    '''
+    """
     Find a room by name and return it.
 
     :param name:    The room name.
@@ -125,27 +124,27 @@ def find_room(name, api_key=None):
         salt '*' slack.find_room name="random"
 
         salt '*' slack.find_room name="random" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-    '''
+    """
     if not api_key:
         api_key = _get_api_key()
 
     # search results don't include the name of the
     # channel with a hash, if the passed channel name
     # has a hash we remove it.
-    if name.startswith('#'):
+    if name.startswith("#"):
         name = name[1:]
     ret = list_rooms(api_key)
-    if ret['res']:
-        rooms = ret['message']
+    if ret["res"]:
+        rooms = ret["message"]
         if rooms:
             for room in range(0, len(rooms)):
-                if rooms[room]['name'] == name:
+                if rooms[room]["name"] == name:
                     return rooms[room]
     return False
 
 
 def find_user(name, api_key=None):
-    '''
+    """
     Find a user by name and return it.
 
     :param name:        The user name.
@@ -159,26 +158,22 @@ def find_user(name, api_key=None):
         salt '*' slack.find_user name="ThomasHatch"
 
         salt '*' slack.find_user name="ThomasHatch" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-    '''
+    """
     if not api_key:
         api_key = _get_api_key()
 
     ret = list_users(api_key)
-    if ret['res']:
-        users = ret['message']
+    if ret["res"]:
+        users = ret["message"]
         if users:
             for user in range(0, len(users)):
-                if users[user]['name'] == name:
+                if users[user]["name"] == name:
                     return users[user]
     return False
 
 
-def post_message(channel,
-                 message,
-                 from_name,
-                 api_key=None,
-                 icon=None):
-    '''
+def post_message(channel, message, from_name, api_key=None, icon=None):
+    """
     Send a message to a Slack channel.
 
     :param channel:     The channel name, either will work.
@@ -194,62 +189,65 @@ def post_message(channel,
 
         salt '*' slack.post_message channel="Development Room" message="Build is done" from_name="Build Server"
 
-    '''
+    """
     if not api_key:
         api_key = _get_api_key()
 
     if not channel:
-        log.error('channel is a required option.')
+        log.error("channel is a required option.")
 
     # channel must start with a hash or an @ (direct-message channels)
-    if not channel.startswith('#') and not channel.startswith('@'):
-        log.warning('Channel name must start with a hash or @. '
-                    'Prepending a hash and using "#%s" as '
-                    'channel name instead of %s',
-                    channel, channel)
-        channel = '#{0}'.format(channel)
+    if not channel.startswith("#") and not channel.startswith("@"):
+        log.warning(
+            "Channel name must start with a hash or @. "
+            'Prepending a hash and using "#%s" as '
+            "channel name instead of %s",
+            channel,
+            channel,
+        )
+        channel = "#{0}".format(channel)
 
     if not from_name:
-        log.error('from_name is a required option.')
+        log.error("from_name is a required option.")
 
     if not message:
-        log.error('message is a required option.')
+        log.error("message is a required option.")
 
     if not from_name:
-        log.error('from_name is a required option.')
+        log.error("from_name is a required option.")
 
-    parameters = {
-        'channel': channel,
-        'username': from_name,
-        'text': message
-    }
+    parameters = {"channel": channel, "username": from_name, "text": message}
 
     if icon is not None:
-        parameters['icon_url'] = icon
+        parameters["icon_url"] = icon
 
     # Slack wants the body on POST to be urlencoded.
-    result = salt.utils.slack.query(function='message',
-                                    api_key=api_key,
-                                    method='POST',
-                                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                                    data=_urlencode(parameters),
-                                    opts=__opts__)
+    result = salt.utils.slack.query(
+        function="message",
+        api_key=api_key,
+        method="POST",
+        header_dict={"Content-Type": "application/x-www-form-urlencoded"},
+        data=_urlencode(parameters),
+        opts=__opts__,
+    )
 
-    if result['res']:
+    if result["res"]:
         return True
     else:
         return result
 
 
-def call_hook(message,
-              attachment=None,
-              color='good',
-              short=False,
-              identifier=None,
-              channel=None,
-              username=None,
-              icon_emoji=None):
-    '''
+def call_hook(
+    message,
+    attachment=None,
+    color="good",
+    short=False,
+    identifier=None,
+    channel=None,
+    username=None,
+    icon_emoji=None,
+):
+    """
     Send message to Slack incoming webhook.
 
     :param message:     The topic of message.
@@ -269,57 +267,45 @@ def call_hook(message,
 
         salt '*' slack.call_hook message='Hello, from SaltStack'
 
-    '''
-    base_url = 'https://hooks.slack.com/services/'
+    """
+    base_url = "https://hooks.slack.com/services/"
     if not identifier:
         identifier = _get_hook_id()
 
     url = _urljoin(base_url, identifier)
 
     if not message:
-        log.error('message is required option')
+        log.error("message is required option")
 
     if attachment:
         payload = {
-            'attachments': [
+            "attachments": [
                 {
-                    'fallback': message,
-                    'color': color,
-                    'pretext': message,
-                    'fields': [
-                        {
-                            "value": attachment,
-                            "short": short,
-                        }
-                    ]
+                    "fallback": message,
+                    "color": color,
+                    "pretext": message,
+                    "fields": [{"value": attachment, "short": short}],
                 }
             ]
         }
     else:
         payload = {
-            'text': message,
+            "text": message,
         }
 
     if channel:
-        payload['channel'] = channel
+        payload["channel"] = channel
 
     if username:
-        payload['username'] = username
+        payload["username"] = username
 
     if icon_emoji:
-        payload['icon_emoji'] = icon_emoji
+        payload["icon_emoji"] = icon_emoji
 
-    data = _urlencode(
-        {
-            'payload': salt.utils.json.dumps(payload)
-        }
-    )
-    result = salt.utils.http.query(url, method='POST', data=data, status=True)
+    data = _urlencode({"payload": salt.utils.json.dumps(payload)})
+    result = salt.utils.http.query(url, method="POST", data=data, status=True)
 
-    if result['status'] <= 201:
+    if result["status"] <= 201:
         return True
     else:
-        return {
-            'res': False,
-            'message': result.get('body', result['status'])
-        }
+        return {"res": False, "message": result.get("body", result["status"])}

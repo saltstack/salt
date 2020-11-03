@@ -1,33 +1,34 @@
 # -*- coding: utf-8 -*-
-'''
+"""
     salt.serializers.configparser
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     .. versionadded:: 2016.3.0
 
     Implements a configparser serializer.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
+
 # Import Salt Libs
 from salt.ext import six
-import salt.ext.six.moves.configparser as configparser  # pylint: disable=E0611
 from salt.serializers import DeserializationError, SerializationError
 
-__all__ = ['deserialize', 'serialize', 'available']
+__all__ = ["deserialize", "serialize", "available"]
 
 available = True
 
 
 def deserialize(stream_or_string, **options):
-    '''
+    """
     Deserialize any string or stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower configparser module.
-    '''
+    """
 
     if six.PY3:
         cp = configparser.ConfigParser(**options)
@@ -58,17 +59,21 @@ def deserialize(stream_or_string, **options):
 
 
 def serialize(obj, **options):
-    '''
+    """
     Serialize Python data to a configparser formatted string or file.
 
     :param obj: the data structure to serialize
     :param options: options given to lower configparser module.
-    '''
+    """
 
     try:
         if not isinstance(obj, dict):
-            raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
-        fp = options.pop('fp', None)
+            raise TypeError(
+                "configparser can only serialize dictionaries, not {0}".format(
+                    type(obj)
+                )
+            )
+        fp = options.pop("fp", None)
         if six.PY3:
             cp = configparser.ConfigParser(**options)
         else:
@@ -93,9 +98,9 @@ def _is_defaultsect(section_name):
 
 
 def _read_dict(cp, dictionary):
-    '''
+    """
     Cribbed from python3's ConfigParser.read_dict function.
-    '''
+    """
     for section, keys in dictionary.items():
         section = six.text_type(section)
 

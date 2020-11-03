@@ -42,7 +42,7 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
-# Setting master_type to 'disable' let's you have a running minion (with engines and
+# Setting master_type to 'disable' lets you have a running minion (with engines and
 # beacons) without a master connection
 # master_type: str
 
@@ -118,6 +118,13 @@
 # set this config to ``False``.
 #minion_id_caching: True
 
+# Convert minion id to lowercase when it is being generated. Helpful when some
+# hosts get the minion id in uppercase. Cached ids will remain the same and
+# not converted. For example, Windows minions often have uppercase minion
+# names when they are set up but not always. To turn on, set this config to
+# ``True``.
+#minion_id_lowercase: False
+
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a
 # FQDN (for instance, Solaris).
@@ -156,6 +163,16 @@
 
 # Set the directory used to hold unix sockets.
 #sock_dir: /var/run/salt/minion
+
+# In order to calculate the fqdns grain, all the IP addresses from the minion
+# are processed with underlying calls to `socket.gethostbyaddr` which can take
+# 5 seconds to be released (after reaching `socket.timeout`) when there is no
+# fqdn for that IP. These calls to `socket.gethostbyaddr` are processed
+# asynchronously, however, it still adds 5 seconds every time grains are
+# generated if an IP does not resolve. In Windows grains are regenerated each
+# time a new process is spawned. Therefore, the default for Windows is `False`.
+# All other OSes default to `True`
+# enable_fqdns_grains: True
 
 # The minion can take a while to start up when lspci and/or dmidecode is used
 # to populate the grains for the minion. Set this to False if you do not need
@@ -315,7 +332,7 @@
 # reconnect 9: wait 33 seconds
 # reconnect x: etc.
 #
-# In a setup with ~6000 thousand hosts these settings would average the reconnects
+# In a setup with ~6000 hosts these settings would average the reconnects
 # to about 100 per second and all hosts would be reconnected within 60 seconds.
 # recon_default: 100
 # recon_max: 5000
@@ -564,6 +581,15 @@
 #   - pkg
 #
 #state_aggregate: False
+
+# Disable requisites during state runs by specifying a single requisite
+# or a list of requisites to disable.
+#
+# disabled_requisites: require_in
+#
+# disabled_requisites:
+#     - require
+#     - require_in
 
 #####     File Directory Settings    #####
 ##########################################

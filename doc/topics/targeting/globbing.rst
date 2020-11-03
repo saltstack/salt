@@ -11,7 +11,7 @@ configuration setting.
 
 .. tip:: minion id and minion keys
 
-    The :term:`minion id` is used to generate the minion's public/private keys
+    The :term:`minion id <Minion ID>` is used to generate the minion's public/private keys
     and if it ever changes the master must then accept the new key as though
     the minion was a new host.
 
@@ -19,8 +19,8 @@ Globbing
 ========
 
 The default matching that Salt utilizes is :py:mod:`shell-style globbing
-<python2:fnmatch>` around the :term:`minion id`. This also works for states
-in the :term:`top file`.
+<python2:fnmatch>` around the :term:`minion id <Minion ID>`. This also works for states
+in the :term:`top file <Top File>`.
 
 .. note::
 
@@ -83,7 +83,7 @@ Match both ``web1-prod`` and ``web1-devel`` minions:
 
     salt -E 'web1-(prod|devel)' test.version
 
-When using regular expressions in a State's :term:`top file`, you must specify
+When using regular expressions in a State's :term:`top file <Top File>`, you must specify
 the matcher as the first option. The following example executes the contents of
 ``webserver.sls`` on the above-mentioned minions.
 

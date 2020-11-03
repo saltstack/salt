@@ -1,43 +1,45 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Installer support for macOS.
 
 Installer is the native .pkg/.mpkg package manager for macOS.
-'''
+"""
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import os.path
 
-# Import 3rd-party libs
-from salt.ext.six.moves import urllib  # pylint: disable=import-error
+import salt.utils.itertools
+import salt.utils.mac_utils
 
 # Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.itertools
-import salt.utils.mac_utils
 from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+from salt.ext.six.moves import urllib  # pylint: disable=import-error
+
 # Don't shadow built-in's.
-__func_alias__ = {'list_': 'list'}
+__func_alias__ = {"list_": "list"}
 
 # Define the module's virtual name
-__virtualname__ = 'pkgutil'
+__virtualname__ = "pkgutil"
 
 
 def __virtual__():
     if not salt.utils.platform.is_darwin():
-        return (False, 'Only available on Mac OS systems')
+        return (False, "Only available on Mac OS systems")
 
-    if not salt.utils.path.which('pkgutil'):
-        return (False, 'Missing pkgutil binary')
+    if not salt.utils.path.which("pkgutil"):
+        return (False, "Missing pkgutil binary")
 
     return __virtualname__
 
 
 def list_():
-    '''
+    """
     List the installed packages.
 
     :return: A list of installed packages
@@ -48,14 +50,14 @@ def list_():
     .. code-block:: bash
 
         salt '*' pkgutil.list
-    '''
-    cmd = 'pkgutil --pkgs'
+    """
+    cmd = "pkgutil --pkgs"
     ret = salt.utils.mac_utils.execute_return_result(cmd)
     return ret.splitlines()
 
 
 def is_installed(package_id):
-    '''
+    """
     Returns whether a given package id is installed.
 
     :return: True if installed, otherwise False
@@ -66,16 +68,16 @@ def is_installed(package_id):
     .. code-block:: bash
 
         salt '*' pkgutil.is_installed com.apple.pkg.gcc4.2Leo
-    '''
+    """
     return package_id in list_()
 
 
 def _install_from_path(path):
-    '''
+    """
     Internal function to install a package from the given path
-    '''
+    """
     if not os.path.exists(path):
-        msg = 'File not found: {0}'.format(path)
+        msg = "File not found: {0}".format(path)
         raise SaltInvocationError(msg)
 
     cmd = 'installer -pkg "{0}" -target /'.format(path)
@@ -83,7 +85,7 @@ def _install_from_path(path):
 
 
 def install(source, package_id):
-    '''
+    """
     Install a .pkg from an URI or an absolute path.
 
     :param str source: The path to a package.
@@ -98,13 +100,13 @@ def install(source, package_id):
     .. code-block:: bash
 
         salt '*' pkgutil.install source=/vagrant/build_essentials.pkg package_id=com.apple.pkg.gcc4.2Leo
-    '''
+    """
     if is_installed(package_id):
         return True
 
     uri = urllib.parse.urlparse(source)
-    if not uri.scheme == '':
-        msg = 'Unsupported scheme for source uri: {0}'.format(uri.scheme)
+    if not uri.scheme == "":
+        msg = "Unsupported scheme for source uri: {0}".format(uri.scheme)
         raise SaltInvocationError(msg)
 
     _install_from_path(source)
@@ -113,7 +115,7 @@ def install(source, package_id):
 
 
 def forget(package_id):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Remove the receipt data about the specified package. Does not remove files.
@@ -131,7 +133,7 @@ def forget(package_id):
     .. code-block:: bash
 
         salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
-    '''
-    cmd = 'pkgutil --forget {0}'.format(package_id)
+    """
+    cmd = "pkgutil --forget {0}".format(package_id)
     salt.utils.mac_utils.execute_return_success(cmd)
     return not is_installed(package_id)

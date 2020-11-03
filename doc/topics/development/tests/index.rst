@@ -6,18 +6,84 @@ Salt's Test Suite
 
 Salt comes with a powerful integration and unit test suite allowing for
 the fully automated run of integration and/or unit tests from a single
-interface.
+interface. It uses the combination of pytest, nox and `Kitchen Salt`_ to
+run these tests. Nox is used to manage all of the test python dependencies.
+When you run the test runner with nox, you will be installing the same
+python dependencies that we use to run our test suite on PRs and branch tests.
+`Kitchen Salt`_ is used to spin up our virtual machines based off of golden
+images. These virtual machines use the `salt-jenkins`_ sls states to configure
+any system dependencies.
 
 To learn the basics of how Salt's test suite works, be sure to check
 out the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
 tutorial.
 
+Nox
+===
+Nox is used to manage all of the python dependencies used in the test suite
+and spins up the different nox sessions. You can look at the ``noxfile.py``
+in the salt repo to view all of the current nox configurations. In that file
+you will notice various nox sessions. When creating each of these sessions,
+nox will create a virtualenv with the specified interpreter. Once the virtualenv
+is created it will also install all of the required python dependencies
+required for that session and run the tests.
+
+For example if you want to run all of the tests using the zeromq transport on
+python3 you would need to specify the zeromq transport and python3.
+
+.. code-block:: bash
+
+    nox -e 'pytest-zeromq-3(coverage=False)'
+
+To run all the tests but on the tcp transport, you would need to specify the tcp session.
+
+.. code-block:: bash
+
+    nox -e 'pytest-tcp-3(coverage=False)'
+
+You can view all available sessions by running:
+
+.. code-block:: bash
+
+    nox --list-sessions
+
+For the most part you will only need nox to run the test suite, as this tool
+will install the exact same python dependencies we use to run on our test runs.
+The exception to this is when a system dependency is required, for example ``mysql``.
+These system dependencies are installed with sls states managed in the `salt-jenkins`_
+repo or you can manually install the dependency yourself.
+
+System Dependencies
+===================
+The system dependencies are installed from the `salt-jenkins`_ repo. The
+``golden-images-provision`` state is what is run to determine what dependencies
+to install on which platform.
+We run this state only when we want to update our current VM images with new
+dependencies.
+
+Kitchen Salt
+============
+We also use `Kitchen Salt`_ to spin up the VM's used for testing. You can view the
+kitchen-salt `getting started`_ for instructions on how to install and set it up.
+`Kitchen Salt`_ uses Test Kitchen to spin up the VM or container in the configured
+provider. Once the VM is spun up, `Kitchen Salt`_ can install salt and run a particular
+set of states. In the case of our branch and PR tests we create "Golden Images" which
+run the `salt-jenkins`_ states and install salt system dependencies beforehand. We only
+update these "Golden Images" when we need to upgrade or install a system dependency. You can
+view the `kitchen-salt jenkins setup`_ docs for instructions on how to set up `Kitchen Salt`_
+similar to the jenkins environment we use to run branch and PR tests.
 
 Test Directory Structure
 ========================
 
-Salt's test suite is located in the ``tests`` directory in the root of
-Salt's codebase. The test suite is divided into two main groups:
+Salt's test suite is located in the ``tests/`` directory in the root of
+Salt's codebase.
+
+With the migration to PyTest, Salt has created a separate directory for tests
+that are written taking advantage of the full pottential of PyTest. These are
+located under ``tests/pytests``.
+
+As for the old test suite, it is divided into two main groups:
 
 * :ref:`Integration Tests <integration-tests>`
 * :ref:`Unit Tests <unit-tests>`
@@ -31,45 +97,8 @@ The files that are housed in the ``modules`` directory of either the unit
 or the integration testing factions contain respective integration or unit
 test files for Salt execution modules.
 
-
-.. note::
-    Salt's test framework provides for the option to only run tests which
-    correspond to a given file (or set of files), via the ``--from-filenames``
-    argument to ``runtests.py``:
-
-    .. code-block:: bash
-
-        python /path/to/runtests.py --from-filenames=salt/modules/foo.py
-
-    Therefore, where possible, test files should be named to match the source
-    files they are testing. For example, when writing tests for
-    ``salt/modules/foo.py``, unit tests should go into
-    ``tests/unit/modules/test_foo.py``, and integration tests should go into
-    ``tests/integration/modules/test_foo.py``.
-
-    However, integration tests are organized differently from unit tests, and
-    this may not always be plausible. In these cases, to ensure that the proper
-    tests are run for these files, they must be mapped in
-    `tests/filename_map.yml`__.
-
-    The filename map is used to supplement the test framework's filename
-    matching logic. This allows one to ensure that states correspnding to an
-    execution module are also tested when ``--from-filenames`` includes that
-    execution module. It can also be used for those cases where the path to a
-    test file doesn't correspond directly to the file which is being tested
-    (e.g. the ``shell``, ``spm``, and ``ssh`` integration tests, among others).
-    Both glob expressions and regular expressions are permitted in the filename
-    map.
-
-
-    .. important::
-        Test modules which don't map directly to the source file they are
-        testing (using the naming convention described above), **must** be
-        added to the ``ignore`` tuple in ``tests/unit/test_module_names.py``,
-        in the ``test_module_name_source_match`` function. This unit test
-        ensures that we maintain the naming convention for test files.
-
-    .. __: https://github.com/saltstack/salt/blob/|repo_primary_branch|/tests/filename_map.yml
+The PyTest only tests under ``tests/pytests`` should, more or less, follow the
+same grouping as the old test suite.
 
 
 Integration Tests
@@ -119,57 +148,26 @@ or in addition to, integration tests when contributing to Salt.
 Running The Tests
 =================
 
-There are requirements, in addition to Salt's requirements, which
-need to be installed in order to run the test suite. Install one of
-the lines below, depending on the relevant Python version:
+There is only one requirement to install, to quickly get started
+running salt's test suite: ``nox``.
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python27.txt
-    pip install -r requirements/dev_python34.txt
+    pip install nox
 
-To be able to run integration tests which utilizes ZeroMQ transport, you also
-need to install additional requirements for it. Make sure you have installed
-the C/C++ compiler and development libraries and header files needed for your
-Python version.
-
-This is an example for RedHat-based operating systems:
+Once this requirement is installed, you can use the ``nox`` binary to run
+all of the tests included in Salt's test suite:
 
 .. code-block:: bash
 
-    yum install gcc gcc-c++ python-devel
-    pip install -r requirements/zeromq.txt
-
-On Debian, Ubuntu or their derivatives run the following commands:
-
-.. code-block:: bash
-
-    apt-get install build-essential python-dev
-    pip install -r requirements/zeromq.txt
-
-This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
-``libzmq``) Python modules required for running integration tests suite.
-
-Once all requirements are installed, use ``runtests.py`` script to run all of
-the tests included in Salt's test suite:
-
-.. code-block:: bash
-
-    python tests/runtests.py
+    nox -e 'pytest-zeromq-3(coverage=False)'
 
 For more information about options you can pass the test runner, see the
 ``--help`` option:
 
 .. code-block:: bash
 
-    python tests/runtests.py --help
-
-An alternative way of invoking the test suite is available in ``setup.py``:
-
-.. code-block:: bash
-
-    ./setup.py test
-
+    nox -e 'pytest-zeromq-3(coverage=False)' -- --help
 
 .. _running-test-subsections:
 
@@ -179,17 +177,17 @@ Running Test Subsections
 Instead of running the entire test suite all at once, which can take a long time,
 there are several ways to run only specific groups of tests or individual tests:
 
-* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``python tests/runtests.py --unit-tests``
-* Run unit and integration tests for states: ``python tests/runtests.py --state``
-* Run integration tests for an individual module: ``python tests/runtests.py -n integration.modules.virt``
-* Run unit tests for an individual module: ``python tests/runtests.py -n unit.modules.virt_test``
+* Run :ref:`unit tests only<running-unit-tests-no-daemons>`: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/``
+* Run unit and integration tests for states: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/states/ tests/integration/states/``
+* Run integration tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py``
+* Run unit tests for an individual module: ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_virt.py``
 * Run an individual test by using the class and test name (this example is for the
-  ``test_default_kvm_profile`` test in the ``integration.module.virt``):
-  ``python tests/runtests.py -n integration.module.virt.VirtTest.test_default_kvm_profile``
+  ``test_default_kvm_profile`` test in the ``tests/integration/module/test_virt.py``):
+  ``nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_virt.py::VirtTest::test_default_kvm_profile``
 
 For more specific examples of how to run various test subsections or individual
-tests, please see the :ref:`Test Selection Options <test-selection-options>`
-documentation or the :ref:`Running Specific Tests <running-specific-tests>`
+tests, please see the `pytest`_ documentation on how to run specific tests or
+the :ref:`Running Specific Tests <running-specific-tests>`
 section of the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
 tutorial.
 
@@ -203,11 +201,11 @@ Since the unit tests do not require a master or minion to execute, it is often u
 run unit tests individually, or as a whole group, without having to start up the integration testing
 daemons. Starting up the master, minion, and syndic daemons takes a lot of time before the tests can
 even start running and is unnecessary to run unit tests. To run unit tests without invoking the
-integration test daemons, simply run the ``runtests.py`` script with ``--unit`` argument:
+integration test daemons, simply add the unit directory as an argument:
 
 .. code-block:: bash
 
-    python tests/runtests.py --unit
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
 
 All of the other options to run individual tests, entire classes of tests, or
 entire test modules still apply.
@@ -238,7 +236,7 @@ To run tests marked as destructive, set the ``--run-destructive`` flag:
 
 .. code-block:: bash
 
-    python tests/runtests.py --run-destructive
+    nox -e 'pytest-zeromq-3(coverage=False)' -- --run-destructive
 
 
 Running Cloud Provider Tests
@@ -285,45 +283,7 @@ cloud provider tests can be run by setting the ``--cloud-provider-tests`` flag:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --cloud-provider-tests
-
-
-Running The Tests In A Docker Container
----------------------------------------
-
-The test suite can be executed under a `docker`_ container using the
-``--docked`` option flag. The `docker`_ container must be properly configured
-on the system invoking the tests and the container must have access to the
-internet.
-
-Here's a simple usage example:
-
-.. code-block:: bash
-
-    python tests/runtests.py --docked=ubuntu-12.04 -v
-
-The full `docker`_ container repository can also be provided:
-
-.. code-block:: bash
-
-    python tests/runtests.py --docked=salttest/ubuntu-12.04 -v
-
-
-The SaltStack team is creating some containers which will have the necessary
-dependencies pre-installed. Running the test suite on a container allows
-destructive tests to run without making changes to the main system. It also
-enables the test suite to run under a different distribution than the one
-the main system is currently using.
-
-The current list of test suite images is on Salt's `docker repository`_.
-
-Custom `docker`_ containers can be provided by submitting a pull request
-against Salt's `docker Salt test containers`_ repository.
-
-.. _`docker`: https://www.docker.io/
-.. _`docker repository`: https://index.docker.io/u/salttest/
-.. _`docker Salt test containers`: https://github.com/saltstack/docker-containers
-
+    nox -e 'pytest-cloud-3(coverage=False)'
 
 Automated Test Runs
 ===================
@@ -359,7 +319,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-http://jenkins.saltstack.com.
+https://jenkinsci.saltstack.com.
 
 
 Using Salt-Cloud on Jenkins
@@ -398,6 +358,7 @@ the actual testing, such as functions containing assertions, must start with
 .. code-block:: python
 
     def test_user_present(self):
+        ...
 
 When functions in test files are not prepended with ``test_``, the function
 acts as a normal, helper function and is not run as a test by the test suite.
@@ -500,3 +461,10 @@ See implementation details in `tests.support.helpers` for details.
 
 `@with_system_user_and_group` -- Creates and optionally destroys a system user and group
 within a test case.  See implementation details in `tests.support.helpers` for details.
+
+
+.. _kitchen-salt jenkins setup: https://kitchen.saltstack.com/docs/file/docs/jenkins.md
+.. _getting started: https://kitchen.saltstack.com/docs/file/docs/gettingstarted.md
+.. _salt-jenkins: https://github.com/saltstack/salt-jenkins
+.. _Kitchen Salt: https://kitchen.saltstack.com/
+.. _pytest: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests

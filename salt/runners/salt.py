@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This runner makes Salt's
 execution modules available
 on the salt master.
@@ -28,9 +28,10 @@ Execution modules are also available to salt runners:
 
     __salt__['salt.cmd'](fun=fun, args=args, kwargs=kwargs)
 
-'''
+"""
 # import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+
 import copy
 import logging
 
@@ -45,7 +46,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def cmd(fun, *args, **kwargs):
-    '''
+    """
     .. versionchanged:: 2018.3.0
         Added ``with_pillar`` argument
 
@@ -78,45 +79,49 @@ def cmd(fun, *args, **kwargs):
         # call functions with arguments and keyword arguments
         salt-run salt.cmd test.arg 1 2 3 a=1
         salt-run salt.cmd mymod.myfunc with_pillar=True
-    '''
-    log.debug('Called salt.cmd runner with minion function %s', fun)
+    """
+    log.debug("Called salt.cmd runner with minion function %s", fun)
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    with_pillar = kwargs.pop('with_pillar', False)
+    with_pillar = kwargs.pop("with_pillar", False)
 
     opts = copy.deepcopy(__opts__)
-    opts['grains'] = salt.loader.grains(opts)
+    opts["grains"] = salt.loader.grains(opts)
 
     if with_pillar:
-        opts['pillar'] = salt.pillar.get_pillar(
+        opts["pillar"] = salt.pillar.get_pillar(
             opts,
-            opts['grains'],
-            opts['id'],
-            saltenv=opts['saltenv'],
-            pillarenv=opts.get('pillarenv')).compile_pillar()
+            opts["grains"],
+            opts["id"],
+            saltenv=opts["saltenv"],
+            pillarenv=opts.get("pillarenv"),
+        ).compile_pillar()
     else:
-        opts['pillar'] = {}
+        opts["pillar"] = {}
 
     functions = salt.loader.minion_mods(
-        opts,
-        utils=salt.loader.utils(opts),
-        context=__context__)
+        opts, utils=salt.loader.utils(opts), context=__context__
+    )
 
-    return functions[fun](*args, **kwargs) \
-        if fun in functions \
-        else '\'{0}\' is not available.'.format(fun)
+    return (
+        functions[fun](*args, **kwargs)
+        if fun in functions
+        else "'{0}' is not available.".format(fun)
+    )
 
 
-def execute(tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            tgt_type='glob',
-            ret='',
-            jid='',
-            kwarg=None,
-            **kwargs):
-    '''
+def execute(
+    tgt,
+    fun,
+    arg=(),
+    timeout=None,
+    tgt_type="glob",
+    ret="",
+    jid="",
+    kwarg=None,
+    **kwargs
+):
+    """
     .. versionadded:: 2017.7.0
 
     Execute ``fun`` on all minions matched by ``tgt`` and ``tgt_type``.
@@ -146,20 +151,22 @@ def execute(tgt,
                     tgt_type: nodegroup
                 days: 1
                 returner: redis
-    '''
-    client = salt.client.get_local_client(__opts__['conf_file'])
+    """
+    client = salt.client.get_local_client(__opts__["conf_file"])
     try:
-        ret = client.cmd(tgt,
-                         fun,
-                         arg=arg,
-                         timeout=timeout or __opts__['timeout'],
-                         tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
-                         ret=ret,
-                         jid=jid,
-                         kwarg=kwarg,
-                         **kwargs)
+        ret = client.cmd(
+            tgt,
+            fun,
+            arg=arg,
+            timeout=timeout or __opts__["timeout"],
+            tgt_type=tgt_type,  # no warn_until, as this is introduced only in 2017.7.0
+            ret=ret,
+            jid=jid,
+            kwarg=kwarg,
+            **kwargs
+        )
     except SaltClientError as client_error:
-        log.error('Error while executing %s on %s (%s)', fun, tgt, tgt_type)
+        log.error("Error while executing %s on %s (%s)", fun, tgt, tgt_type)
         log.error(client_error)
         return {}
     return ret

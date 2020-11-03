@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Read lm-sensors
 
 .. versionadded:: 2014.1.3
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import logging
@@ -12,18 +12,17 @@ import logging
 # import Salt libs
 import salt.utils.path
 
-
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if salt.utils.path.which('sensors'):
+    if salt.utils.path.which("sensors"):
         return True
-    return (False, 'sensors does not exist in the path')
+    return (False, "sensors does not exist in the path")
 
 
 def sense(chip, fahrenheit=False):
-    '''
+    """
     Gather lm-sensors data from a given chip
 
     To determine the chip to query, use the 'sensors' command
@@ -42,14 +41,16 @@ def sense(chip, fahrenheit=False):
     Core 3:         +53.0°C  (high = +87.0°C, crit = +105.0°C)
 
     Given the above, the chip is 'coretemp-isa-0000'.
-    '''
-    extra_args = ''
+    """
+    extra_args = ""
     if fahrenheit is True:
-        extra_args = '-f'
-    sensors = __salt__['cmd.run']('/usr/bin/sensors {0} {1}'.format(chip, extra_args), python_shell=False).splitlines()
+        extra_args = "-f"
+    sensors = __salt__["cmd.run"](
+        "/usr/bin/sensors {0} {1}".format(chip, extra_args), python_shell=False
+    ).splitlines()
     ret = {}
     for sensor in sensors:
-        sensor_list = sensor.split(':')
+        sensor_list = sensor.split(":")
         if len(sensor_list) >= 2:
             ret[sensor_list[0]] = sensor_list[1].lstrip()
     return ret

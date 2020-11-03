@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Return salt data via slack
 
 ..  versionadded:: 2015.5.0
@@ -76,78 +76,81 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return slack --return_kwargs '{"channel": "#random"}'
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
+
+import logging
 
 # Import Python libs
 import pprint
-import logging
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
 import salt.utils.slack
 import salt.utils.yaml
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
+
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'slack'
+__virtualname__ = "slack"
 
 
 def _get_options(ret=None):
-    '''
+    """
     Get the slack options from salt.
-    '''
+    """
 
-    defaults = {'channel': '#general'}
+    defaults = {"channel": "#general"}
 
-    attrs = {'slack_profile': 'profile',
-             'channel': 'channel',
-             'username': 'username',
-             'as_user': 'as_user',
-             'api_key': 'api_key',
-             'changes': 'changes',
-             'only_show_failed': 'only_show_failed',
-             'yaml_format': 'yaml_format',
-             }
+    attrs = {
+        "slack_profile": "profile",
+        "channel": "channel",
+        "username": "username",
+        "as_user": "as_user",
+        "api_key": "api_key",
+        "changes": "changes",
+        "only_show_failed": "only_show_failed",
+        "yaml_format": "yaml_format",
+    }
 
-    profile_attr = 'slack_profile'
+    profile_attr = "slack_profile"
 
-    profile_attrs = {'from_jid': 'from_jid',
-                     'api_key': 'api_key',
-                     'api_version': 'api_key'
-                     }
+    profile_attrs = {
+        "from_jid": "from_jid",
+        "api_key": "api_key",
+        "api_version": "api_key",
+    }
 
-    _options = salt.returners.get_returner_options(__virtualname__,
-                                                   ret,
-                                                   attrs,
-                                                   profile_attr=profile_attr,
-                                                   profile_attrs=profile_attrs,
-                                                   __salt__=__salt__,
-                                                   __opts__=__opts__,
-                                                   defaults=defaults)
+    _options = salt.returners.get_returner_options(
+        __virtualname__,
+        ret,
+        attrs,
+        profile_attr=profile_attr,
+        profile_attrs=profile_attrs,
+        __salt__=__salt__,
+        __opts__=__opts__,
+        defaults=defaults,
+    )
     return _options
 
 
 def __virtual__():
-    '''
+    """
     Return virtual name of the module.
 
     :return: The virtual name of the module.
-    '''
+    """
     return __virtualname__
 
 
-def _post_message(channel,
-                  message,
-                  username,
-                  as_user,
-                  api_key=None):
-    '''
+def _post_message(channel, message, username, as_user, api_key=None):
+    """
     Send a message to a Slack room.
     :param channel:     The room name.
     :param message:     The message to send to the Slack room.
@@ -156,22 +159,24 @@ def _post_message(channel,
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param api_version: The Slack api version, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
-    '''
+    """
 
     parameters = dict()
-    parameters['channel'] = channel
-    parameters['username'] = username
-    parameters['as_user'] = as_user
-    parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
+    parameters["channel"] = channel
+    parameters["username"] = username
+    parameters["as_user"] = as_user
+    parameters["text"] = "```" + message + "```"  # pre-formatted, fixed-width text
 
     # Slack wants the body on POST to be urlencoded.
-    result = salt.utils.slack.query(function='message',
-                                    api_key=api_key,
-                                    method='POST',
-                                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                                    data=_urlencode(parameters))
+    result = salt.utils.slack.query(
+        function="message",
+        api_key=api_key,
+        method="POST",
+        header_dict={"Content-Type": "application/x-www-form-urlencoded"},
+        data=_urlencode(parameters),
+    )
 
-    log.debug('Slack message post result: %s', result)
+    log.debug("Slack message post result: %s", result)
     if result:
         return True
     else:
@@ -179,66 +184,71 @@ def _post_message(channel,
 
 
 def returner(ret):
-    '''
+    """
     Send an slack message with the data
-    '''
+    """
 
     _options = _get_options(ret)
 
-    channel = _options.get('channel')
-    username = _options.get('username')
-    as_user = _options.get('as_user')
-    api_key = _options.get('api_key')
-    changes = _options.get('changes')
-    only_show_failed = _options.get('only_show_failed')
-    yaml_format = _options.get('yaml_format')
+    channel = _options.get("channel")
+    username = _options.get("username")
+    as_user = _options.get("as_user")
+    api_key = _options.get("api_key")
+    changes = _options.get("changes")
+    only_show_failed = _options.get("only_show_failed")
+    yaml_format = _options.get("yaml_format")
 
     if not channel:
-        log.error('slack.channel not defined in salt config')
+        log.error("slack.channel not defined in salt config")
         return
 
     if not username:
-        log.error('slack.username not defined in salt config')
+        log.error("slack.username not defined in salt config")
         return
 
     if not as_user:
-        log.error('slack.as_user not defined in salt config')
+        log.error("slack.as_user not defined in salt config")
         return
 
     if not api_key:
-        log.error('slack.api_key not defined in salt config')
+        log.error("slack.api_key not defined in salt config")
         return
 
     if only_show_failed and changes:
-        log.error('cannot define both slack.changes and slack.only_show_failed in salt config')
+        log.error(
+            "cannot define both slack.changes and slack.only_show_failed in salt config"
+        )
         return
 
-    returns = ret.get('return')
+    returns = ret.get("return")
     if changes is True:
-        returns = {(key, value) for key, value in returns.items() if value['result'] is not True or value['changes']}
+        returns = {
+            (key, value)
+            for key, value in returns.items()
+            if value["result"] is not True or value["changes"]
+        }
 
     if only_show_failed is True:
-        returns = {(key, value) for key, value in returns.items() if value['result'] is not True}
+        returns = {
+            (key, value)
+            for key, value in returns.items()
+            if value["result"] is not True
+        }
 
     if yaml_format is True:
         returns = salt.utils.yaml.safe_dump(returns)
     else:
         returns = pprint.pformat(returns)
 
-    message = ('id: {0}\r\n'
-               'function: {1}\r\n'
-               'function args: {2}\r\n'
-               'jid: {3}\r\n'
-               'return: {4}\r\n').format(
-                    ret.get('id'),
-                    ret.get('fun'),
-                    ret.get('fun_args'),
-                    ret.get('jid'),
-                    returns)
+    message = (
+        "id: {0}\r\n"
+        "function: {1}\r\n"
+        "function args: {2}\r\n"
+        "jid: {3}\r\n"
+        "return: {4}\r\n"
+    ).format(
+        ret.get("id"), ret.get("fun"), ret.get("fun_args"), ret.get("jid"), returns
+    )
 
-    slack = _post_message(channel,
-                          message,
-                          username,
-                          as_user,
-                          api_key)
+    slack = _post_message(channel, message, username, as_user, api_key)
     return slack

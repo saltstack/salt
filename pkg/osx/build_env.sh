@@ -9,18 +9,21 @@
 # Description: This script sets up a build environment for Salt on macOS.
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 1 parameter
-#       $1 : <python version> : the version of Python to use for the
-#                               build environment. Default is 2
+#       $1 : <test mode> :   if this script should be run in test mode, this
+#                            disables the longer optimized compile time of python.
+#                            Please DO NOT set to "true" when building a
+#                            release version.
+#                            (defaults to false)
 #
 #     Example:
-#         The following will set up a Python 3 build environment for Salt
+#         The following will set up an optimized Python build environment for Salt
 #         on macOS
 #
-#         ./dev_env.sh 3
+#         ./dev_env.sh
 #
 ############################################################################
 
@@ -43,38 +46,36 @@ quit_on_error() {
 }
 
 ############################################################################
-# Check passed parameters, set defaults
-############################################################################
-if [ "$1" == "" ]; then
-    PYVER=2
-else
-    PYVER=$1
-fi
-
-############################################################################
 # Parameters Required for the script to function properly
 ############################################################################
 echo -n -e "\033]0;Build_Env: Variables\007"
 
-# This is needed to allow the some test suites (zmq) to pass
-ulimit -n 1200
+MACOSX_DEPLOYMENT_TARGET=10.13
+export MACOSX_DEPLOYMENT_TARGET
 
+# This is needed to allow the some test suites (zmq) to pass
+# taken from https://github.com/zeromq/libzmq/issues/1878
+SET_ULIMIT=200000
+sysctl -w kern.maxfiles=$SET_ULIMIT
+sysctl -w kern.maxfilesperproc=$SET_ULIMIT
+launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
+ulimit -n $SET_ULIMIT
+
+PY_VERSION=3.7
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
 SHADIR=$SCRIPTDIR/shasums
 INSTALL_DIR=/opt/salt
+PKG_CONFIG=$INSTALL_DIR/bin/pkg-config
 PKG_CONFIG_PATH=$INSTALL_DIR/lib/pkgconfig
-CFLAGS="-I$INSTALL_DIR/include"
-LDFLAGS="-L$INSTALL_DIR/lib"
-if [ "$PYVER" == "2" ]; then
-    PYDIR=$INSTALL_DIR/lib/python2.7
-    PYTHON=$INSTALL_DIR/bin/python
-    PIP=$INSTALL_DIR/bin/pip
-else
-    PYDIR=$INSTALL_DIR/lib/python3.5
-    PYTHON=$INSTALL_DIR/bin/python3
-    PIP=$INSTALL_DIR/bin/pip3
-fi
+PYDIR=$INSTALL_DIR/lib/python$PY_VERSION
+PYTHON=$INSTALL_DIR/bin/python3
+PIP=$INSTALL_DIR/bin/pip3
+
+# needed for python to find pkg-config and have pkg-config properly link
+# the python install to the compiled openssl below.
+export PKG_CONFIG
+export PKG_CONFIG_PATH
 
 ############################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -83,16 +84,14 @@ fi
 # Fink, Brew)
 # Check for Xcode Command Line Tools first
 if [ -d '/Library/Developer/CommandLineTools/usr/bin' ]; then
-    PATH=/Library/Developer/CommandLineTools/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Library/Developer/CommandLineTools/usr/bin/make
 elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
-    PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:$INSTALL_DIR/bin:$PATH
     MAKE=/Applications/Xcode.app/Contents/Developer/usr/bin/make
 else
     echo "No installation of XCode found. This script requires XCode."
+    echo "Try running: xcode-select --install"
     exit -1
 fi
-export PATH
 
 ############################################################################
 # Download Function
@@ -177,8 +176,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium: download\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.17.tar.gz"
-PKGDIR="libsodium-1.0.17"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz"
+PKGDIR="libsodium-1.0.18"
 
 download $PKGURL
 
@@ -200,8 +199,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: zeromq: download\007"
 
-PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.tar.gz"
-PKGDIR="zeromq-4.1.6"
+PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.7/zeromq-4.1.7.tar.gz"
+PKGDIR="zeromq-4.1.7"
 
 download $PKGURL
 
@@ -214,6 +213,7 @@ echo -n -e "\033]0;Build_Env: zeromq: configure\007"
 echo -n -e "\033]0;Build_Env: zeromq: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: zeromq: make check\007"
+# some tests fail occasionally.
 $MAKE check
 echo -n -e "\033]0;Build_Env: zeromq: make install\007"
 $MAKE install
@@ -223,8 +223,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: OpenSSL: download\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2q.tar.gz"
-PKGDIR="openssl-1.0.2q"
+PKGURL="http://openssl.org/source/openssl-1.0.2u.tar.gz"
+PKGDIR="openssl-1.0.2u"
 
 download $PKGURL
 
@@ -233,7 +233,7 @@ echo "Building OpenSSL"
 echo "################################################################################"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: OpenSSL: configure\007"
-./Configure darwin64-x86_64-cc --prefix=$INSTALL_DIR --openssldir=$INSTALL_DIR/openssl
+./Configure darwin64-x86_64-cc shared --prefix=$INSTALL_DIR --openssldir=$INSTALL_DIR/openssl
 echo -n -e "\033]0;Build_Env: OpenSSL: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: OpenSSL: make test\007"
@@ -245,14 +245,15 @@ $MAKE install
 # Download and install Python
 ############################################################################
 echo -n -e "\033]0;Build_Env: Python: download\007"
-
-if [ "$PYVER" == "2" ]; then
-    PKGURL="https://www.python.org/ftp/python/2.7.15/Python-2.7.15.tar.xz"
-    PKGDIR="Python-2.7.15"
+# if $1 is true the we should remove the --enable-optimizations flag to get a quicker
+# build if testing other functions of this script
+if [ "$1" == "true" ]; then
+    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install"
 else
-    PKGURL="https://www.python.org/ftp/python/3.5.4/Python-3.5.4.tar.xz"
-    PKGDIR="Python-3.5.4"
+    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations"
 fi
+PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
+PKGDIR="Python-3.7.4"
 
 download $PKGURL
 
@@ -262,7 +263,8 @@ echo "##########################################################################
 echo "Note there are some test failures"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: Python: configure\007"
-./configure --prefix=$INSTALL_DIR --enable-shared --enable-toolbox-glue --with-ensurepip=install
+# removed --enable-toolbox-glue as no longer a config option
+./configure $PY_CONF
 echo -n -e "\033]0;Build_Env: Python: make\007"
 $MAKE
 echo -n -e "\033]0;Build_Env: Python: make install\007"
@@ -271,7 +273,7 @@ $MAKE install
 ############################################################################
 # upgrade pip
 ############################################################################
-$PIP install --upgrade pip
+$PIP install --upgrade pip wheel
 
 ############################################################################
 # Download and install salt python dependencies
@@ -283,15 +285,9 @@ cd $BUILDDIR
 echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
 echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req.txt \
-             --no-cache-dir
-
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (build_ext)"
-echo "################################################################################"
-$PIP install -r $SRCDIR/pkg/osx/req_ext.txt \
-             --global-option=build_ext \
-             --global-option="-I$INSTALL_DIR/include" \
+$PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
+             --target=$PYDIR/site-packages \
+             --ignore-installed \
              --no-cache-dir
 
 echo "--------------------------------------------------------------------------------"

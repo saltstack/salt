@@ -65,7 +65,8 @@ guidelines should be followed when writing unit tests for Salt's test suite:
 - Each ``raise`` and ``return`` statement needs to be independently tested.
 - Isolate testing functionality. Don't rely on the pass or failure of other,
   separate tests.
-- Test functions should contain only one assertion.
+- Test functions should contain only one assertion, at most, multiple
+  assertions can be made, but against the same outcome.
 - Many Salt execution modules are merely wrappers for distribution-specific
   functionality. If there isn't any logic present in a simple execution module,
   consider writing an :ref:`integration test<integration-tests>` instead of
@@ -97,85 +98,131 @@ Mocking Loader Modules
 
 Salt loader modules use a series of globally available dunder variables,
 ``__salt__``, ``__opts__``, ``__pillar__``, etc. To facilitate testing these
-modules a mixin class was created, ``LoaderModuleMockMixin`` which can be found
-in ``tests/support/mixins.py``. The reason for the existence of this class is
-because historically one would add these dunder
-variables directly on the imported module. This, however, introduces unexpected
-behavior when running the full test suite since those attributes would not be
-removed once we were done testing the module and would therefore leak to other
-modules being tested with unpredictable results. This is the kind of work that
-should be deferred to mock, and that's exactly what this mixin class does.
+modules a helper class was created, ``LoaderModuleMock`` which can be found in
+``tests/support/pytest/loader.py``. The reason for the existence of this class
+is because historically one would add these dunder variables directly on the
+imported module. This, however, introduces unexpected behavior when running the
+full test suite since those attributes would not be removed once we were done
+testing the module and would therefore leak to other modules being tested with
+unpredictable results. This is the kind of work that should be deferred to
+mock, and that's exactly what this class provides.
 
 As an example, if one needs to specify some options which should be available
 to the module being tested one should do:
 
 .. code-block:: python
 
+   import pytest
    import salt.modules.somemodule as somemodule
 
-   class SomeModuleTest(TestCase, LoaderModuleMockMixin):
 
-       def setup_loader_modules(self):
-           return {
-               somemodule: {
-                   '__opts__': {'test': True}
-               }
-           }
+   @pytest.fixture(autouse=True)
+   def setup_loader():
+       setup_loader_modules = {somemodule: {"__opts__": {"test": True}}}
+       with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
+           yield loader_mock
+
 
 Consider this more extensive example from
-``tests/unit/modules/test_libcloud_dns.py``:
+``tests/pytests/unit/beacons/test_sensehat.py``:
 
 .. code-block:: python
 
-   # Import Python Libs
    from __future__ import absolute_import
 
-   # Import Salt Testing Libs
-   from tests.support.mixins import LoaderModuleMockMixin
-   from tests.support.unit import TestCase
-   from tests.support.mock import (
-       patch,
-       MagicMock,
-   )
-   import salt.modules.libcloud_dns as libcloud_dns
+   import pytest
+   import salt.beacons.sensehat as sensehat
+   from tests.support.mock import MagicMock
 
 
-   class MockDNSDriver(object):
-       def __init__(self):
-           pass
-
-
-   def get_mock_driver():
-       return MockDNSDriver()
-
-
-   @patch('salt.modules.libcloud_dns._get_driver',
-          MagicMock(return_value=MockDNSDriver()))
-   class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
-
-       def setup_loader_modules(self):
-           module_globals = {
-               '__salt__': {
-                   'config.option': MagicMock(return_value={
-                       'test': {
-                           'driver': 'test',
-                           'key': '2orgk34kgk34g'
-                       }
-                   })
-               }
+   @pytest.fixture(autouse=True)
+   def setup_loader():
+       setup_loader_modules = {
+           sensehat: {
+               "__salt__": {
+                   "sensehat.get_humidity": MagicMock(return_value=80),
+                   "sensehat.get_temperature": MagicMock(return_value=30),
+                   "sensehat.get_pressure": MagicMock(return_value=1500),
+               },
            }
-           if libcloud_dns.HAS_LIBCLOUD is False:
-               module_globals['sys.modules'] = {'libcloud': MagicMock()}
+       }
+       with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
+           yield loader_mock
 
-           return {libcloud_dns: module_globals}
+
+   def test_non_list_config():
+       config = {}
+
+       ret = sensehat.validate(config)
+
+       assert ret == (False, "Configuration for sensehat beacon must be a list.")
 
 
-What happens in the above example is we mock a call to
-`__salt__['config.option']` to return the configuration needed for the
-execution of the tests. Additionally, if the ``libcloud`` library is not
-available, since that's not actually part of what's being tested, we mocked that
-import by patching ``sys.modules`` when tests are running.
+   def test_empty_config():
+       config = [{}]
 
+       ret = sensehat.validate(config)
+
+       assert ret == (False, "Configuration for sensehat beacon requires sensors.")
+
+
+   def test_sensehat_humidity_match():
+
+       config = [{"sensors": {"humidity": "70%"}}]
+
+       ret = sensehat.validate(config)
+       assert ret == (True, "Valid beacon configuration")
+
+       ret = sensehat.beacon(config)
+       assert ret == [{"tag": "sensehat/humidity", "humidity": 80}]
+
+
+   def test_sensehat_temperature_match():
+
+       config = [{"sensors": {"temperature": 20}}]
+
+       ret = sensehat.validate(config)
+       assert ret == (True, "Valid beacon configuration")
+
+       ret = sensehat.beacon(config)
+       assert ret == [{"tag": "sensehat/temperature", "temperature": 30}]
+
+
+   def test_sensehat_temperature_match_range():
+
+       config = [{"sensors": {"temperature": [20, 29]}}]
+
+       ret = sensehat.validate(config)
+       assert ret == (True, "Valid beacon configuration")
+
+       ret = sensehat.beacon(config)
+       assert ret == [{"tag": "sensehat/temperature", "temperature": 30}]
+
+
+   def test_sensehat_pressure_match():
+
+       config = [{"sensors": {"pressure": "1400"}}]
+
+       ret = sensehat.validate(config)
+       assert ret == (True, "Valid beacon configuration")
+
+       ret = sensehat.beacon(config)
+       assert ret == [{"tag": "sensehat/pressure", "pressure": 1500}]
+
+
+   def test_sensehat_no_match():
+
+       config = [{"sensors": {"pressure": "1600"}}]
+
+       ret = sensehat.validate(config)
+       assert ret == (True, "Valid beacon configuration")
+
+       ret = sensehat.beacon(config)
+       assert ret == []
+
+
+What happens in the above example is we mock several calls of the ``sensehat``
+module to return known expected values to assert against.
 
 Mocking Filehandles
 -------------------
@@ -193,21 +240,16 @@ a separate implementation which has additional functionality.
 
 .. code-block:: python
 
-    from tests.support.unit import TestCase
-    from tests.support.mock import (
-        patch
-        mock_open,
-    )
+    from tests.support.mock import patch, mock_open
 
     import salt.modules.mymod as mymod
 
-    class MyAwesomeTestCase(TestCase):
 
-        def test_something(self):
-            fopen_mock = mock_open(read_data='foo\nbar\nbaz\n')
-            with patch('salt.utils.files.fopen', fopen_mock):
-                result = mymod.myfunc()
-                assert result is True
+    def test_something():
+        fopen_mock = mock_open(read_data="foo\nbar\nbaz\n")
+        with patch("salt.utils.files.fopen", fopen_mock):
+            result = mymod.myfunc()
+            assert result is True
 
 This will force any filehandle opened to mimic a filehandle which, when read,
 produces the specified contents.
@@ -215,14 +257,10 @@ produces the specified contents.
 .. important::
     **String Types**
 
-    When running tests on Python 2, ``mock_open`` will convert any ``unicode``
-    types to ``str`` types to more closely reproduce Python 2 behavior (file
-    reads are always ``str`` types in Python 2, irrespective of mode).
-
-    However, when configuring your read_data, make sure that you are using
-    bytestrings (e.g. ``b'foo\nbar\nbaz\n'``) when the code you are testing is
-    opening a file for binary reading, otherwise the tests will fail on Python
-    3. The mocked filehandles produced by ``mock_open`` will raise a
+    When configuring your read_data, make sure that you are using
+    bytestrings (e.g. ``b"foo\nbar\nbaz\n"``) when the code you are testing is
+    opening a file for binary reading, otherwise the tests will fail.  The
+    mocked filehandles produced by ``mock_open`` will raise a
     :py:obj:`TypeError` if you attempt to read a bytestring when opening for
     non-binary reading, and similarly will not let you read a string when
     opening a file for binary reading. They will also not permit bytestrings to
@@ -245,39 +283,38 @@ those cases, you can pass ``read_data`` as a dictionary:
 
     import textwrap
 
-    from tests.support.unit import TestCase
-    from tests.support.mock import (
-        patch
-        mock_open,
-    )
+    from tests.support.mock import patch, mock_open
 
     import salt.modules.mymod as mymod
 
-    class MyAwesomeTestCase(TestCase):
 
-        def test_something(self):
-            contents = {
-                '/etc/foo.conf': textwrap.dedent('''\
-                    foo
-                    bar
-                    baz
-                    '''),
-                '/etc/b*.conf': textwrap.dedent('''\
-                    one
-                    two
-                    three
-                    '''),
-            }
-            fopen_mock = mock_open(read_data=contents)
-            with patch('salt.utils.files.fopen', fopen_mock):
-                result = mymod.myfunc()
-                assert result is True
+    def test_something():
+        contents = {
+            "/etc/foo.conf": textwrap.dedent(
+                """\
+                foo
+                bar
+                baz
+                """
+            ),
+            "/etc/b*.conf": textwrap.dedent(
+                """\
+                one
+                two
+                three
+                """
+            ),
+        }
+        fopen_mock = mock_open(read_data=contents)
+        with patch("salt.utils.files.fopen", fopen_mock):
+            result = mymod.myfunc()
+            assert result is True
 
 This would make ``salt.utils.files.fopen()`` produce filehandles with different
 contents depending on which file was being opened by the code being tested.
 ``/etc/foo.conf`` and any file matching the pattern ``/etc/b*.conf`` would
 work, while opening any other path would result in a
-:py:obj:`FileNotFoundError` being raised (in Python 2, an ``IOError``).
+:py:obj:`FileNotFoundError` being raised.
 
 Since file patterns are supported, it is possible to use a pattern of ``'*'``
 to define a fallback if no other patterns match the filename being opened. The
@@ -285,8 +322,8 @@ below two ``mock_open`` calls would produce identical results:
 
 .. code-block:: python
 
-    mock_open(read_data='foo\n')
-    mock_open(read_data={'*': 'foo\n'})
+    mock_open(read_data="foo\n")
+    mock_open(read_data={"*": "foo\n"})
 
 .. note::
     Take care when specifying the ``read_data`` as a dictionary, in cases where
@@ -301,9 +338,9 @@ below two ``mock_open`` calls would produce identical results:
     .. code-block:: python
 
         contents = OrderedDict()
-        contents['/etc/bar.conf'] = 'foo\nbar\nbaz\n'
-        contents['/etc/b*.conf'] = IOError(errno.EACCES, 'Permission denied')
-        contents['*'] = 'This is a fallback for files not beginning with "/etc/b"\n'
+        contents["/etc/bar.conf"] = "foo\nbar\nbaz\n"
+        contents["/etc/b*.conf"] = IOError(errno.EACCES, "Permission denied")
+        contents["*"] = 'This is a fallback for files not beginning with "/etc/b"\n'
         fopen_mock = mock_open(read_data=contents)
 
 Raising Exceptions
@@ -315,21 +352,16 @@ Instead of a string, an exception can also be used as the ``read_data``:
 
     import errno
 
-    from tests.support.unit import TestCase
-    from tests.support.mock import (
-        patch
-        mock_open,
-    )
+    from tests.support.mock import patch, mock_open
 
     import salt.modules.mymod as mymod
 
-    class MyAwesomeTestCase(TestCase):
 
-        def test_something(self):
-            exc = IOError(errno.EACCES, 'Permission denied')
-            fopen_mock = mock_open(read_data=exc)
-            with patch('salt.utils.files.fopen', fopen_mock):
-                mymod.myfunc()
+    def test_something():
+        exc = IOError(errno.EACCES, "Permission denied")
+        fopen_mock = mock_open(read_data=exc)
+        with patch("salt.utils.files.fopen", fopen_mock):
+            mymod.myfunc()
 
 The above example would raise the specified exception when any file is opened.
 The expectation would be that ``mymod.myfunc()`` would gracefully handle the
@@ -341,7 +373,7 @@ Multiple File Contents
 
 For cases in which a file is being read more than once, and it is necessary to
 test a function's behavior based on what the file looks like the second (or
-third, etc.) time it is read, just specify the the contents for that file as a
+third, etc.) time it is read, just specify the contents for that file as a
 list. Each time the file is opened, ``mock_open`` will cycle through the list
 and produce a mocked filehandle with the specified contents. For example:
 
@@ -350,42 +382,43 @@ and produce a mocked filehandle with the specified contents. For example:
     import errno
     import textwrap
 
-    from tests.support.unit import TestCase
-    from tests.support.mock import (
-        patch
-        mock_open,
-    )
+    from tests.support.mock import patch, mock_open
 
     import salt.modules.mymod as mymod
 
-    class MyAwesomeTestCase(TestCase):
 
-        def test_something(self):
-            contents = {
-                '/etc/foo.conf': [
-                    textwrap.dedent('''\
-                        foo
-                        bar
-                        '''),
-                    textwrap.dedent('''\
-                        foo
-                        bar
-                        baz
-                        '''),
-                ],
-                '/etc/b*.conf': [
-                    IOError(errno.ENOENT, 'No such file or directory'),
-                    textwrap.dedent('''\
-                        one
-                        two
-                        three
-                        '''),
-                ],
-            }
-            fopen_mock = mock_open(read_data=contents)
-            with patch('salt.utils.files.fopen', fopen_mock):
-                result = mymod.myfunc()
-                assert result is True
+    def test_something():
+        contents = {
+            "/etc/foo.conf": [
+                textwrap.dedent(
+                    """\
+                    foo
+                    bar
+                    """
+                ),
+                textwrap.dedent(
+                    """\
+                    foo
+                    bar
+                    baz
+                    """
+                ),
+            ],
+            "/etc/b*.conf": [
+                IOError(errno.ENOENT, "No such file or directory"),
+                textwrap.dedent(
+                    """\
+                    one
+                    two
+                    three
+                    """
+                ),
+            ],
+        }
+        fopen_mock = mock_open(read_data=contents)
+        with patch("salt.utils.files.fopen", fopen_mock):
+            result = mymod.myfunc()
+            assert result is True
 
 Using this example, the first time ``/etc/foo.conf`` is opened, it will
 simulate a file with the first string in the list as its contents, while the
@@ -424,8 +457,8 @@ so, just add an ``as`` clause to the end of the ``patch`` statement:
 
 .. code-block:: python
 
-    fopen_mock = mock_open(read_data='foo\nbar\nbaz\n')
-    with patch('salt.utils.files.fopen', fopen_mock) as m_open:
+    fopen_mock = mock_open(read_data="foo\nbar\nbaz\n")
+    with patch("salt.utils.files.fopen", fopen_mock) as m_open:
         # do testing here
         ...
         ...
@@ -448,31 +481,25 @@ several useful attributes:
 
   .. code-block:: python
 
-      from tests.support.unit import TestCase
-      from tests.support.mock import (
-          patch
-          mock_open,
-          MockCall,
-      )
+      from tests.support.mock import patch, mock_open, MockCall
 
       import salt.modules.mymod as mymod
 
-      class MyAwesomeTestCase(TestCase):
 
-          def test_something(self):
+      def test_something():
 
-              with patch('salt.utils.files.fopen', mock_open(read_data=b'foo\n')) as m_open:
-                  mymod.myfunc()
-                  # Assert that only two opens attempted
-                  assert m_open.call_count == 2
-                  # Assert that only /etc/foo.conf was opened
-                  assert all(call.args[0] == '/etc/foo.conf' for call in m_open.calls)
-                  # Asser that the first open was for binary read, and the
-                  # second was for binary write.
-                  assert m_open.calls == [
-                      MockCall('/etc/foo.conf', 'rb'),
-                      MockCall('/etc/foo.conf', 'wb'),
-                  ]
+          with patch("salt.utils.files.fopen", mock_open(read_data=b"foo\n")) as m_open:
+              mymod.myfunc()
+              # Assert that only two opens attempted
+              assert m_open.call_count == 2
+              # Assert that only /etc/foo.conf was opened
+              assert all(call.args[0] == "/etc/foo.conf" for call in m_open.calls)
+              # Asser that the first open was for binary read, and the
+              # second was for binary write.
+              assert m_open.calls == [
+                  MockCall("/etc/foo.conf", "rb"),
+                  MockCall("/etc/foo.conf", "wb"),
+              ]
 
   Note that ``MockCall`` is imported from ``tests.support.mock`` in the above
   example. Also, the second assert above is redundant since it is covered in
@@ -527,35 +554,35 @@ Examples
 
 .. code-block:: python
 
-    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+    with patch("salt.utils.files.fopen", mock_open(read_data=contents)) as m_open:
         # Run the code you are unit testing
         mymod.myfunc()
         # Check that only the expected file was opened, and that it was opened
         # only once.
         assert m_open.call_count == 1
-        assert list(m_open.filehandles) == ['/etc/foo.conf']
+        assert list(m_open.filehandles) == ["/etc/foo.conf"]
         # "opens" will be a list of all the mocked filehandles opened
-        opens = m_open.filehandles['/etc/foo.conf']
+        opens = m_open.filehandles["/etc/foo.conf"]
         # Check that we wrote the expected lines ("expected" here is assumed to
         # be a list of strings)
         assert opens[0].write_calls == expected
 
 .. code-block:: python
 
-    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+    with patch("salt.utils.files.fopen", mock_open(read_data=contents)) as m_open:
         # Run the code you are unit testing
         mymod.myfunc()
         # Check that .readlines() was called (remember, it's a Mock)
-        m_open.filehandles['/etc/foo.conf'][0].readlines.assert_called()
+        m_open.filehandles["/etc/foo.conf"][0].readlines.assert_called()
 
 .. code-block:: python
 
-    with patch('salt.utils.files.fopen', mock_open(read_data=contents)) as m_open:
+    with patch("salt.utils.files.fopen", mock_open(read_data=contents)) as m_open:
         # Run the code you are unit testing
         mymod.myfunc()
         # Check that we read the file and also wrote to it
-        m_open.filehandles['/etc/foo.conf'][0].read.assert_called_once()
-        m_open.filehandles['/etc/foo.conf'][1].writelines.assert_called_once()
+        m_open.filehandles["/etc/foo.conf"][0].read.assert_called_once()
+        m_open.filehandles["/etc/foo.conf"][1].writelines.assert_called_once()
 
 .. _`Mock()`: https://github.com/testing-cabal/mock
 
@@ -568,18 +595,20 @@ Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the funct
 being tested and ``<test-name>`` describes the ``raise`` or ``return`` being tested.
 
 Unit tests for ``salt/.../<module>.py`` are contained in a file called
-``tests/unit/.../test_<module>.py``, e.g. the tests for ``salt/modules/fib.py``
-are in ``tests/unit/modules/test_fib.py``.
+``tests/pytests/unit/.../test_<module>.py``, e.g. the tests for
+``salt/modules/alternatives.py``
+are in ``tests/pytests/unit/modules/test_alternatives.py``.
 
 In order for unit tests to get picked up during a run of the unit test suite, each
-unit test file must be prefixed with ``test_`` and each individual test must be
-prepended with the ``test_`` naming syntax, as described above.
+unit test file must be prefixed with ``test_`` and each individual test must
+also be
+prefixed with the ``test_`` naming syntax, as described above.
 
 If a function does not start with ``test_``, then the function acts as a "normal"
 function and is not considered a testing function. It will not be included in the
 test run or testing output. The same principle applies to unit test files that
 do not have the ``test_*.py`` naming syntax. This test file naming convention
-is how the test runner recognizes that a test file contains unit tests.
+is how the test runner recognizes that a test file contains tests.
 
 
 Imports
@@ -589,7 +618,7 @@ Most commonly, the following imports are necessary to create a unit test:
 
 .. code-block:: python
 
-    from tests.support.unit import TestCase
+    import pytest
 
 If you need mock support to your tests, please also import:
 
@@ -602,9 +631,9 @@ Evaluating Truth
 ================
 
 A longer discussion on the types of assertions one can make can be found by
-reading `Python's documentation on unit testing`__.
+reading `PyTests's documentation on assertions`__.
 
-.. __: http://docs.python.org/2/library/unittest.html#unittest.TestCase
+.. __: https://docs.pytest.org/en/latest/assert.html
 
 
 Tests Using Mock Objects
@@ -629,11 +658,13 @@ methods, here presented in pseduo-code in an imaginary execution module called
 .. code-block:: python
 
     def create_user(username):
-        qry = 'CREATE USER {0}'.format(username)
+        qry = "CREATE USER {0}".format(username)
         execute_query(qry)
+
 
     def execute_query(qry):
         # Connect to a database and actually do the query...
+        ...
 
 Here, let's imagine that we want to create a unit test for the `create_user`
 function. In doing so, we want to avoid any calls out to an external system and
@@ -643,13 +674,10 @@ sent to it and return pre-defined values. Therefore, our task is clear -- to
 write a unit test which tests the functionality of `create_user` while also
 replacing 'execute_query' with a mocked function.
 
-To begin, we set up the skeleton of our class much like we did before, but with
+To begin, we set up the skeleton of our test much like we did before, but with
 additional imports for MagicMock:
 
 .. code-block:: python
-
-    # Import Salt Testing libs
-    from tests.support.unit import TestCase
 
     # Import Salt execution module to test
     from salt.modules import db
@@ -657,30 +685,28 @@ additional imports for MagicMock:
     # Import Mock libraries
     from tests.support.mock import MagicMock, patch, call
 
-    # Create test case class and inherit from Salt's customized TestCase
-    # Skip this test case if we don't have access to mock!
-    class DbTestCase(TestCase):
-        def test_create_user(self):
-            # First, we replace 'execute_query' with our own mock function
-            with patch.object(db, 'execute_query', MagicMock()) as db_exq:
+    # Create test case
+    def test_create_user():
+        # First, we replace 'execute_query' with our own mock function
+        with patch.object(db, "execute_query", MagicMock()) as db_exq:
 
-                # Now that the exits are blocked, we can run the function under test.
-                db.create_user('testuser')
+            # Now that the exits are blocked, we can run the function under test.
+            db.create_user("testuser")
 
-                # We could now query our mock object to see which calls were made
-                # to it.
-                ## print db_exq.mock_calls
+            # We could now query our mock object to see which calls were made
+            # to it.
+            ## print db_exq.mock_calls
 
-                # Construct a call object that simulates the way we expected
-                # execute_query to have been called.
-                expected_call = call('CREATE USER testuser')
+            # Construct a call object that simulates the way we expected
+            # execute_query to have been called.
+            expected_call = call("CREATE USER testuser")
 
-                # Compare the expected call with the list of actual calls.  The
-                # test will succeed or fail depending on the output of this
-                # assertion.
-                db_exq.assert_has_calls(expected_call)
+            # Compare the expected call with the list of actual calls.  The
+            # test will succeed or fail depending on the output of this
+            # assertion.
+            db_exq.assert_has_calls(expected_call)
 
-.. __: http://www.voidspace.org.uk/python/mock/index.html
+.. __: https://docs.python.org/3/library/unittest.mock.html
 
 
 Modifying ``__salt__`` In Place
@@ -696,9 +722,9 @@ function into ``__salt__`` that's actually a MagicMock instance.
 .. code-block:: python
 
     def show_patch(self):
-        with patch.dict(my_module.__salt__,
-                        {'function.to_replace': MagicMock()}):
+        with patch.dict(my_module.__salt__, {"function.to_replace": MagicMock()}):
             # From this scope, carry on with testing, with a modified __salt__!
+            ...
 
 
 .. _simple-unit-example:
@@ -731,14 +757,15 @@ we might write the skeleton for testing ``fib.py``:
 
     # Create test case class and inherit from Salt's customized TestCase
     class FibTestCase(TestCase):
-        '''
+        """
         This class contains a set of functions that test salt.modules.fib.
-        '''
+        """
+
         def test_fib(self):
-            '''
+            """
             To create a unit test, we should prefix the name with `test_' so
             that it's recognized by the test runner.
-            '''
+            """
             fib_five = (0, 1, 1, 2, 3)
             self.assertEqual(fib.calculate(5), fib_five)
 
@@ -775,7 +802,7 @@ Consider the following function from salt/modules/linux_sysctl.py.
 .. code-block:: python
 
     def get(name):
-        '''
+        """
         Return a single sysctl parameter for this minion
 
         CLI Example:
@@ -783,9 +810,9 @@ Consider the following function from salt/modules/linux_sysctl.py.
         .. code-block:: bash
 
             salt '*' sysctl.get net.ipv4.ip_forward
-        '''
-        cmd = 'sysctl -n {0}'.format(name)
-        out = __salt__['cmd.run'](cmd)
+        """
+        cmd = "sysctl -n {0}".format(name)
+        out = __salt__["cmd.run"](cmd)
         return out
 
 This function is very simple, comprising only four source lines of code and
@@ -806,24 +833,21 @@ will also redefine the ``__salt__`` dictionary such that it only contains
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import TestCase
-    from tests.support.mock import (
-        MagicMock,
-        patch,
-    )
+    from tests.support.mock import MagicMock, patch
 
 
     class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
-        '''
+        """
         TestCase for salt.modules.linux_sysctl module
-        '''
+        """
 
         def test_get(self):
-            '''
+            """
             Tests the return of get function
-            '''
+            """
             mock_cmd = MagicMock(return_value=1)
-            with patch.dict(linux_sysctl.__salt__, {'cmd.run': mock_cmd}):
-                self.assertEqual(linux_sysctl.get('net.ipv4.ip_forward'), 1)
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
+                self.assertEqual(linux_sysctl.get("net.ipv4.ip_forward"), 1)
 
 Since ``get()`` has only one raise or return statement and that statement is a
 success condition, the test function is simply named ``test_get()``.  As
@@ -848,7 +872,7 @@ salt/modules/linux_sysctl.py source file.
 .. code-block:: python
 
     def assign(name, value):
-        '''
+        """
         Assign a single sysctl parameter for this minion
 
         CLI Example:
@@ -856,31 +880,30 @@ salt/modules/linux_sysctl.py source file.
         .. code-block:: bash
 
             salt '*' sysctl.assign net.ipv4.ip_forward 1
-        '''
+        """
         value = str(value)
-        sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
+        sysctl_file = "/proc/sys/{0}".format(name.replace(".", "/"))
         if not os.path.exists(sysctl_file):
-            raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+            raise CommandExecutionError("sysctl {0} does not exist".format(name))
 
         ret = {}
         cmd = 'sysctl -w {0}="{1}"'.format(name, value)
-        data = __salt__['cmd.run_all'](cmd)
-        out = data['stdout']
-        err = data['stderr']
+        data = __salt__["cmd.run_all"](cmd)
+        out = data["stdout"]
+        err = data["stderr"]
 
         # Example:
         #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
         #    net.ipv4.tcp_rmem = 4096 87380 16777216
-        regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name),
-                                                     re.escape(value)))
+        regex = re.compile(r"^{0}\s+=\s+{1}$".format(re.escape(name), re.escape(value)))
 
-        if not regex.match(out) or 'Invalid argument' in str(err):
-            if data['retcode'] != 0 and err:
+        if not regex.match(out) or "Invalid argument" in str(err):
+            if data["retcode"] != 0 and err:
                 error = err
             else:
                 error = out
-            raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
-        new_name, new_value = out.split(' = ', 1)
+            raise CommandExecutionError("sysctl -w failed: {0}".format(error))
+        new_name, new_value = out.split(" = ", 1)
         ret[new_name] = new_value
         return ret
 
@@ -905,53 +928,63 @@ with.
     # Import Salt Testing Libs
     from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import TestCase
-    from tests.support.mock import (
-        MagicMock,
-        patch,
-    )
+    from tests.support.mock import MagicMock, patch
 
 
     class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
-        '''
+        """
         TestCase for salt.modules.linux_sysctl module
-        '''
+        """
 
-        @patch('os.path.exists', MagicMock(return_value=False))
+        @patch("os.path.exists", MagicMock(return_value=False))
         def test_assign_proc_sys_failed(self):
-            '''
+            """
             Tests if /proc/sys/<kernel-subsystem> exists or not
-            '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
-                   'stdout': 'net.ipv4.ip_forward = 1'}
+            """
+            cmd = {
+                "pid": 1337,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "net.ipv4.ip_forward = 1",
+            }
             mock_cmd = MagicMock(return_value=cmd)
-            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertRaises(CommandExecutionError,
-                                  linux_sysctl.assign,
-                                  'net.ipv4.ip_forward', 1)
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
+                self.assertRaises(
+                    CommandExecutionError, linux_sysctl.assign, "net.ipv4.ip_forward", 1
+                )
 
-        @patch('os.path.exists', MagicMock(return_value=True))
+        @patch("os.path.exists", MagicMock(return_value=True))
         def test_assign_cmd_failed(self):
-            '''
+            """
             Tests if the assignment was successful or not
-            '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr':
-                   'sysctl: setting key "net.ipv4.ip_forward": Invalid argument',
-                   'stdout': 'net.ipv4.ip_forward = backward'}
+            """
+            cmd = {
+                "pid": 1337,
+                "retcode": 0,
+                "stderr": 'sysctl: setting key "net.ipv4.ip_forward": Invalid argument',
+                "stdout": "net.ipv4.ip_forward = backward",
+            }
             mock_cmd = MagicMock(return_value=cmd)
-            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertRaises(CommandExecutionError,
-                                  linux_sysctl.assign,
-                                  'net.ipv4.ip_forward', 'backward')
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
+                self.assertRaises(
+                    CommandExecutionError,
+                    linux_sysctl.assign,
+                    "net.ipv4.ip_forward",
+                    "backward",
+                )
 
-        @patch('os.path.exists', MagicMock(return_value=True))
+        @patch("os.path.exists", MagicMock(return_value=True))
         def test_assign_success(self):
-            '''
+            """
             Tests the return of successful assign function
-            '''
-            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
-                   'stdout': 'net.ipv4.ip_forward = 1'}
-            ret = {'net.ipv4.ip_forward': '1'}
+            """
+            cmd = {
+                "pid": 1337,
+                "retcode": 0,
+                "stderr": "",
+                "stdout": "net.ipv4.ip_forward = 1",
+            }
+            ret = {"net.ipv4.ip_forward": "1"}
             mock_cmd = MagicMock(return_value=cmd)
-            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-                self.assertEqual(linux_sysctl.assign(
-                    'net.ipv4.ip_forward', 1), ret)
+            with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
+                self.assertEqual(linux_sysctl.assign("net.ipv4.ip_forward", 1), ret)

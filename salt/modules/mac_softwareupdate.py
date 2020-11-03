@@ -1,92 +1,116 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Support for the softwareupdate command on MacOS.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
 
+import os
 
 # Import python libs
 import re
-import os
 
 # import salt libs
 import salt.utils.data
 import salt.utils.files
-import salt.utils.path
 import salt.utils.mac_utils
+import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-__virtualname__ = 'softwareupdate'
+__virtualname__ = "softwareupdate"
 
 
 def __virtual__():
-    '''
+    """
     Only for MacOS
-    '''
+    """
     if not salt.utils.platform.is_darwin():
-        return (False, 'The softwareupdate module could not be loaded: '
-                       'module only works on MacOS systems.')
+        return (
+            False,
+            "The softwareupdate module could not be loaded: "
+            "module only works on MacOS systems.",
+        )
 
     return __virtualname__
 
 
-def _get_available(recommended=False, restart=False):
-    '''
+def _get_available(recommended=False, restart=False, shut_down=False):
+    """
     Utility function to get all available update packages.
 
     Sample return date:
     { 'updatename': '1.2.3-45', ... }
-    '''
-    cmd = ['softwareupdate', '--list']
+    """
+    cmd = ["softwareupdate", "--list"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    # rexp parses lines that look like the following:
-    #    * Safari6.1.2MountainLion-6.1.2
-    #         Safari (6.1.2), 51679K [recommended]
-    #    - iCal-1.0.2
-    #         iCal, 1.0.2, 6520K
-    rexp = re.compile('(?m)^   [*|-] '
-                      r'([^ ].*)[\r\n].*\(([^\)]+)')
+    if __grains__["osrelease_info"][0] > 10 or __grains__["osrelease_info"][1] >= 15:
+        # Example output:
+        # Software Update Tool
+        #
+        # Finding available software
+        # Software Update found the following new or updated software:
+        # * Label: Command Line Tools beta 5 for Xcode-11.0
+        #     Title: Command Line Tools beta 5 for Xcode, Version: 11.0, Size: 224804K, Recommended: YES,
+        # * Label: macOS Catalina Developer Beta-6
+        #     Title: macOS Catalina Public Beta, Version: 5, Size: 3084292K, Recommended: YES, Action: restart,
+        # * Label: BridgeOSUpdateCustomer
+        #     Title: BridgeOSUpdateCustomer, Version: 10.15.0.1.1.1560926689, Size: 390674K, Recommended: YES, Action: shut down,
+        # - Label: iCal-1.0.2
+        #     Title: iCal, Version: 1.0.2, Size: 6520K,
+        rexp = re.compile(
+            r"(?m)"  # Turn on multiline matching
+            r"^\s*[*-] Label: "  # Name lines start with * or - and "Label: "
+            r"(?P<name>[^ ].*)[\r\n]"  # Capture the rest of that line; this is the update name.
+            r".*Version: (?P<version>[^,]*), "  # Grab the version number.
+            r"Size: (?P<size>[^,]*),\s*"  # Grab the size; unused at this time.
+            r"(?P<recommended>Recommended: YES,)?\s*"  # Optionally grab the recommended flag.
+            r"(?P<action>Action: (?:restart|shut down),)?"  # Optionally grab an action.
+        )
+    else:
+        # Example output:
+        # Software Update Tool
+        #
+        # Finding available software
+        # Software Update found the following new or updated software:
+        #    * Command Line Tools (macOS Mojave version 10.14) for Xcode-10.3
+        #        Command Line Tools (macOS Mojave version 10.14) for Xcode (10.3), 199140K [recommended]
+        #    * macOS 10.14.1 Update
+        #        macOS 10.14.1 Update (10.14.1), 199140K [recommended] [restart]
+        #    * BridgeOSUpdateCustomer
+        #        BridgeOSUpdateCustomer (10.14.4.1.1.1555388607), 328394K, [recommended] [shut down]
+        #    - iCal-1.0.2
+        #        iCal, (1.0.2), 6520K
+        rexp = re.compile(
+            r"(?m)"  # Turn on multiline matching
+            r"^\s+[*-] "  # Name lines start with 3 spaces and either a * or a -.
+            r"(?P<name>.*)[\r\n]"  # The rest of that line is the name.
+            r".*\((?P<version>[^ \)]*)"  # Capture the last parenthesized value on the next line.
+            r"[^\r\n\[]*(?P<recommended>\[recommended\])?\s?"  # Capture [recommended] if there.
+            r"(?P<action>\[(?:restart|shut down)\])?"  # Capture an action if present.
+        )
 
+    # Build a list of lambda funcs to apply to matches to filter based
+    # on our args.
+    conditions = []
     if salt.utils.data.is_true(recommended):
-        # rexp parses lines that look like the following:
-        #    * Safari6.1.2MountainLion-6.1.2
-        #         Safari (6.1.2), 51679K [recommended]
-        rexp = re.compile('(?m)^   [*] '
-                          r'([^ ].*)[\r\n].*\(([^\)]+)')
+        conditions.append(lambda m: m.group("recommended"))
+    if salt.utils.data.is_true(restart):
+        conditions.append(
+            lambda m: "restart" in (m.group("action") or "")
+        )  # pylint: disable=superfluous-parens
+    if salt.utils.data.is_true(shut_down):
+        conditions.append(
+            lambda m: "shut down" in (m.group("action") or "")
+        )  # pylint: disable=superfluous-parens
 
-    keys = ['name', 'version']
-    _get = lambda l, k: l[keys.index(k)]
-
-    updates = rexp.findall(out)
-
-    ret = {}
-    for line in updates:
-        name = _get(line, 'name')
-        version_num = _get(line, 'version')
-        ret[name] = version_num
-
-    if not salt.utils.data.is_true(restart):
-        return ret
-
-    # rexp parses lines that look like the following:
-    #    * Safari6.1.2MountainLion-6.1.2
-    #         Safari (6.1.2), 51679K [recommended] [restart]
-    rexp1 = re.compile('(?m)^   [*|-] '
-                       r'([^ ].*)[\r\n].*restart*')
-
-    restart_updates = rexp1.findall(out)
-    ret_restart = {}
-    for update in ret:
-        if update in restart_updates:
-            ret_restart[update] = ret[update]
-
-    return ret_restart
+    return {
+        m.group("name"): m.group("version")
+        for m in rexp.finditer(out)
+        if all(f(m) for f in conditions)
+    }
 
 
-def list_available(recommended=False, restart=False):
-    '''
+def list_available(recommended=False, restart=False, shut_down=False):
+    """
     List all available updates.
 
     :param bool recommended: Show only recommended updates.
@@ -101,12 +125,12 @@ def list_available(recommended=False, restart=False):
     .. code-block:: bash
 
        salt '*' softwareupdate.list_available
-    '''
-    return _get_available(recommended, restart)
+    """
+    return _get_available(recommended, restart, shut_down)
 
 
 def ignore(name):
-    '''
+    """
     Ignore a specific program update. When an update is ignored the '-' and
     version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
@@ -123,18 +147,18 @@ def ignore(name):
     .. code-block:: bash
 
        salt '*' softwareupdate.ignore <update-name>
-    '''
+    """
     # remove everything after and including the '-' in the updates name.
-    to_ignore = name.rsplit('-', 1)[0]
+    to_ignore = name.rsplit("-", 1)[0]
 
-    cmd = ['softwareupdate', '--ignore', to_ignore]
+    cmd = ["softwareupdate", "--ignore", to_ignore]
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return to_ignore in list_ignored()
 
 
 def list_ignored():
-    '''
+    """
     List all updates that have been ignored. Ignored updates are shown
     without the '-' and version number at the end, this is how the
     softwareupdate command works.
@@ -147,22 +171,21 @@ def list_ignored():
     .. code-block:: bash
 
        salt '*' softwareupdate.list_ignored
-    '''
-    cmd = ['softwareupdate', '--list', '--ignore']
+    """
+    cmd = ["softwareupdate", "--list", "--ignore"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
     # or:
     #     Safari6.1.2MountainLion-6.1.2
-    rexp = re.compile('(?m)^    ["]?'
-                      r'([^,|\s].*[^"|\n|,])[,|"]?')
+    rexp = re.compile('(?m)^    ["]?' r'([^,|\s].*[^"|\n|,])[,|"]?')
 
     return rexp.findall(out)
 
 
 def reset_ignored():
-    '''
+    """
     Make sure the ignored updates are not ignored anymore,
     returns a list of the updates that are no longer ignored.
 
@@ -174,15 +197,15 @@ def reset_ignored():
     .. code-block:: bash
 
        salt '*' softwareupdate.reset_ignored
-    '''
-    cmd = ['softwareupdate', '--reset-ignored']
+    """
+    cmd = ["softwareupdate", "--reset-ignored"]
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return list_ignored() == []
 
 
 def schedule_enabled():
-    '''
+    """
     Check the status of automatic update scheduling.
 
     :return: True if scheduling is enabled, False if disabled
@@ -194,17 +217,17 @@ def schedule_enabled():
     .. code-block:: bash
 
        salt '*' softwareupdate.schedule_enabled
-    '''
-    cmd = ['softwareupdate', '--schedule']
+    """
+    cmd = ["softwareupdate", "--schedule"]
     ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     enabled = ret.split()[-1]
 
-    return salt.utils.mac_utils.validate_enabled(enabled) == 'on'
+    return salt.utils.mac_utils.validate_enabled(enabled) == "on"
 
 
 def schedule_enable(enable):
-    '''
+    """
     Enable/disable automatic update scheduling.
 
     :param enable: True/On/Yes/1 to turn on automatic updates. False/No/Off/0
@@ -221,19 +244,21 @@ def schedule_enable(enable):
     .. code-block:: bash
 
        salt '*' softwareupdate.schedule_enable on|off
-    '''
+    """
     status = salt.utils.mac_utils.validate_enabled(enable)
 
-    cmd = ['softwareupdate',
-           '--schedule',
-           salt.utils.mac_utils.validate_enabled(status)]
+    cmd = [
+        "softwareupdate",
+        "--schedule",
+        salt.utils.mac_utils.validate_enabled(status),
+    ]
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return salt.utils.mac_utils.validate_enabled(schedule_enabled()) == status
 
 
 def update_all(recommended=False, restart=True):
-    '''
+    """
     Install all available updates. Returns a dictionary containing the name
     of the update and the status of its installation.
 
@@ -254,14 +279,14 @@ def update_all(recommended=False, restart=True):
     .. code-block:: bash
 
        salt '*' softwareupdate.update_all
-    '''
+    """
     to_update = _get_available(recommended, restart)
 
     if not to_update:
         return {}
 
     for _update in to_update:
-        cmd = ['softwareupdate', '--install', _update]
+        cmd = ["softwareupdate", "--install", _update]
         salt.utils.mac_utils.execute_return_success(cmd)
 
     ret = {}
@@ -274,7 +299,7 @@ def update_all(recommended=False, restart=True):
 
 
 def update(name):
-    '''
+    """
     Install a named update.
 
     :param str name: The name of the of the update to install.
@@ -287,18 +312,18 @@ def update(name):
     .. code-block:: bash
 
        salt '*' softwareupdate.update <update-name>
-    '''
+    """
     if not update_available(name):
-        raise SaltInvocationError('Update not available: {0}'.format(name))
+        raise SaltInvocationError("Update not available: {}".format(name))
 
-    cmd = ['softwareupdate', '--install', name]
+    cmd = ["softwareupdate", "--install", name]
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return not update_available(name)
 
 
 def update_available(name):
-    '''
+    """
     Check whether or not an update is available with a given name.
 
     :param str name: The name of the update to look for
@@ -312,12 +337,12 @@ def update_available(name):
 
        salt '*' softwareupdate.update_available <update-name>
        salt '*' softwareupdate.update_available "<update with whitespace>"
-    '''
+    """
     return name in _get_available()
 
 
 def list_downloads():
-    '''
+    """
     Return a list of all updates that have been downloaded locally.
 
     :return: A list of updates that have been downloaded
@@ -328,29 +353,31 @@ def list_downloads():
     .. code-block:: bash
 
        salt '*' softwareupdate.list_downloads
-    '''
+    """
     outfiles = []
-    for root, subFolder, files in salt.utils.path.os_walk('/Library/Updates'):
+    for root, subFolder, files in salt.utils.path.os_walk("/Library/Updates"):
         for f in files:
             outfiles.append(os.path.join(root, f))
 
     dist_files = []
     for f in outfiles:
-        if f.endswith('.dist'):
+        if f.endswith(".dist"):
             dist_files.append(f)
 
     ret = []
     for update in _get_available():
         for f in dist_files:
             with salt.utils.files.fopen(f) as fhr:
-                if update.rsplit('-', 1)[0] in salt.utils.stringutils.to_unicode(fhr.read()):
+                if update.rsplit("-", 1)[0] in salt.utils.stringutils.to_unicode(
+                    fhr.read()
+                ):
                     ret.append(update)
 
     return ret
 
 
 def download(name):
-    '''
+    """
     Download a named update so that it can be installed later with the
     ``update`` or ``update_all`` functions
 
@@ -364,21 +391,21 @@ def download(name):
     .. code-block:: bash
 
        salt '*' softwareupdate.download <update name>
-    '''
+    """
     if not update_available(name):
-        raise SaltInvocationError('Update not available: {0}'.format(name))
+        raise SaltInvocationError("Update not available: {}".format(name))
 
     if name in list_downloads():
         return True
 
-    cmd = ['softwareupdate', '--download', name]
+    cmd = ["softwareupdate", "--download", name]
     salt.utils.mac_utils.execute_return_success(cmd)
 
     return name in list_downloads()
 
 
 def download_all(recommended=False, restart=True):
-    '''
+    """
     Download all available updates so that they can be installed later with the
     ``update`` or ``update_all`` functions. It returns a list of updates that
     are now downloaded.
@@ -397,7 +424,7 @@ def download_all(recommended=False, restart=True):
     .. code-block:: bash
 
        salt '*' softwareupdate.download_all
-    '''
+    """
     to_download = _get_available(recommended, restart)
 
     for name in to_download:
@@ -407,7 +434,7 @@ def download_all(recommended=False, restart=True):
 
 
 def get_catalog():
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Get the current catalog being used for update lookups. Will return a url if
@@ -422,26 +449,24 @@ def get_catalog():
     .. code-block:: bash
 
         salt '*' softwareupdates.get_catalog
-    '''
-    cmd = ['defaults',
-           'read',
-           '/Library/Preferences/com.apple.SoftwareUpdate.plist']
+    """
+    cmd = ["defaults", "read", "/Library/Preferences/com.apple.SoftwareUpdate.plist"]
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    if 'AppleCatalogURL' in out:
-        cmd.append('AppleCatalogURL')
+    if "AppleCatalogURL" in out:
+        cmd.append("AppleCatalogURL")
         out = salt.utils.mac_utils.execute_return_result(cmd)
         return out
-    elif 'CatalogURL' in out:
-        cmd.append('CatalogURL')
+    elif "CatalogURL" in out:
+        cmd.append("CatalogURL")
         out = salt.utils.mac_utils.execute_return_result(cmd)
         return out
     else:
-        return 'Default'
+        return "Default"
 
 
 def set_catalog(url):
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Set the Software Update Catalog to the URL specified
@@ -456,11 +481,11 @@ def set_catalog(url):
     .. code-block:: bash
 
         salt '*' softwareupdates.set_catalog http://swupd.local:8888/index.sucatalog
-    '''
+    """
     # This command always returns an error code, though it completes
     # successfully. Success will be determined by making sure get_catalog
     # returns the passed url
-    cmd = ['softwareupdate', '--set-catalog', url]
+    cmd = ["softwareupdate", "--set-catalog", url]
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
@@ -471,7 +496,7 @@ def set_catalog(url):
 
 
 def reset_catalog():
-    '''
+    """
     .. versionadded:: 2016.3.0
 
     Reset the Software Update Catalog to the default.
@@ -484,15 +509,15 @@ def reset_catalog():
     .. code-block:: bash
 
         salt '*' softwareupdates.reset_catalog
-    '''
+    """
     # This command always returns an error code, though it completes
     # successfully. Success will be determined by making sure get_catalog
     # returns 'Default'
-    cmd = ['softwareupdate', '--clear-catalog']
+    cmd = ["softwareupdate", "--clear-catalog"]
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         pass
 
-    return get_catalog() == 'Default'
+    return get_catalog() == "Default"
