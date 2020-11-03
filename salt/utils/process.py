@@ -826,15 +826,23 @@ class ProcessManager:
 
 
 class Process(multiprocessing.Process, NewStyleClassMixin):
+    def __new__(cls, *args, **kwargs):
+        # We implement __new__ because we want to capture the passed in *args and **kwargs
+        # in order to remove the need for each class to implement __getstate__ and __setstate__
+        # which is required on windows
+        instance = super().__new__(cls)
+
+        if salt.utils.platform.is_windows():
+            # On Windows, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
+            instance._args_for_getstate = copy.copy(args)
+            instance._kwargs_for_getstate = copy.copy(kwargs)
+        return instance
+
     def __init__(self, *args, **kwargs):
         log_port = kwargs.pop("log_port", None)
         log_level = kwargs.pop("log_level", None)
         super().__init__(*args, **kwargs)
-        if salt.utils.platform.is_windows():
-            # On Windows, subclasses should call super if they define
-            # __setstate__ and/or __getstate__
-            self._args_for_getstate = copy.copy(args)
-            self._kwargs_for_getstate = copy.copy(kwargs)
         self.log_port = log_port
         if self.log_port is None:
             self.log_port = salt.log.setup.get_multiprocessing_logging_port()
@@ -870,8 +878,6 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
         kwargs = state["kwargs"]
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
-        self._after_fork_methods = self._after_fork_methods
-        self._finalize_methods = self._finalize_methods
 
     def __getstate__(self):
         args = self._args_for_getstate
@@ -880,12 +886,7 @@ class Process(multiprocessing.Process, NewStyleClassMixin):
             kwargs["log_port"] = self.log_port
         if "log_level" not in kwargs:
             kwargs["log_level"] = self.log_level
-        return {
-            "args": args,
-            "kwargs": kwargs,
-            "_after_fork_methods": self._after_fork_methods,
-            "_finalize_methods": self._finalize_methods,
-        }
+        return {"args": args, "kwargs": kwargs}
 
     def join(self, *args, **kwargs):  # pylint: disable=arguments-differ
         super().join(*args, **kwargs)
