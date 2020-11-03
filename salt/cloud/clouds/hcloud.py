@@ -412,7 +412,7 @@ def destroy(name):
         "destroyed instance",
         "salt/cloud/{0}/destroyed".format(name),
         args={
-            "name": name
+            "name": name,
             "ip_address": server.public_net.ipv4.ip
         },
         sock_dir=__opts__["sock_dir"],
