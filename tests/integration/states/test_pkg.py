@@ -673,7 +673,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(tag, ret)
             self.assertIn("changes", ret[tag])
             self.assertIn(target, ret[tag]["changes"])
-            self.assertIn("Package units is not being held.", ret[tag]["comment"])
+            self.assertIn("held", ret[tag]["comment"])
         finally:
             # Clean up, unhold package and remove
             ret = self.run_state("pkg.removed", name=target)
