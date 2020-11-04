@@ -169,9 +169,11 @@ class SysLogHandler(
             exc_type, exc, exc_traceback = sys.exc_info()
             try:
                 if exc_type.__name__ in "FileNotFoundError":
-                    sys.stderr.write(
+                    print(
                         "[WARNING ] The log_file does not exist. Logging not "
-                        "setup correctly or syslog service not started.\n"
+                        "setup correctly or syslog service not started.",
+                        file=sys.stderr,
+                        flush=True,
                     )
                     handled = True
             finally:
@@ -214,9 +216,11 @@ class RotatingFileHandler(
                     and exc.winerror == 32
                 ):
                     if self.level <= logging.WARNING:
-                        sys.stderr.write(
+                        print(
                             '[WARNING ] Unable to rotate the log file "{}" '
-                            "because it is in use\n".format(self.baseFilename)
+                            "because it is in use".format(self.baseFilename),
+                            file=sys.stderr,
+                            flush=True,
                         )
                     handled = True
             finally:
@@ -278,9 +282,11 @@ if sys.version_info < (3, 2):
             try:
                 self.queue.put_nowait(record)
             except _queue.Full:
-                sys.stderr.write(
+                print(
                     "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log'.format(record)
+                    'unable to write "{}" to log'.format(record),
+                    file=sys.stderr,
+                    flush=True,
                 )
 
         def prepare(self, record):
@@ -349,9 +355,11 @@ elif sys.version_info < (3, 7):
             try:
                 self.queue.put_nowait(record)
             except _queue.Full:
-                sys.stderr.write(
+                print(
                     "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log.\n'.format(record)
+                    'unable to write "{}" to log.'.format(record),
+                    file=sys.stderr,
+                    flush=True,
                 )
 
         def prepare(self, record):
@@ -408,9 +416,11 @@ else:
             try:
                 self.queue.put_nowait(record)
             except _queue.Full:
-                sys.stderr.write(
+                print(
                     "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log.\n'.format(record)
+                    'unable to write "{}" to log.'.format(record),
+                    file=sys.stderr,
+                    flush=True,
                 )
 
 
@@ -459,18 +469,25 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         if self.in_proxy is not None:
             return
 
+        # Register self.stop with atexit, though, it won't get called if this is used
+        # in a multiprocessing.Process since it bypasses python's exit machinery by
+        # catching SystemExit and then calling multiprocessing.utils._exit_function
+        # which in turn calls the multiprocessing process instance terminate() method
+        # and, atexit, does not run with signals. Nonetheless, doesn't hurt to have
+        # this register call
         atexit.register(self.stop)
         context = in_proxy = None
         try:
             context = zmq.Context()
             self.context = context
         except zmq.ZMQError as exc:
-            sys.stderr.write(
-                "Failed to create the ZMQ Context: {}\n{}\n".format(
+            print(
+                "Failed to create the ZMQ Context: {}\n{}".format(
                     exc, traceback.format_exc()
-                )
+                ),
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
 
         # Let's start the proxy thread
         socket_bind_event = threading.Event()
@@ -481,8 +498,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         self.proxy_thread.start()
         # Now that we discovered which random port to use, let's continue with the setup
         if socket_bind_event.wait(5) is not True:
-            sys.stderr.write("Failed to bind the ZMQ socket PAIR\n")
-            sys.stderr.flush()
+            print("Failed to bind the ZMQ socket PAIR", file=sys.stderr, flush=True)
             context.term()
             return
 
@@ -495,14 +511,15 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         except zmq.ZMQError as exc:
             if in_proxy is not None:
                 in_proxy.close(1000)
-            sys.stderr.write(
-                "Failed to bind the ZMQ PAIR socket: {}\n{}\n".format(
+            print(
+                "Failed to bind the ZMQ PAIR socket: {}\n{}".format(
                     exc, traceback.format_exc()
-                )
+                ),
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
 
-    def stop(self):
+    def stop(self, call_close=True):
         if self._exiting:
             return
 
@@ -518,15 +535,23 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             if self.proxy_thread is not None and self.proxy_thread.is_alive():
                 self.proxy_thread.join(5)
         except Exception as exc:  # pylint: disable=broad-except
-            sys.stderr.write(
-                "Failed to terminate ZMQHandler: {}\n{}\n".format(
+            print(
+                "Failed to terminate ZMQHandler: {}\n{}".format(
                     exc, traceback.format_exc()
-                )
+                ),
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
             raise
         finally:
             self.context = self.in_proxy = self.proxy_address = self.proxy_thread = None
+        if call_close:
+            self.close(call_stop=False)
+
+    def close(self, call_stop=True):  # pylint: disable=arguments-differ
+        if call_stop:
+            self.stop(call_close=False)
+        super().close()
 
     def format(self, record):
         msg = super().format(record)
@@ -570,11 +595,12 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             return
         self.start()
         if self.in_proxy is None:
-            sys.stderr.write(
+            print(
                 "Not sending log message over the wire because "
-                "we were unable to properly configure a ZMQ PAIR socket.\n"
+                "we were unable to properly configure a ZMQ PAIR socket.",
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
             return
         try:
             msg = self.prepare(record)
@@ -596,12 +622,13 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             if out_proxy is not None:
                 out_proxy.close(1000)
             context.term()
-            sys.stderr.write(
-                "Failed to bind the ZMQ PAIR socket: {}\n{}\n".format(
+            print(
+                "Failed to bind the ZMQ PAIR socket: {}\n{}".format(
                     exc, traceback.format_exc()
-                )
+                ),
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
             return
 
         try:
@@ -612,12 +639,13 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             if pusher is not None:
                 pusher.close(1000)
             context.term()
-            sys.stderr.write(
-                "Failed to connect the ZMQ PUSH socket: {}\n{}\n".format(
+            print(
+                "Failed to connect the ZMQ PUSH socket: {}\n{}".format(
                     exc, traceback.format_exc()
-                )
+                ),
+                file=sys.stderr,
+                flush=True,
             )
-            sys.stderr.flush()
 
         sentinel = msgpack.dumps(None)
         socket_bind_event.set()
@@ -630,12 +658,13 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
                     break
                 pusher.send(msg)
             except zmq.ZMQError as exc:
-                sys.stderr.write(
-                    "Failed to proxy log message: {}\n{}\n".format(
+                print(
+                    "Failed to proxy log message: {}\n{}".format(
                         exc, traceback.format_exc()
-                    )
+                    ),
+                    file=sys.stderr,
+                    flush=True,
                 )
-                sys.stderr.flush()
                 break
 
         # Close the receiving end of the PAIR proxy socket

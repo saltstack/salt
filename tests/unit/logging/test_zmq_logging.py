@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
-import sys
 import threading
+import time
 
 import salt.utils.msgpack
 import zmq
@@ -9,13 +9,25 @@ from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.unit import TestCase
 
+log = logging.getLogger(__name__)
+
 
 def logging_target(running_event, host, port):
+    # It should be running already, but let's wait nonetheless
     running_event.wait(10)
-    log = logging.getLogger(__name__)
-    log.handlers[:] = []
-    handler = salt._logging.handlers.ZMQHandler(host=host, port=port)
-    log.addHandler(handler)
+    try:
+        # Remove any other log handlers inherited
+        logging._acquireLock()  # pylint: disable=protected-access
+        logging.root.handlers[:] = []
+        handler = salt._logging.handlers.ZMQHandler(host=host, port=port)
+        handler.setLevel(logging.DEBUG)
+        logging.root.addHandler(handler)
+    finally:
+        logging._releaseLock()
+
+    _log = logging.getLogger("test_zmq_logging")
+    _log.setLevel(logging.DEBUG)
+    _log.debug("Go! Handlers: %s", logging.root.handlers)
 
     def foo():
         # This will raise an exception
@@ -28,12 +40,11 @@ def logging_target(running_event, host, port):
     try:
         foo()
     except AttributeError:
-        log.exception("TEST-ü")
+        _log.exception("TEST-ü")
     finally:
-        log.removeHandler(handler)
-        # Calling stop will flush any remaining unsent messages
+        # See the comment on ZMQHandler.start on why we have to call stop
+        # explicitly because this code is running in a multiprocessing.Process
         handler.stop()
-        sys.exit(0)
 
 
 class TestZMQLogging(TestCase):
@@ -55,23 +66,25 @@ class TestZMQLogging(TestCase):
         self.running_event.wait(15)
 
     def send_consumer_shutdown(self):
+        log.warning("Sending the stop sentinel to the thread processing the ZMQ logs")
         context = zmq.Context()
         sender = context.socket(zmq.PUSH)
         sender.connect("tcp://{}:{}".format(self.host, self.port))
         try:
             sender.send(salt.utils.msgpack.dumps(None))
+            iteration = 0
+            while self.running_event.is_set():
+                iteration += 1
+                if iteration >= 10:
+                    log.warning("The stop sentinel wasn't received yet")
+                time.sleep(0.5)
         finally:
-            sender.close(1500)
+            sender.close(1)
             context.term()
 
     def tearDown(self):
         self.send_consumer_shutdown()
-        self.running_event.clear()
-        # Wait 5 seconds for the process to terminate
-        self.log_consumer.join(5)
-        if self.log_consumer.exitcode is None:
-            # The process did not finish by itself.
-            self.log_consumer.kill()
+        self.log_consumer.join()
 
     def test_zmq_logging(self):
         with TstSuiteLoggingHandler(level=logging.ERROR) as handler:
@@ -79,7 +92,13 @@ class TestZMQLogging(TestCase):
                 target=logging_target, args=(self.running_event, self.host, self.port),
             )
             proc.start()
-            proc.join()
+            proc.join(5)
+            if proc.exitcode is None:
+                log.warning(
+                    "The process being tested did not exit after 5 seconds. Killing it."
+                )
+                # 5 seconds was more than enough for the process to exit cleanly. Kill it.
+                proc.terminate()
             assert len(handler.messages) == 1, len(handler.messages)
             record = handler.messages[0]
             assert "TEST-ü" in record
