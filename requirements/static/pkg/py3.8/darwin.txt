@@ -5,14 +5,13 @@
 #    pip-compile -o requirements/static/pkg/py3.8/darwin.txt -v pkg/osx/req_pyobjc.txt requirements/darwin.txt requirements/static/pkg/darwin.in
 #
 apache-libcloud==2.4.0
-asn1crypto==1.3.0         # via cryptography
 certifi==2020.6.20        # via requests
 cffi==1.12.2              # via cryptography
 chardet==3.0.4            # via requests
 cheroot==8.3.0            # via cherrypy
 cherrypy==17.4.1
 contextlib2==0.6.0.post1  # via cherrypy
-cryptography==2.6.1
+cryptography==3.2
 distro==1.5.0
 gitdb2==2.0.6             # via gitpython
 gitpython==2.1.15
