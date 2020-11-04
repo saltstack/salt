@@ -182,6 +182,7 @@ class MockSourceList:
     def save(self):
         pass
 
+
 class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.aptpkg
