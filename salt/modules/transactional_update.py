@@ -988,8 +988,8 @@ def call(function, *args, **kwargs):
             if isinstance(local, dict) and "retcode" in local:
                 __context__["retcode"] = local["retcode"]
             return local.get("return", data)
-        except (KeyError, ValueError):
-            return {"result": False, "comment": ret_stdout}
+        except ValueError:
+            return {"result": False, "retcode": 1, "comment": ret_stdout}
     finally:
         __utils__["files.rm_rf"](thin_dest_path)
 

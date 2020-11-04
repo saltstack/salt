@@ -370,7 +370,11 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tu.__utils__, utils_mock), patch.dict(
             tu.__opts__, opts_mock
         ), patch.dict(tu.__salt__, salt_mock):
-            assert tu.call("test.ping") == {"result": False, "comment": "Error"}
+            assert tu.call("test.ping") == {
+                "result": False,
+                "retcode": 1,
+                "comment": "Error",
+            }
 
             utils_mock["thin.gen_thin"].assert_called_once()
             salt_mock["config.option"].assert_called()
@@ -422,7 +426,11 @@ class TransactionalUpdateTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tu.__utils__, utils_mock), patch.dict(
             tu.__opts__, opts_mock
         ), patch.dict(tu.__salt__, salt_mock):
-            assert tu.call("test.ping") == {"result": False, "comment": "Not found"}
+            assert tu.call("test.ping") == {
+                "result": False,
+                "retcode": 1,
+                "comment": "Not found",
+            }
 
             utils_mock["thin.gen_thin"].assert_called_once()
             salt_mock["config.option"].assert_called()
