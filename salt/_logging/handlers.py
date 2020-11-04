@@ -418,9 +418,9 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
 
     # We offload sending the log records to the consumer to a separate
     # thread because PUSH socket's WILL block if the receiving end can't
-    # receive fast engough, thus, also blocking the main thread.
+    # receive fast enough, thus, also blocking the main thread.
     #
-    # To achive this, we create an inproc zmq.PAIR, which also guarantees
+    # To achieve this, we create an inproc zmq.PAIR, which also guarantees
     # message delivery, but should be way faster than the PUSH.
     # We also set some high enough high water mark values to cope with the
     # message flooding.
@@ -430,7 +430,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
     # forking, are inherited by forked processes, and we don't want the ZMQ
     # machinery inherited.
     # For the cases where the ZMQ machinery is still inherited because a
-    # process was forked after ZMQ has been prep'ed up, we check the handler's
+    # process was forked after ZMQ has been prepped up, we check the handler's
     # pid attribute against, the current process pid. If it's not a match, we
     # reconnect the ZMQ machinery.
 
@@ -446,12 +446,19 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         self.push_address = "tcp://{}:{}".format(host, port)
         self.log_prefix = log_prefix
         self.context = self.proxy_address = self.in_proxy = self.proxy_thread = None
+        self._exiting = False
 
     def start(self):
         if self.pid != os.getpid():
             self.stop()
-        elif self.in_proxy is not None:
+            self._exiting = False
+
+        if self._exiting is True:
             return
+
+        if self.in_proxy is not None:
+            return
+
         atexit.register(self.stop)
         context = in_proxy = None
         try:
@@ -460,7 +467,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         except zmq.ZMQError as exc:
             sys.stderr.write(
                 "Failed to create the ZMQ Context: {}\n{}\n".format(
-                    exc, traceback.format_exc(exc)
+                    exc, traceback.format_exc()
                 )
             )
             sys.stderr.flush()
@@ -470,51 +477,50 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         self.proxy_thread = threading.Thread(
             target=self._proxy_logs_target, args=(socket_bind_event,)
         )
+        self.proxy_thread.daemon = True
         self.proxy_thread.start()
-        # Now that we discovered which random port to use, lest's continue with the setup
+        # Now that we discovered which random port to use, let's continue with the setup
         if socket_bind_event.wait(5) is not True:
             sys.stderr.write("Failed to bind the ZMQ socket PAIR\n")
             sys.stderr.flush()
+            context.term()
+            return
 
-        if self.proxy_address is not None:
-            # And we can now also connect the messages input side of the proxy
-            try:
-                in_proxy = self.context.socket(zmq.PAIR)
-                in_proxy.set_hwm(100000)
-                in_proxy.connect(self.proxy_address)
-                self.in_proxy = in_proxy
-            except zmq.ZMQError as exc:
-                if in_proxy is not None:
-                    in_proxy.close(1000)
-                sys.stderr.write(
-                    "Failed to bind the ZMQ PAIR socket: {}\n{}\n".format(
-                        exc, traceback.format_exc(exc)
-                    )
+        # And we can now also connect the messages input side of the proxy
+        try:
+            in_proxy = self.context.socket(zmq.PAIR)
+            in_proxy.set_hwm(100000)
+            in_proxy.connect(self.proxy_address)
+            self.in_proxy = in_proxy
+        except zmq.ZMQError as exc:
+            if in_proxy is not None:
+                in_proxy.close(1000)
+            sys.stderr.write(
+                "Failed to bind the ZMQ PAIR socket: {}\n{}\n".format(
+                    exc, traceback.format_exc()
                 )
-                sys.stderr.flush()
+            )
+            sys.stderr.flush()
 
     def stop(self):
-        try:
-            atexit.unregister(self.stop)
-        except AttributeError:
-            # Python 2
-            try:
-                atexit._exithandlers.remove((self.stop, (), {}))
-            except ValueError:
-                # The exit handler isn't registered
-                pass
+        if self._exiting:
+            return
+
+        self._exiting = True
+        atexit.unregister(self.stop)
 
         try:
             if self.in_proxy is not None:
                 self.in_proxy.send(msgpack.dumps(None))
                 self.in_proxy.close(1500)
-                self.proxy_thread.join()
             if self.context is not None:
                 self.context.term()
+            if self.proxy_thread is not None and self.proxy_thread.is_alive():
+                self.proxy_thread.join(5)
         except Exception as exc:  # pylint: disable=broad-except
             sys.stderr.write(
                 "Failed to terminate ZMQHandler: {}\n{}\n".format(
-                    exc, traceback.format_exc(exc)
+                    exc, traceback.format_exc()
                 )
             )
             sys.stderr.flush()
@@ -525,14 +531,9 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
     def format(self, record):
         msg = super().format(record)
         if self.log_prefix:
-            import salt.utils.stringutils
+            from salt.utils.stringutils import to_unicode
 
-            msg = str(
-                "[{}] {}".format(
-                    salt.utils.stringutils.to_unicode(self.log_prefix),
-                    salt.utils.stringutils.to_unicode(msg),
-                )
-            )
+            msg = "[{}] {}".format(to_unicode(self.log_prefix), to_unicode(msg))
         return msg
 
     def prepare(self, record):
@@ -544,7 +545,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         record.exc_info = None
         record.exc_text = None
         record.message = None  # redundant with msg
-        # On Python >= 3.5 we also have stack_info, but we've formatted altready so, reset it
+        # On Python >= 3.5 we also have stack_info, but we've formatted already so, reset it
         record.stack_info = None
         try:
             return msgpack.dumps(record.__dict__, use_bin_type=True)
@@ -564,7 +565,9 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         Writes the LogRecord to the queue, preparing it for pickling first.
         """
         # Python's logging machinery acquires a lock before calling this method
-        # that's why it's safe to call the start method wihtout an explicit acquire
+        # that's why it's safe to call the start method without an explicit acquire
+        if self._exiting:
+            return
         self.start()
         if self.in_proxy is None:
             sys.stderr.write(
@@ -576,39 +579,42 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         try:
             msg = self.prepare(record)
             self.in_proxy.send(msg)
+        except SystemExit:
+            pass
         except Exception:  # pylint: disable=broad-except
             self.handleError(record)
 
     def _proxy_logs_target(self, socket_bind_event):
+        context = zmq.Context()
         out_proxy = pusher = None
         try:
-            out_proxy = self.context.socket(zmq.PAIR)
+            out_proxy = context.socket(zmq.PAIR)
             out_proxy.set_hwm(100000)
             proxy_port = out_proxy.bind_to_random_port("tcp://127.0.0.1")
             self.proxy_address = "tcp://127.0.0.1:{}".format(proxy_port)
         except zmq.ZMQError as exc:
             if out_proxy is not None:
                 out_proxy.close(1000)
+            context.term()
             sys.stderr.write(
                 "Failed to bind the ZMQ PAIR socket: {}\n{}\n".format(
-                    exc, traceback.format_exc(exc)
+                    exc, traceback.format_exc()
                 )
             )
             sys.stderr.flush()
             return
-        finally:
-            socket_bind_event.set()
 
         try:
-            pusher = self.context.socket(zmq.PUSH)
+            pusher = context.socket(zmq.PUSH)
             pusher.set_hwm(100000)
             pusher.connect(self.push_address)
         except zmq.ZMQError as exc:
             if pusher is not None:
                 pusher.close(1000)
+            context.term()
             sys.stderr.write(
                 "Failed to connect the ZMQ PUSH socket: {}\n{}\n".format(
-                    exc, traceback.format_exc(exc)
+                    exc, traceback.format_exc()
                 )
             )
             sys.stderr.flush()
@@ -626,7 +632,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
             except zmq.ZMQError as exc:
                 sys.stderr.write(
                     "Failed to proxy log message: {}\n{}\n".format(
-                        exc, traceback.format_exc(exc)
+                        exc, traceback.format_exc()
                     )
                 )
                 sys.stderr.flush()
@@ -634,6 +640,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
 
         # Close the receiving end of the PAIR proxy socket
         out_proxy.close(0)
-        # Allow, the pusher queue to send any messsges in it's queue for
+        # Allow, the pusher queue to send any messages in it's queue for
         # the next 1.5 seconds
         pusher.close(1500)
+        context.term()
