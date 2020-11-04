@@ -41,13 +41,10 @@ def hub():
         hub.pop.loop.create()
 
         log.debug("Loading subs onto hub")
-        hub.pop.sub.add(dyne_name="acct")
         hub.pop.sub.add(dyne_name="config")
         # We aren't collecting grains at all but some exec modules depend on the sub being on the hub
         hub.pop.sub.add(dyne_name="grains")
         hub.pop.sub.add(dyne_name="idem")
-        hub.pop.sub.add(dyne_name="exec")
-        hub.pop.sub.add(dyne_name="states")
 
         log.debug("Reading idem config options")
         hub.config.integrate.load(["acct", "idem"], "idem", parse_cli=False, logs=False)
