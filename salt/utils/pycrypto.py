@@ -116,7 +116,11 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
             # all non-crypt algorithms are specified as part of the salt
             crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
 
-    return crypt.crypt(password, crypt_salt)
+    try:
+        ret = crypt.crypt(password, crypt_salt)
+    except OSError:
+        ret = None
+    return ret
 
 
 def gen_hash(crypt_salt=None, password=None, algorithm=None):
