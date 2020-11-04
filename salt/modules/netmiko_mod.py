@@ -579,7 +579,7 @@ def send_config(
         if __proxy__["netmiko.conn"]().is_alive():
             conn = __proxy__["netmiko.conn"]()
         else:
-            conn, kwargs = _prepare_connection(**__proxy__["netmiko.args"]())
+            conn, _ = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     if commit:

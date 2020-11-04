@@ -115,7 +115,7 @@ Then install salt using the following command:
 
 .. code-block:: bash
 
-    sudo pip install salt==<rc tag version>
+    sudo pip install salt==$rc_tag_version
 
 For example for the 3002rc1 release:
 
