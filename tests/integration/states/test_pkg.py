@@ -527,7 +527,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             pkgs = {
                 p
                 for p in self.run_function("pkg.list_repo_pkgs")
-                if "-versionlock" in p
+                if "yum-plugin-versionlock" in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
