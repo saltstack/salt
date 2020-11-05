@@ -3220,7 +3220,7 @@ def update(
 
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
-        data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
+        data["boot_dev"] = boot_dev.split()
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
