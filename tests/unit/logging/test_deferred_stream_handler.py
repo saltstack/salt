@@ -18,48 +18,85 @@ from salt.utils.nb_popen import NonBlockingPopen
 from saltfactories.utils.processes import terminate_process
 from tests.support.helpers import dedent
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import SkipTest, TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
 
+def sync_with_handlers_proc_target():
+    # Needs to be on a top level function so we can test it on windows.
+    #   AttributeError: Can't pickle local object 'TestDeferredStreamHandler.test_sync_with_handlers.<locals>.proc_target'
+    import sys
+    import logging
+    from salt._logging.handlers import DeferredStreamHandler
+    from tests.support.helpers import CaptureOutput
+
+    with CaptureOutput() as stds:
+        try:
+            handler = DeferredStreamHandler(sys.stderr)
+            handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter("%(message)s")
+            logging.root.addHandler(handler)
+            logger = logging.getLogger(__name__)
+            logger.info("Foo")
+            logger.info("Bar")
+            logging.root.removeHandler(handler)
+
+            assert not stds.stdout
+            assert not stds.stderr
+
+            stream_handler = logging.StreamHandler(sys.stderr)
+
+            # Sync with the other handlers
+            handler.sync_with_handlers([stream_handler])
+
+            assert not stds.stdout
+            assert stds.stderr == "Foo\nBar\n"
+        except AssertionError:
+            if "CI" in os.environ:
+                raise SkipTest(
+                    "These tests pass locally when run on their own. Skipping on CI for now on AssertionError."
+                )
+            raise
+
+
+def deferred_write_on_flush_proc_target():
+    # Needs to be on a top level function so we can test it on windows.
+    #   AttributeError: Can't pickle local object 'TestDeferredStreamHandler.test_deferred_write_on_flush.<locals>.proc_target'
+    import sys
+    import logging
+    from salt._logging.handlers import DeferredStreamHandler
+    from tests.support.helpers import CaptureOutput
+
+    with CaptureOutput() as stds:
+        try:
+            handler = DeferredStreamHandler(sys.stderr)
+            handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter("%(message)s")
+            logging.root.addHandler(handler)
+            logger = logging.getLogger(__name__)
+            logger.info("Foo")
+            logger.info("Bar")
+            logging.root.removeHandler(handler)
+
+            assert not stds.stdout
+            assert not stds.stderr
+
+            # Flush the handler
+            handler.flush()
+            assert not stds.stdout
+            assert stds.stderr == "Foo\nBar\n"
+        except AssertionError:
+            if "CI" in os.environ:
+                raise SkipTest(
+                    "These tests pass locally when run on their own. Skipping on CI for now on AssertionError."
+                )
+            raise
+
+
 class TestDeferredStreamHandler(TestCase):
     def test_sync_with_handlers(self):
-        def proc_target():
-            import sys
-            import logging
-            from salt._logging.handlers import DeferredStreamHandler
-            from tests.support.helpers import CaptureOutput
-
-            with CaptureOutput() as stds:
-                try:
-                    handler = DeferredStreamHandler(sys.stderr)
-                    handler.setLevel(logging.DEBUG)
-                    formatter = logging.Formatter("%(message)s")
-                    logging.root.addHandler(handler)
-                    logger = logging.getLogger(__name__)
-                    logger.info("Foo")
-                    logger.info("Bar")
-                    logging.root.removeHandler(handler)
-
-                    assert not stds.stdout
-                    assert not stds.stderr
-
-                    stream_handler = logging.StreamHandler(sys.stderr)
-
-                    # Sync with the other handlers
-                    handler.sync_with_handlers([stream_handler])
-
-                    assert not stds.stdout
-                    assert stds.stderr == "Foo\nBar\n"
-                except AssertionError:
-                    if "CI" in os.environ:
-                        self.skipTest(
-                            "These tests pass locally when run on their own. Skipping on CI for now on AssertionError."
-                        )
-                    raise
-
-        proc = multiprocessing.Process(target=proc_target)
+        proc = multiprocessing.Process(target=sync_with_handlers_proc_target)
         proc.start()
         proc.join()
         try:
@@ -72,38 +109,7 @@ class TestDeferredStreamHandler(TestCase):
             raise
 
     def test_deferred_write_on_flush(self):
-        def proc_target():
-            import sys
-            import logging
-            from salt._logging.handlers import DeferredStreamHandler
-            from tests.support.helpers import CaptureOutput
-
-            with CaptureOutput() as stds:
-                try:
-                    handler = DeferredStreamHandler(sys.stderr)
-                    handler.setLevel(logging.DEBUG)
-                    formatter = logging.Formatter("%(message)s")
-                    logging.root.addHandler(handler)
-                    logger = logging.getLogger(__name__)
-                    logger.info("Foo")
-                    logger.info("Bar")
-                    logging.root.removeHandler(handler)
-
-                    assert not stds.stdout
-                    assert not stds.stderr
-
-                    # Flush the handler
-                    handler.flush()
-                    assert not stds.stdout
-                    assert stds.stderr == "Foo\nBar\n"
-                except AssertionError:
-                    if "CI" in os.environ:
-                        self.skipTest(
-                            "These tests pass locally when run on their own. Skipping on CI for now on AssertionError."
-                        )
-                    raise
-
-        proc = multiprocessing.Process(target=proc_target)
+        proc = multiprocessing.Process(target=deferred_write_on_flush_proc_target)
         proc.start()
         proc.join()
         try:
