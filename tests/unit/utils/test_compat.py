@@ -12,13 +12,14 @@ import salt.utils.compat
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 
+
 class CompatUtilsTestCase(TestCase):
     def test_cmp(self):
         # int x == int y
         ret = salt.utils.compat.cmp(1, 1)
         self.assertEqual(0, ret)
 
-        # int x < int y 
+        # int x < int y
         ret = salt.utils.compat.cmp(1, 2)
         self.assertEqual(-1, ret)
 
