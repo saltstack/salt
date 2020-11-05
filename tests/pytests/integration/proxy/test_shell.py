@@ -71,10 +71,10 @@ def test_service_list(salt_call_cli, service_name):
 
 @slowTest
 @pytest.mark.skip_if_not_root
-def test_service_start(salt_call_cli, service_name):
-    ret = salt_call_cli.run("service.start", service_name)
+def test_service_start(salt_call_cli):
+    ret = salt_call_cli.run("service.start", "samba")
     assert ret.exitcode == 0, ret
-    ret = salt_call_cli.run("service.status", service_name)
+    ret = salt_call_cli.run("service.status", "samba")
     assert ret.exitcode == 0, ret
     assert ret.json is True
 
