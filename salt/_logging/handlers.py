@@ -529,11 +529,24 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
         try:
             if self.in_proxy is not None:
                 self.in_proxy.send(msgpack.dumps(None))
-                self.in_proxy.close(1500)
+                self.in_proxy.close(5000)
             if self.context is not None:
                 self.context.term()
             if self.proxy_thread is not None and self.proxy_thread.is_alive():
                 self.proxy_thread.join(5)
+                if self.proxy_thread.is_alive():
+                    print(
+                        "The ZMQHandler proxy thread did not terminate for 5 seconds. Waiting another 5...",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    self.proxy_thread.join(5)
+                if self.proxy_thread.is_alive():
+                    print(
+                        "The ZMQHandler proxy thread did not terminate for 10 seconds. Giving up...",
+                        file=sys.stderr,
+                        flush=True,
+                    )
         except Exception as exc:  # pylint: disable=broad-except
             print(
                 "Failed to terminate ZMQHandler: {}\n{}".format(
