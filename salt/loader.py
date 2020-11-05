@@ -5,6 +5,8 @@ plugin interfaces used by Salt.
 """
 
 import functools
+import importlib.machinery  # pylint: disable=no-name-in-module,import-error
+import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
 import logging
 import os
@@ -40,17 +42,6 @@ from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
-if sys.version_info[:2] >= (3, 5):
-    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-    import importlib.util  # pylint: disable=no-name-in-module,import-error
-
-    USE_IMPORTLIB = True
-else:
-    import imp
-
-    USE_IMPORTLIB = False
-
-
 try:
     import pkg_resources
 
@@ -63,27 +54,24 @@ log = logging.getLogger(__name__)
 SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
 LOADED_BASE_NAME = "salt.loaded"
 
-if USE_IMPORTLIB:
-    # pylint: disable=no-member
-    MODULE_KIND_SOURCE = 1
-    MODULE_KIND_COMPILED = 2
-    MODULE_KIND_EXTENSION = 3
-    MODULE_KIND_PKG_DIRECTORY = 5
-    SUFFIXES = []
-    for suffix in importlib.machinery.EXTENSION_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_EXTENSION))
-    for suffix in importlib.machinery.SOURCE_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_SOURCE))
-    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_COMPILED))
-    MODULE_KIND_MAP = {
-        MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
-        MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
-        MODULE_KIND_EXTENSION: importlib.machinery.ExtensionFileLoader,
-    }
-    # pylint: enable=no-member
-else:
-    SUFFIXES = imp.get_suffixes()
+# pylint: disable=no-member
+MODULE_KIND_SOURCE = 1
+MODULE_KIND_COMPILED = 2
+MODULE_KIND_EXTENSION = 3
+MODULE_KIND_PKG_DIRECTORY = 5
+SUFFIXES = []
+for suffix in importlib.machinery.EXTENSION_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_EXTENSION))
+for suffix in importlib.machinery.SOURCE_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_SOURCE))
+for suffix in importlib.machinery.BYTECODE_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_COMPILED))
+MODULE_KIND_MAP = {
+    MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
+    MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
+    MODULE_KIND_EXTENSION: importlib.machinery.ExtensionFileLoader,
+}
+# pylint: enable=no-member
 
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
@@ -1437,10 +1425,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if ".zip" not in self.suffix_order:
                 self.suffix_order.append(".zip")
         # allow for module dirs
-        if USE_IMPORTLIB:
-            self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
-        else:
-            self.suffix_map[""] = ("", "", imp.PKG_DIRECTORY)
+        self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
         # The files are added in order of priority, so order *must* be retained.
@@ -1653,8 +1638,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # Be sure that sys.path_importer_cache do not contains any
         # invalid FileFinder references
-        if USE_IMPORTLIB:
-            importlib.invalidate_caches()
+        importlib.invalidate_caches()
 
         # Because we are mangling with importlib, we can find from
         # time to time an invalidation issue with
@@ -1731,66 +1715,59 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         name,
                     )
                 if suffix == "":
-                    if USE_IMPORTLIB:
-                        # pylint: disable=no-member
-                        # Package directory, look for __init__
-                        loader_details = [
-                            (
-                                importlib.machinery.SourceFileLoader,
-                                importlib.machinery.SOURCE_SUFFIXES,
-                            ),
-                            (
-                                importlib.machinery.SourcelessFileLoader,
-                                importlib.machinery.BYTECODE_SUFFIXES,
-                            ),
-                            (
-                                importlib.machinery.ExtensionFileLoader,
-                                importlib.machinery.EXTENSION_SUFFIXES,
-                            ),
-                        ]
-                        file_finder = importlib.machinery.FileFinder(
-                            fpath_dirname, *loader_details
-                        )
-                        spec = file_finder.find_spec(mod_namespace)
-                        if spec is None:
-                            raise ImportError()
-                        # TODO: Get rid of load_module in favor of
-                        # exec_module below. load_module is deprecated, but
-                        # loading using exec_module has been causing odd things
-                        # with the magic dunders we pack into the loaded
-                        # modules, most notably with salt-ssh's __opts__.
-                        mod = spec.loader.load_module()
-                        # mod = importlib.util.module_from_spec(spec)
-                        # spec.loader.exec_module(mod)
-                        # pylint: enable=no-member
-                        sys.modules[mod_namespace] = mod
-                    else:
-                        mod = imp.load_module(mod_namespace, None, fpath, desc)
+                    # pylint: disable=no-member
+                    # Package directory, look for __init__
+                    loader_details = [
+                        (
+                            importlib.machinery.SourceFileLoader,
+                            importlib.machinery.SOURCE_SUFFIXES,
+                        ),
+                        (
+                            importlib.machinery.SourcelessFileLoader,
+                            importlib.machinery.BYTECODE_SUFFIXES,
+                        ),
+                        (
+                            importlib.machinery.ExtensionFileLoader,
+                            importlib.machinery.EXTENSION_SUFFIXES,
+                        ),
+                    ]
+                    file_finder = importlib.machinery.FileFinder(
+                        fpath_dirname, *loader_details
+                    )
+                    spec = file_finder.find_spec(mod_namespace)
+                    if spec is None:
+                        raise ImportError()
+                    # TODO: Get rid of load_module in favor of
+                    # exec_module below. load_module is deprecated, but
+                    # loading using exec_module has been causing odd things
+                    # with the magic dunders we pack into the loaded
+                    # modules, most notably with salt-ssh's __opts__.
+                    mod = spec.loader.load_module()
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
+                    # pylint: enable=no-member
+                    sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
-                    if USE_IMPORTLIB:
-                        # pylint: disable=no-member
-                        loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
-                        spec = importlib.util.spec_from_file_location(
-                            mod_namespace, fpath, loader=loader
-                        )
-                        if spec is None:
-                            raise ImportError()
-                        # TODO: Get rid of load_module in favor of
-                        # exec_module below. load_module is deprecated, but
-                        # loading using exec_module has been causing odd things
-                        # with the magic dunders we pack into the loaded
-                        # modules, most notably with salt-ssh's __opts__.
-                        mod = spec.loader.load_module()
-                        # mod = importlib.util.module_from_spec(spec)
-                        # spec.loader.exec_module(mod)
-                        # pylint: enable=no-member
-                        sys.modules[mod_namespace] = mod
-                    else:
-                        with salt.utils.files.fopen(fpath, desc[1]) as fn_:
-                            mod = imp.load_module(mod_namespace, fn_, fpath, desc)
+                    # pylint: disable=no-member
+                    loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
+                    spec = importlib.util.spec_from_file_location(
+                        mod_namespace, fpath, loader=loader
+                    )
+                    if spec is None:
+                        raise ImportError()
+                    # TODO: Get rid of load_module in favor of
+                    # exec_module below. load_module is deprecated, but
+                    # loading using exec_module has been causing odd things
+                    # with the magic dunders we pack into the loaded
+                    # modules, most notably with salt-ssh's __opts__.
+                    mod = spec.loader.load_module()
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
+                    # pylint: enable=no-member
+                    sys.modules[mod_namespace] = mod
         except OSError:
             raise
         except ImportError as exc:
