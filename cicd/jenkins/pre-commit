@@ -5,7 +5,7 @@ if (env.CHANGE_ID) {
     pre_commit_skips = ''
 } else {
     // This is a branch build
-    pre_commit_skips = 'pyupgrade,remove-import-comments'
+    pre_commit_skips = 'pyupgrade,remove-import-headers,rstcheck'
 }
 
 runPreCommit(

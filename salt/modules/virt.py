@@ -75,7 +75,7 @@ Units
 ==========
 .. _virt-units:
 .. rubric:: Units specification
-.. versionadded:: Magnesium
+.. versionadded:: 3002
 
 The string should contain a number optionally followed
 by a unit. The number may have a decimal fraction. If
@@ -684,14 +684,14 @@ def _migrate(dom, dst_uri, **kwargs):
     :param dom: domain object to migrate
     :param dst_uri: destination URI
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest
@@ -1893,7 +1893,7 @@ def init(
 
     :param name: name of the virtual machine to create
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
         structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
@@ -1913,7 +1913,7 @@ def init(
                 'min_guarantee': '512mib'
             }
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
 
     :param nic: NIC profile to use (Default: ``'default'``).
                 The profile interfaces can be customized / extended with the interfaces parameter.
@@ -2587,7 +2587,7 @@ def update(
 
     :param name: Name of the domain to update
     :param cpu: Number of virtual CPUs to assign to the virtual machine
-    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since Magnesium, a dictionary can be used to
+    :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
         ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
         structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
@@ -2603,7 +2603,7 @@ def update(
                 hard_limit: null
                 soft_limit: null
 
-        .. versionchanged:: Magnesium
+        .. versionchanged:: 3002
 
     :param disk_profile: disk profile to use
     :param disks:
@@ -2659,7 +2659,7 @@ def update(
 
         By default, the value will ``"hd"``.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
 
     :param test: run in dry-run mode if set to True
 
@@ -4158,14 +4158,14 @@ def migrate_non_shared(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -4224,14 +4224,14 @@ def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
         .. deprecated:: 3002
 
     :param kwargs:
-        - live:           Use live migration. Defalt value is True.
+        - live:           Use live migration. Default value is True.
         - persistent:     Leave the domain persistent on destination host.
-                          Defalt value is True.
+                          Default value is True.
         - undefinesource: Undefine the domain on the source host.
-                          Defalt value is True.
+                          Default value is True.
         - offline:        If set to True it will migrate the domain definition
                           without starting the domain on destination and without
-                          stopping it on source host. Defalt value is False.
+                          stopping it on source host. Default value is False.
         - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:   Set maximum tolerable downtime for live-migration.
                           The value represents a number of milliseconds the guest
@@ -4290,14 +4290,14 @@ def migrate(vm_, target, ssh=False, **kwargs):
        .. deprecated:: 3002
 
     :param kwargs:
-        - live:            Use live migration. Defalt value is True.
+        - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
-                           Defalt value is True.
+                           Default value is True.
         - undefinesource:  Undefine the domain on the source host.
-                           Defalt value is True.
+                           Default value is True.
         - offline:         If set to True it will migrate the domain definition
                            without starting the domain on destination and without
-                           stopping it on source host. Defalt value is False.
+                           stopping it on source host. Default value is False.
         - max_bandwidth:   The maximum bandwidth (in MiB/s) that will be used.
         - max_downtime:    Set maximum tolerable downtime for live-migration.
                            The value represents a number of milliseconds the guest

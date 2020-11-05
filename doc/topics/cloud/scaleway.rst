@@ -47,7 +47,7 @@ Set up an initial profile at /etc/salt/cloud.profiles or in the /etc/salt/cloud.
 
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud`` command:
 
-.. code-block:: bash
+.. code-block:: console
 
     #salt-cloud --list-images my-scaleway-config
     my-scaleway-config:
@@ -81,7 +81,7 @@ Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
 
 Execute a query and return all information about the nodes running on configured cloud providers using the ``-Q`` option for the ``salt-cloud`` command:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-cloud -F
     [INFO    ] salt-cloud starting
