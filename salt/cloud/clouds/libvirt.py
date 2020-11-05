@@ -41,6 +41,8 @@ Example profile:
             pool: Data
             # Size in GB (default: '1')
             size: 3
+            # Should the supplementary disk be thin provisionned (default: False, disk will be fully preallocated)
+            thin_provision: True
           # Passthrough disks
             # Bus can be 'ide', 'sata', 'scsi', 'usb' or 'virtio' (default: 'virtio')
             bus: scsi
@@ -63,6 +65,8 @@ Example profile:
       clone_strategy: quick
       # disk_name = [ default | <pattern> ]
       disk_name: '{name}-{dev}'
+      # Should the cloned disk be thin provisionned (default: False, disk will be fully preallocated)
+      thin_provision: False
       ssh_username: vagrant
       # has_ssh_agent: True
       password: vagrant
@@ -400,6 +404,10 @@ def create(vm_):
         "disk_name", vm_, __opts__, default="default"
     )
 
+    thin_provision = config.get_cloud_config_value(
+        "thin_provision", vm_, __opts__, default=False
+    )
+
     devices = config.get_cloud_config_value(
         "devices", vm_, __opts__, default=None
     )
@@ -603,15 +611,22 @@ def create(vm_):
                 disk_type = driver.attrib.get("type")
                 log.info("disk attributes %s", disk.attrib)
                 if disk_type == "qcow2":
+                    if thin_provision:
+                        volumeFlags = 0
+                        log.info("thin_provision is enabled")
+                    else:
+                        volumeFlags = libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+                        log.info("thin_provision is disabled")
+
                     source = disk.find("./source").attrib["file"]
                     pool, volume = find_pool_and_volume(conn, source)
                     if clone_strategy == "quick":
                         new_volume = pool.createXML(
-                            create_volume_with_backing_store_xml(volume, disk_name), libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+                            create_volume_with_backing_store_xml(volume, disk_name), volumeFlags
                         )
                     else:
                         new_volume = pool.createXMLFrom(
-                            create_volume_xml(volume, disk_name), volume, libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+                            create_volume_xml(volume, disk_name), volume, volumeFlags
                         )
                     cleanup.append({"what": "volume", "item": new_volume})
                     pool.refresh()
@@ -683,6 +698,16 @@ def create(vm_):
                         else:
                             size = 1
 
+                        # thin_provision: wether the disk will be thin provsionned or fully allocated (default)
+                        if "thin_provision" in devices["disk"][disk]:
+                            thin_provision = devices["disk"][disk]["thin_provision"]
+                        else:
+                            thin_provision = False
+                        if thin_provision:
+                            volumeFlags = 0
+                        else:
+                            volumeFlags = libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+
                         pool = None
                         for p in virt_pools:
                             if p.name() == devices["disk"][disk]["pool"]:
@@ -718,7 +743,7 @@ def create(vm_):
                                   </target>
                                 </volume>"""
                                 log.debug("Creating %s", vol_xml)
-                                vol = pool.createXML(vol_xml, libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA)
+                                vol = pool.createXML(vol_xml, volumeFlags)
 
                             log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
                             devices_xml.append(ElementTree.Element("disk", type="file", device="disk"))
