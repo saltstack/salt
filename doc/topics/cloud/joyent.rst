@@ -93,7 +93,7 @@ command:
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud``
 command:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt-cloud --list-images my-joyent-config
     my-joyent-config:
