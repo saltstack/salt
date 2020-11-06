@@ -2,7 +2,6 @@
 Compatibility functions for utils
 """
 
-
 import copy
 import importlib
 import sys
