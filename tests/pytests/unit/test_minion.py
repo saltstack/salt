@@ -13,7 +13,7 @@ def test_minion_grains_in_opts():
         grainsfunc.assert_not_called()
 
 
-def test_minoin_grains_not_in_opts():
+def test_minion_grains_not_in_opts():
     """
     Minion generates grains when they are not already in opts
     """
