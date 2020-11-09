@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RPM Package builder system
 
@@ -10,8 +9,6 @@ environments. This also provides a function to generate yum repositories
 This module implements the pkgbuild interface
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import functools
@@ -27,12 +24,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.user
 import salt.utils.vt
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 HAS_LIBS = False
@@ -90,7 +82,7 @@ def _create_rpmmacros(runas="root"):
 
     rpmmacros = os.path.join(home, ".rpmmacros")
     with salt.utils.files.fopen(rpmmacros, "w") as afile:
-        afile.write(salt.utils.stringutils.to_str("%_topdir {0}\n".format(rpmbuilddir)))
+        afile.write(salt.utils.stringutils.to_str("%_topdir {}\n".format(rpmbuilddir)))
         afile.write("%signature gpg\n")
         afile.write("%_source_filedigest_algorithm 8\n")
         afile.write("%_binary_filedigest_algorithm 8\n")
@@ -140,9 +132,9 @@ def _get_distset(tgt):
     # consistent naming on Centos and Redhat, and allow for Amazon naming
     tgtattrs = tgt.split("-")
     if tgtattrs[0] == "amzn2":
-        distset = '--define "dist .{0}"'.format(tgtattrs[0])
+        distset = '--define "dist .{}"'.format(tgtattrs[0])
     elif tgtattrs[1] in ["6", "7", "8"]:
-        distset = '--define "dist .el{0}"'.format(tgtattrs[1])
+        distset = '--define "dist .el{}"'.format(tgtattrs[1])
     else:
         distset = ""
 
@@ -169,7 +161,7 @@ def _get_deps(deps, tree_base, saltenv="base"):
         else:
             shutil.copy(deprpm, dest)
 
-        deps_list += " {0}".format(dest)
+        deps_list += " {}".format(dest)
 
     return deps_list
 
@@ -183,7 +175,7 @@ def _check_repo_gpg_phrase_utils():
         return True
     else:
         raise CommandExecutionError(
-            "utility '{0}' needs to be installed".format(util_name)
+            "utility '{}' needs to be installed".format(util_name)
         )
 
 
@@ -247,10 +239,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
 
     if keyid is not None:
         # import_keys
-        pkg_pub_key_file = "{0}/{1}".format(
+        pkg_pub_key_file = "{}/{}".format(
             gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None)
         )
-        pkg_priv_key_file = "{0}/{1}".format(
+        pkg_priv_key_file = "{}/{}".format(
             gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None)
         )
 
@@ -269,7 +261,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
         except SaltInvocationError:
             raise SaltInvocationError(
                 "Public and Private key files associated with Pillar data and 'keyid' "
-                "{0} could not be found".format(keyid)
+                "{} could not be found".format(keyid)
             )
 
         # gpg keys should have been loaded as part of setup
@@ -298,14 +290,14 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                             break
             except StopIteration:
                 raise SaltInvocationError(
-                    "unable to find keygrip associated with fingerprint '{0}' for keyid '{1}'".format(
+                    "unable to find keygrip associated with fingerprint '{}' for keyid '{}'".format(
                         local_key_fingerprint, local_keyid
                     )
                 )
 
         if local_keyid is None:
             raise SaltInvocationError(
-                "The key ID '{0}' was not found in GnuPG keyring at '{1}'".format(
+                "The key ID '{}' was not found in GnuPG keyring at '{}'".format(
                     keyid, gnupghome
                 )
             )
@@ -316,7 +308,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                 _check_repo_gpg_phrase_utils()
                 cmd = (
                     "/usr/libexec/gpg-preset-passphrase --verbose --preset "
-                    '--passphrase "{0}" {1}'.format(phrase, local_keygrip_to_use)
+                    '--passphrase "{}" {}'.format(phrase, local_keygrip_to_use)
                 )
                 retrc = __salt__["cmd.retcode"](cmd, runas=runas, env=env)
                 if retrc != 0:
@@ -326,17 +318,17 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     )
 
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {0}'".format(
+            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {}'".format(
                 local_uids[0]
             )
 
         # need to update rpm with public key
-        cmd = "rpm --import {0}".format(pkg_pub_key_file)
+        cmd = "rpm --import {}".format(pkg_pub_key_file)
         retrc = __salt__["cmd.retcode"](cmd, runas=runas, use_vt=True)
         if retrc != 0:
             raise SaltInvocationError(
-                "Failed to import public key from file {0} with return "
-                "error {1}, check logs for further details".format(
+                "Failed to import public key from file {} with return "
+                "error {}, check logs for further details".format(
                     pkg_pub_key_file, retrc
                 )
             )
@@ -354,9 +346,9 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
     interval = 0.5
     number_retries = timeout / interval
     times_looped = 0
-    error_msg = "Failed to sign file {0}".format(abs_file)
+    error_msg = "Failed to sign file {}".format(abs_file)
 
-    cmd = "rpm {0} --addsign {1}".format(define_gpg_name, abs_file)
+    cmd = "rpm {} --addsign {}".format(define_gpg_name, abs_file)
     preexec_fn = functools.partial(salt.utils.user.chugid_and_umask, runas, None)
     try:
         stdout, stderr = None, None
@@ -377,7 +369,7 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
 
             if times_looped > number_retries:
                 raise SaltInvocationError(
-                    "Attemping to sign file {0} failed, timed out after {1} seconds".format(
+                    "Attemping to sign file {} failed, timed out after {} seconds".format(
                         abs_file, int(times_looped * interval)
                     )
                 )
@@ -386,7 +378,7 @@ def _sign_file(runas, define_gpg_name, phrase, abs_file, timeout):
         proc_exitstatus = proc.exitstatus
         if proc_exitstatus != 0:
             raise SaltInvocationError(
-                "Signing file {0} failed with proc.status {1}".format(
+                "Signing file {} failed with proc.status {}".format(
                     abs_file, proc_exitstatus
                 )
             )
@@ -401,12 +393,12 @@ def _sign_files_with_gpg_agent(runas, local_keyid, abs_file, repodir, env, timeo
     """
     Sign file with provided key utilizing gpg-agent
     """
-    cmd = "rpmsign --verbose  --key-id={0} --addsign {1}".format(local_keyid, abs_file)
+    cmd = "rpmsign --verbose  --key-id={} --addsign {}".format(local_keyid, abs_file)
     retrc = __salt__["cmd.retcode"](cmd, runas=runas, cwd=repodir, use_vt=True, env=env)
     if retrc != 0:
         raise SaltInvocationError(
-            "Signing encountered errors for command '{0}', "
-            "return error {1}, check logs for further details".format(cmd, retrc)
+            "Signing encountered errors for command '{}', "
+            "return error {}, check logs for further details".format(cmd, retrc)
         )
 
 
@@ -466,20 +458,20 @@ def make_src_pkg(
     __salt__["file.chown"](path=spec_path, user=runas, group="mock")
     __salt__["file.chown"](path=tree_base, user=runas, group="mock")
 
-    if isinstance(sources, six.string_types):
+    if isinstance(sources, str):
         sources = sources.split(",")
     for src in sources:
         _get_src(tree_base, src, saltenv, runas)
 
     # make source rpms for dist el6 with SHA256, usable with mock on other dists
-    cmd = 'rpmbuild --verbose --define "_topdir {0}" -bs --define "dist .el6" {1}'.format(
+    cmd = 'rpmbuild --verbose --define "_topdir {}" -bs --define "dist .el6" {}'.format(
         tree_base, spec_path
     )
     retrc = __salt__["cmd.retcode"](cmd, runas=runas)
     if retrc != 0:
         raise SaltInvocationError(
-            "Make source package for destination directory {0}, spec {1}, sources {2}, failed "
-            "with return error {3}, check logs for further details".format(
+            "Make source package for destination directory {}, spec {}, sources {}, failed "
+            "with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )
@@ -553,16 +545,16 @@ def build(
         try:
             __salt__["file.chown"](path=dbase, user=runas, group="mock")
             __salt__["file.chown"](path=results_dir, user=runas, group="mock")
-            cmd = "mock --root={0} --resultdir={1} --init".format(tgt, results_dir)
+            cmd = "mock --root={} --resultdir={} --init".format(tgt, results_dir)
             retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
             if deps_list and not deps_list.isspace():
-                cmd = "mock --root={0} --resultdir={1} --install {2} {3}".format(
+                cmd = "mock --root={} --resultdir={} --install {} {}".format(
                     tgt, results_dir, deps_list, noclean
                 )
                 retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
                 noclean += " --no-clean"
 
-            cmd = "mock --root={0} --resultdir={1} {2} {3} {4}".format(
+            cmd = "mock --root={} --resultdir={} {} {} {}".format(
                 tgt, results_dir, distset, noclean, srpm
             )
             retrc |= __salt__["cmd.retcode"](cmd, runas=runas)
@@ -608,8 +600,8 @@ def build(
             shutil.rmtree(results_dir)
     if retrc != 0:
         raise SaltInvocationError(
-            "Building packages for destination directory {0}, spec {1}, sources {2}, failed "
-            "with return error {3}, check logs for further details".format(
+            "Building packages for destination directory {}, spec {}, sources {}, failed "
+            "with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )
@@ -758,6 +750,6 @@ def make_repo(
             else:
                 _sign_file(runas, define_gpg_name, phrase, abs_file, timeout)
 
-    cmd = "createrepo --update {0}".format(repodir)
+    cmd = "createrepo --update {}".format(repodir)
     retrc = __salt__["cmd.run_all"](cmd, runas=runas)
     return retrc

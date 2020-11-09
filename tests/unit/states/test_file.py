@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
+import collections
 import logging
 import os
 import plistlib
@@ -24,7 +21,7 @@ import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
-from tests.support.helpers import destructiveTest, slowTest
+from tests.support.helpers import dedent, destructiveTest, slowTest, with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -164,7 +161,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
-        pillar_value = "i am the pillar value{0}".format(os.linesep)
+        pillar_value = "i am the pillar value{}".format(os.linesep)
 
         self.run_contents_pillar(pillar_value, expected=pillar_value)
 
@@ -250,10 +247,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             },
         ):
             if salt.utils.platform.is_windows():
-                comt = "User {0} does not exist".format(user)
+                comt = "User {} does not exist".format(user)
                 ret = return_val({"comment": comt, "name": name})
             else:
-                comt = "User {0} does not exist. Group {1} does not exist.".format(
+                comt = "User {} does not exist. Group {} does not exist.".format(
                     user, group
                 )
                 ret = return_val({"comment": comt, "name": name})
@@ -275,12 +272,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "exists", mock_f
         ):
             if salt.utils.platform.is_windows():
-                comt = "User {0} does not exist".format(user)
+                comt = "User {} does not exist".format(user)
                 ret = return_val(
                     {"comment": comt, "result": False, "name": name, "changes": {}}
                 )
             else:
-                comt = "Symlink {0} to {1} is set for creation".format(name, target)
+                comt = "Symlink {} to {} is set for creation".format(name, target)
                 ret = return_val(
                     {"comment": comt, "result": None, "changes": {"new": name}}
                 )
@@ -304,12 +301,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "exists", mock_f
         ):
             if salt.utils.platform.is_windows():
-                comt = "User {0} does not exist".format(user)
+                comt = "User {} does not exist".format(user)
                 ret = return_val(
                     {"comment": comt, "result": False, "name": name, "changes": {}}
                 )
             else:
-                comt = "Directory {0} for symlink is not present".format(test_dir)
+                comt = "Directory {} for symlink is not present".format(test_dir)
                 ret = return_val({"comment": comt, "result": False, "changes": {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group), ret
@@ -334,9 +331,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
             if salt.utils.platform.is_windows():
-                comt = "Symlink {0} is present and owned by {1}".format(name, user)
+                comt = "Symlink {} is present and owned by {}".format(name, user)
             else:
-                comt = "Symlink {0} is present and owned by {1}:{2}".format(
+                comt = "Symlink {} is present and owned by {}:{}".format(
                     name, user, group
                 )
             ret = return_val({"comment": comt, "result": True, "changes": {}})
@@ -365,8 +362,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
             comt = (
-                "Symlink & backup dest exists and Force not set. {0} -> "
-                "{1} - backup: {2}".format(name, target, os.path.join(test_dir, "SALT"))
+                "Symlink & backup dest exists and Force not set. {} -> "
+                "{} - backup: {}".format(name, target, os.path.join(test_dir, "SALT"))
             )
             ret.update({"comment": comt, "result": False, "changes": {}})
             self.assertDictEqual(
@@ -396,7 +393,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
-            comt = "Backupname must be an absolute path or a file name: {0}".format(
+            comt = "Backupname must be an absolute path or a file name: {}".format(
                 "tmp/SALT"
             )
             ret.update({"comment": comt, "result": False, "changes": {}})
@@ -427,7 +424,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
-            comt = "File exists where the symlink {0} should be".format(name)
+            comt = "File exists where the symlink {} should be".format(name)
             ret = return_val({"comment": comt, "changes": {}, "result": False})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group), ret
@@ -454,7 +451,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
-            comt = "Directory exists where the symlink {0} should be".format(name)
+            comt = "Directory exists where the symlink {} should be".format(name)
             ret = return_val({"comment": comt, "result": False, "changes": {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group), ret
@@ -479,7 +476,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
-            comt = "Unable to create new symlink {0} -> {1}: ".format(name, target)
+            comt = "Unable to create new symlink {} -> {}: ".format(name, target)
             ret = return_val({"comment": comt, "result": False, "changes": {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group), ret
@@ -508,7 +505,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.win_functions.get_sid_from_name", return_value="test-sid"
         ):
-            comt = "Created new symlink {0} -> {1}".format(name, target)
+            comt = "Created new symlink {} -> {}".format(name, target)
             ret = return_val(
                 {"comment": comt, "result": True, "changes": {"new": name}}
             )
@@ -542,8 +539,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             "salt.states.file._check_symlink_ownership", return_value=False
         ):
             comt = (
-                "Created new symlink {0} -> {1}, but was unable to set "
-                "ownership to {2}:{3}".format(name, target, user, group)
+                "Created new symlink {} -> {}, but was unable to set "
+                "ownership to {}:{}".format(name, target, user, group)
             )
             ret = return_val(
                 {"comment": comt, "result": False, "changes": {"new": name}}
@@ -603,7 +600,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             os.path, "isabs", mock_t
         ):
-            expected = "User {0} does not exist".format(user)
+            expected = "User {} does not exist".format(user)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, target, user=user, group=group), ret
@@ -617,7 +614,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             os.path, "isabs", mock_t
         ):
-            expected = "Group {0} does not exist".format(group)
+            expected = "Group {} does not exist".format(group)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, target, user=user, group=group), ret
@@ -628,7 +625,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, patches), patch.dict(
             filestate.__salt__, {"file.user_to_uid": mock_uid}
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Specified file {0} is not an absolute path".format(nonabs)
+            expected = "Specified file {} is not an absolute path".format(nonabs)
             ret = return_val(comment=expected, name=nonabs)
             self.assertDictEqual(
                 filestate.hardlink(nonabs, target, user=user, group=group), ret
@@ -638,7 +635,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, patches), patch.dict(
             filestate.__salt__, {"file.user_to_uid": mock_uid}
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Specified target {0} is not an absolute path".format(nonabs)
+            expected = "Specified target {} is not an absolute path".format(nonabs)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, nonabs, user=user, group=group), ret
@@ -653,7 +650,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "Target {0} for hard link does not exist".format(target)
+            expected = "Target {} for hard link does not exist".format(target)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, target, user=user, group=group), ret
@@ -669,7 +666,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "Unable to hard link from directory {0}".format(test_dir)
+            expected = "Unable to hard link from directory {}".format(test_dir)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, test_dir, user=user, group=group), ret
@@ -681,7 +678,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "Unable to hard link to directory {0}".format(test_dir)
+            expected = "Unable to hard link to directory {}".format(test_dir)
             ret = return_val(comment=expected, name=test_dir)
             self.assertDictEqual(
                 filestate.hardlink(test_dir, target, user=user, group=group), ret
@@ -693,7 +690,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "Hard link {0} to {1} is set for creation".format(name, target)
+            expected = "Hard link {} to {} is set for creation".format(name, target)
             changes = dict(new=name)
             ret = return_val(result=None, comment=expected, name=name, changes=changes)
             self.assertDictEqual(
@@ -712,7 +709,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "The hard link {0} is presently targetting {1}".format(
+            expected = "The hard link {} is presently targetting {}".format(
                 name, target
             )
             ret = return_val(result=True, comment=expected, name=name)
@@ -732,9 +729,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         ), patch.dict(
             filestate.__opts__, {"test": True}
         ):
-            expected = "Link {0} target is set to be changed to {1}".format(
-                name, target
-            )
+            expected = "Link {} target is set to be changed to {}".format(name, target)
             changes = dict(change=name)
             ret = return_val(result=None, comment=expected, name=name, changes=changes)
             self.assertDictEqual(
@@ -752,8 +747,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             filestate.__opts__, {"test": True}
         ):
             expected = (
-                "The file or directory {0} is set for removal to "
-                "make way for a new hard link targeting {1}".format(name, target)
+                "The file or directory {} is set for removal to "
+                "make way for a new hard link targeting {}".format(name, target)
             )
             ret = return_val(result=None, comment=expected, name=name)
             self.assertDictEqual(
@@ -772,7 +767,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             filestate.__opts__, {"test": True}
         ):
             expected = (
-                "File or directory exists where the hard link {0} "
+                "File or directory exists where the hard link {} "
                 "should be. Did you mean to use force?".format(name)
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -785,7 +780,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, patches), patch.dict(
             filestate.__salt__, {"file.user_to_uid": mock_uid}
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Unable to hard link from directory {0}".format(test_dir)
+            expected = "Unable to hard link from directory {}".format(test_dir)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, test_dir, user=user, group=group), ret
@@ -795,7 +790,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.dict(filestate.__salt__, patches), patch.dict(
             filestate.__salt__, {"file.user_to_uid": mock_uid}
         ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-            expected = "Unable to hard link to directory {0}".format(test_dir)
+            expected = "Unable to hard link to directory {}".format(test_dir)
             ret = return_val(comment=expected, name=test_dir)
             self.assertDictEqual(
                 filestate.hardlink(test_dir, target, user=user, group=group), ret
@@ -810,7 +805,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_t
         ):
 
-            expected = "File exists where the hard link {0} should be".format(name)
+            expected = "File exists where the hard link {} should be".format(name)
             ret = return_val(comment=expected, name=name)
             self.assertDictEqual(
                 filestate.hardlink(name, target, user=user, group=group), ret
@@ -827,7 +822,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Target of hard link {0} is already pointing " "to {1}".format(
+            expected = "Target of hard link {} is already pointing " "to {}".format(
                 name, target
             )
             ret = return_val(result=True, comment=expected, name=name)
@@ -850,7 +845,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Set target of hard link {0} -> {1}".format(name, target)
+            expected = "Set target of hard link {} -> {}".format(name, target)
             changes = dict(new=name)
             ret = return_val(result=True, comment=expected, name=name, changes=changes)
             self.assertDictEqual(
@@ -872,7 +867,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to set target of hard link {0} -> " "{1}: {2}".format(
+            expected = "Unable to set target of hard link {} -> " "{}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -895,7 +890,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Created new hard link {0} -> {1}".format(name, target)
+            expected = "Created new hard link {} -> {}".format(name, target)
             changes = dict(new=name)
             ret = return_val(result=True, comment=expected, name=name, changes=changes)
             self.assertDictEqual(
@@ -917,7 +912,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to create new hard link {0} -> " "{1}: {2}".format(
+            expected = "Unable to create new hard link {} -> " "{}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -940,7 +935,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_t
         ):
 
-            expected = "Created new hard link {0} -> {1}".format(name, target)
+            expected = "Created new hard link {} -> {}".format(name, target)
             changes = dict(new=name)
             changes["forced"] = "File for hard link was forcibly replaced"
             ret = return_val(result=True, comment=expected, name=name, changes=changes)
@@ -964,7 +959,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_t
         ):
 
-            expected = "Unable to create new hard link {0} -> " "{1}: {2}".format(
+            expected = "Unable to create new hard link {} -> " "{}: {}".format(
                 name, target, ""
             )
             changes = dict(forced="File for hard link was forcibly replaced")
@@ -995,7 +990,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(filestate.absent(""), ret)
 
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "name": name})
                 self.assertDictEqual(filestate.absent(name), ret)
 
@@ -1006,7 +1001,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, "isfile", mock_t):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "File {0} is set for removal".format(name)
+                    comt = "File {} is set for removal".format(name)
                     ret.update(
                         {
                             "comment": comt,
@@ -1019,7 +1014,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(filestate.__opts__, {"test": False}):
                     with patch.dict(filestate.__salt__, {"file.remove": mock_file}):
-                        comt = "Removed file {0}".format(name)
+                        comt = "Removed file {}".format(name)
                         ret.update(
                             {
                                 "comment": comt,
@@ -1029,14 +1024,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         )
                         self.assertDictEqual(filestate.absent(name), ret)
 
-                        comt = "Removed file {0}".format(name)
+                        comt = "Removed file {}".format(name)
                         ret.update({"comment": "", "result": False, "changes": {}})
                         self.assertDictEqual(filestate.absent(name), ret)
 
             with patch.object(os.path, "isfile", mock_f):
                 with patch.object(os.path, "isdir", mock_t):
                     with patch.dict(filestate.__opts__, {"test": True}):
-                        comt = "Directory {0} is set for removal".format(name)
+                        comt = "Directory {} is set for removal".format(name)
                         ret.update(
                             {
                                 "comment": comt,
@@ -1048,7 +1043,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     with patch.dict(filestate.__opts__, {"test": False}):
                         with patch.dict(filestate.__salt__, {"file.remove": mock_tree}):
-                            comt = "Removed directory {0}".format(name)
+                            comt = "Removed directory {}".format(name)
                             ret.update(
                                 {
                                     "comment": comt,
@@ -1058,7 +1053,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             )
                             self.assertDictEqual(filestate.absent(name), ret)
 
-                            comt = "Failed to remove directory {0}".format(name)
+                            comt = "Failed to remove directory {}".format(name)
                             ret.update(
                                 {"comment": comt, "result": False, "changes": {}}
                             )
@@ -1066,7 +1061,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.dict(filestate.__opts__, {"test": True}):
-                        comt = "File {0} is not present".format(name)
+                        comt = "File {} is not present".format(name)
                         ret.update({"comment": comt, "result": True})
                         self.assertDictEqual(filestate.absent(name), ret)
 
@@ -1088,12 +1083,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(filestate.exists(""), ret)
 
         with patch.object(os.path, "exists", mock_f):
-            comt = "Specified path {0} does not exist".format(name)
+            comt = "Specified path {} does not exist".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.exists(name), ret)
 
         with patch.object(os.path, "exists", mock_t):
-            comt = "Path {0} exists".format(name)
+            comt = "Path {} exists".format(name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(filestate.exists(name), ret)
 
@@ -1115,12 +1110,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(filestate.missing(""), ret)
 
         with patch.object(os.path, "exists", mock_t):
-            comt = "Specified path {0} exists".format(name)
+            comt = "Specified path {} exists".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.missing(name), ret)
 
         with patch.object(os.path, "exists", mock_f):
-            comt = "Path {0} is missing".format(name)
+            comt = "Path {} is missing".format(name)
             ret.update({"comment": comt, "result": True})
             self.assertDictEqual(filestate.missing(name), ret)
 
@@ -1264,7 +1259,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, "isfile", mock_f):
                     comt = (
-                        "File {0} is not present and is not set for "
+                        "File {} is not present and is not set for "
                         "creation".format(name)
                     )
                     ret.update({"comment": comt, "name": name, "result": True})
@@ -1284,7 +1279,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 )
 
                 with patch.object(os.path, "isabs", mock_f):
-                    comt = "Specified file {0} is not an absolute path".format(name)
+                    comt = "Specified file {} is not an absolute path".format(name)
                     ret.update({"comment": comt, "result": False})
                     self.assertDictEqual(
                         filestate.managed(name, user=user, group=group), ret
@@ -1292,7 +1287,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, "isabs", mock_t):
                     with patch.object(os.path, "isdir", mock_t):
-                        comt = "Specified target {0} is a directory".format(name)
+                        comt = "Specified target {} is a directory".format(name)
                         ret.update({"comment": comt})
                         self.assertDictEqual(
                             filestate.managed(name, user=user, group=group), ret
@@ -1336,7 +1331,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                         with patch.object(os.path, "exists", mock_t):
                             with patch.dict(filestate.__opts__, {"test": True}):
-                                comt = "File {0} not updated".format(name)
+                                comt = "File {} not updated".format(name)
                                 ret.update({"comment": comt})
                                 self.assertDictEqual(
                                     filestate.managed(
@@ -1345,7 +1340,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     ret,
                                 )
 
-                                comt = "The file {0} is in the correct state".format(
+                                comt = "The file {} is in the correct state".format(
                                     name
                                 )
                                 ret.update({"comment": comt, "result": True})
@@ -1433,12 +1428,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                         if salt.utils.platform.is_windows():
                             mock_ret = MagicMock(return_value=ret)
-                            comt = "File {0} not updated".format(name)
+                            comt = "File {} not updated".format(name)
                         else:
                             perms = {"luser": user, "lmode": "0644", "lgroup": group}
                             mock_ret = MagicMock(return_value=(ret, perms))
                             comt = (
-                                "File {0} will be updated with "
+                                "File {} will be updated with "
                                 "permissions 0400 from its current "
                                 "state of 0644".format(name)
                             )
@@ -1527,7 +1522,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_check = MagicMock(
             return_value=(
                 None,
-                'The directory "{0}" will be changed'.format(name),
+                'The directory "{}" will be changed'.format(name),
                 {name: {"directory": "new"}},
             )
         )
@@ -1555,7 +1550,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(filestate.directory(name, user=user, group=group), ret)
 
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(
                     filestate.directory(name, user=user, group=group), ret
@@ -1578,16 +1573,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         )
 
                     with patch.object(os.path, "isfile", mock_t):
-                        comt = "Specified location {0} exists and is a file".format(
-                            name
-                        )
+                        comt = "Specified location {} exists and is a file".format(name)
                         ret.update({"comment": comt})
                         self.assertDictEqual(
                             filestate.directory(name, user=user, group=group), ret
                         )
 
                     with patch.object(os.path, "islink", mock_t):
-                        comt = "Specified location {0} exists and is a symlink".format(
+                        comt = "Specified location {} exists and is a symlink".format(
                             name
                         )
                         ret.update({"comment": comt})
@@ -1598,10 +1591,10 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.dict(filestate.__opts__, {"test": True}):
                         if salt.utils.platform.is_windows():
-                            comt = 'The directory "{0}" will be changed' "".format(name)
+                            comt = 'The directory "{}" will be changed' "".format(name)
                         else:
                             comt = (
-                                "The following files will be changed:\n{0}:"
+                                "The following files will be changed:\n{}:"
                                 " directory - new\n".format(name)
                             )
                         ret.update(
@@ -1617,7 +1610,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                     with patch.dict(filestate.__opts__, {"test": False}):
                         with patch.object(os.path, "isdir", mock_f):
-                            comt = "No directory to create {0} in".format(name)
+                            comt = "No directory to create {} in".format(name)
                             ret.update({"comment": comt, "result": False})
                             self.assertDictEqual(
                                 filestate.directory(name, user=user, group=group), ret
@@ -1630,7 +1623,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         with patch.object(
                             os.path, "isdir", MagicMock(side_effect=isdir_side_effect)
                         ):
-                            comt = "Failed to create directory {0}".format(name)
+                            comt = "Failed to create directory {}".format(name)
                             ret.update(
                                 {
                                     "comment": comt,
@@ -1705,7 +1698,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     ret,
                                 )
 
-                        comt = "Directory {0} updated".format(name)
+                        comt = "Directory {} updated".format(name)
                         ret = {
                             "name": name,
                             "result": True,
@@ -1801,7 +1794,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             )
 
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(filestate.recurse(name, source), ret)
 
@@ -1827,12 +1820,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.object(os.path, "exists", mock_t):
-                        comt = "The path {0} exists and is not a directory".format(name)
+                        comt = "The path {} exists and is not a directory".format(name)
                         ret.update({"comment": comt})
                         self.assertDictEqual(filestate.recurse(name, source), ret)
 
                 with patch.object(os.path, "isdir", mock_t):
-                    comt = "The directory {0} is in the correct state".format(name)
+                    comt = "The directory {} is in the correct state".format(name)
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(filestate.recurse(name, source), ret)
 
@@ -1855,7 +1848,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {0} is not an absolute path".format(name)
+            comt = "Specified file {} is not an absolute path".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.replace(name, pattern, repl), ret)
 
@@ -1890,7 +1883,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "name": name})
                 self.assertDictEqual(filestate.blockreplace(name), ret)
 
@@ -1924,7 +1917,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "name": name})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
@@ -1937,7 +1930,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
-                    comt = "{0}: Pattern not found".format(regex)
+                    comt = "{}: Pattern not found".format(regex)
                     ret.update({"comment": comt, "result": False})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
@@ -1950,7 +1943,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     },
                 ):
                     with patch.dict(filestate.__opts__, {"test": True}):
-                        comt = "File {0} is set to be updated".format(name)
+                        comt = "File {} is set to be updated".format(name)
                         ret.update(
                             {
                                 "comment": comt,
@@ -1988,7 +1981,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_f = MagicMock(return_value=False)
             mock = MagicMock(side_effect=[False, True, False, False, True, True, True])
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "name": name})
                 self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
@@ -2005,12 +1998,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
-                    comt = "{0}: Pattern not found".format(regex)
+                    comt = "{}: Pattern not found".format(regex)
                     ret.update({"comment": comt, "result": False})
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                     with patch.dict(filestate.__opts__, {"test": True}):
-                        comt = "File {0} is set to be updated".format(name)
+                        comt = "File {} is set to be updated".format(name)
                         ret.update(
                             {
                                 "comment": comt,
@@ -2078,13 +2071,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(filestate.prepend(name, makedirs=True), ret)
 
             with patch.object(os.path, "isabs", mock_f):
-                comt = "Specified file {0} is not an absolute path".format(name)
+                comt = "Specified file {} is not an absolute path".format(name)
                 ret.update({"comment": comt, "changes": {}})
                 self.assertDictEqual(filestate.prepend(name), ret)
 
             with patch.object(os.path, "isabs", mock_t):
                 with patch.object(os.path, "exists", mock_t):
-                    comt = "Failed to load template file {0}".format(source)
+                    comt = "Failed to load template file {}".format(source)
                     ret.update({"comment": comt, "name": source, "data": []})
                     self.assertDictEqual(filestate.prepend(name, source=source), ret)
 
@@ -2096,7 +2089,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         with patch.dict(filestate.__utils__, {"files.is_text": mock_f}):
                             with patch.dict(filestate.__opts__, {"test": True}):
                                 change = {"diff": "Replace binary file"}
-                                comt = "File {0} is set to be updated".format(name)
+                                comt = "File {} is set to be updated".format(name)
                                 ret.update(
                                     {"comment": comt, "result": None, "changes": change}
                                 )
@@ -2131,14 +2124,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {0} is not an absolute path".format(name)
+            comt = "Specified file {} is not an absolute path".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.touch(name), ret)
 
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "exists", mock_f):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "File {0} is set to be created".format(name)
+                    comt = "File {} is set to be created".format(name)
                     ret.update(
                         {"comment": comt, "result": None, "changes": {"new": name}}
                     )
@@ -2146,13 +2139,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(filestate.__opts__, {"test": False}):
                 with patch.object(os.path, "isdir", mock_f):
-                    comt = "Directory not present to touch file {0}".format(name)
+                    comt = "Directory not present to touch file {}".format(name)
                     ret.update({"comment": comt, "result": False, "changes": {}})
                     self.assertDictEqual(filestate.touch(name), ret)
 
                 with patch.object(os.path, "isdir", mock_t):
                     with patch.dict(filestate.__salt__, {"file.touch": mock_t}):
-                        comt = "Created empty file {0}".format(name)
+                        comt = "Created empty file {}".format(name)
                         ret.update(
                             {"comment": comt, "result": True, "changes": {"new": name}}
                         )
@@ -2183,13 +2176,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_grp = MagicMock(return_value=group)
         mock_io = MagicMock(side_effect=IOError)
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {0} is not an absolute path".format(name)
+            comt = "Specified file {} is not an absolute path".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.copy_(name, source), ret)
 
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "exists", mock_f):
-                comt = 'Source file "{0}" is not present'.format(source)
+                comt = 'Source file "{}" is not present'.format(source)
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(filestate.copy_(name, source), ret)
 
@@ -2223,16 +2216,14 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     )
 
                     comt1 = (
-                        'Failed to delete "{0}" in preparation for'
+                        'Failed to delete "{}" in preparation for'
                         " forced move".format(name)
                     )
                     comt2 = (
-                        'The target file "{0}" exists and will not be '
+                        'The target file "{}" exists and will not be '
                         "overwritten".format(name)
                     )
-                    comt3 = 'File "{0}" is set to be copied to "{1}"'.format(
-                        source, name
-                    )
+                    comt3 = 'File "{}" is set to be copied to "{}"'.format(source, name)
                     with patch.object(os.path, "isdir", mock_f):
                         with patch.object(os.path, "lexists", mock_t):
                             with patch.dict(filestate.__opts__, {"test": False}):
@@ -2289,16 +2280,15 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         mock_lex = MagicMock(side_effect=[False, True, True])
         with patch.object(os.path, "isabs", mock_f):
-            comt = "Specified file {0} is not an absolute path".format(name)
+            comt = "Specified file {} is not an absolute path".format(name)
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
-                comt = (
-                    'Source file "{0}" has already been moved out of '
-                    "place".format(source)
+                comt = 'Source file "{}" has already been moved out of ' "place".format(
+                    source
                 )
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
@@ -2307,7 +2297,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
                 comt = (
-                    'The target file "{0}" exists and will not be '
+                    'The target file "{}" exists and will not be '
                     "overwritten".format(name)
                 )
                 ret.update({"comment": comt, "result": True})
@@ -2319,7 +2309,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, "lexists", mock_lex):
                 with patch.dict(filestate.__opts__, {"test": False}):
                     comt = (
-                        'Failed to delete "{0}" in preparation for '
+                        'Failed to delete "{}" in preparation for '
                         "forced move".format(name)
                     )
                     with patch.dict(filestate.__salt__, {"file.remove": mock_rem}):
@@ -2332,7 +2322,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = 'File "{0}" is set to be moved to "{1}"'.format(source, name)
+                    comt = 'File "{}" is set to be moved to "{}"'.format(source, name)
                     ret.update({"name": name, "comment": comt, "result": None})
                     self.assertDictEqual(filestate.rename(name, source), ret)
 
@@ -2354,7 +2344,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             with patch.object(
                                 shutil, "move", MagicMock(side_effect=IOError)
                             ):
-                                comt = 'Failed to move "{0}" to "{1}"'.format(
+                                comt = 'Failed to move "{}" to "{}"'.format(
                                     source, name
                                 )
                                 ret.update(
@@ -2371,7 +2361,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     with patch.object(os.path, "islink", mock_f):
                         with patch.dict(filestate.__opts__, {"test": False}):
                             with patch.object(shutil, "move", MagicMock()):
-                                comt = 'Moved "{0}" to "{1}"'.format(source, name)
+                                comt = 'Moved "{}" to "{}"'.format(source, name)
                                 ret.update(
                                     {
                                         "name": name,
@@ -2431,7 +2421,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "__id__": "ID",
                 },
             ):
-                comt = "Accumulator {0} for file {1} " "was charged by text".format(
+                comt = "Accumulator {} for file {} " "was charged by text".format(
                     name, filename
                 )
                 ret.update({"comment": comt, "name": name, "result": True})
@@ -2454,7 +2444,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
             with patch.object(os.path, "isfile", mock_f):
-                comt = "File {0} is not present and is not set for " "creation".format(
+                comt = "File {} is not present and is not set for " "creation".format(
                     name
                 )
                 ret.update({"comment": comt, "name": name, "result": True})
@@ -2493,7 +2483,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 filestate.__salt__, {"file.check_managed_changes": mock_changes}
             ):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "Dataset will be serialized and stored into {0}".format(name)
+                    comt = "Dataset will be serialized and stored into {}".format(name)
                     ret.update({"comment": comt, "result": None, "changes": True})
                     self.assertDictEqual(
                         filestate.serialize(name, dataset=True, formatter="python"), ret
@@ -2504,7 +2494,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 filestate.__salt__, {"file.check_managed_changes": mock_no_changes}
             ):
                 with patch.dict(filestate.__opts__, {"test": True}):
-                    comt = "The file {0} is in the correct state".format(name)
+                    comt = "The file {} is in the correct state".format(name)
                     ret.update({"comment": comt, "result": True, "changes": False})
                     self.assertDictEqual(
                         filestate.serialize(name, dataset=True, formatter="python"), ret
@@ -2513,7 +2503,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=ret)
             with patch.dict(filestate.__opts__, {"test": False}):
                 with patch.dict(filestate.__salt__, {"file.manage_file": mock}):
-                    comt = "Dataset will be serialized and stored into {0}".format(name)
+                    comt = "Dataset will be serialized and stored into {}".format(name)
                     ret.update({"comment": comt, "result": None})
                     self.assertDictEqual(
                         filestate.serialize(name, dataset=True, formatter="python"), ret
@@ -2731,12 +2721,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 if test:
                     expected_ret["result"] = None
                     expected_ret["comment"] = (
-                        "{0} backups would have been removed from {1}.\n"
+                        "{} backups would have been removed from {}.\n"
                         "".format(len(deleted_files), fake_name)
                     )
                 else:
                     expected_ret["comment"] = (
-                        "{0} backups were removed from {1}.\n"
+                        "{} backups were removed from {}.\n"
                         "".format(len(deleted_files), fake_name)
                     )
                     mock_remove.assert_has_calls(
@@ -2751,6 +2741,98 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         run_checks(test=True)
         run_checks(strptime_format=fake_strptime_format)
         run_checks(strptime_format=fake_strptime_format, test=True)
+
+    @with_tempfile()
+    def test_file_keyvalue_key_values(self, fpath):
+        """
+        test file.keyvalue when using key_values kwarg
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(
+            name=fpath,
+            key_values=collections.OrderedDict(PermitRootLogin="yes"),
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
+
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
+
+    @with_tempfile()
+    def test_file_keyvalue_empty(self, fpath):
+        """
+        test file.keyvalue when key_values is empty
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(
+            name=fpath,
+            key_values={},
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
+
+        self.assertEqual(
+            ret["comment"],
+            "file.keyvalue key and value not supplied and key_values is empty",
+        )
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertNotIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
+
+    @with_tempfile()
+    def test_file_keyvalue_not_dict(self, fpath):
+        """
+        test file.keyvalue when key_values not a dict
+        """
+        content = dedent(
+            """\
+            #PermitRootLogin prohibit-password
+            #StrictMode yes
+            """
+        )
+
+        with salt.utils.files.fopen(fpath, "w+") as fp_:
+            fp_.write(content)
+
+        ret = filestate.keyvalue(
+            name=fpath,
+            key_values=["PermiteRootLogin", "yes"],
+            separator=" ",
+            uncomment="#",
+            key_ignore_case=True,
+        )
+
+        self.assertEqual(
+            ret["comment"],
+            "file.keyvalue key and value not supplied and key_values is not a dictionary",
+        )
+        with salt.utils.files.fopen(fpath, "r") as fp_:
+            f_contents = fp_.read()
+            self.assertNotIn("PermitRootLogin yes", f_contents)
+            self.assertIn("#StrictMode yes", f_contents)
 
 
 class TestFindKeepFiles(TestCase):
@@ -2835,7 +2917,7 @@ class TestFileTidied(TestCase):
                 ]
             },
             "result": True,
-            "comment": "Removed 3 files or directories from directory {0}".format(name),
+            "comment": "Removed 3 files or directories from directory {}".format(name),
         }
         self.assertDictEqual(exp, ret)
         assert remove.call_count == 3
@@ -2866,7 +2948,7 @@ class TestFileTidied(TestCase):
                 ]
             },
             "result": True,
-            "comment": "Removed 6 files or directories from directory {0}".format(name),
+            "comment": "Removed 6 files or directories from directory {}".format(name),
         }
         self.assertDictEqual(exp, ret)
         assert remove.call_count == 6
@@ -2993,7 +3075,7 @@ class TestSelinux(TestCase, LoaderModuleMockMixin):
         file_name = "/tmp/some-test-file"
         check_perms_result = [
             {
-                "comment": "The file {0} is set to be changed".format(file_name),
+                "comment": "The file {} is set to be changed".format(file_name),
                 "changes": {
                     "selinux": {
                         "New": "User: unconfined_u Type: lost_found_t",
