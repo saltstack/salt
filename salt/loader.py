@@ -1266,10 +1266,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.module_dirs = module_dirs
         self.tag = tag
         self._gc_finalizer = None
-        if loaded_base_name:
+        if loaded_base_name and loaded_base_name != LOADED_BASE_NAME:
             self.loaded_base_name = loaded_base_name
-        else:
-            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
             # Remove any modules matching self.loaded_base_name that have been set to None previously
             self.clean_modules()
             # Make sure that, when this module is about to be GC'ed, we at least set any modules in
@@ -1282,6 +1280,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             )
             # This finalizer does not need to run when the process is exiting
             self._gc_finalizer.atexit = False
+        else:
+            self.loaded_base_name = LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
