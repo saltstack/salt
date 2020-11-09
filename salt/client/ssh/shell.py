@@ -2,24 +2,19 @@
 """
 Manage transport commands via ssh
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
-
-# Import python libs
 import re
 import shlex
 import subprocess
 import sys
 import time
 
-# Import salt libs
 import salt.defaults.exitcodes
 import salt.utils.json
 import salt.utils.nb_popen
 import salt.utils.vt
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +31,7 @@ def gen_key(path):
     """
     Generate a key for use with salt-ssh
     """
-    cmd = ["ssh-keygen", "-P", '""', "-f", path, "-t", "rsa", "-q"]
+    cmd = ["ssh-keygen", "-P", "", "-f", path, "-t", "rsa", "-q"]
     dirname = os.path.dirname(path)
     if dirname and not os.path.isdir(dirname):
         os.makedirs(os.path.dirname(path))
@@ -60,7 +55,7 @@ def gen_shell(opts, **kwargs):
     return shell
 
 
-class Shell(object):
+class Shell:
     """
     Create a shell connection object to encapsulate ssh executions
     """
@@ -89,7 +84,7 @@ class Shell(object):
         self.host = host.strip("[]")
         self.user = user
         self.port = port
-        self.passwd = six.text_type(passwd) if passwd else passwd
+        self.passwd = str(passwd) if passwd else passwd
         self.priv = priv
         self.priv_passwd = priv_passwd
         self.timeout = timeout
@@ -127,26 +122,26 @@ class Shell(object):
             options.append("PasswordAuthentication=no")
         if self.opts.get("_ssh_version", (0,)) > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={0}".format(self.timeout))
+        options.append("ConnectTimeout={}".format(self.timeout))
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
             options.extend(["StrictHostKeyChecking=no", "UserKnownHostsFile=/dev/null"])
         known_hosts = self.opts.get("known_hosts_file")
         if known_hosts and os.path.isfile(known_hosts):
-            options.append("UserKnownHostsFile={0}".format(known_hosts))
+            options.append("UserKnownHostsFile={}".format(known_hosts))
         if self.port:
-            options.append("Port={0}".format(self.port))
+            options.append("Port={}".format(self.port))
         if self.priv and self.priv != "agent-forwarding":
-            options.append("IdentityFile={0}".format(self.priv))
+            options.append("IdentityFile={}".format(self.priv))
         if self.user:
-            options.append("User={0}".format(self.user))
+            options.append("User={}".format(self.user))
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {0} ".format(option))
+            ret.append("-o {} ".format(option))
         return "".join(ret)
 
     def _passwd_opts(self):
@@ -162,7 +157,7 @@ class Shell(object):
         ]
         if self.opts["_ssh_version"] > (4, 9):
             options.append("GSSAPIAuthentication=no")
-        options.append("ConnectTimeout={0}".format(self.timeout))
+        options.append("ConnectTimeout={}".format(self.timeout))
         if self.opts.get("ignore_host_keys"):
             options.append("StrictHostKeyChecking=no")
         if self.opts.get("no_host_keys"):
@@ -181,19 +176,19 @@ class Shell(object):
                 ]
             )
         if self.port:
-            options.append("Port={0}".format(self.port))
+            options.append("Port={}".format(self.port))
         if self.user:
-            options.append("User={0}".format(self.user))
+            options.append("User={}".format(self.user))
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
         ret = []
         for option in options:
-            ret.append("-o {0} ".format(option))
+            ret.append("-o {} ".format(option))
         return "".join(ret)
 
     def _ssh_opts(self):
-        return " ".join(["-o {0}".format(opt) for opt in self.ssh_options])
+        return " ".join(["-o {}".format(opt) for opt in self.ssh_options])
 
     def _copy_id_str_old(self):
         """
@@ -202,9 +197,9 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} '{2} -p {3} {4} {5}@{6}'".format(
+            return "{} {} '{} -p {} {} {}@{}'".format(
                 "ssh-copy-id",
-                "-i {0}.pub".format(self.priv),
+                "-i {}.pub".format(self.priv),
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -221,9 +216,9 @@ class Shell(object):
         if self.passwd:
             # Using single quotes prevents shell expansion and
             # passwords containing '$'
-            return "{0} {1} {2} -p {3} {4} {5}@{6}".format(
+            return "{} {} {} -p {} {} {}@{}".format(
                 "ssh-copy-id",
-                "-i {0}.pub".format(self.priv),
+                "-i {}.pub".format(self.priv),
                 self._passwd_opts(),
                 self.port,
                 self._ssh_opts(),
@@ -260,7 +255,7 @@ class Shell(object):
             command.append(
                 " ".join(
                     [
-                        "-R {0}".format(item)
+                        "-R {}".format(item)
                         for item in self.remote_port_forwards.split(",")
                     ]
                 )
@@ -302,7 +297,7 @@ class Shell(object):
         rcode = None
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing non-blocking command: {0}".format(cmd)
+        logmsg = "Executing non-blocking command: {}".format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -321,7 +316,7 @@ class Shell(object):
         """
         cmd = self._cmd_str(cmd)
 
-        logmsg = "Executing command: {0}".format(cmd)
+        logmsg = "Executing command: {}".format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         if 'decode("base64")' in logmsg or "base64.b64decode(" in logmsg:
@@ -338,17 +333,17 @@ class Shell(object):
         scp a file or files to a remote system
         """
         if makedirs:
-            self.exec_cmd("mkdir -p {0}".format(os.path.dirname(remote)))
+            self.exec_cmd("mkdir -p {}".format(os.path.dirname(remote)))
 
         # scp needs [<ipv6}
         host = self.host
         if ":" in host:
-            host = "[{0}]".format(host)
+            host = "[{}]".format(host)
 
-        cmd = "{0} {1}:{2}".format(local, host, remote)
+        cmd = "{} {}:{}".format(local, host, remote)
         cmd = self._cmd_str(cmd, ssh="scp")
 
-        logmsg = "Executing command: {0}".format(cmd)
+        logmsg = "Executing command: {}".format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
@@ -434,7 +429,7 @@ class Shell(object):
                         ret_stdout = (
                             "The host key needs to be accepted, to "
                             "auto accept run salt-ssh with the -i "
-                            "flag:\n{0}"
+                            "flag:\n{}"
                         ).format(stdout)
                         return ret_stdout, "", 254
                 elif buff and buff.endswith("_||ext_mods||_"):
