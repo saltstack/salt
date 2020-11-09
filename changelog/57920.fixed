@@ -1,2 +1,0 @@
-Set the comment to "No minions responded" if salt.function fails to find any
-minions

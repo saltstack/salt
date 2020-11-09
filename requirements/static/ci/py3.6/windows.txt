@@ -12,7 +12,7 @@ aws-xray-sdk==0.95        # via moto
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
 boto3==1.13.5
 boto==2.49.0
-botocore==1.16.5          # via boto3, moto, s3transfer
+botocore==1.16.26         # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.6.20
@@ -85,13 +85,13 @@ pytest-helpers-namespace==2019.1.8
 pytest-salt-factories==0.93.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==6.1.0
+pytest==6.1.1
 python-dateutil==2.8.0
 python-etcd==0.4.5
 python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pythonnet==2.4.0
-pytz==2019.3
+pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pywin32==227
 pyyaml==5.3.1

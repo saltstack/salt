@@ -155,7 +155,7 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %default"
+            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -1330,7 +1330,9 @@ def ssl_webserver(integration_files_dir, scope="module"):
     """
     spins up an https webserver.
     """
-    context = ssl.SSLContext()
+    if sys.version_info < (3, 5, 3):
+        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
     context.load_cert_chain(
         str(integration_files_dir / "https" / "cert.pem"),
         str(integration_files_dir / "https" / "key.pem"),

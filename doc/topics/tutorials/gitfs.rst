@@ -1012,7 +1012,7 @@ host key in the ``~/.ssh/known_hosts`` file. If the master is also a minion,
 this can be done using the :mod:`ssh.set_known_host
 <salt.modules.ssh.set_known_host>` function:
 
-.. code-block:: bash
+.. code-block:: console
 
     # salt mymaster ssh.set_known_host user=root hostname=github.com
     mymaster:
@@ -1056,7 +1056,7 @@ Verifying the Fingerprint
 To verify that the correct fingerprint was added, it is a good idea to look it
 up. One way to do this is to use ``nmap``:
 
-.. code-block:: bash
+.. code-block:: console
 
     $ nmap -p 22 github.com --script ssh-hostkey
 
@@ -1138,7 +1138,7 @@ steps to this process:
    all users to fire the event.  Add the following policy to the sudoers file
    on the git server.
 
-   .. code-block:: bash
+   .. code-block:: console
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty
