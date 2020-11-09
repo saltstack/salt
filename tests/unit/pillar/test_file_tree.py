@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 test for pillar file_tree.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
 import salt.pillar.file_tree as file_tree
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -174,9 +167,9 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(file_tree.__opts__, {"pillarenv": "dev"}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
-                for key,value in mypillar.items():
+                for key, value in mypillar.items():
                     if isinstance(value, dict):
-                        for ikey,ivalue in value.items():
+                        for ikey, ivalue in value.items():
                             self.assertTrue(isinstance(ikey, str))
                             self.assertTrue(isinstance(ivalue, str))
                     else:
