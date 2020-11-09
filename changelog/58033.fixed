@@ -1,1 +1,0 @@
-`file.read` exec module function no longer fails on binary data.
