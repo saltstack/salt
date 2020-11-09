@@ -3047,3 +3047,91 @@ def services_need_restart(root=None, **kwargs):
     services = zypper_output.split()
 
     return services
+
+
+def get_repo_keys(info=False, root=None, **kwargs):
+    """Return the list of all the GPG keys stored in the RPM database
+
+    .. versionadded:: 3003
+
+    info
+       get the key information, returing a dictionary instead of a
+       list
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_repo_keys
+        salt '*' pkg.get_repo_keys info=True
+
+    """
+    return __salt__["lowpkg.list_gpg_keys"](info, root)
+
+
+def add_repo_key(path=None, text=None, root=None, saltenv="base", **kwargs):
+    """Import a new key into the key storage
+
+    .. versionadded:: 3003
+
+    path
+        the path of the key file to import
+
+    text
+        the key data to import, in string form
+
+    root
+        use root as top level directory (default: "/")
+
+    saltenv
+        the environment the key file resides in
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_repo_key 'salt://apt/sources/test.key'
+        salt '*' pkg.add_repo_key text="'$KEY1'"
+
+    """
+    if not path and not text:
+        raise SaltInvocationError("Provide a key to add")
+
+    if path and text:
+        raise SaltInvocationError("Add a key via path or key")
+
+    if path:
+        cache_path = __salt__["cp.cache_file"](path, saltenv)
+
+        if not cache_path:
+            log.error("Unable to get cached copy of file: %s", path)
+            return False
+
+        with salt.utils.files.fopen(cache_path, "r") as f:
+            text = f.read()
+
+    return __salt__["lowpkg.import_gpg_key"](text, root)
+
+
+def del_repo_key(keyid, root=None, **kwargs):
+    """Remove a key from the key storage
+
+    .. versionadded:: TBD
+
+    keyid
+        key identificatior
+
+    root
+       use root as top level directory (default: "/")
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.del_repo_key keyid=gpg-pubkey-3dbdc284-53674dd4
+
+    """
+    return __salt__["lowpkg.remove_gpg_key"](keyid, root)
