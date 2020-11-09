@@ -402,7 +402,7 @@ class NetapiSSHClientTest(SSHCase):
         self.assertFalse(os.path.exists(path))
 
 
-@requires_sshd_server
+@pytest.mark.requires_sshd_server
 class NetapiSSHClientAuthTest(SSHCase):
 
     USERA = "saltdev"
@@ -412,7 +412,9 @@ class NetapiSSHClientAuthTest(SSHCase):
         """
         Set up a NetapiClient instance
         """
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, "master"))
+        opts = salt.config.client_config(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        )
         naopts = copy.deepcopy(opts)
         naopts["ignore_host_keys"] = True
         self.netapi = salt.netapi.NetapiClient(naopts)
