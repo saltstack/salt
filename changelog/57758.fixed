@@ -1,0 +1,1 @@
+Change dict check to isinstance instead of type() for key_values in file.keyvalue.

@@ -10,7 +10,7 @@ Support for APT (Advanced Packaging Tool)
     For repository management, the ``python-apt`` package must be installed.
 """
 
-# Import python libs
+
 import copy
 import datetime
 import fnmatch
@@ -18,8 +18,10 @@ import logging
 import os
 import re
 import time
+from urllib.error import HTTPError
+from urllib.request import Request as _Request
+from urllib.request import urlopen as _urlopen
 
-# Import salt libs
 import salt.config
 import salt.syspaths
 import salt.utils.args
@@ -37,17 +39,7 @@ import salt.utils.systemd
 import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import third party libs
-# pylint: disable=no-name-in-module,import-error,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves.urllib.error import HTTPError
-from salt.ext.six.moves.urllib.request import Request as _Request
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 from salt.modules.cmdmod import _parse_env
-
-# pylint: enable=no-name-in-module,import-error,redefined-builtin
-
 
 log = logging.getLogger(__name__)
 
@@ -92,10 +84,6 @@ DPKG_ENV_VARS = {
     "DEBIAN_FRONTEND": "noninteractive",
     "UCF_FORCE_CONFFOLD": "1",
 }
-if six.PY2:
-    # Ensure no unicode in env vars on PY2, as it causes problems with
-    # subprocess.Popen()
-    DPKG_ENV_VARS = salt.utils.data.encode(DPKG_ENV_VARS)
 
 # Define the module's virtual name
 __virtualname__ = "pkg"
@@ -2334,7 +2322,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             "Error: repo '{}' not a well formatted definition".format(repo)
         )
 
-    full_comp_list = set(repo_comps)
+    full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
     if "keyid" in kwargs:
@@ -2413,7 +2401,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             )
 
     if "comps" in kwargs:
-        kwargs["comps"] = kwargs["comps"].split(",")
+        kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
         full_comp_list |= set(kwargs["comps"])
     else:
         kwargs["comps"] = list(full_comp_list)
@@ -2559,7 +2547,9 @@ def expand_repo_def(**kwargs):
     source_entry = sourceslist.SourceEntry(repo)
     for list_args in ("architectures", "comps"):
         if list_args in kwargs:
-            kwargs[list_args] = kwargs[list_args].split(",")
+            kwargs[list_args] = [
+                kwarg.strip() for kwarg in kwargs[list_args].split(",")
+            ]
     for kwarg in _MODIFY_OK:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
