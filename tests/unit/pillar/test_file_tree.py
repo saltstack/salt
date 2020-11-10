@@ -167,11 +167,4 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(file_tree.__opts__, {"pillarenv": "dev"}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
-                for key, value in mypillar.items():
-                    if isinstance(value, dict):
-                        for ikey, ivalue in value.items():
-                            self.assertTrue(isinstance(ikey, str))
-                            self.assertTrue(isinstance(ivalue, str))
-                    else:
-                        self.assertTrue(isinstance(value, str))
-                    self.assertTrue(isinstance(key, str))
+                self.assertEqual(mypillar["files"]["groupfile"], b"base")
