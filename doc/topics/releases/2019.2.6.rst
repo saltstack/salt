@@ -4,7 +4,7 @@
 Salt 2019.2.6 Release Notes
 ===========================
 
-Version 2019.2.6 is a CVE fix release for :ref:`2019.2.0 <release-2019-2.0>`.
+Version 2019.2.6 is a CVE fix release for :ref:`2019.2.0 <release-2019-2-0>`.
 
 Fixed
 -----
