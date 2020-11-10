@@ -1,0 +1,1 @@
+Fix issue where win_wua module fails to load when BITS is set to Manual
