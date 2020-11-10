@@ -102,20 +102,15 @@ import binascii
 import calendar
 import logging
 import math
-
-# Import Python libs
 import os
 import re
 import time
 from datetime import datetime
 
-# Import Salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # pylint: disable=C0103
