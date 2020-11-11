@@ -1,3 +1,5 @@
+.. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+
 ====================
 Introduction to Salt
 ====================
@@ -111,7 +113,7 @@ is hosted by Google Groups. It is open to new members.
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
 Additionally, all users of Salt should be subscribed to the Announcements mailing
-list which contains important updates about Salt, such as new release and
+list which contains important updates about Salt, such as new releaes and
 security-related announcements. This list is low-traffic.
 
 .. _`salt-announce mailing list`: https://groups.google.com/forum/#!forum/salt-announce
@@ -121,13 +123,12 @@ IRC
 ===
 
 The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
-can use the `Freenode webchat client`_ right from your browser.
-
-`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
+can use the `Freenode webchat client`_ right from your browser.  `Logs of the
+IRC channel activity`_ are also available.
 
 .. _Freenode: http://freenode.net/irc_servers.shtml
 .. _`Freenode webchat client`: https://webchat.freenode.net/#salt
-.. _`Logs of the IRC channel activity`: http://irclog.perlgeek.de/salt/
+.. _`Logs of the IRC channel activity`: https://freenode.logbot.info/salt/
 
 If you wish to discuss the development of Salt itself join us in
 ``#salt-devel``.
