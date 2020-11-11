@@ -1612,17 +1612,9 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             os.fsync(fh.fileno())
 
     def _byte_compile(self):
-        if salt.loader.USE_IMPORTLIB:
-            # Skip this check as "optimize" is unique to PY3's compileall
-            # module, and this will be a false error when Pylint is run on
-            # Python 2.
-            # pylint: disable=unexpected-keyword-arg
-            compileall.compile_file(self.module_file, quiet=1, optimize=0)
-            compileall.compile_file(self.module_file, quiet=1, optimize=1)
-            compileall.compile_file(self.module_file, quiet=1, optimize=2)
-            # pylint: enable=unexpected-keyword-arg
-        else:
-            compileall.compile_file(self.module_file, quiet=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=0)
+        compileall.compile_file(self.module_file, quiet=1, optimize=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=2)
 
     def _test_optimization_order(self, order):
         self._write_module_file()
@@ -1636,10 +1628,6 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
-
-        if not salt.loader.USE_IMPORTLIB:
-            # We are only testing multiple optimization levels on Python 3.5+
-            return
 
         # Remove the file and make a new loader. We should now load the
         # byte-compiled file with an optimization level matching the 2nd
@@ -1665,13 +1653,10 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         """
         self._test_optimization_order([0, 1, 2])
         self._test_optimization_order([0, 2, 1])
-        if salt.loader.USE_IMPORTLIB:
-            # optimization_order only supported on Python 3.5+, earlier
-            # releases only support unoptimized .pyc files.
-            self._test_optimization_order([1, 2, 0])
-            self._test_optimization_order([1, 0, 2])
-            self._test_optimization_order([2, 0, 1])
-            self._test_optimization_order([2, 1, 0])
+        self._test_optimization_order([1, 2, 0])
+        self._test_optimization_order([1, 0, 2])
+        self._test_optimization_order([2, 0, 1])
+        self._test_optimization_order([2, 1, 0])
 
     def test_load_source_file(self):
         """
