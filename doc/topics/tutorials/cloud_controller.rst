@@ -342,7 +342,7 @@ to the minions to refresh the pillar to pick up on the change:
 Now, migration routines can be run! To migrate a VM, simply run the Salt Virt
 migrate routine:
 
-.. code-block:: bash
+.. code-block:: console
 
     salt-run virt.migrate centos <new hypervisor>
 

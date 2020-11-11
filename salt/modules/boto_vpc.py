@@ -183,7 +183,6 @@ def __virtual__():
 
 
 def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
         __utils__["boto.assign_funcs"](__name__, "vpc", pack=__salt__)
     if HAS_BOTO3:
@@ -197,7 +196,7 @@ def __init__(opts):
 
 
 def check_vpc(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None
+    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
     Check whether a VPC with the given name or id exists.
@@ -585,12 +584,6 @@ def _find_vpcs(
     if all((vpc_id, vpc_name)):
         raise SaltInvocationError("Only one of vpc_name or vpc_id may be " "provided.")
 
-    if not any((vpc_id, vpc_name, tags, cidr)):
-        raise SaltInvocationError(
-            "At least one of the following must be "
-            "provided: vpc_id, vpc_name, cidr or tags."
-        )
-
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     filter_parameters = {"filters": {}}
 
@@ -613,17 +606,31 @@ def _find_vpcs(
     )
 
     if vpcs:
-        return [vpc.id for vpc in vpcs]
+        if not any((vpc_id, vpc_name, cidr, tags)):
+            return [vpc.id for vpc in vpcs if vpc.is_default]
+        else:
+            return [vpc.id for vpc in vpcs]
     else:
         return []
 
 
 def _get_id(
-    vpc_name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None
+    vpc_name=None,
+    cidr=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
     """
+
+    if not any((vpc_name, tags, cidr)):
+        raise SaltInvocationError(
+            "At least one of the following must be provided: vpc_name, cidr or tags."
+        )
 
     if vpc_name and not any((cidr, tags)):
         vpc_id = _cache_id(
@@ -665,7 +672,7 @@ def _get_id(
 
 
 def get_id(
-    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None
+    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
@@ -717,6 +724,12 @@ def exists(
         salt myminion boto_vpc.exists myvpc
 
     """
+
+    if not any((vpc_id, name, tags, cidr)):
+        raise SaltInvocationError(
+            "At least one of the following must be "
+            "provided: vpc_id, vpc_name, cidr or tags."
+        )
 
     try:
         vpc_ids = _find_vpcs(
@@ -870,10 +883,10 @@ def delete(
 
 
 def describe(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None
+    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
 ):
     """
-    Given a VPC ID describe its properties.
+    Describe a VPC's properties. If no VPC ID/Name is spcified then describe the default VPC.
 
     Returns a dictionary of interesting properties.
 
@@ -889,12 +902,16 @@ def describe(
 
     """
 
-    if not any((vpc_id, vpc_name)):
-        raise SaltInvocationError("A valid vpc id or name needs to be specified.")
-
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = _find_vpcs(
+            vpc_id=vpc_id,
+            vpc_name=vpc_name,
+            region=region,
+            key=key,
+            keyid=keyid,
+            profile=profile,
+        )
     except BotoServerError as err:
         boto_err = __utils__["boto.get_error"](err)
         if boto_err.get("aws", {}).get("code") == "InvalidVpcID.NotFound":

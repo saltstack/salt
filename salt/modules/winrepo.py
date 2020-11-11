@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Module to manage Windows software repo on a Standalone Minion
 
@@ -8,15 +7,11 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
 import salt.loader
-
-# Import salt libs
 import salt.output
 import salt.template
 import salt.utils.functools
@@ -175,15 +170,15 @@ def show_sls(name, saltenv="base"):
         repo.extend(definition)
 
         # Check for the sls file by name
-        sls_file = "{0}.sls".format(os.sep.join(repo))
+        sls_file = "{}.sls".format(os.sep.join(repo))
         if not os.path.exists(sls_file):
 
             # Maybe it's a directory with an init.sls
-            sls_file = "{0}\\init.sls".format(os.sep.join(repo))
+            sls_file = "{}\\init.sls".format(os.sep.join(repo))
             if not os.path.exists(sls_file):
 
                 # It's neither, return
-                return "Software definition {0} not found".format(name)
+                return "Software definition {} not found".format(name)
 
     # Load the renderer
     renderers = salt.loader.render(__opts__, __salt__)
@@ -203,7 +198,7 @@ def show_sls(name, saltenv="base"):
     except SaltRenderError as exc:
         log.debug("Failed to compile %s.", sls_file)
         log.debug("Error: %s.", exc)
-        config["Message"] = "Failed to compile {0}".format(sls_file)
-        config["Error"] = "{0}".format(exc)
+        config["Message"] = "Failed to compile {}".format(sls_file)
+        config["Error"] = "{}".format(exc)
 
     return config

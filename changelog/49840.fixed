@@ -1,1 +1,0 @@
-Do not use reverse DNS of the target used in salt-ssh. Use the target the user provides.

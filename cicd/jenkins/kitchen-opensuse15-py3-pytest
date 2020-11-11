@@ -2,7 +2,7 @@
 
 runTestSuite(
     ami_image_id: 'ami-01f083bce987e56ce',
-    concurrent_builds: 2,
+    concurrent_builds: 1,
     distro_name: 'opensuse',
     distro_version: '15',
     env: env,
