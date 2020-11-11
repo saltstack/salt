@@ -385,21 +385,13 @@ def create(vm_):
         transport=__opts__["transport"],
     )
 
-    num_cpus = config.get_cloud_config_value(
-        "num_cpus", vm_, __opts__, default=None
-    )
+    num_cpus = config.get_cloud_config_value("num_cpus", vm_, __opts__, default=None)
 
-    memory = config.get_cloud_config_value(
-        "memory", vm_, __opts__, default=None
-    )
+    memory = config.get_cloud_config_value("memory", vm_, __opts__, default=None)
 
-    serial = config.get_cloud_config_value(
-        "serial", vm_, __opts__, default=None
-    )
+    serial = config.get_cloud_config_value("serial", vm_, __opts__, default=None)
 
-    autostart = config.get_cloud_config_value(
-        "autostart", vm_, __opts__, default=False
-    )
+    autostart = config.get_cloud_config_value("autostart", vm_, __opts__, default=False)
 
     disk_name = config.get_cloud_config_value(
         "disk_name", vm_, __opts__, default="default"
@@ -409,9 +401,7 @@ def create(vm_):
         "thin_provision", vm_, __opts__, default=False
     )
 
-    devices = config.get_cloud_config_value(
-        "devices", vm_, __opts__, default=None
-    )
+    devices = config.get_cloud_config_value("devices", vm_, __opts__, default=None)
 
     key_filename = config.get_cloud_config_value(
         "private_key", vm_, __opts__, search_global=False, default=None
@@ -483,14 +473,17 @@ def create(vm_):
             # Configure amount of memory
             if memory:
                 try:
-                    memory_num, memory_unit = re.findall(r"[^\W\d_]+|\d+.\d+|\d+",
-                                                         memory)
+                    memory_num, memory_unit = re.findall(
+                        r"[^\W\d_]+|\d+.\d+|\d+", memory
+                    )
                     if memory_unit.lower() == "mb":
                         memory_mb = int(memory_num)
                     elif memory_unit.lower() == "gb":
                         memory_mb = int(float(memory_num) * 1024.0)
                     else:
-                        err_msg = "Invalid memory type specified: '{}'".format(memory_unit)
+                        err_msg = "Invalid memory type specified: '{}'".format(
+                            memory_unit
+                        )
                         log.error(err_msg)
                         return {"Error": err_msg}
                 except (TypeError, ValueError):
@@ -546,9 +539,19 @@ def create(vm_):
                         model = devices["network"][network]["model"]
                     else:
                         model = "virtio"
-                    iface_xml.append(ElementTree.Element("model", type=devices["network"][network]["model"]))
+                    iface_xml.append(
+                        ElementTree.Element(
+                            "model", type=devices["network"][network]["model"]
+                        )
+                    )
 
-                    log.debug("Adding NIC '%s', type '%s', source '%s', model '%s'", network, type, source, model)
+                    log.debug(
+                        "Adding NIC '%s', type '%s', source '%s', model '%s'",
+                        network,
+                        type,
+                        source,
+                        model,
+                    )
 
             else:
                 # Keep existing network interfaces from domain template, just remove mac address
@@ -623,7 +626,8 @@ def create(vm_):
                     pool, volume = find_pool_and_volume(conn, source)
                     if clone_strategy == "quick":
                         new_volume = pool.createXML(
-                            create_volume_with_backing_store_xml(volume, disk_name), volumeFlags
+                            create_volume_with_backing_store_xml(volume, disk_name),
+                            volumeFlags,
                         )
                     else:
                         new_volume = pool.createXMLFrom(
@@ -671,12 +675,20 @@ def create(vm_):
                         else:
                             shareable = False
 
-                        log.debug("Adding passthrough disk '%s' to domain '%s'", device, name)
-                        devices_xml.append(ElementTree.Element("disk", type="file", device="disk"))
+                        log.debug(
+                            "Adding passthrough disk '%s' to domain '%s'", device, name
+                        )
+                        devices_xml.append(
+                            ElementTree.Element("disk", type="file", device="disk")
+                        )
                         disk_xml = devices_xml.findall("./disk")[-1]
-                        disk_xml.append(ElementTree.Element("driver", name="qemu", type="raw"))
+                        disk_xml.append(
+                            ElementTree.Element("driver", name="qemu", type="raw")
+                        )
                         disk_xml.append(ElementTree.Element("source", file=device))
-                        disk_xml.append(ElementTree.Element("target", dev=disk, bus=bus))
+                        disk_xml.append(
+                            ElementTree.Element("target", dev=disk, bus=bus)
+                        )
                         if shareable:
                             disk_xml.append(ElementTree.Element("shareable"))
 
@@ -707,7 +719,9 @@ def create(vm_):
                         if thin_provision:
                             volumeFlags = 0
                         else:
-                            volumeFlags = libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+                            volumeFlags = (
+                                libvirt.VIR_STORAGE_VOL_CREATE_PREALLOC_METADATA
+                            )
 
                         pool = None
                         for p in virt_pools:
@@ -723,17 +737,34 @@ def create(vm_):
 
                             try:
                                 vol = pool.storageVolLookupByName(vol_name)
-                                log.debug("Volume '%s' in pool '%s' already exists", vol_name, pool.name())
+                                log.debug(
+                                    "Volume '%s' in pool '%s' already exists",
+                                    vol_name,
+                                    pool.name(),
+                                )
                             except libvirtError:
-                                log.debug("Creating volume '%s' in pool '%s'", vol_name, pool.name())
-                                vol_xml = """
+                                log.debug(
+                                    "Creating volume '%s' in pool '%s'",
+                                    vol_name,
+                                    pool.name(),
+                                )
+                                vol_xml = (
+                                    """
                                 <volume>
-                                  <name>""" + vol_name + """</name>
+                                  <name>"""
+                                    + vol_name
+                                    + """</name>
                                   <allocation>0</allocation>
-                                  <capacity unit="G">""" + str(size) + """</capacity>
+                                  <capacity unit="G">"""
+                                    + str(size)
+                                    + """</capacity>
                                   <target>
-                                    <path>""" + vol_path + """</path>
-                                    <format type='""" + format + """'/>
+                                    <path>"""
+                                    + vol_path
+                                    + """</path>
+                                    <format type='"""
+                                    + format
+                                    + """'/>
                                     <compat>1.1</compat>
                                     <permissions>
                                        <owner>107</owner>
@@ -743,15 +774,32 @@ def create(vm_):
                                      </permissions>
                                   </target>
                                 </volume>"""
+                                )
                                 log.debug("Creating %s", vol_xml)
                                 vol = pool.createXML(vol_xml, volumeFlags)
 
-                            log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
-                            devices_xml.append(ElementTree.Element("disk", type="file", device="disk"))
+                            log.debug(
+                                "Adding volume '%s' to domain '%s'", vol_name, name
+                            )
+                            devices_xml.append(
+                                ElementTree.Element("disk", type="file", device="disk")
+                            )
                             disk_xml = devices_xml.findall("./disk")[-1]
-                            disk_xml.append(ElementTree.Element("driver", cache="none", io="native", name="qemu", type=format))
-                            disk_xml.append(ElementTree.Element("source", file=vol_path))
-                            disk_xml.append(ElementTree.Element("target", dev=disk, bus=bus))
+                            disk_xml.append(
+                                ElementTree.Element(
+                                    "driver",
+                                    cache="none",
+                                    io="native",
+                                    name="qemu",
+                                    type=format,
+                                )
+                            )
+                            disk_xml.append(
+                                ElementTree.Element("source", file=vol_path)
+                            )
+                            disk_xml.append(
+                                ElementTree.Element("target", dev=disk, bus=bus)
+                            )
                             pool.refresh()
 
             clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
