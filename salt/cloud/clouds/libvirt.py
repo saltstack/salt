@@ -99,6 +99,7 @@ Tested on:
 import logging
 import os
 import re
+import sys
 import uuid
 from xml.etree import ElementTree
 
