@@ -1,0 +1,48 @@
+apache-libcloud==2.0.0
+azure>=4.0.0
+boto3>=1.13.5
+boto>=2.46.0
+certifi
+cffi
+cherrypy==17.3.0
+croniter>=0.3.0,!=0.3.22
+dnspython
+docker
+GitPython
+hgtools
+jmespath
+jsonschema
+junos-eznc==2.4.0
+jxmlease
+kazoo
+keyring==5.7.1
+kubernetes<4.0
+libnacl>=1.7.1
+mock>=3.0.5
+moto
+napalm; python_version >= '3.6'
+passlib
+paramiko>=2.1.6
+pycurl
+pygit2<=0.28.2; python_version < '3.8'
+pygit2>=1.2.0; python_version >= '3.8'
+pyiface
+pyinotify
+python-etcd>0.4.2
+pyvmomi
+requests
+rfc3987
+setuptools-scm
+strict_rfc3339
+toml
+vcert~=0.7.0
+virtualenv>=20.0.20
+watchdog
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+
+# cassandra
+cassandra-driver>=2.0

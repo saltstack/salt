@@ -26,7 +26,7 @@ from salt.transport.zeromq import AsyncReqMessageClientPool
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import flaky, not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
@@ -34,6 +34,8 @@ from tests.unit.transport.mixins import (
     ReqChannelMixin,
     run_loop_in_thread,
 )
+
+x = "fix pre"
 
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
@@ -781,3 +783,25 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         gather.join()
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
+
+
+class AsyncZeroMQReqChannelTests(TestCase):
+    def test_force_close_all_instances(self):
+        zmq1 = MagicMock()
+        zmq2 = MagicMock()
+        zmq3 = MagicMock()
+        zmq_objects = {"zmq": {"1": zmq1, "2": zmq2}, "other_zmq": {"3": zmq3}}
+
+        with patch(
+            "salt.transport.zeromq.AsyncZeroMQReqChannel.instance_map", zmq_objects
+        ):
+            salt.transport.zeromq.AsyncZeroMQReqChannel.force_close_all_instances()
+
+            self.assertEqual(zmq1.mock_calls, [call.close()])
+            self.assertEqual(zmq2.mock_calls, [call.close()])
+            self.assertEqual(zmq3.mock_calls, [call.close()])
+
+            # check if instance map changed
+            self.assertIs(
+                zmq_objects, salt.transport.zeromq.AsyncZeroMQReqChannel.instance_map
+            )
