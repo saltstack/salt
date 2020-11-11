@@ -18,7 +18,7 @@ cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.6.20
 certvalidator==0.11.1     # via vcert
-cffi==1.12.2
+cffi==1.14.3
 chardet==3.0.4
 cheetah3==3.1.0
 cheroot==8.3.0
@@ -102,7 +102,7 @@ python-jose==2.0.2        # via moto
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==19.0.0
+pyzmq==19.0.2 ; python_version >= "3.9"
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
