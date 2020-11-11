@@ -489,7 +489,7 @@ def create(vm_):
                     elif memory_unit.lower() == "gb":
                         memory_mb = int(float(memory_num) * 1024.0)
                     else:
-                        err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                        err_msg = "Invalid memory type specified: '{}'".format(memory_unit)
                         log.error(err_msg)
                         return {"Error": err_msg}
                 except (TypeError, ValueError):
@@ -811,7 +811,7 @@ def create(vm_):
     except Exception:  # pylint: disable=broad-except
         do_cleanup(cleanup)
         # throw the root cause after cleanup
-        raise
+        raise sys.exc_info()
 
 
 def do_cleanup(cleanup):
