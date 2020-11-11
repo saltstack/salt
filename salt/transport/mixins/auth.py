@@ -9,7 +9,9 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import re
 import shutil
+import time
 
 # Import Salt Libs
 import salt.crypt
@@ -239,6 +241,30 @@ class AESReqServerMixin(object):
             load["id"], load.get("autosign_grains", None)
         )
 
+        # Check for key auto-update through ancillary token check
+        auto_update = False
+        if "auto" in load and isinstance(load["auto"], str):
+            m = re.match(r"^(?P<expire>\d{10,}):(?P<sum>[0-9a-f]{64})$", load["auto"])
+            if m is not None and int(m.group("expire")) > int(time.time()):
+                try:
+                    with salt.utils.files.fopen(
+                        os.path.join(self.opts["pki_dir"], "auto_update_keys")
+                    ) as f:
+                        for key in f.readlines():
+                            key = key.strip()
+                            if key:
+                                sum = hashlib.sha256(
+                                    "{}:{}:{}".format(
+                                        m.group("expire"), load["id"], key
+                                    )
+                                ).hexdigest()
+                                if sum == m.group("sum"):
+                                    auto_sign = True
+                                    auto_update = True
+                                    break
+                except (OSError, IOError):
+                    pass
+
         pubfn = os.path.join(self.opts["pki_dir"], "minions", load["id"])
         pubfn_pend = os.path.join(self.opts["pki_dir"], "minions_pre", load["id"])
         pubfn_rejected = os.path.join(
@@ -264,26 +290,29 @@ class AESReqServerMixin(object):
             # The key has been accepted, check it
             with salt.utils.files.fopen(pubfn, "r") as pubfn_handle:
                 if pubfn_handle.read().strip() != load["pub"].strip():
-                    log.error(
-                        "Authentication attempt from %s failed, the public "
-                        "keys did not match. This may be an attempt to compromise "
-                        "the Salt cluster.",
-                        load["id"],
-                    )
-                    # put denied minion key into minions_denied
-                    with salt.utils.files.fopen(pubfn_denied, "w+") as fp_:
-                        fp_.write(load["pub"])
-                    eload = {
-                        "result": False,
-                        "id": load["id"],
-                        "act": "denied",
-                        "pub": load["pub"],
-                    }
-                    if self.opts.get("auth_events") is True:
-                        self.event.fire_event(
-                            eload, salt.utils.event.tagify(prefix="auth")
+                    if auto_update:
+                        salt.utils.files.safe_rm(pubfn)
+                    else:
+                        log.error(
+                            "Authentication attempt from %s failed, the public "
+                            "keys did not match. This may be an attempt to compromise "
+                            "the Salt cluster.",
+                            load["id"],
                         )
-                    return {"enc": "clear", "load": {"ret": False}}
+                        # put denied minion key into minions_denied
+                        with salt.utils.files.fopen(pubfn_denied, "w+") as fp_:
+                            fp_.write(load["pub"])
+                        eload = {
+                            "result": False,
+                            "id": load["id"],
+                            "act": "denied",
+                            "pub": load["pub"],
+                        }
+                        if self.opts.get("auth_events") is True:
+                            self.event.fire_event(
+                                eload, salt.utils.event.tagify(prefix="auth")
+                            )
+                        return {"enc": "clear", "load": {"ret": False}}
 
         elif not os.path.isfile(pubfn_pend):
             # The key has not been accepted, this is a new minion

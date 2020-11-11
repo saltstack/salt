@@ -745,6 +745,13 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
+            with salt.utils.files.fopen(
+                os.path.join(self.opts["pki_dir"], "auto_update_token")
+            ) as f:
+                sign_in_payload["auto"] = f.readline().strip()
+        except (OSError, IOError):
+            pass
+        try:
             payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
