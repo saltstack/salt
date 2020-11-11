@@ -6,7 +6,7 @@ Spacewalk Runner
 
 Runner to interact with Spacewalk using Spacewalk API
 
-:codeauthor: Nitin Madhok <nmadhok@clemson.edu>, Joachim Werner <joe@suse.com>, Benedikt Werner <1benediktwerner@gmail.com>
+:codeauthor: Nitin Madhok <nmadhok@g.clemson.edu>, Joachim Werner <joe@suse.com>, Benedikt Werner <1benediktwerner@gmail.com>
 :maintainer: Benedikt Werner <1benediktwerner@gmail.com>
 
 To use this runner, set up the Spacewalk URL, username and password in the

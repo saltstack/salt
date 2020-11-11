@@ -1,5 +1,5 @@
 """
-    :codeauthor: `Nitin Madhok <nmadhok@clemson.edu>`
+    :codeauthor: `Nitin Madhok <nmadhok@g.clemson.edu>`
 
     tests.unit.cloud.clouds.vmware_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
