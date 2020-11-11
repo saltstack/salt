@@ -21,10 +21,8 @@ A state module to manage LVMs
         - stripesize: 8K
 """
 
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -228,7 +226,7 @@ def lv_present(
     **kwargs
 ):
     """
-    Create a new Logical Volume
+    Ensure that a Logical Volume is present, creating it if absent.
 
     name
         The name of the Logical Volume
@@ -240,7 +238,9 @@ def lv_present(
         The size of the Logical Volume
 
     extents
-        The number of logical extents to allocate
+        The number of logical extents allocated to the Logical Volume
+        It can be a percentage allowed by lvcreate's syntax, in this case
+        it will set the Logical Volume initial size and won't be resized.
 
     snapshot
         The name of the snapshot
@@ -265,7 +265,7 @@ def lv_present(
     force
         Assume yes to all prompts
 
-    .. versionadded:: to_complete
+    .. versionadded:: 3002.0
 
     resizefs
         Use fsadm to resize the logical volume filesystem if needed
@@ -321,6 +321,7 @@ def lv_present(
                 ret["result"] = False
     else:
         ret["comment"] = "Logical Volume {} already present".format(name)
+
         if size or extents:
             old_extents = int(lv_info["Current Logical Extents Associated"])
             old_size_mb = _convert_to_mb(lv_info["Logical Volume Size"] + "s")
@@ -328,9 +329,16 @@ def lv_present(
                 size_mb = _convert_to_mb(size)
                 extents = old_extents
             else:
+                # ignore percentage "extents" if the logical volume already exists
+                if "%" in str(extents):
+                    ret[
+                        "comment"
+                    ] = "Logical Volume {} already present, {} won't be resized.".format(
+                        name, extents
+                    )
+                    extents = old_extents
                 size_mb = old_size_mb
 
-            # This is here waiting a change in lvm.lvresize backend
             if force is False and (size_mb < old_size_mb or extents < old_extents):
                 ret[
                     "comment"
