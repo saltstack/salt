@@ -1253,7 +1253,8 @@ class Minion(MinionBase):
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
         if not salt.utils.platform.is_proxy():
-            self.opts["grains"] = salt.loader.grains(opts)
+            if not self.opts.get("grains", {}):
+                self.opts["grains"] = salt.loader.grains(opts)
         else:
             if self.opts.get("beacons_before_connect", False):
                 log.warning(

@@ -174,6 +174,7 @@ pyasn1==0.4.5             # via pyasn1-modules, rsa
 pycparser==2.17
 pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.9.8
+pycurl==7.43.0.6
 pygit2==0.28.2 ; python_version < "3.8"
 pyiface==0.0.11
 pyinotify==0.9.6
@@ -194,7 +195,7 @@ python-jose==2.0.2        # via moto
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==18.0.1
+pyzmq==18.0.1 ; python_version < "3.9"
 requests-oauthlib==1.3.0  # via msrest
 requests==2.21.0
 responses==0.10.6         # via moto
