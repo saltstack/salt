@@ -6,7 +6,7 @@
 #
 asn1crypto==0.24.0        # via cryptography
 certifi==2019.3.9         # via requests
-cffi==1.12.2              # via cryptography
+cffi==1.14.3              # via cryptography
 chardet==3.0.4            # via requests
 cryptography==2.6.1       # via requests-ntlm, smbprotocol
 idna==2.8                 # via requests
