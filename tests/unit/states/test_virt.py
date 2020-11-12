@@ -346,6 +346,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         pub_key="/path/to/key.pub",
                         priv_key="/path/to/key",
                         hypervisor_features={"kvm-hint-dedicated": True},
+                        clock={"utc": True},
                         connection="someconnection",
                         username="libvirtuser",
                         password="supersecret",
@@ -373,6 +374,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     pub_key="/path/to/key.pub",
                     priv_key="/path/to/key",
                     hypervisor_features={"kvm-hint-dedicated": True},
+                    clock={"utc": True},
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
@@ -488,6 +490,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     numatune=None,
                     test=False,
                     hypervisor_features=None,
+                    clock=None,
                 )
 
             # Failed definition update case
@@ -602,6 +605,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     test=True,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                 )
 
             # No changes case
@@ -639,6 +643,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     test=True,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                 )
 
     def test_running(self):
@@ -718,6 +723,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     priv_key=None,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                     connection=None,
                     username=None,
                     password=None,
@@ -807,6 +813,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     priv_key="/path/to/key",
                     boot_dev="network hd",
                     hypervisor_features=None,
+                    clock=None,
                     connection="someconnection",
                     username="libvirtuser",
                     password="supersecret",
@@ -954,6 +961,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     test=False,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                 )
 
             # Failed definition update case
@@ -1075,6 +1083,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     test=True,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                 )
                 start_mock.assert_not_called()
 
@@ -1114,6 +1123,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     test=True,
                     boot_dev=None,
                     hypervisor_features=None,
+                    clock=None,
                 )
 
     def test_stopped(self):

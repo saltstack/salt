@@ -288,6 +288,7 @@ def defined(
     update=True,
     boot_dev=None,
     hypervisor_features=None,
+    clock=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -527,6 +528,41 @@ def defined(
             hypervisor_features:
               kvm-hint-dedicated: True
 
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -593,6 +629,7 @@ def defined(
                     test=__opts__["test"],
                     boot_dev=boot_dev,
                     hypervisor_features=hypervisor_features,
+                    clock=clock,
                 )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -630,6 +667,7 @@ def defined(
                     start=False,
                     boot_dev=boot_dev,
                     hypervisor_features=hypervisor_features,
+                    clock=clock,
                 )
             ret["changes"][name] = {"definition": True}
             ret["comment"] = "Domain {} defined".format(name)
@@ -665,6 +703,7 @@ def running(
     boot_dev=None,
     numatune=None,
     hypervisor_features=None,
+    clock=None,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -824,6 +863,41 @@ def running(
             hypervisor_features:
               kvm-hint-dedicated: True
 
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -894,6 +968,7 @@ def running(
         boot_dev=boot_dev,
         numatune=numatune,
         hypervisor_features=hypervisor_features,
+        clock=clock,
         connection=connection,
         username=username,
         password=password,
