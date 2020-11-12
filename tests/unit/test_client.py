@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt import client
@@ -98,6 +96,29 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
         ):
             with patch("salt.client.LocalClient.cmd_cli") as cmd_cli_mock:
                 self.client.cmd_subset("*", "first.func", subset=1, cli=True)
+                try:
+                    cmd_cli_mock.assert_called_with(
+                        ["minion2"],
+                        "first.func",
+                        (),
+                        progress=False,
+                        kwarg=None,
+                        tgt_type="list",
+                        full_return=False,
+                        ret="",
+                    )
+                except AssertionError:
+                    cmd_cli_mock.assert_called_with(
+                        ["minion1"],
+                        "first.func",
+                        (),
+                        progress=False,
+                        kwarg=None,
+                        tgt_type="list",
+                        full_return=False,
+                        ret="",
+                    )
+                self.client.cmd_subset("*", "first.func", sub=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2"],
