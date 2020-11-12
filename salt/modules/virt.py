@@ -945,6 +945,7 @@ def _gen_xml(
     boot_dev=None,
     numatune=None,
     hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -954,6 +955,7 @@ def _gen_xml(
         "hypervisor": hypervisor,
         "name": name,
         "hypervisor_features": hypervisor_features or {},
+        "clock": clock or {},
     }
 
     context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
@@ -972,6 +974,12 @@ def _gen_xml(
         context["cpu"]["maximum"] = str(cpu)
     elif isinstance(cpu, dict):
         context["cpu"] = nesthash(cpu)
+
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        context["clock"]["offset"] = offset
 
     if hypervisor in ["qemu", "kvm"]:
         context["numatune"] = numatune if numatune else {}
@@ -1894,6 +1902,7 @@ def init(
     boot_dev=None,
     numatune=None,
     hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -2149,6 +2158,59 @@ def init(
 
             hypervisor_features:
               kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
 
     .. _init-cpu-def:
 
@@ -2669,6 +2731,7 @@ def init(
             boot_dev,
             numatune,
             hypervisor_features,
+            clock,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2900,6 +2963,7 @@ def update(
     test=False,
     boot_dev=None,
     hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -3014,6 +3078,59 @@ def update(
             hypervisor_features:
               kvm-hint-dedicated: True
 
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3075,6 +3192,12 @@ def update(
             **kwargs
         )
     )
+
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        clock["offset"] = offset
 
     def _set_loader(node, value):
         salt.utils.xmlutil.set_node_text(node, value)
@@ -3302,7 +3425,62 @@ def update(
             "bandwidth",
             ["id", "vcpus"],
         ),
+        xmlutil.attribute("clock:offset", "clock", "offset"),
+        xmlutil.attribute("clock:adjustment", "clock", "adjustment", convert=str),
+        xmlutil.attribute("clock:timezone", "clock", "timezone"),
     ]
+
+    timer_names = [
+        "platform",
+        "hpet",
+        "kvmclock",
+        "pit",
+        "rtc",
+        "tsc",
+        "hypervclock",
+        "armvtimer",
+    ]
+    for timer in timer_names:
+        params_mapping += [
+            xmlutil.attribute(
+                "clock:timers:{}:track".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "track",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:tickpolicy".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "tickpolicy",
+                ["name"],
+            ),
+            xmlutil.int_attribute(
+                "clock:timers:{}:frequency".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "frequency",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:mode".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "mode",
+                ["name"],
+            ),
+            _yesno_attribute(
+                "clock:timers:{}:present".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "present",
+                ["name"],
+            ),
+        ]
+        for attr in ["slew", "threshold", "limit"]:
+            params_mapping.append(
+                xmlutil.int_attribute(
+                    "clock:timers:{}:{}".format(timer, attr),
+                    "clock/timer[@name='{}']/catchup".format(timer),
+                    attr,
+                )
+            )
 
     for attr in ["level", "type", "size"]:
         params_mapping.append(
@@ -3342,6 +3520,28 @@ def update(
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
         data["boot_dev"] = boot_dev.split()
+
+    # Set the missing optional attributes and timers to None in timers to help cleaning up
+    if data.get("clock", {}).get("timers"):
+        attributes = [
+            "track",
+            "tickpolicy",
+            "frequency",
+            "mode",
+            "present",
+            "slew",
+            "threshold",
+            "limit",
+        ]
+        for timer in data["clock"]["timers"].values():
+            for attribute in attributes:
+                if attribute not in timer:
+                    timer[attribute] = None
+
+        for timer_name in timer_names:
+            if timer_name not in data["clock"]["timers"]:
+                data["clock"]["timers"][timer_name] = None
+
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )

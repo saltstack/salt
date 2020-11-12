@@ -237,6 +237,18 @@
                 <boot dev='{{ dev }}' />
                 {% endfor %}
         </os>
+{%- if clock %}
+        <clock offset="{{ clock.offset }}"{{ opt_attribute(clock, "adjustment") }}{{ opt_attribute(clock, "timezone") }}>
+    {%- for timer_name in clock.timers %}
+    {%- set timer = clock.timers[timer_name] %}
+            <timer name='{{ timer_name }}'{{ opt_attribute(timer, "track") }}{{ opt_attribute(timer, "tickpolicy") }}{{ opt_attribute(timer, "frequency") }}{{ opt_attribute(timer, "mode") }}{{ opt_attribute(timer, "present", yesno) }}>
+        {%- if "threshold" in timer or "slew" in timer or "limit" in timer %}
+                <catchup{{ opt_attribute(timer, "slew") }}{{ opt_attribute(timer, "threshold") }}{{ opt_attribute(timer, "limit") }}/>
+        {%- endif %}
+            </timer>
+    {%- endfor %}
+        </clock>
+{%- endif %}
         <devices>
                 {% for disk in disks %}
                 <disk type='{{ disk.type }}' device='{{ disk.device }}'>
