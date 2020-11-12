@@ -49,7 +49,7 @@ def _get_low_data(low_data):
     Get salt-style low data from an idem state name
     """
     # state_|-id_|-name_|-function
-    match = re.match(r"(\w+)_\|-(\w+)\|-(\w+)_\|-(\w+)", low_data)
+    match = re.match(r"(.+)_\|-(.+)_\|-(.+)_\|-(.+)", low_data)
     return {
         "state": match.group(1),
         "__id__": match.group(2),
@@ -102,12 +102,12 @@ def state(
 
     .. code-block:: yaml
 
-    cheese:
-      idem.state:
-        - runtime: parallel
-        - sls:
-          - idem_state.sls
-          - sls_source
+        cheese:
+            idem.state:
+                - runtime: parallel
+                - sls:
+                    - idem_state.sls
+                    - sls_source
 
     :maturity:      new
     :depends:       acct, pop, pop-config, idem

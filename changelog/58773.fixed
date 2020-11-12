@@ -1,0 +1,1 @@
+Ensuring that the version check function is run a second time in all the user related functions incase the user being managed is the connection user and the password has been updated.

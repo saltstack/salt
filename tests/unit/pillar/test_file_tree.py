@@ -1,25 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 test for pillar file_tree.py
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
 import tempfile
 
 import salt.pillar.file_tree as file_tree
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -27,18 +20,18 @@ MINION_ID = "test-host"
 NODEGROUP_PATH = os.path.join("nodegroups", "test-group", "files")
 HOST_PATH = os.path.join("hosts", MINION_ID, "files")
 
-BASE_PILLAR_CONTENT = {"files": {"hostfile": b"base", "groupfile": b"base"}}
+BASE_PILLAR_CONTENT = {"files": {"hostfile": "base", "groupfile": "base"}}
 DEV_PILLAR_CONTENT = {
     "files": {
-        "hostfile": b"base",
-        "groupfile": b"dev2",
-        "hostfile1": b"dev1",
-        "groupfile1": b"dev1",
-        "hostfile2": b"dev2",
+        "hostfile": "base",
+        "groupfile": "dev2",
+        "hostfile1": "dev1",
+        "groupfile1": "dev1",
+        "hostfile2": "dev2",
     }
 }
 PARENT_PILLAR_CONTENT = {
-    "files": {"hostfile": b"base", "groupfile": b"base", "hostfile2": b"dev2"}
+    "files": {"hostfile": "base", "groupfile": "base", "hostfile2": "dev2"}
 }
 
 FILE_DATA = {
@@ -159,3 +152,26 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                             break
                     else:
                         raise AssertionError("Did not find error message")
+
+    def test_file_tree_no_bytes(self):
+        """
+        test file_tree pillar does not return bytes
+        """
+        absolute_path = os.path.join(self.pillar_path, "base")
+        with patch(
+            "salt.utils.minions.CkMinions.check_minions",
+            MagicMock(return_value=_CHECK_MINIONS_RETURN),
+        ):
+            mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
+            self.assertEqual(BASE_PILLAR_CONTENT, mypillar)
+
+            with patch.dict(file_tree.__opts__, {"pillarenv": "dev"}):
+                mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
+                for key, value in mypillar.items():
+                    if isinstance(value, dict):
+                        for ikey, ivalue in value.items():
+                            self.assertTrue(isinstance(ikey, str))
+                            self.assertTrue(isinstance(ivalue, str))
+                    else:
+                        self.assertTrue(isinstance(value, str))
+                    self.assertTrue(isinstance(key, str))
