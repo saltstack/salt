@@ -7,7 +7,15 @@ from contextlib import closing
 
 import salt.utils.http as http
 from tests.support.helpers import MirrorPostHandler, Webserver, slowTest
-from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
+
+try:
+    import tornado.curl_httpclient  # pylint: disable=unused-import
+
+    HAS_CURL = True
+except ImportError:
+    HAS_CURL = False
 
 
 class HTTPTestCase(TestCase):
@@ -188,6 +196,45 @@ class HTTPPostTestCase(TestCase):
         body = ret.get("body", "")
         boundary = body[: body.find("\r")]
         self.assertEqual(body, match_this.format(boundary))
+
+    @skipIf(
+        HAS_CURL is False, "Missing prerequisites for tornado.curl_httpclient library"
+    )
+    def test_query_proxy(self):
+        """
+        Test http.query with tornado and with proxy opts set
+        and then test with no_proxy set to ensure we dont
+        run into issue #55192 again.
+        """
+        data = "mydatahere"
+        opts = {
+            "proxy_host": "127.0.0.1",
+            "proxy_port": 88,
+            "proxy_username": "salt_test",
+            "proxy_password": "super_secret",
+        }
+
+        mock_curl = MagicMock()
+
+        with patch("tornado.httpclient.HTTPClient.fetch", mock_curl):
+            ret = http.query(
+                self.post_web_root,
+                method="POST",
+                data=data,
+                backend="tornado",
+                opts=opts,
+            )
+
+        for opt in opts:
+            assert opt in mock_curl.call_args_list[0][1].keys()
+
+        opts["no_proxy"] = ["127.0.0.1"]
+
+        ret = http.query(
+            self.post_web_root, method="POST", data=data, backend="tornado", opts=opts
+        )
+        body = ret.get("body", "")
+        assert body == data
 
 
 class HTTPGetTestCase(TestCase):
