@@ -276,3 +276,76 @@ def test_update_approx_mem(make_mock_vm):
 
     ret = virt.update("my_vm", mem={"boot": "3253941043B", "current": "3253941043B"})
     assert not ret["definition"]
+
+
+def test_gen_hypervisor_features():
+    """
+    Test the virt._gen_xml hypervisor_features handling
+    """
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        hypervisor_features={"kvm-hint-dedicated": True},
+    )
+    root = ET.fromstring(xml_data)
+    assert "on" == root.find("features/kvm/hint-dedicated").attrib["state"]
+
+
+def test_update_hypervisor_features(make_mock_vm):
+    """
+    Test changing the hypervisor features of a guest
+    """
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>linux</type>
+            <kernel>/usr/lib/grub2/x86_64-xen/grub.xen</kernel>
+          </os>
+          <features>
+            <kvm>
+              <hint-dedicated state="on"/>
+            </kvm>
+          </features>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+
+    # Update with no change to the features
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": True})
+    assert not ret["definition"]
+
+    # Alter the features
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": False})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "off" == setxml.find("features/kvm/hint-dedicated").get("state")
+
+    # Add the features
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>linux</type>
+            <kernel>/usr/lib/grub2/x86_64-xen/grub.xen</kernel>
+          </os>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": True})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "on" == setxml.find("features/kvm/hint-dedicated").get("state")

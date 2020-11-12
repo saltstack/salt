@@ -1,6 +1,6 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 {%- macro opt_attribute(obj, name, conv=none) %}
-{%- if obj.get(name) is not none %}{{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
+{%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
@@ -320,5 +320,12 @@
         </devices>
         <features>
                 <acpi />
+                <apic />
+                <pae />
+{%- if hypervisor_features.get("kvm-hint-dedicated") %}
+                <kvm>
+                  <hint-dedicated state="on"/>
+                </kvm>
+{%- endif %}
         </features>
 </domain>
