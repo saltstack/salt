@@ -2578,3 +2578,39 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             # they'll run in parallel so we should be below 30 seconds
             # confirm that the total runtime is below 30s
             self.assertTrue((time.time() - start_time) < 30)
+
+    @slowTest
+    def test_state_apply_sync_grains(self):
+        """
+        Ensure grains are refreshed when sync_mods=grains
+        """
+        my_grain_value = str(time.time())
+        my_grain_py_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, "_grains")
+        os.mkdir(my_grain_py_dir)
+        my_grain_py_path = os.path.join(my_grain_py_dir, "my_grain.py")
+        with salt.utils.files.fopen(my_grain_py_path, "w") as my_grain_py_file:
+            my_grain_py_file.write(
+                textwrap.dedent(
+                    """\
+                      def my_grain_function():
+                          grains = dict()
+                          grains["my_grain"] = {}
+                          return grains
+                    """.format(
+                        my_grain_value
+                    )
+                )
+            )
+
+        output_to_path = os.path.join(RUNTIME_VARS.TMP, "my_grain.txt")
+        result = self.run_function(
+            "state.apply",
+            mods="ext-grains",
+            sync_mods="grains",
+            pillar={"output_to_path": output_to_path},
+        )
+        self.assertIsInstance(result, dict)
+        result = result[next(iter(result))]
+        self.assertEqual(result["result"], True)
+        with salt.utils.files.fopen(output_to_path, "r") as output_to_file:
+            self.assertEqual(output_to_file.read(), my_grain_value)
