@@ -102,7 +102,7 @@ python-jose==2.0.2        # via moto
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==19.0.0
+pyzmq==19.0.0 ; python_version < "3.9"
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8
