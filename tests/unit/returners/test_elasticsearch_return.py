@@ -21,7 +21,10 @@ class ElasticSearchReturnerTestCase(TestCase, LoaderModuleMockMixin):
         and the elasticsearch module is not available
         """
         result = elasticsearch_return.__virtual__()
-        expected = False
+        expected = (
+            False,
+            "Elasticsearch module not availble.  Check that the elasticsearch library is installed.",
+        )
         self.assertEqual(expected, result)
 
     def test__virtual_with_elasticsearch(self):
