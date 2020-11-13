@@ -3,6 +3,7 @@ import sys
 
 import salt.modules.pip as pip
 import salt.utils.platform
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -1446,6 +1447,47 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    def test_resolve_requirements_chain_function(self):
+        """ensure requirements chain can handle special cases"""
+        class FakeFopen:
+            def __init__(self, filename):
+                d = {
+                    "requirements-0.txt": (
+                        b"--index-url http://fake.com/simple\n\n"
+                        b"one  # -r wrong.txt, other\n"
+                        b"two # --requirement wrong.exe;some\n"
+                        b"three\n"
+                        b"-r requirements-1.txt\n"
+                        b"# nothing\n"
+                    ),
+                    "requirements-1.txt": (
+                        "four\n"
+                        "five\n"
+                        "--requirement=requirements-2.txt\t# --requirements-2.txt\n\n"
+                    ),
+                    "requirements-2.txt": b"""six""",
+                    "requirements-3.txt": (
+                        b"# some comment\n"
+                        b"-e git+ssh://git.example.com/MyProject#egg=MyProject # the project\n"
+                        b"seven\n"
+                        b"eight # -e something#or other\n"
+                    ),
+                }
+                self.val = d[filename]
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args, **kwargs):
+                pass
+
+            def read(self):
+                return self.val
+
+        with patch("salt.utils.files.fopen", FakeFopen):
+            chain = pip._resolve_requirements_chain(["requirements-0.txt", "requirements-3.txt"])
+        self.assertEqual(chain, ["requirements-0.txt", "requirements-1.txt", "requirements-2.txt", "requirements-3.txt"])
 
     # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
     def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
