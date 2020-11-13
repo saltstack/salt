@@ -328,7 +328,11 @@
                 </console>
                 {% endif %}
                 {% endif %}
-
+{%- if hypervisor in ["qemu", "kvm"] %}
+        <channel type='unix'>
+            <target type='virtio' name='org.qemu.guest_agent.0'/>
+        </channel>
+{%- endif %}
         </devices>
         <features>
                 <acpi />
