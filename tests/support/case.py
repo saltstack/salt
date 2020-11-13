@@ -43,6 +43,7 @@ from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR,
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import cStringIO, range  # pylint: disable=import-error
+import salt.utils.files
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -135,16 +136,21 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, timeout=timeout)
 
     def run_ssh(self, arg_str, with_retcode=False, timeout=25,
-                catch_stderr=False, wipe=False, raw=False):
+                catch_stderr=False, wipe=False, raw=False,
+                roster_file=None, ssh_opts=""):
         '''
         Execute salt-ssh
         '''
-        arg_str = '{0} {1} -c {2} -i --priv {3} --roster-file {4} localhost {5} --out=json'.format(
+        if not roster_file:
+            roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+
+        arg_str = "{0} {1} -c {2} -i --priv {3} --roster-file {4} {5} localhost {6} --out=json".format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
             self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
+            roster_file,
+            ssh_opts,
             arg_str
         )
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True, timeout=timeout)
@@ -538,16 +544,21 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         return ret
 
     def run_ssh(self, arg_str, with_retcode=False, catch_stderr=False,  # pylint: disable=W0221
-                timeout=RUN_TIMEOUT, wipe=True, raw=False):
+                timeout=RUN_TIMEOUT, wipe=True, raw=False, roster_file=None,
+                ssh_opts=""):
         '''
         Execute salt-ssh
         '''
-        arg_str = '{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} --out=json localhost {5}'.format(
+        if not roster_file:
+            roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+
+        arg_str = "{0} -ldebug{1} -c {2} -i --priv {3} --roster-file {4} {5} --out=json localhost {6}".format(
             ' -W' if wipe else '',
             ' -r' if raw else '',
             self.config_dir,
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'),
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
+            roster_file,
+            ssh_opts,
             arg_str)
         ret = self.run_script('salt-ssh',
                               arg_str,
@@ -1025,6 +1036,20 @@ class SSHCase(ShellCase):
             return salt.utils.json.loads(ret)['localhost']
         except Exception:
             return ret
+
+    def custom_roster(self, new_roster, data):
+        """
+        helper method to create a custom roster to use for a ssh test
+        """
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+
+        with salt.utils.files.fopen(roster, "r") as fp_:
+            conf = salt.utils.yaml.safe_load(fp_)
+
+        conf["localhost"].update(data)
+
+        with salt.utils.files.fopen(new_roster, "w") as fp_:
+            salt.utils.yaml.safe_dump(conf, fp_)
 
 
 class ClientCase(AdaptedConfigurationTestCaseMixin, TestCase):
