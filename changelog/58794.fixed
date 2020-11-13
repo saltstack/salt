@@ -1,1 +1,1 @@
-Ensure file_tree pillar returns unicode.
+Allow bytes in gpg renderer

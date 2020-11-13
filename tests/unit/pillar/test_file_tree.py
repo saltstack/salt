@@ -20,18 +20,18 @@ MINION_ID = "test-host"
 NODEGROUP_PATH = os.path.join("nodegroups", "test-group", "files")
 HOST_PATH = os.path.join("hosts", MINION_ID, "files")
 
-BASE_PILLAR_CONTENT = {"files": {"hostfile": "base", "groupfile": "base"}}
+BASE_PILLAR_CONTENT = {"files": {"hostfile": b"base", "groupfile": b"base"}}
 DEV_PILLAR_CONTENT = {
     "files": {
-        "hostfile": "base",
-        "groupfile": "dev2",
-        "hostfile1": "dev1",
-        "groupfile1": "dev1",
-        "hostfile2": "dev2",
+        "hostfile": b"base",
+        "groupfile": b"dev2",
+        "hostfile1": b"dev1",
+        "groupfile1": b"dev1",
+        "hostfile2": b"dev2",
     }
 }
 PARENT_PILLAR_CONTENT = {
-    "files": {"hostfile": "base", "groupfile": "base", "hostfile2": "dev2"}
+    "files": {"hostfile": b"base", "groupfile": b"base", "hostfile2": b"dev2"}
 }
 
 FILE_DATA = {
@@ -153,9 +153,9 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
                     else:
                         raise AssertionError("Did not find error message")
 
-    def test_file_tree_no_bytes(self):
+    def test_file_tree_bytes(self):
         """
-        test file_tree pillar does not return bytes
+        test file_tree pillar returns bytes
         """
         absolute_path = os.path.join(self.pillar_path, "base")
         with patch(
@@ -167,11 +167,4 @@ class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(file_tree.__opts__, {"pillarenv": "dev"}):
                 mypillar = file_tree.ext_pillar(MINION_ID, None, absolute_path)
-                for key, value in mypillar.items():
-                    if isinstance(value, dict):
-                        for ikey, ivalue in value.items():
-                            self.assertTrue(isinstance(ikey, str))
-                            self.assertTrue(isinstance(ivalue, str))
-                    else:
-                        self.assertTrue(isinstance(value, str))
-                    self.assertTrue(isinstance(key, str))
+                self.assertEqual(mypillar["files"]["groupfile"], b"base")

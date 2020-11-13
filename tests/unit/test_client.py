@@ -118,29 +118,6 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                         full_return=False,
                         ret="",
                     )
-                self.client.cmd_subset("*", "first.func", sub=1, cli=True)
-                try:
-                    cmd_cli_mock.assert_called_with(
-                        ["minion2"],
-                        "first.func",
-                        (),
-                        progress=False,
-                        kwarg=None,
-                        tgt_type="list",
-                        full_return=False,
-                        ret="",
-                    )
-                except AssertionError:
-                    cmd_cli_mock.assert_called_with(
-                        ["minion1"],
-                        "first.func",
-                        (),
-                        progress=False,
-                        kwarg=None,
-                        tgt_type="list",
-                        full_return=False,
-                        ret="",
-                    )
                 self.client.cmd_subset("*", "first.func", subset=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
