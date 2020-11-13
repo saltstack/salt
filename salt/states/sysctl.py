@@ -63,9 +63,7 @@ def present(name, value, config=None):
             return ret
         current = __salt__["sysctl.get"](name)
         if current != "" and name not in configured:
-            if re.sub(" +|\t+", " ", current) != \
-               re.sub(" +|\t+", " ", str(value)
-            ):
+            if re.sub(" +|\t+", " ", current) != re.sub(" +|\t+", " ", str(value)):
                 ret["result"] = None
                 ret["comment"] = "Sysctl option {} set to be changed to {}".format(
                     name, value
