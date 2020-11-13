@@ -194,10 +194,12 @@ def upgrade():
     """
     "Upgrade" packages
     """
-    pkgs = uptodate()
     with _loaded_state(__opts__) as state:
-        state["packages"] = pkgs
-    return pkgs
+        for p in state["packages"]:
+            version_float = float(state["packages"][p])
+            version_float = version_float + 1.0
+            state["packages"][p] = str(version_float)
+        return state["packages"]
 
 
 def uptodate():
@@ -205,10 +207,6 @@ def uptodate():
     Call the REST endpoint to see if the packages on the "server" are up to date.
     """
     with _loaded_state(__opts__) as state:
-        for p in state["packages"]:
-            version_float = float(state["packages"][p])
-            version_float = version_float + 1.0
-            state["packages"][p] = str(version_float)
         return state["packages"]
 
 
