@@ -3556,48 +3556,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 <loader>/usr/share/old/OVMF_CODE.fd</loader>
                 <nvram>/usr/share/old/OVMF_VARS.ms.fd</nvram>
               </os>
-              <devices>
-                <disk type='file' device='disk'>
-                  <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}vm_with_boot_param_system.qcow2'/>
-                  <backingStore/>
-                  <target dev='vda' bus='virtio'/>
-                  <alias name='virtio-disk0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-                </disk>
-                <disk type='file' device='disk'>
-                  <driver name='qemu' type='qcow2'/>
-                  <source file='{0}{1}vm_with_boot_param_data.qcow2'/>
-                  <backingStore/>
-                  <target dev='vdb' bus='virtio'/>
-                  <alias name='virtio-disk1'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x1'/>
-                </disk>
-                <interface type='network'>
-                  <mac address='52:54:00:39:02:b1'/>
-                  <source network='default' bridge='virbr0'/>
-                  <target dev='vnet0'/>
-                  <model type='virtio'/>
-                  <alias name='net0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-                </interface>
-                <interface type='network'>
-                  <mac address='52:54:00:39:02:b2'/>
-                  <source network='oldnet' bridge='virbr1'/>
-                  <target dev='vnet1'/>
-                  <model type='virtio'/>
-                  <alias name='net1'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x1'/>
-                </interface>
-                <graphics type='spice' port='5900' autoport='yes' listen='127.0.0.1'>
-                  <listen type='address' address='127.0.0.1'/>
-                </graphics>
-                <video>
-                  <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
-                  <alias name='video0'/>
-                  <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-                </video>
-              </devices>
             </domain>
         """
         domain_mock_boot = self.set_mock_vm("vm_with_boot_param", xml_boot)
