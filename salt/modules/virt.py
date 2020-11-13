@@ -1045,6 +1045,7 @@ def _gen_xml(
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
+            "io": "threads" if disk.get("iothreads", False) else "native",
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
@@ -2554,6 +2555,10 @@ def init(
                       hostname_property: virt:hostname
                       sparse_volume: True
 
+    iothreads
+        When ``True`` dedicated threads will be used for the I/O of the disk.
+        (Default: ``False``)
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -2754,19 +2759,15 @@ def _disks_equal(disk1, disk2):
     """
     target1 = disk1.find("target")
     target2 = disk2.find("target")
-    source1 = (
-        disk1.find("source")
-        if disk1.find("source") is not None
-        else ElementTree.Element("source")
-    )
-    source2 = (
-        disk2.find("source")
-        if disk2.find("source") is not None
-        else ElementTree.Element("source")
-    )
 
-    source1_dict = xmlutil.to_dict(source1, True)
-    source2_dict = xmlutil.to_dict(source2, True)
+    disk1_dict = xmlutil.to_dict(disk1, True)
+    disk2_dict = xmlutil.to_dict(disk2, True)
+
+    source1_dict = disk1_dict.get("source", {})
+    source2_dict = disk2_dict.get("source", {})
+
+    io1 = disk1_dict.get("driver", {}).get("io", "native")
+    io2 = disk2_dict.get("driver", {}).get("io", "native")
 
     # Remove the index added by libvirt in the source for backing chain
     if source1_dict:
@@ -2781,6 +2782,7 @@ def _disks_equal(disk1, disk2):
         and target1.get("bus") == target2.get("bus")
         and disk1.get("device", "disk") == disk2.get("device", "disk")
         and target1.get("dev") == target2.get("dev")
+        and io1 == io2
     )
 
 
