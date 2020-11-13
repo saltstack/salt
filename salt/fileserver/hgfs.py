@@ -301,7 +301,7 @@ def init():
             _failhard()
 
         try:
-            refs = repo.config(b"paths")
+            refs = repo.config(names=b"paths")
         except hglib.error.CommandError:
             refs = None
 
