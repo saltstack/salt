@@ -36,6 +36,7 @@ class SSHTest(SSHCase):
         os.path.exists(os.path.join(thin_dir, "salt-call"))
         os.path.exists(os.path.join(thin_dir, "running_data"))
 
+    @slowTest
     def test_set_path(self):
         """
         test setting the path env variable
@@ -55,3 +56,13 @@ class SSHTest(SSHCase):
         salt_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
+
+    @slowTest
+    def test_tty(self):
+        """
+        test using tty
+        """
+        roster = os.path.join(RUNTIME_VARS.TMP, "roster-tty")
+        self.custom_roster(roster, data={"tty": True})
+        ret = self.run_function("test.ping", roster_file=roster)
+        assert ret is True

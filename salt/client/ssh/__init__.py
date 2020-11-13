@@ -1373,9 +1373,7 @@ ARGS = {arguments}\n'''.format(
         except IOError:
             pass
 
-        ret = self.execute_script(
-            script=target_shim_file, extension=extension, pre_dir="$HOME/"
-        )
+        ret = self.execute_script(script=target_shim_file, extension=extension)
 
         return ret
 
