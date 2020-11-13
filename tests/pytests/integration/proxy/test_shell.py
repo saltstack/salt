@@ -45,8 +45,6 @@ def test_list_pkgs(salt_call_cli):
 
 
 @slowTest
-@pytest.mark.skip_if_not_root
-@pytest.mark.destructive_test
 def test_upgrade(salt_call_cli):
     ret = salt_call_cli.run("pkg.upgrade")
     assert ret.exitcode == 0, ret
@@ -62,7 +60,6 @@ def service_name():
 
 
 @slowTest
-@pytest.mark.skip_if_not_root
 def test_service_list(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.list")
     assert ret.exitcode == 0, ret
@@ -70,7 +67,6 @@ def test_service_list(salt_call_cli, service_name):
 
 
 @slowTest
-@pytest.mark.skip_if_not_root
 def test_service_start(salt_call_cli):
     ret = salt_call_cli.run("service.start", "samba")
     assert ret.exitcode == 0, ret
@@ -80,7 +76,6 @@ def test_service_start(salt_call_cli):
 
 
 @slowTest
-@pytest.mark.skip_if_not_root
 def test_service_get_all(salt_call_cli, service_name):
     ret = salt_call_cli.run("service.get_all")
     assert ret.exitcode == 0, ret
