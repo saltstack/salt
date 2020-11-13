@@ -427,6 +427,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     @slowTest
     def test_when_passed_start_event_grains(self):
         mock_opts = self.get_config("minion", from_scratch=True)
+        # provide mock opts an os grain since we'll look for it later.
+        mock_opts["grains"]["os"] = "linux"
         mock_opts["start_event_grains"] = ["os"]
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()

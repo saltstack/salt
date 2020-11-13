@@ -2006,7 +2006,6 @@ class GetServiceInstanceTestCase(TestCase):
 
     def test_cached_service_instance_different_host(self):
         mock_si = MagicMock()
-        mock_si_stub = MagicMock()
         mock_disconnect = MagicMock()
         mock_get_si = MagicMock(return_value=mock_si)
         mock_getstub = MagicMock()
@@ -2073,6 +2072,30 @@ class GetServiceInstanceTestCase(TestCase):
                 self.assertEqual(mock_si_current_time.call_count, 1)
                 self.assertEqual(mock_disconnect.call_count, 1)
                 self.assertEqual(mock_get_si.call_count, 2)
+
+    def test_cached_unauthenticated_service_instance(self):
+        mock_si_current_time = MagicMock(side_effect=vim.fault.NotAuthenticated)
+        mock_si = MagicMock()
+        mock_get_si = MagicMock(return_value=mock_si)
+        mock_getsi = MagicMock(return_value=mock_si)
+        mock_si.CurrentTime = mock_si_current_time
+        mock_disconnect = MagicMock()
+        with patch("salt.utils.vmware.GetSi", mock_getsi):
+            with patch("salt.utils.vmware._get_service_instance", mock_get_si):
+                with patch("salt.utils.vmware.Disconnect", mock_disconnect):
+                    salt.utils.vmware.get_service_instance(
+                        host="fake_host",
+                        username="fake_username",
+                        password="fake_password",
+                        protocol="fake_protocol",
+                        port=1,
+                        mechanism="fake_mechanism",
+                        principal="fake_principal",
+                        domain="fake_domain",
+                    )
+                    self.assertEqual(mock_si_current_time.call_count, 1)
+                    self.assertEqual(mock_disconnect.call_count, 1)
+                    self.assertEqual(mock_get_si.call_count, 1)
 
     def test_current_time_raise_no_permission(self):
         exc = vim.fault.NoPermission()

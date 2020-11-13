@@ -7,12 +7,30 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3002 (2020-10-08)
+Salt 3002.1 (2020-10-26)
+========================
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3002 (2020-10-19)
 ======================
 
 Removed
 -------
 
+- removed boto_vpc.describe_route_table please use boto_vpc.describe_route_tables (#58636)
+- removed show_ipv4 arg from all functions in from salt.runners.manage (#58638)
+- removed kwargs from mandrill.send if you use "async" please use "asynchronous" (#58640)
+- removed salt/modules/mac_brew_pkg.__fix_cask_namespace (#58641)
+- zfs.mount Passing '-a' as name is deprecated please just pass 'None' (#58642)
 - Remove include_localhost kwarg for connected_ids method in salt/utils/minions.py (#58224)
 - deprecated opts default argument of none and removed deprecation warnings (#58635)
 
@@ -40,10 +58,11 @@ Changed
   arguments. ``formatter`` is still supported, but using both ``serializer`` and
   ``formatter`` will cause the state to fail. (#57858)
 
-
 Fixed
 -----
 
+- `file.read` exec module function no longer fails on binary data. (#58033)
+- Remove py2 support from winrepo execution module and runner (#58596)
 - Create ini file if does not exist when using ini.options_present state module. (#34236)
 - Added an bool "strict" argument to sdb.get module to force module to fail if the sdb uri is not correct. (#39163)
 - Fixed issue with postgres.has_privilege breaking on ALL. (#48465)
@@ -226,9 +245,28 @@ Added
 - Adding tests for changes to virtual function for netmiko module. Adding tests for netmiko proxy minion module. (#58609)
 - Added features config option for feature flags. Added a feature flag
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
-  This flag will be depricated in the Phosphorus release when this functionality
+  This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
 
+Salt 3001.3
+===========
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3001.2
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
 
 Salt 3001.1 (2020-07-27)
 ========================
@@ -656,8 +694,26 @@ Added
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 - Clarify how to get the master fingerprint (#54699)
 
+Salt 3000.5
+===========
 
-## 3000.1
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3000.4
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+
 ### 3000.3
 
 ### Fixed

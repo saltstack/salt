@@ -1058,7 +1058,7 @@ class Single:
                 )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
-                if stderr:
+                if retcode != 0:
                     log.error(
                         "Error running ssh_pre_flight script {}".format(
                             self.ssh_pre_file
