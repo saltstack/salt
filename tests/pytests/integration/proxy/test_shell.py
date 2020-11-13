@@ -6,6 +6,7 @@
 """
 
 import logging
+import os
 import random
 
 import pytest
@@ -18,6 +19,14 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
+def salt_proxy(salt_proxy):
+    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
+    return salt_proxy
+
+
+@pytest.fixture
 def salt_call_cli(salt_proxy):
     return salt_proxy.get_salt_call_cli(default_timeout=120)
 
@@ -40,7 +49,7 @@ def test_list_pkgs(salt_call_cli):
     """
     ret = salt_call_cli.run("pkg.list_pkgs")
     assert ret.exitcode == 0, ret
-    for package_name in salt.proxy.dummy.DETAILS["packages"]:
+    for package_name in salt.proxy.dummy._initial_state()["packages"]:
         assert package_name in ret.json
 
 
@@ -56,7 +65,7 @@ def test_upgrade(salt_call_cli):
 
 @pytest.fixture
 def service_name():
-    return random.choice(list(salt.proxy.dummy.DETAILS["services"]))
+    return random.choice(list(salt.proxy.dummy._initial_state()["services"]))
 
 
 @slowTest
