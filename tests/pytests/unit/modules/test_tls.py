@@ -41,7 +41,7 @@ def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
 
     with patch.dict(
         tls.__salt__, {"config.option": mock_opt, "cmd.retcode": mock_ret}
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": tmpdir}):
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
         tls.create_ca(ca_name, days=365, fixmode=False, **tls_test_data["create_ca"])
         certp_mode = os.stat(certp).st_mode & 0o7777
         certk_mode = os.stat(certk).st_mode & 0o7777
@@ -72,7 +72,7 @@ def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
     with patch.dict(
         tls.__salt__,
         {"config.option": mock_opt, "cmd.retcode": mock_ret, "pillar.get": mock_pgt},
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": tmpdir}):
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
         tls.create_ca(ca_name, days=365, **tls_test_data["create_ca"])
         tls.create_csr(ca_name, **tls_test_data["create_ca"])
 
@@ -105,7 +105,7 @@ def test_create_self_signed_cert_permissions_on_csr_cert_and_key(tmpdir, tls_tes
     with patch.dict(
         tls.__salt__,
         {"config.option": mock_opt, "cmd.retcode": mock_ret, "pillar.get": mock_pgt},
-    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": tmpdir}):
+    ), patch.dict(tls.__opts__, {"hash_type": "sha256", "cachedir": str(tmpdir)}):
         tls.create_self_signed_cert(ca_name, days=365, **tls_test_data["create_ca"])
 
         certp_mode = os.stat(certp).st_mode & 0o7777
