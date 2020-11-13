@@ -143,5 +143,5 @@ kern.maxvnodes=213989
     user@host.domain:/usr/obj/usr/src/head
 /amd64.amd64/sys/GENERIC
 """,
-                ret["kern.version"]
+                ret["kern.version"],
             )
