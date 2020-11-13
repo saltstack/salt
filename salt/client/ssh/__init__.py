@@ -1270,13 +1270,13 @@ ARGS = {arguments}\n'''.format(config=self.minion_config,
             ret = self.shell.exec_cmd('"powershell {0}"'.format(target_shim_file))
         else:
             if not self.winrm:
-                ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
+                ret = self.shell.exec_cmd('/bin/sh \'{0}\''.format(target_shim_file))
             else:
                 ret = saltwinshell.call_python(self, target_shim_file)
 
         # Remove shim from target system
         if not self.winrm:
-            self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
+            self.shell.exec_cmd('rm \'{0}\''.format(target_shim_file))
         else:
             self.shell.exec_cmd('del {0}'.format(target_shim_file))
 
