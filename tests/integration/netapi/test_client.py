@@ -305,6 +305,8 @@ class NetapiSSHClientTest(SSHCase):
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
+            "roster_file": self.roster_file,
+            "rosters": self.rosters,
         }
         ret = self.netapi.run(low)
         self.assertFalse(ret[tgt]["stdout"])
@@ -420,7 +422,7 @@ class NetapiSSHClientTest(SSHCase):
 @pytest.mark.requires_sshd_server
 class NetapiSSHClientAuthTest(SSHCase):
 
-    USERA = "saltdev"
+    USERA = "saltdev-auth"
     USERA_PWD = "saltdev"
 
     def setUp(self):
@@ -436,6 +438,7 @@ class NetapiSSHClientAuthTest(SSHCase):
 
         self.priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
         self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+        self.roster_file = os.path.join(self.rosters, "roster")
         # Initialize salt-ssh
         self.run_function("test.ping")
         self.mod_case = ModuleCase()
@@ -504,8 +507,8 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
-            "password": "saltdev",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
         }
         ret = self.netapi.run(low)
         assert "localhost" in ret
@@ -524,7 +527,7 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
+            "username": self.USERA,
             "password": "notvalidpassword",
         }
         with self.assertRaises(salt.exceptions.EauthAuthenticationError):
@@ -544,7 +547,7 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
+            "username": self.USERA,
             "password": "notvalidpassword",
         }
         with self.assertRaises(salt.exceptions.EauthAuthenticationError):
@@ -557,8 +560,8 @@ class NetapiSSHClientAuthTest(SSHCase):
         """
         low = {
             "eauth": "pam",
-            "username": "saltdev",
-            "password": "saltdev",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
         }
         ret = self.netapi.loadauth.mk_token(low)
         assert "token" in ret and ret["token"]
