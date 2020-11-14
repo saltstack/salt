@@ -1,0 +1,1 @@
+When using ssh_pre_flight if there is a failure, fail on retcode not stderr.

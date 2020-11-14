@@ -1,7 +1,6 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-
 import copy
 import glob
 import os

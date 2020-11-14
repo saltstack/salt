@@ -1,12 +1,8 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
 
-# Import Salt Libs
 import salt.states.lvm as lvm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -162,6 +158,34 @@ class LvmTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"comment": comt, "result": None})
             with patch.dict(lvm.__opts__, {"test": True}):
                 self.assertDictEqual(lvm.lv_present(name, vgname=vgname), ret)
+
+    def test_lv_present_with_percentage_extents(self):
+        """
+        Test do create a new logical volume specifying extents as a percentage
+        """
+        name = "testlv01"
+        vgname = "testvg01"
+        extents = "42%FREE"
+        comt = "Logical Volume {} already present, {} won't be resized.".format(
+            name, extents
+        )
+        ret = {"name": name, "changes": {}, "result": True, "comment": comt}
+
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV01)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            self.assertDictEqual(
+                lvm.lv_present(name, vgname=vgname, extents=extents), ret
+            )
+
+        extents = "42%VG"
+        mock = MagicMock(return_value=STUB_LVDISPLAY_LV02)
+        with patch.dict(lvm.__salt__, {"lvm.lvdisplay": mock}):
+            comt = "Logical Volume {} is set to be created".format(name)
+            ret.update({"comment": comt, "result": None})
+            with patch.dict(lvm.__opts__, {"test": True}):
+                self.assertDictEqual(
+                    lvm.lv_present(name, vgname=vgname, extents=extents), ret
+                )
 
     def test_lv_present_with_force(self):
         """

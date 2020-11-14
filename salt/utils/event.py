@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage events
 
@@ -50,20 +49,16 @@ Namespaced tag
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import fnmatch
 import hashlib
 import logging
-
-# Import python libs
 import os
 import time
 from collections.abc import MutableMapping
 from multiprocessing.util import Finalize
 
-# Import salt libs
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.ioloop
@@ -80,8 +75,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
-
-# Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range
 
@@ -91,8 +84,8 @@ log = logging.getLogger(__name__)
 # component executions, like the state system
 SUB_EVENT = ("state.highstate", "state.sls")
 
-TAGEND = str("\n\n")  # long tag delimiter
-TAGPARTER = str("/")  # name spaced tag delimiter
+TAGEND = "\n\n"  # long tag delimiter
+TAGPARTER = "/"  # name spaced tag delimiter
 SALT = "salt"  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
 TAGS = {
@@ -208,7 +201,7 @@ def tagify(suffix="", prefix="", base=SALT):
     return TAGPARTER.join([part for part in parts if part])
 
 
-class SaltEvent(object):
+class SaltEvent:
     """
     Warning! Use the get_event function or the code will not be
     RAET compatible
@@ -307,14 +300,15 @@ class SaltEvent(object):
                 hash_type = getattr(hashlib, self.opts["hash_type"])
                 # Only use the first 10 chars to keep longer hashes from exceeding the
                 # max socket path length.
+                minion_id = self.opts.get("hash_id", self.opts["id"])
                 id_hash = hash_type(
-                    salt.utils.stringutils.to_bytes(self.opts["id"])
+                    salt.utils.stringutils.to_bytes(minion_id)
                 ).hexdigest()[:10]
                 puburi = os.path.join(
-                    sock_dir, "minion_event_{0}_pub.ipc".format(id_hash)
+                    sock_dir, "minion_event_{}_pub.ipc".format(id_hash)
                 )
                 pulluri = os.path.join(
-                    sock_dir, "minion_event_{0}_pull.ipc".format(id_hash)
+                    sock_dir, "minion_event_{}_pull.ipc".format(id_hash)
                 )
         log.debug("%s PUB socket URI: %s", self.__class__.__name__, puburi)
         log.debug("%s PULL socket URI: %s", self.__class__.__name__, pulluri)
@@ -444,21 +438,17 @@ class SaltEvent(object):
         if serial is None:
             serial = salt.payload.Serial({"serial": "msgpack"})
 
-        if six.PY2:
-            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-            data = serial.loads(mdata, encoding="utf-8")
-        else:
-            mtag, sep, mdata = raw.partition(
-                salt.utils.stringutils.to_bytes(TAGEND)
-            )  # split tag from data
-            mtag = salt.utils.stringutils.to_str(mtag)
-            data = serial.loads(mdata, encoding="utf-8")
+        mtag, sep, mdata = raw.partition(
+            salt.utils.stringutils.to_bytes(TAGEND)
+        )  # split tag from data
+        mtag = salt.utils.stringutils.to_str(mtag)
+        data = serial.loads(mdata, encoding="utf-8")
         return mtag, data
 
     def _get_match_func(self, match_type=None):
         if match_type is None:
             match_type = self.opts["event_match_type"]
-        return getattr(self, "_match_tag_{0}".format(match_type), None)
+        return getattr(self, "_match_tag_{}".format(match_type), None)
 
     def _check_pending(self, tag, match_func=None):
         """Check the pending_events list for events that match the tag
@@ -535,6 +525,11 @@ class SaltEvent(object):
         """
         return fnmatch.fnmatch(event_tag, search_tag)
 
+    def _subproxy_match(self, data):
+        if self.opts.get("subproxy", False):
+            return self.opts["id"] == data.get("proxy_target", None)
+        return True
+
     def _get_event(self, wait, tag, match_func=None, no_block=False):
         if match_func is None:
             match_func = self._get_match_func()
@@ -573,7 +568,7 @@ class SaltEvent(object):
             except RuntimeError:
                 return None
 
-            if not match_func(ret["tag"], tag):
+            if not match_func(ret["tag"], tag) or not self._subproxy_match(ret["data"]):
                 # tag not match
                 if any(
                     pmatch_func(ret["tag"], ptag)
@@ -722,11 +717,14 @@ class SaltEvent(object):
 
         The default is 1000 ms
         """
-        if not six.text_type(tag):  # no empty tags allowed
+        if self.opts.get("subproxy", False):
+            data["proxy_target"] = self.opts["id"]
+
+        if not str(tag):  # no empty tags allowed
             raise ValueError("Empty tag.")
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError("Dict object expected, not '{0}'.".format(data))
+            raise ValueError("Dict object expected, not '{}'.".format(data))
 
         if not self.cpush:
             if timeout is not None:
@@ -739,14 +737,11 @@ class SaltEvent(object):
         data["_stamp"] = datetime.datetime.utcnow().isoformat()
 
         tagend = TAGEND
-        if six.PY2:
-            dump_data = self.serial.dumps(data)
-        else:
-            # Since the pack / unpack logic here is for local events only,
-            # it is safe to change the wire protocol. The mechanism
-            # that sends events from minion to master is outside this
-            # file.
-            dump_data = self.serial.dumps(data, use_bin_type=True)
+        # Since the pack / unpack logic here is for local events only,
+        # it is safe to change the wire protocol. The mechanism
+        # that sends events from minion to master is outside this
+        # file.
+        dump_data = self.serial.dumps(data, use_bin_type=True)
 
         serialized_data = salt.utils.dicttrim.trim_dict(
             dump_data,
@@ -820,17 +815,17 @@ class SaltEvent(object):
             retcode = load["retcode"]
 
         try:
-            for tag, data in six.iteritems(ret):
+            for tag, data in ret.items():
                 data["retcode"] = retcode
                 tags = tag.split("_|-")
                 if data.get("result") is False:
                     self.fire_event(
-                        data, "{0}.{1}".format(tags[0], tags[-1])
+                        data, "{}.{}".format(tags[0], tags[-1])
                     )  # old dup event
                     data["jid"] = load["jid"]
                     data["id"] = load["id"]
                     data["success"] = False
-                    data["return"] = "Error: {0}.{1}".format(tags[0], tags[-1])
+                    data["return"] = "Error: {}.{}".format(tags[0], tags[-1])
                     data["fun"] = fun
                     data["user"] = load["user"]
                     self.fire_event(
@@ -917,7 +912,7 @@ class MasterEvent(SaltEvent):
         keep_loop=False,
         raise_errors=False,
     ):
-        super(MasterEvent, self).__init__(
+        super().__init__(
             "master",
             sock_dir,
             opts,
@@ -937,7 +932,7 @@ class LocalClientEvent(MasterEvent):
     """
 
 
-class NamespacedEvent(object):
+class NamespacedEvent:
     """
     A wrapper for sending events within a specific base namespace
     """
@@ -970,7 +965,7 @@ class MinionEvent(SaltEvent):
     """
 
     def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
-        super(MinionEvent, self).__init__(
+        super().__init__(
             "minion",
             sock_dir=opts.get("sock_dir"),
             opts=opts,
@@ -980,7 +975,7 @@ class MinionEvent(SaltEvent):
         )
 
 
-class AsyncEventPublisher(object):
+class AsyncEventPublisher:
     """
     An event publisher class intended to run in an ioloop (within a single process)
 
@@ -1002,12 +997,12 @@ class AsyncEventPublisher(object):
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()[:10]
         epub_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{0}_pub.ipc".format(id_hash)
+            self.opts["sock_dir"], "minion_event_{}_pub.ipc".format(id_hash)
         )
         if os.path.exists(epub_sock_path):
             os.unlink(epub_sock_path)
         epull_sock_path = os.path.join(
-            self.opts["sock_dir"], "minion_event_{0}_pull.ipc".format(id_hash)
+            self.opts["sock_dir"], "minion_event_{}_pull.ipc".format(id_hash)
         )
         if os.path.exists(epull_sock_path):
             os.unlink(epull_sock_path)
@@ -1092,7 +1087,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
     """
 
     def __init__(self, opts, **kwargs):
-        super(EventPublisher, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1190,7 +1185,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
 
     def _handle_signals(self, signum, sigframe):
         self.close()
-        super(EventPublisher, self)._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1215,7 +1210,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         # longer exists in the global namespace.
         import salt.minion
 
-        super(EventReturn, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts["event_return_queue"]
@@ -1250,14 +1245,14 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         if self.event_queue:
             self.flush_events()
         self.stop = True
-        super(EventReturn, self)._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)
 
     def flush_events(self):
         if isinstance(self.opts["event_return"], list):
             # Multiple event returners
             for r in self.opts["event_return"]:
                 log.debug("Calling event returner %s, one of many.", r)
-                event_return = "{0}.event_return".format(r)
+                event_return = "{}.event_return".format(r)
                 self._flush_event_single(event_return)
         else:
             # Only a single event returner
@@ -1265,7 +1260,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 "Calling event returner %s, only one configured.",
                 self.opts["event_return"],
             )
-            event_return = "{0}.event_return".format(self.opts["event_return"])
+            event_return = "{}.event_return".format(self.opts["event_return"])
             self._flush_event_single(event_return)
         del self.event_queue[:]
 
@@ -1384,7 +1379,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         return ret
 
 
-class StateFire(object):
+class StateFire:
     """
     Evaluate the data from a state run and fire events on the master and minion
     for each returned chunk that is not "green"
@@ -1445,8 +1440,8 @@ class StateFire(object):
         for stag in sorted(running, key=lambda k: running[k].get("__run_num__", 0)):
             if running[stag]["result"] and not running[stag]["changes"]:
                 continue
-            tag = "state_{0}_{1}".format(
-                six.text_type(running[stag]["result"]),
+            tag = "state_{}_{}".format(
+                str(running[stag]["result"]),
                 "True" if running[stag]["changes"] else "False",
             )
             load["events"].append({"tag": tag, "data": running[stag]})

@@ -1,12 +1,8 @@
-# -*- coding: utf-8 -*-
-
-from io import BytesIO as StringIO
+import io
 
 import salt.proxy.junos as junos
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -22,13 +18,7 @@ except ImportError:
 @skipIf(not HAS_JUNOS, "The junos-eznc and jxmlease modules are required")
 class JunosProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {
-            junos: {
-                "__virtual__": MagicMock(return_value="junos"),
-                "DETAILS": {},
-                "__pillar__": {},
-            }
-        }
+        return {junos: {"DETAILS": {}, "__pillar__": {}}}
 
     def setUp(self):
         self.opts = {"proxy": {"username": "xxxx", "password]": "xxx", "host": "junos"}}
@@ -47,6 +37,6 @@ class JunosProxyTestCase(TestCase, LoaderModuleMockMixin):
     @patch("ncclient.manager.connect")
     def test_alive(self, mock_connect):
         junos.init(self.opts)
-        junos.thisproxy["conn"]._conn._session._buffer = StringIO()
+        junos.thisproxy["conn"]._conn._session._buffer = io.BytesIO()
         self.assertTrue(junos.alive(self.opts))
         self.assertTrue(junos.thisproxy.get("initialized"))
