@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 import time
@@ -5,8 +6,11 @@ import time
 import pytest
 import salt.config
 import salt.netapi
+import salt.utils.files
+import salt.utils.platform
+import salt.utils.pycrypto
 from salt.exceptions import EauthAuthenticationError
-from tests.support.case import SSHCase
+from tests.support.case import ModuleCase, SSHCase
 from tests.support.helpers import (
     SKIP_IF_NOT_RUNNING_PYTEST,
     SaveRequestsPostHandler,
@@ -174,12 +178,8 @@ class NetapiSSHClientTest(SSHCase):
         """
         opts = AdaptedConfigurationTestCaseMixin.get_config("client_config").copy()
         self.netapi = salt.netapi.NetapiClient(opts)
-
-        self.priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
         self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
-
-        # Initialize salt-ssh
-        self.run_function("test.ping")
 
     def tearDown(self):
         del self.netapi
@@ -268,3 +268,293 @@ class NetapiSSHClientTest(SSHCase):
 
         self.assertEqual(ret, None)
         self.assertFalse(os.path.exists("badfile.txt"))
+
+    @staticmethod
+    def cleanup_file(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    @staticmethod
+    def cleanup_dir(path):
+        try:
+            salt.utils.files.rm_rf(path)
+        except OSError:
+            pass
+
+    @slowTest
+    def test_shell_inject_ssh_priv(self):
+        """
+        Verify CVE-2020-16846 for ssh_priv variable
+        """
+        # ZDI-CAN-11143
+        path = "/tmp/test-11143"
+        self.addCleanup(self.cleanup_file, path)
+        self.addCleanup(self.cleanup_file, "aaa")
+        self.addCleanup(self.cleanup_file, "aaa.pub")
+        self.addCleanup(self.cleanup_dir, "aaa|id>")
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "www.zerodayinitiative.com",
+            "ssh_priv": "aaa|id>{} #".format(path),
+            "fun": "test.ping",
+            "eauth": "auto",
+            "username": "saltdev_auto",
+            "password": "saltdev",
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    @slowTest
+    def test_shell_inject_tgt(self):
+        """
+        Verify CVE-2020-16846 for tgt variable
+        """
+        # ZDI-CAN-11167
+        path = "/tmp/test-11167"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "root|id>{} #@127.0.0.1".format(path),
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "rosters": "/",
+            "fun": "test.ping",
+            "eauth": "auto",
+            "username": "saltdev_auto",
+            "password": "saltdev",
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    @slowTest
+    def test_shell_inject_ssh_options(self):
+        """
+        Verify CVE-2020-16846 for ssh_options
+        """
+        # ZDI-CAN-11169
+        path = "/tmp/test-11169"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "test.ping",
+            "eauth": "auto",
+            "username": "saltdev_auto",
+            "password": "saltdev",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "rosters": "/",
+            "ssh_options": ["|id>{} #".format(path), "lol"],
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    @slowTest
+    def test_shell_inject_ssh_port(self):
+        """
+        Verify CVE-2020-16846 for ssh_port variable
+        """
+        # ZDI-CAN-11172
+        path = "/tmp/test-11172"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "test.ping",
+            "eauth": "auto",
+            "username": "saltdev_auto",
+            "password": "saltdev",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "rosters": "/",
+            "ssh_port": "hhhhh|id>{} #".format(path),
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+    @slowTest
+    def test_shell_inject_remote_port_forwards(self):
+        """
+        Verify CVE-2020-16846 for remote_port_forwards variable
+        """
+        # ZDI-CAN-11173
+        path = "/tmp/test-1173"
+        self.addCleanup(self.cleanup_file, path)
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "test.ping",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "rosters": "/",
+            "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
+            "eauth": "auto",
+            "username": "saltdev_auto",
+            "password": "saltdev",
+        }
+        ret = self.netapi.run(low)
+        self.assertFalse(os.path.exists(path))
+
+
+@pytest.mark.requires_sshd_server
+class NetapiSSHClientAuthTest(SSHCase):
+
+    USERA = "saltdev"
+    USERA_PWD = "saltdev"
+
+    def setUp(self):
+        """
+        Set up a NetapiClient instance
+        """
+        opts = salt.config.client_config(
+            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "master")
+        )
+        naopts = copy.deepcopy(opts)
+        naopts["ignore_host_keys"] = True
+        self.netapi = salt.netapi.NetapiClient(naopts)
+
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key")
+        self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+        # Initialize salt-ssh
+        self.run_function("test.ping")
+        self.mod_case = ModuleCase()
+        try:
+            add_user = self.mod_case.run_function(
+                "user.add", [self.USERA], createhome=False
+            )
+            self.assertTrue(add_user)
+            if salt.utils.platform.is_darwin():
+                hashed_password = self.USERA_PWD
+            else:
+                hashed_password = salt.utils.pycrypto.gen_hash(password=self.USERA_PWD)
+            add_pwd = self.mod_case.run_function(
+                "shadow.set_password", [self.USERA, hashed_password],
+            )
+            self.assertTrue(add_pwd)
+        except AssertionError:
+            self.mod_case.run_function("user.delete", [self.USERA], remove=True)
+            self.skipTest("Could not add user or password, skipping test")
+
+    def tearDown(self):
+        del self.netapi
+        self.mod_case.run_function("user.delete", [self.USERA], remove=True)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.post_webserver = Webserver(handler=SaveRequestsPostHandler)
+        cls.post_webserver.start()
+        cls.post_web_root = cls.post_webserver.web_root
+        cls.post_web_handler = cls.post_webserver.handler
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.post_webserver.stop()
+        del cls.post_webserver
+
+    @slowTest
+    def test_ssh_auth_bypass(self):
+        """
+        CVE-2020-25592 - Bogus eauth raises exception.
+        """
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": "127.0.0.1",
+            "renderer": "cheetah",
+            "fun": "test.ping",
+            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "rosters": "/",
+            "eauth": "xx",
+        }
+        with self.assertRaises(salt.exceptions.EauthAuthenticationError):
+            ret = self.netapi.run(low)
+
+    @slowTest
+    def test_ssh_auth_valid(self):
+        """
+        CVE-2020-25592 - Valid eauth works as expected.
+        """
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": "saltdev",
+            "password": "saltdev",
+        }
+        ret = self.netapi.run(low)
+        assert "localhost" in ret
+        assert ret["localhost"]["return"] is True
+
+    @slowTest
+    def test_ssh_auth_invalid(self):
+        """
+        CVE-2020-25592 - Wrong password raises exception.
+        """
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": "saltdev",
+            "password": "notvalidpassword",
+        }
+        with self.assertRaises(salt.exceptions.EauthAuthenticationError):
+            ret = self.netapi.run(low)
+
+    @slowTest
+    def test_ssh_auth_invalid_acl(self):
+        """
+        CVE-2020-25592 - Eauth ACL enforced.
+        """
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "at.at",
+            "args": ["12:05am", "echo foo"],
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "eauth": "pam",
+            "username": "saltdev",
+            "password": "notvalidpassword",
+        }
+        with self.assertRaises(salt.exceptions.EauthAuthenticationError):
+            ret = self.netapi.run(low)
+
+    @slowTest
+    def test_ssh_auth_token(self):
+        """
+        CVE-2020-25592 - Eauth tokens work as expected.
+        """
+        low = {
+            "eauth": "pam",
+            "username": "saltdev",
+            "password": "saltdev",
+        }
+        ret = self.netapi.loadauth.mk_token(low)
+        assert "token" in ret and ret["token"]
+        low = {
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "roster_file": "roster",
+            "rosters": [self.rosters],
+            "ssh_priv": self.priv_file,
+            "token": ret["token"],
+        }
+        ret = self.netapi.run(low)
+        assert "localhost" in ret
+        assert ret["localhost"]["return"] is True
