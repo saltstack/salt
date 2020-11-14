@@ -12,7 +12,7 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ShellCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 from tests.support.paths import TMP
 
 # Import Salt libs
@@ -150,3 +150,61 @@ class SSHSingleTests(TestCase):
                          'PasswordAuthentication=yes -o ConnectTimeout=65 -o Port=22 '
                          '-o IdentityFile=/etc/salt/pki/master/ssh/salt-ssh.rsa '
                          '-o User=root  date +%s')
+
+@skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
+class SSHTests(ShellCase):
+    def setUp(self):
+        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.argv = [
+            "ssh.set_auth_key",
+            "root",
+            "hobn+amNAXSBTiOXEqlBjGB...rsa root@master",
+        ]
+        self.opts = {
+            "argv": self.argv,
+            "__role": "master",
+            "cachedir": self.tmp_cachedir,
+            "extension_modules": os.path.join(self.tmp_cachedir, "extmods"),
+        }
+        self.target = {
+            "passwd": "abc123",
+            "ssh_options": None,
+            "sudo": False,
+            "identities_only": False,
+            "host": "login1",
+            "user": "root",
+            "timeout": 65,
+            "remote_port_forwards": None,
+            "sudo_user": "",
+            "port": "22",
+            "priv": "/etc/salt/pki/master/ssh/salt-ssh.rsa",
+        }
+
+    def test_shim_cmd(self):
+        """
+        test Single.shim_cmd()
+        """
+        single = ssh.Single(
+            self.opts,
+            self.opts["argv"],
+            "localhost",
+            mods={},
+            fsclient=None,
+            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            mine=False,
+            winrm=False,
+            tty=True,
+            **self.target
+        )
+        exp_ret = ("Success", "", 0)
+        mock_cmd = MagicMock(return_value=exp_ret)
+        patch_cmd = patch("salt.client.ssh.shell.Shell.exec_cmd", mock_cmd)
+        patch_send = patch("salt.client.ssh.shell.Shell.send", return_value=("", "", 0))
+        patch_rand = patch("os.urandom", return_value=b"5\xd9l\xca\xc2\xff")
+        with patch_cmd, patch_rand, patch_send:
+            ret = single.shim_cmd(cmd_str="echo test")
+            assert ret == exp_ret
+            assert [
+                call("/bin/sh '.35d96ccac2ff.py'"),
+                call("rm '.35d96ccac2ff.py'"),
+            ] == mock_cmd.call_args_list
