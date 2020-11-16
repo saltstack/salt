@@ -213,6 +213,10 @@ class SaltLoggingClass(
             max_logger_length = len(
                 max(list(logging.Logger.manager.loggerDict), key=len)
             )
+            if max_logger_length > 80:
+                # Make sure the logger name on the formatted log record is not longer than 100 chars
+                # Messages which need more that 100 chars will use them, but not ALL log messages
+                max_logger_length = 80
             for handler in logging.root.handlers:
                 if handler in (get_null_handler(), get_temp_handler()):
                     continue
