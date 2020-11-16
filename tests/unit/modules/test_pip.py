@@ -1471,8 +1471,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                         b"# some comment\n"
                         b"-e git+ssh://git.example.com/MyProject#egg=MyProject # the project\n"
                         b"seven\n"
+                        b"-e git+ssh://git.example.com/Example#egg=example\n"
                         b"eight # -e something#or other\n"
+                        b"--requirement requirements-4.txt\n\n"
                     ),
+                    "requirements-4.txt": "",
                 }
                 self.val = d[filename]
 
@@ -1487,7 +1490,10 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch("salt.utils.files.fopen", FakeFopen):
             chain = pip._resolve_requirements_chain(["requirements-0.txt", "requirements-3.txt"])
-        self.assertEqual(chain, ["requirements-0.txt", "requirements-1.txt", "requirements-2.txt", "requirements-3.txt"])
+        self.assertEqual(
+            chain,
+            ["requirements-0.txt", "requirements-1.txt", "requirements-2.txt", "requirements-3.txt", "requirements-4.txt"]
+        )
 
     # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
     def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
