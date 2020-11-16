@@ -1348,7 +1348,7 @@ Example:
 
 Returns:
 
-.. code-block:: python
+.. code-block:: pycon
 
   {
     'body': '{
@@ -2168,6 +2168,85 @@ Will insert the following message in the minion logs:
     2017-02-01 01:24:40,728 [salt.module.logmod][ERROR   ][3779] testing jinja logging
 
 .. jinja_ref:: custom-execution-modules
+
+Profiling
+=========
+
+.. versionadded:: 3002
+
+When working with a very large codebase, it becomes increasingly imperative to
+trace inefficiencies with state and pillar render times.  The `profile` jinja
+block enables the user to get finely detailed information on the most expensive
+areas in the codebase.
+
+Profiling blocks
+----------------
+
+Any block of jinja code can be wrapped in a ``profile`` block.  The syntax for
+a profile block is ``{% profile as '<name>' %}<jinja code>{% endprofile %}``,
+where ``<name>`` can be any string.  The ``<name>`` token will appear in the
+log at the ``profile`` level along with the render time of the block.
+
+.. code-block:: sls
+
+    # /srv/salt/example.sls
+    {%- profile as 'local data' %}
+      {%- set local_data = {'counter': 0} %}
+      {%- for i in range(313377) %}
+        {%- do local_data.update({'counter': i}) %}
+      {%- endfor %}
+    {%- endprofile %}
+
+    test:
+      cmd.run:
+        - name: |-
+            printf 'data: %s' '{{ local_data['counter'] }}'
+
+The ``profile`` block in the ``example.sls`` state will emit the following log
+statement:
+
+.. code-block:: console
+
+    # salt-call --local -l profile state.apply example
+    [...]
+    [PROFILE ] Time (in seconds) to render profile block 'local data': 0.9385035037994385
+    [...]
+
+Profiling imports
+-----------------
+
+Using the same logic as the ``profile`` block, the ``import_yaml``,
+``import_json``, and ``import_text`` blocks will emit similar statements at the
+``profile`` log level.
+
+.. code-block:: sls
+
+    # /srv/salt/data.sls
+    {%- set values = {'counter': 0} %}
+    {%- for i in range(524288) %}
+      {%- do values.update({'counter': i}) %}
+    {%- endfor %}
+
+    data: {{ values['counter'] }}
+
+.. code-block:: sls
+
+    # /srv/salt/example.sls
+    {%- import_yaml 'data.sls' as imported %}
+
+    test:
+      cmd.run:
+        - name: |-
+            printf 'data: %s' '{{ imported['data'] }}'
+
+For ``import_*`` blocks, the ``profile`` log statement has the following form:
+
+.. code-block:: console
+
+    # salt-call --local -l profile state.apply example
+    [...]
+    [PROFILE ] Time (in seconds) to render import_yaml 'data.sls': 1.5500736236572266
+    [...]
 
 Python Methods
 ====================

@@ -1,0 +1,13 @@
+.. _release-2019-2-6:
+
+===========================
+Salt 2019.2.6 Release Notes
+===========================
+
+Version 2019.2.6 is a CVE fix release for :ref:`2019.2.0 <release-2019-2-0>`.
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)

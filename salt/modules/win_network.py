@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing network information
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import hashlib
@@ -112,7 +110,7 @@ def ping(host, timeout=False, return_boolean=False):
             "-n",
             "4",
             "-w",
-            six.text_type(timeout),
+            str(timeout),
             salt.utils.network.sanitize_host(host),
         ]
     else:
@@ -265,7 +263,7 @@ def get_route(ip):
 
         salt '*' network.get_route 10.10.10.10
     """
-    cmd = "Find-NetRoute -RemoteIPAddress {0}".format(ip)
+    cmd = "Find-NetRoute -RemoteIPAddress {}".format(ip)
     out = __salt__["cmd.run"](cmd, shell="powershell", python_shell=True)
     regexp = re.compile(
         r"^IPAddress\s+:\s(?P<source>[\d\.:]+)?.*"
@@ -498,7 +496,10 @@ def connect(host, port=None, **kwargs):
     ):
         address = host
     else:
-        address = "{0}".format(salt.utils.network.sanitize_host(host))
+        address = "{}".format(salt.utils.network.sanitize_host(host))
+
+    # just in case we encounter error on getaddrinfo
+    _address = ("unknown",)
 
     try:
         if proto == "udp":
@@ -538,13 +539,13 @@ def connect(host, port=None, **kwargs):
             skt.shutdown(2)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Unable to connect to {0} ({1}) on {2} port {3}".format(
+        ret["comment"] = "Unable to connect to {} ({}) on {} port {}".format(
             host, _address[0], proto, port
         )
         return ret
 
     ret["result"] = True
-    ret["comment"] = "Successfully connected to {0} ({1}) on {2} port {3}".format(
+    ret["comment"] = "Successfully connected to {} ({}) on {} port {}".format(
         host, _address[0], proto, port
     )
     return ret

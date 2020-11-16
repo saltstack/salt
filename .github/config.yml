@@ -7,8 +7,7 @@ newIssueWelcomeComment: >
   possible. In the meantime, here’s some information that may help as you continue your Salt
   journey.
 
-  Please be sure to review our [Code of Conduct]
-  (https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Please be sure to review our [Code of Conduct](https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
   Also, check out some of our community
   resources including:
 
@@ -23,9 +22,9 @@ newIssueWelcomeComment: >
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com or reach out directly to the
-  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
-  look forward to doing awesome things with you!
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
 
 # Comment to be posted to on PRs from first time contributors in your repository
 newPRWelcomeComment: >
@@ -34,8 +33,7 @@ newPRWelcomeComment: >
   possible. In the meantime, here’s some information that may help as you continue your Salt
   journey.
 
-  Please be sure to review our [Code of Conduct]
-  (https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Please be sure to review our [Code of Conduct](https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
   Also, check out some of our community
   resources including:
 
@@ -50,9 +48,9 @@ newPRWelcomeComment: >
   opportunities to meet with other contributors and the Salt Core team and collaborate in real
   time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
 
-  If you have additional questions, email us at core@saltstack.com or reach out directly to the
-  Community Manager, Cassandra Faris via Slack. We’re glad you’ve joined our community and
-  look forward to doing awesome things with you!
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
 
 # Comment to be posted to on pull requests merged by a first time user
 firstPRMergeComment: >

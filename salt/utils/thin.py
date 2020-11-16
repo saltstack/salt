@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Generate the salt thin tarball from the installed python files
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
@@ -14,7 +12,6 @@ import tarfile
 import tempfile
 import zipfile
 
-import distro
 import jinja2
 import msgpack
 import salt
@@ -72,11 +69,13 @@ except ImportError:
     except ImportError:
         ssl_match_hostname = None
 # pylint: enable=import-error,no-name-in-module
-
-
 if _six.PY2:
     import concurrent
+
+    distro = None
 else:
+    import distro
+
     concurrent = None
 
 
@@ -177,7 +176,7 @@ def gte():
     return salt.utils.json.dumps(tops, ensure_ascii=False)
 
 
-def get_tops_python(py_ver, exclude=None):
+def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
     """
     Get top directories for the ssh_ext_alternatives dependencies
     automatically for the given python version. This allows
@@ -188,10 +187,12 @@ def get_tops_python(py_ver, exclude=None):
 
     :param exclude:
         list of modules not to auto detect
+
+    :param ext_py_ver:
+        the py-version from the ssh_ext_alternatives config
     """
     files = {}
-    for mod in [
-        "distro",
+    mods = [
         "jinja2",
         "yaml",
         "tornado",
@@ -203,7 +204,11 @@ def get_tops_python(py_ver, exclude=None):
         "ssl_match_hostname",
         "markupsafe",
         "backports_abc",
-    ]:
+    ]
+    if ext_py_ver and tuple(ext_py_ver) >= (3, 0):
+        mods.append("distro")
+
+    for mod in mods:
         if exclude and mod in exclude:
             continue
 
@@ -242,7 +247,7 @@ def get_ext_tops(config):
     """
     config = copy.deepcopy(config)
     alternatives = {}
-    required = ["jinja2", "yaml", "tornado", "msgpack", "distro"]
+    required = ["jinja2", "yaml", "tornado", "msgpack"]
     tops = []
     for ns, cfg in salt.ext.six.iteritems(config or {}):
         alternatives[ns] = cfg
@@ -257,6 +262,9 @@ def get_ext_tops(config):
             )
         if err_msg:
             raise salt.exceptions.SaltSystemExit(err_msg)
+
+        if tuple(locked_py_version) >= (3, 0) and "distro" not in required:
+            required.append("distro")
 
         if cfg.get("dependencies") == "inherit":
             # TODO: implement inheritance of the modules from _here_
@@ -293,7 +301,7 @@ def get_ext_tops(config):
                     " in the external configuration: {}".format(required)
                 )
                 log.error(msg)
-                raise salt.exceptions.SaltSystemExit(msg)
+                raise salt.exceptions.SaltSystemExit(msg=msg)
         alternatives[ns]["dependencies"] = tops
     return alternatives
 
@@ -381,8 +389,9 @@ def _get_supported_py_config(tops, extended_cfg):
     for the supported Python interpreter versions. This is then written into the thin.tgz
     archive and then verified by salt.client.ssh.ssh_py_shim.get_executable()
 
-    Note: Minimum default of 2.x versions is 2.7 and 3.x is 3.0, unless specified in namespaces.
-
+    Note: Current versions of Salt only Support Python 3, but the versions of Python
+    (2.7,3.0) remain to include support for ssh_ext_alternatives if user is targeting an
+    older version of Salt.
     :return:
     """
     pymap = []
@@ -437,7 +446,9 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
                 config[ns]["dependencies"] = {}
 
             # get auto deps
-            auto_deps = get_tops_python(py_ver, exclude=exclude)
+            auto_deps = get_tops_python(
+                py_ver, exclude=exclude, ext_py_ver=cfg["py-version"]
+            )
             for dep in auto_deps:
                 config[ns]["dependencies"][dep] = auto_deps[dep]
 
@@ -450,7 +461,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             base, top_dirname = os.path.basename(top), os.path.dirname(top)
             os.chdir(top_dirname)
             site_pkg_dir = (
-                _is_shareable(base) and "pyall" or "py{0}".format(py_ver_major)
+                _is_shareable(base) and "pyall" or "py{}".format(py_ver_major)
             )
             log.debug(
                 'Packing alternative "%s" to "%s/%s" destination',
@@ -510,9 +521,14 @@ def gen_thin(
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     """
-    if sys.version_info < (2, 6):
+    if python2_bin != "python2" or python3_bin != "python3":
+        salt.utils.versions.warn_until(
+            "Silicon",
+            "python2_bin and python3_bin are no longer used, please update your call to gen_thin",
+        )
+    if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
-            'The minimum required python version to run salt-ssh is "2.6".'
+            'The minimum required python version to run salt-ssh is "3".'
         )
     if compress not in ["gzip", "zip"]:
         log.warning(
@@ -562,92 +578,11 @@ def gen_thin(
                     )
         else:
             return thintar
-    if _six.PY3:
-        # Let's check for the minimum python 2 version requirement, 2.6
-        if not salt.utils.path.which(python2_bin):
-            log.debug(
-                "%s binary does not exist. Will not detect Python 2 version",
-                python2_bin,
-            )
-        else:
-            py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(
-                python2_bin
-            )
-            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
-            stdout, _ = cmd.communicate()
-            if cmd.returncode == 0:
-                py2_version = tuple(
-                    int(n) for n in stdout.decode("utf-8").strip().split(".")
-                )
-                if py2_version < (2, 6):
-                    raise salt.exceptions.SaltSystemExit(
-                        'The minimum required python version to run salt-ssh is "2.6".'
-                        'The version reported by "{0}" is "{1}". Please try "salt-ssh '
-                        '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(
-                            python2_bin, stdout.strip()
-                        )
-                    )
-            else:
-                log.debug("Unable to detect %s version", python2_bin)
-                log.debug(stdout)
 
     tops_failure_msg = "Failed %s tops for Python binary %s."
-    python_check_msg = (
-        "%s binary does not exist. Will not attempt to generate tops for Python %s"
-    )
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
     tops_py_version_mapping[sys.version_info.major] = tops
-
-    # Collect tops, alternative to 2.x version
-    if _six.PY2 and sys.version_info.major == 2:
-        # Get python 3 tops
-        if not salt.utils.path.which(python3_bin):
-            log.debug(python_check_msg, python3_bin, "3")
-        else:
-            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
-                python3_bin,
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
-            )
-            cmd = subprocess.Popen(
-                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-            )
-            stdout, stderr = cmd.communicate()
-            if cmd.returncode == 0:
-                try:
-                    tops = salt.utils.json.loads(stdout)
-                    tops_py_version_mapping["3"] = tops
-                except ValueError as err:
-                    log.error(tops_failure_msg, "parsing", python3_bin)
-                    log.exception(err)
-            else:
-                log.debug(tops_failure_msg, "collecting", python3_bin)
-                log.debug(stderr)
-
-    # Collect tops, alternative to 3.x version
-    if _six.PY3 and sys.version_info.major == 3:
-        # Get python 2 tops
-        if not salt.utils.path.which(python2_bin):
-            log.debug(python_check_msg, python2_bin, "2")
-        else:
-            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
-                python2_bin,
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods}),
-            )
-            cmd = subprocess.Popen(
-                py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-            )
-            stdout, stderr = cmd.communicate()
-            if cmd.returncode == 0:
-                try:
-                    tops = salt.utils.json.loads(stdout.decode("utf-8"))
-                    tops_py_version_mapping["2"] = tops
-                except ValueError as err:
-                    log.error(tops_failure_msg, "parsing", python2_bin)
-                    log.exception(err)
-            else:
-                log.debug(tops_failure_msg, "collecting", python2_bin)
-                log.debug(stderr)
 
     with salt.utils.files.fopen(pymap_cfg, "wb") as fp_:
         fp_.write(
@@ -760,7 +695,7 @@ def thin_sum(cachedir, form="sha1"):
     code_checksum_path = os.path.join(cachedir, "thin", "code-checksum")
     if os.path.isfile(code_checksum_path):
         with salt.utils.files.fopen(code_checksum_path, "r") as fh:
-            code_checksum = "'{0}'".format(fh.read().strip())
+            code_checksum = "'{}'".format(fh.read().strip())
     else:
         code_checksum = "'0'"
 
@@ -789,6 +724,11 @@ def gen_min(
         salt-run min.generate mako,wempy 1
         salt-run min.generate overwrite=1
     """
+    if python2_bin != "python2" or python3_bin != "python3":
+        salt.utils.versions.warn_until(
+            "Silicon",
+            "python2_bin and python3_bin are no longer used, please update your call to gen_min",
+        )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):
         os.makedirs(mindir)
@@ -818,81 +758,10 @@ def gen_min(
                 pass
         else:
             return mintar
-    if _six.PY3:
-        # Let's check for the minimum python 2 version requirement, 2.6
-        py_shell_cmd = (
-            python2_bin + " -c 'from __future__ import print_function; import sys; "
-            'print("{0}.{1}".format(*(sys.version_info[:2])));\''
-        )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
-        stdout, _ = cmd.communicate()
-        if cmd.returncode == 0:
-            py2_version = tuple(
-                int(n) for n in stdout.decode("utf-8").strip().split(".")
-            )
-            if py2_version < (2, 6):
-                # Bail!
-                raise salt.exceptions.SaltSystemExit(
-                    'The minimum required python version to run salt-ssh is "2.6".'
-                    'The version reported by "{0}" is "{1}". Please try "salt-ssh '
-                    '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(
-                        python2_bin, stdout.strip()
-                    )
-                )
-    elif sys.version_info < (2, 6):
-        # Bail! Though, how did we reached this far in the first place.
-        raise salt.exceptions.SaltSystemExit(
-            'The minimum required python version to run salt-ssh is "2.6".'
-        )
 
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
-    if _six.PY2:
-        tops_py_version_mapping["2"] = tops
-    else:
-        tops_py_version_mapping["3"] = tops
-
-    # TODO: Consider putting known py2 and py3 compatible libs in its own sharable directory.
-    #       This would reduce the min size.
-    if _six.PY2 and sys.version_info[0] == 2:
-        # Get python 3 tops
-        py_shell_cmd = (
-            python3_bin + " -c 'import sys; import json; import salt.utils.thin; "
-            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);' "
-            "'{0}'".format(
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods})
-            )
-        )
-        cmd = subprocess.Popen(
-            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-        )
-        stdout, stderr = cmd.communicate()
-        if cmd.returncode == 0:
-            try:
-                tops = salt.utils.json.loads(stdout)
-                tops_py_version_mapping["3"] = tops
-            except ValueError:
-                pass
-    if _six.PY3 and sys.version_info[0] == 3:
-        # Get python 2 tops
-        py_shell_cmd = (
-            python2_bin + " -c 'from __future__ import print_function; "
-            "import sys; import json; import salt.utils.thin; "
-            "print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))), ensure_ascii=False)); exit(0);' "
-            "'{0}'".format(
-                salt.utils.json.dumps({"extra_mods": extra_mods, "so_mods": so_mods})
-            )
-        )
-        cmd = subprocess.Popen(
-            py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-        )
-        stdout, stderr = cmd.communicate()
-        if cmd.returncode == 0:
-            try:
-                tops = salt.utils.json.loads(stdout.decode("utf-8"))
-                tops_py_version_mapping["2"] = tops
-            except ValueError:
-                pass
+    tops_py_version_mapping["3"] = tops
 
     tfp = tarfile.open(mintar, "w:gz", dereference=True)
     try:  # cwd may not exist if it was removed but salt was run from it
@@ -1038,7 +907,7 @@ def gen_min(
                 os.chdir(tempdir)
             if not os.path.isdir(top):
                 # top is a single file module
-                tfp.add(base, arcname=os.path.join("py{0}".format(py_ver), base))
+                tfp.add(base, arcname=os.path.join("py{}".format(py_ver), base))
                 continue
             for root, dirs, files in salt.utils.path.os_walk(base, followlinks=True):
                 for name in files:
@@ -1051,7 +920,7 @@ def gen_min(
                         continue
                     tfp.add(
                         os.path.join(root, name),
-                        arcname=os.path.join("py{0}".format(py_ver), root, name),
+                        arcname=os.path.join("py{}".format(py_ver), root, name),
                     )
             if tempdir is not None:
                 shutil.rmtree(tempdir)

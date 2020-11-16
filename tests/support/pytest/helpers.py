@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import textwrap
 import types
+import warnings
 from contextlib import contextmanager
 
 import pytest
@@ -18,6 +19,18 @@ from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+if not RUNTIME_VARS.PYTEST_SESSION:
+    # XXX: Remove this try/except once we fully switch to pytest
+
+    class FakePyTestHelpersNamespace:
+        __slots__ = ()
+
+        def register(self, func):
+            return func
+
+    # Patch pytest so it all works under runtests.py
+    pytest.helpers = FakePyTestHelpersNamespace()
 
 
 @pytest.helpers.register
@@ -221,8 +234,16 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 @pytest.helpers.register
-def loader_mock(request, loader_modules, **kwargs):
-    return LoaderModuleMock(request, loader_modules, **kwargs)
+def loader_mock(*args, **kwargs):
+    if len(args) > 1:
+        loader_modules = args[1]
+        warnings.warn(
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            category=DeprecationWarning,
+        )
+    else:
+        loader_modules = args[0]
+    return LoaderModuleMock(loader_modules, **kwargs)
 
 
 @pytest.helpers.register

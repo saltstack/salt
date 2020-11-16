@@ -1,2 +1,0 @@
-Use "use_bin_type" to differentiate between bytes and str when writing cache
-for pillar and grains.
