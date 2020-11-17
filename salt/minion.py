@@ -1071,6 +1071,10 @@ class MinionManager(MinionBase):
         """
         Helper function to return the correct type of object
         """
+        load_grains = False
+        if opts.get("grains", {}):
+            # we have custom grains in config, we need to also load default grains
+            load_grains = True
         return Minion(
             opts,
             timeout,
@@ -1078,6 +1082,7 @@ class MinionManager(MinionBase):
             io_loop=io_loop,
             loaded_base_name=loaded_base_name,
             jid_queue=jid_queue,
+            load_grains=load_grains,
         )
 
     def _check_minions(self):
@@ -1212,6 +1217,7 @@ class Minion(MinionBase):
         loaded_base_name=None,
         io_loop=None,
         jid_queue=None,
+        load_grains=False,
     ):  # pylint: disable=W0231
         """
         Pass in the options dict
@@ -1253,7 +1259,7 @@ class Minion(MinionBase):
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
         if not salt.utils.platform.is_proxy():
-            if not self.opts.get("grains", {}):
+            if not self.opts.get("grains", {}) or load_grains:
                 self.opts["grains"] = salt.loader.grains(opts)
         else:
             if self.opts.get("beacons_before_connect", False):
