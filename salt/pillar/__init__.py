@@ -822,7 +822,7 @@ class Pillar:
                             env_matches.append(item)
         return matches
 
-    def render_pstate(self, sls, saltenv, mods, defaults=None):
+    def render_pstate(self, sls, saltenv, mods, defaults=None, inc_key=None):
         """
         Collect a single pillar sls file and render it
         """
@@ -893,7 +893,7 @@ class Pillar:
                 )
             else:
                 errors.append(msg)
-        mods.add(sls)
+        mods.add((sls, inc_key))
         nstate = None
         if state:
             if not isinstance(state, dict):
@@ -946,9 +946,9 @@ class Pillar:
                             if len(matched_pstates) < 1:
                                 matched_pstates = [sub_sls]
                             for m_sub_sls in matched_pstates:
-                                if m_sub_sls not in mods:
+                                if (m_sub_sls, key) not in mods:
                                     nstate, mods, err = self.render_pstate(
-                                        m_sub_sls, saltenv, mods, defaults
+                                        m_sub_sls, saltenv, mods, defaults, key
                                     )
                                     if nstate:
                                         if key:
