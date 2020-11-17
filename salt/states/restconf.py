@@ -1,5 +1,10 @@
 """
 State module for restconf Proxy minions
+
+:codeauthor: Jamie (Bear) Murphy <jamiemurphyit@gmail.com>
+:maturity:   new
+:platform:   any
+
 """
 
 # Import Python libs
