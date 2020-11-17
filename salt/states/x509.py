@@ -429,6 +429,9 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
 
     diff = []
     for k, v in required_cert_info.items():
+        # cert info comes as byte string
+        if isinstance(v, str):
+            v = salt.utils.stringutils.to_bytes(v)
         try:
             if v != cert_info[k]:
                 if k == "Subject Hash":
