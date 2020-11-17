@@ -20,7 +20,7 @@ no disk space:
 
 .. code-block:: yaml
 
-    '> /var/log/messages/:
+    '> /var/log/messages/':
       cmd.run:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
@@ -47,7 +47,7 @@ run if **any** of the files do not exist:
 .. note::
 
     The ``creates`` option was added to the cmd state in version 2014.7.0,
-    and made a global requisite in Sodium.
+    and made a global requisite in 3001.
 
 Sometimes when running a command that starts up a daemon, the init script
 doesn't return properly which causes Salt to wait indefinitely for a response.
@@ -243,6 +243,7 @@ import os
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.json
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext import six
 
@@ -830,6 +831,7 @@ def script(
     template=None,
     cwd=None,
     runas=None,
+    password=None,
     shell=None,
     env=None,
     stateful=False,
@@ -865,7 +867,33 @@ def script(
         /root
 
     runas
-        The name of the user to run the command as
+        Specify an alternate user to run the command. The default
+        behavior is to run as the user under which Salt is running. If running
+        on a Windows minion you must also use the ``password`` argument, and
+        the target user account must be in the Administrators group.
+
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
+    password
+
+    .. versionadded:: 3000
+
+        Windows only. Required when specifying ``runas``. This
+        parameter will be ignored on non-Windows platforms.
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -1004,6 +1032,10 @@ def script(
         )
         return ret
 
+    if runas and salt.utils.platform.is_windows() and not password:
+        ret["commnd"] = "Must supply a password if runas argument is used on Windows."
+        return ret
+
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
@@ -1012,6 +1044,7 @@ def script(
     cmd_kwargs.update(
         {
             "runas": runas,
+            "password": password,
             "shell": shell or __grains__["shell"],
             "env": env,
             "cwd": cwd,

@@ -10,7 +10,6 @@ Helpers for the NAPALM modules.
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python stdlib
-import inspect
 import logging
 
 # import NAPALM utils
@@ -103,7 +102,9 @@ def _get_netmiko_args(optional_args):
     # Older version don't have the netmiko_helpers module, the following code is
     # simply a port from the NAPALM code base, for backwards compatibility:
     # https://github.com/napalm-automation/napalm/blob/develop/napalm/base/netmiko_helpers.py
-    netmiko_args, _, _, netmiko_defaults = inspect.getargspec(BaseConnection.__init__)
+    netmiko_args, _, _, netmiko_defaults = __utils__["args.get_function_argspec"](
+        BaseConnection.__init__
+    )
     check_self = netmiko_args.pop(0)
     if check_self != "self":
         raise ValueError("Error processing Netmiko arguments")

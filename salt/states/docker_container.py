@@ -752,7 +752,7 @@ def running(
                   - /dev/sdb:5mb
 
 
-    device_read_iops
+    device_write_iops
         Limit write rate (I/O per second) from a device, specified as a list
         of expressions in the format ``PATH:RATE``, where ``RATE`` is a number
         of I/O operations. Can be expressed as a comma-separated list or a
@@ -763,14 +763,14 @@ def running(
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - devices_read_iops: /dev/sda:1000,/dev/sdb:500
+                - devices_write_iops: /dev/sda:1000,/dev/sdb:500
 
         .. code-block:: yaml
 
             foo:
               docker_container.running:
                 - image: bar/baz:latest
-                - devices_read_iops:
+                - devices_write_iops:
                   - /dev/sda:1000
                   - /dev/sdb:500
 

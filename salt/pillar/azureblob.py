@@ -2,7 +2,7 @@
 """
 Use Azure Blob as a Pillar source.
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 :maintainer: <devops@eitr.tech>
 :maturity: new
@@ -57,8 +57,6 @@ from salt.ext.six.moves import filter
 # Import Salt libs
 from salt.pillar import Pillar
 
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
 # Import Azure libs
 HAS_LIBS = False
 try:
@@ -67,6 +65,8 @@ try:
     HAS_LIBS = True
 except ImportError:
     pass
+
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 __virtualname__ = "azureblob"
@@ -167,7 +167,7 @@ def ext_pillar(
 
 def _init(connection_string, container, multiple_env, environment, blob_cache_expire):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Connect to Blob Storage and download the metadata for each file in all containers specified and
         cache the data to disk.
@@ -219,7 +219,7 @@ def _init(connection_string, container, multiple_env, environment, blob_cache_ex
 
 def _get_cache_dir():
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Get pillar cache directory. Initialize it if it does not exist.
 
@@ -235,7 +235,7 @@ def _get_cache_dir():
 
 def _get_cached_file_name(container, saltenv, path):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Return the cached file name for a container path file.
 
@@ -257,7 +257,7 @@ def _get_cached_file_name(container, saltenv, path):
 
 def _get_containers_cache_filename(container):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Return the filename of the cache for container contents. Create the path if it does not exist.
 
@@ -275,7 +275,7 @@ def _refresh_containers_cache_file(
     connection_string, container, cache_file, multiple_env=False, environment="base"
 ):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Downloads the entire contents of an Azure storage container to the local filesystem.
 
@@ -351,7 +351,7 @@ def _refresh_containers_cache_file(
 
 def _read_containers_cache_file(cache_file):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Return the contents of the containers cache file.
 
@@ -368,7 +368,7 @@ def _read_containers_cache_file(cache_file):
 
 def _find_files(metadata):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Looks for all the files in the Azure Blob container cache metadata.
 
@@ -391,7 +391,7 @@ def _find_files(metadata):
 
 def _find_file_meta(metadata, container, saltenv, path):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Looks for a file's metadata in the Azure Blob Container cache file.
 
@@ -417,7 +417,7 @@ def _get_file_from_blob(
     connection_string, metadata, saltenv, container, path, cached_file_path
 ):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Downloads the entire contents of an Azure storage container to the local filesystem.
 

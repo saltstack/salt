@@ -33,6 +33,7 @@ class SchedulerPostponeTest(SchedulerTestsBase):
 
     def tearDown(self):
         self.schedule.reset()
+        super(SchedulerPostponeTest, self).tearDown()
 
     @slowTest
     def test_postpone(self):

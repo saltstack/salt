@@ -10,9 +10,11 @@ from contextlib import contextmanager
 import pytest
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.user
 from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
+    dedent,
     destructiveTest,
     skip_if_binaries_missing,
     skip_if_not_root,
@@ -286,11 +288,12 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = dedent(
+            """
                    import sys
                    sys.stdout.write('cheese')
                """
+        )
         self.assertEqual(
             self.run_function(
                 "cmd.exec_code", [AVAILABLE_PYTHON_EXECUTABLE, code]
@@ -303,11 +306,12 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = dedent(
+            """
                    import sys
                    sys.stdout.write(sys.argv[1])
                """
+        )
         arg = "cheese"
         self.assertEqual(
             self.run_function(
@@ -321,11 +325,12 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.exec_code
         """
-        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
-        code = """|
+        code = dedent(
+            """
                    import sys
                    sys.stdout.write(sys.argv[1])
                """
+        )
         arg = "cheese"
         self.assertEqual(
             self.run_function(
@@ -531,11 +536,14 @@ class CMDModuleTest(ModuleCase):
         """
         test return of whoami
         """
-        cmd = self.run_function("cmd.run", ["whoami"])
-        if salt.utils.platform.is_windows():
-            self.assertIn("administrator", cmd)
+        if not salt.utils.platform.is_windows():
+            user = RUNTIME_VARS.RUNTIME_CONFIGS["master"]["user"]
         else:
-            self.assertEqual("root", cmd)
+            user = salt.utils.user.get_specific_user()
+        if user.startswith("sudo_"):
+            user = user.replace("sudo_", "")
+        cmd = self.run_function("cmd.run", ["whoami"])
+        self.assertEqual(user.lower(), cmd.lower())
 
     @skipIf(not salt.utils.platform.is_windows(), "minion is not windows")
     @slowTest

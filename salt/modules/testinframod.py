@@ -218,9 +218,9 @@ def _copy_function(module_name, name=None):
             parameters = mod_sig.parameters
         else:
             if isinstance(mod.__init__, types.MethodType):
-                mod_sig = inspect.getargspec(mod.__init__)
+                mod_sig = __utils__["args.get_function_argspec"](mod.__init__)
             elif hasattr(mod, "__call__"):
-                mod_sig = inspect.getargspec(mod.__call__)
+                mod_sig = __utils__["args.get_function_argspec"](mod.__call__)
             parameters = mod_sig.args
         log.debug("Parameters accepted by module %s: %s", module_name, parameters)
         additional_args = {}

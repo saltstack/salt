@@ -116,11 +116,11 @@ def _netsh_file(content):
         str: The text returned by the netsh command
     """
     with tempfile.NamedTemporaryFile(
-        mode="w", prefix="salt-", suffix=".netsh", delete=False
+        mode="w", prefix="salt-", suffix=".netsh", delete=False, encoding="utf-8"
     ) as fp:
         fp.write(content)
     try:
-        log.debug("{0}:\n{1}".format(fp.name, content))
+        log.debug("%s:\n%s", fp.name, content)
         return salt.modules.cmdmod.run(
             "netsh -f {0}".format(fp.name), python_shell=True
         )

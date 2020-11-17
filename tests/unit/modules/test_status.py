@@ -377,3 +377,38 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
                 ):
                     ret = status.w()
                     self.assertListEqual(ret, m.ret)
+
+    def _set_up_test_status_pid_linux(self):
+        class MockData(object):
+            """
+            Store mock data
+            """
+
+        m = MockData()
+        m.ret = "2701\n7539\n7540\n7542\n7623"
+        return m
+
+    def test_status_pid_linux(self):
+        m = self._set_up_test_status_pid_linux()
+        ps = (
+            "UID      PID PPID  C STIME TTY      TIME CMD\n"
+            "root     360    2  0 Jun08 ?    00:00:00   [jbd2/dm-0-8]\n"
+            "root     947    2  0 Jun08 ?    00:00:00   [jbd2/dm-1-8]\n"
+            "root     949    2  0 Jun08 ?    00:00:09   [jbd2/dm-3-8]\n"
+            "root     951    2  0 Jun08 ?    00:00:00   [jbd2/dm-4-8]\n"
+            "root    2701    1  0 Jun08 ?    00:00:28   /usr/sbin/httpd -k start\n"
+            "apache  7539 2701  0 04:40 ?    00:00:04     /usr/sbin/httpd -k start\n"
+            "apache  7540 2701  0 04:40 ?    00:00:02     /usr/sbin/httpd -k start\n"
+            "apache  7542 2701  0 04:40 ?    00:01:46     /usr/sbin/httpd -k start\n"
+            "apache  7623 2701  0 04:40 ?    00:02:41     /usr/sbin/httpd -k start\n"
+            "root    1564    1  0 Jun11 ?    00:07:19   /usr/bin/python3 /usr/bin/salt-minion -d\n"
+            "root    6674 1564  0 19:53 ?    00:00:00     /usr/bin/python3 /usr/bin/salt-call status.pid httpd -l debug"
+        )
+
+        with patch.dict(status.__grains__, {"ps": "ps -efHww"}):
+            with patch.dict(
+                status.__salt__, {"cmd.run_stdout": MagicMock(return_value=ps)}
+            ):
+                with patch.object(os, "getpid", return_value="6674"):
+                    ret = status.pid("httpd")
+                    self.assertEqual(ret, m.ret)

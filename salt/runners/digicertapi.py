@@ -37,12 +37,12 @@ if interest warrants.
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import collections
 import logging
 import os
 import re
 import subprocess
 import tempfile
+from collections.abc import Sequence
 
 import salt.cache
 import salt.syspaths as syspaths
@@ -51,7 +51,6 @@ import salt.utils.http
 import salt.utils.json
 from salt.exceptions import CommandExecutionError, SaltRunnerError
 from salt.ext import six
-from salt.ext.six.moves import range
 
 try:
     from M2Crypto import RSA
@@ -425,7 +424,7 @@ def order_certificate(
 
     if dns_names and isinstance(dns_names, six.string_types):
         dns_names = [dns_names]
-    if dns_names and not isinstance(dns_names, collections.Sequence):
+    if dns_names and not isinstance(dns_names, Sequence):
         raise SaltRunnerError(
             "order_certificate needs a single dns_name, or an array of dns_names."
         )
@@ -443,7 +442,7 @@ def order_certificate(
 
     if organization_units and isinstance(organization_units, six.string_types):
         organization_units = [organization_units]
-    if organization_units and not isinstance(organization_units, collections.Sequence):
+    if organization_units and not isinstance(organization_units, Sequence):
         raise SaltRunnerError("Organization_units is not a valid data type.")
     if organization_units:
         certificate["organization_units"] = organization_units

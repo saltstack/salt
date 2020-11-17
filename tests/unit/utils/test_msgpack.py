@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Test the MessagePack utility
 """
-
-# Import Python Libs
-from __future__ import absolute_import
-
 import inspect
 import os
 import pprint
@@ -15,11 +10,7 @@ from io import BytesIO
 
 import salt.utils.msgpack
 from salt.ext.six.moves import range
-
-# Import Salt Libs
 from salt.utils.odict import OrderedDict
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -164,7 +155,22 @@ class TestMsgpack(TestCase):
         else:
             unpacker = salt.utils.msgpack.Unpacker(bio)
         for size in sizes:
-            self.assertEqual(unpacker.unpack(), dict((i, i * 2) for i in range(size)))
+            self.assertEqual(unpacker.unpack(), {i: i * 2 for i in range(size)})
+
+    def test_max_buffer_size(self):
+        """
+        Test if max buffer size allows at least 100MiB
+        """
+        bio = BytesIO()
+        bio.write(salt.utils.msgpack.packb("0" * (100 * 1024 * 1024)))
+        bio.seek(0)
+        unpacker = salt.utils.msgpack.Unpacker(bio)
+        raised = False
+        try:
+            unpacker.unpack()
+        except ValueError:
+            raised = True
+        self.assertFalse(raised)
 
     def test_exceptions(self):
         # Verify that this exception exists
@@ -185,9 +191,9 @@ class TestMsgpack(TestCase):
                     msgpack
                 )
 
-        msgpack_items = set(
+        msgpack_items = {
             x for x in dir(msgpack) if not x.startswith("_") and sanitized(x)
-        )
+        }
         msgpack_util_items = set(dir(salt.utils.msgpack))
         self.assertFalse(
             msgpack_items - msgpack_util_items,
@@ -217,7 +223,6 @@ class TestMsgpack(TestCase):
         # Sanity check, we are not borking the BytesIO read function
         self.assertNotEqual(BytesIO.read, buffer.read)
         buffer.read = buffer.getvalue
-
         pack_func(data, buffer)
         # Sanity Check
         self.assertTrue(buffer.getvalue())
@@ -226,7 +231,11 @@ class TestMsgpack(TestCase):
 
         # Reverse the packing and the result should be equivalent to the original data
         unpacked = unpack_func(buffer)
-        self.assertEqual(data, unpacked.decode())
+
+        if isinstance(unpacked, bytes):
+            unpacked = unpacked.decode()
+
+        self.assertEqual(data, unpacked)
 
     def test_buffered_base_pack(self):
         self._test_buffered_base(
@@ -278,7 +287,7 @@ class TestMsgpack(TestCase):
         class MyUnpacker(salt.utils.msgpack.Unpacker):
             def __init__(self):
                 my_kwargs = {}
-                super(MyUnpacker, self).__init__(ext_hook=self._hook, **raw)
+                super().__init__(ext_hook=self._hook, **raw)
 
             def _hook(self, code, data):
                 if code == 1:
@@ -306,7 +315,7 @@ class TestMsgpack(TestCase):
         self.assertEqual(ret, data)
 
     def _test_pack_unicode(self, pack_func, unpack_func):
-        test_data = [u"", u"abcd", [u"defgh"], u"Русский текст"]
+        test_data = ["", "abcd", ["defgh"], "Русский текст"]
         for td in test_data:
             ret = unpack_func(pack_func(td), use_list=True, **raw)
             self.assertEqual(ret, td)
@@ -340,7 +349,7 @@ class TestMsgpack(TestCase):
         ret = unpack_func(
             pack_func(b"abc\xeddef", use_bin_type=False), unicode_errors="ignore", **raw
         )
-        self.assertEqual(u"abcdef", ret)
+        self.assertEqual("abcdef", ret)
 
     def _test_strict_unicode_unpack(self, pack_func, unpack_func):
         packed = pack_func(b"abc\xeddef", use_bin_type=False)
@@ -349,13 +358,11 @@ class TestMsgpack(TestCase):
     @skipIf(sys.version_info < (3, 0), "Python 2 passes invalid surrogates")
     def _test_ignore_errors_pack(self, pack_func, unpack_func):
         ret = unpack_func(
-            pack_func(
-                u"abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"
-            ),
+            pack_func("abc\uDC80\uDCFFdef", use_bin_type=True, unicode_errors="ignore"),
             use_list=True,
             **raw
         )
-        self.assertEqual(u"abcdef", ret)
+        self.assertEqual("abcdef", ret)
 
     def _test_decode_binary(self, pack_func, unpack_func):
         ret = unpack_func(pack_func(b"abc"), use_list=True)
@@ -367,11 +374,10 @@ class TestMsgpack(TestCase):
     )
     def _test_pack_float(self, pack_func, **kwargs):
         self.assertEqual(
-            b"\xca" + struct.pack(str(">f"), 1.0), pack_func(1.0, use_single_float=True)
+            b"\xca" + struct.pack(">f", 1.0), pack_func(1.0, use_single_float=True)
         )
         self.assertEqual(
-            b"\xcb" + struct.pack(str(">d"), 1.0),
-            pack_func(1.0, use_single_float=False),
+            b"\xcb" + struct.pack(">d", 1.0), pack_func(1.0, use_single_float=False),
         )
 
     def _test_odict(self, pack_func, unpack_func):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Utils for the NAPALM modules and proxy.
 
@@ -15,8 +14,6 @@ Utils for the NAPALM modules and proxy.
 .. versionadded:: 2017.7.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import importlib
@@ -28,10 +25,6 @@ import salt.output
 import salt.utils.args
 import salt.utils.platform
 
-# Import Salt libs
-from salt.ext import six
-
-# Import third party libs
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
@@ -41,19 +34,12 @@ try:
 
     # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
-    HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
     try:
         NAPALM_MAJOR = int(napalm.__version__.split(".")[0])
     except AttributeError:
         NAPALM_MAJOR = 0
 except ImportError:
     HAS_NAPALM = False
-    try:
-        import napalm_base
-
-        HAS_NAPALM_BASE = True
-    except ImportError:
-        HAS_NAPALM_BASE = False
 
 try:
     # try importing ConnectionClosedException
@@ -103,9 +89,7 @@ def virtual(opts, virtualname, filename):
     """
     Returns the __virtual__.
     """
-    if ((HAS_NAPALM and NAPALM_MAJOR >= 2) or HAS_NAPALM_BASE) and (
-        is_proxy(opts) or is_minion(opts)
-    ):
+    if (HAS_NAPALM and NAPALM_MAJOR >= 2) and (is_proxy(opts) or is_minion(opts)):
         return virtualname
     else:
         return (
@@ -179,7 +163,7 @@ def call(napalm_device, method, *args, **kwargs):
         # if connected will try to execute desired command
         kwargs_copy = {}
         kwargs_copy.update(kwargs)
-        for karg, warg in six.iteritems(kwargs_copy):
+        for karg, warg in kwargs_copy.items():
             # lets clear None arguments
             # to not be sent to NAPALM methods
             if warg is None:
@@ -436,7 +420,7 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return "{base_msg}. See log for details.".format(
-                        base_msg=six.text_type(nce.msg)
+                        base_msg=str(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set
@@ -505,7 +489,7 @@ def proxy_napalm_wrap(func):
                 except napalm_base.exceptions.ConnectionException as nce:
                     log.error(nce)
                     return "{base_msg}. See log for details.".format(
-                        base_msg=six.text_type(nce.msg)
+                        base_msg=str(nce.msg)
                     )
             else:
                 # in case the `inherit_napalm_device` is set

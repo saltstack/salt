@@ -90,7 +90,7 @@ def bin_pkg_info(path, saltenv="base"):
         minion so that it can be examined.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the package. Ignored
+        Salt fileserver environment from which to retrieve the package. Ignored
         if ``path`` is a local file path on the minion.
 
     CLI Example:
@@ -134,11 +134,14 @@ def bin_pkg_info(path, saltenv="base"):
     return ret
 
 
-def list_pkgs(*packages):
+def list_pkgs(*packages, **kwargs):
     """
     List the packages currently installed in a dict::
 
         {'<package_name>': '<version>'}
+
+    root
+        use root as top level directory (default: "/")
 
     CLI Example:
 
@@ -147,7 +150,10 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
     """
     pkgs = {}
-    cmd = ["rpm", "-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"]
+    cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
+    cmd.extend(["-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"])
     if packages:
         cmd.extend(packages)
     out = __salt__["cmd.run"](cmd, output_loglevel="trace", python_shell=False)
@@ -162,6 +168,9 @@ def list_pkgs(*packages):
 def verify(*packages, **kwargs):
     """
     Runs an rpm -Va on a system, and returns the results in a dict
+
+    root
+        use root as top level directory (default: "/")
 
     Files with an attribute of config, doc, ghost, license or readme in the
     package header can be ignored using the ``ignore_types`` keyword argument
@@ -202,6 +211,8 @@ def verify(*packages, **kwargs):
             ]
 
     cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
     cmd.extend(["--" + x for x in verify_options])
     if packages:
         cmd.append("-V")
@@ -260,6 +271,9 @@ def modified(*packages, **flags):
 
     .. versionadded:: 2015.5.0
 
+    root
+        use root as top level directory (default: "/")
+
     CLI examples:
 
     .. code-block:: bash
@@ -268,9 +282,12 @@ def modified(*packages, **flags):
         salt '*' lowpkg.modified httpd postfix
         salt '*' lowpkg.modified
     """
-    ret = __salt__["cmd.run_all"](
-        ["rpm", "-Va"] + list(packages), output_loglevel="trace", python_shell=False
-    )
+    cmd = ["rpm"]
+    if flags.get("root"):
+        cmd.extend(["--root", flags.pop("root")])
+    cmd.append("-Va")
+    cmd.extend(packages)
+    ret = __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
     data = {}
 
@@ -333,11 +350,14 @@ def modified(*packages, **flags):
     return filtered_data
 
 
-def file_list(*packages):
+def file_list(*packages, **kwargs):
     """
     List the files that belong to a package. Not specifying any packages will
     return a list of _every_ file on the system's rpm database (not generally
     recommended).
+
+    root
+        use root as top level directory (default: "/")
 
     CLI Examples:
 
@@ -347,23 +367,29 @@ def file_list(*packages):
         salt '*' lowpkg.file_list httpd postfix
         salt '*' lowpkg.file_list
     """
-    if not packages:
-        cmd = ["rpm", "-qla"]
-    else:
-        cmd = ["rpm", "-ql"]
+    cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
+
+    cmd.append("-ql" if packages else "-qla")
+    if packages:
         # Can't concatenate a tuple, must do a list.extend()
         cmd.extend(packages)
+
     ret = __salt__["cmd.run"](
         cmd, output_loglevel="trace", python_shell=False
     ).splitlines()
     return {"errors": [], "files": ret}
 
 
-def file_dict(*packages):
+def file_dict(*packages, **kwargs):
     """
     List the files that belong to a package, sorted by group. Not specifying
     any packages will return a list of _every_ file on the system's rpm
     database (not generally recommended).
+
+    root
+        use root as top level directory (default: "/")
 
     CLI Examples:
 
@@ -376,7 +402,10 @@ def file_dict(*packages):
     errors = []
     ret = {}
     pkgs = {}
-    cmd = ["rpm", "-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"]
+    cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
+    cmd.extend(["-q" if packages else "-qa", "--queryformat", r"%{NAME} %{VERSION}\n"])
     if packages:
         cmd.extend(packages)
     out = __salt__["cmd.run"](cmd, output_loglevel="trace", python_shell=False)
@@ -387,8 +416,10 @@ def file_dict(*packages):
         comps = line.split()
         pkgs[comps[0]] = {"version": comps[1]}
     for pkg in pkgs:
-        files = []
-        cmd = ["rpm", "-ql", pkg]
+        cmd = ["rpm"]
+        if kwargs.get("root"):
+            cmd.extend(["--root", kwargs["root"]])
+        cmd.extend(["-ql", pkg])
         out = __salt__["cmd.run"](
             ["rpm", "-ql", pkg], output_loglevel="trace", python_shell=False
         )
@@ -396,7 +427,7 @@ def file_dict(*packages):
     return {"errors": errors, "packages": ret}
 
 
-def owner(*paths):
+def owner(*paths, **kwargs):
     """
     Return the name of the package that owns the file. Multiple file paths can
     be passed. If a single path is passed, a string will be returned,
@@ -405,6 +436,9 @@ def owner(*paths):
 
     If the file is not owned by a package, or is not present on the minion,
     then an empty string will be returned for that path.
+
+    root
+        use root as top level directory (default: "/")
 
     CLI Examples:
 
@@ -417,14 +451,17 @@ def owner(*paths):
         return ""
     ret = {}
     for path in paths:
-        cmd = ["rpm", "-qf", "--queryformat", "%{name}", path]
+        cmd = ["rpm"]
+        if kwargs.get("root"):
+            cmd.extend(["--root", kwargs["root"]])
+        cmd.extend(["-qf", "--queryformat", "%{name}", path])
         ret[path] = __salt__["cmd.run_stdout"](
             cmd, output_loglevel="trace", python_shell=False
         )
         if "not owned" in ret[path].lower():
             ret[path] = ""
     if len(ret) == 1:
-        return list(ret.values())[0]
+        return next(iter(ret.values()))
     return ret
 
 
@@ -477,6 +514,9 @@ def info(*packages, **kwargs):
     :param all_versions:
         Return information for all installed versions of the packages
 
+    :param root:
+        use root as top level directory (default: "/")
+
     :return:
 
     CLI example:
@@ -499,7 +539,14 @@ def info(*packages, **kwargs):
     else:
         size_tag = "%{SIZE}"
 
-    cmd = packages and "rpm -q {0}".format(" ".join(packages)) or "rpm -qa"
+    cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
+    if packages:
+        cmd.append("-q")
+        cmd.extend(packages)
+    else:
+        cmd.append("-qa")
 
     # Construct query format
     attr_map = {
@@ -550,6 +597,7 @@ def info(*packages, **kwargs):
         query.append(attr_map["description"])
     query.append("-----\\n")
 
+    cmd = " ".join(cmd)
     call = __salt__["cmd.run_all"](
         cmd + (" --queryformat '{0}'".format("".join(query))),
         output_loglevel="trace",
@@ -679,6 +727,11 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        else:
+            log.warning(
+                "Please install a package that provides rpm.labelCompare for "
+                "more accurate version comparisons."
+            )
         if cmp_func is None and HAS_RPMUTILS:
             try:
                 cmp_func = rpmUtils.miscutils.compareEVR
@@ -687,6 +740,10 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
         if cmp_func is None:
             if salt.utils.path.which("rpmdev-vercmp"):
+                log.warning(
+                    "Installing the rpmdevtools package may surface dev tools in production."
+                )
+
                 # rpmdev-vercmp always uses epochs, even when zero
                 def _ensure_epoch(ver):
                     def _prepend(ver):
@@ -725,10 +782,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                         result["stdout"],
                     )
             else:
-                # We'll need to fall back to salt.utils.versions.version_cmp()
                 log.warning(
-                    "rpmdevtools is not installed, please install it for "
-                    "more accurate version comparisons"
+                    "Falling back on salt.utils.versions.version_cmp() for version comparisons"
                 )
         else:
             # If one EVR is missing a release but not the other and they
@@ -758,9 +813,12 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
     return salt.utils.versions.version_cmp(ver1, ver2, ignore_epoch=False)
 
 
-def checksum(*paths):
+def checksum(*paths, **kwargs):
     """
     Return if the signature of a RPM file is valid.
+
+    root
+        use root as top level directory (default: "/")
 
     CLI Example:
 
@@ -774,14 +832,16 @@ def checksum(*paths):
     if not paths:
         raise CommandExecutionError("No package files has been specified.")
 
+    cmd = ["rpm"]
+    if kwargs.get("root"):
+        cmd.extend(["--root", kwargs["root"]])
+    cmd.extend(["-K", "--quiet"])
     for package_file in paths:
+        cmd_ = cmd + [package_file]
         ret[package_file] = bool(
             __salt__["file.file_exists"](package_file)
         ) and not __salt__["cmd.retcode"](
-            ["rpm", "-K", "--quiet", package_file],
-            ignore_retcode=True,
-            output_loglevel="trace",
-            python_shell=False,
+            cmd_, ignore_retcode=True, output_loglevel="trace", python_shell=False
         )
 
     return ret

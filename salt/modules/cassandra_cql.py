@@ -424,6 +424,7 @@ def cql_query_with_prepare(
     query,
     statement_name,
     statement_arguments,
+    asynchronous=False,
     callback_errors=None,
     contact_points=None,
     port=None,
@@ -444,8 +445,11 @@ def cql_query_with_prepare(
     :type  statement_name: str
     :param statement_arguments: Bind parameters for the SQL statement
     :type  statement_arguments: list[str]
-    :param async:           Run this query in asynchronous mode
-    :type  async:           bool
+    :param asynchronous:          Run this query in asynchronous mode
+    :type  asynchronous:          bool
+    :param async:                 Run this query in asynchronous mode (an alias to 'asynchronous')
+                                  NOTE: currently it overrides 'asynchronous' and it will be dropped in version 3001!
+    :type  async:          bool
     :param callback_errors: Function to call after query runs if there is an error
     :type  callback_errors: Function callable
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
@@ -475,7 +479,8 @@ def cql_query_with_prepare(
             statement_arguments=['John']
     """
     # Backward-compatibility with Python 3.7: "async" is a reserved word
-    asynchronous = kwargs.get("async", False)
+    if "async" in kwargs:
+        asynchronous = kwargs.get("async", False)
     try:
         cluster, session = _connect(
             contact_points=contact_points,

@@ -36,14 +36,15 @@ As an example, let's modify the ``list`` matcher to have the separator be a
     from __future__ import absolute_import, print_function, unicode_literals
     from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
+
     def match(self, tgt):
-        '''
+        """
         Determines if this host is on the list
-        '''
+        """
         if isinstance(tgt, six.string_types):
             # The stock matcher splits on `,`.  Change to `/` below.
-            tgt = tgt.split('/')
-        return bool(self.opts['id'] in tgt)
+            tgt = tgt.split("/")
+        return bool(self.opts["id"] in tgt)
 
 
 Place this code in a file called ``list_matcher.py`` in ``_matchers`` in your

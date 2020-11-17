@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import fnmatch
 import glob
 import logging
+import os
 
 # Import salt libs
 import salt.client
@@ -235,6 +236,10 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         Enter into the server loop
         """
         salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        if self.opts["reactor_niceness"] and not salt.utils.platform.is_windows():
+            log.info("Reactor setting niceness to %i", self.opts["reactor_niceness"])
+            os.nice(self.opts["reactor_niceness"])
 
         # instantiate some classes inside our new process
         with salt.utils.event.get_event(

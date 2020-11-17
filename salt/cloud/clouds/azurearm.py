@@ -34,6 +34,9 @@ The Azure ARM cloud module is used to control access to Microsoft Azure Resource
       * ``client_id``
       * ``secret``
 
+    if using Managed Service Identity authentication:
+      * ``subscription_id``
+
     Optional provider parameters:
 
     **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud. Possible values:
@@ -212,53 +215,19 @@ def get_configured_provider():
     """
     Return the first configured provider instance.
     """
-
-    def __is_provider_configured(opts, provider, required_keys=()):
-        """
-        Check if the provider is configured.
-        """
-        if ":" in provider:
-            alias, driver = provider.split(":")
-            if alias not in opts["providers"]:
-                return False
-            if driver not in opts["providers"][alias]:
-                return False
-            for key in required_keys:
-                if opts["providers"][alias][driver].get(key, None) is None:
-                    return False
-            return opts["providers"][alias][driver]
-
-        for alias, drivers in six.iteritems(opts["providers"]):
-            for driver, provider_details in six.iteritems(drivers):
-                if driver != provider:
-                    continue
-
-                skip_provider = False
-                for key in required_keys:
-                    if provider_details.get(key, None) is None:
-                        # This provider does not include all necessary keys,
-                        # continue to next one.
-                        skip_provider = True
-                        break
-
-                if skip_provider:
-                    continue
-
-                return provider_details
-        return False
-
-    provider = __is_provider_configured(
-        __opts__,
-        __active_provider_name__ or __virtualname__,
+    key_combos = [
         ("subscription_id", "tenant", "client_id", "secret"),
-    )
+        ("subscription_id", "username", "password"),
+        ("subscription_id",),
+    ]
 
-    if provider is False:
-        provider = __is_provider_configured(
-            __opts__,
-            __active_provider_name__ or __virtualname__,
-            ("subscription_id", "username", "password"),
+    for combo in key_combos:
+        provider = config.is_provider_configured(
+            __opts__, __active_provider_name__ or __virtualname__, combo,
         )
+
+        if provider:
+            return provider
 
     return provider
 
@@ -301,10 +270,12 @@ def get_conn(client_type):
             "secret", get_configured_provider(), __opts__, search_global=False
         )
         conn_kwargs.update({"client_id": client_id, "secret": secret, "tenant": tenant})
-    else:
-        username = config.get_cloud_config_value(
-            "username", get_configured_provider(), __opts__, search_global=False
-        )
+
+    username = config.get_cloud_config_value(
+        "username", get_configured_provider(), __opts__, search_global=False
+    )
+
+    if username:
         password = config.get_cloud_config_value(
             "password", get_configured_provider(), __opts__, search_global=False
         )
@@ -1075,11 +1046,11 @@ def request_instance(vm_):
         lun += 1
         # The default vhd is {vm_name}-datadisk{lun}.vhd
         if "media_link" in volume:
-            volume["vhd"] = VirtualHardDisk(volume["media_link"])
+            volume["vhd"] = VirtualHardDisk(uri=volume["media_link"])
             del volume["media_link"]
         elif volume.get("vhd") == "unmanaged":
             volume["vhd"] = VirtualHardDisk(
-                "https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd".format(
+                uri="https://{0}.blob.{1}/vhds/{2}-datadisk{3}.vhd".format(
                     vm_["storage_account"],
                     storage_endpoint_suffix,
                     vm_["name"],
@@ -1087,7 +1058,7 @@ def request_instance(vm_):
                 ),
             )
         elif "vhd" in volume:
-            volume["vhd"] = VirtualHardDisk(volume["vhd"])
+            volume["vhd"] = VirtualHardDisk(uri=volume["vhd"])
 
         if "image" in volume:
             volume["create_option"] = "from_image"
@@ -1100,7 +1071,7 @@ def request_instance(vm_):
     img_ref = None
     if vm_["image"].startswith("http") or vm_.get("vhd") == "unmanaged":
         if vm_["image"].startswith("http"):
-            source_image = VirtualHardDisk(vm_["image"])
+            source_image = VirtualHardDisk(uri=vm_["image"])
         else:
             source_image = None
             if "|" in vm_["image"]:
@@ -1119,7 +1090,7 @@ def request_instance(vm_):
             create_option=DiskCreateOptionTypes.from_image,
             name=disk_name,
             vhd=VirtualHardDisk(
-                "https://{0}.blob.{1}/vhds/{2}.vhd".format(
+                uri="https://{0}.blob.{1}/vhds/{2}.vhd".format(
                     vm_["storage_account"], storage_endpoint_suffix, disk_name,
                 ),
             ),

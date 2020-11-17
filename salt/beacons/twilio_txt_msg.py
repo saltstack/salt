@@ -92,7 +92,7 @@ def beacon(config):
     client = TwilioRestClient(_config["account_sid"], _config["auth_token"])
     messages = client.messages.list(to=_config["twilio_number"])
     log.trace("Num messages: %d", len(messages))
-    if len(messages) < 1:
+    if not messages:
         log.trace("Twilio beacon has no texts")
         return ret
 
