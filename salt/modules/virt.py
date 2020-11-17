@@ -3188,8 +3188,18 @@ def update(
             "set": lambda n, v: n.set("nodeset", v),
             "del": salt.utils.xmlutil.del_attribute("nodeset"),
         },
-        {"path": "mem:nosharepages", "xpath": "memoryBacking/nosharepages"},
-        {"path": "mem:locked", "xpath": "memoryBacking/locked"},
+        {
+            "path": "mem:nosharepages",
+            "xpath": "memoryBacking/nosharepages",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
+        },
+        {
+            "path": "mem:locked",
+            "xpath": "memoryBacking/locked",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
+        },
         {
             "path": "mem:source",
             "xpath": "memoryBacking/source",

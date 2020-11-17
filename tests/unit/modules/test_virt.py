@@ -2841,7 +2841,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
         )
         self.assertNotEqual(setxml.find("./memoryBacking/nosharepages"), None)
+        self.assertIsNone(setxml.find("./memoryBacking/nosharepages").text)
+        self.assertEqual([], setxml.find("./memoryBacking/nosharepages").keys())
         self.assertNotEqual(setxml.find("./memoryBacking/locked"), None)
+        self.assertIsNone(setxml.find("./memoryBacking/locked").text)
+        self.assertEqual([], setxml.find("./memoryBacking/locked").keys())
         self.assertEqual(setxml.find("./memoryBacking/source").attrib["type"], "file")
         self.assertEqual(setxml.find("./memoryBacking/access").attrib["mode"], "shared")
         self.assertNotEqual(setxml.find("./memoryBacking/discard"), None)
