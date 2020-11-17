@@ -2366,7 +2366,7 @@ def grant_exists(
         )
         log.error(err)
         return False
-    if "ALL" in grant:
+    if "ALL" in grant.upper():
         if (
             salt.utils.versions.version_cmp(server_version, "8.0") >= 0
             and "MariaDB" not in server_version
