@@ -1072,7 +1072,7 @@ class MinionManager(MinionBase):
         Helper function to return the correct type of object
         """
         load_grains = False
-        if opts.get("grains", {}):
+        if opts.get("grains"):
             # we have custom grains in config, we need to also load default grains
             load_grains = True
         return Minion(
