@@ -176,8 +176,7 @@ class MockSourceList:
         self.list = []
 
     def __iter__(self):
-        for entry in self.list:
-            yield entry
+        yield from self.list
 
     def save(self):
         pass
@@ -607,7 +606,9 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         source_uri = "http://cdn-aws.deb.debian.org/debian/"
         source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
 
-        mock_source = MockSourceEntry(source_uri, source_type, source_line, False, "stretch")
+        mock_source = MockSourceEntry(
+            source_uri, source_type, source_line, False, "stretch"
+        )
         mock_source_list = MockSourceList()
         mock_source_list.list = [mock_source]
 
@@ -619,11 +620,16 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch(
                     "salt.modules.aptpkg.refresh_db", MagicMock(return_value={})
                 ):
-                    with patch(
-                        "salt.utils.data.is_true", MagicMock(return_value=True)
-                    ):
-                        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
-                            with patch("salt.modules.aptpkg.sourceslist", MagicMock(), create=True):
+                    with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+                        with patch(
+                            "salt.modules.aptpkg._check_apt",
+                            MagicMock(return_value=True),
+                        ):
+                            with patch(
+                                "salt.modules.aptpkg.sourceslist",
+                                MagicMock(),
+                                create=True,
+                            ):
                                 with patch(
                                     "salt.modules.aptpkg.sourceslist.SourcesList",
                                     MagicMock(return_value=mock_source_list),
@@ -631,11 +637,24 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                                 ):
                                     with patch(
                                         "salt.modules.aptpkg._split_repo_str",
-                                        MagicMock(return_value=("deb", [], "http://cdn-aws.deb.debian.org/debian/", "stretch", ["main"]))
+                                        MagicMock(
+                                            return_value=(
+                                                "deb",
+                                                [],
+                                                "http://cdn-aws.deb.debian.org/debian/",
+                                                "stretch",
+                                                ["main"],
+                                            )
+                                        ),
                                     ):
                                         source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
-                                        repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
-                                        assert repo[source_line_no_slash]["uri"] == source_uri
+                                        repo = aptpkg.mod_repo(
+                                            source_line_no_slash, enabled=False
+                                        )
+                                        assert (
+                                            repo[source_line_no_slash]["uri"]
+                                            == source_uri
+                                        )
 
     @patch(
         "salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")])

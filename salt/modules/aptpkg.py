@@ -2426,7 +2426,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
         # has already been modified on a previous run.
         repo_matches = (
             source.type == repo_type
-            and source.uri.rstrip('/') == repo_uri.rstrip('/')
+            and source.uri.rstrip("/") == repo_uri.rstrip("/")
             and source.dist == repo_dist
         )
         kw_matches = source.dist == kw_dist and source.type == kw_type
