@@ -560,7 +560,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret["changes"][name] = after_toggle_status
 
     if after_toggle_status:
-        ret["comment"] = "Started Service {}".format(name)
+        ret["comment"] = "Started service {}".format(name)
     else:
         ret["comment"] = "Service {} failed to start".format(name)
         ret["result"] = False
