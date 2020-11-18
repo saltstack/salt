@@ -211,6 +211,46 @@ def del_attribute(attribute, ignored=None):
     return _do_delete
 
 
+def attribute(path, xpath, attr_name, ignored=None, convert=None):
+    """
+    Helper function creating a change_xml mapping entry for a text XML attribute.
+
+    :param path: the path to the value in the data
+    :param xpath: the xpath to the node holding the attribute
+    :param attr_name: the attribute name
+    :param ignored: the list of attributes to ignore when cleaning up the node
+    :param convert: a function used to convert the value
+    """
+    entry = {
+        "path": path,
+        "xpath": xpath,
+        "get": lambda n: n.get(attr_name),
+        "set": lambda n, v: n.set(attr_name, str(v)),
+        "del": salt.utils.xmlutil.del_attribute(attr_name, ignored),
+    }
+    if convert:
+        entry["convert"] = convert
+    return entry
+
+
+def int_attribute(path, xpath, attr_name, ignored=None):
+    """
+    Helper function creating a change_xml mapping entry for a text XML integer attribute.
+
+    :param path: the path to the value in the data
+    :param xpath: the xpath to the node holding the attribute
+    :param attr_name: the attribute name
+    :param ignored: the list of attributes to ignore when cleaning up the node
+    """
+    return {
+        "path": path,
+        "xpath": xpath,
+        "get": lambda n: int(n.get(attr_name)) if n.get(attr_name) else None,
+        "set": lambda n, v: n.set(attr_name, str(v)),
+        "del": salt.utils.xmlutil.del_attribute(attr_name, ignored),
+    }
+
+
 def change_xml(doc, data, mapping):
     """
     Change an XML ElementTree document according.
