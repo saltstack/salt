@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Homebrew for macOS
 
@@ -8,25 +7,19 @@ Homebrew for macOS
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import functools
 import logging
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
-from salt.exceptions import CommandExecutionError, MinionError
-
-# Import third party libs
-from salt.ext import six
+from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
 from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
@@ -56,6 +49,42 @@ def _list_taps():
     return _call_brew(cmd)["stdout"].splitlines()
 
 
+def _list_pinned():
+    """
+    List currently pinned formulas
+    """
+    cmd = "list --pinned"
+    return _call_brew(cmd)["stdout"].splitlines()
+
+
+def _pin(pkg, runas=None):
+    """
+    Pin pkg
+    """
+    cmd = "pin {}".format(pkg)
+    try:
+        _call_brew(cmd)
+    except CommandExecutionError:
+        log.error('Failed to pin "%s"', pkg)
+        return False
+
+    return True
+
+
+def _unpin(pkg, runas=None):
+    """
+    Pin pkg
+    """
+    cmd = "unpin {}".format(pkg)
+    try:
+        _call_brew(cmd)
+    except CommandExecutionError:
+        log.error('Failed to unpin "%s"', pkg)
+        return False
+
+    return True
+
+
 def _tap(tap, runas=None):
     """
     Add unofficial GitHub repos to the list of formulas that brew tracks,
@@ -64,7 +93,7 @@ def _tap(tap, runas=None):
     if tap in _list_taps():
         return True
 
-    cmd = "tap {0}".format(tap)
+    cmd = "tap {}".format(tap)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -224,12 +253,10 @@ def latest_version(*names, **kwargs):
         # Perhaps this will need an option to pick devel by default
         return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
 
-    versions_dict = dict(
-        (key, get_version(val)) for key, val in six.iteritems(_info(*names))
-    )
+    versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 
     if len(names) == 1:
-        return next(six.itervalues(versions_dict))
+        return next(iter(versions_dict.values()))
     else:
         return versions_dict
 
@@ -268,7 +295,6 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -277,7 +303,7 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = "uninstall {0}".format(" ".join(targets))
+    cmd = "uninstall {}".format(" ".join(targets))
 
     out = _call_brew(cmd)
     if out["retcode"] != 0 and out["stderr"]:
@@ -298,7 +324,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(**kwargs):
     """
     Update the homebrew package repository.
 
@@ -333,7 +359,7 @@ def _info(*pkgs):
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    cmd = "info --json=v1 {0}".format(" ".join(pkgs))
+    cmd = "info --json=v1 {}".format(" ".join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
@@ -405,7 +431,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         salt '*' pkg.install 'package package package'
     """
     try:
-        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
             name, pkgs, kwargs.get("sources", {})
         )
@@ -429,9 +454,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             _tap(tap)
 
     if options:
-        cmd = "install {0} {1}".format(formulas, " ".join(options))
+        cmd = "install {} {}".format(formulas, " ".join(options))
     else:
-        cmd = "install {0}".format(formulas)
+        cmd = "install {}".format(formulas)
 
     out = _call_brew(cmd)
     if out["retcode"] != 0 and out["stderr"]:
@@ -471,7 +496,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     try:
         data = salt.utils.json.loads(res["stdout"])
     except ValueError as err:
-        msg = 'unable to interpret output from "brew outdated": {0}'.format(err)
+        msg = 'unable to interpret output from "brew outdated": {}'.format(err)
         log.error(msg)
         raise CommandExecutionError(msg)
 
@@ -481,7 +506,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     return ret
 
 
-def upgrade_available(pkg):
+def upgrade_available(pkg, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
@@ -494,7 +519,7 @@ def upgrade_available(pkg):
     return pkg in list_upgrades()
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, **kwargs):
     """
     Upgrade outdated, unpinned brews.
 
@@ -540,7 +565,7 @@ def upgrade(refresh=True):
     return ret
 
 
-def info_installed(*names):
+def info_installed(*names, **kwargs):
     """
     Return the information of the named package(s) installed on the system.
 
@@ -559,43 +584,156 @@ def info_installed(*names):
     return _info(*names)
 
 
-def _fix_cask_namespace(name=None, pkgs=None):
+def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
-    Check if provided packages contains the old version of brew-cask namespace
-    and replace it by the new one.
+    Set package in 'hold' state, meaning it will not be upgraded.
 
-    This function also warns about the correct namespace for this packages
-    and it will stop working with the release of Sodium.
+    .. versionadded:: 3001
 
-    :param name: The name of the package to check
-    :param pkgs: A list of packages to check
+    name
+        The name of the package, e.g., 'tmux'
 
-    :return: name and pkgs with the mocked namespace
+    CLI Example:
+
+     .. code-block:: bash
+
+        salt '*' pkg.hold <package name>
+
+    pkgs
+        A list of packages to hold. Must be passed as a python list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
     """
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError("One of name, pkgs, or sources must be specified.")
+    if pkgs and sources:
+        raise SaltInvocationError("Only one of pkgs or sources can be specified.")
 
-    show_warning = False
-
-    if name and name.startswith("caskroom/cask/"):
-        show_warning = True
-        name = name.replace("caskroom/cask/", "homebrew/cask/")
-
+    targets = []
     if pkgs:
-        pkgs_ = []
-        for pkg in pkgs:
-            if isinstance(pkg, str) and pkg.startswith("caskroom/cask/"):
-                show_warning = True
-                pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
-                pkgs_.append(pkg)
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
+
+    ret = {}
+    pinned = _list_pinned()
+    installed = list_pkgs()
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
+
+        ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
+
+        if target not in installed:
+            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+        elif target not in pinned:
+            if "test" in __opts__ and __opts__["test"]:
+                ret[target].update(result=None)
+                ret[target]["comment"] = "Package {} is set to be held.".format(target)
             else:
-                pkgs_.append(pkg)
-                continue
-        pkgs = pkgs_
+                result = _pin(target)
+                if result:
+                    changes = {"old": "install", "new": "hold"}
+                    ret[target].update(changes=changes, result=True)
+                    ret[target]["comment"] = "Package {} is now being held.".format(
+                        target
+                    )
+                else:
+                    ret[target].update(result=False)
+                    ret[target]["comment"] = "Unable to hold package {}.".format(target)
+        else:
+            ret[target].update(result=True)
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
+                target
+            )
+    return ret
 
-    if show_warning:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "The 'caskroom/cask/' namespace for brew-cask packages "
-            "is deprecated. Use 'homebrew/cask/' instead.",
-        )
 
-    return name, pkgs
+pin = hold
+
+
+def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
+    """
+    Set package current in 'hold' state to install state,
+    meaning it will be upgraded.
+
+    .. versionadded:: 3001
+
+    name
+        The name of the package, e.g., 'tmux'
+
+     CLI Example:
+
+     .. code-block:: bash
+
+        salt '*' pkg.unhold <package name>
+
+    pkgs
+        A list of packages to unhold. Must be passed as a python list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
+    """
+    if not name and not pkgs and not sources:
+        raise SaltInvocationError("One of name, pkgs, or sources must be specified.")
+    if pkgs and sources:
+        raise SaltInvocationError("Only one of pkgs or sources can be specified.")
+
+    targets = []
+    if pkgs:
+        targets.extend(pkgs)
+    elif sources:
+        for source in sources:
+            targets.append(next(iter(source)))
+    else:
+        targets.append(name)
+
+    ret = {}
+    pinned = _list_pinned()
+    installed = list_pkgs()
+    for target in targets:
+        if isinstance(target, dict):
+            target = next(iter(target))
+
+        ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
+
+        if target not in installed:
+            ret[target]["comment"] = "Package {} does not have a state.".format(target)
+        elif target in pinned:
+            if "test" in __opts__ and __opts__["test"]:
+                ret[target].update(result=None)
+                ret[target]["comment"] = "Package {} is set to be unheld.".format(
+                    target
+                )
+            else:
+                result = _unpin(target)
+                if result:
+                    changes = {"old": "hold", "new": "install"}
+                    ret[target].update(changes=changes, result=True)
+                    ret[target][
+                        "comment"
+                    ] = "Package {} is no longer being held.".format(target)
+                else:
+                    ret[target].update(result=False)
+                    ret[target]["comment"] = "Unable to unhold package {}.".format(
+                        target
+                    )
+        else:
+            ret[target].update(result=True)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
+    return ret
+
+
+unpin = unhold

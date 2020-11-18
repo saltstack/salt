@@ -17,7 +17,7 @@
                 scaling="proportional"
                 alignment="bottomleft" />
     <!-- Define documents displayed at various steps -->
-    <welcome file="welcome@PY2@.rtf"
+    <welcome file="welcome.rtf"
              mime-type="text/rtf" />
     <license file="license.rtf"
              mime-type="text/rtf" />
@@ -26,7 +26,7 @@
     <!-- List all component packages -->
     <pkg-ref id="com.saltstack.salt"
              version="@VERSION@"
-             auth="root">salt-src-@VERSION@-py@PYVER@-@CPUARCH@.pkg</pkg-ref>
+             auth="root">salt-src-@VERSION@-py3-@CPUARCH@.pkg</pkg-ref>
     <!-- List them again here. They can now be organized
          as a hierarchy if you want. -->
     <choices-outline>

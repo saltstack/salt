@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the function calls to execute command line scripts
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
@@ -17,12 +14,12 @@ import traceback
 from random import randint
 
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
+
+if sys.version_info < (3,):
+    raise SystemExit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def _handle_interrupt(exc, original_exc, hardfail=False, trace=""):
@@ -103,19 +100,6 @@ def salt_master():
     if __name__ != "__main__":
         sys.modules["__main__"] = sys.modules[__name__]
 
-    # REMOVEME after Python 2.7 support is dropped (also the six import)
-    if six.PY2:
-        from salt.utils.versions import warn_until
-
-        # Message borrowed from pip's deprecation warning
-        warn_until(
-            "Sodium",
-            "Python 2.7 will reach the end of its life on January 1st,"
-            " 2020. Please upgrade your Python as Python 2.7 won't be"
-            " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
-        )
-    # END REMOVEME
     master = salt.cli.daemons.Master()
     master.start()
 
@@ -212,19 +196,6 @@ def salt_minion():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
-    # REMOVEME after Python 2.7 support is dropped (also the six import)
-    elif six.PY2:
-        from salt.utils.versions import warn_until
-
-        # Message borrowed from pip's deprecation warning
-        warn_until(
-            "Sodium",
-            "Python 2.7 will reach the end of its life on January 1st,"
-            " 2020. Please upgrade your Python as Python 2.7 won't be"
-            " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
-        )
-    # END REMOVEME
 
     if "--disable-keepalive" in sys.argv:
         sys.argv.remove("--disable-keepalive")
@@ -443,7 +414,7 @@ def salt_key():
         _install_signal_handlers(client)
         client.run()
     except Exception as err:  # pylint: disable=broad-except
-        sys.stderr.write("Error: {0}\n".format(err))
+        sys.stderr.write("Error: {}\n".format(err))
 
 
 def salt_cp():
@@ -465,11 +436,20 @@ def salt_call():
     """
     import salt.cli.call
 
-    if "" in sys.path:
-        sys.path.remove("")
-    client = salt.cli.call.SaltCall()
-    _install_signal_handlers(client)
-    client.run()
+    try:
+        from salt.transport import zeromq
+    except ImportError:
+        zeromq = None
+
+    try:
+        if "" in sys.path:
+            sys.path.remove("")
+        client = salt.cli.call.SaltCall()
+        _install_signal_handlers(client)
+        client.run()
+    finally:
+        if zeromq is not None:
+            zeromq.AsyncZeroMQReqChannel.force_close_all_instances()
 
 
 def salt_run():
@@ -599,7 +579,7 @@ def salt_unity():
     if len(sys.argv) < 2:
         msg = "Must pass in a salt command, available commands are:"
         for cmd in avail:
-            msg += "\n{0}".format(cmd)
+            msg += "\n{}".format(cmd)
         print(msg)
         sys.exit(1)
     cmd = sys.argv[1]
@@ -608,7 +588,7 @@ def salt_unity():
         sys.argv[0] = "salt"
         s_fun = salt_main
     else:
-        sys.argv[0] = "salt-{0}".format(cmd)
+        sys.argv[0] = "salt-{}".format(cmd)
         sys.argv.pop(1)
-        s_fun = getattr(sys.modules[__name__], "salt_{0}".format(cmd))
+        s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
     s_fun()

@@ -80,7 +80,7 @@ outside a ``pyeapi`` Proxy, e.g.:
 
 .. code-block:: bash
 
-    salt '*' pyeapi.send_commands 'show version' 'show interfaces'
+    salt '*' pyeapi.run_commands 'show version' 'show interfaces'
     salt '*' pyeapi.config 'ntp server 1.2.3.4'
 
 .. note::

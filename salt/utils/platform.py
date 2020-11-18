@@ -1,30 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Functions for identifying which platform a machine is
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import subprocess
 import sys
-import warnings
 
-# Import Salt libs
+from distro import linux_distribution
 from salt.utils.decorators import memoize as real_memoize
-
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(**kwargs)
-
-
-except ImportError:
-    from distro import linux_distribution
 
 
 @real_memoize
@@ -54,9 +37,11 @@ def is_proxy():
         # Changed this from 'salt-proxy in main...' to 'proxy in main...'
         # to support the testsuite's temp script that is called 'cli_salt_proxy'
         #
-        # Add '--proxyid' in sys.argv so that salt-call --proxyid
+        # Add '--proxyid' or '--proxyid=...' in sys.argv so that salt-call
         # is seen as a proxy minion
-        if "proxy" in main.__file__ or "--proxyid" in sys.argv:
+        if "proxy" in main.__file__ or any(
+            arg for arg in sys.argv if arg.startswith("--proxyid")
+        ):
             ret = True
     except AttributeError:
         pass

@@ -24,8 +24,9 @@ class ReqChannel(object):
     @staticmethod
     def factory(opts, **kwargs):
         # All Sync interfaces are just wrappers around the Async ones
-        sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncReqChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
     def close(self):
         """
@@ -62,8 +63,9 @@ class PushChannel(object):
 
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPushChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncPushChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
     def send(self, load, tries=3, timeout=60):
         """
@@ -79,8 +81,9 @@ class PullChannel(object):
 
     @staticmethod
     def factory(opts, **kwargs):
-        sync = SyncWrapper(AsyncPullChannel.factory, (opts,), kwargs)
-        return sync
+        return SyncWrapper(
+            AsyncPullChannel.factory, (opts,), kwargs, loop_kwarg="io_loop",
+        )
 
 
 # TODO: better doc strings

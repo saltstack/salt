@@ -369,3 +369,45 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
                 with self.assertRaises(CommandExecutionError):
                     virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+
+    def test_virtualenv_importerror_ver_output(self):
+        """
+        test virtualenv_ver when there is an ImportError
+        and virtualenv --version returns the various
+        --versions outputs
+        """
+        stdout = (
+            ("1.9.2", (1, 9, 2)),
+            ("1.9rc2", (1, 9)),
+            (
+                "virtualenv 20.0.0 from /home/ch3ll/.pyenv/versions/3.6.4/envs/virtualenv/lib/python3.6/site-packages/virtualenv/__init__.py",
+                (20, 0, 0),
+            ),
+            ("16.7.10", (16, 7, 10)),
+        )
+        for stdout, expt in stdout:
+            with ForceImportErrorOn("virtualenv"):
+                mock_ver = MagicMock(return_value={"retcode": 0, "stdout": stdout})
+                with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
+                    ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+                    assert ret == expt
+
+    def test_issue_57734_debian_package(self):
+        virtualenv_mock = MagicMock()
+        virtualenv_mock.__version__ = "20.0.23+ds"
+        with patch.dict("sys.modules", {"virtualenv": virtualenv_mock}):
+            ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+        self.assertEqual(ret, (20, 0, 23))
+
+    def test_issue_57734_debian_package_importerror(self):
+        with ForceImportErrorOn("virtualenv"):
+            mock_ver = MagicMock(
+                return_value={
+                    "retcode": 0,
+                    "stdout": "virtualenv 20.0.23+ds from "
+                    "/usr/lib/python3/dist-packages/virtualenv/__init__.py",
+                }
+            )
+            with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):
+                ret = virtualenv_mod.virtualenv_ver(venv_bin="pyenv")
+        self.assertEqual(ret, (20, 0, 23))

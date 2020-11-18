@@ -7,12 +7,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.states.cmd as cmd
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class CmdTestCase(TestCase, LoaderModuleMockMixin):
@@ -143,6 +144,50 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                         }
                     )
                     self.assertDictEqual(cmd.script(name), ret)
+
+    @skipIf(not salt.utils.platform.is_windows(), "windows test only")
+    def test_script_runas_no_password(self):
+        """
+        Test to download a script and execute it, specifically on windows.
+        Make sure that when using runas, and a password is not supplied we check.
+        """
+        name = "cmd.script"
+        ret = {
+            "name": "cmd.script",
+            "changes": {},
+            "result": False,
+            "comment": "",
+            "commnd": "Must supply a password if runas argument is used on Windows.",
+        }
+
+        patch_opts = patch.dict(cmd.__opts__, {"test": False})
+        patch_shell = patch.dict(cmd.__grains__, {"shell": "shell"})
+
+        # Fake the execution module call
+        mock = MagicMock(side_effect=[CommandExecutionError, {"retcode": 1}])
+        patch_call = patch.dict(cmd.__salt__, {"cmd.script": mock})
+
+        with patch_opts, patch_shell, patch_call:
+            self.assertDictEqual(cmd.script(name, runas="User"), ret)
+
+    @skipIf(not salt.utils.platform.is_windows(), "windows test only")
+    def test_script_runas_password(self):
+        """
+        Test to download a script and execute it, specifically on windows.
+        Make sure that when we do supply a password, we get into the function call.
+        """
+        name = "cmd.script"
+        ret = {"changes": {}, "comment": "", "name": "cmd.script", "result": False}
+
+        patch_opts = patch.dict(cmd.__opts__, {"test": False})
+        patch_shell = patch.dict(cmd.__grains__, {"shell": "shell"})
+
+        # Fake the execution module call
+        mock = MagicMock(side_effect=[CommandExecutionError, {"retcode": 1}])
+        patch_call = patch.dict(cmd.__salt__, {"cmd.script": mock})
+
+        with patch_opts, patch_shell, patch_call:
+            self.assertDictEqual(cmd.script(name, runas="User", password="Test"), ret)
 
     # 'call' function tests: 1
 

@@ -486,25 +486,40 @@ def uptodate(
 
     post_info = wua.updates().list()
 
+    # Updates not installed is a list of updates that the WUA first requested
+    # to be installed but became ineligible for installation because they were
+    # superseded by other updates
+    updates_not_installed = []
+
     # Verify the installation
     for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]["Installed"]):
-            ret["changes"]["failed"] = {
-                item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
-                    "KBs": post_info[item]["KBs"],
-                }
-            }
-            ret["result"] = False
+        if item not in post_info:
+            # Update (item) was not installed for valid reason
+            updates_not_installed.append(item)
         else:
-            ret["changes"]["installed"] = {
-                item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
-                    "NeedsReboot": post_info[item]["NeedsReboot"],
-                    "KBs": post_info[item]["KBs"],
+            if not salt.utils.data.is_true(post_info[item]["Installed"]):
+                ret["changes"]["failed"] = {
+                    item: {
+                        "Title": post_info[item]["Title"][:40] + "...",
+                        "KBs": post_info[item]["KBs"],
+                    }
                 }
-            }
+                ret["result"] = False
+            else:
+                ret["changes"]["installed"] = {
+                    item: {
+                        "Title": post_info[item]["Title"][:40] + "...",
+                        "NeedsReboot": post_info[item]["NeedsReboot"],
+                        "KBs": post_info[item]["KBs"],
+                    }
+                }
 
+    # Add the list of updates not installed to the return
+    if updates_not_installed:
+        ret["comment"] = "Updates that were not installed:"
+        for update in updates_not_installed:
+            ret["comment"] += "\n"
+            ret["comment"] += ": ".join([update])
     if ret["changes"].get("failed", False):
         ret["comment"] = "Updates failed"
     else:

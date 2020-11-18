@@ -1,25 +1,20 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 The setup script for salt
 """
 
-# pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
-# pylint: disable=3rd-party-local-module-not-gated,resource-leakage,blacklisted-module
-# pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
-
-# For Python 2.5.  A no-op on 2.6 and above.
-from __future__ import absolute_import, print_function, with_statement
-
+# pylint: disable=file-perms,resource-leakage
+import contextlib
 import distutils.dist
 import glob
-import inspect
 import operator
 import os
 import platform
 import sys
 from ctypes.util import find_library
 from datetime import datetime
+
+# pylint: disable=no-name-in-module
 from distutils import log
 from distutils.cmd import Command
 from distutils.command.build import build
@@ -28,13 +23,15 @@ from distutils.command.install_lib import install_lib
 from distutils.errors import DistutilsArgError
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 
-# pylint: disable=E0611
 import setuptools
 from setuptools import setup
+from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.develop import develop
-from setuptools.command.egg_info import egg_info
 from setuptools.command.install import install
 from setuptools.command.sdist import sdist
+
+# pylint: enable=no-name-in-module
+
 
 try:
     from urllib2 import urlopen
@@ -48,7 +45,6 @@ try:
     HAS_BDIST_WHEEL = True
 except ImportError:
     HAS_BDIST_WHEEL = False
-# pylint: enable=E0611
 
 try:
     import zmq
@@ -95,16 +91,19 @@ else:
         "joyent_"
     )
 
-# Store a reference whether if we're running under Python 3 and above
-IS_PY3 = sys.version_info > (3,)
+USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
+if USE_STATIC_REQUIREMENTS is not None:
+    USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
+# Are we running pop-build
+if "TIAMAT_BUILD" in os.environ:
+    USE_STATIC_REQUIREMENTS = True
 
 try:
     # Add the esky bdist target if the module is available
     # may require additional modules depending on platform
-    from esky import bdist_esky
-
     # bbfreeze chosen for its tight integration with distutils
-    import bbfreeze
+    import bbfreeze  # pylint: disable=unused-import
+    from esky import bdist_esky  # pylint: disable=unused-import
 
     HAS_ESKY = True
 except ImportError:
@@ -117,23 +116,56 @@ SALT_VERSION_HARDCODED = os.path.join(
 SALT_SYSPATHS_HARDCODED = os.path.join(
     os.path.abspath(SETUP_DIRNAME), "salt", "_syspaths.py"
 )
-SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt")
-SALT_CRYPTO_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"
-)
-SALT_ZEROMQ_REQS = os.path.join(
-    os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"
-)
+SALT_BASE_REQUIREMENTS = [
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt"),
+    # pyzmq needs to be installed regardless of the salt transport
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "crypto.txt"),
+]
+SALT_LINUX_LOCKED_REQS = [
+    # Linux packages defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "linux.txt",
+    )
+]
+SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
+    os.path.abspath(SETUP_DIRNAME),
+    "requirements",
+    "darwin.txt",
+]
+SALT_OSX_LOCKED_REQS = [
+    # OSX packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "darwin.txt",
+    )
+]
+SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
+    os.path.abspath(SETUP_DIRNAME),
+    "requirements",
+    "windows.txt",
+]
+SALT_WINDOWS_LOCKED_REQS = [
+    # Windows packages already defined locked requirements
+    os.path.join(
+        os.path.abspath(SETUP_DIRNAME),
+        "requirements",
+        "static",
+        "pkg",
+        "py{}.{}".format(*sys.version_info),
+        "windows.txt",
+    )
+]
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
-SALT_OSX_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_ext.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "osx", "req_pyobjc.txt"),
-]
-SALT_WINDOWS_REQS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req.txt"),
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "pkg", "windows", "req_win.txt"),
-]
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(
@@ -214,11 +246,8 @@ def _check_ver(pyver, op, wanted):
     """
     pyver = distutils.version.LooseVersion(pyver)
     wanted = distutils.version.LooseVersion(wanted)
-    if IS_PY3:
-        if not isinstance(pyver, str):
-            pyver = str(pyver)
-        if not isinstance(wanted, str):
-            wanted = str(wanted)
+    if not isinstance(pyver, str):
+        pyver = str(pyver)
     return getattr(operator, "__{}__".format(op))(pyver, wanted)
 
 
@@ -227,15 +256,11 @@ def _parse_requirements_file(requirements_file):
     with open(requirements_file) as rfh:
         for line in rfh.readlines():
             line = line.strip()
-            if not line or line.startswith(("#", "-r")):
+            if not line or line.startswith(("#", "-r", "--")):
                 continue
             if IS_WINDOWS_PLATFORM:
                 if "libcloud" in line:
                     continue
-            if IS_PY3 and "futures" in line.lower():
-                # Python 3 already has futures, installing it will only break
-                # the current python installation whenever futures is imported
-                continue
             try:
                 pkg, pyverspec = line.rsplit(";", 1)
             except ValueError:
@@ -460,23 +485,30 @@ class DownloadWindowsDlls(Command):
         if getattr(self.distribution, "salt_download_windows_dlls", None) is None:
             print("This command is not meant to be called on it's own")
             exit(1)
-        import pip
+        try:
+            import pip
 
-        # pip has moved many things to `_internal` starting with pip 10
-        if LooseVersion(pip.__version__) < LooseVersion("10.0"):
-            # pylint: disable=no-name-in-module
-            from pip.utils.logging import indent_log
+            # pip has moved many things to `_internal` starting with pip 10
+            if LooseVersion(pip.__version__) < LooseVersion("10.0"):
+                # pylint: disable=no-name-in-module
+                from pip.utils.logging import indent_log
 
-            # pylint: enable=no-name-in-module
-        else:
-            from pip._internal.utils.logging import (
-                indent_log,
-            )  # pylint: disable=no-name-in-module
+                # pylint: enable=no-name-in-module
+            else:
+                from pip._internal.utils.logging import (  # pylint: disable=no-name-in-module
+                    indent_log,
+                )
+        except ImportError:
+            # TODO: Impliment indent_log here so we don't require pip
+            @contextlib.contextmanager
+            def indent_log():
+                yield
+
         platform_bits, _ = platform.architecture()
         url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
         dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "msvcr120"):
+            for fname in ("libeay32", "ssleay32", "libsodium"):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
@@ -484,11 +516,12 @@ class DownloadWindowsDlls(Command):
                 fdest = dest.format(fname=fname)
                 if not os.path.exists(fdest):
                     log.info(
-                        "Downloading {0}.dll to {1} from {2}".format(fname, fdest, furl)
+                        "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
                     )
                     try:
-                        import requests
                         from contextlib import closing
+
+                        import requests
 
                         with closing(requests.get(furl, stream=True)) as req:
                             if req.status_code == 200:
@@ -499,7 +532,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                             else:
                                 log.error(
-                                    "Failed to download {0}.dll to {1} from {2}".format(
+                                    "Failed to download {}.dll to {} from {}".format(
                                         fname, fdest, furl
                                     )
                                 )
@@ -508,23 +541,15 @@ class DownloadWindowsDlls(Command):
 
                         if req.getcode() == 200:
                             with open(fdest, "wb") as wfh:
-                                if IS_PY3:
-                                    while True:
-                                        chunk = req.read(4096)
-                                        if len(chunk) == 0:
-                                            break
-                                        wfh.write(chunk)
-                                        wfh.flush()
-                                else:
-                                    while True:
-                                        for chunk in req.read(4096):
-                                            if not chunk:
-                                                break
-                                            wfh.write(chunk)
-                                            wfh.flush()
+                                while True:
+                                    chunk = req.read(4096)
+                                    if not chunk:
+                                        break
+                                    wfh.write(chunk)
+                                    wfh.flush()
                         else:
                             log.error(
-                                "Failed to download {0}.dll to {1} from {2}".format(
+                                "Failed to download {}.dll to {} from {}".format(
                                     fname, fdest, furl
                                 )
                             )
@@ -537,10 +562,6 @@ class Sdist(sdist):
             self.run_command("write_salt_ssh_packaging_file")
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
-        if not IS_PY3 and not isinstance(base_dir, str):
-            # Work around some bad code in distutils which logs unicode paths
-            # against a str format string.
-            base_dir = base_dir.encode("utf-8")
         sdist.make_release_tree(self, base_dir, files)
 
         # Let's generate salt/_version.py to include in the sdist tarball
@@ -554,6 +575,14 @@ class Sdist(sdist):
         sdist.make_distribution(self)
         if self.distribution.ssh_packaging:
             os.unlink(PACKAGED_FOR_SALT_SSH_FILE)
+
+
+class BDistEgg(bdist_egg):
+    def finalize_options(self):
+        bdist_egg.finalize_options(self)
+        self.distribution.build_egg = True
+        if not self.skip_build:
+            self.run_command("build")
 
 
 class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
@@ -592,7 +621,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             # Let's update the bootstrap-script to the version defined to be
             # distributed. See BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION above.
             url = (
-                "https://github.com/saltstack/salt-bootstrap/raw/{0}"
+                "https://github.com/saltstack/salt-bootstrap/raw/{}"
                 "/bootstrap-salt.sh".format(BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION)
             )
             deploy_path = os.path.join(
@@ -600,8 +629,8 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
             )
             log.info(
                 "Updating bootstrap-salt.sh."
-                "\n\tSource:      {0}"
-                "\n\tDestination: {1}".format(url, deploy_path)
+                "\n\tSource:      {}"
+                "\n\tDestination: {}".format(url, deploy_path)
             )
 
             try:
@@ -613,7 +642,7 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 else:
                     log.error(
                         "Failed to update the bootstrap-salt.sh script. HTTP "
-                        "Error code: {0}".format(req.status_code)
+                        "Error code: {}".format(req.status_code)
                     )
             except ImportError:
                 req = urlopen(url)
@@ -623,13 +652,13 @@ class CloudSdist(Sdist):  # pylint: disable=too-many-ancestors
                 else:
                     log.error(
                         "Failed to update the bootstrap-salt.sh script. HTTP "
-                        "Error code: {0}".format(req.getcode())
+                        "Error code: {}".format(req.getcode())
                     )
             try:
                 with open(deploy_path, "w") as fp_:
                     fp_.write(script_contents)
-            except (OSError, IOError) as err:
-                log.error("Failed to write the updated script: {0}".format(err))
+            except OSError as err:
+                log.error("Failed to write the updated script: {}".format(err))
 
         # Let's the rest of the build command
         Sdist.run(self)
@@ -665,9 +694,9 @@ class TestCommand(Command):
         self.run_command("build")
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
-        test_cmd = sys.executable + " {0}".format(runner)
+        test_cmd = sys.executable + " {}".format(runner)
         if self.runtests_opts:
-            test_cmd += " {0}".format(self.runtests_opts)
+            test_cmd += " {}".format(self.runtests_opts)
 
         print("running test")
         test_process = Popen(
@@ -688,7 +717,7 @@ class Clean(clean):
         for subdir in ("salt", "tests", "doc"):
             root = os.path.join(os.path.dirname(__file__), subdir)
             for dirname, _, _ in os.walk(root):
-                for to_remove_filename in glob.glob("{0}/*.py[oc]".format(dirname)):
+                for to_remove_filename in glob.glob("{}/*.py[oc]".format(dirname)):
                     os.remove(to_remove_filename)
 
 
@@ -741,6 +770,11 @@ class Build(build):
 
         if getattr(self.distribution, "with_salt_version", False):
             # Write the hardcoded salt version module salt/_version.py
+            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+            self.run_command("write_salt_version")
+
+        if getattr(self.distribution, "build_egg", False):
+            # we are building an egg package. need to include _version.py
             self.distribution.salt_version_hardcoded_path = salt_build_ver_file
             self.run_command("write_salt_version")
 
@@ -980,10 +1014,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = "Portable, distributed, remote execution and configuration management system"
-        kwargs = {}
-        if IS_PY3:
-            kwargs["encoding"] = "utf-8"
-        with open(SALT_LONG_DESCRIPTION_FILE, **kwargs) as f:
+        with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
         self.author = "Thomas S Hatch"
@@ -995,6 +1026,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 "clean": Clean,
                 "build": Build,
                 "sdist": Sdist,
+                "bdist_egg": BDistEgg,
                 "install": Install,
                 "develop": Develop,
                 "write_salt_version": WriteSaltVersion,
@@ -1027,8 +1059,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 continue
             if attrname == "salt_version":
                 attrname = "version"
-            if hasattr(self.metadata, "set_{0}".format(attrname)):
-                getattr(self.metadata, "set_{0}".format(attrname))(attrvalue)
+            if hasattr(self.metadata, "set_{}".format(attrname)):
+                getattr(self.metadata, "set_{}".format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
                 try:
                     setattr(self.metadata, attrname, attrvalue)
@@ -1049,8 +1081,12 @@ class SaltDistribution(distutils.dist.Distribution):
         return [
             "Programming Language :: Python",
             "Programming Language :: Cython",
-            "Programming Language :: Python :: 2.6",
-            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
             "Development Status :: 5 - Production/Stable",
             "Environment :: Console",
             "Intended Audience :: Developers",
@@ -1111,6 +1147,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(
                 [
+                    "doc/man/salt-api.1",
                     "doc/man/salt-cp.1",
                     "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
@@ -1142,24 +1179,42 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_install_requires(self):
+        install_requires = []
+        if USE_STATIC_REQUIREMENTS is True:
+            # We've been explicitly asked to use static requirements
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
 
-        if IS_OSX_PLATFORM:
-            install_requires = []
-            for reqfile in SALT_OSX_REQS:
-                install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_LINUX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
             return install_requires
-
-        if IS_WINDOWS_PLATFORM:
-            install_requires = []
-            for reqfile in SALT_WINDOWS_REQS:
-                install_requires += _parse_requirements_file(reqfile)
-            return install_requires
-
-        install_requires = _parse_requirements_file(SALT_REQS)
-
-        if self.salt_transport == "zeromq":
-            install_requires += _parse_requirements_file(SALT_CRYPTO_REQS)
-            install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
+        elif USE_STATIC_REQUIREMENTS is False:
+            # We've been explicitly asked NOT to use static requirements
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_BASE_REQUIREMENTS:
+                    install_requires += _parse_requirements_file(reqfile)
+        else:
+            # This is the old and default behavior
+            if IS_OSX_PLATFORM:
+                for reqfile in SALT_OSX_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            elif IS_WINDOWS_PLATFORM:
+                for reqfile in SALT_WINDOWS_LOCKED_REQS:
+                    install_requires += _parse_requirements_file(reqfile)
+            else:
+                for reqfile in SALT_BASE_REQUIREMENTS:
+                    install_requires += _parse_requirements_file(reqfile)
         return install_requires
 
     @property
@@ -1176,6 +1231,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
+                    "scripts/salt-api",
                     "scripts/salt-cp",
                     "scripts/salt-key",
                     "scripts/salt-minion",
@@ -1222,6 +1278,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
                 [
+                    "salt-api = salt.scripts:salt_api",
                     "salt-cp = salt.scripts:salt_cp",
                     "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
@@ -1330,7 +1387,7 @@ class SaltDistribution(distutils.dist.Distribution):
         elif sys.platform.startswith("linux"):
             freezer_includes.append("spwd")
             try:
-                import yum  # pylint: disable=unused-variable
+                import yum  # pylint: disable=unused-import
 
                 freezer_includes.append("yum")
             except ImportError:
@@ -1371,7 +1428,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ("zeromq", "both", "ssh", "none"):
             raise DistutilsArgError(
                 "The value of --salt-transport needs be 'zeromq', "
-                "'both', 'ssh', or 'none' not '{0}'".format(self.salt_transport)
+                "'both', 'ssh', or 'none' not '{}'".format(self.salt_transport)
             )
 
         # Setup our property functions after class initialization and

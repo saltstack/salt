@@ -168,6 +168,7 @@ def update():
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
                     file_path, mtime = line.replace("\n", "").split(":", 1)
+                    mtime = float(mtime)
                     old_mtime_map[file_path] = mtime
                     if mtime != new_mtime_map.get(file_path, mtime):
                         data["files"]["changed"].append(file_path)
@@ -210,6 +211,9 @@ def update():
             event.fire_event(
                 data, salt.utils.event.tagify(["roots", "update"], prefix="fileserver")
             )
+    # return data is used for tests
+    # but can also be used to get file changes with out needing fileserver events
+    return data
 
 
 def file_hash(load, fnd):

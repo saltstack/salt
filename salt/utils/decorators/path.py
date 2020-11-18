@@ -4,10 +4,11 @@ Decorators for salt.utils.path
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
+import functools
+
 # Import Salt libs
 import salt.utils.path
 from salt.exceptions import CommandNotFoundError
-from salt.utils.decorators.signature import identical_signature_wrapper
 
 
 def which(exe):
@@ -16,6 +17,7 @@ def which(exe):
     """
 
     def wrapper(function):
+        @functools.wraps(function)
         def wrapped(*args, **kwargs):
             if salt.utils.path.which(exe) is None:
                 raise CommandNotFoundError(
@@ -23,7 +25,7 @@ def which(exe):
                 )
             return function(*args, **kwargs)
 
-        return identical_signature_wrapper(function, wrapped)
+        return wrapped
 
     return wrapper
 
@@ -34,6 +36,7 @@ def which_bin(exes):
     """
 
     def wrapper(function):
+        @functools.wraps(function)
         def wrapped(*args, **kwargs):
             if salt.utils.path.which_bin(exes) is None:
                 raise CommandNotFoundError(
@@ -42,6 +45,6 @@ def which_bin(exes):
                 )
             return function(*args, **kwargs)
 
-        return identical_signature_wrapper(function, wrapped)
+        return wrapped
 
     return wrapper

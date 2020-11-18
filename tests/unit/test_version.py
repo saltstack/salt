@@ -17,11 +17,11 @@ import re
 import salt.version
 
 # Import Salt libs
-from salt.version import SaltStackVersion, versions_report
+from salt.version import SaltStackVersion, system_information, versions_report
 from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class VersionTestCase(TestCase):
@@ -342,3 +342,88 @@ class VersionTestCase(TestCase):
 
         for ver, repr_ret in expect:
             assert repr(SaltStackVersion(*ver)) == repr_ret
+
+    @skipIf(not salt.utils.platform.is_linux(), "Linux test only")
+    def test_system_version_linux(self):
+        """
+        version.system_version on Linux
+        """
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("Manjaro Linux", "20.0.2", "Lysia")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "Manjaro Linux 20.0.2 Lysia")
+            self.assertIn(version, versions)
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("Debian GNU/Linux", "9", "stretch")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "Debian GNU/Linux 9 stretch")
+            self.assertIn(version, versions)
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("Debian GNU/Linux", "10", "buster")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "Debian GNU/Linux 10 buster")
+            self.assertIn(version, versions)
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("CentOS Linux", "7", "Core")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "CentOS Linux 7 Core")
+            self.assertIn(version, versions)
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("CentOS Linux", "8", "Core")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "CentOS Linux 8 Core")
+            self.assertIn(version, versions)
+
+        with patch(
+            "distro.linux_distribution",
+            MagicMock(return_value=("OpenSUSE Leap", "15.1", "")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "OpenSUSE Leap 15.1 ")
+            self.assertIn(version, versions)
+
+    @skipIf(not salt.utils.platform.is_darwin(), "OS X test only")
+    def test_system_version_osx(self):
+        """
+        version.system_version on OS X
+        """
+
+        with patch(
+            "platform.mac_ver",
+            MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "10.15.2 x86_64")
+            self.assertIn(version, versions)
+
+    @skipIf(not salt.utils.platform.is_windows(), "Windows test only")
+    def test_system_version_windows(self):
+        """
+        version.system_version on Windows
+        """
+
+        with patch(
+            "platform.win32_ver",
+            return_value=("10", "10.0.14393", "SP0", "Multiprocessor Free"),
+        ), patch("win32api.RegOpenKey", MagicMock()), patch(
+            "win32api.RegQueryValueEx",
+            MagicMock(return_value=("Windows Server 2016 Datacenter", 1)),
+        ):
+            versions = [item for item in system_information()]
+            version = ("version", "2016Server 10.0.14393 SP0 Multiprocessor Free")
+            self.assertIn(version, versions)

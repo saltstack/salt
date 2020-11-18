@@ -62,6 +62,10 @@ class MockWMI_ComputerSystem(object):
     def JoinDomainOrWorkgroup(Name):
         return [0]
 
+    @staticmethod
+    def UnjoinDomainOrWorkgroup(Password, UserName, FUnjoinOptions):
+        return [0]
+
 
 class MockWMI_OperatingSystem(object):
     """
@@ -86,6 +90,11 @@ class MockWMI_OperatingSystem(object):
 
     def __init__(self):
         pass
+
+
+class MockWMI_ComputerSystemProduct:
+    def __init__(self):
+        self.SKUNumber = None
 
 
 class MockWMI_Processor(object):
@@ -345,6 +354,35 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 "Already joined to saltstack",
             )
 
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_unjoin_domain(self):
+        """
+            Test unjoining a computer from an Active Directory domain
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Domain": "contoso.com"}),
+        ):
+            self.assertDictEqual(
+                win_system.unjoin_domain(),
+                {"Workgroup": "WORKGROUP", "Restart": False},
+            )
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_unjoin_domain_already_unjoined(self):
+        """
+            Test unjoining a computer from an Active Directory domain
+        """
+        with patch("salt.utils.winapi.Com", MagicMock()), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(wmi, "WMI", Mock(return_value=self.WMI)), patch(
+            "salt.modules.win_system.get_domain_workgroup",
+            MagicMock(return_value={"Workgroup": "WORKGROUP"}),
+        ):
+            self.assertEqual(win_system.unjoin_domain(), "Already joined to WORKGROUP")
+
     def test_get_system_time(self):
         """
             Test to get system time
@@ -508,6 +546,10 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
         ), patch.object(
             self.WMI,
+            "Win32_ComputerSystemProduct",
+            return_value=[MockWMI_ComputerSystemProduct()],
+        ), patch.object(
+            self.WMI,
             "Win32_Processor",
             return_value=[MockWMI_Processor(), MockWMI_Processor()],
         ), patch.object(
@@ -554,3 +596,50 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ]
         self.assertIn(ret["chassis_bootup_state"], warning_states)
         self.assertIn(ret["thermal_state"], warning_states)
+
+    @skipIf(not win_system.HAS_WIN32NET_MODS, "Missing win32 libraries")
+    def test_get_system_info_no_number_of_enabled_core(self):
+        """
+        Tests get_system_info when there is no `NumberOfEnabledCore` property in
+        the WMI Class Win32_Processor. Older versions of Windows are missing
+        this property
+        """
+        # Create a mock processor class that does not have the
+        # NumberOfCoresEnabled property
+        class MockWMIProcessor(object):
+            """
+            Mock WMI Win32_Processor Class
+            """
+
+            def __init__(self):
+                self.Manufacturer = "Intel"
+                self.MaxClockSpeed = 2301
+                self.NumberOfLogicalProcessors = 8
+                self.NumberOfCores = 4
+
+        with patch("salt.utils.win_system.get_computer_name", MagicMock()), patch(
+            "salt.utils.winapi.Com", MagicMock()
+        ), patch.object(
+            self.WMI, "Win32_OperatingSystem", return_value=[MockWMI_OperatingSystem()]
+        ), patch.object(
+            self.WMI, "Win32_ComputerSystem", return_value=[MockWMI_ComputerSystem()]
+        ), patch.object(
+            self.WMI,
+            "Win32_ComputerSystemProduct",
+            return_value=[MockWMI_ComputerSystemProduct()],
+        ), patch.object(
+            self.WMI,
+            "Win32_Processor",
+            return_value=[MockWMIProcessor(), MockWMIProcessor()],
+        ), patch.object(
+            self.WMI, "Win32_BIOS", return_value=[MockWMI_BIOS()]
+        ), patch.object(
+            wmi, "WMI", Mock(return_value=self.WMI)
+        ):
+            ret = win_system.get_system_info()
+            self.assertIn("processors", ret)
+            self.assertIn("processors_logical", ret)
+            self.assertIn("processor_cores", ret)
+            self.assertIn("processor_manufacturer", ret)
+            self.assertIn("processor_max_clock_speed", ret)
+            self.assertNotIn("processor_cores_enabled", ret)

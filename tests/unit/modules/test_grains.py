@@ -727,3 +727,65 @@ class GrainsModuleTestCase(TestCase, LoaderModuleMockMixin):
         grainsmod.__salt__["saltutil.refresh_grains"].assert_called_with(
             refresh_pillar=False
         )
+
+    def test_setval_unicode(self):
+        key = "塩"  # salt
+        value = "塩人生です"  # salt is life
+
+        # Note: call setvals 2 times is important
+        # 1: add key to conf grains
+        # 2: update and read key from conf grains
+        for _ in range(2):
+            ret = grainsmod.setvals({key: value})
+            self.assertIn(key, ret)
+            self.assertEqual(ret[key], value)
+
+    def test_delval_single(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delval("a")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"a": None})
+            self.assertEqual(
+                grainsmod.__grains__, {"a": None, "b": {"nested": "val"}, "c": 8}
+            )
+
+    def test_delval_nested(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delval("b:nested")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"b": {"nested": None}})
+            self.assertEqual(
+                grainsmod.__grains__, {"a": "aval", "b": {"nested": None}, "c": 8}
+            )
+
+    def test_delkey_single_key(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delkey("a")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"a": None})
+            self.assertEqual(grainsmod.__grains__, {"b": {"nested": "val"}, "c": 8})
+
+    def test_delkey_nested_key(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delkey("b:nested")
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"b": {}})
+            self.assertEqual(grainsmod.__grains__, {"a": "aval", "b": {}, "c": 8})
+
+    def test_delkey_nested_key_force_needed(self):
+        with patch.dict(
+            grainsmod.__grains__, {"a": "aval", "b": {"nested": "val"}, "c": 8}
+        ):
+            res = grainsmod.delkey("b", force=True)
+            assert res["comment"].find("Use 'force=True' to overwrite.") == -1
+            self.assertTrue(res["result"])
+            self.assertEqual(res["changes"], {"b": None})
+            self.assertEqual(grainsmod.__grains__, {"a": "aval", "c": 8})

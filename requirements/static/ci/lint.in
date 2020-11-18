@@ -1,0 +1,4 @@
+# Lint requirements
+pylint==2.4.4
+SaltPyLint>=v2020.9.28
+toml

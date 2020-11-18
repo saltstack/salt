@@ -10,6 +10,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 
@@ -26,6 +27,17 @@ class WinLgpoNetshTestCase(TestCase):
         ret = win_lgpo_netsh.get_settings(
             profile="domain", section="firewallpolicy", store="lgpo"
         )
+        self.assertIn("Inbound", ret)
+        self.assertIn("Outbound", ret)
+
+    def test_get_settings_firewallpolicy_lgpo_issue_57591(self):
+        """
+        Should not stacktrace when the hostname contains unicode characters
+        """
+        with patch.object(win_lgpo_netsh, "__hostname__", return_value="kомпьютер"):
+            ret = win_lgpo_netsh.get_settings(
+                profile="domain", section="firewallpolicy", store="lgpo"
+            )
         self.assertIn("Inbound", ret)
         self.assertIn("Outbound", ret)
 

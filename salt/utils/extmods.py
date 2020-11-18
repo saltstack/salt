@@ -87,7 +87,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
             for sub_env in saltenv:
                 log.info("Syncing %s for environment '%s'", form, sub_env)
                 cache = []
-                log.info("Loading cache from {0}, for {1})".format(source, sub_env))
+                log.info("Loading cache from %s, for %s", source, sub_env)
                 # Grab only the desired files (.py, .pyx, .so)
                 cache.extend(
                     fileclient.cache_dir(

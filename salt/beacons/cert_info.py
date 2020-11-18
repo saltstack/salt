@@ -100,13 +100,15 @@ def beacon(config):
 
         if isinstance(cert_path, dict):
             try:
-                notify_days = cert_path[cert_path.keys()[0]].get(
+                next_cert_path = next(iter(cert_path))
+                notify_days = cert_path[next_cert_path].get(
                     "notify_days", global_notify_days
                 )
-                cert_path = cert_path.keys()[0]
-            except IndexError as exc:
+            except StopIteration as exc:
                 log.error("Unable to load certificate %s (%s)", cert_path, exc)
                 continue
+            else:
+                cert_path = next_cert_path
 
         try:
             with salt.utils.files.fopen(cert_path) as fp_:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for running ZFS command
 
@@ -13,14 +12,10 @@ Module for running ZFS command
   consistency in output.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.modules.cmdmod
-
-# Import Salt libs
 import salt.utils.args
 import salt.utils.path
 import salt.utils.versions
@@ -409,7 +404,7 @@ def mount(name=None, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -430,20 +425,6 @@ def mount(name=None, **kwargs):
         flags.append("-O")
     if kwargs.get("options", False):
         opts["-o"] = kwargs.get("options")
-    if name in [None, "-a"]:
-        # NOTE: the new way to mount all filesystems is to have name
-        #       set to ```None```. We still accept the old '-a' until
-        #       Sodium. After Sodium we can update the if statement
-        #       to ```if not name:```
-        if name == "-a":
-            salt.utils.versions.warn_until(
-                "Sodium",
-                "Passing '-a' as name is deprecated as of Salt 2019.2.0. This "
-                "warning will be removed in Salt Sodium. Please pass name as "
-                "'None' instead to mount all filesystems.",
-            )
-        flags.append("-a")
-        name = None
 
     ## Mount filesystem
     res = __salt__["cmd.run_all"](
@@ -474,7 +455,7 @@ def unmount(name, **kwargs):
 
     .. warning::
 
-            Passing '-a' as name is deprecated and will be removed in Sodium.
+            Passing '-a' as name is deprecated and will be removed in 3001.
 
     CLI Example:
 
@@ -492,7 +473,7 @@ def unmount(name, **kwargs):
         flags.append("-f")
     if name in [None, "-a"]:
         # NOTE: still accept '-a' as name for backwards compatibility
-        #       until Salt Sodium this should just simplify
+        #       until Salt 3001 this should just simplify
         #       this to just set '-a' if name is not set.
         flags.append("-a")
         name = None
@@ -906,15 +887,7 @@ def hold(tag, *snapshot, **kwargs):
 
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
-
     """
-    ## warn about tag change
-    if "," in tag:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
-        )
 
     ## Configure command
     # NOTE: initialize the defaults
@@ -973,14 +946,6 @@ def release(tag, *snapshot, **kwargs):
         salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
 
     """
-    ## warn about tag change
-    if "," in tag:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "A comma-separated tag is no support as of Salt 2018.3.1 "
-            "This warning will be removed in Salt Sodium.",
-        )
-
     ## Configure command
     # NOTE: initialize the defaults
     flags = []
