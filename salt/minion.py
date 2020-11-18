@@ -1066,7 +1066,14 @@ class MinionManager(MinionBase):
             minion.handle_event(package)
 
     def _create_minion_object(
-        self, opts, timeout, safe, io_loop=None, loaded_base_name=None, jid_queue=None
+        self,
+        opts,
+        timeout,
+        safe,
+        io_loop=None,
+        loaded_base_name=None,
+        jid_queue=None,
+        load_grains=True,
     ):
         """
         Helper function to return the correct type of object
@@ -1078,6 +1085,7 @@ class MinionManager(MinionBase):
             io_loop=io_loop,
             loaded_base_name=loaded_base_name,
             jid_queue=jid_queue,
+            load_grains=load_grains,
         )
 
     def _check_minions(self):
@@ -1212,6 +1220,7 @@ class Minion(MinionBase):
         loaded_base_name=None,
         io_loop=None,
         jid_queue=None,
+        load_grains=True,
     ):  # pylint: disable=W0231
         """
         Pass in the options dict
@@ -1253,7 +1262,7 @@ class Minion(MinionBase):
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
         if not salt.utils.platform.is_proxy():
-            if not self.opts.get("grains", {}):
+            if load_grains:
                 self.opts["grains"] = salt.loader.grains(opts)
         else:
             if self.opts.get("beacons_before_connect", False):
@@ -1756,7 +1765,7 @@ class Minion(MinionBase):
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
         if not minion_instance:
-            minion_instance = cls(opts)
+            minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
             if not hasattr(minion_instance, "functions"):
                 (
@@ -3608,7 +3617,14 @@ class ProxyMinionManager(MinionManager):
     """
 
     def _create_minion_object(
-        self, opts, timeout, safe, io_loop=None, loaded_base_name=None, jid_queue=None
+        self,
+        opts,
+        timeout,
+        safe,
+        io_loop=None,
+        loaded_base_name=None,
+        jid_queue=None,
+        load_grains=True,
     ):
         """
         Helper function to return the correct type of object
@@ -3620,6 +3636,7 @@ class ProxyMinionManager(MinionManager):
             io_loop=io_loop,
             loaded_base_name=loaded_base_name,
             jid_queue=jid_queue,
+            load_grains=True,
         )
 
 

@@ -1316,12 +1316,13 @@ class TestDaemon:
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
-                try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
-                except OSError as exc:
-                    if exc.errno != 3:
-                        raise
+            if os.path.exists(self.sshd_pidfile):
+                with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
+                    try:
+                        os.kill(int(fhr.read()), signal.SIGKILL)
+                    except OSError as exc:
+                        if exc.errno != 3:
+                            raise
 
     def _exit_mockbin(self):
         path = os.environ.get("PATH", "")
