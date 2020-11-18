@@ -316,7 +316,9 @@ def change_xml(doc, data, mapping):
                 if convert_fn:
                     new_value = convert_fn(new_value)
 
-                if str(current_value) != str(new_value):
+                # Allow custom comparison. Can be useful for almost equal numeric values
+                compare_fn = param.get("equals", lambda o, n: str(o) == str(n))
+                if not compare_fn(current_value, new_value):
                     set_fn(node, new_value)
                     need_update = True
             else:
