@@ -12,6 +12,7 @@ import copy
 import logging
 import os
 import sys
+import re
 import tempfile
 
 import salt
@@ -78,6 +79,18 @@ def create(root):
             return False
     return True
 
+def relog(message):
+    """
+    Takes a multiline string containing log lines as usually returned as
+    stderr from `cmd.run_chroot` and logs it.
+    """
+    for logline in message.split('\n'):
+        match = re.search('\[([A-Z]+)\s*\]\s(.*)', logline)
+        level = match.group(1)
+        message = match.group(2)
+        log.log(logging._nameToLevel[level], "(chroot) %s"%message)
+
+
 
 def call(root, function, *args, **kwargs):
     """
@@ -129,6 +142,7 @@ def call(root, function, *args, **kwargs):
     chroot_path = os.path.join(os.path.sep, os.path.relpath(thin_dest_path, root))
     try:
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        log_level = __opts__.get("log_level", "info")
         salt_argv = (
             [
                 "python{}".format(sys.version_info[0]),
@@ -142,7 +156,7 @@ def call(root, function, *args, **kwargs):
                 "--out",
                 "json",
                 "-l",
-                "quiet",
+                log_level,
                 "--",
                 function,
             ]
@@ -151,6 +165,7 @@ def call(root, function, *args, **kwargs):
         )
         ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
 
+        relog(ret["stderr"])
         # Process "real" result in stdout
         try:
             data = __utils__["json.find_json"](ret["stdout"])
