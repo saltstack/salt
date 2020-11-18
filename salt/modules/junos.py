@@ -1371,7 +1371,7 @@ def install_os(path=None, **kwargs):
         When True (default), executes the software install on all Routing Engines of the Junos
         device. When False, execute the software install only on the current Routing Engine.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
@@ -1507,6 +1507,8 @@ def file_copy(src=None, dest=None):
 
     dest
         The destination path on the where the file will be copied
+
+    .. versionadded:: 3001
 
     CLI Example:
 
@@ -1799,7 +1801,7 @@ def get_table(
     table_args=None,
 ):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Retrieve data from a Junos device using Tables/Views
 
@@ -1976,6 +1978,8 @@ def rpc_file_list(path, **kwargs):
     Use the Junos RPC interface to get a list of files and return
     them as a structure dictionary.
 
+    .. versionadded:: Aluminum
+
     CLI Example :
 
         salt junos-router junos.rpc_file_list /var/local/salt/etc
@@ -2017,6 +2021,7 @@ def rpc_file_list(path, **kwargs):
                     1
         success:
             True
+
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     conn = __proxy__["junos.conn"]()
@@ -2085,6 +2090,8 @@ def file_compare(file1, file2, **kwargs):
 
     Under the hood, this uses the junos CLI command `file compare files ...`
 
+    .. versionadded:: Aluminum
+
     CLI Example :
 
         salt junos-router junos.file_compare /var/tmp/backup1/cmt.script /var/tmp/backup2/cmt.script
@@ -2138,6 +2145,8 @@ def fsentry_exists(dir, **kwargs):
     or a non-file (generally a directory) in the file system,
     or if there is no file by that name.
 
+    .. versionadded:: Aluminum
+
     CLI Example :
 
         salt junos-router junos.fsentry_exists /var/log
@@ -2148,7 +2157,6 @@ def fsentry_exists(dir, **kwargs):
             True
         exists:
             True
-
     """
     if salt.utils.platform.is_proxy():
         return {
@@ -2231,6 +2239,8 @@ def routing_engine(**kwargs):
 
     Under the hood parses the result of `show chassis routing-engine`
 
+    .. versionadded:: Aluminum
+
     CLI Example :
 
         salt junos-router junos.routing_engine
@@ -2281,6 +2291,8 @@ def dir_copy(source, dest, force=False, **kwargs):
 
     force : This function will not copy identical files unless `force` is `True`
 
+    .. versionadded:: Aluminum
+
     CLI Example:
 
     .. code-block:: bash
@@ -2290,7 +2302,6 @@ def dir_copy(source, dest, force=False, **kwargs):
     This will take the `pki` directory, its absolute path and copy it and its
     contents to routing engine 1 root directory. The result will be
     `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
-
     """
     if salt.utils.platform.is_proxy():
         return {
