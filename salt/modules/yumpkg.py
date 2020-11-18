@@ -74,8 +74,13 @@ def __virtual__():
         return (False, "Module yumpkg: no yum based system detected")
 
     enabled = (
-        "amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo",
-        "issabel pbx", "openeuler"
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler"
     )
 
     if os_family == "redhat" or os_grain in enabled:
