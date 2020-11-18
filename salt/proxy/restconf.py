@@ -1,4 +1,4 @@
-'''
+"""
 Proxy Minion to manage Restconf Devices
 
 :codeauthor: Jamie (Bear) Murphy <jamiemurphyit@gmail.com>
@@ -10,7 +10,7 @@ Usage
 
 .. note::
 
-    To be able to use this module you need to enable to RESTCONF on your device 
+    To be able to use this module you need to enable to RESTCONF on your device
     and having https enabled.
 
     Cisco Configuration example:
@@ -23,7 +23,7 @@ Usage
 
 .. note::
 
-    RESTCONF requires modern OS distributions. 
+    RESTCONF requires modern OS distributions.
     This plugin has been written specifically to use JSON Restconf endpoints
 
 Pillar
@@ -72,18 +72,17 @@ Proxy Pillar Example
       username: example
       password: example
       verify: false
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
 # Import python stdlib
 import copy
-import logging
-import salt.utils.http
 import json
+import logging
+
+import salt.utils.http
 
 # Import Salt modules
 from salt.exceptions import SaltException
-
 
 # -----------------------------------------------------------------------------
 # proxy properties
@@ -96,7 +95,7 @@ __proxyenabled__ = ["restconf"]
 # globals
 # -----------------------------------------------------------------------------
 
-__virtualname__ = 'restconf'
+__virtualname__ = "restconf"
 log = logging.getLogger(__file__)
 restconf_device = {}
 
@@ -106,11 +105,12 @@ restconf_device = {}
 
 
 def __virtual__():
-    '''
+    """
     This Proxy Module is widely available as there are no external dependencies.
-    '''
+    """
     log.debug("restconf proxy __virtual__() called...")
     return __virtualname__
+
 
 # -----------------------------------------------------------------------------
 # proxy functions
@@ -119,53 +119,54 @@ def __virtual__():
 
 def init(opts):
     log.debug("restconf proxy init(opts) called...")
-    # restconf/data/ietf-yang-library:modules-state/module
-    '''
-    Open the connection to the RESTCONF Device.
+    # Open the connection to the RESTCONF Device.
+    # As the communication is HTTP based, there is no connection to maintain,
+    # however, in order to test the connectivity and make sure we are able to
+    # bring up this Minion, we are checking the standard restconf state uri.
 
-    As the communication is HTTP based, there is no connection to maintain,
-    however, in order to test the connectivity and make sure we are able to
-    bring up this Minion, we are checking the standard restconf state uri.
-    '''
-    proxy_dict = opts.get('proxy', {})
+    proxy_dict = opts.get("proxy", {})
     conn_args = copy.deepcopy(proxy_dict)
-    conn_args.pop('proxytype', None)
-    opts['multiprocessing'] = conn_args.pop('multiprocessing', True)
+    conn_args.pop("proxytype", None)
+    opts["multiprocessing"] = conn_args.pop("multiprocessing", True)
     # This is not a SSH-based proxy, so it should be safe to enable
     # multiprocessing.
-    restconf_device['conn_args'] = conn_args
+    restconf_device["conn_args"] = conn_args
     try:
         response = connection_test()
         if response[0]:
             # Execute a very simple command to confirm we are able to connect properly
-            restconf_device['initialized'] = True
-            restconf_device['up'] = True
-            log.info('Connected to %s', conn_args['hostname'], exc_info=True)
+            restconf_device["initialized"] = True
+            restconf_device["up"] = True
+            log.info("Connected to %s", conn_args["hostname"], exc_info=True)
 
         else:
-            restconf_device['initialized'] = False
-            restconf_device['up'] = False
-            log.error('Unable to connect to %s', conn_args['hostname'], exc_info=True)
+            restconf_device["initialized"] = False
+            restconf_device["up"] = False
+            log.error("Unable to connect to %s", conn_args["hostname"], exc_info=True)
     except SaltException:
-        log.error('Unable to connect to %s', conn_args['hostname'], exc_info=True)
+        log.error("Unable to connect to %s", conn_args["hostname"], exc_info=True)
         raise
 
 
 def connection_test():
     log.debug("restconf proxy connection_test() called...")
     response = salt.utils.http.query(
-            "https://{h}/restconf/yang-library-version".format(h=restconf_device['conn_args']['hostname']),
-            method='GET',
-            decode_type="json",
-            decode=True,
-            verify_ssl=restconf_device['conn_args']['verify'],
-            username=restconf_device['conn_args']['username'],
-            password=restconf_device['conn_args']['password'],
-            header_list=['Accept: application/yang-data+json', 'Content-Type: application/yang-data+json']
-
-        )
+        "https://{h}/restconf/yang-library-version".format(
+            h=restconf_device["conn_args"]["hostname"]
+        ),
+        method="GET",
+        decode_type="json",
+        decode=True,
+        verify_ssl=restconf_device["conn_args"]["verify"],
+        username=restconf_device["conn_args"]["username"],
+        password=restconf_device["conn_args"]["password"],
+        header_list=[
+            "Accept: application/yang-data+json",
+            "Content-Type: application/yang-data+json",
+        ],
+    )
     log.debug("restconf_response: {r}".format(r=response))
-    if 'ietf-restconf:yang-library-version' in str(response):
+    if "ietf-restconf:yang-library-version" in str(response):
         return True, response
     else:
         return False, response
@@ -173,48 +174,49 @@ def connection_test():
 
 def ping():
     log.debug("restconf proxy ping() called...")
-    '''
-    Connection open successfully?
-    '''
+    # Connection open successfully?
     return connection_test()[0]
 
 
 def initialized():
-    '''
+    """
     Connection finished initializing?
-    '''
-    return restconf_device.get('initialized', False)
+    """
+    return restconf_device.get("initialized", False)
 
 
 def shutdown(opts):
-    '''
+    """
     Closes connection with the device.
-    '''
-    log.debug('Shutting down the restconf Proxy Minion %s', opts['id'])
+    """
+    log.debug("Shutting down the restconf Proxy Minion %s", opts["id"])
+
 
 # -----------------------------------------------------------------------------
 # callable functions
 # -----------------------------------------------------------------------------
 
 
-def request(uri, method='GET', dict_payload=None):
+def request(uri, method="GET", dict_payload=None):
     if dict_payload is None:
-        data = ''
+        data = ""
     elif isinstance(dict_payload, str):
         data = dict_payload
     else:
         data = json.dumps(dict_payload)
     response = salt.utils.http.query(
-            "https://{h}/{u}".format(h=restconf_device['conn_args']['hostname'], u=uri),
-            method=method,
-            data=data,
-            decode=True,
-            status=True,
-            verify_ssl=restconf_device['conn_args']['verify'],
-            username=restconf_device['conn_args']['username'],
-            password=restconf_device['conn_args']['password'],
-            header_list=['Accept: application/yang-data+json', 'Content-Type: application/yang-data+json']
-
-        )
+        "https://{h}/{u}".format(h=restconf_device["conn_args"]["hostname"], u=uri),
+        method=method,
+        data=data,
+        decode=True,
+        status=True,
+        verify_ssl=restconf_device["conn_args"]["verify"],
+        username=restconf_device["conn_args"]["username"],
+        password=restconf_device["conn_args"]["password"],
+        header_list=[
+            "Accept: application/yang-data+json",
+            "Content-Type: application/yang-data+json",
+        ],
+    )
     log.debug("restconf_request_response: {r}".format(r=response))
     return response
