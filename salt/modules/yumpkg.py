@@ -80,7 +80,7 @@ def __virtual__():
         "virtuozzolinux",
         "virtuozzo",
         "issabel pbx",
-        "openeuler"
+        "openeuler",
     )
 
     if os_family == "redhat" or os_grain in enabled:
