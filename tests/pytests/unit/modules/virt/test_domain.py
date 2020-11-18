@@ -19,7 +19,7 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
           <devices>
             <disk type='file' device='disk'>
               <driver name='qemu' type='qcow2' cache='none' io='native'/>
-              <source file='/path/to/default/vm03_system'/>
+              <source file='/path/to/default/my_vm_system'/>
               <target dev='xvda' bus='xen'/>
             </disk>
             <disk type='block' device='disk'>
@@ -41,6 +41,7 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
             {"name": "system", "pool": "default"},
             {"name": "iscsi-data", "pool": "my-iscsi", "source_file": "unit:0:0:1"},
             {"name": "vdb-data", "pool": "vdb", "source_file": "vdb1"},
+            {"name": "file-data", "pool": "default", "size": "10240"},
         ],
     )
 
@@ -49,6 +50,12 @@ def test_update_xen_disk_volumes(make_mock_vm, make_mock_storage_pool):
     setxml = ET.fromstring(define_mock.call_args[0][0])
     assert "block" == setxml.find(".//disk[3]").get("type")
     assert "/path/to/vdb/vdb1" == setxml.find(".//disk[3]/source").get("dev")
+
+    # Note that my_vm-file-data was not an existing volume before the update
+    assert "file" == setxml.find(".//disk[4]").get("type")
+    assert "/path/to/default/my_vm_file-data" == setxml.find(".//disk[4]/source").get(
+        "file"
+    )
 
 
 def test_get_disks(make_mock_vm, make_mock_storage_pool):

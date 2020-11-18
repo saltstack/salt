@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon Elasticsearch Service
 
@@ -50,8 +49,6 @@ Connection module for Amazon Elasticsearch Service
 # keep lint from choking on _get_conn and _cache_id
 # pylint: disable=E0602
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -59,12 +56,7 @@ import salt.utils.compat
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-
-# Import Salt libs
-from salt.ext import six
 from salt.utils.decorators import depends
-
-# Import third party libs
 
 try:
     # Disable unused import-errors as these are only used for dependency checking
@@ -92,7 +84,6 @@ def __virtual__():
 
 def __init__(opts):
     _ = opts
-    salt.utils.compat.pack_dunder(__name__)
     __utils__["boto3.assign_funcs"](__name__, "es")
 
 
@@ -155,9 +146,7 @@ def add_tags(
     if arn:
         boto_params = {
             "ARN": arn,
-            "TagList": [
-                {"Key": k, "Value": value} for k, value in six.iteritems(tags or {})
-            ],
+            "TagList": [{"Key": k, "Value": tags[k]} for k in tags or {}.items()],
         }
         try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -349,7 +338,7 @@ def create_elasticsearch_domain(
     boto_kwargs = salt.utils.data.filter_falsey(
         {
             "DomainName": domain_name,
-            "ElasticsearchVersion": six.text_type(elasticsearch_version or ""),
+            "ElasticsearchVersion": str(elasticsearch_version or ""),
             "ElasticsearchClusterConfig": elasticsearch_cluster_config,
             "EBSOptions": ebs_options,
             "AccessPolicies": (
@@ -574,7 +563,7 @@ def describe_elasticsearch_instance_type_limits(
         {
             "DomainName": domain_name,
             "InstanceType": instance_type,
-            "ElasticsearchVersion": six.text_type(elasticsearch_version),
+            "ElasticsearchVersion": str(elasticsearch_version),
         }
     )
     try:
@@ -828,7 +817,7 @@ def list_elasticsearch_instance_types(
         conn = _get_conn(region=region, keyid=keyid, key=key, profile=profile)
         boto_params = salt.utils.data.filter_falsey(
             {
-                "ElasticsearchVersion": six.text_type(elasticsearch_version),
+                "ElasticsearchVersion": str(elasticsearch_version),
                 "DomainName": domain_name,
             }
         )
@@ -1269,7 +1258,7 @@ def upgrade_elasticsearch_domain(
     boto_params = salt.utils.data.filter_falsey(
         {
             "DomainName": domain_name,
-            "TargetVersion": six.text_type(target_version),
+            "TargetVersion": str(target_version),
             "PerformCheckOnly": perform_check_only,
         }
     )
@@ -1385,7 +1374,7 @@ def check_upgrade_eligibility(
     if "error" in res:
         return res
     compatible_versions = res["response"][0]["TargetVersions"]
-    if six.text_type(elasticsearch_version) not in compatible_versions:
+    if str(elasticsearch_version) not in compatible_versions:
         ret["result"] = True
         ret["response"] = False
         ret["error"] = 'Desired version "{}" not in compatible versions: {}.' "".format(
