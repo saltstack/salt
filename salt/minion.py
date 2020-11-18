@@ -442,13 +442,16 @@ class MinionBase:
         if context is None:
             context = {}
         if initial_load:
-            self.opts["pillar"] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts["grains"],
-                self.opts["id"],
-                self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
+            if self.opts.get("skip_init_pillar", False):
+                self.opts["pillar"] = {}
+            else:
+                self.opts["pillar"] = salt.pillar.get_pillar(
+                    self.opts,
+                    self.opts["grains"],
+                    self.opts["id"],
+                    self.opts["saltenv"],
+                    pillarenv=self.opts.get("pillarenv"),
+                ).compile_pillar()
 
         self.utils = salt.loader.utils(self.opts, context=context)
         self.functions = salt.loader.minion_mods(
@@ -1427,16 +1430,19 @@ class Minion(MinionBase):
         if self.connected:
             self.opts["master"] = master
 
-            # Initialize pillar before loader to make pillar accessible in modules
-            async_pillar = salt.pillar.get_async_pillar(
-                self.opts,
-                self.opts["grains"],
-                self.opts["id"],
-                self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            )
-            self.opts["pillar"] = yield async_pillar.compile_pillar()
-            async_pillar.destroy()
+            if self.opts.get("skip_init_pillar", False):
+                self.opts["pillar"] = {}
+            else:
+                # Initialize pillar before loader to make pillar accessible in modules
+                async_pillar = salt.pillar.get_async_pillar(
+                    self.opts,
+                    self.opts["grains"],
+                    self.opts["id"],
+                    self.opts["saltenv"],
+                    pillarenv=self.opts.get("pillarenv"),
+                )
+                self.opts["pillar"] = yield async_pillar.compile_pillar()
+                async_pillar.destroy()
 
         if not self.ready:
             self._setup_core()
