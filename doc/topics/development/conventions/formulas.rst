@@ -642,32 +642,29 @@ example is a state tree of two sls files, one simple and one complicated.
         # This example has the minion id in the form 'web-03-dev'.
         # Easily access the grains dictionary:
         try:
-            app, instance_number, environment = __grains__['id'].split('-')
+            app, instance_number, environment = __grains__["id"].split("-")
             instance_number = int(instance_number)
         except ValueError:
-            app, instance_number, environment = ['Unknown', 0, 'dev']
+            app, instance_number, environment = ["Unknown", 0, "dev"]
 
         list_of_roles.add(app)
 
-        if app == 'web' and environment == 'dev':
-            list_of_roles.add('primary')
-            list_of_roles.add('secondary')
-        elif app == 'web' and environment == 'staging':
+        if app == "web" and environment == "dev":
+            list_of_roles.add("primary")
+            list_of_roles.add("secondary")
+        elif app == "web" and environment == "staging":
             if instance_number == 0:
-                list_of_roles.add('primary')
+                list_of_roles.add("primary")
             else:
-                list_of_roles.add('secondary')
+                list_of_roles.add("secondary")
 
         # Easily cross-call Salt execution modules:
-        if __salt__['myutils.query_valid_ec2_instance']():
-            list_of_roles.add('is_ec2_instance')
+        if __salt__["myutils.query_valid_ec2_instance"]():
+            list_of_roles.add("is_ec2_instance")
 
         return {
-            'set_roles_grains': {
-                'grains.present': [
-                    {'name': 'roles'},
-                    {'value': list(list_of_roles)},
-                ],
+            "set_roles_grains": {
+                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)},],
             },
         }
 

@@ -89,16 +89,12 @@ kernel is not present, then the test should be skipped.
 .. code-block:: python
 
     def setUp(self):
-        '''
+        """
         Sets up test requirements
-        '''
-        os_grain = self.run_function('grains.item', ['kernel'])
-        if os_grain['kernel'] not in 'Darwin':
-            self.skipTest(
-                'Test not applicable to \'{kernel}\' kernel'.format(
-                    **os_grain
-                )
-            )
+        """
+        os_grain = self.run_function("grains.item", ["kernel"])
+        if os_grain["kernel"] not in "Darwin":
+            self.skipTest("Test not applicable to '{kernel}' kernel".format(**os_grain))
 
 The ``setUp`` function can be used for many things. The above code snippet is
 only one example. Another example might be to ensure that a particular setting
@@ -272,24 +268,25 @@ Now the workhorse method ``run_function`` can be used to test a module:
 .. code-block:: python
 
     import os
-    import tests.integration as integration
+    from tests.support.case import ModuleCase
 
 
-    class TestModuleTest(integration.ModuleCase):
-        '''
+    class TestModuleTest(ModuleCase):
+        """
         Validate the test module
-        '''
+        """
+
         def test_ping(self):
-            '''
+            """
             test.ping
-            '''
-            self.assertTrue(self.run_function('test.ping'))
+            """
+            self.assertTrue(self.run_function("test.ping"))
 
         def test_echo(self):
-            '''
+            """
             test.echo
-            '''
-            self.assertEqual(self.run_function('test.echo', ['text']), 'text')
+            """
+            self.assertEqual(self.run_function("test.echo", ["text"]), "text")
 
 The fist example illustrates the testing master issuing a ``test.ping`` call
 to a testing minion. The test asserts that the minion returned with a ``True``
@@ -312,26 +309,29 @@ Validating the shell commands can be done via shell tests:
     import shutil
     import tempfile
 
-    import tests.integration as integration
+    from tests.support.case import ShellCase
 
-    class KeyTest(integration.ShellCase):
-        '''
+
+    class KeyTest(ShellCase):
+        """
         Test salt-key script
-        '''
+        """
 
-        _call_binary_ = 'salt-key'
+        _call_binary_ = "salt-key"
 
         def test_list(self):
-            '''
+            """
             test salt-key -L
-            '''
-            data = self.run_key('-L')
+            """
+            data = self.run_key("-L")
             expect = [
-                    'Unaccepted Keys:',
-                    'Accepted Keys:',
-                    'minion',
-                    'sub_minion',
-                    'Rejected:', '']
+                "Unaccepted Keys:",
+                "Accepted Keys:",
+                "minion",
+                "sub_minion",
+                "Rejected:",
+                "",
+            ]
             self.assertEqual(data, expect)
 
 This example verifies that the ``salt-key`` command executes and returns as
@@ -345,20 +345,21 @@ Testing salt-ssh functionality can be done using the SSHCase test class:
 
 .. code-block:: python
 
-    import tests.integration as integration
+    from tests.support.case import SSHCase
 
-    class SSHGrainsTest(integration.SSHCase):
-    '''
-    Test salt-ssh grains functionality
-    Depend on proper environment set by integration.SSHCase class
-    '''
 
-    def test_grains_id(self):
-        '''
-        Test salt-ssh grains id work for localhost.
-        '''
-        cmd = self.run_function('grains.get', ['id'])
-        self.assertEqual(cmd, 'localhost')
+    class SSHGrainsTest(SSHCase):
+        """
+        Test salt-ssh grains functionality
+        Depend on proper environment set by integration.SSHCase class
+        """
+
+        def test_grains_id(self):
+            """
+            Test salt-ssh grains id work for localhost.
+            """
+            cmd = self.run_function("grains.get", ["id"])
+            self.assertEqual(cmd, "localhost")
 
 
 Testing Event System via SaltMinionEventAssertsMixin
@@ -370,20 +371,23 @@ on a minion event bus.
 
 .. code-block:: python
 
-    import tests.integration as integration
     import salt.utils.event
+    from tests.support.mixins import SaltEventAssertsMixin
 
-    class TestEvent(integration.SaltEventAssertsMixin):
-        '''
+
+    class TestEvent(SaltEventAssertsMixin):
+        """
         Example test of firing an event and receiving it
-        '''
+        """
 
         def test_event(self):
-            e = salt.utils.event.get_event('minion', sock_dir=self.minion_opts['sock_dir'], opts=self.minion_opts)
+            e = salt.utils.event.get_event(
+                "minion", sock_dir=self.minion_opts["sock_dir"], opts=self.minion_opts
+            )
 
-            e.fire_event({'a': 'b'}, '/test_event')
+            e.fire_event({"a": "b"}, "/test_event")
 
-            self.assertMinionEventReceived({'a': 'b'})
+            self.assertMinionEventReceived({"a": "b"})
 
 
 Syndic Example via SyndicCase
@@ -393,17 +397,19 @@ Testing Salt's Syndic can be done via the SyndicCase test class:
 
 .. code-block:: python
 
-    import tests.integration as integration
+    from tests.support.case import SyndicCase
 
-    class TestSyndic(integration.SyndicCase):
-        '''
+
+    class TestSyndic(SyndicCase):
+        """
         Validate the syndic interface by testing the test module
-        '''
+        """
+
         def test_ping(self):
-            '''
+            """
             test.ping
-            '''
-            self.assertTrue(self.run_function('test.ping'))
+            """
+            self.assertTrue(self.run_function("test.ping"))
 
 This example verifies that a ``test.ping`` command is issued from the testing
 master, is passed through to the testing syndic, down to the minion, and back
@@ -446,16 +452,16 @@ to test states:
     # Import salt libs
     import salt.utils.files
 
-    HFILE = os.path.join(TMP, 'hosts')
+    HFILE = os.path.join(TMP, "hosts")
 
 
     class HostTest(ModuleCase, SaltReturnAssertsMixin):
-        '''
+        """
         Validate the host state
-        '''
+        """
 
         def setUp(self):
-            shutil.copyfile(os.path.join(FILES, 'hosts'), HFILE)
+            shutil.copyfile(os.path.join(FILES, "hosts"), HFILE)
             super(HostTest, self).setUp()
 
         def tearDown(self):
@@ -464,18 +470,18 @@ to test states:
             super(HostTest, self).tearDown()
 
         def test_present(self):
-            '''
+            """
             host.present
-            '''
-            name = 'spam.bacon'
-            ip = '10.10.10.10'
-            ret = self.run_state('host.present', name=name, ip=ip)
+            """
+            name = "spam.bacon"
+            ip = "10.10.10.10"
+            ret = self.run_state("host.present", name=name, ip=ip)
             self.assertSaltTrueReturn(ret)
             with salt.utils.files.fopen(HFILE) as fp_:
                 output = fp_.read()
-                self.assertIn('{0}\t\t{1}'.format(ip, name), output)
+                self.assertIn("{0}\t\t{1}".format(ip, name), output)
 
-To access the integration files, a variable named ``FILES`` points to the 
+To access the integration files, a variable named ``FILES`` points to the
 ``tests/integration/files`` directory. This is where the referenced
 ``host.present`` sls file resides.
 
@@ -507,24 +513,25 @@ the test method:
 
 .. code-block:: python
 
-    import tests.integration as integration
+    from tests.support.case import ModuleCase
     from tests.support.helpers import destructiveTest, skip_if_not_root
 
-    class DestructiveExampleModuleTest(integration.ModuleCase):
-        '''
+
+    class DestructiveExampleModuleTest(ModuleCase):
+        """
         Demonstrate a destructive test
-        '''
+        """
 
         @destructiveTest
         @skip_if_not_root
         def test_user_not_present(self):
-            '''
+            """
             This is a DESTRUCTIVE TEST it creates a new user on the minion.
             And then destroys that user.
-            '''
-            ret = self.run_state('user.present', name='salt_test')
+            """
+            ret = self.run_state("user.present", name="salt_test")
             self.assertSaltTrueReturn(ret)
-            ret = self.run_state('user.absent', name='salt_test')
+            ret = self.run_state("user.absent", name="salt_test")
             self.assertSaltTrueReturn(ret)
 
 
@@ -576,43 +583,42 @@ contain valid information are also required in the test class's ``setUp`` functi
     from tests.support.case import ShellCase
     from tests.support.paths import FILES
 
+
     class LinodeTest(ShellCase):
-    '''
-    Integration tests for the Linode cloud provider in Salt-Cloud
-    '''
+        """
+        Integration tests for the Linode cloud provider in Salt-Cloud
+        """
 
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(LinodeTest, self).setUp()
+        def setUp(self):
+            """
+            Sets up the test requirements
+            """
+            super(LinodeTest, self).setUp()
 
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'linode-config:'
-        provider = 'linode'
-        providers = self.run_cloud('--list-providers')
-        if profile_str not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
-            )
-
-        # check if apikey and password are present
-        path = os.path.join(FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        config = cloud_providers_config(path)
-        api = config['linode-config']['linode']['apikey']
-        password = config['linode-config']['linode']['password']
-        if api == '' or password == '':
-            self.skipTest(
-                'An api key and password must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
-                    provider
+            # check if appropriate cloud provider and profile files are present
+            profile_str = "linode-config:"
+            provider = "linode"
+            providers = self.run_cloud("--list-providers")
+            if profile_str not in providers:
+                self.skipTest(
+                    "Configuration file for {0} was not found. Check {0}.conf files "
+                    "in tests/integration/files/conf/cloud.*.d/ to run these tests.".format(
+                        provider
+                    )
                 )
-            )
+
+            # check if apikey and password are present
+            path = os.path.join(FILES, "conf", "cloud.providers.d", provider + ".conf")
+            config = cloud_providers_config(path)
+            api = config["linode-config"]["linode"]["apikey"]
+            password = config["linode-config"]["linode"]["password"]
+            if api == "" or password == "":
+                self.skipTest(
+                    "An api key and password must be provided to run these tests. Check "
+                    "tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                        provider
+                    )
+                )
 
 Repeatedly creating and destroying instances on cloud providers can be costly.
 Therefore, cloud provider tests are off by default and do not run automatically. To
@@ -634,27 +640,28 @@ the test function:
 
     from tests.support.helpers import expensiveTest
 
+
     @expensiveTest
     def test_instance(self):
-        '''
+        """
         Test creating an instance on Linode
-        '''
-        name = 'linode-testing'
+        """
+        name = "linode-testing"
 
         # create the instance
-        instance = self.run_cloud('-p linode-test {0}'.format(name))
-        str = '        {0}'.format(name)
+        instance = self.run_cloud("-p linode-test {0}".format(name))
+        str = "        {0}".format(name)
 
         # check if instance with salt installed returned as expected
         try:
             self.assertIn(str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(name))
+            self.run_cloud("-d {0} --assume-yes".format(name))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(name))
-        str = '            True'
+        delete = self.run_cloud("-d {0} --assume-yes".format(name))
+        str = "            True"
         try:
             self.assertIn(str, delete)
         except AssertionError:

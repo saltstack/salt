@@ -36,7 +36,7 @@ fired onto the master event bus where. For example:
 .. code-block:: python
 
     def a_runner(outputter=None, display_progress=False):
-        print('Hello world')
+        print("Hello world")
         ...
 
 The above would result in an event fired as follows:
@@ -62,7 +62,7 @@ A custom runner may send its own progress event by using the
 .. code-block:: python
 
     if display_progress:
-        __jid_event__.fire_event({'message': 'A progress message'}, 'progress')
+        __jid_event__.fire_event({"message": "A progress message"}, "progress")
 
 The above would produce output on the console reading: ``A progress message``
 as well as an event on the event similar to:
@@ -117,11 +117,12 @@ responding to Salt calls could look like this:
     # Import salt modules
     import salt.client
 
+
     def up():
-        '''
+        """
         Print a list of all of the minions that are up
-        '''
-        client = salt.client.LocalClient(__opts__['conf_file'])
-        minions = client.cmd('*', 'test.version', timeout=1)
+        """
+        client = salt.client.LocalClient(__opts__["conf_file"])
+        minions = client.cmd("*", "test.version", timeout=1)
         for minion in sorted(minions):
-            print minion
+            print(minion)

@@ -1,19 +1,36 @@
-# -*- coding: utf-8 -*-
 """
     tests.support.pytest.helpers
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     PyTest helpers functions
 """
+import logging
 import os
 import shutil
 import tempfile
 import textwrap
+import types
+import warnings
 from contextlib import contextmanager
 
 import pytest
 import salt.utils.files
+from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
+
+log = logging.getLogger(__name__)
+
+if not RUNTIME_VARS.PYTEST_SESSION:
+    # XXX: Remove this try/except once we fully switch to pytest
+
+    class FakePyTestHelpersNamespace:
+        __slots__ = ()
+
+        def register(self, func):
+            return func
+
+    # Patch pytest so it all works under runtests.py
+    pytest.helpers = FakePyTestHelpersNamespace()
 
 
 @pytest.helpers.register
@@ -156,7 +173,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_STATE_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_STATE_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
@@ -204,7 +221,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     """
 
     if saltenv == "base":
-        directory = RUNTIME_VARS.TMP_PILLAR_TREE
+        directory = RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
@@ -214,6 +231,53 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
+
+
+@pytest.helpers.register
+def loader_mock(*args, **kwargs):
+    if len(args) > 1:
+        loader_modules = args[1]
+        warnings.warn(
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            category=DeprecationWarning,
+        )
+    else:
+        loader_modules = args[0]
+    return LoaderModuleMock(loader_modules, **kwargs)
+
+
+@pytest.helpers.register
+def salt_loader_module_functions(module):
+    if not isinstance(module, types.ModuleType):
+        raise RuntimeError(
+            "The passed 'module' argument must be an imported "
+            "imported module, not {}".format(type(module))
+        )
+    funcs = {}
+    func_alias = getattr(module, "__func_alias__", {})
+    virtualname = getattr(module, "__virtualname__")
+    for name in dir(module):
+        if name.startswith("_"):
+            continue
+        func = getattr(module, name)
+        if getattr(func, "__module__", None) != module.__name__:
+            # Not eve defined on the module being processed, carry on
+            continue
+        if not isinstance(func, types.FunctionType):
+            # Not a function? carry on
+            continue
+        funcname = func_alias.get(func.__name__) or func.__name__
+        funcs["{}.{}".format(virtualname, funcname)] = func
+    return funcs
+
+
+@pytest.helpers.register
+def remove_stale_minion_key(master, minion_id):
+    key_path = os.path.join(master.config["pki_dir"], "minions", minion_id)
+    if os.path.exists(key_path):
+        os.unlink(key_path)
+    else:
+        log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
 
 
 # Only allow star importing the functions defined in this module

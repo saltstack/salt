@@ -116,7 +116,7 @@ def _netsh_file(content):
         str: The text returned by the netsh command
     """
     with tempfile.NamedTemporaryFile(
-        mode="w", prefix="salt-", suffix=".netsh", delete=False
+        mode="w", prefix="salt-", suffix=".netsh", delete=False, encoding="utf-8"
     ) as fp:
         fp.write(content)
     try:

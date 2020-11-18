@@ -101,11 +101,7 @@ This is done via setuptools entry points:
 
     setup(
         # ...
-        entry_points={
-            'salt.loader': [
-                'module_dirs=spirofs.loader:module',
-            ],
-        },
+        entry_points={"salt.loader": ["module_dirs=spirofs.loader:module"]},
         # ...
     )
 

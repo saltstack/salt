@@ -1,7 +1,7 @@
 {% if grains['os'] == 'Windows' %}
   {% set test_false = 'cmd.exe /c exit 1' %}
   {% set test_true = 'cmd.exe /c exit 0' %}
-{% elif grains['os'] == 'MacOS' %}
+{% elif grains['os'] == 'MacOS' or grains['os'] == 'FreeBSD' %}
   {% set test_false = '/usr/bin/false' %}
   {% set test_true = '/usr/bin/true' %}
 {% else %}

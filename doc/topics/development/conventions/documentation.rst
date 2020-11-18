@@ -97,7 +97,7 @@ code and can contain special formatting. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         Usage:
@@ -110,7 +110,7 @@ code and can contain special formatting. For example:
 
         :param value: a string
         :return: a copy of ``value`` that has been upper-cased
-        '''
+        """
         return value.upper()
 
 Specify a release for additions or changes
@@ -122,13 +122,13 @@ denotes what Salt release will be affected. For example:
 .. code-block:: python
 
     def my_function(value):
-        '''
+        """
         Upper-case the given value
 
         .. versionadded:: 2014.7.0
 
         <...snip...>
-        '''
+        """
         return value.upper()
 
 For changes to a function:
@@ -136,14 +136,14 @@ For changes to a function:
 .. code-block:: python
 
     def my_function(value, strip=False):
-        '''
+        """
         Upper-case the given value
 
         .. versionchanged:: 2016.3.0
             Added a flag to also strip whitespace from the string.
 
         <...snip...>
-        '''
+        """
         if strip:
             return value.upper().strip()
         return value.upper()
