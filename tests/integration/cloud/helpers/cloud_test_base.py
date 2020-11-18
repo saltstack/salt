@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Openstack Cloud Provider
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -45,11 +43,11 @@ class CloudTest(ShellCase):
         """
         Standardize the data returned from a salt-cloud --query
         """
-        return set(
+        return {
             x.strip(": ")
             for x in self.run_cloud("--query")
             if x.lstrip().lower().startswith("cloud-test-")
-        )
+        }
 
     def _instance_exists(self, instance_name=None, query=None):
         """
@@ -116,7 +114,7 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         log.debug('Deleting instance "{}"'.format(instance_name))
         delete_str = self.run_cloud(
-            "-d {0} --assume-yes --out=yaml".format(instance_name), timeout=timeout
+            "-d {} --assume-yes --out=yaml".format(instance_name), timeout=timeout
         )
         if delete_str:
             delete = safe_load("\n".join(delete_str))
@@ -199,9 +197,9 @@ class CloudTest(ShellCase):
 
     def setUp(self):
         """
-        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail
+        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_PROVIDER_CONFIG_ITEMS or this will fail
         """
-        super(CloudTest, self).setUp()
+        super().setUp()
 
         if not self.PROVIDER:
             self.fail("A PROVIDER must be defined for this test")
@@ -225,7 +223,7 @@ class CloudTest(ShellCase):
                 "Conf items are missing that must be provided to run these tests:  {}".format(
                     ", ".join(missing_conf_item)
                 )
-                + "\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                + "\nCheck tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                     self.PROVIDER
                 )
             )

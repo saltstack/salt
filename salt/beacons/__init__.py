@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 This package contains the loader modules for the salt streams system
 """
-# Import Python libs
-from __future__ import absolute_import
 
 import copy
 import logging
 import re
 
-# Import Salt libs
 import salt.loader
 import salt.utils.event
 import salt.utils.minion
@@ -19,7 +15,7 @@ from salt.ext.six.moves import map
 log = logging.getLogger(__name__)
 
 
-class Beacon(object):
+class Beacon:
     """
     This class is used to evaluate and execute on the beacon system
     """
@@ -76,8 +72,9 @@ class Beacon(object):
                 beacon_name = current_beacon_config["beacon_module"]
             else:
                 beacon_name = mod
-            fun_str = "{0}.beacon".format(beacon_name)
-            validate_str = "{0}.validate".format(beacon_name)
+            b_config[mod].append({"_beacon_name": mod})
+            fun_str = "{}.beacon".format(beacon_name)
+            validate_str = "{}.validate".format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(
                     current_beacon_config, "run_once"
@@ -106,7 +103,7 @@ class Beacon(object):
                         if re.match("state.*", job["fun"]):
                             is_running = True
                     if is_running:
-                        close_str = "{0}.close".format(beacon_name)
+                        close_str = "{}.close".format(beacon_name)
                         if close_str in self.beacons:
                             log.info("Closing beacon %s. State run in progress.", mod)
                             self.beacons[close_str](b_config[mod])
@@ -132,7 +129,7 @@ class Beacon(object):
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
-                    tag = "salt/beacon/{0}/{1}/".format(self.opts["id"], mod)
+                    tag = "salt/beacon/{}/{}/".format(self.opts["id"], mod)
                     if "tag" in data:
                         tag += data.pop("tag")
                     if "id" not in data:
@@ -265,7 +262,7 @@ class Beacon(object):
         List the available beacons
         """
         _beacons = [
-            "{0}".format(_beacon.replace(".beacon", ""))
+            "{}".format(_beacon.replace(".beacon", ""))
             for _beacon in self.beacons
             if ".beacon" in _beacon
         ]
@@ -292,7 +289,7 @@ class Beacon(object):
             valid, vcomment = self.beacons[validate_str](beacon_data)
         else:
             vcomment = (
-                "Beacon {0} does not have a validate"
+                "Beacon {} does not have a validate"
                 " function, skipping validation.".format(name)
             )
             valid = True
@@ -316,15 +313,15 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot update beacon item {0}, "
+                "Cannot update beacon item {}, "
                 "because it is configured in pillar.".format(name)
             )
             complete = False
         else:
             if name in self.opts["beacons"]:
-                comment = "Updating settings for beacon " "item: {0}".format(name)
+                comment = "Updating settings for beacon " "item: {}".format(name)
             else:
-                comment = "Added new beacon item: {0}".format(name)
+                comment = "Added new beacon item: {}".format(name)
             complete = True
             self.opts["beacons"].update(data)
 
@@ -351,12 +348,12 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot modify beacon item {0}, "
+                "Cannot modify beacon item {}, "
                 "it is configured in pillar.".format(name)
             )
             complete = False
         else:
-            comment = "Updating settings for beacon " "item: {0}".format(name)
+            comment = "Updating settings for beacon " "item: {}".format(name)
             complete = True
             self.opts["beacons"].update(data)
 
@@ -379,16 +376,16 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot delete beacon item {0}, "
+                "Cannot delete beacon item {}, "
                 "it is configured in pillar.".format(name)
             )
             complete = False
         else:
             if name in self.opts["beacons"]:
                 del self.opts["beacons"][name]
-                comment = "Deleting beacon item: {0}".format(name)
+                comment = "Deleting beacon item: {}".format(name)
             else:
-                comment = "Beacon item {0} not found.".format(name)
+                comment = "Beacon item {} not found.".format(name)
             complete = True
 
         # Fire the complete event back along with updated list of beacons
@@ -443,13 +440,13 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot enable beacon item {0}, "
+                "Cannot enable beacon item {}, "
                 "it is configured in pillar.".format(name)
             )
             complete = False
         else:
             self._update_enabled(name, True)
-            comment = "Enabling beacon item {0}".format(name)
+            comment = "Enabling beacon item {}".format(name)
             complete = True
 
         # Fire the complete event back along with updated list of beacons
@@ -472,13 +469,13 @@ class Beacon(object):
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot disable beacon item {0}, "
+                "Cannot disable beacon item {}, "
                 "it is configured in pillar.".format(name)
             )
             complete = False
         else:
             self._update_enabled(name, False)
-            comment = "Disabling beacon item {0}".format(name)
+            comment = "Disabling beacon item {}".format(name)
             complete = True
 
         # Fire the complete event back along with updated list of beacons

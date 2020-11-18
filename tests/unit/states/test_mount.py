@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.mount as mount
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -49,15 +43,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         ret = {"name": name, "result": False, "comment": "", "changes": {}}
 
         mock = MagicMock(
-            side_effect=[
-                "new",
-                "present",
-                "new",
-                "change",
-                "bad config",
-                "salt",
-                "present",
-            ]
+            side_effect=["new", "present", "new", "change", "bad config", "salt"]
         )
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
@@ -100,7 +86,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(mount.mounted(name, device, fstype), ret)
 
                 with patch.dict(mount.__opts__, {"test": False}):
-                    comt = "Unable to unmount {0}: False.".format(name)
+                    comt = "Unable to unmount {}: False.".format(name)
                     umount = (
                         "Forced unmount and mount because" " options (noowners) changed"
                     )
@@ -145,9 +131,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(mount.__opts__, {"test": True}), patch(
                         "os.path.exists", MagicMock(return_value=False)
                     ):
-                        comt = "{0} does not exist and would not be created".format(
-                            name
-                        )
+                        comt = "{} does not exist and would not be created".format(name)
                         ret.update({"comment": comt, "changes": {}})
                         self.assertDictEqual(mount.mounted(name, device, fstype), ret)
 
@@ -184,7 +168,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         "os.path.exists", MagicMock(return_value=False)
                     ):
                         comt = (
-                            "{0} not present and not mounted. "
+                            "{} not present and not mounted. "
                             "Entry already exists in the fstab.".format(name)
                         )
                         ret.update({"comment": comt, "result": True})
@@ -193,7 +177,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                         comt = (
-                            "{0} not present and not mounted. "
+                            "{} not present and not mounted. "
                             "Added new entry to the fstab.".format(name)
                         )
                         ret.update(
@@ -208,7 +192,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                         comt = (
-                            "{0} not present and not mounted. "
+                            "{} not present and not mounted. "
                             "Updated the entry in the fstab.".format(name)
                         )
                         ret.update(
@@ -223,7 +207,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         )
 
                         comt = (
-                            "{0} not present and not mounted. "
+                            "{} not present and not mounted. "
                             "However, the fstab was not found.".format(name)
                         )
                         ret.update({"comment": comt, "result": False, "changes": {}})
@@ -231,7 +215,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                             mount.mounted(name, device, fstype, mount=False), ret
                         )
 
-                        comt = "{0} not present and not mounted".format(name)
+                        comt = "{} not present and not mounted".format(name)
                         ret.update({"comment": comt, "result": True, "changes": {}})
                         self.assertDictEqual(
                             mount.mounted(name, device, fstype, mount=False), ret
@@ -239,6 +223,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test no change for uid provided as a name #25293
         with patch.dict(mount.__grains__, {"os": "CentOS"}):
+            set_fstab_mock = MagicMock(autospec=True, return_value="present")
             with patch.dict(
                 mount.__salt__,
                 {
@@ -247,7 +232,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     "mount.umount": mock_f,
                     "mount.read_mount_cache": mock_read_cache,
                     "mount.write_mount_cache": mock_write_cache,
-                    "mount.set_fstab": mock,
+                    "mount.set_fstab": set_fstab_mock,
                     "user.info": mock_user,
                     "group.info": mock_group,
                 },
@@ -265,6 +250,18 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                 opts=["uid=user1", "gid=group1"],
                             ),
                             ret,
+                        )
+                        # Test to check the options order #57520
+                        set_fstab_mock.assert_called_with(
+                            name2,
+                            "//SERVER/SHARE/",
+                            "cifs",
+                            ["gid=group1", "uid=user1"],
+                            0,
+                            0,
+                            "/etc/fstab",
+                            test=True,
+                            match_on="auto",
                         )
 
         with patch.dict(mount.__grains__, {"os": "AIX"}):
@@ -326,14 +323,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
                     comt = (
-                        "Swap {0} is set to be added to the "
+                        "Swap {} is set to be added to the "
                         "fstab and to be activated".format(name)
                     )
                     ret.update({"comment": comt})
                     self.assertDictEqual(mount.swap(name), ret)
 
                 with patch.dict(mount.__opts__, {"test": False}):
-                    comt = "Swap {0} already active".format(name)
+                    comt = "Swap {} already active".format(name)
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(mount.swap(name, persist=False), ret)
 
@@ -341,7 +338,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         mount.__salt__,
                         {"mount.fstab": mock_emt, "mount.set_fstab": mock},
                     ):
-                        comt = "Swap {0} already active".format(name)
+                        comt = "Swap {} already active".format(name)
                         ret.update({"comment": comt, "result": True})
                         self.assertDictEqual(mount.swap(name), ret)
 
@@ -392,12 +389,12 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
-                    comt = "Swap {0} already active".format(name)
+                    comt = "Swap {} already active".format(name)
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(mount.swap(name), ret)
 
                 with patch.dict(mount.__opts__, {"test": False}):
-                    comt = "Swap {0} already active".format(name)
+                    comt = "Swap {} already active".format(name)
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(mount.swap(name), ret)
 
@@ -405,7 +402,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         mount.__salt__,
                         {"mount.fstab": mock_emt, "mount.set_fstab": mock},
                     ):
-                        comt = "Swap {0} already active".format(name)
+                        comt = "Swap {} already active".format(name)
                         ret.update({"comment": comt, "result": True})
                         self.assertDictEqual(mount.swap(name), ret)
 
@@ -452,13 +449,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
-                    comt = "Swap {0} already active".format(name)
+                    comt = "Swap {} already active".format(name)
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(mount.swap(name), ret)
 
                 with patch.dict(mount.__opts__, {"test": False}):
                     comt = (
-                        "Swap {0} already active. swap not present"
+                        "Swap {} already active. swap not present"
                         " in /etc/filesystems on AIX.".format(name)
                     )
                     ret.update({"comment": comt, "result": False})
@@ -469,7 +466,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         {"mount.filesystems": mock_emt, "mount.set_filesystems": mock},
                     ):
                         comt = (
-                            "Swap {0} already active. swap not present"
+                            "Swap {} already active. swap not present"
                             " in /etc/filesystems on AIX.".format(name)
                         )
                         ret.update({"comment": comt, "result": False})
@@ -515,15 +512,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
-                    comt = "Mount point {0} is mounted but should not " "be".format(
-                        name
-                    )
+                    comt = "Mount point {} is mounted but should not " "be".format(name)
                     ret.update({"comment": comt})
                     self.assertDictEqual(mount.unmounted(name, device), ret)
 
                     comt = (
                         "Target was already unmounted. "
-                        "fstab entry for device {0} not found".format(device)
+                        "fstab entry for device {} not found".format(device)
                     )
                     ret.update({"comment": comt, "result": True})
                     self.assertDictEqual(
@@ -564,7 +559,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                     with patch.dict(mount.__salt__, {"mount.filesystems": mock_dev}):
-                        comt = "Mount point {0} is mounted but should not " "be".format(
+                        comt = "Mount point {} is mounted but should not " "be".format(
                             name3
                         )
                         ret.update({"comment": comt, "result": None, "name": name3})
@@ -820,7 +815,10 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             "name": "/dev/sda1",
             "result": None,
             "changes": {},
-            "comment": ["/home entry will be written in /etc/fstab."],
+            "comment": [
+                "/home entry will be written in /etc/fstab.",
+                "Will mount /dev/sda1 on /home",
+            ],
         }
 
         grains_mock = {"os": "Linux"}
@@ -999,6 +997,42 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             "name": "/dev/sda1",
             "result": True,
             "changes": {"persist": "new"},
+            "comment": [
+                "/home entry added in /etc/fstab.",
+                "Mounted /dev/sda1 on /home",
+            ],
+        }
+
+        grains_mock = {"os": "Linux"}
+        opts_mock = {"test": False}
+        set_fstab_mock = {"mount.set_fstab": MagicMock(return_value="new")}
+        mount_mock = {"mount.mount": MagicMock(return_value=True)}
+        with patch.dict(mount.__grains__, grains_mock), patch.dict(
+            mount.__opts__, opts_mock
+        ), patch.dict(mount.__salt__, mount_mock), patch.dict(
+            mount.__salt__, set_fstab_mock
+        ):
+            assert mount.fstab_present("/dev/sda1", "/home", "ext2") == ret
+            set_fstab_mock["mount.set_fstab"].assert_called_with(
+                name="/home",
+                device="/dev/sda1",
+                fstype="ext2",
+                opts="defaults",
+                dump=0,
+                pass_num=0,
+                config="/etc/fstab",
+                match_on="auto",
+                not_change=False,
+            )
+
+    def test_fstab_present_new_no_mount(self):
+        """
+        Test fstab_present with mount=false option
+        """
+        ret = {
+            "name": "/dev/sda1",
+            "result": True,
+            "changes": {"persist": "new"},
             "comment": ["/home entry added in /etc/fstab."],
         }
 
@@ -1008,7 +1042,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mount.__grains__, grains_mock), patch.dict(
             mount.__opts__, opts_mock
         ), patch.dict(mount.__salt__, salt_mock):
-            assert mount.fstab_present("/dev/sda1", "/home", "ext2") == ret
+            assert mount.fstab_present("/dev/sda1", "/home", "ext2", mount=False) == ret
             salt_mock["mount.set_fstab"].assert_called_with(
                 name="/home",
                 device="/dev/sda1",

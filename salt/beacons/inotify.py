@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Watch files and translate the changes into salt events
 
@@ -14,8 +13,6 @@ Watch files and translate the changes into salt events
        kernel support.
 
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import collections
 import fnmatch
@@ -23,15 +20,14 @@ import logging
 import os
 import re
 
-# Import salt libs
 import salt.ext.six
+import salt.utils.beacons
 
 # pylint: disable=import-error
 from salt.ext.six.moves import map
 
 # pylint: enable=import-error
 
-# Import third party libs
 try:
     import pyinotify
 
@@ -75,17 +71,19 @@ def _get_notifier(config):
     """
     Check the context for the notifier and construct it if not present
     """
-    if "inotify.notifier" not in __context__:
+    beacon_name = config.get("_beacon_name", "inotify")
+    notifier = "{}.notifier".format(beacon_name)
+    if notifier not in __context__:
         __context__["inotify.queue"] = collections.deque()
         wm = pyinotify.WatchManager()
-        __context__["inotify.notifier"] = pyinotify.Notifier(wm, _enqueue)
+        __context__[notifier] = pyinotify.Notifier(wm, _enqueue)
         if (
             "coalesce" in config
             and isinstance(config["coalesce"], bool)
             and config["coalesce"]
         ):
-            __context__["inotify.notifier"].coalesce_events()
-    return __context__["inotify.notifier"]
+            __context__[notifier].coalesce_events()
+    return __context__[notifier]
 
 
 def validate(config):
@@ -190,7 +188,7 @@ def validate(config):
                                     False,
                                     (
                                         "Configuration for inotify beacon "
-                                        "invalid mask option {0}.".format(mask)
+                                        "invalid mask option {}.".format(mask)
                                     ),
                                 )
     return True, "Valid beacon configuration"
@@ -261,6 +259,10 @@ def beacon(config):
       affects all paths that are being watched. This is due to this option
       being at the Notifier level in pyinotify.
     """
+
+    whitelist = ["_beacon_name"]
+    config = salt.utils.beacons.remove_hidden_options(config, whitelist)
+
     _config = {}
     list(map(_config.update, config))
 
@@ -284,7 +286,7 @@ def beacon(config):
                     break
                 path = os.path.dirname(path)
 
-            excludes = _config["files"][path].get("exclude", "")
+            excludes = _config["files"].get(path, {}).get("exclude", "")
 
             if excludes and isinstance(excludes, list):
                 for exclude in excludes:
@@ -371,6 +373,8 @@ def beacon(config):
 
 
 def close(config):
-    if "inotify.notifier" in __context__:
-        __context__["inotify.notifier"].stop()
-        del __context__["inotify.notifier"]
+    beacon_name = config.get("_beacon_name", "inotify")
+    notifier = "{}.notifier".format(beacon_name)
+    if notifier in __context__:
+        __context__[notifier].stop()
+        del __context__[notifier]

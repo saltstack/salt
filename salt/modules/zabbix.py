@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Zabbix
 
@@ -23,7 +22,6 @@ Support for Zabbix
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import logging
@@ -35,9 +33,6 @@ import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import SaltException
-
-# Import Salt libs
-from salt.ext import six
 
 # pylint: disable=import-error,no-name-in-module,unused-import
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
@@ -134,7 +129,7 @@ def _frontend_url():
             response = salt.utils.http.query(frontend_url)
             error = response["error"]
         except HTTPError as http_e:
-            error = six.text_type(http_e)
+            error = str(http_e)
         if error.find("412: Precondition Failed"):
             return frontend_url
         else:
@@ -172,9 +167,7 @@ def _query(method, params, url, auth=None):
 
     data = salt.utils.json.dumps(data)
 
-    log.info(
-        "_QUERY input:\nurl: %s\ndata: %s", six.text_type(url), six.text_type(data)
-    )
+    log.info("_QUERY input:\nurl: %s\ndata: %s", str(url), str(data))
 
     try:
         result = salt.utils.http.query(
@@ -187,12 +180,10 @@ def _query(method, params, url, auth=None):
             status=True,
             headers=True,
         )
-        log.info("_QUERY result: %s", six.text_type(result))
+        log.info("_QUERY result: %s", str(result))
         if "error" in result:
             raise SaltException(
-                "Zabbix API: Status: {0} ({1})".format(
-                    result["status"], result["error"]
-                )
+                "Zabbix API: Status: {} ({})".format(result["status"], result["error"])
             )
         ret = result.get("dict", {})
         if "error" in ret:
@@ -206,7 +197,7 @@ def _query(method, params, url, auth=None):
         raise SaltException(
             "URL or HTTP headers are probably not correct! ({})".format(err)
         )
-    except socket.error as err:
+    except OSError as err:
         raise SaltException("Check hostname in URL! ({})".format(err))
 
 
@@ -246,7 +237,7 @@ def _login(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("zabbix.{0}".format(name), None)
+            val = __salt__["config.option"]("zabbix.{}".format(name), None)
             if val is not None:
                 connargs[key] = val
 
@@ -355,7 +346,7 @@ def substitute_params(input_object, extend_params=None, filter_key="name", **kwa
             except KeyError:
                 raise SaltException(
                     "Qyerying object ID requested "
-                    "but object name not provided: {0}".format(input_object)
+                    "but object name not provided: {}".format(input_object)
                 )
         else:
             return {
@@ -364,7 +355,7 @@ def substitute_params(input_object, extend_params=None, filter_key="name", **kwa
             }
     else:
         # Zabbix response is always str, return everything in str as well
-        return six.text_type(input_object)
+        return str(input_object)
 
 
 # pylint: disable=too-many-return-statements,too-many-nested-blocks
@@ -383,18 +374,18 @@ def compare_params(defined, existing, return_old_value=False):
     # Comparison of data types
     if not isinstance(defined, type(existing)):
         raise SaltException(
-            "Zabbix object comparison failed (data type mismatch). Expecting {0}, got {1}. "
-            'Existing value: "{2}", defined value: "{3}").'.format(
+            "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
+            'Existing value: "{}", defined value: "{}").'.format(
                 type(existing), type(defined), existing, defined
             )
         )
 
     # Comparison of values
     if not salt.utils.data.is_iter(defined):
-        if six.text_type(defined) != six.text_type(existing) and return_old_value:
-            return {"new": six.text_type(defined), "old": six.text_type(existing)}
-        elif six.text_type(defined) != six.text_type(existing) and not return_old_value:
-            return six.text_type(defined)
+        if str(defined) != str(existing) and return_old_value:
+            return {"new": str(defined), "old": str(existing)}
+        elif str(defined) != str(existing) and not return_old_value:
+            return str(defined)
 
     # Comparison of lists of values or lists of dicts
     if isinstance(defined, list):
@@ -441,8 +432,8 @@ def compare_params(defined, existing, return_old_value=False):
 
         except TypeError:
             raise SaltException(
-                "Zabbix object comparison failed (data type mismatch). Expecting {0}, got {1}. "
-                'Existing value: "{2}", defined value: "{3}").'.format(
+                "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
+                'Existing value: "{}", defined value: "{}").'.format(
                     type(existing), type(defined), existing, defined
                 )
             )
@@ -466,12 +457,12 @@ def get_object_id_by_params(obj, params=None, **connection_args):
         params = {}
     res = run_query(obj + ".get", params, **connection_args)
     if res and len(res) == 1:
-        return six.text_type(res[0][ZABBIX_ID_MAPPER[obj]])
+        return str(res[0][ZABBIX_ID_MAPPER[obj]])
     else:
         raise SaltException(
             "Zabbix API: Object does not exist or bad Zabbix user permissions or other unexpected "
-            "result. Called method {0} with params {1}. "
-            "Result: {2}".format(obj + ".get", params, res)
+            "result. Called method {} with params {}. "
+            "Result: {}".format(obj + ".get", params, res)
         )
 
 
@@ -2023,7 +2014,7 @@ def usermacro_get(
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro))) + "}"
+                    macro = "{" + str(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["filter"].setdefault("macro", macro)
@@ -2075,7 +2066,7 @@ def usermacro_create(macro, value, hostid, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro))) + "}"
+                    macro = "{" + str(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro
@@ -2117,7 +2108,7 @@ def usermacro_createglobal(macro, value, **connection_args):
             if macro:
                 # Python mistakenly interprets macro names starting and ending with '{' and '}' as a dict
                 if isinstance(macro, dict):
-                    macro = "{" + six.text_type(next(iter(macro))) + "}"
+                    macro = "{" + str(next(iter(macro))) + "}"
                 if not macro.startswith("{") and not macro.endswith("}"):
                     macro = "{" + macro + "}"
                 params["macro"] = macro
@@ -2298,13 +2289,18 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         salt '*' zabbix.mediatype_get mediatypeids="['1', '2', '3']"
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = "mediatype.get"
             params = {"output": "extend", "filter": {}}
             if name:
-                params["filter"].setdefault("description", name)
+                # since zabbix API 4.4, mediatype has new attribute: name
+                if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
+                    params["filter"].setdefault("name", name)
+                else:
+                    params["filter"].setdefault("description", name)
             if mediatypeids:
                 params.setdefault("mediatypeids", mediatypeids)
             params = _params_extend(params, **connection_args)
@@ -2349,13 +2345,20 @@ def mediatype_create(name, mediatype, **connection_args):
         smtp_server='mailserver.example.com' smtp_helo='zabbix.example.com'
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
     try:
         if conn_args:
             method = "mediatype.create"
-            params = {"description": name}
+            # since zabbix 4.4 api, mediatype has new attribute: name
+            if _LooseVersion(zabbix_version) >= _LooseVersion("4.4"):
+                params = {"name": name}
+                _ignore_name = False
+            else:
+                params = {"description": name}
+                _ignore_name = True
             params["type"] = mediatype
-            params = _params_extend(params, _ignore_name=True, **connection_args)
+            params = _params_extend(params, _ignore_name, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["mediatypeid"]
         else:
@@ -2638,7 +2641,7 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
         salt.utils.files.safe_rm(cfile)
 
     params = {"format": file_format, "rules": new_rules, "source": xml}
-    log.info("CONFIGURATION IMPORT: rules: %s", six.text_type(params["rules"]))
+    log.info("CONFIGURATION IMPORT: rules: %s", str(params["rules"]))
     try:
         run_query("configuration.import", params, **connection_args)
         return {
@@ -2648,4 +2651,4 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
             "called successfully.",
         }
     except SaltException as exc:
-        return {"name": config_file, "result": False, "message": six.text_type(exc)}
+        return {"name": config_file, "result": False, "message": str(exc)}

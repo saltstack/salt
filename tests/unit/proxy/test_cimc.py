@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
-
 import logging
 
 import salt.exceptions
 import salt.proxy.cimc as cimc
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -15,13 +11,7 @@ log = logging.getLogger(__name__)
 
 class CIMCProxyTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        return {
-            cimc: {
-                "__virtual__": MagicMock(return_value="cimc"),
-                "DETAILS": {},
-                "__pillar__": {},
-            }
-        }
+        return {cimc: {"DETAILS": {}, "__pillar__": {}}}
 
     def setUp(self):
         self.opts = {"proxy": {"username": "xxxx", "password": "xxx", "host": "cimc"}}
