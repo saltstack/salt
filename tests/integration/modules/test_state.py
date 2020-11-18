@@ -2541,3 +2541,18 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         assert isinstance(result, dict), result
         result = result[next(iter(result))]
         assert result["result"], result
+
+    @slowTest
+    def test_parallel_state_with_requires(self):
+        """
+        This is a test case for https://github.com/saltstack/salt/issues/49273
+        Parallel state object has any requisites
+        """
+        start_time = time.time()
+        result = self.run_function("state.sls", mods="issue-49273")
+        end_time = time.time()
+
+        # We're running 3 states that sleep for 10 seconds each
+        # they'll run in parallel so we should be below 30 seconds
+        # confirm that the total runtime is below 30s
+        self.assertTrue((time.time() - start_time) < 30)
