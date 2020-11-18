@@ -30,6 +30,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
+import logging
 
 import salt.modules.chroot as chroot
 import salt.utils.platform
@@ -157,7 +158,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                     "--out",
                     "json",
                     "-l",
-                    "quiet",
+                    "info",
                     "--",
                     "test.ping",
                 ],
@@ -204,7 +205,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                     "--out",
                     "json",
                     "-l",
-                    "quiet",
+                    "info",
                     "--",
                     "test.ping",
                 ],
@@ -253,7 +254,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                     "--out",
                     "json",
                     "-l",
-                    "quiet",
+                    "info",
                     "--",
                     "module.function",
                     "key=value",
@@ -314,3 +315,63 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(chroot.__opts__, opts_mock):
             self.assertEqual(chroot.highstate("/chroot"), "result")
             _create_and_execute_salt_state.assert_called_once()
+
+    def test_relog_plain(self):
+        """
+        Tests that relog emits logs at error level if passed a plain string
+        """
+
+        with self.assertLogs(level=logging.DEBUG) as cm:
+            chroot.relog("test message\nanother line")
+        self.assertEqual(cm.output, [
+            'ERROR:salt.modules.chroot:(chroot) test message',
+            'ERROR:salt.modules.chroot:(chroot) another line'
+        ])
+
+    def test_relog_formatted(self):
+        """
+        Tests that relog emits logs at error level if passed a plain string
+        """
+
+        with self.assertLogs(level=logging.DEBUG) as cm:
+            chroot.relog("""
+[ERROR] An example error message
+[WARN] An example warning message
+[INFO] An example info message
+[DEBUG] An example debug message""")
+        self.assertEqual(cm.output, [
+            'ERROR:salt.modules.chroot:(chroot) An example error message',
+            'WARNING:salt.modules.chroot:(chroot) An example warning message',
+            'INFO:salt.modules.chroot:(chroot) An example info message',
+            'DEBUG:salt.modules.chroot:(chroot) An example debug message'
+        ])
+
+    @patch("salt.modules.chroot.exist")
+    @patch("tempfile.mkdtemp")
+    def test_call_fails_emits_log(self, mkdtemp, exist):
+        """
+        Test execution of Salt functions in chroot. Checks that failures emit
+        stderr to logging
+        """
+        # Fail the inner command
+        exist.return_value = True
+        mkdtemp.return_value = "/chroot/tmp01"
+        utils_mock = {
+            "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
+            "files.rm_rf": MagicMock(),
+            "json.find_json": MagicMock(return_value={"return": {}}),
+        }
+        salt_mock = {
+            "cmd.run": MagicMock(return_value=""),
+            "config.option": MagicMock(),
+            "cmd.run_chroot": MagicMock(return_value={"retcode": 1, "stderr": "[ERROR] This went wrong"}),
+        }
+        with patch.dict(chroot.__utils__, utils_mock), patch.dict(
+            chroot.__salt__, salt_mock
+        ):
+            with self.assertLogs(level=logging.DEBUG) as cm:
+                self.assertEqual(
+                    chroot.call("/chroot", "test.ping"),
+                    {"result": False, "comment": "Can't parse container command output"},
+                )
+            self.assertEqual(cm.output, ["ERROR:salt.modules.chroot:(chroot) This went wrong"])

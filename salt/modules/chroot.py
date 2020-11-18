@@ -85,10 +85,20 @@ def relog(message):
     stderr from `cmd.run_chroot` and logs it.
     """
     for logline in message.split('\n'):
-        match = re.search('\[([A-Z]+)\s*\]\s(.*)', logline)
-        level = match.group(1)
-        message = match.group(2)
-        log.log(logging._nameToLevel[level], "(chroot) %s"%message)
+        # Skip blank lines
+        if logline == "":
+            continue
+
+        # If the logline is in the format [<LOGLEVEL>] message,
+        # Extract the loglevel to relog at the same level.
+        # Otherwise, log the whole line at ERROR.
+        try:
+            match = re.search('\[([A-Z]+)\s*\]\s(.*)', logline)
+            level = match.group(1)
+            message = match.group(2)
+            log.log(logging._nameToLevel[level], "(chroot) %s"%message)
+        except AttributeError:
+            log.error("(chroot) %s"%logline)
 
 
 
@@ -165,7 +175,10 @@ def call(root, function, *args, **kwargs):
         )
         ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
 
-        relog(ret["stderr"])
+        # Log anything from stderr
+        if "stderr" in ret:
+            relog(ret["stderr"])
+
         # Process "real" result in stdout
         try:
             data = __utils__["json.find_json"](ret["stdout"])
