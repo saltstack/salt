@@ -3063,17 +3063,15 @@ def update(
     def _set_nvram(node, value):
         node.set("template", value)
 
-    def _set_with_byte_unit(node, value):
-        node.text = str(value)
-        node.set("unit", "bytes")
+    def _set_with_byte_unit(attr_name=None):
+        def _setter(node, value):
+            if attr_name:
+                node.set(attr_name, str(value))
+            else:
+                node.text = str(value)
+            node.set("unit", "bytes")
 
-    def _set_mem_with_byte_unit(node, value):
-        node.set("memory", str(value))
-        node.set("unit", "bytes")
-
-    def _set_size_with_byte_unit(node, value):
-        node.set("size", str(value))
-        node.set("unit", "bytes")
+        return _setter
 
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
@@ -3088,6 +3086,24 @@ def update(
 
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
 
+    def _almost_equal(current, new):
+        if current is None or new is None:
+            return False
+        return abs(current - new) / current < 1e-03
+
+    def _memory_parameter(path, xpath, attr_name=None, ignored=None):
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit(attr_name),
+            "equals": _almost_equal,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
+
     # Update the kernel boot parameters
     params_mapping = [
         {"path": "boot:kernel", "xpath": "os/kernel"},
@@ -3096,41 +3112,11 @@ def update(
         {"path": "boot:loader", "xpath": "os/loader", "set": _set_loader},
         {"path": "boot:nvram", "xpath": "os/nvram", "set": _set_nvram},
         # Update the memory, note that libvirt outputs all memory sizes in KiB
-        {
-            "path": "mem",
-            "xpath": "memory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem",
-            "xpath": "currentMemory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:max",
-            "convert": _handle_unit,
-            "xpath": "maxMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:boot",
-            "convert": _handle_unit,
-            "xpath": "memory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:current",
-            "convert": _handle_unit,
-            "xpath": "currentMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
+        _memory_parameter("mem", "memory"),
+        _memory_parameter("mem", "currentMemory"),
+        _memory_parameter("mem:max", "maxMemory"),
+        _memory_parameter("mem:boot", "memory"),
+        _memory_parameter("mem:current", "currentMemory"),
         {
             "path": "mem:slots",
             "xpath": "maxMemory",
@@ -3138,34 +3124,10 @@ def update(
             "set": lambda n, v: n.set("slots", str(v)),
             "del": salt.utils.xmlutil.del_attribute("slots", ["unit"]),
         },
-        {
-            "path": "mem:hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:soft_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/soft_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:swap_hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/swap_hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:min_guarantee",
-            "convert": _handle_unit,
-            "xpath": "memtune/min_guarantee",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
+        _memory_parameter("mem:hard_limit", "memtune/hard_limit"),
+        _memory_parameter("mem:soft_limit", "memtune/soft_limit"),
+        _memory_parameter("mem:swap_hard_limit", "memtune/swap_hard_limit"),
+        _memory_parameter("mem:min_guarantee", "memtune/min_guarantee"),
         {
             "path": "boot_dev:{dev}",
             "xpath": "os/boot[$dev]",
@@ -3173,14 +3135,12 @@ def update(
             "set": lambda n, v: n.set("dev", v),
             "del": salt.utils.xmlutil.del_attribute("dev"),
         },
-        {
-            "path": "mem:hugepages:{id}:size",
-            "convert": _handle_unit,
-            "xpath": "memoryBacking/hugepages/page[$id]",
-            "get": _get_with_unit,
-            "set": _set_size_with_byte_unit,
-            "del": salt.utils.xmlutil.del_attribute("size", ["unit", "nodeset"]),
-        },
+        _memory_parameter(
+            "mem:hugepages:{id}:size",
+            "memoryBacking/hugepages/page[$id]",
+            "size",
+            ["unit", "nodeset"],
+        ),
         {
             "path": "mem:hugepages:{id}:nodeset",
             "xpath": "memoryBacking/hugepages/page[$id]",
@@ -3360,14 +3320,9 @@ def update(
             "set": lambda n, v: n.set("cpus", str(v)),
             "del": salt.utils.xmlutil.del_attribute("cpus", ["id"]),
         },
-        {
-            "path": "cpu:numa:{id}:memory",
-            "xpath": "cpu/numa/cell[@id='$id']",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_mem_with_byte_unit,
-            "del": salt.utils.xmlutil.del_attribute("memory", ["id"]),
-        },
+        _memory_parameter(
+            "cpu:numa:{id}:memory", "cpu/numa/cell[@id='$id']", "memory", ["id"]
+        ),
         {
             "path": "cpu:numa:{id}:discard",
             "xpath": "cpu/numa/cell[@id='$id']",
@@ -3633,7 +3588,7 @@ def update(
                 elif isinstance(mem, int):
                     new_mem = int(mem * 1024)
 
-                if old_mem != new_mem and new_mem is not None:
+                if not _almost_equal(old_mem, new_mem) and new_mem is not None:
                     commands.append(
                         {
                             "device": "mem",
