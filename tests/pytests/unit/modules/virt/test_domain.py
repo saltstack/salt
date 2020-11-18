@@ -254,3 +254,25 @@ def test_get_disk_convert_volumes(make_mock_vm, make_mock_storage_pool):
                 "virtual size": 214748364800,
             },
         } == virt.get_disks("srv01")
+
+
+def test_update_approx_mem(make_mock_vm):
+    """
+    test virt.update with memory parameter unchanged thought not exactly equals to the current value.
+    This may happen since libvirt sometimes rounds the memory value.
+    """
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>3177680</memory>
+          <currentMemory unit='KiB'>3177680</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>hvm</type>
+          </os>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+
+    ret = virt.update("my_vm", mem={"boot": "3253941043B", "current": "3253941043B"})
+    assert not ret["definition"]
