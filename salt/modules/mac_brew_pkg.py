@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Homebrew for macOS
 
@@ -8,15 +7,12 @@ Homebrew for macOS
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import copy
 import functools
 import logging
 import re
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.functools
 import salt.utils.json
@@ -24,9 +20,6 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import third party libs
-from salt.ext import six
 from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
@@ -68,7 +61,7 @@ def _pin(pkg, runas=None):
     """
     Pin pkg
     """
-    cmd = "pin {0}".format(pkg)
+    cmd = "pin {}".format(pkg)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -82,7 +75,7 @@ def _unpin(pkg, runas=None):
     """
     Pin pkg
     """
-    cmd = "unpin {0}".format(pkg)
+    cmd = "unpin {}".format(pkg)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -100,7 +93,7 @@ def _tap(tap, runas=None):
     if tap in _list_taps():
         return True
 
-    cmd = "tap {0}".format(tap)
+    cmd = "tap {}".format(tap)
     try:
         _call_brew(cmd)
     except CommandExecutionError:
@@ -260,12 +253,10 @@ def latest_version(*names, **kwargs):
         # Perhaps this will need an option to pick devel by default
         return pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
 
-    versions_dict = dict(
-        (key, get_version(val)) for key, val in six.iteritems(_info(*names))
-    )
+    versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 
     if len(names) == 1:
-        return next(six.itervalues(versions_dict))
+        return next(iter(versions_dict.values()))
     else:
         return versions_dict
 
@@ -312,7 +303,7 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = "uninstall {0}".format(" ".join(targets))
+    cmd = "uninstall {}".format(" ".join(targets))
 
     out = _call_brew(cmd)
     if out["retcode"] != 0 and out["stderr"]:
@@ -368,7 +359,7 @@ def _info(*pkgs):
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    cmd = "info --json=v1 {0}".format(" ".join(pkgs))
+    cmd = "info --json=v1 {}".format(" ".join(pkgs))
     brew_result = _call_brew(cmd)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
@@ -463,9 +454,9 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             _tap(tap)
 
     if options:
-        cmd = "install {0} {1}".format(formulas, " ".join(options))
+        cmd = "install {} {}".format(formulas, " ".join(options))
     else:
-        cmd = "install {0}".format(formulas)
+        cmd = "install {}".format(formulas)
 
     out = _call_brew(cmd)
     if out["retcode"] != 0 and out["stderr"]:
@@ -505,7 +496,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     try:
         data = salt.utils.json.loads(res["stdout"])
     except ValueError as err:
-        msg = 'unable to interpret output from "brew outdated": {0}'.format(err)
+        msg = 'unable to interpret output from "brew outdated": {}'.format(err)
         log.error(msg)
         raise CommandExecutionError(msg)
 
@@ -593,48 +584,6 @@ def info_installed(*names, **kwargs):
     return _info(*names)
 
 
-def _fix_cask_namespace(name=None, pkgs=None):
-    """
-    Check if provided packages contains the old version of brew-cask namespace
-    and replace it by the new one.
-
-    This function also warns about the correct namespace for this packages
-    and it will stop working with the release of 3001.
-
-    :param name: The name of the package to check
-    :param pkgs: A list of packages to check
-
-    :return: name and pkgs with the mocked namespace
-    """
-
-    show_warning = False
-
-    if name and name.startswith("caskroom/cask/"):
-        show_warning = True
-        name = name.replace("caskroom/cask/", "homebrew/cask/")
-
-    if pkgs:
-        pkgs_ = []
-        for pkg in pkgs:
-            if isinstance(pkg, str) and pkg.startswith("caskroom/cask/"):
-                show_warning = True
-                pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
-                pkgs_.append(pkg)
-            else:
-                pkgs_.append(pkg)
-                continue
-        pkgs = pkgs_
-
-    if show_warning:
-        salt.utils.versions.warn_until(
-            "Sodium",
-            "The 'caskroom/cask/' namespace for brew-cask packages "
-            "is deprecated. Use 'homebrew/cask/' instead.",
-        )
-
-    return name, pkgs
-
-
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
     Set package in 'hold' state, meaning it will not be upgraded.
@@ -683,27 +632,25 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]["comment"] = "Package {0} does not have a state.".format(target)
+            ret[target]["comment"] = "Package {} does not have a state.".format(target)
         elif target not in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {0} is set to be held.".format(target)
+                ret[target]["comment"] = "Package {} is set to be held.".format(target)
             else:
                 result = _pin(target)
                 if result:
                     changes = {"old": "install", "new": "hold"}
                     ret[target].update(changes=changes, result=True)
-                    ret[target]["comment"] = "Package {0} is now being held.".format(
+                    ret[target]["comment"] = "Package {} is now being held.".format(
                         target
                     )
                 else:
                     ret[target].update(result=False)
-                    ret[target]["comment"] = "Unable to hold package {0}.".format(
-                        target
-                    )
+                    ret[target]["comment"] = "Unable to hold package {}.".format(target)
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {0} is already set to be held.".format(
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
                 target
             )
     return ret
@@ -761,11 +708,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         ret[target] = {"name": target, "changes": {}, "result": False, "comment": ""}
 
         if target not in installed:
-            ret[target]["comment"] = "Package {0} does not have a state.".format(target)
+            ret[target]["comment"] = "Package {} does not have a state.".format(target)
         elif target in pinned:
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {0} is set to be unheld.".format(
+                ret[target]["comment"] = "Package {} is set to be unheld.".format(
                     target
                 )
             else:
@@ -775,17 +722,17 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                     ret[target].update(changes=changes, result=True)
                     ret[target][
                         "comment"
-                    ] = "Package {0} is no longer being held.".format(target)
+                    ] = "Package {} is no longer being held.".format(target)
                 else:
                     ret[target].update(result=False)
-                    ret[target]["comment"] = "Unable to unhold package {0}.".format(
+                    ret[target]["comment"] = "Unable to unhold package {}.".format(
                         target
                     )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {0} is already set not to be held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 

@@ -15,15 +15,14 @@ Support for Opkg
     must be installed.
 
 """
-# Import python libs
 
 import copy
 import errno
 import logging
 import os
 import re
+from pathlib import Path
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -33,8 +32,7 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import 3rd-party libs
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
@@ -56,6 +54,14 @@ __virtualname__ = "pkg"
 NILRT_RESTARTCHECK_STATE_PATH = "/var/lib/salt/restartcheck_state"
 
 
+def _get_nisysapi_conf_d_path():
+    return "/usr/lib/{}/nisysapi/conf.d/experts/".format(
+        "arm-linux-gnueabi"
+        if "arm" in __grains__.get("cpuarch")
+        else "x86_64-linux-gnu"
+    )
+
+
 def _update_nilrt_restart_state():
     """
     NILRT systems determine whether to reboot after various package operations
@@ -67,20 +73,23 @@ def _update_nilrt_restart_state():
     and checksums to be used later by the restartcheck module.
 
     """
+    # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
+    uname = __salt__["cmd.run_stdout"]("uname -r")
     __salt__["cmd.shell"](
-        "stat -c %Y /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.timestamp".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "stat -c %Y /lib/modules/{}/modules.dep >{}/modules.dep.timestamp".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
     __salt__["cmd.shell"](
-        "md5sum /lib/modules/$(uname -r)/modules.dep >{}/modules.dep.md5sum".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "md5sum /lib/modules/{}/modules.dep >{}/modules.dep.md5sum".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
 
     # We can't assume nisysapi.ini always exists like modules.dep
     nisysapi_path = "/usr/local/natinst/share/nisysapi.ini"
     if os.path.exists(nisysapi_path):
+        # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
         __salt__["cmd.shell"](
             "stat -c %Y {} >{}/nisysapi.ini.timestamp".format(
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
@@ -91,6 +100,43 @@ def _update_nilrt_restart_state():
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
             )
         )
+
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = _get_nisysapi_conf_d_path()
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen(
+            "{}/sysapi.conf.d.count".format(NILRT_RESTARTCHECK_STATE_PATH), "w"
+        ) as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            _fingerprint_file(
+                filename=Path(nisysapi_conf_d_path, fexpert),
+                fingerprint_dir=Path(NILRT_RESTARTCHECK_STATE_PATH),
+            )
+
+
+def _fingerprint_file(*, filename, fingerprint_dir):
+    """
+    Compute stat & md5sum hash of provided ``filename``. Store
+    the hash and timestamp in ``fingerprint_dir``.
+
+    filename
+        ``Path`` to the file to stat & hash.
+
+    fingerprint_dir
+        ``Path`` of the directory to store the stat and hash output files.
+    """
+    __salt__["cmd.shell"](
+        "stat -c %Y {} > {}/{}.timestamp".format(
+            filename, fingerprint_dir, filename.name
+        )
+    )
+    __salt__["cmd.shell"](
+        "md5sum {} > {}/{}.md5sum".format(filename, fingerprint_dir, filename.name)
+    )
 
 
 def _get_restartcheck_result(errors):
@@ -1204,6 +1250,68 @@ def version_cmp(
     return None
 
 
+def _set_repo_option(repo, option):
+    """
+    Set the option to repo
+    """
+    if not option:
+        return
+    opt = option.split("=")
+    if len(opt) != 2:
+        return
+    if opt[0] == "trusted":
+        repo["trusted"] = opt[1] == "yes"
+    else:
+        repo[opt[0]] = opt[1]
+
+
+def _set_repo_options(repo, options):
+    """
+    Set the options to the repo.
+    """
+    delimiters = "[", "]"
+    pattern = "|".join(map(re.escape, delimiters))
+    for option in options:
+        splitted = re.split(pattern, option)
+        for opt in splitted:
+            _set_repo_option(repo, opt)
+
+
+def _create_repo(line, filename):
+    """
+    Create repo
+    """
+    repo = {}
+    if line.startswith("#"):
+        repo["enabled"] = False
+        line = line[1:]
+    else:
+        repo["enabled"] = True
+    cols = salt.utils.args.shlex_split(line.strip())
+    repo["compressed"] = not cols[0] in "src"
+    repo["name"] = cols[1]
+    repo["uri"] = cols[2]
+    repo["file"] = os.path.join(OPKG_CONFDIR, filename)
+    if len(cols) > 3:
+        _set_repo_options(repo, cols[3:])
+    return repo
+
+
+def _read_repos(conf_file, repos, filename, regex):
+    """
+    Read repos from configuration file
+    """
+    for line in conf_file:
+        line = salt.utils.stringutils.to_unicode(line)
+        if not regex.search(line):
+            continue
+        repo = _create_repo(line, filename)
+
+        # do not store duplicated uri's
+        if repo["uri"] not in repos:
+            repos[repo["uri"]] = [repo]
+
+
 def list_repos(**kwargs):  # pylint: disable=unused-argument
     """
     Lists all repos on ``/etc/opkg/*.conf``
@@ -1217,30 +1325,10 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     repos = {}
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
-        if filename.endswith(".conf"):
-            with salt.utils.files.fopen(
-                os.path.join(OPKG_CONFDIR, filename)
-            ) as conf_file:
-                for line in conf_file:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if regex.search(line):
-                        repo = {}
-                        if line.startswith("#"):
-                            repo["enabled"] = False
-                            line = line[1:]
-                        else:
-                            repo["enabled"] = True
-                        cols = salt.utils.args.shlex_split(line.strip())
-                        if cols[0] in "src":
-                            repo["compressed"] = False
-                        else:
-                            repo["compressed"] = True
-                        repo["name"] = cols[1]
-                        repo["uri"] = cols[2]
-                        repo["file"] = os.path.join(OPKG_CONFDIR, filename)
-                        # do not store duplicated uri's
-                        if repo["uri"] not in repos:
-                            repos[repo["uri"]] = [repo]
+        if not filename.endswith(".conf"):
+            continue
+        with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            _read_repos(conf_file, repos, filename, regex)
     return repos
 
 
@@ -1283,17 +1371,30 @@ def _del_repo_from_file(repo, filepath):
         fhandle.writelines(output)
 
 
-def _add_new_repo(repo, uri, compressed, enabled=True):
+def _set_trusted_option_if_needed(repostr, trusted):
+    """
+    Set trusted option to repo if needed
+    """
+    if trusted is True:
+        repostr += " [trusted=yes]"
+    elif trusted is False:
+        repostr += " [trusted=no]"
+    return repostr
+
+
+def _add_new_repo(repo, properties):
     """
     Add a new repo entry
     """
-    repostr = "# " if not enabled else ""
-    repostr += "src/gz " if compressed else "src "
+    repostr = "# " if not properties.get("enabled") else ""
+    repostr += "src/gz " if properties.get("compressed") else "src "
     if " " in repo:
         repostr += '"' + repo + '" '
     else:
         repostr += repo + " "
-    repostr += uri + "\n"
+    repostr += properties.get("uri")
+    repostr = _set_trusted_option_if_needed(repostr, properties.get("trusted"))
+    repostr += "\n"
     conffile = os.path.join(OPKG_CONFDIR, repo + ".conf")
 
     with salt.utils.files.fopen(conffile, "a") as fhandle:
@@ -1348,9 +1449,9 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 if source["file"] in deleted_from:
                     deleted_from[source["file"]] += 1
             for repo_file, count in deleted_from.items():
-                msg = "Repo '{0}' has been removed from {1}.\n"
+                msg = "Repo '{}' has been removed from {}.\n"
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = "File {1} containing repo '{0}' has been " "removed.\n"
+                    msg = "File {1} containing repo '{0}' has been removed.\n"
                     try:
                         os.remove(repo_file)
                     except OSError:
@@ -1412,6 +1513,12 @@ def mod_repo(repo, **kwargs):
             else:
                 repostr += " {}".format(repo_alias)
             repostr += " {}".format(kwargs["uri"] if "uri" in kwargs else source["uri"])
+            trusted = kwargs.get("trusted")
+            repostr = (
+                _set_trusted_option_if_needed(repostr, trusted)
+                if trusted is not None
+                else _set_trusted_option_if_needed(repostr, source.get("trusted"))
+            )
             _mod_repo_in_file(repo, repostr, source["file"])
         elif uri and source["uri"] == uri:
             raise CommandExecutionError(
@@ -1426,11 +1533,15 @@ def mod_repo(repo, **kwargs):
                     repo
                 )
             )
+        properties = {"uri": kwargs["uri"]}
         # If compressed is not defined, assume True
-        compressed = kwargs["compressed"] if "compressed" in kwargs else True
+        properties["compressed"] = (
+            kwargs["compressed"] if "compressed" in kwargs else True
+        )
         # If enabled is not defined, assume True
-        enabled = kwargs["enabled"] if "enabled" in kwargs else True
-        _add_new_repo(repo, kwargs["uri"], compressed, enabled)
+        properties["enabled"] = kwargs["enabled"] if "enabled" in kwargs else True
+        properties["trusted"] = kwargs.get("trusted")
+        _add_new_repo(repo, properties)
 
     if "refresh" in kwargs:
         refresh_db()

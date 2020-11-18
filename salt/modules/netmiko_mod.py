@@ -182,15 +182,12 @@ outside a ``netmiko`` Proxy, e.g.:
     the documentation notes for a proper setup.
 """
 
-# Import python stdlib
 import logging
 
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
 from salt.utils.args import clean_kwargs
 
-# Import third party libs
 try:
     from netmiko import ConnectHandler
     from netmiko import BaseConnection
@@ -229,7 +226,13 @@ def __virtual__():
             False,
             "The netmiko execution module requires netmiko library to be installed.",
         )
-    return __virtualname__
+    if salt.utils.platform.is_proxy() and __opts__["proxy"]["proxytype"] == "netmiko":
+        return __virtualname__
+    else:
+        return (
+            False,
+            "Not a proxy or a proxy of type netmiko.",
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -576,7 +579,7 @@ def send_config(
         if __proxy__["netmiko.conn"]().is_alive():
             conn = __proxy__["netmiko.conn"]()
         else:
-            conn, kwargs = _prepare_connection(**__proxy__["netmiko.args"]())
+            conn, _ = _prepare_connection(**__proxy__["netmiko.args"]())
     else:
         conn, kwargs = _prepare_connection(**kwargs)
     if commit:
