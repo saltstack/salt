@@ -8,7 +8,6 @@
 import collections
 import compileall
 import copy
-import gc
 import imp
 import inspect
 import logging
@@ -1245,12 +1244,14 @@ class LoaderMultipleGlobalTest(ModuleCase):
             copy.deepcopy(opts),
             pack={},
             tag="module",
+            loaded_base_name="salt.loader1",
         )
         self.loader2 = salt.loader.LazyLoader(
             salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
             copy.deepcopy(opts),
             pack={},
             tag="module",
+            loaded_base_name="salt.loader2",
         )
 
     def tearDown(self):
@@ -1284,65 +1285,11 @@ class LoaderCleanupTest(ModuleCase):
             copy.deepcopy(opts),
             pack={},
             tag="module",
+            loaded_base_name="salt.test",
         )
 
     def tearDown(self):
         del self.loader1
-
-    def test_loader_gc_cleanup(self):
-        loaded_base_name = self.loader1.loaded_base_name
-        for name in list(sys.modules):
-            if name.startswith(loaded_base_name):
-                break
-        else:
-            self.fail(
-                "Did not find any modules in sys.modules matching {!r}".format(
-                    loaded_base_name
-                )
-            )
-
-        # Assert that the weakref.finalizer is alive
-        assert self.loader1._gc_finalizer.alive is True
-
-        gc.collect()
-        # Even after a gc.collect call, we should still have our module in sys.modules
-        for name in list(sys.modules):
-            if name.startswith(loaded_base_name):
-                if sys.modules[name] is None:
-                    self.fail(
-                        "Found at least one module in sys.modules matching {!r} prematurely set to None".format(
-                            loaded_base_name
-                        )
-                    )
-                break
-        else:
-            self.fail(
-                "Did not find any modules in sys.modules matching {!r}".format(
-                    loaded_base_name
-                )
-            )
-        # Should still be true because there's still at least one reference to self.loader1
-        assert self.loader1._gc_finalizer.alive is True
-
-        # Now we remove our refence to loader and trigger GC, thus triggering the loader weakref finalizer
-        self.loader1 = None
-        gc.collect()
-
-        for name in list(sys.modules):
-            if name.startswith(loaded_base_name):
-                if sys.modules[name] is not None:
-                    self.fail(
-                        "Found a real module reference in sys.modules matching {!r}.".format(
-                            loaded_base_name,
-                        )
-                    )
-                break
-        else:
-            self.fail(
-                "Did not find any modules in sys.modules matching {!r}".format(
-                    loaded_base_name
-                )
-            )
 
     def test_loader_clean_modules(self):
         loaded_base_name = self.loader1.loaded_base_name
@@ -1356,9 +1303,6 @@ class LoaderCleanupTest(ModuleCase):
                     )
                 )
                 break
-
-        # Additionally, assert that the weakref.finalizer is now dead
-        assert self.loader1._gc_finalizer.alive is False
 
 
 class LoaderGlobalsTest(ModuleCase):
@@ -1609,17 +1553,9 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             os.fsync(fh.fileno())
 
     def _byte_compile(self):
-        if salt.loader.USE_IMPORTLIB:
-            # Skip this check as "optimize" is unique to PY3's compileall
-            # module, and this will be a false error when Pylint is run on
-            # Python 2.
-            # pylint: disable=unexpected-keyword-arg
-            compileall.compile_file(self.module_file, quiet=1, optimize=0)
-            compileall.compile_file(self.module_file, quiet=1, optimize=1)
-            compileall.compile_file(self.module_file, quiet=1, optimize=2)
-            # pylint: enable=unexpected-keyword-arg
-        else:
-            compileall.compile_file(self.module_file, quiet=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=0)
+        compileall.compile_file(self.module_file, quiet=1, optimize=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=2)
 
     def _test_optimization_order(self, order):
         self._write_module_file()
@@ -1633,10 +1569,6 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
-
-        if not salt.loader.USE_IMPORTLIB:
-            # We are only testing multiple optimization levels on Python 3.5+
-            return
 
         # Remove the file and make a new loader. We should now load the
         # byte-compiled file with an optimization level matching the 2nd
@@ -1662,13 +1594,10 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         """
         self._test_optimization_order([0, 1, 2])
         self._test_optimization_order([0, 2, 1])
-        if salt.loader.USE_IMPORTLIB:
-            # optimization_order only supported on Python 3.5+, earlier
-            # releases only support unoptimized .pyc files.
-            self._test_optimization_order([1, 2, 0])
-            self._test_optimization_order([1, 0, 2])
-            self._test_optimization_order([2, 0, 1])
-            self._test_optimization_order([2, 1, 0])
+        self._test_optimization_order([1, 2, 0])
+        self._test_optimization_order([1, 0, 2])
+        self._test_optimization_order([2, 0, 1])
+        self._test_optimization_order([2, 1, 0])
 
     def test_load_source_file(self):
         """

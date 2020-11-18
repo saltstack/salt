@@ -435,8 +435,6 @@ def get_service_instance(
             # and reconnect
             Disconnect(service_instance)
             service_instance = None
-        else:
-            return service_instance
 
     if not service_instance:
         service_instance = _get_service_instance(
