@@ -195,6 +195,7 @@ execution modules
     hosts
     http
     icinga2
+    idem
     ifttt
     ilo
     incron
@@ -427,6 +428,7 @@ execution modules
     serverdensity_device
     servicenow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm

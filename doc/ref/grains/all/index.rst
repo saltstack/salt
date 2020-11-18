@@ -21,6 +21,7 @@ grains modules
     fx2
     iscsi
     junos
+    lvm
     marathon
     mdadm
     mdata

@@ -82,13 +82,15 @@ Additional Installation Guides
     ../tutorials/standalone_minion
     ../tutorials/quickstart
 
+.. _installation-dependencies:
+
 Dependencies
 ------------
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
 * `Python`_ - Python2 >= 2.7, Python3 >= 3.4
-* `msgpack-python`_ - High-performance message interchange format
+* `msgpack`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
 * `MarkupSafe`_ - Implements a XML/HTML/XHTML Markup safe string for Python
@@ -154,7 +156,7 @@ Optional Dependencies
 .. _`Python`: https://www.python.org/downloads/
 .. _`ZeroMQ`: https://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.org/project/msgpack-python/
+.. _`msgpack`:  https://pypi.python.org/project/msgpack/
 .. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`YAML`: https://pyyaml.org/

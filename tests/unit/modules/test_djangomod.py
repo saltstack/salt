@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.djangomod as djangomod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -23,7 +17,9 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         patcher = patch("salt.utils.path.which", lambda exe: exe)
         patcher.start()
         self.addCleanup(patcher.stop)
-        return {djangomod: {"_get_django_admin": MagicMock(return_value=True)}}
+        return {
+            djangomod: {"_get_django_admin": MagicMock(return_value="django-admin.py")}
+        }
 
     # 'command' function tests: 1
 

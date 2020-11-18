@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 tests for user state
 user absent
@@ -7,7 +5,6 @@ user present
 user present with custom homedir
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import sys
@@ -59,7 +56,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     user_name = "salt-test"
     alt_group = "salt-test-altgroup"
     user_home = (
-        "/var/lib/{0}".format(user_name)
+        "/var/lib/{}".format(user_name)
         if not salt.utils.platform.is_windows()
         else os.path.join("tmp", user_name)
     )
@@ -211,7 +208,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(
         sys.getfilesystemencoding().startswith("ANSI"),
-        "A system encoding which supports Unicode characters must be set. Current setting is: {0}. Try setting $LANG='en_US.UTF-8'".format(
+        "A system encoding which supports Unicode characters must be set. Current setting is: {}. Try setting $LANG='en_US.UTF-8'".format(
             sys.getfilesystemencoding()
         ),
     )
@@ -272,7 +269,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         "windows minion does not support roomnumber or phone",
     )
     @slowTest
-    def test_user_present_gecos_none_fields(self):
+    def test_user_present_gecos_empty_fields(self):
         """
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
 
@@ -282,10 +279,10 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state(
             "user.present",
             name=self.user_name,
-            fullname=None,
-            roomnumber=None,
-            workphone=None,
-            homephone=None,
+            fullname="",
+            roomnumber="",
+            workphone="",
+            homephone="",
         )
         self.assertSaltTrueReturn(ret)
 
@@ -438,7 +435,7 @@ class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
             "user.present",
             name=USER,
             win_homedrive="U:",
-            win_profile="C:\\User\\{0}".format(USER),
+            win_profile="C:\\User\\{}".format(USER),
             win_logonscript="C:\\logon.vbs",
             win_description="Test User Account",
         )
@@ -447,14 +444,14 @@ class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
             "user.present",
             name=USER,
             win_homedrive="R:",
-            win_profile="C:\\Users\\{0}".format(USER),
+            win_profile="C:\\Users\\{}".format(USER),
             win_logonscript="C:\\Windows\\logon.vbs",
             win_description="Temporary Account",
         )
         self.assertSaltTrueReturn(ret)
         self.assertSaltStateChangesEqual(ret, "R:", keys=["homedrive"])
         self.assertSaltStateChangesEqual(
-            ret, "C:\\Users\\{0}".format(USER), keys=["profile"]
+            ret, "C:\\Users\\{}".format(USER), keys=["profile"]
         )
         self.assertSaltStateChangesEqual(
             ret, "C:\\Windows\\logon.vbs", keys=["logonscript"]
