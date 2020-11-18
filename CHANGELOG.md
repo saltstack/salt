@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3002.2 (2020-11-14)
+Salt 3002.2 (2020-11-16)
 ========================
 
 Fixed
@@ -29,6 +29,7 @@ Fixed
 - Do not generate grains for every job run on Windows minions. This makes Windows
   conform more to the way posix OSes work today. (#58904)
 - Fixes salt-ssh authentication when using tty (#58922)
+- Revert LazyLoader finalizer. Removed the weakref.finalizer code. On some occasions, the finalized would run when trying to load a new module, firing a race condition. (#58947)
 
 
 Salt 3002.1 (2020-10-26)
