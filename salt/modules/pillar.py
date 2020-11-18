@@ -299,7 +299,7 @@ def _obfuscate_inner(var):
         return "<{0}>".format(var.__class__.__name__)
 
 
-def obfuscate(*args):
+def obfuscate(*args, **kwargs):
     """
     .. versionadded:: 2015.8.0
 
@@ -326,7 +326,7 @@ def obfuscate(*args):
         salt '*' pillar.obfuscate
 
     """
-    return _obfuscate_inner(items(*args))
+    return _obfuscate_inner(items(*args, **kwargs))
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
