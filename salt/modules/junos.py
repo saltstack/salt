@@ -96,6 +96,7 @@ class HandleFileCopy:
     To figure out proper path either from proxy local file system
     or proxy cache or on master. If required, then only copy from
     master to proxy
+
     """
 
     def __init__(self, path, **kwargs):
@@ -699,7 +700,7 @@ def rollback(**kwargs):
         return ret
 
     if ret["out"]:
-        ret["message"] = "Rollback successfull"
+        ret["message"] = "Rollback successful"
     else:
         ret["message"] = "Rollback failed"
         return ret
@@ -737,7 +738,7 @@ def rollback(**kwargs):
             _restart_connection()
             return ret
     else:
-        ret["message"] = "Rollback succesfull but pre-commit check failed."
+        ret["message"] = "Rollback succesful but pre-commit check failed."
         ret["out"] = False
 
     return ret
@@ -1496,7 +1497,7 @@ def install_os(path=None, **kwargs):
 
 ## @timeoutDecorator
 @timeoutDecorator_cleankwargs
-def file_copy(src=None, dest=None):
+def file_copy(src, dest):
     """
     NOTE This function does not work on Juniper native minions
 
