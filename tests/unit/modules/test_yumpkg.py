@@ -1040,6 +1040,68 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 yumpkg.install("foo", version=new)
             assert exc_info.value.info == expected, exc_info.value.info
 
+    @skipIf(not salt.utils.platform.is_linux(), "Only run on Linux")
+    def test_install_normalize(self):
+        """
+        Tests that the normalize argument is working as expected
+        """
+        name = "gpfs.gplbin-4.18.0-193.28.1.el8_2.x86_64"
+        normalized_name = "gpfs.gplbin-4.18.0-193.28.1.el8_2"
+        version = "5.1.0-1"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+            }
+        )
+        cmd = MagicMock(return_value={"retcode": 0})
+        salt_mock = {
+            "cmd.run_all": cmd,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: version}, "repository")
+            ),
+        }
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock), patch.object(
+            yumpkg, "_yum", MagicMock(return_value="yum")
+        ):
+
+            # Check package name is normalized
+            yumpkg.install(pkgs=[
+                {'gpfs.gplbin-4.18.0-193.28.1.el8_2.x86_64': '5.1.0-1'},
+            ], normalize=True)
+            cmd.assert_called_with(
+                [
+                    "yum",
+                    "-y",
+                    "install",
+                    "{}-{}.x86_64".format(normalized_name, version)
+                ],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+                redirect_stderr=True,
+                ignore_retcode=False
+            )
+
+            # Check package name is not normalized
+            yumpkg.install(pkgs=[
+                {'gpfs.gplbin-4.18.0-193.28.1.el8_2.x86_64': '5.1.0-1'},
+            ], normalize=False)
+            cmd.assert_called_with(
+                [
+                    "yum",
+                    "-y",
+                    "install",
+                    "{}-{}.x86_64".format(name, version)
+                ],
+                env={},
+                output_loglevel="trace",
+                python_shell=False,
+                redirect_stderr=True,
+                ignore_retcode=False
+            )
+
     def test_upgrade_with_options(self):
         with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
             "salt.utils.systemd.has_scope", MagicMock(return_value=False)

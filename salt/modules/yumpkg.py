@@ -1555,7 +1555,8 @@ def install(
                 else:
                     if archpart in salt.utils.pkg.rpm.ARCHES:
                         arch = "." + archpart
-                        pkgname = namepart
+                        if normalize:
+                            pkgname = namepart
 
                 if "*" in version_num:
                     # Resolve wildcard matches
