@@ -173,11 +173,11 @@ def timeoutDecorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if "dev_timeout" in kwargs or "timeout" in kwargs:
-            dev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
-            kwargs["dev_timeout"] = dev_timeout
-            conn.timeout = dev_timeout
+            kwargs["dev_timeout"] = ldev_timeout
+            conn.timeout = ldev_timeout
             try:
                 result = function(*args, **kwargs)
                 conn.timeout = restore_timeout
@@ -195,11 +195,11 @@ def timeoutDecorator_cleankwargs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if "dev_timeout" in kwargs or "timeout" in kwargs:
-            dev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
-            kwargs["dev_timeout"] = dev_timeout
-            conn.timeout = dev_timeout
+            kwargs["dev_timeout"] = ldev_timeout
+            conn.timeout = ldev_timeout
             try:
                 restore_kwargs = False
                 del_list = []
@@ -738,7 +738,7 @@ def rollback(**kwargs):
             _restart_connection()
             return ret
     else:
-        ret["message"] = "Rollback succesful but pre-commit check failed."
+        ret["message"] = "Rollback successful but pre-commit check failed."
         ret["out"] = False
 
     return ret
