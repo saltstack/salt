@@ -339,11 +339,11 @@ def _get_yum_config():
             for name, value in yb.conf.items():
                 conf[name] = value
         except (AttributeError, yum.Errors.ConfigError) as exc:
-            raise CommandExecutionError("Could not query yum config: {}".format(exc))
+            raise CommandExecutionError("Could not query yum config: {}".format(exc)) from exc
         except yum.Errors.YumBaseError as yum_base_error:
             raise CommandExecutionError(
                 "Error accessing yum or rpmdb: {}".format(yum_base_error)
-            )
+            ) from yum_base_error
     else:
         # fall back to parsing the config ourselves
         # Look for the config the same order yum does
@@ -363,7 +363,7 @@ def _get_yum_config():
         try:
             cp.read(fn)
         except OSError as exc:
-            raise CommandExecutionError("Unable to read from {}: {}".format(fn, exc))
+            raise CommandExecutionError("Unable to read from {}: {}".format(fn, exc)) from exc
 
         if cp.has_section("main"):
             for opt in cp.options("main"):
@@ -1402,7 +1402,7 @@ def install(
             name, pkgs, sources, saltenv=saltenv, normalize=normalize, **kwargs
         )
     except MinionError as exc:
-        raise CommandExecutionError(exc)
+        raise CommandExecutionError(exc) from exc
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
@@ -1937,7 +1937,7 @@ def upgrade(
                 name=name, pkgs=pkgs, sources=None, normalize=normalize, **kwargs
             )[0]
         except MinionError as exc:
-            raise CommandExecutionError(exc)
+            raise CommandExecutionError(exc) from exc
 
         if pkg_params:
             # Calling list.extend() on a dict will extend it using the
@@ -2045,7 +2045,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs)[0]
     except MinionError as exc:
-        raise CommandExecutionError(exc)
+        raise CommandExecutionError(exc) from exc
 
     old = list_pkgs()
     targets = []
