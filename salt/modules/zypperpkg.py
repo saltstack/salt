@@ -1428,7 +1428,6 @@ def install(
     skip_verify=False,
     version=None,
     ignore_repo_failure=False,
-    no_recommends=False,
     root=None,
     **kwargs
 ):
@@ -1520,7 +1519,10 @@ def install(
         In case to set strict check, this parameter needs to be set to True. Default: False.
 
     no_recommends
-        Do not install recommended packages, only required ones.
+        Do not install recommended packages, only required ones. Default: False.
+
+    recommends
+        Do not install recommended packages, only required ones. Default: False.
 
     root
         operate on a different root directory.
@@ -1639,6 +1641,11 @@ def install(
         kwargs.get("resolve_capabilities") and "--capability" or "--name"
     )
 
+    if kwargs.get("recommends") is True:
+        cmd_install.append("--recommends")
+    elif kwargs.get("no_recommends") is True:
+        cmd_install.append("--no-recommends")
+
     if not refresh:
         cmd_install.insert(0, "--no-refresh")
     if skip_verify:
@@ -1647,8 +1654,6 @@ def install(
         cmd_install.append("--download-only")
     if fromrepo:
         cmd_install.extend(fromrepoopt)
-    if no_recommends:
-        cmd_install.append("--no-recommends")
 
     errors = []
 
@@ -1717,9 +1722,7 @@ def upgrade(
     dryrun=False,
     dist_upgrade=False,
     fromrepo=None,
-    novendorchange=False,
     skip_verify=False,
-    no_recommends=False,
     root=None,
     **kwargs
 ):  # pylint: disable=unused-argument
@@ -1755,14 +1758,20 @@ def upgrade(
     fromrepo
         Specify a list of package repositories to upgrade from. Default: None
 
+    vendorchange
+        If set to True, allow vendor changes. Default: False
+
     novendorchange
         If set to True, no allow vendor changes. Default: False
 
     skip_verify
         Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
+    recommends
+        Install recommended packages. Default: False
+
     no_recommends
-        Do not install recommended packages, only required ones.
+        Do not install recommended packages, only required ones. Default: False
 
     root
         Operate on a different root directory.
@@ -1804,17 +1813,21 @@ def upgrade(
         log.info("Targeting repos: %s", fromrepo)
 
     if dist_upgrade:
-        if novendorchange:
+        if __grains__["osrelease_info"][0] > 11:
             # TODO: Grains validation should be moved to Zypper class
-            if __grains__["osrelease_info"][0] > 11:
+            if kwargs.get("vendorchange") is True:
+                cmd_update.append("--allow-vendor-change")
+            elif kwargs.get("novendorchange") is True:
                 cmd_update.append("--no-allow-vendor-change")
                 log.info("Disabling vendor changes")
-            else:
-                log.warning(
-                    "Disabling vendor changes is not supported on this Zypper version"
-                )
+        else:
+            log.warning(
+                "Disabling vendor changes is not supported on this Zypper version"
+            )
 
-        if no_recommends:
+        if kwargs.get("recommends") is True:
+            cmd_update.append("--recommends")
+        elif kwargs.get("no_recommends") is True:
             cmd_update.append("--no-recommends")
             log.info("Disabling recommendations")
 
