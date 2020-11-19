@@ -20,7 +20,7 @@ import salt.utils.stringutils
 from salt.ext.six.moves import range
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
-from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
+from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv, slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -29,6 +29,13 @@ try:
     import pytest
 except ImportError:
     pytest = None
+
+if not salt.utils.thin.has_immutables:
+
+    class immutables:
+        __file__ = ""
+
+    salt.utils.thin.immutables = immutables
 
 
 @skipIf(pytest is None, "PyTest is missing")
@@ -420,6 +427,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.concurrent",
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch(
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops(self):
         """
@@ -440,11 +455,13 @@ class SSHThinTestCase(TestCase):
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
             "/site-packages/concurrent",
+            "/site-packages/contextvars",
         ]
-
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         tops = thin.get_tops()
         assert len(tops) == len(base_tops)
-        assert sorted(tops) == sorted(base_tops)
+        assert sorted(tops) == sorted(base_tops), sorted(tops)
 
     @patch(
         "salt.utils.thin.distro",
@@ -496,6 +513,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.concurrent",
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch(
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_extra_mods(self):
         """
@@ -516,9 +541,12 @@ class SSHThinTestCase(TestCase):
             "/site-packages/concurrent",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
+            "/site-packages/contextvars",
             os.sep + os.path.join("custom", "foo"),
             os.sep + os.path.join("custom", "bar.py"),
         ]
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
@@ -580,6 +608,14 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.concurrent",
         type("concurrent", (), {"__file__": "/site-packages/concurrent"}),
     )
+    @patch(
+        "salt.utils.thin.contextvars",
+        type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
+    )
+    @patch(
+        "salt.utils.thin.immutables",
+        type("immutables", (), {"__file__": "/site-packages/immutables"}),
+    )
     @patch("salt.utils.thin.log", MagicMock())
     def test_get_tops_so_mods(self):
         """
@@ -600,9 +636,12 @@ class SSHThinTestCase(TestCase):
             "/site-packages/concurrent",
             "/site-packages/markupsafe",
             "/site-packages/backports_abc",
+            "/site-packages/contextvars",
             "/custom/foo.so",
             "/custom/bar.so",
         ]
+        if salt.utils.thin.has_immutables:
+            base_tops.extend(["/site-packages/immutables"])
         builtins = sys.version_info.major == 3 and "builtins" or "__builtin__"
         with patch(
             "{}.__import__".format(builtins),
@@ -1272,6 +1311,7 @@ class SSHThinTestCase(TestCase):
             for _file in exp_files:
                 assert [x for x in calls if "{}".format(_file) in x[-2]]
 
+    @slowTest
     @skipIf(
         salt.utils.platform.is_windows(), "salt-ssh does not deploy to/from windows"
     )
