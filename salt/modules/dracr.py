@@ -42,10 +42,9 @@ def __virtual__():
     if salt.utils.path.which("racadm"):
         return True
 
-    return (
-        False,
-        "The drac execution module cannot be loaded: racadm binary not in path.",
-    )
+    path = __salt__['environ.get']('PATH')
+    msg = "The dracr execution module cannot be loaded, racadm binary not in path: {}"
+    return (False, msg.format(path))
 
 
 def __parse_drac(output):
