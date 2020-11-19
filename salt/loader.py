@@ -5,6 +5,8 @@ plugin interfaces used by Salt.
 """
 
 import functools
+import importlib.machinery  # pylint: disable=no-name-in-module,import-error
+import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
 import logging
 import os
@@ -15,7 +17,6 @@ import threading
 import time
 import traceback
 import types
-import weakref
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
@@ -40,17 +41,6 @@ from salt.ext.six.moves import reload_module
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
-if sys.version_info[:2] >= (3, 5):
-    import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-    import importlib.util  # pylint: disable=no-name-in-module,import-error
-
-    USE_IMPORTLIB = True
-else:
-    import imp
-
-    USE_IMPORTLIB = False
-
-
 try:
     import pkg_resources
 
@@ -63,27 +53,24 @@ log = logging.getLogger(__name__)
 SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
 LOADED_BASE_NAME = "salt.loaded"
 
-if USE_IMPORTLIB:
-    # pylint: disable=no-member
-    MODULE_KIND_SOURCE = 1
-    MODULE_KIND_COMPILED = 2
-    MODULE_KIND_EXTENSION = 3
-    MODULE_KIND_PKG_DIRECTORY = 5
-    SUFFIXES = []
-    for suffix in importlib.machinery.EXTENSION_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_EXTENSION))
-    for suffix in importlib.machinery.SOURCE_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_SOURCE))
-    for suffix in importlib.machinery.BYTECODE_SUFFIXES:
-        SUFFIXES.append((suffix, "rb", MODULE_KIND_COMPILED))
-    MODULE_KIND_MAP = {
-        MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
-        MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
-        MODULE_KIND_EXTENSION: importlib.machinery.ExtensionFileLoader,
-    }
-    # pylint: enable=no-member
-else:
-    SUFFIXES = imp.get_suffixes()
+# pylint: disable=no-member
+MODULE_KIND_SOURCE = 1
+MODULE_KIND_COMPILED = 2
+MODULE_KIND_EXTENSION = 3
+MODULE_KIND_PKG_DIRECTORY = 5
+SUFFIXES = []
+for suffix in importlib.machinery.EXTENSION_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_EXTENSION))
+for suffix in importlib.machinery.SOURCE_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_SOURCE))
+for suffix in importlib.machinery.BYTECODE_SUFFIXES:
+    SUFFIXES.append((suffix, "rb", MODULE_KIND_COMPILED))
+MODULE_KIND_MAP = {
+    MODULE_KIND_SOURCE: importlib.machinery.SourceFileLoader,
+    MODULE_KIND_COMPILED: importlib.machinery.SourcelessFileLoader,
+    MODULE_KIND_EXTENSION: importlib.machinery.ExtensionFileLoader,
+}
+# pylint: enable=no-member
 
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
@@ -1130,51 +1117,6 @@ def _mod_type(module_path):
     return "ext"
 
 
-def _cleanup_module_namespace(loaded_base_name, delete_from_sys_modules=False):
-    """
-    Clean module namespace.
-    If ``delete_from_sys_modules`` is ``False``, then the module instance in ``sys.modules``
-    will only be set to ``None``, when ``True``, it's actually ``del``elted.
-
-    The reason for this two stage cleanup procedure is because this function might
-    get called during the GC collection cycle and trigger https://bugs.python.org/issue40327
-
-    We seem to specially trigger this during the CI test runs with ``coverage.py`` tracking
-    the code usage:
-
-        Traceback (most recent call last):
-          File "/urs/lib64/python3.6/site-packages/coverage/multiproc.py", line 37, in _bootstrap
-            cov.start()
-          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 527, in start
-            self._init_for_start()
-          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 455, in _init_for_start
-            concurrency=concurrency,
-          File "/urs/lib64/python3.6/site-packages/coverage/collector.py", line 111, in __init__
-            self.origin = short_stack()
-          File "/urs/lib64/python3.6/site-packages/coverage/debug.py", line 157, in short_stack
-            stack = inspect.stack()[limit:skip:-1]
-          File "/usr/lib64/python3.6/inspect.py", line 1501, in stack
-            return getouterframes(sys._getframe(1), context)
-          File "/usr/lib64/python3.6/inspect.py", line 1478, in getouterframes
-            frameinfo = (frame,) + getframeinfo(frame, context)
-          File "/usr/lib64/python3.6/inspect.py", line 1452, in getframeinfo
-            lines, lnum = findsource(frame)
-          File "/usr/lib64/python3.6/inspect.py", line 780, in findsource
-            module = getmodule(object, file)
-          File "/usr/lib64/python3.6/inspect.py", line 732, in getmodule
-            for modname, module in list(sys.modules.items()):
-        RuntimeError: dictionary changed size during iteration
-    """
-    for name in list(sys.modules):
-        if name.startswith(loaded_base_name):
-            if delete_from_sys_modules:
-                del sys.modules[name]
-            else:
-                mod = sys.modules[name]
-                sys.modules[name] = None
-                del mod
-
-
 # TODO: move somewhere else?
 class FilterDictWrapper(MutableMapping):
     """
@@ -1266,22 +1208,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.module_dirs = module_dirs
         self.tag = tag
         self._gc_finalizer = None
-        if loaded_base_name:
+        if loaded_base_name and loaded_base_name != LOADED_BASE_NAME:
             self.loaded_base_name = loaded_base_name
         else:
-            self.loaded_base_name = "{}_{}".format(LOADED_BASE_NAME, id(self))
-            # Remove any modules matching self.loaded_base_name that have been set to None previously
-            self.clean_modules()
-            # Make sure that, when this module is about to be GC'ed, we at least set any modules in
-            # sys.modules which match self.loaded_base_name to None to reduce memory usage over time.
-            # ATTENTION: Do not replace the '_cleanup_module_namespace' function on the call below with
-            #            self.clean_modules as that WILL prevent this loader object from being garbage
-            #            collected and the finalizer running.
-            self._gc_finalizer = weakref.finalize(
-                self, _cleanup_module_namespace, "{}".format(self.loaded_base_name)
-            )
-            # This finalizer does not need to run when the process is exiting
-            self._gc_finalizer.atexit = False
+            self.loaded_base_name = LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
         if "__context__" not in self.pack:
@@ -1341,10 +1271,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         Clean modules
         """
-        if self._gc_finalizer is not None and self._gc_finalizer.alive:
-            # Prevent the weakref.finalizer instance from running, there's no point after the next call.
-            self._gc_finalizer.detach()
-        _cleanup_module_namespace(self.loaded_base_name, delete_from_sys_modules=True)
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                del sys.modules[name]
 
     def __getitem__(self, item):
         """
@@ -1437,10 +1366,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if ".zip" not in self.suffix_order:
                 self.suffix_order.append(".zip")
         # allow for module dirs
-        if USE_IMPORTLIB:
-            self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
-        else:
-            self.suffix_map[""] = ("", "", imp.PKG_DIRECTORY)
+        self.suffix_map[""] = ("", "", MODULE_KIND_PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
         # The files are added in order of priority, so order *must* be retained.
@@ -1653,8 +1579,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # Be sure that sys.path_importer_cache do not contains any
         # invalid FileFinder references
-        if USE_IMPORTLIB:
-            importlib.invalidate_caches()
+        importlib.invalidate_caches()
 
         # Because we are mangling with importlib, we can find from
         # time to time an invalidation issue with
@@ -1731,66 +1656,59 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         name,
                     )
                 if suffix == "":
-                    if USE_IMPORTLIB:
-                        # pylint: disable=no-member
-                        # Package directory, look for __init__
-                        loader_details = [
-                            (
-                                importlib.machinery.SourceFileLoader,
-                                importlib.machinery.SOURCE_SUFFIXES,
-                            ),
-                            (
-                                importlib.machinery.SourcelessFileLoader,
-                                importlib.machinery.BYTECODE_SUFFIXES,
-                            ),
-                            (
-                                importlib.machinery.ExtensionFileLoader,
-                                importlib.machinery.EXTENSION_SUFFIXES,
-                            ),
-                        ]
-                        file_finder = importlib.machinery.FileFinder(
-                            fpath_dirname, *loader_details
-                        )
-                        spec = file_finder.find_spec(mod_namespace)
-                        if spec is None:
-                            raise ImportError()
-                        # TODO: Get rid of load_module in favor of
-                        # exec_module below. load_module is deprecated, but
-                        # loading using exec_module has been causing odd things
-                        # with the magic dunders we pack into the loaded
-                        # modules, most notably with salt-ssh's __opts__.
-                        mod = spec.loader.load_module()
-                        # mod = importlib.util.module_from_spec(spec)
-                        # spec.loader.exec_module(mod)
-                        # pylint: enable=no-member
-                        sys.modules[mod_namespace] = mod
-                    else:
-                        mod = imp.load_module(mod_namespace, None, fpath, desc)
+                    # pylint: disable=no-member
+                    # Package directory, look for __init__
+                    loader_details = [
+                        (
+                            importlib.machinery.SourceFileLoader,
+                            importlib.machinery.SOURCE_SUFFIXES,
+                        ),
+                        (
+                            importlib.machinery.SourcelessFileLoader,
+                            importlib.machinery.BYTECODE_SUFFIXES,
+                        ),
+                        (
+                            importlib.machinery.ExtensionFileLoader,
+                            importlib.machinery.EXTENSION_SUFFIXES,
+                        ),
+                    ]
+                    file_finder = importlib.machinery.FileFinder(
+                        fpath_dirname, *loader_details
+                    )
+                    spec = file_finder.find_spec(mod_namespace)
+                    if spec is None:
+                        raise ImportError()
+                    # TODO: Get rid of load_module in favor of
+                    # exec_module below. load_module is deprecated, but
+                    # loading using exec_module has been causing odd things
+                    # with the magic dunders we pack into the loaded
+                    # modules, most notably with salt-ssh's __opts__.
+                    mod = spec.loader.load_module()
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
+                    # pylint: enable=no-member
+                    sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
-                    if USE_IMPORTLIB:
-                        # pylint: disable=no-member
-                        loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
-                        spec = importlib.util.spec_from_file_location(
-                            mod_namespace, fpath, loader=loader
-                        )
-                        if spec is None:
-                            raise ImportError()
-                        # TODO: Get rid of load_module in favor of
-                        # exec_module below. load_module is deprecated, but
-                        # loading using exec_module has been causing odd things
-                        # with the magic dunders we pack into the loaded
-                        # modules, most notably with salt-ssh's __opts__.
-                        mod = spec.loader.load_module()
-                        # mod = importlib.util.module_from_spec(spec)
-                        # spec.loader.exec_module(mod)
-                        # pylint: enable=no-member
-                        sys.modules[mod_namespace] = mod
-                    else:
-                        with salt.utils.files.fopen(fpath, desc[1]) as fn_:
-                            mod = imp.load_module(mod_namespace, fn_, fpath, desc)
+                    # pylint: disable=no-member
+                    loader = MODULE_KIND_MAP[desc[2]](mod_namespace, fpath)
+                    spec = importlib.util.spec_from_file_location(
+                        mod_namespace, fpath, loader=loader
+                    )
+                    if spec is None:
+                        raise ImportError()
+                    # TODO: Get rid of load_module in favor of
+                    # exec_module below. load_module is deprecated, but
+                    # loading using exec_module has been causing odd things
+                    # with the magic dunders we pack into the loaded
+                    # modules, most notably with salt-ssh's __opts__.
+                    mod = spec.loader.load_module()
+                    # mod = importlib.util.module_from_spec(spec)
+                    # spec.loader.exec_module(mod)
+                    # pylint: enable=no-member
+                    sys.modules[mod_namespace] = mod
         except OSError:
             raise
         except ImportError as exc:

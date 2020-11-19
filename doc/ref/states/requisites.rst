@@ -363,6 +363,8 @@ shown in json for clarity:
         }
     }
 
+.. code-block:: json
+
     {
         "local": {
             "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
