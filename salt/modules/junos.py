@@ -278,7 +278,7 @@ def facts_refresh():
     try:
         conn.facts_refresh()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Execution failed due to '{}'".format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -309,7 +309,7 @@ def facts():
         ret["facts"] = __proxy__["junos.get_serialized_facts"]()
         ret["out"] = True
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not display facts due to '{}'".format(exception)
+        ret["message"] = 'Could not display facts due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
@@ -395,7 +395,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))(filter_reply, options=op)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = "RPC execution failed due to '{}'".format(exception)
+            ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
             _restart_connection()
             return ret
@@ -409,7 +409,7 @@ def rpc(cmd=None, dest=None, **kwargs):
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))({"format": format_}, **op)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = "RPC execution failed due to '{}'".format(exception)
+            ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
             _restart_connection()
             return ret
@@ -480,7 +480,7 @@ def set_hostname(hostname=None, **kwargs):
     try:
         conn.cu.load(set_string, format="set")
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not load configuration due to error '{}'".format(
+        ret["message"] = 'Could not load configuration due to error "{}"'.format(
             exception
         )
         ret["out"] = False
@@ -490,7 +490,7 @@ def set_hostname(hostname=None, **kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not commit check due to error '{}'".format(exception)
+        ret["message"] = 'Could not commit check due to error "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -504,7 +504,7 @@ def set_hostname(hostname=None, **kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = "Successfully loaded host-name but commit failed with '{}'".format(
+            ] = 'Successfully loaded host-name but commit failed with "{}"'.format(
                 exception
             )
             _restart_connection()
@@ -518,7 +518,7 @@ def set_hostname(hostname=None, **kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = "Successfully loaded host-name but rollback before exit failed '{}'".format(
+            ] = 'Successfully loaded host-name but rollback before exit failed "{}"'.format(
                 exception
             )
             _restart_connection()
@@ -583,7 +583,7 @@ def commit(**kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not perform commit check due to '{}'".format(exception)
+        ret["message"] = 'Could not perform commit check due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -604,7 +604,7 @@ def commit(**kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = "Commit check succeeded but actual commit failed with '{}'".format(
+            ] = 'Commit check succeeded but actual commit failed with "{}"'.format(
                 exception
             )
             _restart_connection()
@@ -617,7 +617,7 @@ def commit(**kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = "Pre-commit check failed, and exception during rollback '{}'".format(
+            ] = 'Pre-commit check failed, and exception during rollback "{}"'.format(
                 exception
             )
             _restart_connection()
@@ -693,7 +693,7 @@ def rollback(**kwargs):
     try:
         ret["out"] = conn.cu.rollback(id_)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Rollback failed due to '{}'".format(exception)
+        ret["message"] = 'Rollback failed due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -718,7 +718,7 @@ def rollback(**kwargs):
     try:
         commit_ok = conn.cu.commit_check()
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not commit check due to '{}'".format(exception)
+        ret["message"] = 'Could not commit check due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -731,7 +731,7 @@ def rollback(**kwargs):
             ret["out"] = False
             ret[
                 "message"
-            ] = "Rollback successful but commit failed with error '{}'".format(
+            ] = 'Rollback successful but commit failed with error "{}"'.format(
                 exception
             )
             _restart_connection()
@@ -789,7 +789,7 @@ def diff(**kwargs):
     try:
         ret["message"] = conn.cu.diff(rb_id=id_)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not get diff with error '{}'".format(exception)
+        ret["message"] = 'Could not get diff with error "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
@@ -854,7 +854,7 @@ def ping(dest_ip=None, **kwargs):
     try:
         ret["message"] = jxmlease.parse(etree.tostring(conn.rpc.ping(**op)))
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Execution failed due to '{}'".format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
@@ -911,7 +911,7 @@ def cli(command=None, **kwargs):
     try:
         result = conn.cli(command, format_, warning=False)
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Execution failed due to '{}'".format(exception)
+        ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
         return ret
@@ -1004,7 +1004,7 @@ def shutdown(**kwargs):
         ret["message"] = "Successfully powered off/rebooted."
         ret["out"] = True
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not poweroff/reboot because '{}'".format(exception)
+        ret["message"] = 'Could not poweroff/reboot because "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
@@ -1174,7 +1174,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = "Could not load configuration due to : '{}'".format(exception)
+                    ] = 'Could not load configuration due to : "{}"'.format(exception)
                     ret["format"] = op["format"]
                     ret["out"] = False
                     _restart_connection()
@@ -1206,7 +1206,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = "Commit check threw the following exception: '{}'".format(
+                        ] = 'Commit check threw the following exception: "{}"'.format(
                             exception
                         )
                         ret["out"] = False
@@ -1220,7 +1220,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = "Commit check successful but commit failed with '{}'".format(
+                        ] = 'Commit check successful but commit failed with "{}"'.format(
                             exception
                         )
                         ret["out"] = False
@@ -1236,7 +1236,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = "Loaded configuration but commit check failed, and exception occurred during rolling back configuration '{}'".format(
+                        ] = 'Loaded configuration but commit check failed, and exception occurred during rolling back configuration "{}"'.format(
                             exception
                         )
                         _restart_connection()
@@ -1252,7 +1252,7 @@ def install_config(path=None, **kwargs):
                     except Exception as exception:  # pylint: disable=broad-except
                         ret[
                             "message"
-                        ] = "Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred '{}'".format(
+                        ] = 'Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred "{}"'.format(
                             exception
                         )
                         ret["out"] = False
@@ -1265,7 +1265,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = "Could not write into diffs_file due to: '{}'".format(exception)
+                    ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
                     ret["out"] = False
 
         except ValueError as ex:
@@ -1312,7 +1312,7 @@ def zeroize():
         conn.cli("request system zeroize")
         ret["message"] = "Completed zeroize and rebooted"
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = "Could not zeroize due to : '{}'".format(exception)
+        ret["message"] = 'Could not zeroize due to : "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
@@ -1429,7 +1429,7 @@ def install_os(path=None, **kwargs):
                 ret["out"] = False
                 __proxy__["junos.reboot_clear"]()
                 return ret
-            if not salt.utils.platform.is_proxy():
+            if salt.utils.platform.is_junos():
                 # If its native minion running on Junos, pyez dont need to SCP file
                 # hence setting no_copy as True, HandleFileCopy already copied file
                 # from master to Junos
@@ -1442,7 +1442,7 @@ def install_os(path=None, **kwargs):
                     image_path, progress=True, timeout=timeout, **op
                 )
             except Exception as exception:  # pylint: disable=broad-except
-                ret["message"] = "Installation failed due to: '{}'".format(exception)
+                ret["message"] = 'Installation failed due to: "{}"'.format(exception)
                 ret["out"] = False
                 __proxy__["junos.reboot_clear"]()
                 _restart_connection()
@@ -1453,7 +1453,7 @@ def install_os(path=None, **kwargs):
                 path, progress=True, timeout=timeout, **op
             )
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = "Installation failed due to: '{}'".format(exception)
+            ret["message"] = 'Installation failed due to: "{}"'.format(exception)
             ret["out"] = False
             __proxy__["junos.reboot_clear"]()
             _restart_connection()
@@ -1481,7 +1481,7 @@ def install_os(path=None, **kwargs):
             __proxy__["junos.reboot_clear"]()
             ret[
                 "message"
-            ] = "Installation successful but reboot failed due to : '{}'".format(
+            ] = 'Installation successful but reboot failed due to : "{}"'.format(
                 exception
             )
             ret["out"] = False
@@ -1516,7 +1516,7 @@ def file_copy(src=None, dest=None):
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     """
-    if not salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -1537,7 +1537,7 @@ def file_copy(src=None, dest=None):
                 scp.put(fp, dest)
             ret["message"] = "Successfully copied file from {} to {}".format(src, dest)
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = "Could not copy file : '{}'".format(exception)
+            ret["message"] = 'Could not copy file : "{}"'.format(exception)
             ret["out"] = False
 
         return ret
@@ -1569,12 +1569,12 @@ def lock():
         conn.cu.lock()
         ret["message"] = "Successfully locked the configuration."
     except RpcTimeoutError as exception:
-        ret["message"] = "Could not gain lock due to : '{}'".format(exception)
+        ret["message"] = 'Could not gain lock due to : "{}"'.format(exception)
         ret["out"] = False
         _restart_connection()
 
     except LockError as exception:
-        ret["message"] = "Could not gain lock due to : '{}'".format(exception)
+        ret["message"] = "Could not gain lock due to : \"{}'".format(exception)
         ret["out"] = False
 
     return ret
@@ -1599,14 +1599,14 @@ def unlock():
         conn.cu.unlock()
         ret["message"] = "Successfully unlocked the configuration."
     except RpcTimeoutError as exception:
-        ret["message"] = "Could not unlock configuration due to : '{}'".format(
+        ret["message"] = 'Could not unlock configuration due to : "{}"'.format(
             exception
         )
         ret["out"] = False
         _restart_connection()
 
     except UnlockError as exception:
-        ret["message"] = "Could not unlock configuration due to : '{}'".format(
+        ret["message"] = 'Could not unlock configuration due to : "{}"'.format(
             exception
         )
         ret["out"] = False
@@ -1751,7 +1751,7 @@ def load(path=None, **kwargs):
             conn.cu.load(**op)
             ret["message"] = "Successfully loaded the configuration."
         except Exception as exception:  # pylint: disable=broad-except
-            ret["message"] = "Could not load configuration due to : '{}'".format(
+            ret["message"] = 'Could not load configuration due to : "{}"'.format(
                 exception
             )
             ret["format"] = op["format"]
@@ -2103,7 +2103,7 @@ def file_compare(file1, file2, **kwargs):
         success:
             True
     """
-    if salt.utils.platform.is_proxy():
+    if not salt.utils.platform.is_junos():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -2158,7 +2158,7 @@ def fsentry_exists(dir, **kwargs):
         exists:
             True
     """
-    if salt.utils.platform.is_proxy():
+    if not salt.utils.platform.is_junos():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -2303,7 +2303,7 @@ def dir_copy(source, dest, force=False, **kwargs):
     contents to routing engine 1 root directory. The result will be
     `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
     """
-    if salt.utils.platform.is_proxy():
+    if not salt.utils.platform.is_junos():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
