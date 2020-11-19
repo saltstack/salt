@@ -36,6 +36,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__proxy__": {
                     "junos.conn": self.make_connect,
                     "junos.get_serialized_facts": self.get_facts,
+                    "junos.reboot_active": MagicMock(return_value=None),
+                    "junos.reboot_clear": MagicMock(return_value=None),
                 },
                 "__salt__": {
                     "cp.get_template": self.mock_cp,
@@ -1106,7 +1108,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__pub_ret": "",
             }
             ret = dict()
-            ret["message"] = 'Could not poweroff/reboot beacause "Test exception"'
+            ret["message"] = 'Could not poweroff/reboot because "Test exception"'
             ret["out"] = False
             self.assertEqual(junos.shutdown(**args), ret)
 
