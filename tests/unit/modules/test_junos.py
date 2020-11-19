@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rajvi Dhimar <rajvidhimar95@gmail.com>
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
 # Import salt modules
 import salt.modules.junos as junos
-from salt.ext import six
-
-# Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     from lxml import etree
 except ImportError:
@@ -51,6 +44,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     "slsutil.renderer": MagicMock(
                         return_value="set system host-name dummy"
                     ),
+                    "event.fire_master": MagicMock(return_value=None),
                 },
             }
         }
@@ -2462,14 +2456,14 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(ret, ret_exp)
 
     def test_get_table_api_error(self):
-        table = str("sample")
+        table = "sample"
         file = "inventory.yml"
         ret_exp = {
             "out": False,
             "hostname": "1.1.1.1",
             "tablename": "sample",
             "message": "Uncaught exception during get API call - please report:"
-            " '{}'".format(six.text_type(table)),
+            " '{}'".format(str(table)),
         }
         with patch("jnpr.junos.device.Device.execute") as mock_execute:
             ret = junos.get_table(table, file)
