@@ -699,7 +699,7 @@ def rollback(**kwargs):
         return ret
 
     if ret["out"]:
-        ret["message"] = "Rollback successful"
+        ret["message"] = "Rollback successfull"
     else:
         ret["message"] = "Rollback failed"
         return ret
@@ -1574,7 +1574,7 @@ def lock():
         _restart_connection()
 
     except LockError as exception:
-        ret["message"] = "Could not gain lock due to : \"{}'".format(exception)
+        ret["message"] = 'Could not gain lock due to : "{}"'.format(exception)
         ret["out"] = False
 
     return ret
