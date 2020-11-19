@@ -46,7 +46,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                     ),
                     "event.fire_master": MagicMock(return_value=None),
                 },
-            }
+                "_restart_connection": MagicMock(return_value=None),
+            },
         }
 
     def mock_cp(self, *args, **kwargs):
