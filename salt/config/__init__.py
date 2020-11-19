@@ -134,8 +134,8 @@ VALID_OPTS = immutabletypes.freeze(
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
-        # When in multi-master mode, temporarily remove a master from the list if a conenction
-        # is interrupted and try another master in the list.
+        # Temporarily remove a master if a connection is interrupted and try to
+        # reconnect (with a failback if configured)
         "master_alive_interval": int,
         # When in multi-master failover mode, fail back to the first master in the list if it's back
         # online.

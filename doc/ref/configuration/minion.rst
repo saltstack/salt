@@ -282,9 +282,14 @@ failback interval can be set to ping the top master with this interval, in secon
 
 Default: ``0``
 
-Configures how often, in seconds, the minion will verify that the current
-master is alive and responding.  The minion will try to establish a connection
-to the next master in the list if it finds the existing one is dead.
+Configures how often, in seconds, the minion will verify that the current master
+is alive and responding.  The minion will try to re-establish a connection, or
+connect to the next master in the list, if it finds the connection is dead.
+
+.. versionadded:: 2016.3.0
+.. versionchanged:: 3003
+
+    This option may now be used with a single master.
 
 .. code-block:: yaml
 
