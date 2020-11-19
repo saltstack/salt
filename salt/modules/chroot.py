@@ -79,6 +79,7 @@ def create(root):
             return False
     return True
 
+
 def relog(message):
     """
     Takes a multiline string containing log lines as usually returned as
@@ -93,13 +94,12 @@ def relog(message):
         # Extract the loglevel to relog at the same level.
         # Otherwise, log the whole line at ERROR.
         try:
-            match = re.search('\[([A-Z]+)\s*\]\s(.*)', logline)
+            match = re.search(r'\[([A-Z]+)\s*\]\s(.*)', logline)
             level = match.group(1)
             message = match.group(2)
-            log.log(logging._nameToLevel[level], "(chroot) %s"%message)
+            log.log(logging._nameToLevel[level], "(chroot) %s", message)
         except AttributeError:
-            log.error("(chroot) %s"%logline)
-
+            log.error("(chroot) %s", logline)
 
 
 def call(root, function, *args, **kwargs):
