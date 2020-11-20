@@ -3558,7 +3558,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
       <cpuselection/>
       <deviceboot/>
       <disksnapshot default='on' toggle='no'/>
-      <acpi default='on' toggle='yes'/>
+      <acpi default='off' toggle='yes'/>
       <apic default='on' toggle='no'/>
       <pae/>
       <nonpae/>
@@ -3586,7 +3586,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
       <deviceboot/>
       <disksnapshot default='on' toggle='no'/>
       <acpi default='on' toggle='yes'/>
-      <apic default='on' toggle='no'/>
+      <apic default='off' toggle='no'/>
     </features>
   </guest>
 
@@ -3739,7 +3739,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "cpuselection": {"default": True, "toggle": False},
                         "deviceboot": {"default": True, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
-                        "acpi": {"default": True, "toggle": True},
+                        "acpi": {"default": False, "toggle": True},
                         "apic": {"default": True, "toggle": False},
                         "pae": {"default": True, "toggle": False},
                         "nonpae": {"default": True, "toggle": False},
@@ -3777,7 +3777,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         "deviceboot": {"default": True, "toggle": False},
                         "disksnapshot": {"default": True, "toggle": False},
                         "acpi": {"default": True, "toggle": True},
-                        "apic": {"default": True, "toggle": False},
+                        "apic": {"default": False, "toggle": False},
                     },
                 },
                 {
@@ -3792,7 +3792,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ],
         }
-
         self.assertEqual(expected, caps)
 
     def test_network(self):

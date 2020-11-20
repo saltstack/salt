@@ -116,6 +116,11 @@ def _conf(family="ipv4"):
             return "/etc/iptables/rules6-save"
         else:
             return "/etc/iptables/rules-save"
+    elif __grains__["os_family"] == "NILinuxRT":
+        if family == "ipv6":
+            return "/etc/natinst/share/ip6tables.conf"
+        else:
+            return "/etc/natinst/share/iptables.conf"
     else:
         raise SaltException(
             "Saving iptables to file is not"
