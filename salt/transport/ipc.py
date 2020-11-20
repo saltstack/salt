@@ -91,6 +91,13 @@ class IPCServer(object):
     but using either UNIX domain sockets or TCP sockets
     """
 
+    async_methods = [
+        "handle_stream",
+    ]
+    close_methods = [
+        "close",
+    ]
+
     def __init__(self, socket_path, io_loop=None, payload_handler=None):
         """
         Create a new Tornado IPC server
@@ -414,6 +421,15 @@ class IPCMessageClient(IPCClient):
     # Send some data
     ipc_client.send('Hello world')
     """
+
+    async_methods = [
+        "send",
+        "connect",
+        "_connect",
+    ]
+    close_methods = [
+        "close",
+    ]
 
     # FIXME timeout unimplemented
     # FIXME tries unimplemented

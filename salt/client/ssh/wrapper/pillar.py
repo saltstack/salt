@@ -4,14 +4,18 @@ Extract the pillar data for this minion
 """
 from __future__ import absolute_import, print_function
 
-# Import python libs
-import collections
-
 # Import salt libs
 import salt.pillar
 import salt.utils.data
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
+
+try:
+    # Python 3
+    from collections.abc import Mapping
+except ImportError:
+    # We still allow Py2 import because this could be executed in a machine with Py2.
+    from collections import Mapping  # pylint: disable=no-name-in-module
 
 
 def get(key, default="", merge=False, delimiter=DEFAULT_TARGET_DELIM):
@@ -53,9 +57,7 @@ def get(key, default="", merge=False, delimiter=DEFAULT_TARGET_DELIM):
     """
     if merge:
         ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, {}, delimiter)
-        if isinstance(ret, collections.Mapping) and isinstance(
-            default, collections.Mapping
-        ):
+        if isinstance(ret, Mapping) and isinstance(default, Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
     return salt.utils.data.traverse_dict_and_list(__pillar__, key, default, delimiter)

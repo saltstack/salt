@@ -401,7 +401,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     """
     if acl_names is None:
         acl_names = []
-    ret = {"name": name, "result": True, "changes": {}, "pchanges": {}, "comment": ""}
+    ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum([_octal.get(i, i) for i in perms])
@@ -445,7 +445,6 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                 "name": name,
                 "result": True,
                 "changes": {},
-                "pchanges": {},
                 "comment": "Permissions and {}s are in the desired state".format(
                     acl_type
                 ),
@@ -506,7 +505,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                         perms,
                                     ),
                                     "result": None,
-                                    "pchanges": changes,
+                                    "changes": changes,
                                 }
                             )
                             return ret
@@ -556,7 +555,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                 "comment": "New permissions will be applied for "
                                 "{0}: {1}".format(acl_names, perms),
                                 "result": None,
-                                "pchanges": changes,
+                                "changes": changes,
                             }
                         )
                         ret["result"] = None
@@ -609,7 +608,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         "comment": "New permissions will be applied for "
                         "{0}: {1}".format(acl_names, perms),
                         "result": None,
-                        "pchanges": changes,
+                        "changes": changes,
                     }
                 )
                 ret["result"] = None

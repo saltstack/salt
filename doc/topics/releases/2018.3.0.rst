@@ -216,10 +216,10 @@ they failed. Here's some example pseudocode:
 
     def myrunner():
         ...
-        do stuff
+        # do stuff
         ...
         if some_error_condition:
-            __context__['retcode'] = 1
+            __context__["retcode"] = 1
         return result
 
 Variable Update Intervals for Fileserver Backends

@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 tests for pkg state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -14,7 +11,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -27,6 +23,7 @@ from tests.support.helpers import (
     slowTest,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -47,8 +44,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         cls.ctx = {}
         cls._PKG_TARGETS = ["figlet", "sl"]
         if grains["os"] == "Windows":
-            cls._PKG_TARGETS = ["7zip", "putty"]
-        elif grains["os"] == "freebsd":
+            cls._PKG_TARGETS = ["vlc", "putty"]
+        elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
         elif grains["os_family"] in ("Arch", "Debian"):
             cls._WILDCARDS_SUPPORTED = True
@@ -101,14 +98,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Only a single target, pkg.latest_version returned a string
                 self.ctx[key][targets[0]] = result
 
-        ret = dict([(x, self.ctx[key].get(x, "")) for x in names])
+        ret = {x: self.ctx[key].get(x, "") for x in names}
         if len(names) == 1:
             return ret[names[0]]
         return ret
 
     @requires_system_grains
     def setUp(self, grains=None):  # pylint:disable=W0221
-        super(PkgTest, self).setUp()
+        super().setUp()
         if "refresh" not in self.ctx:
             self.run_function("pkg.refresh_db")
             self.ctx["refresh"] = True
@@ -144,14 +141,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @slowTest
     def test_pkg_002_installed_with_version(self):
         """
         This is a destructive test as it installs and then removes a package
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target = self._PKG_TARGETS[0]
         version = self.latest_version(target)
 
@@ -193,14 +188,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @requires_salt_states("pkg.installed", "pkg.removed")
-    @slowTest
     def test_pkg_004_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         version = self.latest_version(self._PKG_TARGETS[0])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -341,7 +334,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function("pkg.info_installed", [package])
-        self.assertTrue(pkgquery in six.text_type(ret))
+        self.assertTrue(pkgquery in str(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
     @slowTest
@@ -416,7 +409,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(
                 ret["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"],
-                "Package {0} is already up-to-date".format(target),
+                "Package {} is already up-to-date".format(target),
             )
 
     @requires_salt_modules("pkg.version")
@@ -566,7 +559,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat":
+        if grains["os_family"] == "RedHat" or grains["os"] == "FreeBSD":
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
@@ -658,9 +651,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/updated: {0}".format(
-                    realpkg
-                ),
+                "The following packages would be installed/updated: {}".format(realpkg),
                 ret,
             )
             ret = self.run_state(
@@ -716,17 +707,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state("pkg.removed", name=realpkg)
             self.assertSaltTrueReturn(ret)
 
+    @skipIf(not _PKG_CAP_TARGETS, "Capability not available")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         """
         This is a destructive test as it installs and then removes two packages
         """
-        if not self._PKG_CAP_TARGETS:
-            self.skipTest("Capability not provided")
-
         if not self._VERSION_SPEC_SUPPORTED:
             self.skipTest("Version specification not supported")
-
         target, realpkg = self._PKG_CAP_TARGETS[0]
         version = self.latest_version(target)
         realver = self.latest_version(realpkg)
@@ -761,7 +749,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment("packages would be installed/updated", ret)
-            self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
+            self.assertInSaltComment("{}={}".format(realpkg, realver), ret)
 
             ret = self.run_state(
                 "pkg.installed",
@@ -809,7 +797,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/upgraded: {0}".format(
+                "The following packages would be installed/upgraded: {}".format(
                     realpkg
                 ),
                 ret,
@@ -858,7 +846,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             test=True,
         )
         self.assertInSaltComment(
-            "The following packages would be downloaded: {0}".format(realpkg), ret
+            "The following packages would be downloaded: {}".format(realpkg), ret
         )
 
         ret = self.run_state(

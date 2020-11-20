@@ -9,8 +9,6 @@ Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
-import inspect
-
 # Import python libs
 import logging
 
@@ -40,17 +38,17 @@ def __virtual__():
 def _select_kwargs(**kwargs):
     paramiko_kwargs = {}
     scp_kwargs = {}
-    PARAMIKO_KWARGS, _, _, _ = inspect.getargspec(paramiko.SSHClient.connect)
-    PARAMIKO_KWARGS.pop(0)  # strip self
-    PARAMIKO_KWARGS.append("auto_add_policy")
-    SCP_KWARGS, _, _, _ = inspect.getargspec(scp.SCPClient.__init__)
-    SCP_KWARGS.pop(0)  # strip self
-    SCP_KWARGS.pop(0)  # strip transport arg (it is passed in _prepare_connection)
-    for karg, warg in six.iteritems(kwargs):
-        if karg in PARAMIKO_KWARGS and warg is not None:
-            paramiko_kwargs[karg] = warg
-        if karg in SCP_KWARGS and warg is not None:
-            scp_kwargs[karg] = warg
+    paramiko_args = __utils__["args.get_function_argspec"](paramiko.SSHClient.connect)[
+        0
+    ]
+    paramiko_args.append("auto_add_policy")
+    scp_args = __utils__["args.get_function_argspec"](scp.SCPClient.__init__)[0]
+    scp_args.pop(0)  # strip transport arg (it is passed in _prepare_connection)
+    for key, val in six.iteritems(kwargs):
+        if key in paramiko_args and val is not None:
+            paramiko_kwargs[key] = val
+        if key in scp_args and val is not None:
+            scp_kwargs[key] = val
     return paramiko_kwargs, scp_kwargs
 
 

@@ -18,6 +18,7 @@ def minion_in_returns(minion, lines):
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.usefixtures("salt_sub_minion")
 class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     """
     Test salt matchers

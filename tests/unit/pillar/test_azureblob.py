@@ -25,7 +25,10 @@ from tests.support.unit import TestCase, skipIf
 # Import Azure libs
 HAS_LIBS = False
 try:
+    # pylint: disable=no-name-in-module
     from azure.storage.blob import BlobServiceClient
+
+    # pylint: enable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:

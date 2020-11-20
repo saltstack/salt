@@ -1,0 +1,57 @@
+# Configuration for welcome - https://github.com/behaviorbot/welcome
+# Configuration for new-issue-welcome - https://github.com/behaviorbot/new-issue-welcome
+# Comment to be posted to on first time issues
+newIssueWelcomeComment: >
+  Hi there! Welcome to the Salt Community! Thank you for making your first contribution. We have
+  a lengthy process for issues and PRs. Someone from the Core Team will follow up as soon as
+  possible. In the meantime, here’s some information that may help as you continue your Salt
+  journey.
+
+  Please be sure to review our [Code of Conduct](https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Also, check out some of our community
+  resources including:
+
+    - [Community Wiki](https://github.com/saltstack/community/wiki)
+    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
+    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+
+  There are lots of ways to get involved in our community. Every month, there are around a dozen
+  opportunities to meet with other contributors and the Salt Core team and collaborate in real
+  time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
+
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
+
+# Comment to be posted to on PRs from first time contributors in your repository
+newPRWelcomeComment: >
+  Hi there! Welcome to the Salt Community! Thank you for making your first contribution. We have
+  a lengthy process for issues and PRs. Someone from the Core Team will follow up as soon as
+  possible. In the meantime, here’s some information that may help as you continue your Salt
+  journey.
+
+  Please be sure to review our [Code of Conduct](https://github.com/saltstack/salt/blob/master/CODE_OF_CONDUCT.md).
+  Also, check out some of our community
+  resources including:
+
+    - [Community Wiki](https://github.com/saltstack/community/wiki)
+    - [Salt’s Contributor Guide](https://docs.saltstack.com/en/latest/topics/development/contributing.html)
+    - [Join our Community Slack](https://saltstackcommunity.herokuapp.com/)
+    - [IRC on Freenode](https://webchat.freenode.net/#salt)
+    - [SaltStack YouTube channel](https://www.youtube.com/user/SaltStack)
+    - [SaltStackInc Twitch channel](https://www.twitch.tv/saltstackinc)
+
+  There are lots of ways to get involved in our community. Every month, there are around a dozen
+  opportunities to meet with other contributors and the Salt Core team and collaborate in real
+  time. The best way to keep track is by subscribing to the Salt Community Events Calendar.
+
+  If you have additional questions, email us at core@saltstack.com. We’re glad
+  you’ve joined our community and look forward to doing awesome things with
+  you!
+
+# Comment to be posted to on pull requests merged by a first time user
+firstPRMergeComment: >
+  Congratulations on your first PR being merged! :tada:

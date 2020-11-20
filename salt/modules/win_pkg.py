@@ -2215,8 +2215,13 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     """
-    Package purges are not supported, this function is identical to
+    Package purges are not supported on Windows, this function is identical to
     ``remove()``.
+
+    .. note::
+        At some point in the future, ``pkg.purge`` may direct the installer to
+        remove all configs and settings for software packages that support that
+        option.
 
     .. versionadded:: 0.16.0
 

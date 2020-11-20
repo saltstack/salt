@@ -13,7 +13,6 @@ so that any external authentication system can be used inside of Salt
 # 5. Cache auth token with relative data opts['token_dir']
 # 6. Interface to verify tokens
 
-# Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
@@ -21,8 +20,8 @@ import getpass
 import logging
 import random
 import time
+from collections.abc import Iterable, Mapping
 
-# Import salt libs
 import salt.config
 import salt.exceptions
 import salt.loader
@@ -202,9 +201,9 @@ class LoadAuth(object):
         if expire_override is True:
             return True
 
-        if isinstance(expire_override, collections.Mapping):
+        if isinstance(expire_override, Mapping):
             expire_whitelist = expire_override.get(load["eauth"], [])
-            if isinstance(expire_whitelist, collections.Iterable):
+            if isinstance(expire_whitelist, Iterable):
                 if load.get("username") in expire_whitelist:
                     return True
 

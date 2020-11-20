@@ -58,9 +58,9 @@ Example Process Class
             self.opts = opts
 
         def run(self):
-            self.event = SaltEvent('master', self.opts['sock_dir'])
+            self.event = SaltEvent("master", self.opts["sock_dir"])
             i = 0
 
             while True:
-                self.event.fire_event({'iteration': i}, 'ext_processes/test{0}')
+                self.event.fire_event({"iteration": i}, "ext_processes/test{0}")
                 time.sleep(60)

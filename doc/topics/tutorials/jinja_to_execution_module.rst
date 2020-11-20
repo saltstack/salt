@@ -100,31 +100,33 @@ Note how the module encapsulates all of the logic around finding the storage ser
     # _modules/storage.py
     #!python
 
-    '''
+    """
     Functions related to storage servers.
-    '''
+    """
 
     import re
 
 
     def ips():
-        '''
+        """
         Provide a list of all local storage server IPs.
 
         CLI Example::
 
             salt \* storage.ips
-        '''
+        """
 
-        if  __grains__.get('virtual', None) in ['VirtualBox', 'oracle']:
-            return ['192.168.33.51', ]
+        if __grains__.get("virtual", None) in ["VirtualBox", "oracle"]:
+            return [
+                "192.168.33.51",
+            ]
 
-        colo = __pillar__.get('inventory', {}).get('colo', 'Unknown')
-        return __pillar__.get('storage_servers', {}).get(colo, ['unknown', ])
+        colo = __pillar__.get("inventory", {}).get("colo", "Unknown")
+        return __pillar__.get("storage_servers", {}).get(colo, ["unknown",])
 
 
     def ip():
-        '''
+        """
         Select and return a local storage server IP.
 
         This loadbalances across storage servers by using the modulus of the client's id number.
@@ -138,12 +140,12 @@ Note how the module encapsulates all of the logic around finding the storage ser
 
             salt \* storage.ip
 
-        '''
+        """
 
-        numerical_suffix = re.compile(r'^.*(\d+)$')
+        numerical_suffix = re.compile(r"^.*(\d+)$")
         servers_list = ips()
 
-        m = numerical_suffix.match(__grains__['id'])
+        m = numerical_suffix.match(__grains__["id"])
         if m:
             modulus = len(servers_list)
             server_number = int(m.group(1))

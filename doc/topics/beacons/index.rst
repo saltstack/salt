@@ -360,8 +360,7 @@ The return data structure would look something like this:
 
 .. code-block:: python
 
-    [{'changes': ['/foo/bar'], 'tag': 'foo'},
-     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+    [{"changes": ["/foo/bar"], "tag": "foo"}, {"changes": ["/foo/baz"], "tag": "bar"}]
 
 Calling Execution Modules
 -------------------------

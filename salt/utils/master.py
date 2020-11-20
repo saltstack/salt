@@ -398,7 +398,7 @@ class MasterPillarUtil(object):
         ckminions = salt.utils.minions.CkMinions(self.opts)
         _res = ckminions.check_minions(self.tgt, self.tgt_type)
         minion_ids = _res["minions"]
-        if len(minion_ids) == 0:
+        if not minion_ids:
             log.debug(
                 'No minions matched for tgt="%s" and tgt_type="%s"',
                 self.tgt,
@@ -826,7 +826,7 @@ class ConnectedCache(Process):
 
                 try:
 
-                    if len(new_c_data) == 0:
+                    if not new_c_data:
                         log.debug("ConCache Got empty update from worker")
                         continue
 

@@ -29,7 +29,7 @@ occurred:
 .. code-block:: python
 
     if something_went_wrong:
-        __context__['retcode'] = 42
+        __context__["retcode"] = 42
 
 This is actually how states signal that they have failed. Different cases
 result in different codes being set in the :ref:`__context__ <dunder-context>`

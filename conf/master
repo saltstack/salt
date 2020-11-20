@@ -1024,6 +1024,24 @@
 #
 #pillar_cache_backend: disk
 
+# A master can also cache GPG data locally to bypass the expense of having to render them
+# for each minion on every request. This feature should only be enabled in cases
+# where pillar rendering time is known to be unsatisfactory and any attendant security
+# concerns about storing decrypted GPG data in a master cache have been addressed.
+#
+# When enabling this feature, be certain to read through the additional ``gpg_cache_*``
+# configuration options to fully understand the tunable parameters and their implications.
+#gpg_cache: False
+
+# If and only if a master has set ``gpg_cache: True``, the cache TTL controls the amount
+# of time, in seconds, before the cache is considered invalid by a master and a fresh
+# pillar is recompiled and stored.
+#gpg_cache_ttl: 86400
+
+# If and only if a master has set `gpg_cache: True`, one of several storage providers
+# can be utilized. Available options are the same as ``pillar_cache_backend``.
+#gpg_cache_backend: disk
+
 
 ######        Reactor Settings        #####
 ###########################################

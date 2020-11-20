@@ -39,7 +39,7 @@ class CacheTest(TestCase, LoaderModuleMockMixin):
         """
         mock_minion = ["Larry"]
         mock_ret = {}
-        self.assertEqual(cache.grains(minion=mock_minion), mock_ret)
+        self.assertEqual(cache.grains(tgt="*", minion=mock_minion), mock_ret)
 
         mock_data = "grain stuff"
 
@@ -51,4 +51,4 @@ class CacheTest(TestCase, LoaderModuleMockMixin):
                 return mock_data
 
         with patch.object(salt.utils.master, "MasterPillarUtil", MockMaster):
-            self.assertEqual(cache.grains(), mock_data)
+            self.assertEqual(cache.grains(tgt="*"), mock_data)

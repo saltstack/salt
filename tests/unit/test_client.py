@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Place <mp@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.platform
 from salt import client
@@ -12,7 +10,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
 )
-from salt.ext.tornado.concurrent import Future
 from tests.support.helpers import slowTest
 from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import MagicMock, patch
@@ -98,7 +95,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
             },
         ):
             with patch("salt.client.LocalClient.cmd_cli") as cmd_cli_mock:
-                self.client.cmd_subset("*", "first.func", sub=1, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=1, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2"],
@@ -121,7 +118,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                         full_return=False,
                         ret="",
                     )
-                self.client.cmd_subset("*", "first.func", sub=10, cli=True)
+                self.client.cmd_subset("*", "first.func", subset=10, cli=True)
                 try:
                     cmd_cli_mock.assert_called_with(
                         ["minion2", "minion1"],
@@ -146,7 +143,7 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                     )
 
                 ret = self.client.cmd_subset(
-                    "*", "first.func", sub=1, cli=True, full_return=True
+                    "*", "first.func", subset=1, cli=True, full_return=True
                 )
                 try:
                     cmd_cli_mock.assert_called_with(
@@ -240,68 +237,3 @@ class LocalClientTestCase(TestCase, SaltClientTestCaseMixin):
                     "test.ping",
                     tgt_type="nodegroup",
                 )
-
-    # all of these parse_input test wrapper tests can be replaced by
-    # parameterize if/when we switch to pytest runner
-    # @pytest.mark.parametrize('method', [('run_job', 'cmd', ...)])
-    def _test_parse_input(self, method, asynchronous=False):
-        if asynchronous:
-            target = "salt.client.LocalClient.pub_async"
-            pub_ret = Future()
-            pub_ret.set_result({"jid": "123456789", "minions": ["m1"]})
-        else:
-            target = "salt.client.LocalClient.pub"
-            pub_ret = {"jid": "123456789", "minions": ["m1"]}
-
-        with patch(target, return_value=pub_ret) as pub_mock:
-            with patch(
-                "salt.client.LocalClient.get_cli_event_returns",
-                return_value=[{"m1": {"ret": ["test.arg"]}}],
-            ):
-                with patch(
-                    "salt.client.LocalClient.get_iter_returns",
-                    return_value=[{"m1": {"ret": True}}],
-                ):
-                    ret = getattr(self.client, method)(
-                        "*",
-                        "test.arg",
-                        arg=[
-                            "a",
-                            5,
-                            "yaml_arg={qux: Qux}",
-                            "another_yaml={bax: 12345}",
-                        ],
-                        jid="123456789",
-                    )
-
-                    # iterate generator if needed
-                    if asynchronous:
-                        pass
-                    else:
-                        ret = list(ret)
-
-                    # main test here is that yaml_arg is getting deserialized properly
-                    parsed_args = [
-                        "a",
-                        5,
-                        {
-                            "yaml_arg": {"qux": "Qux"},
-                            "another_yaml": {"bax": 12345},
-                            "__kwarg__": True,
-                        },
-                    ]
-                    self.assertTrue(
-                        any(parsed_args in call[0] for call in pub_mock.call_args_list)
-                    )
-
-    def test_parse_input_is_called(self):
-        self._test_parse_input("run_job")
-        self._test_parse_input("cmd")
-        self._test_parse_input("cmd_subset")
-        self._test_parse_input("cmd_batch")
-        self._test_parse_input("cmd_cli")
-        self._test_parse_input("cmd_full_return")
-        self._test_parse_input("cmd_iter")
-        self._test_parse_input("cmd_iter_no_block")
-        self._test_parse_input("cmd_async")
-        self._test_parse_input("run_job_async", asynchronous=True)
