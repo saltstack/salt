@@ -2950,6 +2950,63 @@ def _diff_graphics_lists(old, new):
     return _diff_lists(old, new, _graphics_equal)
 
 
+def _expand_cpuset(cpuset):
+    """
+    Expand the libvirt cpuset and nodeset values into a list of cpu/node IDs
+    """
+    if cpuset is None:
+        return None
+
+    if isinstance(cpuset, int):
+        return str(cpuset)
+
+    result = set()
+    toremove = set()
+    for part in cpuset.split(","):
+        m = re.match("([0-9]+)-([0-9]+)", part)
+        if m:
+            result |= set(range(int(m.group(1)), int(m.group(2)) + 1))
+        elif part.startswith("^"):
+            toremove.add(int(part[1:]))
+        else:
+            result.add(int(part))
+    cpus = list(result - toremove)
+    cpus.sort()
+    cpus = [str(cpu) for cpu in cpus]
+    return ",".join(cpus)
+
+
+def _normalize_cpusets(desc, data):
+    """
+    Expand the cpusets that can't be expanded by the change_xml() function,
+    namely the ones that are used as keys and in the middle of the XPath expressions.
+    """
+    # Normalize the cpusets keys in the XML
+    xpaths = ["cputune/cachetune", "cputune/cachetune/monitor", "cputune/memorytune"]
+    for xpath in xpaths:
+        nodes = desc.findall(xpath)
+        for node in nodes:
+            node.set("vcpus", _expand_cpuset(node.get("vcpus")))
+
+    # data paths to change:
+    #  - cpu:tuning:cachetune:{id}:monitor:{sid}
+    #  - cpu:tuning:memorytune:{id}
+    if not isinstance(data.get("cpu"), dict):
+        return
+    tuning = data["cpu"].get("tuning", {})
+    for child in ["cachetune", "memorytune"]:
+        if tuning.get(child):
+            new_item = dict()
+            for cpuset, value in tuning[child].items():
+                if child == "cachetune" and value.get("monitor"):
+                    value["monitor"] = {
+                        _expand_cpuset(monitor_cpus): monitor
+                        for monitor_cpus, monitor in value["monitor"].items()
+                    }
+                new_item[_expand_cpuset(cpuset)] = value
+            tuning[child] = new_item
+
+
 def update(
     name,
     cpu=0,
@@ -3256,7 +3313,62 @@ def update(
             entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
         return entry
 
+    def _cpuset_parameter(path, xpath, attr_name=None, ignored=None):
+        def _set_cpuset(node, value):
+            if attr_name:
+                node.set(attr_name, value)
+            else:
+                node.text = value
+
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _expand_cpuset,
+            "get": lambda n: _expand_cpuset(n.get(attr_name) if attr_name else n.text),
+            "set": _set_cpuset,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
+
     # Update the kernel boot parameters
+    data = {k: v for k, v in locals().items() if bool(v)}
+    if boot_dev:
+        data["boot_dev"] = boot_dev.split()
+
+    # Set the missing optional attributes and timers to None in timers to help cleaning up
+    timer_names = [
+        "platform",
+        "hpet",
+        "kvmclock",
+        "pit",
+        "rtc",
+        "tsc",
+        "hypervclock",
+        "armvtimer",
+    ]
+    if data.get("clock", {}).get("timers"):
+        attributes = [
+            "track",
+            "tickpolicy",
+            "frequency",
+            "mode",
+            "present",
+            "slew",
+            "threshold",
+            "limit",
+        ]
+        for timer in data["clock"]["timers"].values():
+            for attribute in attributes:
+                if attribute not in timer:
+                    timer[attribute] = None
+
+        for timer_name in timer_names:
+            if timer_name not in data["clock"]["timers"]:
+                data["clock"]["timers"][timer_name] = None
+
+    _normalize_cpusets(desc, data)
+
     params_mapping = [
         {"path": "boot:kernel", "xpath": "os/kernel"},
         {"path": "boot:initrd", "xpath": "os/initrd"},
@@ -3281,7 +3393,7 @@ def update(
             "size",
             ["unit", "nodeset"],
         ),
-        xmlutil.attribute(
+        _cpuset_parameter(
             "mem:hugepages:{id}:nodeset", "memoryBacking/hugepages/page[$id]", "nodeset"
         ),
         {
@@ -3308,7 +3420,7 @@ def update(
         },
         {"path": "cpu:maximum", "xpath": "vcpu", "get": lambda n: int(n.text)},
         xmlutil.attribute("cpu:placement", "vcpu", "placement"),
-        xmlutil.attribute("cpu:cpuset", "vcpu", "cpuset"),
+        _cpuset_parameter("cpu:cpuset", "vcpu", "cpuset"),
         xmlutil.attribute("cpu:current", "vcpu", "current"),
         xmlutil.attribute("cpu:match", "cpu", "match"),
         xmlutil.attribute("cpu:mode", "cpu", "mode"),
@@ -3337,7 +3449,7 @@ def update(
         xmlutil.int_attribute(
             "cpu:vcpus:{id}:order", "vcpus/vcpu[@id='$id']", "order", ["id"]
         ),
-        xmlutil.attribute(
+        _cpuset_parameter(
             "cpu:numa:{id}:cpus", "cpu/numa/cell[@id='$id']", "cpus", ["id"]
         ),
         _memory_parameter(
@@ -3365,14 +3477,14 @@ def update(
         {"path": "cpu:tuning:emulator_quota", "xpath": "cputune/emulator_quota"},
         {"path": "cpu:tuning:iothread_period", "xpath": "cputune/iothread_period"},
         {"path": "cpu:tuning:iothread_quota", "xpath": "cputune/iothread_quota"},
-        xmlutil.attribute(
+        _cpuset_parameter(
             "cpu:tuning:vcpupin:{id}",
             "cputune/vcpupin[@vcpu='$id']",
             "cpuset",
             ["vcpu"],
         ),
-        xmlutil.attribute("cpu:tuning:emulatorpin", "cputune/emulatorpin", "cpuset"),
-        xmlutil.attribute(
+        _cpuset_parameter("cpu:tuning:emulatorpin", "cputune/emulatorpin", "cpuset"),
+        _cpuset_parameter(
             "cpu:tuning:iothreadpin:{id}",
             "cputune/iothreadpin[@iothread='$id']",
             "cpuset",
@@ -3387,7 +3499,7 @@ def update(
         xmlutil.attribute(
             "cpu:tuning:vcpusched:{id}:priority", "cputune/vcpusched[$id]", "priority"
         ),
-        xmlutil.attribute(
+        _cpuset_parameter(
             "cpu:tuning:vcpusched:{id}:vcpus", "cputune/vcpusched[$id]", "vcpus"
         ),
         xmlutil.attribute(
@@ -3401,7 +3513,7 @@ def update(
             "cputune/iothreadsched[$id]",
             "priority",
         ),
-        xmlutil.attribute(
+        _cpuset_parameter(
             "cpu:tuning:iothreadsched:{id}:iothreads",
             "cputune/iothreadsched[$id]",
             "iothreads",
@@ -3432,16 +3544,6 @@ def update(
         xmlutil.attribute("clock:timezone", "clock", "timezone"),
     ]
 
-    timer_names = [
-        "platform",
-        "hpet",
-        "kvmclock",
-        "pit",
-        "rtc",
-        "tsc",
-        "hypervclock",
-        "armvtimer",
-    ]
     for timer in timer_names:
         params_mapping += [
             xmlutil.attribute(
@@ -3498,14 +3600,14 @@ def update(
     if hypervisor in ["qemu", "kvm"]:
         params_mapping += [
             xmlutil.attribute("numatune:memory:mode", "numatune/memory", "mode"),
-            xmlutil.attribute("numatune:memory:nodeset", "numatune/memory", "nodeset"),
+            _cpuset_parameter("numatune:memory:nodeset", "numatune/memory", "nodeset"),
             xmlutil.attribute(
                 "numatune:memnodes:{id}:mode",
                 "numatune/memnode[@cellid='$id']",
                 "mode",
                 ["cellid"],
             ),
-            xmlutil.attribute(
+            _cpuset_parameter(
                 "numatune:memnodes:{id}:nodeset",
                 "numatune/memnode[@cellid='$id']",
                 "nodeset",
@@ -3518,31 +3620,6 @@ def update(
                 convert=lambda v: "on" if v else "off",
             ),
         ]
-
-    data = {k: v for k, v in locals().items() if bool(v)}
-    if boot_dev:
-        data["boot_dev"] = boot_dev.split()
-
-    # Set the missing optional attributes and timers to None in timers to help cleaning up
-    if data.get("clock", {}).get("timers"):
-        attributes = [
-            "track",
-            "tickpolicy",
-            "frequency",
-            "mode",
-            "present",
-            "slew",
-            "threshold",
-            "limit",
-        ]
-        for timer in data["clock"]["timers"].values():
-            for attribute in attributes:
-                if attribute not in timer:
-                    timer[attribute] = None
-
-        for timer_name in timer_names:
-            if timer_name not in data["clock"]["timers"]:
-                data["clock"]["timers"][timer_name] = None
 
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
