@@ -180,6 +180,20 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             calls = [call(), call(10), call(30)]
             mock_timeout.assert_has_calls(calls)
 
+    def test_timeout_cleankwargs_decorator(self):
+        with patch(
+            "jnpr.junos.Device.timeout", new_callable=PropertyMock
+        ) as mock_timeout:
+            mock_timeout.return_value = 30
+
+            def function(x):
+                return x
+
+            decorator = junos.timeoutDecorator_cleankwargs(function)
+            decorator("Test Mock", dev_timeout=10, __pub_args="abc")
+            calls = [call(), call(10), call(30)]
+            mock_timeout.assert_has_calls(calls)
+
     def test_facts_refresh(self):
         with patch("salt.modules.saltutil.sync_grains") as mock_sync_grains:
             ret = dict()
@@ -1836,7 +1850,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1852,10 +1866,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = False
+            mock_install.return_value = False, "because we are testing failure"
             ret = dict()
             ret["out"] = False
-            ret["message"] = "Installation failed."
+            ret[
+                "message"
+            ] = "Installation failed. Reason: because we are testing failure"
             self.assertEqual(junos.install_os("path"), ret)
 
     def test_install_os_with_reboot_arg(self):
@@ -1870,7 +1886,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             args = {
                 "__pub_user": "root",
                 "__pub_arg": [{"reboot": True}],
@@ -1914,7 +1930,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             mock_reboot.side_effect = self.raise_exception
             args = {
                 "__pub_user": "root",
@@ -1943,7 +1959,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1964,7 +1980,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
@@ -1981,7 +1997,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_getsize:
             mock_getsize.return_value = 10
             mock_isfile.return_value = True
-            mock_install.return_value = True
+            mock_install.return_value = True, "installed"
             ret = dict()
             ret["out"] = True
             ret["message"] = "Installed the os."
