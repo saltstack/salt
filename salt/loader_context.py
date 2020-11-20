@@ -101,7 +101,7 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.default = state["default"]
 
     def __getattr__(self, name):
-        return self.value().__getattr__(name)
+        return getattr(self.value(), name)
 
     def missing_fun_string(self, name):
         return self.loader().missing_fun_string(name)
