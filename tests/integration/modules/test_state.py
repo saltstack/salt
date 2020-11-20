@@ -2558,7 +2558,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
           {%- for x in range(1, 10) %}
             blah-{{x}}:
               cmd.run:
-                - name: sleep 5
+                - name: sleep 2
                 - require:
                   - barrier
                   - barrier2
