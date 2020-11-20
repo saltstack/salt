@@ -32,6 +32,7 @@ from tests.support.helpers import (
     Webserver,
     dedent,
     destructiveTest,
+    requires_system_grains,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
@@ -1077,9 +1078,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
         self.assertSaltTrueReturn(ret)
 
+    @requires_system_grains
     @skip_if_not_root
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
-    def test_directory_max_depth(self):
+    def test_directory_max_depth(self, grains):
         """
         file.directory
         Test the max_depth option by iteratively increasing the depth and
@@ -1101,11 +1103,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        initial_modes = {
-            0: {sub: "0755", subsub: "0111"},
-            1: {sub: "0111", subsub: "0111"},
-            2: {sub: "0111", subsub: "0111"},
-        }
+        if grains["os_family"] in ("VMware Photon OS",):
+            initial_modes = {
+                0: {sub: "0750", subsub: "0110"},
+                1: {sub: "0110", subsub: "0110"},
+                2: {sub: "0110", subsub: "0110"},
+            }
+        else:
+            initial_modes = {
+                0: {sub: "0755", subsub: "0111"},
+                1: {sub: "0111", subsub: "0111"},
+                2: {sub: "0111", subsub: "0111"},
+            }
 
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
