@@ -1499,9 +1499,10 @@ def install_os(path=None, **kwargs):
 @timeoutDecorator_cleankwargs
 def file_copy(src, dest):
     """
-    NOTE This function does not work on Juniper native minions
-
     Copies the file from the local device to the junos device
+
+    .. note::
+        This function does not work on Juniper native minions
 
     src
         The source path where the file is kept.
@@ -2081,8 +2082,6 @@ def _make_source_list(dir):
 @timeoutDecorator
 def file_compare(file1, file2, **kwargs):
     """
-    NOTE This function only works on Juniper native minions
-
     Compare two files and return a dictionary indicating if they
     are different.
 
@@ -2090,6 +2089,9 @@ def file_compare(file1, file2, **kwargs):
     exist or some other error occurred.
 
     Under the hood, this uses the junos CLI command `file compare files ...`
+
+    .. note::
+        This function only works on Juniper native minions
 
     .. versionadded:: Aluminum
 
@@ -2103,6 +2105,7 @@ def file_compare(file1, file2, **kwargs):
             False
         success:
             True
+
     """
     if not salt.utils.platform.is_junos():
         return {
@@ -2140,11 +2143,12 @@ def file_compare(file1, file2, **kwargs):
 @timeoutDecorator
 def fsentry_exists(dir, **kwargs):
     """
-    NOTE This function only works on Juniper native minions
-
     Returns a dictionary indicating if `dir` refers to a file
     or a non-file (generally a directory) in the file system,
     or if there is no file by that name.
+
+    .. note::
+        This function only works on Juniper native minions
 
     .. versionadded:: Aluminum
 
@@ -2158,6 +2162,7 @@ def fsentry_exists(dir, **kwargs):
             True
         exists:
             True
+
     """
     if not salt.utils.platform.is_junos():
         return {
@@ -2256,6 +2261,7 @@ def routing_engine(**kwargs):
           True
 
     Returns `success: False` if the device does not appear to have multiple routing engines.
+
     """
     engine_status = _find_routing_engines()
     if not engine_status["success"]:
@@ -2282,7 +2288,8 @@ def dir_copy(source, dest, force=False, **kwargs):
     """
     Copy a directory and recursively its contents from source to dest.
 
-    NOTE this function only works on the Juniper native minion
+    .. note::
+        This function only works on the Juniper native minion
 
     Parameters:
 
@@ -2303,6 +2310,7 @@ def dir_copy(source, dest, force=False, **kwargs):
     This will take the `pki` directory, its absolute path and copy it and its
     contents to routing engine 1 root directory. The result will be
     `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
+
     """
     if not salt.utils.platform.is_junos():
         return {
