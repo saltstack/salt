@@ -30,14 +30,13 @@ def setup_loader():
         yield loader_mock
 
 
+@pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
 def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
     ca_name = "test_ca"
     certp = tmpdir.join(ca_name).join("{}_ca_cert.crt".format(ca_name)).strpath
     certk = tmpdir.join(ca_name).join("{}_ca_cert.key".format(ca_name)).strpath
     mock_opt = MagicMock(return_value=tmpdir)
     mock_ret = MagicMock(return_value=0)
-
-    print(tls_test_data)
 
     with patch.dict(
         tls.__salt__, {"config.option": mock_opt, "cmd.retcode": mock_ret}
@@ -50,6 +49,7 @@ def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
         assert 0o600 == certk_mode
 
 
+@pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
 def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
     ca_name = "test_ca"
     csrp = (
@@ -83,6 +83,7 @@ def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
         assert 0o600 == keyp_mode
 
 
+@pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
 def test_create_self_signed_cert_permissions_on_csr_cert_and_key(tmpdir, tls_test_data):
     ca_name = "test_ca"
     certp = (
