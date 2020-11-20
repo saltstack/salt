@@ -176,7 +176,6 @@ def timeoutDecorator(function):
             ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
-            kwargs["dev_timeout"] = ldev_timeout
             conn.timeout = ldev_timeout
             try:
                 result = function(*args, **kwargs)
@@ -198,7 +197,6 @@ def timeoutDecorator_cleankwargs(function):
             ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
-            kwargs["dev_timeout"] = ldev_timeout
             conn.timeout = ldev_timeout
             try:
                 restore_kwargs = False
@@ -1461,6 +1459,7 @@ def install_os(path=None, **kwargs):
             return ret
 
     if install_status is True:
+        ret["out"] = True
         ret["message"] = "Installed the os."
     else:
         ret["message"] = "Installation failed. Reason: {}".format(install_message)
@@ -1490,6 +1489,7 @@ def install_os(path=None, **kwargs):
             return ret
 
         __proxy__["junos.reboot_clear"]()
+        ret["out"] = True
         ret["message"] = "Successfully installed and rebooted!"
 
     return ret
