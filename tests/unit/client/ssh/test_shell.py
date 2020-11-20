@@ -25,11 +25,7 @@ class SSHShellTests(TestCase):
             assert os.path.exists(fp)
 
         # verify there is not a passphrase set on key
-        ret = subprocess.run(
-            ["ssh-keygen", "-f", self.priv_key, "-y"],
-            capture_output=True,
-            timeout=30,
-            check=True,
+        ret = subprocess.check_output(
+            ["ssh-keygen", "-f", self.priv_key, "-y"], timeout=30,
         )
-        self.assertTrue(ret.stdout.decode().startswith("ssh-rsa"))
-        self.assertEqual(ret.returncode, 0)
+        self.assertTrue(ret.decode().startswith("ssh-rsa"))
