@@ -36,8 +36,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "__proxy__": {
                     "junos.conn": self.make_connect,
                     "junos.get_serialized_facts": self.get_facts,
-                    "junos.reboot_active": MagicMock(return_value=None),
-                    "junos.reboot_clear": MagicMock(return_value=None),
+                    "junos.reboot_active": MagicMock(return_value=True),
+                    "junos.reboot_clear": MagicMock(return_value=True),
                 },
                 "__salt__": {
                     "cp.get_template": self.mock_cp,
