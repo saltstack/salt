@@ -1984,42 +1984,30 @@ def rpc_file_list(path, **kwargs):
 
     CLI Example :
 
+    .. code-block:: bash
+
         salt junos-router junos.rpc_file_list /var/local/salt/etc
 
         junos-router:
-        ----------
-        files:
-            ----------
-            directory:
-                ----------
-                directory-name:
-
-                    /var/local/salt/etc
-                file-information:
-                    |_
-                      ----------
-                      file-directory:
-                          ----------
-                      file-name:
-
-                          pki
-                    |_
-                      ----------
-                      file-name:
-
-                          proxy
-                    |_
-                      ----------
-                      file-directory:
-                          ----------
-                      file-name:
-
-                          proxy.d
+            files:
+                directory:
+                    directory-name:
+                        /var/local/salt/etc
+                    file-information:
+                        |_
+                          file-directory:
+                              file-name:
+                                  pki
+                        |_
+                          file-name:
+                              proxy
+                        |_
+                          file-directory:
+                              file-name:
+                                  proxy.d
                 total-file-blocks:
-
                     10
                 total-files:
-
                     1
         success:
             True
@@ -2097,14 +2085,15 @@ def file_compare(file1, file2, **kwargs):
 
     CLI Example :
 
+    .. code-block:: bash
+
         salt junos-router junos.file_compare /var/tmp/backup1/cmt.script /var/tmp/backup2/cmt.script
 
         junos-router:
-        -------------
-        identical:
-            False
-        success:
-            True
+            identical:
+                False
+            success:
+                True
 
     """
     if not salt.utils.platform.is_junos():
@@ -2154,14 +2143,15 @@ def fsentry_exists(dir, **kwargs):
 
     CLI Example :
 
+    .. code-block:: bash
+
         salt junos-router junos.fsentry_exists /var/log
 
         junos-router:
-        -------------
-        is_dir:
-            True
-        exists:
-            True
+            is_dir:
+                True
+            exists:
+                True
 
     """
     if not salt.utils.platform.is_junos():
@@ -2249,16 +2239,17 @@ def routing_engine(**kwargs):
 
     CLI Example :
 
+    .. code-block:: bash
+
         salt junos-router junos.routing_engine
 
         junos-router:
-        ----------
-        backup:
-          - re1:
-        master:
-          re0:
-        success:
-          True
+            backup:
+              - re1:
+            master:
+              re0:
+            success:
+              True
 
     Returns `success: False` if the device does not appear to have multiple routing engines.
 
