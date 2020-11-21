@@ -31,7 +31,6 @@ from tests.support.helpers import SKIP_IF_NOT_RUNNING_PYTEST, RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
     AdaptedConfigurationTestCaseMixin,
     SaltClientTestCaseMixin,
-    SaltMultimasterClientTestCaseMixin,
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -550,17 +549,6 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
                 pass
 
 
-class MultiMasterTestShellCase(ShellCase):
-    """
-    '''
-    Execute a test for a shell command when running multi-master tests
-    """
-
-    @property
-    def config_dir(self):
-        return RUNTIME_VARS.TMP_MM_CONF_DIR
-
-
 class SPMTestUserInterface:
     """
     Test user interface to SPMClient
@@ -825,89 +813,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 ret.append(
                     "[TEST SUITE ENFORCED]{}" "[/TEST SUITE ENFORCED]".format(msg)
                 )
-        return ret
-
-
-class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
-    """
-    Execute a module function
-    """
-
-    def run_function(
-        self,
-        function,
-        arg=(),
-        minion_tgt="mm-minion",
-        timeout=300,
-        master_tgt="mm-master",
-        **kwargs
-    ):
-        """
-        Run a single salt function and condition the return down to match the
-        behavior of the raw function call
-        """
-        known_to_return_none = (
-            "data.get",
-            "file.chown",
-            "file.chgrp",
-            "pkg.refresh_db",
-            "ssh.recv_known_host_entries",
-            "time.sleep",
-        )
-        if minion_tgt == "mm-sub-minion":
-            known_to_return_none += ("mine.update",)
-        if "f_arg" in kwargs:
-            kwargs["arg"] = kwargs.pop("f_arg")
-        if "f_timeout" in kwargs:
-            kwargs["timeout"] = kwargs.pop("f_timeout")
-        if master_tgt is None:
-            client = self.clients["mm-master"]
-        elif isinstance(master_tgt, int):
-            client = self.clients[list(self.clients)[master_tgt]]
-        else:
-            client = self.clients[master_tgt]
-        orig = client.cmd(minion_tgt, function, arg, timeout=timeout, kwarg=kwargs)
-
-        if RUNTIME_VARS.PYTEST_SESSION:
-            fail_or_skip_func = self.fail
-        else:
-            fail_or_skip_func = self.skipTest
-
-        if minion_tgt not in orig:
-            fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion '{}'. Command output: {}".format(minion_tgt, orig)
-            )
-        elif orig[minion_tgt] is None and function not in known_to_return_none:
-            fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{}' from "
-                "the minion '{}'. Command output: {}".format(function, minion_tgt, orig)
-            )
-
-        # Try to match stalled state functions
-        orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
-
-        return orig[minion_tgt]
-
-    def run_function_all_masters(
-        self, function, arg=(), minion_tgt="mm-minion", timeout=300, **kwargs
-    ):
-        """
-        Run a single salt function from all the masters in multimaster environment
-        and condition the return down to match the behavior of the raw function call
-        """
-        ret = []
-        for master_id in self.clients:
-            ret.append(
-                self.run_function(
-                    function,
-                    arg=arg,
-                    minion_tgt=minion_tgt,
-                    timeout=timeout,
-                    master_tgt=master_id,
-                    **kwargs
-                )
-            )
         return ret
 
 
