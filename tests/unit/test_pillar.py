@@ -1087,6 +1087,83 @@ sub_with_slashes:
             "simple_include.missing_include" in compiled_pillar["_errors"][0]
         )
 
+    @with_tempdir()
+    def test_templated_includes(self, tempdir):
+        opts = {
+            "optimization_order": [0, 1, 2],
+            "renderer": "jinja|yaml",
+            "renderer_blacklist": [],
+            "renderer_whitelist": [],
+            "state_top": "top.sls",
+            "pillar_roots": {"base": [tempdir]},
+            "extension_modules": "",
+            "saltenv": "base",
+            "file_roots": [],
+            "file_ignore_regex": None,
+            "file_ignore_glob": None,
+        }
+        grains = {}
+
+        with fopen(os.path.join(tempdir, "top.sls"), "w") as f_top_sls:
+            print(textwrap.dedent(
+                  """
+                     base:
+                       '*':
+                         - repeated_includes
+                         - recursive_include
+               """), file=f_top_sls)
+
+        d_repeated_inc = os.path.join(tempdir, "repeated_includes")
+        os.makedirs(d_repeated_inc)
+
+        with fopen(os.path.join(d_repeated_inc, "template.sls"), "w") as f_repeated_inc_tpl:
+            print("value: {{ tpl_val }}",
+                  file=f_repeated_inc_tpl)
+        with fopen(os.path.join(d_repeated_inc, "init.sls"), "w") as f_repeated_inc_init:
+            print(textwrap.dedent(
+                  """
+                     include:
+                       - repeated_includes.template:
+                           defaults:
+                             tpl_val: value1
+                           key: test_repeated_inc:key1
+                       - repeated_includes.template:
+                           defaults:
+                             tpl_val: value2
+                           key: test_repeated_inc:key2
+                       - repeated_includes.template:
+                           defaults:
+                             tpl_val: This value must not appear, as the target key repeats.
+                           key: test_repeated_inc:key2
+               """), file=f_repeated_inc_init)
+
+        d_recursive_inc = os.path.join(tempdir, "recursive_include")
+        os.makedirs(d_recursive_inc)
+
+        # This kind of recursion is probably not useful, but the test makes sure circular reference are detected.
+        with fopen(os.path.join(d_recursive_inc, "init.sls"), "w") as f_recursive_inc_init:
+            print(textwrap.dedent(
+                  """
+                     include:
+                       - recursive_include:
+                           defaults:
+                             tpl_val: new value
+                           key: test_recursive_inc:nested
+
+                     test_recursive_inc:
+                       key1:
+                         value: {{ tpl_val |default("default value") }}
+               """), file=f_recursive_inc_init)
+
+        pillar = salt.pillar.Pillar(opts, grains, "minion", "base")
+        pillar.matchers["confirm_top.confirm_top"] = lambda *x, **y: True
+        compiled_pillar = pillar.compile_pillar()
+
+        self.assertEqual(compiled_pillar['test_repeated_inc']['key1']['value'], 'value1')
+        self.assertEqual(compiled_pillar['test_repeated_inc']['key2']['value'], 'value2')
+        self.assertEqual(compiled_pillar['test_recursive_inc']['key1']['value'], 'default value')
+        self.assertEqual(compiled_pillar['test_recursive_inc']['nested']['test_recursive_inc']['key1']['value'], 'new value')
+
 
 @patch("salt.transport.client.ReqChannel.factory", MagicMock())
 class RemotePillarTestCase(TestCase):
