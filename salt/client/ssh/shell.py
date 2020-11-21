@@ -45,7 +45,7 @@ def gen_key(path):
     '''
     Generate a key for use with salt-ssh
     '''
-    cmd = ["ssh-keygen", "-P", '""', "-f", path, "-t", "rsa", "-q"]
+    cmd = ["ssh-keygen", "-P", "", "-f", path, "-t", "rsa", "-q"]
     if not os.path.isdir(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
     subprocess.call(cmd)
