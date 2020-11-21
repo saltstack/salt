@@ -1043,7 +1043,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action="purge", name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=False, **kwargs):
+def upgrade(name=None, refresh=True, dist_upgrade=False, **kwargs):
     """
     .. versionchanged:: 2015.8.12,2016.3.3,2016.11.0
         On minions running systemd>=205, `systemd-run(1)`_ is now used to
@@ -1068,6 +1068,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
+
+    name
+        The name of the package to be upgraded.
 
     dist_upgrade
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
@@ -1129,6 +1132,10 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append("--download-only")
 
     cmd.append("dist-upgrade" if dist_upgrade else "upgrade")
+
+    if not dist_upgrade and name != None:
+        cmd.append(name)
+
     result = _call_apt(cmd, env=DPKG_ENV_VARS.copy())
     __context__.pop("pkg.list_pkgs", None)
     new = list_pkgs()
