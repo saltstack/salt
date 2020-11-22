@@ -1089,7 +1089,6 @@ sub_with_slashes:
 
     @with_tempdir()
     def test_templated_includes(self, tempdir):
-        # .
         opts = {
             "optimization_order": [0, 1, 2],
             "renderer": "jinja|yaml",
