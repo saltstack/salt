@@ -255,6 +255,8 @@ def _versionlock_pkg(grains=None):
         if int(grains.get("osmajorrelease")) >= 8:
             return "python3-dnf-plugin-versionlock"
         return "python2-dnf-plugin-versionlock"
+    elif _yum() == "tdnf":
+        raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
         return (
             "yum-versionlock"
