@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import os
 import subprocess
 
@@ -28,6 +30,6 @@ class SSHShellTests(TestCase):
 
         # verify there is not a passphrase set on key
         ret = subprocess.check_output(
-            ["ssh-keygen", "-f", self.priv_key, "-y"], timeout=30,
+            ["ssh-keygen", "-f", self.priv_key, "-y"]
         )
         self.assertTrue(ret.decode().startswith("ssh-rsa"))
