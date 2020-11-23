@@ -1940,7 +1940,6 @@ def get_table(
         return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["message"] = "Uncaught exception - please report: {}".format(str(err))
-        ##        traceback.print_exc()
         ret["out"] = False
         _restart_connection()
         return ret
