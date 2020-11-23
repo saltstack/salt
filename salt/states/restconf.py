@@ -50,18 +50,20 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
     :param init_method: Method to use on alternative URI when setting config, default: PATCH
     :type init_method: ``str``
     Examples:
+
     .. code-block:: yaml
-        random name here:
+
+        do_configure_restconf_endpoint:
           restconf.config_manage:
             - name: random_name_here
             - uri: restconf/data/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1%2F0%2F3
             - config:
                 Cisco-IOS-XE-native:GigabitEthernet:
-                    description:
-                        harro
-                    name:
-                        1/0/3
+                  description: interfaceDescription
+                  name: "1/0/3"
+
     """
+
     # TODO: add template function so that config var does not need to be passed
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     found_working_uri = False
