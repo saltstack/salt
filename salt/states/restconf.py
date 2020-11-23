@@ -10,12 +10,21 @@ State module for restconf Proxy minions
 
 import json  # noqa: F401
 
-from deepdiff import DeepDiff
-
 # from salt.utils.odict import OrderedDict  # noqa: F401
+
+try:
+    HAS_DEEPDIFF = True
+    from deepdiff import DeepDiff
+except ImportError:
+    HAS_DEEPDIFF = False
 
 
 def __virtual__():
+    if not HAS_DEEPDIFF:
+        return (
+            False,
+            "Missing dependency: The restconf states method requires the 'deepdiff' Python module.",
+        )
     if "restconf.set_data" in __salt__:  # noqa: F821
         return True
     return (False, "restconf module could not be loaded")
