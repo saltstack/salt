@@ -181,6 +181,9 @@ class NetapiSSHClientTest(SSHCase):
         naopts = copy.deepcopy(opts)
         naopts["ignore_host_keys"] = True
         self.netapi = salt.netapi.NetapiClient(naopts)
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
+        self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+        self.roster_file = os.path.join(self.rosters, "roster")
 
         # Initialize salt-ssh
         self.run_function('test.ping')
@@ -337,12 +340,12 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_options": ["|id>{} #".format(path), "lol"],
         }
@@ -360,12 +363,12 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_port": "hhhhh|id>{} #".format(path),
         }
@@ -383,9 +386,9 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
             "eauth": "auto",
@@ -397,7 +400,7 @@ class NetapiSSHClientTest(SSHCase):
 
 
 @requires_sshd_server
-class NetapiSSHClientAuthTest(SSHCase):
+class NetapiSSHClientAuthTest(SSHCase, ModuleCase):
 
     USERA = "saltdev"
     USERA_PWD = "saltdev"
@@ -411,13 +414,13 @@ class NetapiSSHClientAuthTest(SSHCase):
         naopts["ignore_host_keys"] = True
         self.netapi = salt.netapi.NetapiClient(naopts)
 
-        self.priv_file = os.path.join(TMP_CONF_DIR, "key_test")
-        self.rosters = os.path.join(TMP_CONF_DIR)
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+        self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+        self.roster_file = os.path.join(self.rosters, "roster")
         # Initialize salt-ssh
         self.run_function("test.ping")
-        self.mod_case = ModuleCase()
         try:
-            add_user = self.mod_case.run_function(
+            add_user = ModuleCase.run_function(self,
                 "user.add", [self.USERA], createhome=False
             )
             self.assertTrue(add_user)
@@ -425,17 +428,17 @@ class NetapiSSHClientAuthTest(SSHCase):
                 hashed_password = self.USERA_PWD
             else:
                 hashed_password = salt.utils.pycrypto.gen_hash(password=self.USERA_PWD)
-            add_pwd = self.mod_case.run_function(
+            add_pwd = ModuleCase.run_function(self,
                 "shadow.set_password", [self.USERA, hashed_password],
             )
             self.assertTrue(add_pwd)
         except AssertionError:
-            self.mod_case.run_function("user.delete", [self.USERA], remove=True)
+            ModuleCase.run_function(self, "user.delete", [self.USERA], remove=True)
             self.skipTest("Could not add user or password, skipping test")
 
     def tearDown(self):
         del self.netapi
-        self.mod_case.run_function("user.delete", [self.USERA], remove=True)
+        ModuleCase.run_function(self, "user.delete", [self.USERA], remove=True)
 
     @classmethod
     def setUpClass(cls):
@@ -459,7 +462,7 @@ class NetapiSSHClientAuthTest(SSHCase):
             "tgt": "127.0.0.1",
             "renderer": "cheetah",
             "fun": "test.ping",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "eauth": "xx",
         }
@@ -478,8 +481,8 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
-            "password": "saltdev",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
         }
         ret = self.netapi.run(low)
         assert "localhost" in ret
@@ -497,7 +500,7 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
+            "username": self.USERA,
             "password": "notvalidpassword",
         }
         with self.assertRaises(salt.exceptions.EauthAuthenticationError):
@@ -516,7 +519,7 @@ class NetapiSSHClientAuthTest(SSHCase):
             "rosters": [self.rosters],
             "ssh_priv": self.priv_file,
             "eauth": "pam",
-            "username": "saltdev",
+            "username": self.USERA,
             "password": "notvalidpassword",
         }
         with self.assertRaises(salt.exceptions.EauthAuthenticationError):
@@ -528,8 +531,8 @@ class NetapiSSHClientAuthTest(SSHCase):
         """
         low = {
             "eauth": "pam",
-            "username": "saltdev",
-            "password": "saltdev",
+            "username": self.USERA,
+            "password": self.USERA_PWD,
         }
         ret = self.netapi.loadauth.mk_token(low)
         assert "token" in ret and ret["token"]
