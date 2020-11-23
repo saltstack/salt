@@ -801,6 +801,11 @@ def run(
         cmd_all = __salt__[run_cmd](
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
+    except OSError as err:
+        ret["comment"] = six.text_type(err)
+        if "The user name or password is incorrect" in ret["comment"]:
+            ret["comment"] = "`runas` user password was incorrect."
+        return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["comment"] = six.text_type(err)
         return ret
@@ -1060,12 +1065,6 @@ def script(
         }
     )
 
-    run_check_cmd_kwargs = {
-        "cwd": cwd,
-        "runas": runas,
-        "shell": shell or __grains__["shell"],
-    }
-
     # Change the source to be the name arg if it is not specified
     if source is None:
         source = name
@@ -1088,6 +1087,11 @@ def script(
     # Wow, we passed the test, run this sucker!
     try:
         cmd_all = __salt__["cmd.script"](source, python_shell=True, **cmd_kwargs)
+    except OSError as err:
+        ret["comment"] = six.text_type(err)
+        if "The user name or password is incorrect" in ret["comment"]:
+            ret["comment"] = "`runas` user password was incorrect."
+        return ret
     except (CommandExecutionError, SaltRenderError, IOError) as err:
         ret["comment"] = six.text_type(err)
         return ret

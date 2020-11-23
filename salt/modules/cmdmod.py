@@ -300,6 +300,9 @@ def _run(
     if password is None and "__context__" in globals():
         password = __context__.get("runas_password")
 
+    if salt.utils.platform.is_windows() and password is None and runas is not None and not salt.utils.user._win_current_user_is_admin():
+        log.warning("runas usually needs the user password!")
+
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
     # the minion is running.
