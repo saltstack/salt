@@ -6,6 +6,7 @@
 """
 import logging
 import os
+import pathlib
 import shutil
 import tempfile
 import textwrap
@@ -105,6 +106,8 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
     try:
         if directory is None:
             directory = RUNTIME_VARS.TMP
+        elif isinstance(directory, pathlib.Path):
+            directory = str(directory)
 
         if name is not None:
             file_path = os.path.join(directory, name)
@@ -126,12 +129,19 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
 
             with salt.utils.files.fopen(file_path, "w") as wfh:
                 wfh.write(file_contents)
+            log_contents = "{0} Contents {0}\n{1}\n{2} Contents {2}".format(
+                ">" * 15, file_contents, "<" * 15
+            )
+            log.debug("Created temp file: %s\n%s", file_path, log_contents)
+        else:
+            log.debug("Touched temp file: %s", file_path)
 
         yield file_path
 
     finally:
         try:
             os.unlink(file_path)
+            log.debug("Deleted temp file: %s", file_path)
         except OSError:
             # Already deleted
             pass
