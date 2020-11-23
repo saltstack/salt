@@ -37,18 +37,25 @@ def __virtual__():
 def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH"):
     """
     Ensure a specific value exists at a given path
-    :param name: The name for this rule
-    :type  name: ``str``
-    :param uri: The restconf uri to set / get config
-    :type  uri: ``str``
-    :param method: rest method to use eg GET, PUT, POST, PATCH, DELETE
-    :type method: ``str``
-    :param config: The new value at the given path
-    :type  config: ``dict``
-    :param init_uri: Alternative URI incase the URI doesnt exist on first pass
-    :type init_uri: ``str``
-    :param init_method: Method to use on alternative URI when setting config, default: PATCH
-    :type init_method: ``str``
+
+    name:
+        (str) The name for this rule
+
+    uri:
+        (str) The restconf uri to set / get config
+
+    method:
+        (str) rest method to use eg GET, PUT, POST, PATCH, DELETE
+
+    config:
+        (dict) The new value at the given path
+
+    init_uri: (optional)
+        (str) Alternative URI incase the URI doesnt exist on first pass
+
+    init_method: (optional)
+        (str) Method to use on alternative URI when setting config, default: PATCH
+
     Examples:
 
     .. code-block:: yaml
