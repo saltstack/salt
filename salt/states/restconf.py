@@ -5,6 +5,10 @@ State module for restconf Proxy minions
 :maturity:   new
 :platform:   any
 
+About
+=====
+This state module was designed to manage restconf states.
+This module relies on the restconf proxy module to interface with the devices.
 """
 
 
