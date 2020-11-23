@@ -3289,6 +3289,7 @@ def update(
         node.set("current", str(value))
 
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
+    old_cpu = int(desc.find("./vcpu").text)
 
     def _almost_equal(current, new):
         if current is None or new is None:
@@ -3683,14 +3684,18 @@ def update(
         commands = []
         removable_changes = []
         if domain.isActive() and live:
-            if cpu:
-                commands.append(
-                    {
-                        "device": "cpu",
-                        "cmd": "setVcpusFlags",
-                        "args": [cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                    }
-                )
+            if cpu and (
+                isinstance(cpu, int) or isinstance(cpu, dict) and cpu.get("maximum")
+            ):
+                new_cpu = cpu.get("maximum") if isinstance(cpu, dict) else cpu
+                if old_cpu != new_cpu and new_cpu is not None:
+                    commands.append(
+                        {
+                            "device": "cpu",
+                            "cmd": "setVcpusFlags",
+                            "args": [new_cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                        }
+                    )
             if mem:
                 if isinstance(mem, dict):
                     # setMemoryFlags takes memory amount in KiB
