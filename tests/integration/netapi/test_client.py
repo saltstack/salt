@@ -184,8 +184,9 @@ class NetapiSSHClientTest(SSHCase):
         """
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, "master"))
         self.netapi = salt.netapi.NetapiClient(opts)
-        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test")
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "client_key")
         self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+        self.roster_file = os.path.join(self.rosters, "roster")
 
     def tearDown(self):
         del self.netapi
@@ -347,14 +348,15 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_options": ["|id>{} #".format(path), "lol"],
+            "ignore_host_keys": True,
         }
         ret = self.netapi.run(low)
         self.assertFalse(os.path.exists(path))
@@ -371,14 +373,15 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_port": "hhhhh|id>{} #".format(path),
+            "ignore_host_keys": True,
         }
         ret = self.netapi.run(low)
         self.assertFalse(os.path.exists(path))
@@ -395,14 +398,15 @@ class NetapiSSHClientTest(SSHCase):
             "roster": "cache",
             "client": "ssh",
             "tgt": "127.0.0.1",
-            "renderer": "cheetah",
+            "renderer": "jinja|yaml",
             "fun": "test.ping",
-            "roster_file": "/tmp/salt-tests-tmpdir/config/roster",
+            "roster_file": self.roster_file,
             "rosters": "/",
             "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
             "eauth": "auto",
             "username": "saltdev_auto",
             "password": "saltdev",
+            "ignore_host_keys": True,
         }
         ret = self.netapi.run(low)
         self.assertFalse(os.path.exists(path))
