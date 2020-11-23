@@ -2338,7 +2338,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2365,7 +2364,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2387,7 +2385,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2407,7 +2404,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2421,7 +2417,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2437,7 +2432,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2452,7 +2446,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2487,7 +2480,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -2862,7 +2854,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": True,
             },
             virt.update("my_vm", cpu={"iothreads": 5}),
         )
@@ -2904,7 +2895,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": True,
             },
             virt.update("my_vm", cpu={"tuning": cputune}),
         )
@@ -3957,7 +3947,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -3992,7 +3981,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4014,7 +4002,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4029,7 +4016,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4043,7 +4029,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4060,7 +4045,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4075,7 +4059,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4098,7 +4081,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4118,7 +4100,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4131,7 +4112,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4145,7 +4125,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4162,7 +4141,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4179,7 +4157,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4193,7 +4170,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4209,7 +4185,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4225,7 +4200,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4239,7 +4213,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4258,7 +4231,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4277,7 +4249,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4307,7 +4278,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4413,7 +4383,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(
             {
                 "definition": True,
-                "cpu": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
             },
@@ -4824,7 +4793,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": False,
             },
             virt.update("xml_with_iothreads_params", cpu={"iothreads": 7}),
         )
@@ -4932,7 +4900,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": False,
             },
             virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
         )
@@ -5094,7 +5061,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": False,
             },
             virt.update("xml_with_cputune_params", cpu={"tuning": cputune}),
         )
@@ -5200,7 +5166,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "definition": True,
                 "disk": {"attached": [], "detached": [], "updated": []},
                 "interface": {"attached": [], "detached": []},
-                "cpu": False,
             },
             virt.update("xml_with_cputune_params", cpu={"tuning": cputune_subelement}),
         )
