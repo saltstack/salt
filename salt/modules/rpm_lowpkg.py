@@ -55,7 +55,7 @@ def __virtual__():
             "The rpm execution module failed to load: failed to detect os or os_family grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "VirtuozzoLinux")
+    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "vmware photon os")
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
