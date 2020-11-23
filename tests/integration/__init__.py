@@ -138,7 +138,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = salt.utils.msgpack.Unpacker(encoding="utf-8")
+        unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
