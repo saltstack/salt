@@ -2,10 +2,12 @@ import os
 import subprocess
 
 import salt.client.ssh.shell as shell
+from tests.support.helpers import skip_if_binaries_missing
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 
+@skip_if_binaries_missing("ssh")
 class SSHShellTests(TestCase):
     def setUp(self):
         self.pub_key = os.path.join(RUNTIME_VARS.TMP, "ssh", "testkey.pub")
