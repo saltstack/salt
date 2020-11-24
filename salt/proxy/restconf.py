@@ -11,7 +11,7 @@ Usage
 .. note::
 
     To be able to use this module you need to enable to RESTCONF on your device
-    and having https enabled.
+    and have https enabled.
 
     Cisco Configuration example:
 
@@ -124,8 +124,7 @@ def init(opts):
     # however, in order to test the connectivity and make sure we are able to
     # bring up this Minion, we are checking the standard restconf state uri.
 
-    proxy_dict = opts.get("proxy", {})
-    conn_args = copy.deepcopy(proxy_dict)
+    conn_args = copy.deepcopy(opts.get("proxy", {}))
     conn_args.pop("proxytype", None)
     opts["multiprocessing"] = conn_args.pop("multiprocessing", True)
     # This is not a SSH-based proxy, so it should be safe to enable
