@@ -11,7 +11,7 @@ Usage
 .. note::
 
     To be able to use this module you need to enable to RESTCONF on your device
-    and having https enabled.
+    and have https enabled.
 
     Cisco Configuration example:
 
