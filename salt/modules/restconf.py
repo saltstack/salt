@@ -12,7 +12,7 @@ __virtualname__ = "restconf"
 
 
 def __virtual__():
-    if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:  # noqa: F821
+    if __opts__.get("proxy", {}).get("proxytype") != __virtualname__:
         return False, "Proxytype does not match: {}".format(__virtualname__)
     return True
 
@@ -36,7 +36,7 @@ def get_data(uri):
 
         salt '*' restconf.get_data restconf/yang-library-version
     """
-    return __proxy__["restconf.request"](uri)  # noqa: F821
+    return __proxy__["restconf.request"](uri)
 
 
 def set_data(uri, method, dict_payload):
@@ -49,4 +49,4 @@ def set_data(uri, method, dict_payload):
 
         salt '*' restconf.get_data restconf/yang-library-version method=PATCH dict_payload=""
     """
-    return __proxy__["restconf.request"](uri, method, dict_payload)  # noqa: F821
+    return __proxy__["restconf.request"](uri, method, dict_payload)
