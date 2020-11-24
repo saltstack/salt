@@ -42,10 +42,10 @@ hostname: (str)
     The IP address or DNS host name of the restconf device.
 
 username: (str)
-    The username to pass to the device to authenticate the RESTCONF requests.
+    The username for the device to authenticate the RESTCONF requests.
 
 password: (str)
-    The password to pass to the device to authenticate the RESTCONF requests.
+    The password for the device to authenticate the RESTCONF requests.
 
 verify: ``True`` (str, optional, default:true)
     Either a boolean, in which case it controls whether we verify the restconf
