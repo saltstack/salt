@@ -13,6 +13,7 @@ This module relies on the restconf proxy module to interface with the devices.
 
 
 import json
+import logging
 
 # from salt.utils.odict import OrderedDict
 
@@ -21,6 +22,8 @@ try:
     from deepdiff import DeepDiff
 except ImportError:
     HAS_DEEPDIFF = False
+
+log = logging.getLogger(__file__)
 
 
 def __virtual__():
@@ -70,6 +73,22 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
                   name: "1/0/3"
 
     """
+
+    uri = str(uri)
+    name = str(name)
+    method = str(method)
+    if uri == "":
+        log.critical("uri must not be blank")
+        return False
+    if name == "":
+        log.critical("Name is required")
+        return False
+    if method == "":
+        log.critical("method is required")
+        return False
+    if not type(config) is dict:
+        log.critical("config is required, config must be a dict")
+        return False
 
     # TODO: add template function so that config var does not need to be passed
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
