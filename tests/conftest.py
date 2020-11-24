@@ -694,6 +694,17 @@ def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
 
 
 @pytest.fixture(scope="session")
+def ext_pillar_file_tree_root_dir(pillar_tree_root_dir):
+    """
+    Fixture which returns the salt pillar file tree directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = pillar_tree_root_dir / "file-tree"
+    dirname.mkdir(exist_ok=True)
+    return dirname
+
+
+@pytest.fixture(scope="session")
 def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
     """
     Fixture which returns the salt prod environment pillar tree directory path.
@@ -826,6 +837,7 @@ def salt_master_factory(
     base_env_pillar_tree_root_dir,
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
+    ext_pillar_file_tree_root_dir,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -859,7 +871,7 @@ def salt_master_factory(
     ext_pillar.append(
         {
             "file_tree": {
-                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
+                "root_dir": str(ext_pillar_file_tree_root_dir),
                 "follow_dir_links": False,
                 "keep_newline": True,
             }
