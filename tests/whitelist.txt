@@ -40,7 +40,6 @@ integration.modules.test_mine
 integration.modules.test_mysql
 integration.modules.test_network
 integration.modules.test_nilrt_ip
-integration.modules.test_pillar
 integration.modules.test_pip
 integration.modules.test_pkg
 integration.modules.test_publish
