@@ -104,7 +104,9 @@ class NetmikoProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_connection = MockNetmikoConnection
 
-        with patch.object(netmiko_proxy, "ConnectHandler", mock_connection):
+        with patch.object(
+            netmiko_proxy, "ConnectHandler", mock_connection, create=True
+        ):
             result = netmiko_proxy.make_con()
             self.assertNotEqual(result, None)
 
@@ -125,7 +127,7 @@ class NetmikoProxyTestCase(TestCase, LoaderModuleMockMixin):
         mock_connection = MockNetmikoConnection
 
         with patch.object(netmiko_proxy, "DEFAULT_CONNECTION_TIMEOUT", 0), patch.object(
-            netmiko_proxy, "ConnectHandler", raise_exception
+            netmiko_proxy, "ConnectHandler", raise_exception, create=True
         ):
             result = None
             try:
