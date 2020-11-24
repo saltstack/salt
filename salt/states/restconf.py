@@ -86,8 +86,12 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
     if method == "":
         log.critical("method is required")
         return False
-    if not type(config) is dict:
-        log.critical("config is required, config must be a dict")
+    if "salt.utils.odict.OrderedDict" not in str(type(config)):
+        log.critical(
+            "config is required, config must be a salt salt.utils.odict.OrderedDict {t}".format(
+                t=type(config)
+            )
+        )
         return False
 
     # TODO: add template function so that config var does not need to be passed
