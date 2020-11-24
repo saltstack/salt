@@ -54,9 +54,11 @@ verify: ``True`` (str, optional, default:true)
     When there is no certificate configuration on the device and this option is
     set as ``True`` (default), the commands will fail with the following error:
     ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed``.
-    In this case, you either need to configure a proper certificate on the
-    device (*recommended*), or bypass the checks setting this argument as ``False``
-    with all the security risks considered as you may be MITM'd.
+
+    .. warning::
+      In this case, you either need to configure a proper certificate on the
+      device (*recommended*), or bypass the checks setting this argument as ``False``
+      with all the security risks considered as you may be MITM'd.
 
 Proxy Pillar Example
 --------------------
@@ -163,7 +165,8 @@ def connection_test():
     log.debug("restconf proxy connection_test() called...")
     response = salt.utils.http.query(
         "{t}://{h}/restconf/yang-library-version".format(
-            t=restconf_device["transport"], h=restconf_device["conn_args"]["hostname"]
+            t=restconf_device["conn_args"]["transport"],
+            h=restconf_device["conn_args"]["hostname"],
         ),
         method="GET",
         decode_type="json",
@@ -218,7 +221,7 @@ def request(uri, method="GET", dict_payload=None):
     response = salt.utils.http.query(
         "{t}://{h}/{u}".format(
             h=restconf_device["conn_args"]["hostname"],
-            t=restconf_device["transport"],
+            t=restconf_device["conn_args"]["transport"],
             u=uri,
         ),
         method=method,
