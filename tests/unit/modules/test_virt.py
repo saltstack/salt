@@ -598,7 +598,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 "swap_hard_limit": "1g",
                 "min_guarantee": "256m",
                 "hugepages": [
-                    {"nodeset": "", "size": "128m"},
+                    {"size": "128m"},
                     {"nodeset": "0", "size": "256m"},
                     {"nodeset": "1", "size": "512m"},
                 ],
