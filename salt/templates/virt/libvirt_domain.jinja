@@ -1,4 +1,5 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
+{%- from 'libvirt_macros.jinja' import opt_attribute as opt_attribute -%}
 {%- macro opt_attribute(obj, name, conv=none) %}
 {%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
@@ -100,24 +101,16 @@
   {%- endif %}
   {%- if cpu.tuning.vcpusched %}
     {%- for sched in cpu.tuning.vcpusched %}
-                <vcpusched scheduler='{{ sched.scheduler }}'
-                    {%- if sched.get("vcpus") %} vcpus='{{ sched.get("vcpus") }}'{% endif -%}
-                    {%- if sched.get("priority") is not none %} priority='{{ sched.get("priority") }}'{% endif -%}
-                />
+    <vcpusched scheduler='{{ sched.scheduler }}'{{ opt_attribute(sched, "vcpus") }}{{ opt_attribute(sched, "priority") }}/>
     {%- endfor %}
   {%- endif %}
   {%- if cpu.tuning.iothreadsched %}
     {%- for sched in cpu.tuning.iothreadsched %}
-                <iothreadsched scheduler='{{ sched.scheduler }}'
-                    {%- if sched.get("iothreads") %} iothreads='{{ sched.get("iothreads") }}'{% endif -%}
-                    {%- if sched.get("priority") is not none %} priority='{{ sched.get("priority") }}'{% endif -%}
-                />
+    <iothreadsched scheduler='{{ sched.scheduler }}'{{ opt_attribute(sched, "iothreads") }}{{ opt_attribute(sched, "priority") }}/>
     {%- endfor %}
   {%- endif %}
   {%- if cpu.tuning.emulatorsched %}
-                <emulatorsched scheduler='{{ cpu.tuning.emulatorsched.scheduler }}'
-                    {%- if cpu.tuning.emulatorsched.get("priority") is not none %} priority='{{ cpu.tuning.emulatorsched.get("priority") }}'{% endif -%}
-                />
+  <emulatorsched scheduler='{{ cpu.tuning.emulatorsched.scheduler }}'{{ opt_attribute(cpu.tuning.emulatorsched, "priority") }}/>
   {%- endif %}
   {%- if cpu.tuning.cachetune %}
     {%- for k, v in cpu.tuning.cachetune.items() %}
@@ -173,8 +166,7 @@
 {%- if numatune %}
         <numatune>
   {%- if 'memory' in numatune and numatune.memory %}
-                <memory mode='{{ numatune.memory.mode }}'
-                    {%- if numatune.memory.nodeset %} nodeset='{{ numatune.memory.nodeset }}'{%- endif %}
+                <memory mode='{{ numatune.memory.mode }}'{{ opt_attribute(numatune.memory, "nodeset") }}
                 />
   {%- endif %}
   {%- if 'memnodes' in numatune and numatune.memnodes %}
@@ -189,9 +181,7 @@
   {%- if mem.hugepages %}
             <hugepages>
     {%- for page in mem.hugepages %}
-            <page size="{{ to_kib(page.get("size")) }}" unit="KiB"
-                {%- if page.get("nodeset") or page.get("nodeset") == 0 %} nodeset='{{ page.get("nodeset") }}'{% endif -%}
-            />
+            <page size="{{ to_kib(page.get("size")) }}" unit="KiB"{{ opt_attribute(page, "nodeset" )}}/>
     {%- endfor %}
             </hugepages>
     {%- if mem.nosharepages %}
@@ -287,21 +277,15 @@
                 </interface>
 {%- endfor %}
 {%- if graphics %}
-                <graphics type='{{ graphics.type }}'
+                <graphics type='{{ graphics.type }}'{{ opt_attribute(graphics, "port") }}
   {%- if graphics.listen.address %}
                           listen='{{ graphics.listen.address }}'
-  {%- endif %}
-  {%- if graphics.port %}
-                          port='{{ graphics.port }}'
   {%- endif %}
   {%- if graphics.type == 'spice' and graphics.tls_port %}
                           tlsPort='{{ graphics.tls_port }}'
   {%- endif %}
-                          autoport='{{ 'no' if graphics.port or graphics.tls_port else 'yes' }}'>
-                    <listen type='{{ graphics.listen.type }}'
-  {%- if graphics.listen.address %}
-                            address='{{ graphics.listen.address }}'
-  {%- endif %}/>
+                          autoport='{{ yesno(not graphics.port and not graphics.tls_port) }}'>
+                    <listen type='{{ graphics.listen.type }}'{{ opt_attribute(graphics.listen, "address") }}/>
                 </graphics>
   {%- if graphics.type == "spice" %}
                   <channel type='spicevmc'>
