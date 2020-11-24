@@ -74,7 +74,6 @@ integration.shell.test_arguments
 integration.shell.test_cloud
 integration.shell.test_enabled
 integration.shell.test_master_tops
-integration.shell.test_matcher
 integration.shell.test_spm
 integration.spm.test_build
 integration.spm.test_files

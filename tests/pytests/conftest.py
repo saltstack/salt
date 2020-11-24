@@ -19,9 +19,21 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
+def salt_minion_id():
+    return random_string("minion-")
+
+
+@pytest.fixture(scope="session")
+def salt_sub_minion_id():
+    return random_string("sub-minion-")
+
+
+@pytest.fixture(scope="session")
 def salt_master_factory(
     request,
     salt_factories,
+    salt_minion_id,
+    salt_sub_minion_id,
     base_env_state_tree_root_dir,
     base_env_pillar_tree_root_dir,
     prod_env_state_tree_root_dir,
@@ -47,6 +59,22 @@ def salt_master_factory(
         {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
     ]
 
+    nodegroups = {
+        "min": salt_minion_id,
+        "sub_min": salt_sub_minion_id,
+        "mins": "N@min or N@sub_min",
+        "list_nodegroup": [salt_minion_id, salt_sub_minion_id],
+        "multiline_nodegroup": [salt_minion_id, "or", salt_sub_minion_id],
+        "one_minion_list": [salt_minion_id],
+        "redundant_minions": "N@min or N@mins",
+        "nodegroup_loop_a": "N@nodegroup_loop_b",
+        "nodegroup_loop_b": "N@nodegroup_loop_a",
+        "missing_minion": "L@{},ghostminion".format(salt_minion_id),
+        "list_group": "N@multiline_nodegroup",
+        "one_list_group": "N@one_minion_list",
+        "list_group2": "N@list_nodegroup",
+    }
+    config_defaults["nodegroups"] = nodegroups
     config_overrides = {}
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -134,7 +162,7 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory):
+def salt_minion_factory(salt_master_factory, salt_minion_id):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -150,7 +178,7 @@ def salt_minion_factory(salt_master_factory):
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
     factory = salt_master_factory.get_salt_minion_daemon(
-        random_string("minion-"),
+        salt_minion_id,
         config_defaults=config_defaults,
         config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
@@ -162,7 +190,7 @@ def salt_minion_factory(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_sub_minion_factory(salt_master_factory):
+def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
     ) as rfh:
@@ -180,7 +208,7 @@ def salt_sub_minion_factory(salt_master_factory):
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
     factory = salt_master_factory.get_salt_minion_daemon(
-        random_string("sub-minion-"),
+        salt_sub_minion_id,
         config_defaults=config_defaults,
         config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
