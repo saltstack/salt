@@ -9,6 +9,7 @@ import shutil
 
 # Import salt testing libs
 from tests.support.case import SSHCase
+from tests.support.runtests import RUNTIME_VARS
 
 
 class SSHTest(SSHCase):

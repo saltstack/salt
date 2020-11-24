@@ -14,6 +14,7 @@ import salt.utils.pycrypto
 
 # Import Salt Testing libs
 from tests.support.paths import TMP_CONF_DIR, TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch
 from tests.support.case import ModuleCase, SSHCase

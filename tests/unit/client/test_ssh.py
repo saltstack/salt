@@ -14,6 +14,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.case import ShellCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, call
 from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.config
