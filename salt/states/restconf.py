@@ -12,9 +12,9 @@ This module relies on the restconf proxy module to interface with the devices.
 """
 
 
-import json  # noqa: F401
+import json
 
-# from salt.utils.odict import OrderedDict  # noqa: F401
+# from salt.utils.odict import OrderedDict
 
 try:
     HAS_DEEPDIFF = True
@@ -29,7 +29,7 @@ def __virtual__():
             False,
             "Missing dependency: The restconf states method requires the 'deepdiff' Python module.",
         )
-    if "restconf.set_data" in __salt__:  # noqa: F821
+    if "restconf.set_data" in __salt__:
         return True
     return (False, "restconf module could not be loaded")
 
@@ -75,7 +75,7 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     found_working_uri = False
     uri_used = ""
-    existing_raw = __salt__["restconf.get_data"](uri)  # noqa: F821
+    existing_raw = __salt__["restconf.get_data"](uri)
     request_uri = ""
     request_method = ""
     # TODO: this could probaby be a loop
@@ -87,7 +87,7 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
         request_method = method
 
     if not found_working_uri:
-        existing_raw_init = __salt__["restconf.get_data"](init_uri)  # noqa: F821
+        existing_raw_init = __salt__["restconf.get_data"](init_uri)
         if existing_raw_init["status"] in [200]:
             existing = existing_raw_init["dict"]
             found_working_uri = True
@@ -109,7 +109,7 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
-    elif __opts__["test"] is True:  # noqa: F821
+    elif __opts__["test"] is True:
         ret["result"] = None
         ret["comment"] = "Config will be added"
         diff = _restDiff(existing, dict_config)
@@ -118,9 +118,7 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
         ret["changes"]["changed"] = diff.changed()
 
     else:
-        resp = __salt__["restconf.set_data"](
-            request_uri, request_method, dict_config
-        )  # noqa: F821
+        resp = __salt__["restconf.set_data"](request_uri, request_method, dict_config)
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
