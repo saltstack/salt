@@ -32,31 +32,28 @@ Pillar
 The ``restconf`` proxy configuration requires the following parameters in order
 to connect to the network switch:
 
-transport: ``https``
+transport: ``https`` (str)
     Specifies the type of connection transport to use. Valid values for the
-    connection are ``http``, and  ``https``.
+    connection are ``https``, and  ``http``.
+    http is not part of the restconf standard but is included as an option here
+    as some manufacturers have ignored this requirement.
 
-host: ``localhost``
+host: (str)
     The IP address or DNS host name of the connection device.
 
-username: ``admin``
+username: (str)
     The username to pass to the device to authenticate the RESTCONF requests.
 
-password:
+password: (str)
     The password to pass to the device to authenticate the RESTCONF requests.
 
-# TODO: timeout not yet implemented
-# timeout: ``60``
-#     Time in seconds to wait for the device to respond. Default: 60 seconds.
-
-verify: ``True``
-    Either a boolean, in which case it controls whether we verify the NX-API
-    TLS certificate, or a string, in which case it must be a path to a CA bundle
-    to use. Defaults to ``True``.
+verify: ``True`` (str, optional, default:true)
+    Either a boolean, in which case it controls whether we verify the restconf
+    SSL certificate.
 
     When there is no certificate configuration on the device and this option is
     set as ``True`` (default), the commands will fail with the following error:
-    ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:581)``.
+    ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed``.
     In this case, you either need to configure a proper certificate on the
     device (*recommended*), or bypass the checks setting this argument as ``False``
     with all the security risks considered as you may be MITM'd.
@@ -125,10 +122,25 @@ def init(opts):
     # bring up this Minion, we are checking the standard restconf state uri.
 
     conn_args = copy.deepcopy(opts.get("proxy", {}))
-    conn_args.pop("proxytype", None)
     opts["multiprocessing"] = conn_args.pop("multiprocessing", True)
     # This is not a SSH-based proxy, so it should be safe to enable
     # multiprocessing.
+
+    # Proxy minimum init variables
+    if "hostname" not in conn_args:
+        log.critical("No 'hostname' key found in pillar for this proxy.")
+        return False
+    if "username" not in conn_args:
+        log.critical("No 'username' key found in pillar for this proxy.")
+        return False
+    if "password" not in conn_args:
+        log.critical("No 'password' key found in pillar for this proxy.")
+        return False
+    if "verify" not in conn_args:
+        conn_args["verify"] = True
+    if "transport" not in conn_args:
+        conn_args["transport"] = "https"
+
     restconf_device["conn_args"] = conn_args
     try:
         response = connection_test()
