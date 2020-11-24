@@ -38,8 +38,8 @@ transport: ``https`` (str)
     http is not part of the restconf standard but is included as an option here
     as some manufacturers have ignored this requirement.
 
-host: (str)
-    The IP address or DNS host name of the connection device.
+hostname: (str)
+    The IP address or DNS host name of the restconf device.
 
 username: (str)
     The username to pass to the device to authenticate the RESTCONF requests.
