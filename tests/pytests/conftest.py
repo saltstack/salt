@@ -38,6 +38,7 @@ def salt_master_factory(
     base_env_pillar_tree_root_dir,
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
+    ext_pillar_file_tree_root_dir,
 ):
     master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -88,7 +89,7 @@ def salt_master_factory(
     ext_pillar.append(
         {
             "file_tree": {
-                "root_dir": os.path.join(RUNTIME_VARS.PILLAR_DIR, "base", "file_tree"),
+                "root_dir": str(ext_pillar_file_tree_root_dir),
                 "follow_dir_links": False,
                 "keep_newline": True,
             }
