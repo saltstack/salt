@@ -15,29 +15,33 @@ This module relies on the restconf proxy module to interface with the devices.
 import json
 import logging
 
+# try:
+#     HAS_DEEPDIFF = True
+#     from deepdiff import DeepDiff
+# except ImportError:
+#     HAS_DEEPDIFF = False
+from salt.utils.dictdiffer import DictDiffer, RecursiveDictDiffer
+
 # from salt.utils.odict import OrderedDict
 
-try:
-    HAS_DEEPDIFF = True
-    from deepdiff import DeepDiff
-except ImportError:
-    HAS_DEEPDIFF = False
 
 log = logging.getLogger(__file__)
 
 
 def __virtual__():
-    if not HAS_DEEPDIFF:
-        return (
-            False,
-            "Missing dependency: The restconf states method requires the 'deepdiff' Python module.",
-        )
+    # if not HAS_DEEPDIFF:
+    #     return (
+    #         False,
+    #         "Missing dependency: The restconf states method requires the 'deepdiff' Python module.",
+    #     )
     if "restconf.set_data" in __salt__:
         return True
     return (False, "restconf module could not be loaded")
 
 
-def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH"):
+def config_manage(
+    name, uri, method, config, init_uri=None, init_method="PATCH", init_config=None
+):
     """
     Ensure a specific value exists at a given path
 
@@ -58,6 +62,10 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
 
     init_method: (optional)
         (str) Method to use on alternative URI when setting config, default: PATCH
+
+    init_config: (optional)
+        (dict) The new value at the given init path.
+        This is only needed if you need to supply a different style of data to an init uri.
 
     Examples:
 
@@ -99,8 +107,10 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
     found_working_uri = False
     uri_used = ""
     existing_raw = __salt__["restconf.get_data"](uri)
+    print(existing_raw)
     request_uri = ""
     request_method = ""
+
     # TODO: this could probaby be a loop
     if existing_raw["status"] in [200]:
         existing = existing_raw["dict"]
@@ -124,9 +134,22 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
         return ret
     # TODO: END
 
+    use_conf = config
+    if uri_used == "init":
+        # We will be creating a new endpoint as we are using the init uri so config will be blank
+        existing = {}
+        if init_config is not None:
+            # some init uris need a special config layout
+            use_conf = init_config
+
     dict_config = json.loads(
-        json.dumps(config)
+        json.dumps(use_conf)
     )  # convert from orderedDict to Dict (which is now ordered by default in python3.8)
+
+    log.debug("existing:")
+    log.debug(existing)
+    log.debug("dict_config")
+    log.debug(dict_config)
 
     if existing == dict_config:
         ret["result"] = True
@@ -134,19 +157,37 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
 
     elif __opts__["test"] is True:
         ret["result"] = None
+        ret["changes"]["method"] = "test"
         ret["comment"] = "Config will be added"
-        diff = _restDiff(existing, dict_config)
-        ret["changes"]["new"] = diff.added()
-        ret["changes"]["removed"] = diff.removed()
-        ret["changes"]["changed"] = diff.changed()
+
+        try:
+            diff = RecursiveDictDiffer(existing, dict_config, False)
+            ret["changes"]["diff_method"] = "RecursiveDictDiffer"
+            ret["changes"]["new"] = diff.added()
+            ret["changes"]["removed"] = diff.removed()
+            ret["changes"]["changed"] = diff.changed()
+        except TypeError:  # https://github.com/saltstack/salt/issues/59017
+            diff = DictDiffer(dict_config, existing)  # , True)
+            diff_method = "DictDiffer"
+            ret["changes"]["diff_method"] = "DictDiffer"
+            ret["changes"]["new"] = diff.added()
+            ret["changes"]["removed"] = diff.removed()
+            ret["changes"]["changed"] = diff.changed()
 
     else:
         resp = __salt__["restconf.set_data"](request_uri, request_method, dict_config)
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
+            ret["changes"]["method"] = uri_used
             ret["comment"] = "Successfully added config"
-            diff = _restDiff(existing, dict_config)
+            diff_method = "RecursiveDictDiffer"
+            try:
+                diff = RecursiveDictDiffer(existing, dict_config, False)
+            except TypeError:  # https://github.com/saltstack/salt/issues/59017
+                diff = DictDiffer(dict_config, existing)  # , True)
+                diff_method = "DictDiffer"
+            ret["changes"]["diff_method"] = diff_method
             ret["changes"]["new"] = diff.added()
             ret["changes"]["removed"] = diff.removed()
             ret["changes"]["changed"] = diff.changed()
@@ -171,39 +212,39 @@ def config_manage(name, uri, method, config, init_uri=None, init_method="PATCH")
     return ret
 
 
-class _restDiff:
-    """
-    Calculate the difference between two dictionaries as:
-    (1) items added
-    (2) items removed
-    (3) keys same in both but changed values
-    (4) keys same in both and unchanged values
-    """
+# class _restDiff:
+#     """
+#     Calculate the difference between two dictionaries as:
+#     (1) items added
+#     (2) items removed
+#     (3) keys same in both but changed values
+#     (4) keys same in both and unchanged values
+#     """
 
-    def __init__(self, current_dict, past_dict):
-        self.current_dict = current_dict
-        self.past_dict = past_dict
-        self.diff = DeepDiff(current_dict, past_dict)
-        print("DeepDiff:")
-        print(self.diff)
-        self.diff_pretty = self.diff.pretty()
+#     def __init__(self, current_dict, past_dict):
+#         self.current_dict = current_dict
+#         self.past_dict = past_dict
+#         self.diff = DeepDiff(current_dict, past_dict)
+#         print("DeepDiff:")
+#         print(self.diff)
+#         self.diff_pretty = self.diff.pretty()
 
-    def added(self):
-        # TODO: Potential for new adds to get missed here.
-        # need to dig into deepdiff more
-        if "dictionary_item_added" in self.diff.keys():
-            return str(self.diff["dictionary_item_added"])
-        return None
+#     def added(self):
+#         # TODO: Potential for new adds to get missed here.
+#         # need to dig into deepdiff more
+#         if "dictionary_item_added" in self.diff.keys():
+#             return str(self.diff["dictionary_item_added"])
+#         return None
 
-    def removed(self):
-        if "dictionary_item_removed" in self.diff.keys():
-            return str(self.diff["dictionary_item_removed"])
-        return None
+#     def removed(self):
+#         if "dictionary_item_removed" in self.diff.keys():
+#             return str(self.diff["dictionary_item_removed"])
+#         return None
 
-    def changed(self):
-        if "values_changed" in self.diff.keys():
-            return str(self.diff["values_changed"])
-        return None
+#     def changed(self):
+#         if "values_changed" in self.diff.keys():
+#             return str(self.diff["values_changed"])
+#         return None
 
-    def unchanged(self):
-        return None  # TODO: not implemented
+#     def unchanged(self):
+#         return None  # TODO: not implemented
