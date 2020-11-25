@@ -21,13 +21,18 @@ from salt.utils.dictdiffer import DictDiffer, RecursiveDictDiffer
 
 log = logging.getLogger(__file__)
 
+try:
+    HAS_DEEPDIFF = True
+    from deepdiff import DeepDiff
+except ImportError:
+    HAS_DEEPDIFF = False
+
 
 def __virtual__():
-    # if not HAS_DEEPDIFF:
-    #     return (
-    #         False,
-    #         "Missing dependency: The restconf states method requires the 'deepdiff' Python module.",
-    #     )
+    if not HAS_DEEPDIFF:
+        log.warning(
+            "Your python install does now have deepdiff installed, please run `pip3 install deepdiff`"
+        )
     if "restconf.set_data" in __salt__:
         return True
     return (False, "restconf module could not be loaded")
@@ -144,7 +149,7 @@ def config_manage(
         ret["changes"] = _compare_changes(
             uri_check[1]["request_restponse"], proposed_config
         )
-        ret["changes"]["rest_method"] = request_method
+        # ret["changes"]["rest_method"] = request_method
         ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
         ret["comment"] = "Config will be added"
 
@@ -158,7 +163,7 @@ def config_manage(
             ret["changes"] = _compare_changes(
                 uri_check[1]["request_restponse"], proposed_config
             )
-            ret["changes"]["rest_method"] = request_method
+            # ret["changes"]["rest_method"] = request_method
             ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
             ret["comment"] = "Successfully added config"
         else:
@@ -180,7 +185,18 @@ def config_manage(
     return ret
 
 
+def restconfDiff(old, new):
+    diff_data = {}
+    diff_data["changes_text"] = DeepDiff(old, new).pretty()
+    diff_data["changes_dict"] = str(DeepDiff(old, new))
+    diff_data["diff_method"] = "DeepDiff"
+    return diff_data
+
+
 def _compare_changes(old, new):
+    # if HAS_DEEPDIFF:
+    #     return restconfDiff(old, new)
+
     # Would you like to play a game of dictdiffer breaking?
     compare_complete = False
     changes = {}
@@ -207,4 +223,5 @@ def _compare_changes(old, new):
             changes["new"] = diff.added()
             changes["removed"] = diff.removed()
             changes["changed"] = diff.changed()
+
     return changes
