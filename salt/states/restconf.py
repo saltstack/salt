@@ -15,6 +15,8 @@ This module relies on the restconf proxy module to interface with the devices.
 import json
 import logging
 
+from salt.utils.data import recursive_diff
+
 # try:
 #     HAS_DEEPDIFF = True
 #     from deepdiff import DeepDiff
@@ -104,96 +106,67 @@ def config_manage(
 
     # TODO: add template function so that config var does not need to be passed
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
-    found_working_uri = False
-    uri_used = ""
-    existing_raw = __salt__["restconf.get_data"](uri)
-    print(existing_raw)
-    request_uri = ""
-    request_method = ""
 
-    # TODO: this could probaby be a loop
-    if existing_raw["status"] in [200]:
-        existing = existing_raw["dict"]
-        found_working_uri = True
-        uri_used = "Primary"
-        request_uri = uri
-        request_method = method
-
-    if not found_working_uri:
-        existing_raw_init = __salt__["restconf.get_data"](init_uri)
-        if existing_raw_init["status"] in [200]:
-            existing = existing_raw_init["dict"]
-            found_working_uri = True
-            uri_used = "init"
-            request_uri = init_uri
-            request_method = init_method
-
-    if not found_working_uri:
+    uri_check = __salt__["restconf.uri_check"](uri, init_uri)
+    log.debug("uri_check:")
+    log.debug(uri_check)
+    if not uri_check[0]:
         ret["result"] = False
         ret["comment"] = "restconf could not find a working URI to get initial config"
         return ret
-    # TODO: END
+    # uri_check['uri_used']
+    # uri_check['request_uri']
+    # uri_check['request_restponse']
 
     use_conf = config
-    if uri_used == "init":
+    if uri_check[1]["uri_used"] == "init":
         # We will be creating a new endpoint as we are using the init uri so config will be blank
         existing = {}
         if init_config is not None:
             # some init uris need a special config layout
             use_conf = init_config
+    request_method = method
+    if uri_check[1]["uri_used"] == "init":
+        request_method = init_method
+        # since we are using the init method we are basicly doing a net new change
+        uri_check[1]["request_restponse"] = {}
 
-    dict_config = json.loads(
+    proposed_config = json.loads(
         json.dumps(use_conf)
     )  # convert from orderedDict to Dict (which is now ordered by default in python3.8)
 
-    log.debug("existing:")
-    log.debug(existing)
-    log.debug("dict_config")
-    log.debug(dict_config)
+    log.debug("existing uri config:")
+    log.debug(type(uri_check[1]["request_restponse"]))
+    log.debug(uri_check[1]["request_restponse"])
+    log.debug("proposed_config:")
+    log.debug(type(proposed_config))
+    log.debug(proposed_config)
 
-    if existing == dict_config:
+    # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
+    if uri_check[1]["request_restponse"] == proposed_config:
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
     elif __opts__["test"] is True:
         ret["result"] = None
+        ret["changes"] = _compare_changes(
+            uri_check[1]["request_restponse"], proposed_config
+        )
         ret["changes"]["method"] = "test"
         ret["comment"] = "Config will be added"
 
-        try:
-            diff = RecursiveDictDiffer(existing, dict_config, False)
-            ret["changes"]["diff_method"] = "RecursiveDictDiffer"
-            ret["changes"]["new"] = diff.added()
-            ret["changes"]["removed"] = diff.removed()
-            ret["changes"]["changed"] = diff.changed()
-        except TypeError:  # https://github.com/saltstack/salt/issues/59017
-            diff = DictDiffer(dict_config, existing)  # , True)
-            diff_method = "DictDiffer"
-            ret["changes"]["diff_method"] = "DictDiffer"
-            ret["changes"]["new"] = diff.added()
-            ret["changes"]["removed"] = diff.removed()
-            ret["changes"]["changed"] = diff.changed()
-
     else:
-        resp = __salt__["restconf.set_data"](request_uri, request_method, dict_config)
+        resp = __salt__["restconf.set_data"](
+            uri_check[1]["request_uri"], request_method, proposed_config
+        )
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
-            ret["changes"]["method"] = uri_used
+            ret["changes"] = _compare_changes(
+                uri_check[1]["request_restponse"], proposed_config
+            )
+            ret["changes"]["method"] = request_method
             ret["comment"] = "Successfully added config"
-            diff_method = "RecursiveDictDiffer"
-            try:
-                diff = RecursiveDictDiffer(existing, dict_config, False)
-            except TypeError:  # https://github.com/saltstack/salt/issues/59017
-                diff = DictDiffer(dict_config, existing)  # , True)
-                diff_method = "DictDiffer"
-            ret["changes"]["diff_method"] = diff_method
-            ret["changes"]["new"] = diff.added()
-            ret["changes"]["removed"] = diff.removed()
-            ret["changes"]["changed"] = diff.changed()
-            if method == "PATCH":
-                ret["changes"]["removed"] = None
-        # full failure
         else:
             ret["result"] = False
             if "dict" in resp:
@@ -202,11 +175,41 @@ def config_manage(
                 why = resp["body"]
             else:
                 why = None
-            ret[
-                "comment"
-            ] = "failed to add / modify config. API Statuscode: {s}, API Response: {w}, URI:{u}".format(
-                w=why, s=resp["status"], u=uri_used
+            ret["comment"] = (
+                "failed to add / modify config. "
+                "API Statuscode: {s}, API Response: {w}, URI:{u}".format(
+                    w=why, s=resp["status"], u=uri_check[1]["request_uri"]
+                )
             )
-            print("post_content: {b}".format(b=json.dumps(dict_config)))
+            print("post_content: {b}".format(b=json.dumps(proposed_config)))
 
     return ret
+
+
+def _compare_changes(old, new):
+    compare_complete = False
+    changes = {}
+    try:
+        changes = recursive_diff(old, new)
+        compare_complete = True
+        changes["diff_method"] = "recursive_diff"
+    except ValueError:  # pylint: disable=W0703
+        # https://github.com/saltstack/salt/issues/59017#issuecomment-733744465
+        compare_complete = False
+        changes = {}
+
+    if not compare_complete:
+        try:
+            diff = RecursiveDictDiffer(old, new, False)
+            changes["diff_method"] = "RecursiveDictDiffer"
+            changes["new"] = diff.added()
+            changes["removed"] = diff.removed()
+            changes["changed"] = diff.changed()
+        except TypeError:  # https://github.com/saltstack/salt/issues/59017
+            diff = DictDiffer(new, old)
+            diff_method = "DictDiffer"
+            changes["diff_method"] = "DictDiffer"
+            changes["new"] = diff.added()
+            changes["removed"] = diff.removed()
+            changes["changed"] = diff.changed()
+    return changes
