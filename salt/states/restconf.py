@@ -144,7 +144,8 @@ def config_manage(
         ret["changes"] = _compare_changes(
             uri_check[1]["request_restponse"], proposed_config
         )
-        ret["changes"]["method"] = "test"
+        ret["changes"]["rest_method"] = request_method
+        ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
         ret["comment"] = "Config will be added"
 
     else:
@@ -157,7 +158,8 @@ def config_manage(
             ret["changes"] = _compare_changes(
                 uri_check[1]["request_restponse"], proposed_config
             )
-            ret["changes"]["method"] = request_method
+            ret["changes"]["rest_method"] = request_method
+            ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
             ret["comment"] = "Successfully added config"
         else:
             ret["result"] = False
