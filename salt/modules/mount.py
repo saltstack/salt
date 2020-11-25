@@ -844,32 +844,30 @@ def set_fstab(
         raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
-    if not os.path.isfile(config):
-        raise CommandExecutionError('Bad config file "{}"'.format(config))
-
-    try:
-        with salt.utils.files.fopen(config, "r") as ifile:
-            for line in ifile:
-                line = salt.utils.stringutils.to_unicode(line)
-                try:
-                    if criteria.match(line):
-                        # Note: If ret isn't None here,
-                        # we've matched multiple lines
-                        ret = "present"
-                        if entry.match(line) or not_change:
-                            lines.append(line)
+    if os.path.isfile(config):
+        try:
+            with salt.utils.files.fopen(config, "r") as ifile:
+                for line in ifile:
+                    line = salt.utils.stringutils.to_unicode(line)
+                    try:
+                        if criteria.match(line):
+                            # Note: If ret isn't None here,
+                            # we've matched multiple lines
+                            ret = "present"
+                            if entry.match(line) or not_change:
+                                lines.append(line)
+                            else:
+                                ret = "change"
+                                lines.append(str(entry))
                         else:
-                            ret = "change"
-                            lines.append(str(entry))
-                    else:
+                            lines.append(line)
+
+                    except _fstab_entry.ParseError:
                         lines.append(line)
 
-                except _fstab_entry.ParseError:
-                    lines.append(line)
-
-    except OSError as exc:
-        msg = "Couldn't read from {0}: {1}"
-        raise CommandExecutionError(msg.format(config, exc))
+        except OSError as exc:
+            msg = "Couldn't read from {0}: {1}"
+            raise CommandExecutionError(msg.format(config, exc))
 
     # add line if not present or changed
     if ret is None:
