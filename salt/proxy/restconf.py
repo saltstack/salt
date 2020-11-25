@@ -163,23 +163,8 @@ def init(opts):
 
 def connection_test():
     log.debug("restconf proxy connection_test() called...")
-    response = salt.utils.http.query(
-        "{t}://{h}/restconf/yang-library-version".format(
-            t=restconf_device["conn_args"]["transport"],
-            h=restconf_device["conn_args"]["hostname"],
-        ),
-        method="GET",
-        decode_type="json",
-        decode=True,
-        verify_ssl=restconf_device["conn_args"]["verify"],
-        username=restconf_device["conn_args"]["username"],
-        password=restconf_device["conn_args"]["password"],
-        header_list=[
-            "Accept: application/yang-data+json",
-            "Content-Type: application/yang-data+json",
-        ],
-    )
-    log.debug("restconf_response: {r}".format(r=response))
+    response = request("restconf/yang-library-version", method="GET", dict_payload=None)
+
     if "ietf-restconf:yang-library-version" in str(response):
         return True, response
     else:
@@ -236,5 +221,5 @@ def request(uri, method="GET", dict_payload=None):
             "Content-Type: application/yang-data+json",
         ],
     )
-    log.debug("restconf_request_response: {r}".format(r=response))
+    log.debug("proxy_restconf_request_response: {r}".format(r=response))
     return response
