@@ -35,6 +35,11 @@ def sdb_etcd_port():
 
 
 @pytest.fixture(scope="session")
+def vault_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="session")
 def salt_master_factory(
     request,
     salt_factories,
@@ -46,6 +51,7 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
+    vault_port,
 ):
     master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -87,6 +93,11 @@ def salt_master_factory(
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
+    }
+    config_defaults["vault"] = {
+        "url": "http://127.0.0.1:{}".format(vault_port),
+        "auth": {"method": "token", "token": "testsecret", "uses": 0},
+        "policies": ["testpolicy"],
     }
     config_overrides = {}
     ext_pillar = []
@@ -175,7 +186,7 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -185,6 +196,11 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
+    }
+    config_defaults["vault"] = {
+        "url": "http://127.0.0.1:{}".format(vault_port),
+        "auth": {"method": "token", "token": "testsecret", "uses": 0},
+        "policies": ["testpolicy"],
     }
 
     config_overrides = {
