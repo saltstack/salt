@@ -30,12 +30,18 @@ try:
 except ImportError:
     pytest = None
 
-if not salt.utils.thin.has_immutables:
 
-    class immutables:
-        __file__ = ""
+def patch_if(condition, *args, **kwargs):
+    """
+    Return a patch decorator if the provided condition is met
+    """
+    if condition:
+        return patch(*args, **kwargs)
 
-    salt.utils.thin.immutables = immutables
+    def inner(func):
+        return func
+
+    return inner
 
 
 @skipIf(pytest is None, "PyTest is missing")
@@ -431,7 +437,8 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
@@ -517,7 +524,8 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
@@ -612,7 +620,8 @@ class SSHThinTestCase(TestCase):
         "salt.utils.thin.contextvars",
         type("contextvars", (), {"__file__": "/site-packages/contextvars"}),
     )
-    @patch(
+    @patch_if(
+        salt.utils.thin.has_immutables,
         "salt.utils.thin.immutables",
         type("immutables", (), {"__file__": "/site-packages/immutables"}),
     )
