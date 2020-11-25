@@ -19,7 +19,6 @@ import shutil
 import ssl
 import stat
 import sys
-import textwrap
 from functools import partial, wraps
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
@@ -476,6 +475,7 @@ def pytest_runtest_setup(item):
             item._skipped_by_mark = True
             pytest.skip("SSH tests are disabled, pass '--ssh-tests' to enable them.")
         item.fixturenames.append("sshd_server")
+        item.fixturenames.append("salt_ssh_roster_file")
 
     requires_salt_modules_marker = item.get_closest_marker("requires_salt_modules")
     if requires_salt_modules_marker is not None:
@@ -1055,11 +1055,6 @@ def salt_run_cli(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_ssh_cli(salt_master_factory):
-    return salt_master_factory.get_salt_ssh_cli()
-
-
-@pytest.fixture(scope="session")
 def salt_call_cli(salt_minion_factory):
     return salt_minion_factory.get_salt_call_cli()
 
@@ -1147,34 +1142,28 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict, config_dir=sshd_config_dir,
     )
-    # We also need a salt-ssh roster config file
-    roster_path = pathlib.Path(salt_master.config_dir) / "roster"
-    roster_contents = textwrap.dedent(
-        """\
-        localhost:
-          host: 127.0.0.1
-          port: {}
-          user: {}
-          mine_functions:
-            test.arg: ['itworked']
-        """.format(
-            factory.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
-        )
+    with factory.started():
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master):
+    roster_contents = """
+    localhost:
+      host: 127.0.0.1
+      port: {}
+      user: {}
+      mine_functions:
+        test.arg: ['itworked']
+    """.format(
+        sshd_server.listen_port, RUNTIME_VARS.RUNNING_TESTS_USER
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
-    log.debug(
-        "Writing to configuration file %s. Configuration:\n%s",
-        roster_path,
-        roster_contents,
-    )
-    with salt.utils.files.fopen(str(roster_path), "w") as wfh:
-        wfh.write(roster_contents)
-
-    with factory.started():
-        yield factory
-    if roster_path.exists():
-        roster_path.unlink()
+    with pytest.helpers.temp_file(
+        "roster", roster_contents, salt_master.config_dir
+    ) as roster_file:
+        yield roster_file
 
 
 # <---- Salt Factories -----------------------------------------------------------------------------------------------
