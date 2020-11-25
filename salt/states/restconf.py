@@ -15,17 +15,9 @@ This module relies on the restconf proxy module to interface with the devices.
 import json
 import logging
 
+# Playing a game of how many dictdiffers I can break
 from salt.utils.data import recursive_diff
-
-# try:
-#     HAS_DEEPDIFF = True
-#     from deepdiff import DeepDiff
-# except ImportError:
-#     HAS_DEEPDIFF = False
 from salt.utils.dictdiffer import DictDiffer, RecursiveDictDiffer
-
-# from salt.utils.odict import OrderedDict
-
 
 log = logging.getLogger(__file__)
 
@@ -187,6 +179,7 @@ def config_manage(
 
 
 def _compare_changes(old, new):
+    # Would you like to play a game of dictdiffer breaking?
     compare_complete = False
     changes = {}
     try:
