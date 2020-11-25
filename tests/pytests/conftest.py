@@ -12,6 +12,7 @@ import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
 from saltfactories.utils import random_string
+from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
 
@@ -29,6 +30,11 @@ def salt_sub_minion_id():
 
 
 @pytest.fixture(scope="session")
+def sdb_etcd_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="session")
 def salt_master_factory(
     request,
     salt_factories,
@@ -39,6 +45,7 @@ def salt_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
+    sdb_etcd_port,
 ):
     master_id = random_string("master-")
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -76,6 +83,11 @@ def salt_master_factory(
         "list_group2": "N@list_nodegroup",
     }
     config_defaults["nodegroups"] = nodegroups
+    config_defaults["sdbetcd"] = {
+        "driver": "etcd",
+        "etcd.host": "127.0.0.1",
+        "etcd.port": sdb_etcd_port,
+    }
     config_overrides = {}
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -163,12 +175,17 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
+    config_defaults["sdbetcd"] = {
+        "driver": "etcd",
+        "etcd.host": "127.0.0.1",
+        "etcd.port": sdb_etcd_port,
+    }
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
