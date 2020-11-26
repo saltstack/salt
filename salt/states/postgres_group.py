@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL groups (roles)
 =======================================
@@ -10,16 +9,11 @@ The postgres_group module is used to create and manage Postgres groups.
     frank:
       postgres_group.present
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import logging
 
 # Salt imports
 from salt.modules import postgres
-
-# Import Python libs
-
 
 log = logging.getLogger(__name__)
 
@@ -130,14 +124,15 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Group {0} is already present".format(name),
+        "comment": "Group {} is already present".format(name),
     }
 
     # default to encrypted passwords
-    if encrypted is not False:
+    if encrypted is None:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
     # maybe encrypt if it's not already and necessary
     password = postgres._maybe_encrypt_password(name, password, encrypted=encrypted)
+
     db_args = {
         "maintenance_db": maintenance_db,
         "runas": user,
@@ -156,9 +151,9 @@ def present(
         mode = "update"
 
     # The user is not present, make it!
-    cret = None
     update = {}
     if mode == "update":
+        role_groups = group_attr.get("groups", [])
         if createdb is not None and group_attr["can create databases"] != createdb:
             update["createdb"] = createdb
         if inherit is not None and group_attr["inherits privileges"] != inherit:
@@ -175,14 +170,23 @@ def present(
             refresh_password or group_attr["password"] != password
         ):
             update["password"] = True
+        if groups is not None:
+            lgroups = groups
+            if isinstance(groups, ((str,), str)):
+                lgroups = lgroups.split(",")
+            if isinstance(lgroups, list):
+                missing_groups = [a for a in lgroups if a not in role_groups]
+                if missing_groups:
+                    update["groups"] = missing_groups
+
     if mode == "create" or (mode == "update" and update):
         if __opts__["test"]:
             if update:
                 ret["changes"][name] = update
             ret["result"] = None
-            ret["comment"] = "Group {0} is set to be {1}d".format(name, mode)
+            ret["comment"] = "Group {} is set to be {}d".format(name, mode)
             return ret
-        cret = __salt__["postgres.group_{0}".format(mode)](
+        cret = __salt__["postgres.group_{}".format(mode)](
             groupname=name,
             createdb=createdb,
             createroles=createroles,
@@ -197,12 +201,15 @@ def present(
         )
     else:
         cret = None
+
     if cret:
-        ret["comment"] = "The group {0} has been {1}d".format(name, mode)
+        ret["comment"] = "The group {} has been {}d".format(name, mode)
         if update:
             ret["changes"][name] = update
+        else:
+            ret["changes"][name] = "Present"
     elif cret is not None:
-        ret["comment"] = "Failed to create group {0}".format(name)
+        ret["comment"] = "Failed to {} group {}".format(mode, name)
         ret["result"] = False
     else:
         ret["result"] = True
@@ -256,15 +263,17 @@ def absent(
     if __salt__["postgres.user_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {0} is set to be removed".format(name)
+            ret["comment"] = "Group {} is set to be removed".format(name)
             return ret
         if __salt__["postgres.group_remove"](name, **db_args):
-            ret["comment"] = "Group {0} has been removed".format(name)
+            ret["comment"] = "Group {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
+        else:
+            ret["result"] = False
+            ret["comment"] = "Group {} failed to be removed".format(name)
+            return ret
     else:
-        ret["comment"] = "Group {0} is not present, so it cannot " "be removed".format(
-            name
-        )
+        ret["comment"] = "Group {} is not present, so it cannot be removed".format(name)
 
     return ret

@@ -69,7 +69,6 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_cluster
   - unit.states.test_postgres_database
   - unit.states.test_postgres_extension
-  - unit.states.test_postgres_group
   - unit.states.test_postgres_initdb
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
