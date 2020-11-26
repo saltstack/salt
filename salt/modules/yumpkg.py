@@ -2040,12 +2040,6 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     .. versionadded:: 0.16.0
 
-    ignore_epoch : False
-        Only used when the version of a package is specified. If set to ``True``,
-        then the epoch will be ignored when comparing the currently-installed version.
-
-        .. versionadded:: Magnesium
-
 
     Returns a dict containing the changes.
 
@@ -2067,11 +2061,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     for target in pkg_params:
         version_to_remove = pkg_params[target]
         installed_versions = old[target].split(",")
-        if ignore_epoch:
-            version_to_remove = version_to_remove.split(":", 1)[-1]
-            installed_versions = [
-                version.split(":", 1)[-1] for version in installed_versions
-            ]
+
         # Check if package version set to be removed is actually installed:
         if target in old and not version_to_remove:
             targets.append(target)
@@ -2086,7 +2076,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
-            # Since we don't seem to have the arch info, epoch information has to parsed out. But
+            # Since we don't always have the arch info, epoch information has to parsed out. But
             # a version check was already performed, so we are removing the right version.
             targets.append(
                 "{0}-{1}{2}".format(pkgname, version_to_remove.split(":", 1)[-1], arch)

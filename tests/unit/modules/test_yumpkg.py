@@ -962,6 +962,91 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     redirect_stderr=True,
                 )
 
+    def test_remove_with_epoch(self):
+        """
+        Tests that we properly identify a version containing an epoch for
+        deinstallation.
+
+        You can deinstall pkgs only without the epoch if no arch is provided:
+
+        .. code-block:: bash
+
+            yum remove PackageKit-yum-1.1.10-2.el7.centos
+        """
+        name = "foo"
+        installed = "8:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name: [installed]
+                if kwargs.get("versions_as_list", False)
+                else installed
+            }
+        )
+        cmd_mock = MagicMock(
+            return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+        )
+        salt_mock = {
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name: installed}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, installed[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock):
+
+            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+                expected = ["yum", "-y", "remove", full_pkg_string]
+                yumpkg.remove(name)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
+    def test_remove_with_epoch_and_arch_info(self):
+        """
+        Tests that we properly identify a version containing an epoch and arch
+        deinstallation.
+
+        You can deinstall pkgs with or without epoch in combination with the arch.
+        Here we test for the absence of the epoch, but the presence for the arch:
+
+        .. code-block:: bash
+
+            yum remove PackageKit-yum-1.1.10-2.el7.centos.x86_64
+        """
+        arch = "x86_64"
+        name = "foo"
+        name_and_arch = name + "." + arch
+        installed = "8:3.8.12-4.n.el7"
+        list_pkgs_mock = MagicMock(
+            side_effect=lambda **kwargs: {
+                name_and_arch: [installed]
+                if kwargs.get("versions_as_list", False)
+                else installed
+            }
+        )
+        cmd_mock = MagicMock(
+            return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+        )
+        salt_mock = {
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({name_and_arch: installed}, "repository")
+            ),
+        }
+        full_pkg_string = "-".join((name, installed[2:]))
+        with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+            "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+        ), patch.dict(yumpkg.__salt__, salt_mock):
+
+            with patch.dict(yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}):
+                expected = ["yum", "-y", "remove", full_pkg_string + "." + arch]
+                yumpkg.remove(name)
+                call = cmd_mock.mock_calls[0][1][0]
+                assert call == expected, call
+
     def test_install_with_epoch(self):
         """
         Tests that we properly identify a version containing an epoch as an
