@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL users (roles)
 ======================================
@@ -10,19 +9,12 @@ The postgres_users module is used to create and manage Postgres users.
     frank:
       postgres_user.present
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import datetime
 import logging
 
-from salt.ext import six
-
 # Salt imports
 from salt.modules import postgres
-
-# Import salt libs
-
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +55,7 @@ def present(
     """
     Ensure that the named user is present with the specified privileges
     Please note that the user/group notion in postgresql is just abstract, we
-    have roles, where users can be seens as roles with the LOGIN privilege
+    have roles, where users can be seen as roles with the LOGIN privilege
     and groups the others.
 
     name
@@ -144,11 +136,11 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {0} is already present".format(name),
+        "comment": "User {} is already present".format(name),
     }
 
     # default to encrypted passwords
-    if encrypted is not False:
+    if encrypted is None:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
     # maybe encrypt if it's not already and necessary
     password = postgres._maybe_encrypt_password(name, password, encrypted=encrypted)
@@ -175,7 +167,6 @@ def present(
     if user_attr is not None:
         mode = "update"
 
-    cret = None
     update = {}
     if mode == "update":
         user_groups = user_attr.get("groups", [])
@@ -197,7 +188,7 @@ def present(
             update["password"] = True
         if valid_until is not None:
             valid_until_dt = __salt__["postgres.psql_query"](
-                "SELECT '{0}'::timestamp(0) as dt;".format(
+                "SELECT '{}'::timestamp(0) as dt;".format(
                     valid_until.replace("'", "''")
                 ),
                 **db_args
@@ -212,7 +203,7 @@ def present(
                 update["valid_until"] = valid_until
         if groups is not None:
             lgroups = groups
-            if isinstance(groups, (six.string_types, six.text_type)):
+            if isinstance(groups, ((str,), str)):
                 lgroups = lgroups.split(",")
             if isinstance(lgroups, list):
                 missing_groups = [a for a in lgroups if a not in user_groups]
@@ -227,9 +218,9 @@ def present(
             if update:
                 ret["changes"][name] = update
             ret["result"] = None
-            ret["comment"] = "User {0} is set to be {1}d".format(name, mode)
+            ret["comment"] = "User {} is set to be {}d".format(name, mode)
             return ret
-        cret = __salt__["postgres.user_{0}".format(mode)](
+        cret = __salt__["postgres.user_{}".format(mode)](
             username=name,
             createdb=createdb,
             createroles=createroles,
@@ -247,13 +238,13 @@ def present(
         cret = None
 
     if cret:
-        ret["comment"] = "The user {0} has been {1}d".format(name, mode)
+        ret["comment"] = "The user {} has been {}d".format(name, mode)
         if update:
             ret["changes"][name] = update
         else:
             ret["changes"][name] = "Present"
     elif cret is not None:
-        ret["comment"] = "Failed to create user {0}".format(name)
+        ret["comment"] = "Failed to {} user {}".format(mode, name)
         ret["result"] = False
     else:
         ret["result"] = True
@@ -307,19 +298,17 @@ def absent(
     if __salt__["postgres.user_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {0} is set to be removed".format(name)
+            ret["comment"] = "User {} is set to be removed".format(name)
             return ret
         if __salt__["postgres.user_remove"](name, **db_args):
-            ret["comment"] = "User {0} has been removed".format(name)
+            ret["comment"] = "User {} has been removed".format(name)
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "User {0} failed to be removed".format(name)
+            ret["comment"] = "User {} failed to be removed".format(name)
             return ret
     else:
-        ret["comment"] = "User {0} is not present, so it cannot " "be removed".format(
-            name
-        )
+        ret["comment"] = "User {} is not present, so it cannot be removed".format(name)
 
     return ret

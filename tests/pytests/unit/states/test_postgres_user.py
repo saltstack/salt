@@ -201,7 +201,6 @@ def test_present_create_plain_password(mocks):
     mocks["postgres.user_update"].assert_not_called()
 
 
-@pytest.mark.xfail
 def test_present_create_md5_password_default_plain(mocks, monkeypatch, md5_pw):
     monkeypatch.setattr(postgres, "_DEFAULT_PASSWORDS_ENCRYPTION", False)
     test_present_create_md5_password(mocks, md5_pw)
@@ -315,7 +314,6 @@ def test_present_update_md5_password(mocks, existing_user, md5_pw):
     )
 
 
-@pytest.mark.xfail
 def test_present_update_error(mocks, existing_user):
     existing_user["password"] = "md500000000000000000000000000000000"
     mocks["postgres.role_get"].return_value = existing_user
