@@ -74,7 +74,6 @@ salt/(states|modules)/.*postgres.py:
   - unit.states.test_postgres_language
   - unit.states.test_postgres_privileges
   - unit.states.test_postgres_schema
-  - unit.states.test_postgres_user
 
 salt/modules/rabbitmq.py:
   - unit.states.test_rabbitmq_cluster
