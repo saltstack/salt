@@ -5,7 +5,9 @@ import collections.abc
 import contextlib
 import contextvars
 
-loader_ctxvar = contextvars.ContextVar("loader_ctxvar")
+DEFAULT_CTX_VAR = "loader_ctxvar"
+
+loader_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
 
 
 @contextlib.contextmanager
@@ -32,6 +34,10 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.default = default
 
     def loader(self):
+        """
+        The LazyLoader in the current context. This will return None if there
+        is no context established.
+        """
         try:
             return self.loader_context.loader()
         except AttributeError:
@@ -46,6 +52,9 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         return loader
 
     def value(self):
+        """
+        The value of the current for this context
+        """
         loader = self.loader()
         if loader is None:
             return self.default
@@ -121,12 +130,18 @@ class LoaderContext:
         return self.loader[item]
 
     def loader(self):
+        """
+        Return the LazyLoader in the current context. If there is no value set raise an AttributeError
+        """
         try:
             return self.loader_ctxvar.get()
         except LookupError:
             raise AttributeError("No loader context")
 
     def named_context(self, name, default=None, ctx_class=NamedLoaderContext):
+        """
+        Return a NamedLoaderContext instance which will use this LoaderContext
+        """
         return ctx_class(name, self, default)
 
     def __eq__(self, other):
