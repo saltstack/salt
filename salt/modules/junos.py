@@ -14,18 +14,20 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 """
 
 # Import Python libraries
+
 import copy
 import json
 import logging
 import os
+import re
 import tempfile
-import traceback
 from functools import wraps
 
-# Import Salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.json
+import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 import yaml
 
@@ -39,19 +41,24 @@ except ImportError:
 # https://github.com/Juniper/py-junos-eznc
 try:
     # pylint: disable=W0611
-    from jnpr.junos import Device
-    from jnpr.junos.utils.config import Config
-    from jnpr.junos.utils.sw import SW
-    from jnpr.junos.utils.scp import SCP
-    import jnpr.junos.utils
     import jnpr.junos.cfg
-    import jxmlease
-    from jnpr.junos.factory.optable import OpTable
-    from jnpr.junos.factory.cfgtable import CfgTable
     import jnpr.junos.op as tables_dir
-    from jnpr.junos.factory.factory_loader import FactoryLoader
+    import jnpr.junos.utils
+    import jxmlease
     import yamlordereddictloader
-    from jnpr.junos.exception import ConnectClosedError, LockError
+    from jnpr.junos import Device
+    from jnpr.junos.exception import (
+        ConnectClosedError,
+        LockError,
+        RpcTimeoutError,
+        UnlockError,
+    )
+    from jnpr.junos.factory.cfgtable import CfgTable
+    from jnpr.junos.factory.factory_loader import FactoryLoader
+    from jnpr.junos.factory.optable import OpTable
+    from jnpr.junos.utils.config import Config
+    from jnpr.junos.utils.scp import SCP
+    from jnpr.junos.utils.sw import SW
 
     # pylint: enable=W0611
     HAS_JUNOS = True
@@ -138,7 +145,7 @@ class HandleFileCopy:
             if self._cached_file != "":
                 return self._cached_file
         else:
-            # check for local location of the file
+            # check for local location of file
             if __salt__["file.file_exists"](self._file_path):
                 if self._kwargs:
                     self._cached_file = salt.utils.files.mkstemp()
@@ -165,10 +172,11 @@ class HandleFileCopy:
 def timeoutDecorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs:
+        if "dev_timeout" in kwargs or "timeout" in kwargs:
+            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
-            conn.timeout = kwargs.pop("dev_timeout", None)
+            conn.timeout = ldev_timeout
             try:
                 result = function(*args, **kwargs)
                 conn.timeout = restore_timeout
@@ -182,6 +190,75 @@ def timeoutDecorator(function):
     return wrapper
 
 
+def timeoutDecorator_cleankwargs(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if "dev_timeout" in kwargs or "timeout" in kwargs:
+            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+            conn = __proxy__["junos.conn"]()
+            restore_timeout = conn.timeout
+            conn.timeout = ldev_timeout
+            try:
+                restore_kwargs = False
+                del_list = []
+                op = {}
+                op.update(kwargs)
+                for keychk in kwargs:
+                    if keychk.startswith("__pub"):
+                        del_list.append(keychk)
+                if del_list:
+                    restore_kwargs = True
+                    for delkey in del_list:
+                        kwargs.pop(delkey)
+
+                result = function(*args, **kwargs)
+                if restore_kwargs:
+                    kwargs.update(op)
+
+                conn.timeout = restore_timeout
+                return result
+            except Exception:  # pylint: disable=broad-except
+                conn.timeout = restore_timeout
+                raise
+        else:
+            restore_kwargs = False
+            del_list = []
+            op = {}
+            op.update(kwargs)
+            for keychk in kwargs:
+                if keychk.startswith("__pub"):
+                    del_list.append(keychk)
+            if del_list:
+                restore_kwargs = True
+                for delkey in del_list:
+                    kwargs.pop(delkey)
+
+            ret = function(*args, **kwargs)
+            if restore_kwargs:
+                kwargs.update(op)
+
+            return ret
+
+    return wrapper
+
+
+def _restart_connection():
+    minion_id = __opts__.get("proxyid", "") or __opts__.get("id", "")
+    log.info(
+        "Junos exception occurred {} (junos proxy) is down. Restarting.".format(
+            minion_id
+        )
+    )
+    __salt__["event.fire_master"](
+        {}, "junos/proxy/{}/stop".format(__opts__["proxy"]["host"])
+    )
+    __proxy__["junos.shutdown"](__opts__)  # safely close connection
+    __proxy__["junos.init"](__opts__)  # reopen connection
+    log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
+
+
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def facts_refresh():
     """
     Reload the facts dictionary from the device. Usually only needed if,
@@ -202,6 +279,7 @@ def facts_refresh():
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     ret["facts"] = __proxy__["junos.get_serialized_facts"]()
@@ -210,6 +288,7 @@ def facts_refresh():
         __salt__["saltutil.sync_grains"]()
     except Exception as exception:  # pylint: disable=broad-except
         log.error('Grains could not be updated due to "%s"', exception)
+
     return ret
 
 
@@ -231,6 +310,8 @@ def facts():
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not display facts due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
+
     return ret
 
 
@@ -315,15 +396,21 @@ def rpc(cmd=None, dest=None, **kwargs):
         except Exception as exception:  # pylint: disable=broad-except
             ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
+            _restart_connection()
             return ret
     else:
         if "filter" in op:
             log.warning('Filter ignored as it is only used with "get-config" rpc')
+
+        if "dest" in op:
+            log.warning("dest in op, rpc may reject this for cmd {}".format(cmd))
+
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))({"format": format_}, **op)
         except Exception as exception:  # pylint: disable=broad-except
             ret["message"] = 'RPC execution failed due to "{}"'.format(exception)
             ret["out"] = False
+            _restart_connection()
             return ret
 
     if format_ == "text":
@@ -342,6 +429,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             write_response = etree.tostring(reply)
         with salt.utils.files.fopen(dest, "w") as fp:
             fp.write(salt.utils.stringutils.to_str(write_response))
+
     return ret
 
 
@@ -395,6 +483,7 @@ def set_hostname(hostname=None, **kwargs):
             exception
         )
         ret["out"] = False
+        _restart_connection()
         return ret
 
     try:
@@ -402,6 +491,7 @@ def set_hostname(hostname=None, **kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not commit check due to error "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     if commit_ok:
@@ -416,11 +506,21 @@ def set_hostname(hostname=None, **kwargs):
             ] = 'Successfully loaded host-name but commit failed with "{}"'.format(
                 exception
             )
+            _restart_connection()
             return ret
     else:
         ret["out"] = False
         ret["message"] = "Successfully loaded host-name but pre-commit check failed."
-        conn.cu.rollback()
+        try:
+            conn.cu.rollback()
+        except Exception as exception:  # pylint: disable=broad-except
+            ret["out"] = False
+            ret[
+                "message"
+            ] = 'Successfully loaded host-name but rollback before exit failed "{}"'.format(
+                exception
+            )
+            _restart_connection()
 
     return ret
 
@@ -484,6 +584,7 @@ def commit(**kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not perform commit check due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     if commit_ok:
@@ -505,10 +606,20 @@ def commit(**kwargs):
             ] = 'Commit check succeeded but actual commit failed with "{}"'.format(
                 exception
             )
+            _restart_connection()
     else:
         ret["out"] = False
         ret["message"] = "Pre-commit check failed."
-        conn.cu.rollback()
+        try:
+            conn.cu.rollback()
+        except Exception as exception:  # pylint: disable=broad-except
+            ret["out"] = False
+            ret[
+                "message"
+            ] = 'Pre-commit check failed, and exception during rollback "{}"'.format(
+                exception
+            )
+            _restart_connection()
 
     return ret
 
@@ -519,6 +630,9 @@ def rollback(**kwargs):
     Roll back the last committed configuration changes and commit
 
     id : 0
+        The rollback ID value (0-49)
+
+    d_id : 0
         The rollback ID value (0-49)
 
     dev_timeout : 30
@@ -542,9 +656,27 @@ def rollback(**kwargs):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.rollback id=10
+        salt 'device_name' junos.rollback 10
+
+    NOTE: Because of historical reasons and the internals of the Salt state
+    compiler, there are three possible sources of the rollback ID--the
+    positional argument, and the `id` and `d_id` kwargs.  The precedence of
+    the arguments are `id` (positional), `id` (kwarg), `d_id` (kwarg).  In
+    other words, if all three are passed, only the positional argument
+    will be used.  A warning is logged if more than one is passed.
     """
-    id_ = kwargs.pop("id", 0)
+    ids_passed = 0
+    id_ = 0
+    if "d_id" in kwargs:
+        id_ = kwargs.pop("d_id")
+        ids_passed = ids_passed + 1
+    if "id" in kwargs:
+        id_ = kwargs.pop("id", 0)
+        ids_passed = ids_passed + 1
+
+    if ids_passed > 1:
+        log.warning("junos.rollback called with more than one possible ID.")
+        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
 
     ret = {}
     conn = __proxy__["junos.conn"]()
@@ -562,6 +694,7 @@ def rollback(**kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Rollback failed due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     if ret["out"]:
@@ -586,6 +719,7 @@ def rollback(**kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not commit check due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     if commit_ok:
@@ -599,13 +733,16 @@ def rollback(**kwargs):
             ] = 'Rollback successful but commit failed with error "{}"'.format(
                 exception
             )
+            _restart_connection()
             return ret
     else:
         ret["message"] = "Rollback successful but pre-commit check failed."
         ret["out"] = False
+
     return ret
 
 
+@timeoutDecorator
 def diff(**kwargs):
     """
     Returns the difference between the candidate and the current configuration
@@ -613,14 +750,35 @@ def diff(**kwargs):
     id : 0
         The rollback ID value (0-49)
 
+    d_id : 0
+        The rollback ID value (0-49)
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'device_name' junos.diff id=3
+        salt 'device_name' junos.diff d_id=3
+
+    NOTE: Because of historical reasons and the internals of the Salt state
+    compiler, there are three possible sources of the rollback ID--the
+    positional argument, and the `id` and `d_id` kwargs.  The precedence of
+    the arguments are `id` (positional), `id` (kwarg), `d_id` (kwarg).  In
+    other words, if all three are passed, only the positional argument
+    will be used.  A warning is logged if more than one is passed.
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
-    id_ = kwargs.pop("id", 0)
+    ids_passed = 0
+    id_ = 0
+    if "d_id" in kwargs:
+        id_ = kwargs.pop("d_id")
+        ids_passed = ids_passed + 1
+    if "id" in kwargs:
+        id_ = kwargs.pop("id", 0)
+        ids_passed = ids_passed + 1
+    if ids_passed > 1:
+        log.warning("junos.rollback called with more than one possible ID.")
+        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
+
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
@@ -632,6 +790,7 @@ def diff(**kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not get diff with error "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
 
     return ret
 
@@ -696,6 +855,8 @@ def ping(dest_ip=None, **kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
+
     return ret
 
 
@@ -751,6 +912,7 @@ def cli(command=None, **kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Execution failed due to "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
         return ret
 
     if format_ == "text":
@@ -772,6 +934,7 @@ def cli(command=None, **kwargs):
     return ret
 
 
+@timeoutDecorator
 def shutdown(**kwargs):
     """
     Shut down (power off) or reboot a device running Junos OS. This includes
@@ -840,8 +1003,10 @@ def shutdown(**kwargs):
         ret["message"] = "Successfully powered off/rebooted."
         ret["out"] = True
     except Exception as exception:  # pylint: disable=broad-except
-        ret["message"] = 'Could not poweroff/reboot beacause "{}"'.format(exception)
+        ret["message"] = 'Could not poweroff/reboot because "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
+
     return ret
 
 
@@ -872,6 +1037,11 @@ def install_config(path=None, **kwargs):
 
         .. note:: This option cannot be used if **format** is "set".
 
+    replace : False
+        Specify whether the configuration file uses ``replace:`` statements. If
+        ``True``, only those statements under the ``replace`` tag will be
+        changed.
+
     merge : False
         If set to ``True`` will set the load-config action to merge.
         the default load-config action is 'replace' for xml/json/text config
@@ -899,10 +1069,9 @@ def install_config(path=None, **kwargs):
     diffs_file
       Path to the file where the diff (difference in old configuration and the
       committed configuration) will be stored. Note that the file will be
-      stored on the proxy minion. To push the files to the master
+      stored on the proxy minion. To push the files to the master use:
 
-      use
-      :py:func:`cp.push <salt.modules.cp.push>`.
+        py:func:`cp.push <salt.modules.cp.push>`.
 
     template_vars
       Variables to be passed into the template processing engine in addition to
@@ -1007,6 +1176,7 @@ def install_config(path=None, **kwargs):
                     ] = 'Could not load configuration due to : "{}"'.format(exception)
                     ret["format"] = op["format"]
                     ret["out"] = False
+                    _restart_connection()
                     return ret
 
                 config_diff = None
@@ -1039,6 +1209,7 @@ def install_config(path=None, **kwargs):
                             exception
                         )
                         ret["out"] = False
+                        _restart_connection()
                         return ret
 
                 if check and not test:
@@ -1052,19 +1223,40 @@ def install_config(path=None, **kwargs):
                             exception
                         )
                         ret["out"] = False
+                        _restart_connection()
                         return ret
+
                 elif not check:
-                    cu.rollback()
-                    ret[
-                        "message"
-                    ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                    try:
+                        cu.rollback()
+                        ret[
+                            "message"
+                        ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                    except Exception as exception:  # pylint: disable=broad-except
+                        ret[
+                            "message"
+                        ] = 'Loaded configuration but commit check failed, and exception occurred during rolling back configuration "{}"'.format(
+                            exception
+                        )
+                        _restart_connection()
+
                     ret["out"] = False
                 else:
-                    cu.rollback()
-                    ret[
-                        "message"
-                    ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
-                    ret["out"] = True
+                    try:
+                        cu.rollback()
+                        ret[
+                            "message"
+                        ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                        ret["out"] = True
+                    except Exception as exception:  # pylint: disable=broad-except
+                        ret[
+                            "message"
+                        ] = 'Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred "{}"'.format(
+                            exception
+                        )
+                        ret["out"] = False
+                        _restart_connection()
+
                 try:
                     if write_diff and config_diff is not None:
                         with salt.utils.files.fopen(write_diff, "w") as fp:
@@ -1074,6 +1266,7 @@ def install_config(path=None, **kwargs):
                         "message"
                     ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
                     ret["out"] = False
+
         except ValueError as ex:
             message = "install_config failed due to: {}".format(str(ex))
             log.error(message)
@@ -1083,10 +1276,17 @@ def install_config(path=None, **kwargs):
             log.error("Configuration database is locked")
             ret["message"] = ex.message
             ret["out"] = False
+        except RpcTimeoutError as ex:
+            message = "install_config failed due to timeout error : {}".format(str(ex))
+            log.error(message)
+            ret["message"] = message
+            ret["out"] = False
 
         return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def zeroize():
     """
     Resets the device to default factory settings
@@ -1113,6 +1313,7 @@ def zeroize():
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = 'Could not zeroize due to : "{}"'.format(exception)
         ret["out"] = False
+        _restart_connection()
 
     return ret
 
@@ -1173,7 +1374,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentation:
+        Please refer to below URl for PyEZ sw.install() documentaion:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
@@ -1200,6 +1401,7 @@ def install_os(path=None, **kwargs):
     # For info: https://github.com/Juniper/salt/issues/116
     dev_timeout = max(op.pop("dev_timeout", 0), op.pop("timeout", 0))
     timeout = max(1800, conn.timeout, dev_timeout)
+
     # Reboot should not be passed as a keyword argument to install(),
     # Please refer to https://github.com/Juniper/salt/issues/115 for more details
     reboot = op.pop("reboot", False)
@@ -1212,34 +1414,57 @@ def install_os(path=None, **kwargs):
         ret["out"] = False
         return ret
 
+    if reboot:
+        #  flag reboot active, disables proxy_reconnect since it's probing
+        # of connection interferes with the reboot, especially with a
+        # package install (time taken to xfer package and install)
+        __proxy__["junos.reboot_active"]()
+
     install_status = False
     if not no_copy_:
         with HandleFileCopy(path) as image_path:
             if image_path is None:
                 ret["message"] = "Invalid path. Please provide a valid image path"
                 ret["out"] = False
+                __proxy__["junos.reboot_clear"]()
                 return ret
+            if salt.utils.platform.is_junos():
+                # If its native minion running on Junos, pyez dont need to SCP file
+                # hence setting no_copy as True, HandleFileCopy already copied file
+                # from master to Junos
+                tmp_absfile = image_path
+                op["no_copy"] = True
+                op["remote_path"] = os.path.dirname(tmp_absfile)
+                image_path = os.path.basename(tmp_absfile)
             try:
-                install_status = conn.sw.install(
+                install_status, install_message = conn.sw.install(
                     image_path, progress=True, timeout=timeout, **op
                 )
             except Exception as exception:  # pylint: disable=broad-except
                 ret["message"] = 'Installation failed due to: "{}"'.format(exception)
                 ret["out"] = False
+                __proxy__["junos.reboot_clear"]()
+                _restart_connection()
                 return ret
     else:
         try:
-            install_status = conn.sw.install(path, progress=True, timeout=timeout, **op)
+            install_status, install_message = conn.sw.install(
+                path, progress=True, timeout=timeout, **op
+            )
         except Exception as exception:  # pylint: disable=broad-except
             ret["message"] = 'Installation failed due to: "{}"'.format(exception)
             ret["out"] = False
+            __proxy__["junos.reboot_clear"]()
+            _restart_connection()
             return ret
 
     if install_status is True:
+        ret["out"] = True
         ret["message"] = "Installed the os."
     else:
-        ret["message"] = "Installation failed."
+        ret["message"] = "Installation failed. Reason: {}".format(install_message)
         ret["out"] = False
+        __proxy__["junos.reboot_clear"]()
         return ret
 
     # Handle reboot, after the install has finished
@@ -1250,22 +1475,34 @@ def install_os(path=None, **kwargs):
         if "all_re" in op:
             reboot_kwargs["all_re"] = op.get("all_re")
         try:
+            __proxy__["junos.reboot_active"]()
             conn.sw.reboot(**reboot_kwargs)
         except Exception as exception:  # pylint: disable=broad-except
+            __proxy__["junos.reboot_clear"]()
             ret[
                 "message"
             ] = 'Installation successful but reboot failed due to : "{}"'.format(
                 exception
             )
             ret["out"] = False
+            _restart_connection()
             return ret
+
+        __proxy__["junos.reboot_clear"]()
+        ret["out"] = True
         ret["message"] = "Successfully installed and rebooted!"
+
     return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def file_copy(src, dest):
     """
     Copies the file from the local device to the junos device
+
+    .. note::
+        This function does not work on Juniper native minions
 
     src
         The source path where the file is kept.
@@ -1273,12 +1510,20 @@ def file_copy(src, dest):
     dest
         The destination path on the where the file will be copied
 
+    .. versionadded:: 3001
+
     CLI Example:
 
     .. code-block:: bash
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     """
+    if salt.utils.platform.is_junos():
+        return {
+            "success": False,
+            "message": "This method is unsupported on the current operating system!",
+        }
+
     conn = __proxy__["junos.conn"]()
     ret = {}
     ret["out"] = True
@@ -1296,9 +1541,12 @@ def file_copy(src, dest):
         except Exception as exception:  # pylint: disable=broad-except
             ret["message"] = 'Could not copy file : "{}"'.format(exception)
             ret["out"] = False
+
         return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def lock():
     """
     Attempts an exclusive lock on the candidate configuration. This
@@ -1322,13 +1570,20 @@ def lock():
     try:
         conn.cu.lock()
         ret["message"] = "Successfully locked the configuration."
-    except jnpr.junos.exception.LockError as exception:
+    except RpcTimeoutError as exception:
+        ret["message"] = 'Could not gain lock due to : "{}"'.format(exception)
+        ret["out"] = False
+        _restart_connection()
+
+    except LockError as exception:
         ret["message"] = 'Could not gain lock due to : "{}"'.format(exception)
         ret["out"] = False
 
     return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def unlock():
     """
     Unlocks the candidate configuration.
@@ -1345,7 +1600,14 @@ def unlock():
     try:
         conn.cu.unlock()
         ret["message"] = "Successfully unlocked the configuration."
-    except jnpr.junos.exception.UnlockError as exception:
+    except RpcTimeoutError as exception:
+        ret["message"] = 'Could not unlock configuration due to : "{}"'.format(
+            exception
+        )
+        ret["out"] = False
+        _restart_connection()
+
+    except UnlockError as exception:
         ret["message"] = 'Could not unlock configuration due to : "{}"'.format(
             exception
         )
@@ -1354,6 +1616,7 @@ def unlock():
     return ret
 
 
+@timeoutDecorator
 def load(path=None, **kwargs):
     """
     Loads the configuration from the file provided onto the device.
@@ -1370,6 +1633,11 @@ def load(path=None, **kwargs):
         configuration file. Sets action to override
 
         .. note:: This option cannot be used if **format** is "set".
+
+    replace : False
+        Specify whether the configuration file uses ``replace:`` statements. If
+        ``True``, only those statements under the ``replace`` tag will be
+        changed.
 
     merge : False
         If set to ``True`` will set the load-config action to merge.
@@ -1490,11 +1758,14 @@ def load(path=None, **kwargs):
             )
             ret["format"] = op["format"]
             ret["out"] = False
+            _restart_connection()
             return ret
 
         return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def commit_check():
     """
     Perform a commit check on the configuration
@@ -1514,10 +1785,13 @@ def commit_check():
     except Exception as exception:  # pylint: disable=broad-except
         ret["message"] = "Commit check failed with {}".format(exception)
         ret["out"] = False
+        _restart_connection()
 
     return ret
 
 
+## @timeoutDecorator
+@timeoutDecorator_cleankwargs
 def get_table(
     table,
     table_file,
@@ -1630,6 +1904,7 @@ def get_table(
                     conn
                 )
                 ret["out"] = False
+                _restart_connection()
                 return ret
             ret["reply"] = json.loads(data.to_json())
             if data.__class__.__bases__[0] in [OpTable, CfgTable]:
@@ -1661,10 +1936,441 @@ def get_table(
             "with {}".format(str(conn))
         )
         ret["out"] = False
+        _restart_connection()
         return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["message"] = "Uncaught exception - please report: {}".format(str(err))
-        traceback.print_exc()
         ret["out"] = False
+        _restart_connection()
         return ret
     return ret
+
+
+def _recursive_dict(node):
+    """
+    Convert an lxml.etree node tree into a dict.
+    """
+    result = {}
+
+    for element in node.iterchildren():
+        # Remove namespace prefix
+        key = element.tag.split("}")[1] if "}" in element.tag else element.tag
+
+        # Process element as tree element if the inner XML contains non-whitespace content
+        if element.text and element.text.strip():
+            value = element.text
+        else:
+            value = _recursive_dict(element)
+        if key in result:
+
+            if type(result[key]) is list:
+                result[key].append(value)
+            else:
+                tempvalue = result[key].copy()
+                result[key] = [tempvalue, value]
+        else:
+            result[key] = value
+    return result
+
+
+@timeoutDecorator
+def rpc_file_list(path, **kwargs):
+    """
+    Use the Junos RPC interface to get a list of files and return
+    them as a structure dictionary.
+
+    .. versionadded:: Aluminum
+
+    CLI Example :
+
+    .. code-block:: bash
+
+        salt junos-router junos.rpc_file_list /var/local/salt/etc
+
+        junos-router:
+            files:
+                directory:
+                    directory-name:
+                        /var/local/salt/etc
+                    file-information:
+                        |_
+                          file-directory:
+                              file-name:
+                                  pki
+                        |_
+                          file-name:
+                              proxy
+                        |_
+                          file-directory:
+                              file-name:
+                                  proxy.d
+                total-file-blocks:
+                    10
+                total-files:
+                    1
+        success:
+            True
+
+    """
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    conn = __proxy__["junos.conn"]()
+    if conn._conn is None:
+        return False
+
+    results = conn.rpc.file_list(path=path)
+
+    ret = {}
+    ret["files"] = _recursive_dict(results)
+    ret["success"] = True
+
+    return ret
+
+
+def _strip_newlines(str):
+    stripped = str.replace("\n", "")
+    return stripped
+
+
+def _make_source_list(dir):
+
+    dir_list = []
+    if not dir:
+        return
+    base = rpc_file_list(dir)["files"]["directory"]
+
+    # No files in this directory
+    if "file-information" not in base:
+        if "directory_name" not in base:
+            return None
+        return [os.path.join(_strip_newlines(base.get("directory-name", None))) + "/"]
+
+    if isinstance(base["file-information"], dict):
+        dirname = os.path.join(
+            dir, _strip_newlines(base["file-information"]["file-name"])
+        )
+        if "file-directory" in base["file-information"]:
+            new_list = _make_source_list(os.path.join(dir, dirname))
+            return new_list
+        else:
+            return [dirname]
+    for entry in base["file-information"]:
+        if "file-directory" in entry:
+            new_list = _make_source_list(
+                os.path.join(dir, _strip_newlines(entry["file-name"]))
+            )
+            if new_list:
+                dir_list.extend(new_list)
+        else:
+            dir_list.append(os.path.join(dir, _strip_newlines(entry["file-name"])))
+
+    return dir_list
+
+
+@timeoutDecorator
+def file_compare(file1, file2, **kwargs):
+    """
+    Compare two files and return a dictionary indicating if they
+    are different.
+
+    Dictionary includes `success` key.  If False, one or more files do not
+    exist or some other error occurred.
+
+    Under the hood, this uses the junos CLI command `file compare files ...`
+
+    .. note::
+        This function only works on Juniper native minions
+
+    .. versionadded:: Aluminum
+
+    CLI Example :
+
+    .. code-block:: bash
+
+        salt junos-router junos.file_compare /var/tmp/backup1/cmt.script /var/tmp/backup2/cmt.script
+
+        junos-router:
+            identical:
+                False
+            success:
+                True
+
+    """
+    if not salt.utils.platform.is_junos():
+        return {
+            "success": False,
+            "message": "This method is unsupported on the current operating system!",
+        }
+
+    ret = {"message": "", "identical": False, "success": True}
+
+    junos_cli = salt.utils.path.which("cli")
+    if not junos_cli:
+        return {"success": False, "message": "Cannot find Junos cli command"}
+
+    cliret = __salt__["cmd.run"](
+        "{} file compare files {} {} ".format(junos_cli, file1, file2)
+    )
+    clilines = cliret.splitlines()
+
+    for r in clilines:
+        if r.strip() != "":
+            if "No such file" in r:
+                ret["identical"] = False
+                ret["success"] = False
+                return ret
+
+            ret["identical"] = False
+            ret["success"] = True
+            return ret
+
+    ret["identical"] = True
+    ret["success"] = True
+    return ret
+
+
+@timeoutDecorator
+def fsentry_exists(dir, **kwargs):
+    """
+    Returns a dictionary indicating if `dir` refers to a file
+    or a non-file (generally a directory) in the file system,
+    or if there is no file by that name.
+
+    .. note::
+        This function only works on Juniper native minions
+
+    .. versionadded:: Aluminum
+
+    CLI Example :
+
+    .. code-block:: bash
+
+        salt junos-router junos.fsentry_exists /var/log
+
+        junos-router:
+            is_dir:
+                True
+            exists:
+                True
+
+    """
+    if not salt.utils.platform.is_junos():
+        return {
+            "success": False,
+            "message": "This method is unsupported on the current operating system!",
+        }
+
+    junos_cli = salt.utils.path.which("cli")
+    if not junos_cli:
+        return {"success": False, "message": "Cannot find Junos cli command"}
+
+    ret = __salt__["cmd.run"]("{} file show {}".format(junos_cli, dir))
+    retlines = ret.splitlines()
+    exists = True
+    is_dir = False
+    status = {"is_dir": False, "exists": True}
+    for r in retlines:
+        if "could not resolve" in r or "error: Could not connect" in r:
+            status["is_dir"] = False
+            status["exists"] = False
+        if "is not a regular file" in r:
+            status["is_dir"] = True
+            status["exists"] = True
+
+    return status
+
+
+def _find_routing_engines():
+    junos_cli = salt.utils.path.which("cli")
+    if not junos_cli:
+        return {"success": False, "message": "Cannot find Junos cli command"}
+
+    re_check = __salt__["cmd.run"]("{} show chassis routing-engine".format(junos_cli))
+    engine_present = True
+    engine = {}
+
+    # for l in re_check.splitlines():
+    #     if 'error: Unrecognized command' in l:
+    #         engine_present = False
+
+    # if not engine_present:
+    #     return {'success': False,
+    #             'message': 'Device does not have multiple routing engines'}
+
+    current_engine = None
+    status = None
+    for l in re_check.splitlines():
+        if "Slot" in l:
+            mat = re.search(".*(\\d+):.*", l)
+            if mat:
+                current_engine = "re" + str(mat.group(1)) + ":"
+        if "Current state" in l:
+            if "Master" in l:
+                status = "Master"
+            if "Disabled" in l:
+                status = "Disabled"
+            if "Backup" in l:
+                status = "Backup"
+
+        if current_engine and status:
+            engine[current_engine] = status
+            current_engine = None
+            status = None
+
+    if not engine:
+        return {
+            "success": False,
+            "message": "Junos cli command returned no information",
+        }
+
+    engine["success"] = True
+    return engine
+
+
+@timeoutDecorator
+def routing_engine(**kwargs):
+    """
+    Returns a dictionary containing the routing engines on the device and
+    their status (Master, Disabled, Backup).
+
+    Under the hood parses the result of `show chassis routing-engine`
+
+    .. versionadded:: Aluminum
+
+    CLI Example :
+
+    .. code-block:: bash
+
+        salt junos-router junos.routing_engine
+
+        junos-router:
+            backup:
+              - re1:
+            master:
+              re0:
+            success:
+              True
+
+    Returns `success: False` if the device does not appear to have multiple routing engines.
+
+    """
+    engine_status = _find_routing_engines()
+    if not engine_status["success"]:
+        return {"success": False}
+
+    master = None
+    backup = []
+    for k, v in engine_status.items():
+        if v == "Master":
+            master = k
+        if v == "Backup" or v == "Disabled":
+            backup.append(k)
+
+    if master:
+        ret = {"master": master, "backup": backup, "success": True}
+    else:
+        ret = {"master": master, "backup": backup, "success": False}
+    log.debug(ret)
+    return ret
+
+
+@timeoutDecorator
+def dir_copy(source, dest, force=False, **kwargs):
+    """
+    Copy a directory and recursively its contents from source to dest.
+
+    .. note::
+        This function only works on the Juniper native minion
+
+    Parameters:
+
+    source : Directory to use as the source
+
+    dest : Directory in which to place the source and its contents.
+
+    force : This function will not copy identical files unless `force` is `True`
+
+    .. versionadded:: Aluminum
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'device_name' junos.dir_copy /etc/salt/pki re1:/
+
+    This will take the `pki` directory, its absolute path and copy it and its
+    contents to routing engine 1 root directory. The result will be
+    `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
+
+    """
+    if not salt.utils.platform.is_junos():
+        return {
+            "success": False,
+            "message": "This method is unsupported on the current operating system!",
+        }
+
+    junos_cli = salt.utils.path.which("cli")
+    if not junos_cli:
+        return {"success": False, "message": "Cannot find Junos cli command"}
+
+    ret = {}
+    ret_messages = ""
+    if not source.startswith("/"):
+        ret["message"] = "Source directory must be a fully qualified path."
+        ret["success"] = False
+        return ret
+
+    if not (dest.endswith(":") or dest.startswith("/")):
+        ret[
+            "message"
+        ] = "Destination must be a routing engine reference (e.g. re1:) or a fully qualified path."
+        ret["success"] = False
+        return ret
+
+    check_source = fsentry_exists(source)
+    if not check_source["exists"]:
+        ret["message"] = "Source does not exist"
+        ret["success"] = False
+        return ret
+
+    if not check_source["is_dir"]:
+        ret["message"] = "Source is not a directory."
+        ret["success"] = False
+        return ret
+
+    filelist = _make_source_list(source)
+    dirops = []
+    for f in filelist:
+        splitpath = os.path.split(f)[0]
+        fullpath = "/"
+        for component in splitpath.split("/"):
+            fullpath = os.path.join(fullpath, component)
+            if fullpath not in dirops:
+                dirops.append(fullpath)
+
+    for d in dirops:
+        target = dest + d
+        status = fsentry_exists(target)
+        if not status["exists"]:
+            ret = __salt__["cmd.run"](
+                "{} file make-directory {}".format(junos_cli, target)
+            )
+            ret = ret_messages + ret
+        else:
+            ret_messages = ret_messages + "Directory " + target + " already exists.\n"
+    for f in filelist:
+        if not f.endswith("/"):
+            target = dest + f
+            comp_result = file_compare(f, target)
+
+            if not comp_result["identical"] or force:
+                ret = __salt__["cmd.run"](
+                    "{} file copy {} {}".format(junos_cli, f, target)
+                )
+                ret = ret_messages + ret
+            else:
+                ret_messages = (
+                    ret_messages
+                    + "Files {} and {} are identical, not copying.\n".format(f, target)
+                )
+
+    return ret_messages
