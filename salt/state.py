@@ -4000,11 +4000,12 @@ class BaseHighState:
                 include = []
                 if "include" in state:
                     if not isinstance(state["include"], list):
-                        err = (
-                            "Include Declaration in SLS {} is not formed "
-                            "as a list".format(sls)
-                        )
-                        errors.append(err)
+                        if state["include"] is not None:
+                            err = (
+                                "Include Declaration in SLS {} is not formed "
+                                "as a list".format(sls)
+                            )
+                            errors.append(err)
                     else:
                         include = state.pop("include")
 
