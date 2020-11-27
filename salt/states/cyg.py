@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Cygwin packages.
 
@@ -10,7 +9,6 @@ or removed.
     dos2unix:
       cyg.installed
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -61,7 +59,7 @@ def installed(name, cyg_arch="x86_64", mirrors=None):
  be one of 'x86' or 'x86_64'"
         return ret
 
-    LOG.debug("Installed State: Initial Mirror list: {0}".format(mirrors))
+    LOG.debug("Installed State: Initial Mirror list: {}".format(mirrors))
 
     if not __salt__["cyg.check_valid_package"](
         name, cyg_arch=cyg_arch, mirrors=mirrors
@@ -79,7 +77,7 @@ def installed(name, cyg_arch="x86_64", mirrors=None):
     if __opts__["test"]:
         ret[
             "comment"
-        ] = "The package {0} would\
+        ] = "The package {} would\
  have been installed".format(
             name
         )
@@ -144,7 +142,7 @@ def removed(name, cyg_arch="x86_64", mirrors=None):
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "The package {0} would have been removed".format(name)
+        ret["comment"] = "The package {} would have been removed".format(name)
         return ret
     if __salt__["cyg.uninstall"](name, cyg_arch):
         ret["result"] = True
@@ -223,7 +221,7 @@ def updated(name=None, cyg_arch="x86_64", mirrors=None):
 # http://stackoverflow.com/a/1165552
 
 
-class DictDiffer(object):
+class DictDiffer:
     """
     Calculate the difference between two dictionaries.
 
@@ -265,14 +263,10 @@ class DictDiffer(object):
         """
         Return a set of the keys with changed values.
         """
-        return set(
-            o for o in self.intersect if self.past_dict[o] != self.current_dict[o]
-        )
+        return {o for o in self.intersect if self.past_dict[o] != self.current_dict[o]}
 
     def unchanged(self):
         """
         Return a set of the keys with unchanged values.
         """
-        return set(
-            o for o in self.intersect if self.past_dict[o] == self.current_dict[o]
-        )
+        return {o for o in self.intersect if self.past_dict[o] == self.current_dict[o]}

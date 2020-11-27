@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 Test the ssh module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -163,10 +160,11 @@ def _testrpm_signed(abs_path_named_rpm):
     CHECK_KEYID_OK = re.compile(test_string, re.M)
     retrc = CHECK_KEYID_OK.search(rpm_chk_sign.decode())
     log.debug(
-        "signed checking, found test_string '{0}' in rpm_chk_sign '{1}', return code '{2}'".format(
+        "signed checking, found test_string '{}' in rpm_chk_sign '{}', return code '{}'".format(
             test_string, rpm_chk_sign, retrc
         )
     )
+
     if retrc:
         return True
     return False
@@ -189,7 +187,7 @@ class RPMSignModuleTest(ModuleCase):
         """
         Set up the rpm signing module tests
         """
-        super(RPMSignModuleTest, self).setUp()
+        super().setUp()
         if not os.path.isdir(self.subsalt_dir):
             os.makedirs(self.subsalt_dir)
         if not os.path.isdir(self.gpghome):
@@ -235,7 +233,7 @@ class RPMSignModuleTest(ModuleCase):
         if os.path.isdir(self.subsalt_dir):
             shutil.rmtree(self.subsalt_dir)
 
-        super(RPMSignModuleTest, self).tearDown()
+        super().tearDown()
         del self.gpg_passphrase
         del self.gpg_keyid
         del self.gpg_pkg_key_pub
@@ -257,7 +255,7 @@ class RPMSignModuleTest(ModuleCase):
         """
         if not (grains["os_family"] == "RedHat" and grains["osmajorrelease"] >= 8):
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}".format(
+                "TODO: test not configured for {} and major release {}".format(
                     grains["os_family"], grains["osmajorrelease"]
                 )
             )
@@ -270,21 +268,21 @@ class RPMSignModuleTest(ModuleCase):
         self.run_function(
             "cmd.run", ["gpgconf --kill gpg-agent"], template="jinja", python_shell=True
         )
-        gpg_agent_cmd = "gpg-agent --homedir {0} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
+        gpg_agent_cmd = "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
             self.gpghome
         )
         gpg_tty_info_path = os.path.join(self.gpghome, "gpg_tty_info")
         self.run_function(
             "cmd.run",
-            ["{0}".format(gpg_agent_cmd)],
+            ["{}".format(gpg_agent_cmd)],
             template="jinja",
             python_shell=True,
         )
         self.run_function(
             "cmd.run",
             [
-                "{0}".format(gpg_agent_cmd),
-                "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {0}".format(
+                "{}".format(gpg_agent_cmd),
+                "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
                     gpg_tty_info_path
                 ),
             ],
@@ -326,19 +324,19 @@ class RPMSignModuleTest(ModuleCase):
         """
         if not (grains["os_family"] == "RedHat" or grains["os_family"] == "Amazon"):
             self.skipTest(
-                "TODO: test not configured for {0}".format(grains["os_family"])
+                "TODO: test not configured for {}".format(grains["os_family"])
             )
 
         if grains["os_family"] == "RedHat" and grains["osmajorrelease"] >= 8:
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}".format(
+                "TODO: test not configured for {} and major release {}".format(
                     grains["os_family"], grains["osmajorrelease"]
                 )
             )
 
         if grains["os_family"] == "Amazon" and grains["osmajorrelease"] != 2:
             self.skipTest(
-                "TODO: test not configured for {0} and major release {1}".format(
+                "TODO: test not configured for {} and major release {}".format(
                     grains["os_family"], grains["osmajorrelease"]
                 )
             )

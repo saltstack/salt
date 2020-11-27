@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use LDAP data as a Pillar source
 
@@ -122,16 +121,11 @@ Result
     }
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import third party libs
 import jinja2
-
-# Import salt libs
 import salt.utils.data
 from salt.exceptions import SaltInvocationError
 
@@ -142,7 +136,6 @@ try:
 except ImportError:
     HAS_LDAP = False
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 

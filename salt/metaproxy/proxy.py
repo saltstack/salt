@@ -10,7 +10,6 @@ import threading
 import traceback
 import types
 
-# pylint: disable=3rd-party-module-not-gated
 import salt
 import salt.beacons
 import salt.cli.daemons
@@ -18,8 +17,8 @@ import salt.client
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
-import salt.ext.tornado.gen  # pylint: disable=F0401
-import salt.ext.tornado.ioloop  # pylint: disable=F0401
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
 import salt.loader
 import salt.log.setup
 import salt.minion
@@ -51,8 +50,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
@@ -757,8 +754,6 @@ def handle_decoded_payload(self, data):
     differently.
     """
     # Ensure payload is unicode. Disregard failure to decode binary blobs.
-    if six.PY2:
-        data = salt.utils.data.decode(data, keep=True)
     if "user" in data:
         log.info(
             "User %s Executing command %s with jid %s",

@@ -22,12 +22,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import pytest
-except ImportError as import_error:
-    pytest = None
-
-
 log = logging.getLogger(__name__)
 
 # Globals
@@ -44,7 +38,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), "solaris")
 
 
-@skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for core grains

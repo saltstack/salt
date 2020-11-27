@@ -132,6 +132,7 @@ import string  # pylint: disable=deprecated-module
 import subprocess
 import sys
 import time
+from urllib.parse import urlparse, urlunparse
 from xml.etree import ElementTree
 from xml.sax import saxutils
 
@@ -147,8 +148,6 @@ import salt.utils.xmlutil as xmlutil
 import salt.utils.yaml
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 
 try:
     import libvirt  # pylint: disable=import-error

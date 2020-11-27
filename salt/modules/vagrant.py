@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Work with virtual machines managed by Vagrant.
 
@@ -28,15 +27,10 @@ requirements:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-import salt.ext.six as six
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -533,7 +527,7 @@ def destroy(name):
     )
     if ret["retcode"] == 0:
         _erase_vm_info(name)
-        return "Destroyed VM {0}".format(name)
+        return "Destroyed VM {}".format(name)
     return False
 
 
@@ -626,7 +620,7 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
                     nxt = tokens.index("inet6") + 1
                     found_address = ipaddress.ip_address(tokens[nxt].split("/")[0])
                 if found_address in target_network_range:
-                    ans["ip_address"] = six.text_type(found_address)
+                    ans["ip_address"] = str(found_address)
                     break  # we have located a good matching address
             except (IndexError, AttributeError, TypeError):
                 pass  # all syntax and type errors loop here
@@ -642,7 +636,7 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
         try:
             with salt.utils.files.fopen(ssh_config["IdentityFile"]) as pks:
                 ans["private_key"] = salt.utils.stringutils.to_unicode(pks.read())
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise CommandExecutionError(
                 "Error processing Vagrant private key file: {}".format(e)
             )

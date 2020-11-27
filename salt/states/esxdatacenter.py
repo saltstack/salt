@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt states to create and manage VMware vSphere datacenters (datacenters).
 
@@ -49,17 +48,11 @@ State configuration:
       esxdatacenter.datacenter_configured
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.exceptions
 
-# Import Salt Libs
-from salt.ext import six
-
-# Get Logging Started
 log = logging.getLogger(__name__)
 LOGIN_DETAILS = {}
 
@@ -90,7 +83,7 @@ def datacenter_configured(name):
         dc_name = __salt__["esxdatacenter.get_details"]()["datacenter"]
     else:
         dc_name = name
-    log.info("Running datacenter_configured for datacenter '{0}'" "".format(dc_name))
+    log.info("Running datacenter_configured for datacenter '{}'" "".format(dc_name))
     ret = {"name": name, "changes": {}, "result": None, "comment": "Default"}
     comments = []
     si = None
@@ -101,19 +94,16 @@ def datacenter_configured(name):
         )
         if not dcs:
             if __opts__["test"]:
-                comments.append(
-                    "State will create " "datacenter '{0}'.".format(dc_name)
-                )
+                comments.append("State will create " "datacenter '{}'.".format(dc_name))
             else:
-                log.debug("Creating datacenter '{0}'. ".format(dc_name))
+                log.debug("Creating datacenter '{}'. ".format(dc_name))
                 __salt__["vsphere.create_datacenter"](dc_name, si)
-                comments.append("Created datacenter '{0}'.".format(dc_name))
+                comments.append("Created datacenter '{}'.".format(dc_name))
             log.info(comments[-1])
             ret["changes"].update({"new": {"name": dc_name}})
         else:
             comments.append(
-                "Datacenter '{0}' already exists. Nothing to be "
-                "done.".format(dc_name)
+                "Datacenter '{}' already exists. Nothing to be " "done.".format(dc_name)
             )
             log.info(comments[-1])
         __salt__["vsphere.disconnect"](si)
@@ -125,9 +115,6 @@ def datacenter_configured(name):
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update(
-            {
-                "result": False if not __opts__["test"] else None,
-                "comment": six.text_type(exc),
-            }
+            {"result": False if not __opts__["test"] else None, "comment": str(exc)}
         )
         return ret

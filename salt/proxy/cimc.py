@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing Cisco Integrated Management Controller devices
 =========================================================================================
@@ -66,13 +65,10 @@ password
 The password used to login to the cimc host. Required.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python Libs
 import logging
 import re
 
-# Import Salt Libs
 import salt.exceptions
 from salt._compat import ElementTree as ET
 
@@ -83,7 +79,6 @@ __proxyenabled__ = ["cimc"]
 GRAINS_CACHE = {"vendor": "Cisco"}
 DETAILS = {}
 
-# Set up logging
 log = logging.getLogger(__file__)
 
 # Define the module's virtual name
@@ -102,9 +97,7 @@ def _validate_response_code(response_code_to_check, cookie_to_logout=None):
     if formatted_response_code not in ["200", "201", "202", "204"]:
         if cookie_to_logout:
             logout(cookie_to_logout)
-        log.error(
-            "Received error HTTP status code: {0}".format(formatted_response_code)
-        )
+        log.error("Received error HTTP status code: {}".format(formatted_response_code))
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host."
         )
@@ -125,7 +118,7 @@ def init(opts):
         log.critical("No 'passwords' key found in pillar for this proxy.")
         return False
 
-    DETAILS["url"] = "https://{0}/nuova".format(opts["proxy"]["host"])
+    DETAILS["url"] = "https://{}/nuova".format(opts["proxy"]["host"])
     DETAILS["headers"] = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": 62,
@@ -158,8 +151,8 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
         h = "true"
 
     payload = (
-        '<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">'
-        "<inConfig>{3}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
+        '<configConfMo cookie="{}" inHierarchical="{}" dn="{}">'
+        "<inConfig>{}</inConfig></configConfMo>".format(cookie, h, dn, inconfig)
     )
     r = __utils__["http.query"](
         DETAILS["url"],
@@ -195,7 +188,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>'.format(
+    payload = '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
         cookie, h, cid
     )
     r = __utils__["http.query"](
@@ -226,7 +219,7 @@ def logon():
     Logs into the cimc device and returns the session cookie.
     """
     content = {}
-    payload = "<aaaLogin inName='{0}' inPassword='{1}'></aaaLogin>".format(
+    payload = "<aaaLogin inName='{}' inPassword='{}'></aaaLogin>".format(
         DETAILS["username"], DETAILS["password"]
     )
     r = __utils__["http.query"](

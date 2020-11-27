@@ -13,7 +13,6 @@ Refer to :mod:`junos <salt.proxy.junos>` for information on connecting to junos 
 
 """
 
-# Import Python libraries
 
 import copy
 import json

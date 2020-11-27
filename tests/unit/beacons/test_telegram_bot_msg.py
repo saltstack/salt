@@ -1,20 +1,11 @@
-# coding: utf-8
-
-# Python libs
-from __future__ import absolute_import
-
 import datetime
 import logging
 
-# Salt libs
 from salt.beacons import telegram_bot_msg
-
-# Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Third-party libs
 try:
     import telegram
 

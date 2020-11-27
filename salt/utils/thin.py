@@ -12,11 +12,12 @@ import tarfile
 import tempfile
 import zipfile
 
+# pylint: enable=import-error,no-name-in-module
+import distro
 import jinja2
 import msgpack
 import salt
 import salt.exceptions
-import salt.ext.six as _six
 import salt.ext.tornado as tornado
 import salt.utils.files
 import salt.utils.hashutils
@@ -68,15 +69,8 @@ except ImportError:
         from salt.ext import ssl_match_hostname
     except ImportError:
         ssl_match_hostname = None
-# pylint: enable=import-error,no-name-in-module
-if _six.PY2:
-    import concurrent
 
-    distro = None
-else:
-    import distro
-
-    concurrent = None
+concurrent = None
 
 
 log = logging.getLogger(__name__)
@@ -249,7 +243,7 @@ def get_ext_tops(config):
     alternatives = {}
     required = ["jinja2", "yaml", "tornado", "msgpack"]
     tops = []
-    for ns, cfg in salt.ext.six.iteritems(config or {}):
+    for ns, cfg in (config or {}).items():
         alternatives[ns] = cfg
         locked_py_version = cfg.get("py-version")
         err_msg = None
@@ -395,14 +389,14 @@ def _get_supported_py_config(tops, extended_cfg):
     :return:
     """
     pymap = []
-    for py_ver, tops in _six.iteritems(copy.deepcopy(tops)):
+    for py_ver, tops in copy.deepcopy(tops).items():
         py_ver = int(py_ver)
         if py_ver == 2:
             pymap.append("py2:2:7")
         elif py_ver == 3:
             pymap.append("py3:3:0")
 
-    for ns, cfg in _six.iteritems(copy.deepcopy(extended_cfg) or {}):
+    for ns, cfg in (copy.deepcopy(extended_cfg) or {}).items():
         pymap.append("{}:{}:{}".format(ns, *cfg.get("py-version")))
     pymap.append("")
 
@@ -430,7 +424,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
     # Pack alternative data
     config = copy.deepcopy(extended_cfg)
     # Check if auto_detect is enabled and update dependencies
-    for ns, cfg in _six.iteritems(config):
+    for ns, cfg in config.items():
         if cfg.get("auto_detect"):
             py_ver = "python" + str(cfg.get("py-version", [""])[0])
             if cfg.get("py_bin"):
@@ -452,7 +446,7 @@ def _pack_alternative(extended_cfg, digest_collector, tfp):
             for dep in auto_deps:
                 config[ns]["dependencies"][dep] = auto_deps[dep]
 
-    for ns, cfg in _six.iteritems(get_ext_tops(config)):
+    for ns, cfg in get_ext_tops(config).items():
         tops = [cfg.get("path")] + cfg.get("dependencies")
         py_ver_major, py_ver_minor = cfg.get("py-version")
 
@@ -609,7 +603,7 @@ def gen_thin(
 
     # Pack default data
     log.debug("Packing default libraries based on current Salt version")
-    for py_ver, tops in _six.iteritems(tops_py_version_mapping):
+    for py_ver, tops in tops_py_version_mapping.items():
         for top in tops:
             if absonly and not os.path.isabs(top):
                 continue
@@ -892,7 +886,7 @@ def gen_min(
         "salt/output/nested.py",
     )
 
-    for py_ver, tops in _six.iteritems(tops_py_version_mapping):
+    for py_ver, tops in tops_py_version_mapping.items():
         for top in tops:
             base = os.path.basename(top)
             top_dirname = os.path.dirname(top)

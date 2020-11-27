@@ -43,8 +43,6 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
-from salt.ext import six
-from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 from salt.template import compile_template
 from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
