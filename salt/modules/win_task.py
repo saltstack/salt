@@ -648,7 +648,8 @@ def create_task_from_xml(
         # Load xml from file, overrides xml_text
         # Need to figure out how to load contents of xml
         if xml_path:
-            xml_text = xml_path
+            with salt.utils.files.fopen(xml_path) as _fp:
+                xml_text = _fp.read()
 
         # Get the folder to list folders from
         task_folder = task_service.GetFolder(location)
@@ -676,35 +677,35 @@ def create_task_from_xml(
 
         except pythoncom.com_error as error:
             hr, msg, exc, arg = error.args  # pylint: disable=W0633
-            error_code = hex(exc[5] + 2 ** 32)
+            error_code = str(hex(exc[5] + 2 ** 32))
             fc = {
-                0x80041319: "Required element or attribute missing",
-                0x80041318: "Value incorrectly formatted or out of range",
-                0x80020005: "Access denied",
-                0x80041309: "A task's trigger is not found",
-                0x8004130A: "One or more of the properties required to run this "
+                "0x80041319": "Required element or attribute missing",
+                "0x80041318": "Value incorrectly formatted or out of range",
+                "0x80020005": "Access denied",
+                "0x80041309": "A task's trigger is not found",
+                "0x8004130a": "One or more of the properties required to run this "
                 "task have not been set",
-                0x8004130C: "The Task Scheduler service is not installed on this "
+                "0x8004130c": "The Task Scheduler service is not installed on this "
                 "computer",
-                0x8004130D: "The task object could not be opened",
-                0x8004130E: "The object is either an invalid task object or is not "
+                "0x8004130d": "The task object could not be opened",
+                "0x8004130e": "The object is either an invalid task object or is not "
                 "a task object",
-                0x8004130F: "No account information could be found in the Task "
+                "0x8004130f": "No account information could be found in the Task "
                 "Scheduler security database for the task indicated",
-                0x80041310: "Unable to establish existence of the account specified",
-                0x80041311: "Corruption was detected in the Task Scheduler "
+                "0x80041310": "Unable to establish existence of the account specified",
+                "0x80041311": "Corruption was detected in the Task Scheduler "
                 "security database; the database has been reset",
-                0x80041313: "The task object version is either unsupported or invalid",
-                0x80041314: "The task has been configured with an unsupported "
+                "0x80041313": "The task object version is either unsupported or invalid",
+                "0x80041314": "The task has been configured with an unsupported "
                 "combination of account settings and run time options",
-                0x80041315: "The Task Scheduler Service is not running",
-                0x80041316: "The task XML contains an unexpected node",
-                0x80041317: "The task XML contains an element or attribute from an "
+                "0x80041315": "The Task Scheduler Service is not running",
+                "0x80041316": "The task XML contains an unexpected node",
+                "0x80041317": "The task XML contains an element or attribute from an "
                 "unexpected namespace",
-                0x8004131A: "The task XML is malformed",
-                0x0004131C: "The task is registered, but may fail to start. Batch "
+                "0x8004131a": "The task XML is malformed",
+                "0x0004131c": "The task is registered, but may fail to start. Batch "
                 "logon privilege needs to be enabled for the task principal",
-                0x8004131D: "The task XML contains too many nodes of the same type",
+                "0x8004131d": "The task XML contains too many nodes of the same type",
             }
             try:
                 failure_code = fc[error_code]
