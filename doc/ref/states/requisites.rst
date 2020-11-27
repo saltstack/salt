@@ -185,6 +185,8 @@ Several requisite types have a corresponding :ref:`requisite_any <requisites-any
 * ``onchanges_any``
 * ``onfail_any``
 
+There is no combined form of :ref:`_any <requisites-any>` and :ref:`_in <requisites-in>` requisites, such as ``require_any_in``!
+
 Lastly, onfail has one special ``onfail_all`` form to account for when `AND`
 logic is desired instead of the default `OR` logic of onfail/onfail_any (which
 are equivalent).
