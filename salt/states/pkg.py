@@ -2949,7 +2949,7 @@ def _uninstall(
         }
 
     changes = __salt__["pkg.{0}".format(action)](
-        name, pkgs=pkgs, ignore_epoch=ignore_epoch, version=version, **kwargs
+        name, pkgs=pkgs, version=version, **kwargs
     )
     new = __salt__["pkg.list_pkgs"](versions_as_list=True, **kwargs)
     failed = []
