@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
 tests for pkg state
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -14,7 +11,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
-from salt.ext import six
 from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
@@ -48,7 +44,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         cls.ctx = {}
         cls._PKG_TARGETS = ["figlet", "sl"]
         if grains["os"] == "Windows":
-            cls._PKG_TARGETS = ["7zip", "putty"]
+            cls._PKG_TARGETS = ["vlc", "putty"]
         elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
         elif grains["os_family"] in ("Arch", "Debian"):
@@ -102,14 +98,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Only a single target, pkg.latest_version returned a string
                 self.ctx[key][targets[0]] = result
 
-        ret = dict([(x, self.ctx[key].get(x, "")) for x in names])
+        ret = {x: self.ctx[key].get(x, "") for x in names}
         if len(names) == 1:
             return ret[names[0]]
         return ret
 
     @requires_system_grains
     def setUp(self, grains=None):  # pylint:disable=W0221
-        super(PkgTest, self).setUp()
+        super().setUp()
         if "refresh" not in self.ctx:
             self.run_function("pkg.refresh_db")
             self.ctx["refresh"] = True
@@ -338,7 +334,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function("pkg.info_installed", [package])
-        self.assertTrue(pkgquery in six.text_type(ret))
+        self.assertTrue(pkgquery in str(ret))
 
     @requires_salt_states("pkg.latest", "pkg.removed")
     @slowTest
@@ -413,7 +409,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
             self.assertEqual(
                 ret["pkg_|-{0}_|-{0}_|-latest".format(target)]["comment"],
-                "Package {0} is already up-to-date".format(target),
+                "Package {} is already up-to-date".format(target),
             )
 
     @requires_salt_modules("pkg.version")
@@ -529,7 +525,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
             pkgs = {
-                p for p in self.run_function("pkg.list_pkgs") if "-versionlock" in p
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
@@ -627,6 +625,63 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
+    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
+    @requires_salt_states("pkg.installed", "pkg.removed")
+    @requires_system_grains
+    @slowTest
+    def test_pkg_017_installed_held_equals_false(self, grains=None):
+        """
+        Tests that a package installed with held set to False
+        """
+        versionlock_pkg = None
+        if grains["os_family"] == "RedHat":
+            pkgs = {
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
+            }
+            if not pkgs:
+                self.skipTest("No versionlock package found in repositories")
+            for versionlock_pkg in pkgs:
+                ret = self.run_state(
+                    "pkg.installed", name=versionlock_pkg, refresh=False
+                )
+                # Exit loop if a versionlock package installed correctly
+                try:
+                    self.assertSaltTrueReturn(ret)
+                    log.debug(
+                        "Installed versionlock package: {}".format(versionlock_pkg)
+                    )
+                    break
+                except AssertionError as e:
+                    log.debug("Versionlock package not found:\n{}".format(e))
+            else:
+                self.fail("Could not install versionlock package from {}".format(pkgs))
+
+        target = self._PKG_TARGETS[0]
+
+        # First we ensure that the package is installed
+        ret = self.run_state("pkg.installed", name=target, hold=False, refresh=False,)
+        self.assertSaltTrueReturn(ret)
+
+        if versionlock_pkg and "-versionlock is not installed" in str(ret):
+            self.skipTest("{}  `{}` is installed".format(ret, versionlock_pkg))
+
+        try:
+            tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(tag, ret)
+            self.assertIn("changes", ret[tag])
+            self.assertIn(target, ret[tag]["changes"])
+            self.assertIn("held", ret[tag]["comment"])
+        finally:
+            # Clean up, unhold package and remove
+            ret = self.run_state("pkg.removed", name=target)
+            self.assertSaltTrueReturn(ret)
+            if versionlock_pkg:
+                ret = self.run_state("pkg.removed", name=versionlock_pkg)
+                self.assertSaltTrueReturn(ret)
+
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
     def test_pkg_cap_001_installed(self):
@@ -655,9 +710,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/updated: {0}".format(
-                    realpkg
-                ),
+                "The following packages would be installed/updated: {}".format(realpkg),
                 ret,
             )
             ret = self.run_state(
@@ -755,7 +808,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment("packages would be installed/updated", ret)
-            self.assertInSaltComment("{0}={1}".format(realpkg, realver), ret)
+            self.assertInSaltComment("{}={}".format(realpkg, realver), ret)
 
             ret = self.run_state(
                 "pkg.installed",
@@ -803,7 +856,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 test=True,
             )
             self.assertInSaltComment(
-                "The following packages would be installed/upgraded: {0}".format(
+                "The following packages would be installed/upgraded: {}".format(
                     realpkg
                 ),
                 ret,
@@ -852,7 +905,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             test=True,
         )
         self.assertInSaltComment(
-            "The following packages would be downloaded: {0}".format(realpkg), ret
+            "The following packages would be downloaded: {}".format(realpkg), ret
         )
 
         ret = self.run_state(

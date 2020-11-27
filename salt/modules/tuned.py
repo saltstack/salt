@@ -51,6 +51,11 @@ def list_():
     result = __salt__["cmd.run"]("tuned-adm list").splitlines()
     # Remove "Available profiles:"
     result.pop(0)
+    # Cut off any warnings
+    try:
+        result = result[: result.index("** COLLECTED WARNINGS **") - 1]
+    except ValueError:
+        pass
     # Remove "Current active profile:.*"
     result.pop()
     # Output can be : " - <profile name> - <description>" (v2.7.1)

@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import sys
 import traceback
 
-# Import salt libs
 import salt
 import salt.defaults.exitcodes
 import salt.loader
@@ -27,23 +23,18 @@ import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
-
-# Custom exceptions
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltClientError,
     SaltInvocationError,
 )
-
-# Import 3rd-party libs
-from salt.ext import six
 from salt.log import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
 
-class Caller(object):
+class Caller:
     """
     Factory class to create salt-call callers for different transport
     """
@@ -67,7 +58,7 @@ class Caller(object):
             # return NewKindOfCaller(opts, **kwargs)
 
 
-class BaseCaller(object):
+class BaseCaller:
     """
     Base class for caller transports
     """
@@ -88,20 +79,20 @@ class BaseCaller(object):
             else:
                 self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
-            raise SystemExit(six.text_type(exc))
+            raise SystemExit(str(exc))
 
     def print_docs(self):
         """
         Pick up the documentation for all of the modules and print it out.
         """
         docs = {}
-        for name, func in six.iteritems(self.minion.functions):
+        for name, func in self.minion.functions.items():
             if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__
         for name in sorted(docs):
             if name.startswith(self.opts.get("fun", "")):
-                salt.utils.stringutils.print_cli("{0}:\n{1}\n".format(name, docs[name]))
+                salt.utils.stringutils.print_cli("{}:\n{}\n".format(name, docs[name]))
 
     def print_grains(self):
         """
@@ -156,7 +147,7 @@ class BaseCaller(object):
             salt.minion.get_proc_dir(self.opts["cachedir"]), ret["jid"]
         )
         if fun not in self.minion.functions:
-            docs = self.minion.functions["sys.doc"]("{0}*".format(fun))
+            docs = self.minion.functions["sys.doc"]("{}*".format(fun))
             if docs:
                 docs[fun] = self.minion.functions.missing_fun_string(fun)
                 ret["out"] = "nested"
@@ -166,7 +157,7 @@ class BaseCaller(object):
             mod_name = fun.split(".")[0]
             if mod_name in self.minion.function_errors:
                 sys.stderr.write(
-                    " Possible reasons: {0}\n".format(
+                    " Possible reasons: {}\n".format(
                         self.minion.function_errors[mod_name]
                     )
                 )
@@ -198,11 +189,11 @@ class BaseCaller(object):
             except NameError:
                 # Don't require msgpack with local
                 pass
-            except IOError:
+            except OSError:
                 sys.stderr.write(
                     "Cannot write to process directory. "
                     "Do you have permissions to "
-                    "write to {0} ?\n".format(proc_fn)
+                    "write to {} ?\n".format(proc_fn)
                 )
             func = self.minion.functions[fun]
             data = {"arg": args, "fun": fun}
@@ -216,14 +207,14 @@ class BaseCaller(object):
                 data["executor_opts"] = salt.utils.args.yamlify_arg(
                     self.opts["executor_opts"]
                 )
-            if isinstance(executors, six.string_types):
+            if isinstance(executors, str):
                 executors = [executors]
             try:
                 for name in executors:
-                    fname = "{0}.execute".format(name)
+                    fname = "{}.execute".format(name)
                     if fname not in self.minion.executors:
                         raise SaltInvocationError(
-                            "Executor '{0}' is not available".format(name)
+                            "Executor '{}' is not available".format(name)
                         )
                     ret["return"] = self.minion.executors[fname](
                         self.opts, data, func, args, kwargs
@@ -232,7 +223,7 @@ class BaseCaller(object):
                         break
             except TypeError as exc:
                 sys.stderr.write(
-                    "\nPassed invalid arguments: {0}.\n\nUsage:\n".format(exc)
+                    "\nPassed invalid arguments: {}.\n\nUsage:\n".format(exc)
                 )
                 salt.utils.stringutils.print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
@@ -274,11 +265,11 @@ class BaseCaller(object):
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
-        except (IOError, OSError):
+        except OSError:
             pass
         if hasattr(self.minion.functions[fun], "__outputter__"):
             oput = self.minion.functions[fun].__outputter__
-            if isinstance(oput, six.string_types):
+            if isinstance(oput, str):
                 ret["out"] = oput
         is_local = (
             self.opts["local"]
@@ -298,7 +289,7 @@ class BaseCaller(object):
                 continue
             try:
                 ret["success"] = True
-                self.minion.returners["{0}.returner".format(returner)](ret)
+                self.minion.returners["{}.returner".format(returner)](ret)
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -326,7 +317,7 @@ class ZeroMQCaller(BaseCaller):
         """
         Pass in the command line options
         """
-        super(ZeroMQCaller, self).__init__(opts)
+        super().__init__(opts)
 
     def return_pub(self, ret):
         """
@@ -336,6 +327,6 @@ class ZeroMQCaller(BaseCaller):
             self.opts, usage="salt_call"
         ) as channel:
             load = {"cmd": "_return", "id": self.opts["id"]}
-            for key, value in six.iteritems(ret):
+            for key, value in ret.items():
                 load[key] = value
             channel.send(load)

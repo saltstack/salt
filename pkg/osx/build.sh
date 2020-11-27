@@ -12,23 +12,26 @@
 #              /opt/salt
 #
 # Requirements:
-#     - XCode Command Line Tools (xcode-select --install)
+#     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 3 parameters
 #         $1 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
-#         $2 : <pythin ver> : The version of Python to use in the
-#                             build. Default is 2
+#         $2 : <test mode> : if this script should be run in test mode, this
+#                            disables the longer optimized compile time of python.
+#                            Please DO NOT set to "true" when building a
+#                            release version.
+#                            (defaults to false)
 #         $3 : <package dir> : the staging area for the package
 #                              defaults to /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt v2015.8.3 with Python 2 and
+#         The following will build Salt v3001 with an optimized python and
 #         stage all files in /tmp/custom_pkg:
 #
-#         ./build.sh v2015.8.3 2 /tmp/custom_pkg
+#         ./build.sh v3001 false /tmp/custom_pkg
 #
 ############################################################################
 
@@ -52,9 +55,9 @@ else
 fi
 
 if [ "$2" == "" ]; then
-    PYVER=2
+    TEST_MODE="false"
 else
-    PYVER=$2
+    TEST_MODE=$2
 fi
 
 if [ "$3" == "" ]; then
@@ -68,11 +71,7 @@ fi
 ############################################################################
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
-if [ "$PYVER" == "2" ]; then
-    PYTHON=/opt/salt/bin/python
-else
-    PYTHON=/opt/salt/bin/python3
-fi
+PYTHON=/opt/salt/bin/python3
 CPUARCH=`uname -m`
 
 ############################################################################
@@ -89,8 +88,11 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-$PKGRESOURCES/build_env.sh $PYVER
-
+$PKGRESOURCES/build_env.sh $TEST_MODE
+if [[ "$?" != "0" ]]; then
+    echo "Failed to build the environment."
+    exit -1
+fi
 ############################################################################
 # Install Salt
 ############################################################################
@@ -104,9 +106,9 @@ $PYTHON $SRCDIR/setup.py install
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-$PKGRESOURCES/build_pkg.sh $VERSION $PYVER $PKGDIR
+$PKGRESOURCES/build_pkg.sh $VERSION $PKGDIR
 
 ############################################################################
 # Sign Package
 ############################################################################
-$PKGRESOURCES/build_sig.sh salt-$VERSION-py$PYVER-$CPUARCH.pkg salt-$VERSION-py$PYVER-$CPUARCH-signed.pkg
+$PKGRESOURCES/build_sig.sh salt-$VERSION-py3-$CPUARCH.pkg salt-$VERSION-py3-$CPUARCH-signed.pkg

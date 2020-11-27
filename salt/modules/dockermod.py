@@ -2811,15 +2811,15 @@ def create(
         - ``device_write_bps="/dev/sda:100mb,/dev/sdb:50mb"``
         - ``device_write_bps="['/dev/sda:100mb', '/dev/sdb:50mb']"``
 
-    device_read_iops
+    device_write_iops
         Limit write rate (I/O per second) from a device, specified as a list
         of expressions in the format ``PATH:RATE``, where ``RATE`` is a number
         of I/O operations.
 
         Examples:
 
-        - ``device_read_iops="/dev/sda:1000,/dev/sdb:500"``
-        - ``device_read_iops="['/dev/sda:1000', '/dev/sdb:500']"``
+        - ``device_write_iops="/dev/sda:1000,/dev/sdb:500"``
+        - ``device_write_iops="['/dev/sda:1000', '/dev/sdb:500']"``
 
     dns
         List of DNS nameservers. Can be passed as a comma-separated list or a
