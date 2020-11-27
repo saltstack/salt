@@ -1015,7 +1015,12 @@ def _lint(session, rcfile, flags, paths, tee_output=True):
         session.run("pylint", "--version")
         pylint_report_path = os.environ.get("PYLINT_REPORT")
 
-    cmd_args = ["pylint", "--rcfile={}".format(rcfile)] + list(flags) + list(paths)
+    flags = list(flags)
+    env_disabled_lint_flags = os.environ.get("PYLINT_DISABLE")
+    if env_disabled_lint_flags:
+        flags.append("--disable={}".format(env_disabled_lint_flags))
+
+    cmd_args = ["pylint", "--rcfile={}".format(rcfile)] + flags + list(paths)
 
     cmd_kwargs = {"env": {"PYTHONUNBUFFERED": "1"}}
 
