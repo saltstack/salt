@@ -91,7 +91,7 @@ def test_present_create_basic(mocks):
         groupname="groupname",
         createdb=None,
         createroles=None,
-        encrypted=True,
+        encrypted="md5",
         superuser=None,
         login=None,
         inherit=None,

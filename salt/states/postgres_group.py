@@ -65,7 +65,17 @@ def present(
         Is the group allowed to create other roles/users
 
     encrypted
-        Should the password be encrypted in the system catalog?
+        How the password should be stored.
+
+        If encrypted is ``None``, ``True``, or ``md5``, it will use
+        PostgreSQL's MD5 algorithm.
+
+        If encrypted is ``False``, it will be stored in plaintext.
+
+        If encrypted is ``scram-sha-256``, it will use the algorithm described
+        in RFC 7677.
+
+        # TODO: versionadded for this?
 
     login
         Should the group have login perm
@@ -80,13 +90,15 @@ def present(
         Should the new group be allowed to initiate streaming replication
 
     password
-        The group's password
-        It can be either a plain string or a md5 postgresql hashed password::
+        The group's password.
+        It can be either a plain string or a pre-hashed password::
 
             'md5{MD5OF({password}{role}}'
+            'SCRAM-SHA-256${iterations}:{salt}${stored_key}:{server_key}'
 
-        If encrypted is ``None`` or ``True``, the password will be automatically
-        encrypted to the previous format if it is not already done.
+        If encrypted is not ``False``, then the password will be converted
+        to the appropriate format above, if not already. As a consequence,
+        passwords that start with "md5" or "SCRAM-SHA-256" cannot be used.
 
     refresh_password
         Password refresh flag
@@ -130,8 +142,6 @@ def present(
     # default to encrypted passwords
     if encrypted is None:
         encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if it's not already and necessary
-    password = postgres._maybe_encrypt_password(name, password, encrypted=encrypted)
 
     db_args = {
         "maintenance_db": maintenance_db,
@@ -150,6 +160,22 @@ def present(
     if group_attr is not None:
         mode = "update"
 
+    if password is not None:
+        if (
+            mode == "update"
+            and not refresh_password
+            and postgres._verify_password(
+                name, password, group_attr["password"], encrypted
+            )
+        ):
+            # if password already matches then don't touch it
+            password = None
+        else:
+            # encrypt password if necessary
+            password = postgres._maybe_encrypt_password(
+                name, password, encrypted=encrypted
+            )
+
     # The user is not present, make it!
     update = {}
     if mode == "update":
@@ -166,9 +192,7 @@ def present(
             update["replication"] = replication
         if superuser is not None and group_attr["superuser"] != superuser:
             update["superuser"] = superuser
-        if password is not None and (
-            refresh_password or group_attr["password"] != password
-        ):
+        if password is not None:
             update["password"] = True
         if groups is not None:
             lgroups = groups

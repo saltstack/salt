@@ -68,7 +68,17 @@ def present(
         Is the user allowed to create other users?
 
     encrypted
-        Should the password be encrypted in the system catalog?
+        How the password should be stored.
+
+        If encrypted is ``None``, ``True``, or ``md5``, it will use
+        PostgreSQL's MD5 algorithm.
+
+        If encrypted is ``False``, it will be stored in plaintext.
+
+        If encrypted is ``scram-sha-256``, it will use the algorithm described
+        in RFC 7677.
+
+        # TODO: versionadded for this?
 
     login
         Should the group have login perm
@@ -83,14 +93,15 @@ def present(
         Should the new user be allowed to initiate streaming replication
 
     password
-        The system user's password. It can be either a plain string or a
-        md5 postgresql hashed password::
+        The user's password.
+        It can be either a plain string or a pre-hashed password::
 
             'md5{MD5OF({password}{role}}'
+            'SCRAM-SHA-256${iterations}:{salt}${stored_key}:{server_key}'
 
-        If encrypted is None or True, the password will be automatically
-        encrypted to the previous
-        format if it is not already done.
+        If encrypted is not ``False``, then the password will be converted
+        to the appropriate format above, if not already. As a consequence,
+        passwords that start with "md5" or "SCRAM-SHA-256" cannot be used.
 
     default_password
         The password used only when creating the user, unless password is set.
@@ -139,17 +150,6 @@ def present(
         "comment": "User {} is already present".format(name),
     }
 
-    # default to encrypted passwords
-    if encrypted is None:
-        encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
-    # maybe encrypt if it's not already and necessary
-    password = postgres._maybe_encrypt_password(name, password, encrypted=encrypted)
-
-    if default_password is not None:
-        default_password = postgres._maybe_encrypt_password(
-            name, default_password, encrypted=encrypted
-        )
-
     db_args = {
         "maintenance_db": maintenance_db,
         "runas": user,
@@ -159,6 +159,10 @@ def present(
         "password": db_password,
     }
 
+    # default to encrypted passwords
+    if encrypted is None:
+        encrypted = postgres._DEFAULT_PASSWORDS_ENCRYPTION
+
     # check if user exists
     mode = "create"
     user_attr = __salt__["postgres.role_get"](
@@ -166,6 +170,25 @@ def present(
     )
     if user_attr is not None:
         mode = "update"
+
+    if mode == "create" and password is None:
+        password = default_password
+
+    if password is not None:
+        if (
+            mode == "update"
+            and not refresh_password
+            and postgres._verify_password(
+                name, password, user_attr["password"], encrypted
+            )
+        ):
+            # if password already matches then don't touch it
+            password = None
+        else:
+            # encrypt password if necessary
+            password = postgres._maybe_encrypt_password(
+                name, password, encrypted=encrypted
+            )
 
     update = {}
     if mode == "update":
@@ -182,9 +205,7 @@ def present(
             update["replication"] = replication
         if superuser is not None and user_attr["superuser"] != superuser:
             update["superuser"] = superuser
-        if password is not None and (
-            refresh_password or user_attr["password"] != password
-        ):
+        if password is not None:
             update["password"] = True
         if valid_until is not None:
             valid_until_dt = __salt__["postgres.psql_query"](
@@ -209,9 +230,6 @@ def present(
                 missing_groups = [a for a in lgroups if a not in user_groups]
                 if missing_groups:
                     update["groups"] = missing_groups
-
-    if mode == "create" and password is None:
-        password = default_password
 
     if mode == "create" or (mode == "update" and update):
         if __opts__["test"]:
