@@ -168,7 +168,7 @@ module they are using.
 Requisites Types
 ----------------
 
-All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` form:
+All requisite types have a corresponding :ref:`_in <requisites-in>` form:
 
 * :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
 * :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
