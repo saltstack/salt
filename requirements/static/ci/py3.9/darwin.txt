@@ -7,8 +7,8 @@
 apache-libcloud==2.4.0
 appdirs==1.4.3            # via virtualenv
 argh==0.26.2              # via watchdog
-asn1crypto==1.3.0
-attrs==19.1.0             # via pytest
+asn1crypto==1.3.0         # via certvalidator, oscrypto
+attrs==20.3.0             # via pytest, pytest-salt-factories
 aws-xray-sdk==0.95        # via moto
 bcrypt==3.1.6             # via paramiko
 boto3==1.13.5
@@ -18,7 +18,7 @@ cachetools==3.1.0         # via google-auth
 cassandra-driver==3.23.0
 certifi==2020.6.20
 certvalidator==0.11.1     # via vcert
-cffi==1.12.2
+cffi==1.14.3
 chardet==3.0.4
 cheetah3==3.1.0
 cheroot==8.3.0
@@ -29,7 +29,7 @@ clustershell==1.8.1
 colorama==0.4.3           # via ciscoconfparse
 contextlib2==0.6.0.post1
 croniter==0.3.29
-cryptography==2.6.1
+cryptography==3.2
 distlib==0.3.0            # via virtualenv
 distro==1.5.0
 dnspython==1.16.0
@@ -91,10 +91,10 @@ pyopenssl==19.0.0
 pyparsing==2.4.5          # via junos-eznc, packaging
 pyserial==3.4             # via junos-eznc, netmiko
 pytest-helpers-namespace==2019.1.8
-pytest-salt-factories==0.93.0
+pytest-salt-factories==0.98.0
 pytest-salt==2020.1.27
 pytest-tempdir==2019.10.12
-pytest==6.1.1
+pytest==6.1.2
 python-dateutil==2.8.0
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -102,7 +102,7 @@ python-jose==2.0.2        # via moto
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
 pyyaml==5.3.1
-pyzmq==19.0.0
+pyzmq==19.0.2 ; python_version >= "3.9"
 requests==2.21.0
 responses==0.10.6         # via moto
 rfc3987==1.3.8

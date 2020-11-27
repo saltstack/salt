@@ -31,10 +31,13 @@ def proxy_minion_id(salt_factories, salt_master):
 
 
 @slowTest
+@pytest.mark.skipif(True, reason="This test will always fail after #58979 was merged")
 def test_exit_status_no_proxyid(salt_master, proxy_minion_id):
     """
     Ensure correct exit status when --proxyid argument is missing.
     """
+    # Why this test got disabled:
+    #  https://github.com/saltstack/salt/pull/58979/files#diff-50d51d9b6043081acacafa23eb7b742b791d3b04df64bf739f9a37490f45ef19R437
     with pytest.raises(FactoryNotStarted) as exc:
         factory = salt_master.get_salt_proxy_minion_daemon(
             proxy_minion_id, include_proxyid_cli_flag=False

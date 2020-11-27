@@ -46,7 +46,7 @@ import salt.utils.verify
 from salt.ext import six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 from salt.template import compile_template
-from salt.utils.platform import is_windows
+from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
@@ -190,13 +190,15 @@ EOF'''.format(
     ]
 )
 
-if not is_windows():
+if not is_windows() and not is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
         shim_file += "c"
     with salt.utils.files.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
+else:
+    SSH_PY_SHIM = None
 
 log = logging.getLogger(__name__)
 
@@ -1378,9 +1380,7 @@ ARGS = {arguments}\n'''.format(
         except OSError:
             pass
 
-        ret = self.execute_script(
-            script=target_shim_file, extension=extension, pre_dir="$HOME/"
-        )
+        ret = self.execute_script(script=target_shim_file, extension=extension)
 
         return ret
 
