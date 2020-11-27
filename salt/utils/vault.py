@@ -272,11 +272,11 @@ def get_cache():
 
     # Determine if ttl still valid
     if ttl10 < cur_time:
-        log.debug("Cached token has expired {} < {}: DELETING".format(ttl10, cur_time))
+        log.debug("Cached token has expired %s < %s: DELETING", ttl10, cur_time)
         del_cache()
         return _gen_new_connection()
     else:
-        log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
+        log.debug("Token has not expired %s > %s", ttl10, cur_time)
     return connection
 
 
@@ -346,7 +346,7 @@ def make_request(
                 log.debug("Deleting token from memory")
                 del __context__["vault_token"]
         else:
-            log.debug("Token has {} uses left".format(connection["uses"]))
+            log.debug("Token has %s uses left", connection["uses"])
             write_cache(connection)
 
     if get_token_url:

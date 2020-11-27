@@ -1626,7 +1626,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1788,7 +1788,7 @@ def create_csr(path=None, text=False, **kwargs):
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         extstack.push(ext)

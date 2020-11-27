@@ -4800,7 +4800,7 @@ def _load_policy_definitions(path="c:\\Windows\\PolicyDefinitions", language="en
                 # Only process ADMX files, any other file will cause a
                 # stacktrace later on
                 if not admx_file_ext == ".admx":
-                    log.debug("{} is not an ADMX file".format(t_admx_file))
+                    log.debug("%s is not an ADMX file", t_admx_file)
                     continue
                 admx_file = os.path.join(root, t_admx_file)
                 # Parse xml for the ADMX file
@@ -5265,16 +5265,17 @@ def _set_advaudit_value(option, value):
         # Only log this error, it will be in effect the next time the machine
         # updates its policy
         log.error(
-            "Failed to apply audit setting: {}\n"
-            "Policy will take effect on next GPO update".format(option)
+            "Failed to apply audit setting: %s\n"
+            "Policy will take effect on next GPO update",
+            option,
         )
 
     # Update __context__
     if value is None:
-        log.debug("LGPO: Removing Advanced Audit data: {}".format(option))
+        log.debug("LGPO: Removing Advanced Audit data: %s", option)
         __context__["lgpo.adv_audit_data"].pop(option)
     else:
-        log.debug("LGPO: Updating Advanced Audit data: {}: {}".format(option, value))
+        log.debug("LGPO: Updating Advanced Audit data: %s: %s", option, value)
         __context__["lgpo.adv_audit_data"][option] = value
 
     return True
@@ -5285,14 +5286,14 @@ def _get_netsh_value(profile, option):
         __context__["lgpo.netsh_data"] = {}
 
     if profile not in __context__["lgpo.netsh_data"]:
-        log.debug("LGPO: Loading netsh data for {} profile".format(profile))
+        log.debug("LGPO: Loading netsh data for %s profile", profile)
         settings = salt.utils.win_lgpo_netsh.get_all_settings(
             profile=profile, store="lgpo"
         )
         __context__["lgpo.netsh_data"].update({profile: settings})
     log.trace(
-        "LGPO: netsh returning value: {}"
-        "".format(__context__["lgpo.netsh_data"][profile][option])
+        "LGPO: netsh returning value: %s",
+        __context__["lgpo.netsh_data"][profile][option],
     )
     return __context__["lgpo.netsh_data"][profile][option]
 
@@ -5442,7 +5443,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     """
-    log.debug("validating {} for policy {}".format(value, policy))
+    log.debug("validating %s for policy %s", value, policy)
     if "Settings" in policy:
         if policy["Settings"]:
             if isinstance(policy["Settings"], list):
@@ -6147,7 +6148,7 @@ def _processValueItem(
             if this_element_value is not None:
                 # Sometimes values come in as strings
                 if isinstance(this_element_value, str):
-                    log.debug("Converting {} to bytes".format(this_element_value))
+                    log.debug("Converting %s to bytes", this_element_value)
                     this_element_value = this_element_value.encode("utf-32-le")
                 expected_string = b"".join(
                     [

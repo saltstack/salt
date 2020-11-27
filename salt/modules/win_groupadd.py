@@ -116,15 +116,16 @@ def add(name, **kwargs):
         try:
             new_group = comp_obj.Create("group", name)
             new_group.SetInfo()
-            log.info("Successfully created group {}".format(name))
+            log.info("Successfully created group %s", name)
         except pywintypes.com_error as exc:
-            msg = "Failed to create group {}. {}".format(
-                name, win32api.FormatMessage(exc.excepinfo[5])
+            log.error(
+                "Failed to create group %s. %s",
+                name,
+                win32api.FormatMessage(exc.excepinfo[5]),
             )
-            log.error(msg)
             return False
     else:
-        log.warning("The group {} already exists.".format(name))
+        log.warning("The group %s already exists.", name)
         return False
     return True
 
@@ -153,13 +154,14 @@ def delete(name, **kwargs):
             comp_obj.Delete("group", name)
             log.info("Successfully removed group {}".format(name))
         except pywintypes.com_error as exc:
-            msg = "Failed to remove group {}. {}".format(
-                name, win32api.FormatMessage(exc.excepinfo[5])
+            log.error(
+                "Failed to remove group %s. %s",
+                name,
+                win32api.FormatMessage(exc.excepinfo[5]),
             )
-            log.error(msg)
             return False
     else:
-        log.warning("The group {} does not exists.".format(name))
+        log.warning("The group %s does not exists.", name)
         return False
 
     return True
@@ -276,15 +278,12 @@ def adduser(name, username, **kwargs):
     try:
         if username not in existing_members:
             group_obj.Add("WinNT://" + username.replace("\\", "/"))
-            log.info("Added user {}".format(username))
+            log.info("Added user %s", username)
         else:
-            log.warning("User {} is already a member of {}".format(username, name))
+            log.warning("User %s is already a member of %s", username, name)
             return False
     except pywintypes.com_error as exc:
-        msg = "Failed to add {} to group {}. {}".format(
-            username, name, exc.excepinfo[2]
-        )
-        log.error(msg)
+        log.error("Failed to add %s to group %s. %s", username, name, exc.excepinfo[2])
         return False
 
     return True
@@ -325,15 +324,17 @@ def deluser(name, username, **kwargs):
     try:
         if salt.utils.win_functions.get_sam_name(username) in existing_members:
             group_obj.Remove("WinNT://" + username.replace("\\", "/"))
-            log.info("Removed user {}".format(username))
+            log.info("Removed user %s", username)
         else:
-            log.warning("User {} is not a member of {}".format(username, name))
+            log.warning("User %s is not a member of %s", username, name)
             return False
     except pywintypes.com_error as exc:
-        msg = "Failed to remove {} from group {}. {}".format(
-            username, name, win32api.FormatMessage(exc.excepinfo[5])
+        log.error(
+            "Failed to remove %s from group %s. %s",
+            username,
+            name,
+            win32api.FormatMessage(exc.excepinfo[5]),
         )
-        log.error(msg)
         return False
 
     return True
@@ -383,7 +384,7 @@ def members(name, members_list, **kwargs):
     members_list.sort()
 
     if existing_members == members_list:
-        log.info("{} membership is correct".format(name))
+        log.info("%s membership is correct", name)
         return True
 
     # add users
@@ -392,12 +393,14 @@ def members(name, members_list, **kwargs):
         if member not in existing_members:
             try:
                 obj_group.Add("WinNT://" + member.replace("\\", "/"))
-                log.info("User added: {}".format(member))
+                log.info("User added: %s", member)
             except pywintypes.com_error as exc:
-                msg = "Failed to add {} to {}. {}".format(
-                    member, name, win32api.FormatMessage(exc.excepinfo[5])
+                log.error(
+                    "Failed to add {} to {}. {}",
+                    member,
+                    name,
+                    win32api.FormatMessage(exc.excepinfo[5]),
                 )
-                log.error(msg)
                 success = False
 
     # remove users not in members_list
@@ -405,12 +408,14 @@ def members(name, members_list, **kwargs):
         if member not in members_list:
             try:
                 obj_group.Remove("WinNT://" + member.replace("\\", "/"))
-                log.info("User removed: {}".format(member))
+                log.info("User removed: %s", member)
             except pywintypes.com_error as exc:
-                msg = "Failed to remove {} from {}. {}".format(
-                    member, name, win32api.FormatMessage(exc.excepinfo[5])
+                log.error(
+                    "Failed to remove %s from %s. %s",
+                    member,
+                    name,
+                    win32api.FormatMessage(exc.excepinfo[5]),
                 )
-                log.error(msg)
                 success = False
 
     return success

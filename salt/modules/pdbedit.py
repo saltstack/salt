@@ -365,8 +365,8 @@ def modify(
                 for f in val.upper():
                     if f not in ["N", "D", "H", "L", "X"]:
                         log.warning(
-                            "pdbedit.modify - unknown {f} flag for account_control, ignored".format(
-                                f=f
+                            "pdbedit.modify - unknown '%s' flag for account_control, ignored".format(
+                                f
                             )
                         )
                     else:

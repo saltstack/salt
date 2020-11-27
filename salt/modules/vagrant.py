@@ -599,7 +599,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
             "{User}@{HostName} ifconfig".format(**ssh_config)
         )
 
-        log.info("Trying ssh -p {Port} {User}@{HostName} ifconfig".format(**ssh_config))
+        log.info(
+            "Trying ssh -p %(Port)s %(User)s@%(HostName)s ifconfig".format(**ssh_config)
+        )
         reply = __salt__["cmd.shell"](command)
         log.info("--->\n%s", reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)

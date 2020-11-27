@@ -207,9 +207,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
             continue
 
         if not salt.utils.path.which(py_ver):
-            log.error(
-                "{} does not exist. Could not auto detect dependencies".format(py_ver)
-            )
+            log.error("%s does not exist. Could not auto detect dependencies", py_ver)
             return {}
         py_shell_cmd = "{0} -c 'import {1}; print({1}.__file__)'".format(py_ver, mod)
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
@@ -218,9 +216,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
 
         if not stdout or not os.path.exists(mod_file):
             log.error(
-                "Could not auto detect file location for module {} for python version {}".format(
-                    mod, py_ver
-                )
+                "Could not auto detect file location for module %s for python version %s",
+                mod,
+                py_ver,
             )
             continue
 

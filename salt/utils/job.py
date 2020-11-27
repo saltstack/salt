@@ -45,7 +45,8 @@ def store_job(opts, load, event=None, mminion=None):
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace:\n",
+                job_cache,
                 exc_info=True,
             )
 
@@ -59,7 +60,8 @@ def store_job(opts, load, event=None, mminion=None):
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace:\n",
+                job_cache,
                 exc_info=True,
             )
     elif salt.utils.jid.is_jid(load["jid"]):
@@ -73,7 +75,8 @@ def store_job(opts, load, event=None, mminion=None):
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace:\n",
+                job_cache,
                 exc_info=True,
             )
 
@@ -128,7 +131,8 @@ def store_job(opts, load, event=None, mminion=None):
             log.error("Load does not contain 'jid': %s", e)
         except Exception:  # pylint: disable=broad-except
             log.critical(
-                "The specified '{}' returner threw a stack trace:\n".format(job_cache),
+                "The specified '%s' returner threw a stack trace:\n",
+                job_cache,
                 exc_info=True,
             )
 
@@ -136,7 +140,8 @@ def store_job(opts, load, event=None, mminion=None):
         mminion.returners[fstr](load)
     except Exception:  # pylint: disable=broad-except
         log.critical(
-            "The specified '{}' returner threw a stack trace:\n".format(job_cache),
+            "The specified '%s' returner threw a stack trace:\n",
+            job_cache,
             exc_info=True,
         )
 

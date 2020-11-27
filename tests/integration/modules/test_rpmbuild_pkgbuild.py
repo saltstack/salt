@@ -160,9 +160,10 @@ def _testrpm_signed(abs_path_named_rpm):
     CHECK_KEYID_OK = re.compile(test_string, re.M)
     retrc = CHECK_KEYID_OK.search(rpm_chk_sign.decode())
     log.debug(
-        "signed checking, found test_string '{}' in rpm_chk_sign '{}', return code '{}'".format(
-            test_string, rpm_chk_sign, retrc
-        )
+        "signed checking, found test_string '%s' in rpm_chk_sign '%s', return code '%s'",
+        test_string,
+        rpm_chk_sign,
+        retrc,
     )
 
     if retrc:

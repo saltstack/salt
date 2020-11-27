@@ -60,7 +60,7 @@ class CloudTest(ShellCase):
         if not query:
             query = self.query_instances()
 
-        log.debug('Checking for "{}" in {}'.format(instance_name, query))
+        log.debug('Checking for "%s" in %s', instance_name, query)
         if isinstance(query, set):
             return instance_name in query
         return any(instance_name == q.strip(": ") for q in query)
@@ -88,9 +88,9 @@ class CloudTest(ShellCase):
             for tries in range(self.__RE_TRIES):
                 if self._instance_exists(instance_name, query):
                     log.debug(
-                        'Instance "{}" reported after {} seconds'.format(
-                            instance_name, tries * self.__RE_RUN_DELAY
-                        )
+                        'Instance "%s" reported after %s seconds',
+                        instance_name,
+                        tries * self.__RE_RUN_DELAY,
                     )
                     break
                 else:
@@ -105,14 +105,14 @@ class CloudTest(ShellCase):
                 ),
             )
 
-            log.debug('Instance exists and was created: "{}"'.format(instance_name))
+            log.debug('Instance exists and was created: "%s"', instance_name)
 
     def assertDestroyInstance(self, instance_name=None, timeout=None):
         if timeout is None:
             timeout = TIMEOUT
         if not instance_name:
             instance_name = self.instance_name
-        log.debug('Deleting instance "{}"'.format(instance_name))
+        log.debug('Deleting instance "%s"', instance_name)
         delete_str = self.run_cloud(
             "-d {} --assume-yes --out=yaml".format(instance_name), timeout=timeout
         )
@@ -142,9 +142,10 @@ class CloudTest(ShellCase):
             if self._instance_exists(query=query):
                 sleep(30)
                 log.debug(
-                    'Instance "{}" still found in query after {} tries: {}'.format(
-                        instance_name, tries, query
-                    )
+                    'Instance "%s" still found in query after %s tries: %s',
+                    instance_name,
+                    tries,
+                    query,
                 )
                 query = self.query_instances()
         # The last query should have been successful
@@ -241,9 +242,7 @@ class CloudTest(ShellCase):
             ):
                 instances.add(q)
                 log.debug(
-                    'Adding "{}" to the set of instances that needs to be deleted'.format(
-                        q
-                    )
+                    'Adding "%s" to the set of instances that needs to be deleted', q
                 )
         return instances
 
@@ -266,11 +265,12 @@ class CloudTest(ShellCase):
                             instance_name
                         ),
                     )
-                except AssertionError as e:
+                except AssertionError as exc:
                     log.error(
-                        'Failed to delete instance "{}". Tries: {}\n{}'.format(
-                            instance_name, tries, str(e)
-                        )
+                        'Failed to delete instance "%s". Tries: %s\n%s',
+                        instance_name,
+                        tries,
+                        exc,
                     )
                 if not self._instance_exists():
                     destroyed = True
@@ -310,9 +310,7 @@ class CloudTest(ShellCase):
                 success = False
                 fail_messages.append(alt_destroy_message)
                 log.error(
-                    'Failed to destroy instance "{}": {}'.format(
-                        instance, alt_destroy_message
-                    )
+                    'Failed to destroy instance "%s": %s', instance, alt_destroy_message
                 )
         self.assertTrue(success, "\n".join(fail_messages))
         self.assertFalse(

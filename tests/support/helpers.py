@@ -697,7 +697,7 @@ def with_system_user(
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system user {!r}".format(username))
+            log.debug("Creating system user '%s'", username)
             kwargs = {"timeout": 60, "groups": groups}
             if salt.utils.platform.is_windows():
                 kwargs.update({"password": password})
@@ -709,7 +709,7 @@ def with_system_user(
                     cls.skipTest("Failed to create system user {!r}".format(username))
 
                 if on_existing == "delete":
-                    log.debug("Deleting the system user {!r}".format(username))
+                    log.debug("Deleting the system user '%s'", username)
                     delete_user = cls.run_function(
                         "user.delete", [username, True, True]
                     )
@@ -720,7 +720,7 @@ def with_system_user(
                                 username
                             )
                         )
-                    log.debug("Second time creating system user {!r}".format(username))
+                    log.debug("Second time creating system user '%s'", username)
                     create_user = cls.run_function("user.add", [username], **kwargs)
                     if not create_user:
                         cls.skipTest(
@@ -745,8 +745,7 @@ def with_system_user(
                     return func(cls, username)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running {!r} raised an exception: {}".format(func, exc),
-                        exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True,
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -760,13 +759,14 @@ def with_system_user(
                         if failure is None:
                             log.warning(
                                 "Although the actual test-case did not fail, "
-                                "deleting the created system user {!r} "
-                                "afterwards did.".format(username)
+                                "deleting the created system user %r "
+                                "afterwards did.",
+                                username,
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system user {!r}".format(username)
+                                "The test-case failed and also did the removal of the system user %r",
+                                username,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
@@ -806,7 +806,7 @@ def with_system_group(group, on_existing="delete", delete=True):
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system group {!r}".format(group))
+            log.debug("Creating system group '%s'", group)
             create_group = cls.run_function("group.add", [group])
             if not create_group:
                 log.debug("Failed to create system group")
@@ -815,14 +815,14 @@ def with_system_group(group, on_existing="delete", delete=True):
                     cls.skipTest("Failed to create system group {!r}".format(group))
 
                 if on_existing == "delete":
-                    log.debug("Deleting the system group {!r}".format(group))
+                    log.debug("Deleting the system group '%s'", group)
                     delete_group = cls.run_function("group.delete", [group])
                     if not delete_group:
                         cls.skipTest(
                             "A group named {!r} already existed on the "
                             "system and re-creating it was not possible".format(group)
                         )
-                    log.debug("Second time creating system group {!r}".format(group))
+                    log.debug("Second time creating system group '%s'", group)
                     create_group = cls.run_function("group.add", [group])
                     if not create_group:
                         cls.skipTest(
@@ -836,10 +836,9 @@ def with_system_group(group, on_existing="delete", delete=True):
             try:
                 try:
                     return func(cls, group)
-                except Exception as exc:  # pylint: disable=W0703
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Running {!r} raised an exception: {}".format(func, exc),
-                        exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True,
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -850,14 +849,14 @@ def with_system_group(group, on_existing="delete", delete=True):
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system group {!r} "
-                                "afterwards did.".format(group)
+                                "Although the actual test-case did not fail, deleting the created system group %r "
+                                "afterwards did.",
+                                group,
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system group {!r}".format(group)
+                                "The test-case failed and also did the removal of the system group %r",
+                                group,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it
@@ -900,9 +899,9 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
         def wrap(cls):
 
             # Let's add the user to the system.
-            log.debug("Creating system user {!r}".format(username))
+            log.debug("Creating system user '%s'", username)
             create_user = cls.run_function("user.add", [username])
-            log.debug("Creating system group {!r}".format(group))
+            log.debug("Creating system group '%s'", group)
             create_group = cls.run_function("group.add", [group])
             if not create_user:
                 log.debug("Failed to create system user")
@@ -911,7 +910,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     cls.skipTest("Failed to create system user {!r}".format(username))
 
                 if on_existing == "delete":
-                    log.debug("Deleting the system user {!r}".format(username))
+                    log.debug("Deleting the system user '%s'", username)
                     delete_user = cls.run_function(
                         "user.delete", [username, True, True]
                     )
@@ -922,7 +921,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                                 username
                             )
                         )
-                    log.debug("Second time creating system user {!r}".format(username))
+                    log.debug("Second time creating system user '%s'", username)
                     create_user = cls.run_function("user.add", [username])
                     if not create_user:
                         cls.skipTest(
@@ -938,14 +937,14 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     cls.skipTest("Failed to create system group {!r}".format(group))
 
                 if on_existing == "delete":
-                    log.debug("Deleting the system group {!r}".format(group))
+                    log.debug("Deleting the system group '%s'", group)
                     delete_group = cls.run_function("group.delete", [group])
                     if not delete_group:
                         cls.skipTest(
                             "A group named {!r} already existed on the "
                             "system and re-creating it was not possible".format(group)
                         )
-                    log.debug("Second time creating system group {!r}".format(group))
+                    log.debug("Second time creating system group '%s'", group)
                     create_group = cls.run_function("group.add", [group])
                     if not create_group:
                         cls.skipTest(
@@ -959,10 +958,9 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
             try:
                 try:
                     return func(cls, username, group)
-                except Exception as exc:  # pylint: disable=W0703
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Running {!r} raised an exception: {}".format(func, exc),
-                        exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True,
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -976,26 +974,26 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     if not delete_user:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system user {!r} "
-                                "afterwards did.".format(username)
+                                "Although the actual test-case did not fail, deleting the created system user %r "
+                                "afterwards did.",
+                                username,
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system user {!r}".format(username)
+                                "The test-case failed and also did the removal of the system user %r",
+                                username,
                             )
                     if not delete_group:
                         if failure is None:
                             log.warning(
-                                "Although the actual test-case did not fail, "
-                                "deleting the created system group {!r} "
-                                "afterwards did.".format(group)
+                                "Although the actual test-case did not fail, deleting the created system group %r "
+                                "afterwards did.",
+                                group,
                             )
                         else:
                             log.warning(
-                                "The test-case failed and also did the removal"
-                                " of the system group {!r}".format(group)
+                                "The test-case failed and also did the removal of the system group %r",
+                                group,
                             )
                 if failure is not None:
                     # If an exception was thrown, raise it

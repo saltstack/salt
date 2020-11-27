@@ -312,9 +312,9 @@ def bootstrap(force=False, source=None):
 
     # Download Chocolatey installer
     try:
-        log.debug("Downloading Chocolatey: {}".format(os.path.basename(url)))
+        log.debug("Downloading Chocolatey: %s", os.path.basename(url))
         script = __salt__["cp.get_url"](path=url, dest=dest)
-        log.debug("Script: {}".format(script))
+        log.debug("Script: %s", script)
     except MinionError:
         err = "Failed to download Chocolatey Installer"
         if source:
@@ -323,7 +323,7 @@ def bootstrap(force=False, source=None):
 
     # If this is a nupkg download we need to unzip it first
     if os.path.splitext(os.path.basename(dest))[1] == ".nupkg":
-        log.debug("Unzipping Chocolatey: {}".format(dest))
+        log.debug("Unzipping Chocolatey: %s", dest)
         __salt__["archive.unzip"](
             zip_file=dest,
             dest=os.path.join(os.path.dirname(dest), "chocolatey"),
@@ -339,12 +339,12 @@ def bootstrap(force=False, source=None):
         )
 
     # Run the Chocolatey bootstrap
-    log.debug("Installing Chocolatey: {}".format(script))
+    log.debug("Installing Chocolatey: %s", script)
     result = __salt__["cmd.script"](
         script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
     )
     if result["retcode"] != 0:
-        err = "Bootstrapping Chocolatey failed: {}".format(result["stderr"])
+        err = "Bootstrapping Chocolatey failed: %s", result["stderr"]
         raise CommandExecutionError(err)
 
     return result["stdout"]
@@ -392,7 +392,7 @@ def unbootstrap():
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
+            log.debug("Removing Chocolatey environment variable: %s", env_var)
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )
@@ -404,7 +404,7 @@ def unbootstrap():
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
-            log.debug("Removing Chocolatey path item: {}" "".format(path))
+            log.debug("Removing Chocolatey path item: %s", path)
             __salt__["win_path.remove"](path=path, rehash=True)
             removed.append("Removed Path Item: {}".format(path))
 

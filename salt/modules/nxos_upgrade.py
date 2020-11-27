@@ -119,7 +119,7 @@ def check_upgrade_impact(system_image, kickstart_image=None, issu=True, **kwargs
     if issu and ki is None:
         cmd = cmd + " non-disruptive"
 
-    log.info("Check upgrade impact using command: '{}'".format(cmd))
+    log.info("Check upgrade impact using command: '%s'", cmd)
     kwargs.update({"timeout": kwargs.get("timeout", 900)})
     error_pattern_list = [
         "Another install procedure may be in progress",
@@ -195,7 +195,7 @@ def upgrade(system_image, kickstart_image=None, issu=True, **kwargs):
             if impact["invalid_command"]:
                 impact = False
                 continue
-            log.info("Impact data gathered:\n{}".format(impact))
+            log.info("Impact data gathered:\n%s", impact)
 
             # Check to see if conditions are sufficent to return the impact
             # data and not proceed with the actual upgrade.
@@ -273,7 +273,7 @@ def _upgrade(system_image, kickstart_image, issu, **kwargs):
         logmsg += "\nDisruptive Upgrade/Downgrade requested."
 
     log.info(logmsg)
-    log.info("Begin upgrade using command: '{}'".format(cmd))
+    log.info("Begin upgrade using command: '%s'", cmd)
 
     kwargs.update({"timeout": kwargs.get("timeout", 900)})
     error_pattern_list = ["Another install procedure may be in progress"]
@@ -347,7 +347,7 @@ def _parse_upgrade_data(data):
     upgrade_result["upgrade_data"] = data
     for line in data.split("\n"):
 
-        log.info("Processing line: ({})".format(line))
+        log.info("Processing line: (%s)", line)
 
         # Check to see if upgrade is disruptive or non-disruptive
         if re.search(r"non-disruptive", line):

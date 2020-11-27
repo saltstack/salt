@@ -1281,9 +1281,7 @@ def _zfs_image_create(
             )
         )
     elif destination_fs in existing_disk:
-        log.info(
-            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
-        )
+        log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
 
@@ -4548,7 +4546,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {}".format(fs_name))
+            log.info("Destroying VM ZFS volume %s", fs_name)
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])

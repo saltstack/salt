@@ -367,11 +367,11 @@ class TextTestResult(_TextTestResult):
     """
 
     def startTest(self, test):
-        log.debug(">>>>> START >>>>> {}".format(test.id()))
+        log.debug(">>>>> START >>>>> %s", test.id())
         return super().startTest(test)
 
     def stopTest(self, test):
-        log.debug("<<<<< END <<<<<<< {}".format(test.id()))
+        log.debug("<<<<< END <<<<<<< %s", test.id())
         return super().stopTest(test)
 
 
