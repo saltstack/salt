@@ -166,6 +166,34 @@ def test_present_create_basic_error(mocks):
     mocks["postgres.user_update"].assert_not_called()
 
 
+def test_present_change_option(mocks, existing_user):
+    mocks["postgres.role_get"].return_value = existing_user
+
+    assert postgres_user.present("username", replication=True) == {
+        "name": "username",
+        "result": True,
+        "changes": {"username": {"replication": True}},
+        "comment": "The user username has been updated",
+    }
+
+    mocks["postgres.role_get"].assert_called_once()
+    mocks["postgres.user_create"].assert_not_called()
+    mocks["postgres.user_update"].assert_called_once_with(
+        username="username",
+        createdb=None,
+        createroles=None,
+        encrypted="md5",
+        superuser=None,
+        login=None,
+        inherit=None,
+        replication=True,
+        rolepassword=None,
+        valid_until=None,
+        groups=None,
+        **DB_ARGS
+    )
+
+
 def test_present_create_md5_password(mocks, md5_pw):
     assert postgres_user.present("username", password="password", encrypted=True) == {
         "name": "username",
