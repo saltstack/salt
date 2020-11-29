@@ -1,5 +1,5 @@
-salt.modules.mac_keychain module
-================================
+salt.modules.mac_keychain
+=========================
 
 .. automodule:: salt.modules.mac_keychain
     :members:

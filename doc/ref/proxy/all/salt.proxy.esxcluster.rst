@@ -1,5 +1,5 @@
-salt.proxy.esxcluster module
-============================
+salt.proxy.esxcluster
+=====================
 
 .. automodule:: salt.proxy.esxcluster
     :members:

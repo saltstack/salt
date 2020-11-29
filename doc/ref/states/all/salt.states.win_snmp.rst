@@ -1,5 +1,5 @@
-salt.states.win_snmp module
-===========================
+salt.states.win_snmp
+====================
 
 .. automodule:: salt.states.win_snmp
     :members:

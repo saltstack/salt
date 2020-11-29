@@ -1,5 +1,5 @@
-salt.modules.boto_cloudwatch_event module
-=========================================
+salt.modules.boto_cloudwatch_event
+==================================
 
 .. automodule:: salt.modules.boto_cloudwatch_event
     :members:

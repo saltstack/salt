@@ -1,5 +1,5 @@
-salt.modules.nexus module
-=========================
+salt.modules.nexus
+==================
 
 .. automodule:: salt.modules.nexus
     :members:

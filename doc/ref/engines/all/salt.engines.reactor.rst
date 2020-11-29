@@ -1,5 +1,5 @@
-salt.engines.reactor module
-===========================
+salt.engines.reactor
+====================
 
 .. automodule:: salt.engines.reactor
     :members:

@@ -1,5 +1,5 @@
-salt.sdb.consul module
-======================
+salt.sdb.consul
+===============
 
 .. automodule:: salt.sdb.consul
     :members:

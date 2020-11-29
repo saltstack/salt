@@ -1,5 +1,5 @@
-salt.pillar.sql_base module
-===========================
+salt.pillar.sql_base
+====================
 
 .. automodule:: salt.pillar.sql_base
     :members:

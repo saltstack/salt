@@ -1,5 +1,5 @@
-salt.modules.boto3_sns module
-=============================
+salt.modules.boto3_sns
+======================
 
 .. automodule:: salt.modules.boto3_sns
     :members:

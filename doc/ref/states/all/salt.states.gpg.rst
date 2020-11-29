@@ -1,5 +1,5 @@
-salt.states.gpg module
-======================
+salt.states.gpg
+===============
 
 .. automodule:: salt.states.gpg
     :members:

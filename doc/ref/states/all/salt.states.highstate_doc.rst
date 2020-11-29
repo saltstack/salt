@@ -1,5 +1,5 @@
-salt.states.highstate_doc module
-================================
+salt.states.highstate_doc
+=========================
 
 .. automodule:: salt.states.highstate_doc
     :members:

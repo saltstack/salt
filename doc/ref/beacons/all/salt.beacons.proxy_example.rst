@@ -1,5 +1,5 @@
-salt.beacons.proxy_example module
-=================================
+salt.beacons.proxy_example
+==========================
 
 .. automodule:: salt.beacons.proxy_example
     :members:

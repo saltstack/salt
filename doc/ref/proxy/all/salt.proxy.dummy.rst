@@ -1,5 +1,5 @@
-salt.proxy.dummy module
-=======================
+salt.proxy.dummy
+================
 
 .. automodule:: salt.proxy.dummy
     :members:

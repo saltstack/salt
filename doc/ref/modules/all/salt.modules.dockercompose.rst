@@ -1,5 +1,5 @@
-salt.modules.dockercompose module
-=================================
+salt.modules.dockercompose
+==========================
 
 .. automodule:: salt.modules.dockercompose
     :members:

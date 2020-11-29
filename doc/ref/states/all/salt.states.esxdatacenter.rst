@@ -1,5 +1,5 @@
-salt.states.esxdatacenter module
-================================
+salt.states.esxdatacenter
+=========================
 
 .. automodule:: salt.states.esxdatacenter
     :members:

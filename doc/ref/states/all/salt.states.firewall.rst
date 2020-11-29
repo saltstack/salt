@@ -1,5 +1,5 @@
-salt.states.firewall module
-===========================
+salt.states.firewall
+====================
 
 .. automodule:: salt.states.firewall
     :members:

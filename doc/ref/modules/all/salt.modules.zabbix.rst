@@ -1,5 +1,5 @@
-salt.modules.zabbix module
-==========================
+salt.modules.zabbix
+===================
 
 .. automodule:: salt.modules.zabbix
     :members:

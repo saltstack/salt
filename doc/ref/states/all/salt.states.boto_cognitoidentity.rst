@@ -1,5 +1,5 @@
-salt.states.boto_cognitoidentity module
-=======================================
+salt.states.boto_cognitoidentity
+================================
 
 .. automodule:: salt.states.boto_cognitoidentity
     :members:

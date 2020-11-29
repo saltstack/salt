@@ -1,5 +1,5 @@
-salt.states.boto_datapipeline module
-====================================
+salt.states.boto_datapipeline
+=============================
 
 .. automodule:: salt.states.boto_datapipeline
     :members:
