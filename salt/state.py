@@ -2774,7 +2774,7 @@ class State:
                 status = "met"
             else:
                 status = "pre"
-        elif "onfail" in fun_stats and "onchangesmet" not in fun_stats:
+        elif "onfail" in fun_stats and "met" not in fun_stats:
             status = "onfail"
         elif "onchanges" in fun_stats and "onchangesmet" not in fun_stats:
             status = "onchanges"
