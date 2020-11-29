@@ -10,6 +10,11 @@ heavily on how you use Salt, where you use Salt, how your team is structured,
 where you get data from, and what kinds of access (internal and external) you
 require.
 
+.. important::
+
+    Refer to the :ref:`saltstack_security_announcements` documentation in order to stay updated
+    and secure.
+
 .. warning::
 
     For historical reasons, Salt requires PyCrypto as a "lowest common
@@ -43,7 +48,8 @@ Salt hardening tips
 ===================
 
 - Subscribe to `salt-users`_ or `salt-announce`_ so you know when new Salt
-  releases are available. Keep your systems up-to-date with the latest patches.
+  releases are available.
+- Keep your systems up-to-date with the latest patches.
 - Use Salt's Client :ref:`ACL system <acl>` to avoid having to give out root
   access in order to run Salt commands.
 - Use Salt's Client :ref:`ACL system <acl>` to restrict which users can run what commands.
