@@ -16,6 +16,7 @@ from salt.utils.odict import OrderedDict
 from tests.support.helpers import slowTest, with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -754,14 +755,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             if not os.path.isdir(dpath):
                 os.makedirs(dpath)
         shutil.copy(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls"), self.base_state_tree_dir
-        )
-        shutil.copy(
-            os.path.join(RUNTIME_VARS.BASE_FILES, "core.sls"), self.base_state_tree_dir
-        )
-        shutil.copy(
             os.path.join(RUNTIME_VARS.BASE_FILES, "test.sls"), self.other_state_tree_dir
         )
+
         overrides = {}
         overrides["root_dir"] = root_dir
         overrides["state_events"] = False
@@ -782,37 +778,97 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.highstate.pop_active()
 
     def test_lazy_avail_states_base(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'base' env available states
-        self.highstate.avail["base"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file(
+            "{}/top.sls".format(self.base_state_tree_dir), top_sls
+        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'base' env available states
+            self.highstate.avail["base"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
 
     def test_lazy_avail_states_other(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'other' env available states
-        self.highstate.avail["other"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, True)
-        self.assertEqual(self.highstate.avail._avail, {"base": None, "other": ["test"]})
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
+        )
+
+        with temp_state_file(
+            "{}/top.sls".format(self.base_state_tree_dir), top_sls
+        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'other' env available states
+            self.highstate.avail["other"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, True)
+            self.assertEqual(
+                self.highstate.avail._avail, {"base": None, "other": ["test"]}
+            )
 
     def test_lazy_avail_states_multi(self):
-        # list_states not called yet
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": None})
-        # After getting 'base' env available states
-        self.highstate.avail["base"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, False)
-        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
-        # After getting 'other' env available states
-        self.highstate.avail["other"]  # pylint: disable=pointless-statement
-        self.assertEqual(self.highstate.avail._filled, True)
-        self.assertEqual(
-            self.highstate.avail._avail, {"base": ["core", "top"], "other": ["test"]}
+        top_sls = """
+        base:
+          '*':
+            - core
+            """
+
+        core_state = """
+        {}/testfile:
+          file:
+            - managed
+            - source: salt://testfile
+            - makedirs: true
+            """.format(
+            RUNTIME_VARS.TMP
         )
+
+        with temp_state_file(
+            "{}/top.sls".format(self.base_state_tree_dir), top_sls
+        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+            # list_states not called yet
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": None})
+            # After getting 'base' env available states
+            self.highstate.avail["base"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, False)
+            self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+            # After getting 'other' env available states
+            self.highstate.avail["other"]  # pylint: disable=pointless-statement
+            self.assertEqual(self.highstate.avail._filled, True)
+            self.assertEqual(
+                self.highstate.avail._avail,
+                {"base": ["core", "top"], "other": ["test"]},
+            )
 
 
 @skipIf(pytest is None, "PyTest is missing")
