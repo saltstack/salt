@@ -1234,12 +1234,13 @@ def network_defined(
     :param vport: Virtualport type (Default: ``'None'``)
     :param tag: Vlan tag (Default: ``'None'``)
     :param ipv4_config:
-        IPv4 network configuration. See the :py:func`virt.network_define
-        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        IPv4 network configuration. See the
+        :py:func:`virt.network_define <salt.modules.virt.network_define>`
+        function corresponding parameter documentation
         for more details on this dictionary.
         (Default: None).
     :param ipv6_config:
-        IPv6 network configuration. See the :py:func`virt.network_define
+        IPv6 network configuration. See the :py:func:`virt.network_define
         <salt.modules.virt.network_define>` function corresponding parameter documentation
         for more details on this dictionary.
         (Default: None).
