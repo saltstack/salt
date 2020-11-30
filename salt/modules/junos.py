@@ -1428,7 +1428,8 @@ def install_os(path=None, **kwargs):
                 ret["out"] = False
                 __proxy__["junos.reboot_clear"]()
                 return ret
-            if salt.utils.platform.is_junos():
+            ## DGM if salt.utils.platform.is_junos():
+            if not salt.utils.platform.is_proxy():
                 # If its native minion running on Junos, pyez dont need to SCP file
                 # hence setting no_copy as True, HandleFileCopy already copied file
                 # from master to Junos
@@ -1518,7 +1519,8 @@ def file_copy(src, dest):
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     """
-    if salt.utils.platform.is_junos():
+    ## DGM if salt.utils.platform.is_junos():
+    if not salt.utils.platform.is_proxy():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -2095,7 +2097,8 @@ def file_compare(file1, file2, **kwargs):
                 True
 
     """
-    if not salt.utils.platform.is_junos():
+    ## DGM if not salt.utils.platform.is_junos():
+    if salt.utils.platform.is_proxy():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -2153,7 +2156,8 @@ def fsentry_exists(dir, **kwargs):
                 True
 
     """
-    if not salt.utils.platform.is_junos():
+    ## DGM if not salt.utils.platform.is_junos():
+    if salt.utils.platform.is_proxy():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
@@ -2302,7 +2306,8 @@ def dir_copy(source, dest, force=False, **kwargs):
     `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
 
     """
-    if not salt.utils.platform.is_junos():
+    ## DGM if not salt.utils.platform.is_junos():
+    if salt.utils.platform.is_proxy():
         return {
             "success": False,
             "message": "This method is unsupported on the current operating system!",
