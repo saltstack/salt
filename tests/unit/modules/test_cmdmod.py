@@ -127,7 +127,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                         self.assertRaises(
                             CommandExecutionError, cmdmod._run, "foo", "bar"
                         )
-
+    @skipIf(not salt.utils.platform.is_windows(), "Only run on Windows")
     def test_run_runas_with_windows(self):
         """
         Tests error raised when runas is passed on windows

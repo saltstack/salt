@@ -804,7 +804,7 @@ def run(
     except OSError as err:
         ret["comment"] = six.text_type(err)
         if "The user name or password is incorrect" in ret["comment"]:
-            ret["comment"] = "`runas` user password was incorrect."
+            ret["comment"] = "`runas` user name or user password was incorrect."
         return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["comment"] = six.text_type(err)
@@ -1037,10 +1037,6 @@ def script(
         )
         return ret
 
-    if runas and salt.utils.platform.is_windows() and not password:
-        ret["commnd"] = "Must supply a password if runas argument is used on Windows."
-        return ret
-
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
@@ -1090,7 +1086,7 @@ def script(
     except OSError as err:
         ret["comment"] = six.text_type(err)
         if "The user name or password is incorrect" in ret["comment"]:
-            ret["comment"] = "`runas` user password was incorrect."
+            ret["comment"] = "`runas` user name or user password was incorrect."
         return ret
     except (CommandExecutionError, SaltRenderError, IOError) as err:
         ret["comment"] = six.text_type(err)
