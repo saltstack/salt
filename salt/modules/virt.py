@@ -7643,19 +7643,8 @@ def pool_update(
             new_xml.insert(1, element)
 
         # Filter out spaces and empty elements like <source/> since those would mislead the comparison
-        def visit_xml(node, fn):
-            fn(node)
-            for child in node:
-                visit_xml(child, fn)
-
-        def space_stripper(node):
-            if node.tail is not None:
-                node.tail = node.tail.strip(" \t\n")
-            if node.text is not None:
-                node.text = node.text.strip(" \t\n")
-
-        visit_xml(old_xml, space_stripper)
-        visit_xml(new_xml, space_stripper)
+        xmlutil.strip_spaces(old_xml)
+        xmlutil.strip_spaces(new_xml)
 
         def empty_node_remover(node):
             for child in node:
@@ -7667,7 +7656,7 @@ def pool_update(
                 ):
                     node.remove(child)
 
-        visit_xml(old_xml, empty_node_remover)
+        xmlutil.visit(old_xml, empty_node_remover)
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:

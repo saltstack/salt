@@ -379,3 +379,25 @@ def change_xml(doc, data, mapping):
                 deleted = del_fn(parent_map, node)
                 need_update = need_update or deleted
     return need_update
+
+
+def strip_spaces(node):
+    """
+    Remove all spaces and line breaks before and after nodes.
+    This helps comparing XML trees.
+
+    :param node: the XML node to remove blanks from
+    :return: the node
+    """
+
+    if node.tail is not None:
+        node.tail = node.tail.strip(" \t\n")
+    if node.text is not None:
+        node.text = node.text.strip(" \t\n")
+    try:
+        for child in node:
+            strip_spaces(child)
+    except RecursionError:
+        raise Exception("Failed to recurse on the node")
+
+    return node
