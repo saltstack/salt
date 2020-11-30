@@ -80,29 +80,34 @@ def config_manage(
                   name: "1/0/3"
 
     """
+    ret = {"result": False, "comment": ""}
 
     uri = str(uri)
     name = str(name)
     method = str(method)
     if uri == "":
+        ret["comment"] = "CRITICAL: uri must not be blank"
         log.critical("uri must not be blank")
-        return False
+        return ret
     if name == "":
+        ret["comment"] = "CRITICAL: Name is required"
         log.critical("Name is required")
-        return False
+        return ret
     if method == "":
+        ret["comment"] = "CRITICAL: method is required"
         log.critical("method is required")
-        return False
+        return ret
     if "salt.utils.odict.OrderedDict" not in str(type(config)):
+        ret["comment"] = "CRITICAL: config must be an OrderedDict type"
         log.critical(
             "config is required, config must be a salt salt.utils.odict.OrderedDict {t}".format(
                 t=type(config)
             )
         )
-        return False
+        return ret
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     # TODO: add template function so that config var does not need to be passed
-    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     uri_check = __salt__["restconf.uri_check"](uri, init_uri)
     log.debug("uri_check:")
@@ -140,14 +145,14 @@ def config_manage(
     log.debug(proposed_config)
 
     # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
-    if uri_check[1]["request_restponse"] == proposed_config:
+    if uri_check[1]["request_restponse"]["dict"] == proposed_config:
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
     elif __opts__["test"] is True:
         ret["result"] = None
         ret["changes"] = _compare_changes(
-            uri_check[1]["request_restponse"], proposed_config
+            uri_check[1]["request_restponse"]["dict"], proposed_config
         )
         # ret["changes"]["rest_method"] = request_method
         ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
@@ -157,6 +162,7 @@ def config_manage(
         resp = __salt__["restconf.set_data"](
             uri_check[1]["request_uri"], request_method, proposed_config
         )
+
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
@@ -180,7 +186,7 @@ def config_manage(
                     w=why, s=resp["status"], u=uri_check[1]["request_uri"]
                 )
             )
-            print("post_content: {b}".format(b=json.dumps(proposed_config)))
+            log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))
 
     return ret
 
