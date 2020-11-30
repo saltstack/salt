@@ -1304,7 +1304,7 @@ class LoaderMultipleGlobalTest(ModuleCase):
             assert func1.__globals__["__foo__"].value() == "bar1"
         finally:
             salt.loader_context.loader_ctxvar.reset(token)
-        salt.loader_context.loader_ctxvar.set(self.loader2)
+        token = salt.loader_context.loader_ctxvar.set(self.loader2)
         try:
             assert func2.__globals__["__foo__"].value() == "bar2"
         finally:
