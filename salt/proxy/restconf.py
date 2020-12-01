@@ -73,6 +73,7 @@ Proxy Pillar Example
       verify: false
 """
 
+
 # Import python stdlib
 import copy
 import json
