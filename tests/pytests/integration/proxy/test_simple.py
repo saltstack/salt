@@ -4,6 +4,8 @@ Simple Smoke Tests for Connected Proxy Minion
 import os
 
 import pytest
+from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.fixture(scope="module")
@@ -89,13 +91,41 @@ def test_grains_items(salt_cli, salt_proxy):
 
 
 def test_state_apply(salt_cli, salt_proxy):
-    ret = salt_cli.run("state.apply", "core", minion_tgt=salt_proxy.id)
-    for value in ret.json.values():
-        assert value["result"] is True
+    core_state = """
+    {}/testfile:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        RUNTIME_VARS.TMP
+    )
+
+    with temp_state_file("core.sls", core_state):
+        ret = salt_cli.run("state.apply", "core", minion_tgt=salt_proxy.id)
+        for value in ret.json.values():
+            assert value["result"] is True
 
 
 @pytest.mark.slow_test
 def test_state_highstate(salt_cli, salt_proxy):
-    ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
-    for value in ret.json.values():
-        assert value["result"] is True
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    core_state = """
+    {}/testfile:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        RUNTIME_VARS.TMP
+    )
+
+    with temp_state_file("top.sls", top_sls), temp_state_file("core.sls", core_state):
+        ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
+        for value in ret.json.values():
+            assert value["result"] is True
