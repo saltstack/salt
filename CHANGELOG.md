@@ -6,6 +6,14 @@ This changelog follows [keepachangelog](https://keepachangelog.com/en/1.0.0/) fo
 This project versioning is _similar_ to [Semantic Versioning](https://semver.org), and is documented in [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20/files).
 Versions are `MAJOR.PATCH`.
 
+Salt 3000.6 (2020-12-01)
+========================
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
 Salt 3000.5 (2020-09-16)
 ========================
 
