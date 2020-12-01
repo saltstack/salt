@@ -5,6 +5,7 @@ Minion side functions for salt-cp
 import base64
 import errno
 import fnmatch
+import glob as globmod
 import logging
 import os
 from urllib.parse import urlparse
@@ -862,7 +863,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                 init_send = True
 
 
-def push_dir(path, glob=None, upload_path=None):
+def push_dir(path, glob=None, upload_path=None, glob_recurse=False):
     """
     Push a directory from the minion up to the master, the files will be saved
     to the salt master in the master's minion files cachedir (defaults to
@@ -879,6 +880,13 @@ def push_dir(path, glob=None, upload_path=None):
         Provide a different path and directory name inside the master's minion
         files cachedir
 
+    glob_recurse
+        .. versionadded:: aluminum
+        Use :ref:`glob.glob` for matching instead of `fnmatch.fnmatch`. This
+        allows more complex file matching, e.g.
+        ``glob="**/foo*bar/.dotfile*"``.
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -886,6 +894,8 @@ def push_dir(path, glob=None, upload_path=None):
         salt '*' cp.push /usr/lib/mysql
         salt '*' cp.push /usr/lib/mysql upload_path='/newmysql/path'
         salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
+        salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
+        salt '*' cp.push_dir /etc/locale/ glob='en_US.*'
     """
     if "../" in path or path.endswith("/..") or not os.path.isabs(path):
         return False
@@ -895,12 +905,26 @@ def push_dir(path, glob=None, upload_path=None):
         return push(path, upload_path=upload_path)
     else:
         filelist = []
-        for root, _, files in salt.utils.path.os_walk(path):
-            filelist += [os.path.join(root, tmpfile) for tmpfile in files]
-        if glob is not None:
-            filelist = [
-                fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)
-            ]
+        if glob_recurse:
+            prev = os.getcwd()
+            try:
+                os.chdir(path)
+            except FileNotFoundError:
+                return False
+            else:
+                filelist = [
+                    os.path.abspath(os.path.join(path, fname))
+                    for fname in sorted(globmod.glob(glob, recursive=True))
+                ]
+            finally:
+                os.chdir(prev)
+        else:
+            for root, _, files in salt.utils.path.os_walk(path):
+                filelist += [os.path.join(root, tmpfile) for tmpfile in files]
+            if glob is not None:
+                filelist = [
+                    fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)
+                ]
         if not filelist:
             return False
         for tmpfile in filelist:

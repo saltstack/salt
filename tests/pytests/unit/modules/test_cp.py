@@ -1,8 +1,14 @@
+import os
+import tempfile
+
 import pytest
 import salt.modules.cp as cp
+import salt.utils.files
 from tests.support.mock import call, patch
 
 # pylint: disable=comparison-to-True-should-be-if-cond-is-True-or-if-cond,singleton-comparison
+
+PATH_COUNT = 5
 
 
 @pytest.fixture(autouse=True)
@@ -10,6 +16,23 @@ def setup_loader():
     setup_loader_modules = {cp: {}}
     with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
         yield loader_mock
+
+
+@pytest.fixture
+def directory_setup():
+    with tempfile.TemporaryDirectory() as tempdir:
+        for i in range(PATH_COUNT):
+            commonpath = os.path.join(tempdir, "path{}".format(i), "common")
+            os.makedirs(commonpath, exist_ok=True)
+            fooname = os.path.join(commonpath, "foo.txt")
+            barname = os.path.join(commonpath, "bar.txt")
+            dotfooname = os.path.join(commonpath, ".foo.txt")
+            dotbarname = os.path.join(commonpath, ".bar.txt")
+            foothingbarname = os.path.join(commonpath, "foo-thing-bar.txt")
+            for fname in (fooname, barname, dotfooname, dotbarname, foothingbarname):
+                with salt.utils.files.fopen(fname, "w"):
+                    pass
+        yield tempdir
 
 
 @pytest.mark.parametrize(
@@ -159,29 +182,112 @@ def test_when_push_fails_then_result_should_be_False():
         fake_push.assert_any_call("fnordroot/.foo.txt", upload_path=None)
 
 
-## TODO: angeloudy's desired scenario -W. Werner, 2020-12-01
-# salt-call cp.push_dir /a/b glob='**/b/*.txt', while still supports the old matching
-#
-# salt-call cp.push_dir /a/b glob='*.txt'
-#
-# In my case, I have many exported files(with extension *.groovy)from my application inside FreeBSD Jails.
-#
-# /jails/jail1/usr/local/myapp/export
-# /jails/jail2/usr/local/myapp/export
-# /jails/jail3/usr/local/myapp/export
-# /jails/jail3/usr/local/myapp/export
-# I wanted to do
-# salt minion1 cp.push_dir /jails glob='**/export/*.groovy',
+def test_when_glob_recurse_and_dir_does_not_exist_then_result_should_be_False():
+    result = cp.push_dir("/fnord", glob="**/common/*foo.txt", glob_recurse=True)
 
-# Test that:
+    assert result == False
 
-# .foo.bar
-# foo.bar
 
-# are handled as expected
+def test_when_glob_recurse_then_directory_should_be_changed_back_to_original(
+    directory_setup,
+):
+    expected_dir = os.getcwd()
 
-# foo*
-# *.txt
-# foo-*-bar.txt
-# */foo/bar.*
-# */foo/*.bar
+    cp.push_dir(directory_setup, glob="fnord", glob_recurse=True)
+    actual_dir = os.getcwd()
+
+    assert actual_dir == expected_dir
+
+
+def test_when_glob_recurse_is_True_then_double_starred_dotglob_should_match_recursively_glob_style(
+    directory_setup,
+):
+    expected_calls = [
+        call(
+            os.path.realpath(
+                os.path.join(directory_setup, "path{}".format(i), "common", "foo.txt")
+            ),
+            upload_path=None,
+        )
+        for i in range(PATH_COUNT)
+    ]
+    patch_push = patch("salt.modules.cp.push", autospec=True, return_value=True)
+    with patch_push as fake_push:
+        result = cp.push_dir(
+            directory_setup, glob="**/common/*foo.txt", glob_recurse=True
+        )
+
+        fake_push.assert_has_calls(expected_calls)
+
+
+@pytest.mark.parametrize(
+    "pattern,fname",
+    [
+        ("**/common/.*foo.txt", ".foo.txt"),
+        ("**/common/.foo.txt", ".foo.txt"),
+        ("**/common/.foo.*", ".foo.txt"),
+        ("*/common/.foo.*", ".foo.txt"),
+        ("path*/common/.foo.txt", ".foo.txt"),
+    ],
+)
+def test_when_glob_recurse_is_True_then_double_starred_glob_should_match_recursively_glob_style(
+    directory_setup, pattern, fname
+):
+    expected_calls = [
+        call(
+            os.path.realpath(
+                os.path.join(directory_setup, "path{}".format(i), "common", fname)
+            ),
+            upload_path=None,
+        )
+        for i in range(PATH_COUNT)
+    ]
+    patch_push = patch("salt.modules.cp.push", autospec=True, return_value=True)
+    with patch_push as fake_push:
+        result = cp.push_dir(directory_setup, glob=pattern, glob_recurse=True)
+
+        fake_push.assert_has_calls(expected_calls)
+
+
+def test_when_glob_recurse_is_True_then_double_starred_internalglob_should_match_recursively_glob_style(
+    directory_setup,
+):
+    expected_calls = [
+        call(
+            os.path.realpath(
+                os.path.join(
+                    directory_setup, "path{}".format(i), "common", "foo-thing-bar.txt"
+                )
+            ),
+            upload_path=None,
+        )
+        for i in range(PATH_COUNT)
+    ]
+    patch_push = patch("salt.modules.cp.push", autospec=True, return_value=True)
+    with patch_push as fake_push:
+        result = cp.push_dir(directory_setup, glob="**/common/foo-*", glob_recurse=True)
+
+        fake_push.assert_has_calls(expected_calls)
+
+
+def test_when_glob_recurse_is_True_then_double_starred_dot_txt_should_return_all_things(
+    directory_setup,
+):
+    expected_calls = []
+    for i in range(PATH_COUNT):
+        for fname in ("bar.txt", "foo-thing-bar.txt", "foo.txt"):
+            expected_calls.append(
+                call(
+                    os.path.realpath(
+                        os.path.join(
+                            directory_setup, "path{}".format(i), "common", fname
+                        )
+                    ),
+                    upload_path=None,
+                )
+            )
+    patch_push = patch("salt.modules.cp.push", autospec=True, return_value=True)
+    with patch_push as fake_push:
+        result = cp.push_dir(directory_setup, glob="**/common/*.txt", glob_recurse=True)
+
+        fake_push.assert_has_calls(expected_calls)
