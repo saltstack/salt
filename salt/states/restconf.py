@@ -12,27 +12,16 @@ This module relies on the restconf proxy module to interface with the devices.
 """
 
 
+import difflib
 import json
 import logging
 
-# Playing a game of how many dictdiffers I can break
-from salt.utils.data import recursive_diff
-from salt.utils.dictdiffer import DictDiffer, RecursiveDictDiffer
+import yaml
 
 log = logging.getLogger(__file__)
 
-try:
-    HAS_DEEPDIFF = True
-    from deepdiff import DeepDiff
-except ImportError:
-    HAS_DEEPDIFF = False
-
 
 def __virtual__():
-    if not HAS_DEEPDIFF:
-        log.warning(
-            "Your python install does now have deepdiff installed, please run `pip3 install deepdiff`"
-        )
     if "restconf.set_data" in __salt__:
         return True
     return (False, "restconf module could not be loaded")
@@ -145,14 +134,14 @@ def config_manage(
     log.debug(proposed_config)
 
     # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
-    if uri_check[1]["request_restponse"]["dict"] == proposed_config:
+    if uri_check[1]["request_restponse"] == proposed_config:
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
     elif __opts__["test"] is True:
         ret["result"] = None
-        ret["changes"] = _compare_changes(
-            uri_check[1]["request_restponse"]["dict"], proposed_config
+        ret["changes"]["changed"] = _compare_changes(
+            uri_check[1]["request_restponse"], proposed_config
         )
         # ret["changes"]["rest_method"] = request_method
         ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
@@ -166,7 +155,7 @@ def config_manage(
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
-            ret["changes"] = _compare_changes(
+            ret["changes"]["changed"] = _compare_changes(
                 uri_check[1]["request_restponse"], proposed_config
             )
             # ret["changes"]["rest_method"] = request_method
@@ -191,43 +180,19 @@ def config_manage(
     return ret
 
 
-def restconfDiff(old, new):
-    diff_data = {}
-    diff_data["changes_text"] = DeepDiff(old, new).pretty()
-    diff_data["changes_dict"] = str(DeepDiff(old, new))
-    diff_data["diff_method"] = "DeepDiff"
-    return diff_data
-
-
 def _compare_changes(old, new):
-    # if HAS_DEEPDIFF:
-    #     return restconfDiff(old, new)
-
-    # Would you like to play a game of dictdiffer breaking?
-    compare_complete = False
-    changes = {}
-    try:
-        changes = recursive_diff(old, new)
-        compare_complete = True
-        changes["diff_method"] = "recursive_diff"
-    except ValueError:  # pylint: disable=W0703
-        # https://github.com/saltstack/salt/issues/59017#issuecomment-733744465
-        compare_complete = False
-        changes = {}
-
-    if not compare_complete:
-        try:
-            diff = RecursiveDictDiffer(old, new, False)
-            changes["diff_method"] = "RecursiveDictDiffer"
-            changes["new"] = diff.added()
-            changes["removed"] = diff.removed()
-            changes["changed"] = diff.changed()
-        except TypeError:  # https://github.com/saltstack/salt/issues/59017
-            diff = DictDiffer(new, old)
-            diff_method = "DictDiffer"
-            changes["diff_method"] = "DictDiffer"
-            changes["new"] = diff.added()
-            changes["removed"] = diff.removed()
-            changes["changed"] = diff.changed()
-
-    return changes
+    # option to switch to a json output
+    # old = json.dumps(old, sort_keys=False, indent=2).splitlines()
+    # new = json.dumps(new, sort_keys=False, indent=2).splitlines()
+    old = yaml.safe_dump(old, default_flow_style=False).splitlines()
+    new = yaml.safe_dump(new, default_flow_style=False).splitlines()
+    log.debug("_compare_changes:")
+    log.debug("old:")
+    log.debug(old)
+    log.debug("new:")
+    log.debug(new)
+    diffout = difflib.unified_diff(old, new, fromfile="before", tofile="after")
+    diffclean = "\n".join([x.replace("\n", "") for x in diffout])
+    print(diffclean)
+    log.debug(diffclean)
+    return diffclean
