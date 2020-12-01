@@ -1,5 +1,5 @@
 #!/bin/bash
-############################################################################
+################################################################################
 #
 # Title: Build Package Script for macOS
 # Authors: CR Oldham, Shane Lee
@@ -24,19 +24,34 @@
 #
 #         ./build.sh 2017.7.0 3
 #
-############################################################################
+# Environment Setup:
+#
+#     Import Certificates:
+#         Import the Salt Developer Installer Signing certificate using the
+#         following command:
+#
+#         security import "developerID_installer.cer" -k ~/Library/Keychains/login.keychain
+#
+#     Define Environment Variables:
+#         Create an environment variable with the name of the certificate to use
+#         from the keychain for installer signing. Use the following command
+#         (The actual value must match what is provided in the certificate):
+#
+#         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
+#
+################################################################################
 
-############################################################################
+################################################################################
 # Make sure the script is launched with sudo
-############################################################################
+################################################################################
 if [[ $(id -u) -ne 0 ]]
     then
         exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
-############################################################################
+################################################################################
 # Set to Exit on all Errors
-############################################################################
+################################################################################
 trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
@@ -44,9 +59,9 @@ quit_on_error() {
     exit -1
 }
 
-############################################################################
+################################################################################
 # Check passed parameters, set defaults
-############################################################################
+################################################################################
 # Get/Set Version
 if [ "$1" == "" ]; then
     VERSION=`git describe`
@@ -63,17 +78,17 @@ fi
 
 CPUARCH=`uname -m`
 
-############################################################################
+################################################################################
 # Additional Parameters Required for the script to function properly
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Variables\007"
 
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
 
-############################################################################
+################################################################################
 # Make sure this is the Salt Repository
-############################################################################
+################################################################################
 if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
@@ -81,26 +96,26 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     exit -1
 fi
 
-############################################################################
+################################################################################
 # Ensure Paths are present and clean
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Clean Staging Area\007"
 
 # Clean folder in the staging area
 rm -rdf $PKGDIR
 mkdir -p $PKGDIR
 
-############################################################################
+################################################################################
 # Copy Start Scripts from Salt Repo to /opt/salt
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
 
 cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
 cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 
-############################################################################
+################################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Copy Service Definitions\007"
 
 mkdir -p $PKGDIR/opt
@@ -112,9 +127,9 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.master.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchDaemons
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
 
-############################################################################
+################################################################################
 # Remove unnecessary files from the package
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Trim unneeded files\007"
 
 rm -rdf $PKGDIR/opt/salt/bin/pkg-config
@@ -129,18 +144,18 @@ rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
 echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
 
-############################################################################
+################################################################################
 # Copy Config Files from Salt Repo to the Package Directory
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Copy Config Files\007"
 
 mkdir -p $PKGDIR/etc/salt
 cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
 cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 
-############################################################################
+################################################################################
 # Add Version and CPU Arch to distribution.xml
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
 
 TITLE="Salt $VERSION (Python 3)"
@@ -161,19 +176,23 @@ sed -E -i '' "$SEDSTR" distribution.xml
 SEDSTR="s/@CPUARCH@/$CPUARCH/g"
 sed -i '' "$SEDSTR" distribution.xml
 
-############################################################################
+################################################################################
 # Build the Package
-############################################################################
+################################################################################
 echo -n -e "\033]0;Build_Pkg: Build Package\007"
 
+# Build the src package
 pkgbuild --root=$PKGDIR \
          --scripts=pkg-scripts \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
-         --ownership=recommended salt-src-$VERSION-py3-$CPUARCH.pkg
+         --ownership=recommended \
+         salt-src-$VERSION-py3-$CPUARCH.pkg
 
 productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION-py3-$CPUARCH.pkg \
-             --version=$VERSION salt-$VERSION-py3-$CPUARCH.pkg
+             --version=$VERSION \
+             --sign $DEV_INSTALL_CERT \
+             salt-$VERSION-py3-$CPUARCH-signed.pkg
 
