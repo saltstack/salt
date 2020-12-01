@@ -48,6 +48,7 @@ def test_loaders_have_uniq_context(loader_dir):
     loader_1 = salt.loader.LazyLoader([loader_dir], opts,)
     loader_2 = salt.loader.LazyLoader([loader_dir], opts,)
     loader_1._load_all()
+    loader_2._load_all()
     assert loader_1.pack["__context__"] == {}
     assert loader_2.pack["__context__"] == {}
     loader_1["mod_a.set_context"]("foo", "bar")
