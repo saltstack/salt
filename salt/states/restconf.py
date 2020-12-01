@@ -193,6 +193,5 @@ def _compare_changes(old, new):
     log.debug(new)
     diffout = difflib.unified_diff(old, new, fromfile="before", tofile="after")
     diffclean = "\n".join([x.replace("\n", "") for x in diffout])
-    print(diffclean)
     log.debug(diffclean)
     return diffclean

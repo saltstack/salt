@@ -58,7 +58,7 @@ def fake_uri_response_primary_blank():
         {
             "uri_used": "primary",
             "request_uri": "restconf/fakepath",
-            "request_restponse": {"dict": {}},
+            "request_restponse": {},
         },
     ]
     yield fake_uri_response_primary_blank
