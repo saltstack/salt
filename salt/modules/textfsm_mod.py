@@ -10,11 +10,6 @@ data, and can be easily re-used in other modules, or directly
 inside the renderer (Jinja, Mako, Genshi, etc.).
 
 :depends:   - textfsm Python library
-
-.. note::
-
-    For Python 2/3 compatibility, it is more recommended to
-    install the ``jtextfsm`` library: ``pip install jtextfsm``.
 """
 
 import logging
@@ -33,7 +28,7 @@ except ImportError:
     HAS_TEXTFSM = False
 
 try:
-    import clitable
+    from textfsm import clitable
 
     HAS_CLITABLE = True
 except ImportError:
