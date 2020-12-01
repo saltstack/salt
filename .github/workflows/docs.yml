@@ -51,13 +51,19 @@ jobs:
       env:
         PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
       run:
-        nox --install-only --forcecolor -e 'docs-html(compress=True, clean=True)'
+        nox --install-only --forcecolor -e 'docs-html(compress=False, clean=True)'
 
     - name: Build Docs
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
-        nox --forcecolor -e 'docs-html(compress=True, clean=True)'
+        nox --forcecolor -e 'docs-html(compress=False, clean=True)'
+
+    - name: Store Generated Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: salt-html-docs
+        path: doc/_build/html
 
   Manpages:
     name: Build Salt man Pages
@@ -112,11 +118,18 @@ jobs:
       env:
         PIP_EXTRA_INDEX_URL: https://artifactory.saltstack.net/artifactory/api/pypi/pypi-open/simple/
       run:
-        nox --install-only --forcecolor -e 'docs-man(compress=True, update=False, clean=True)'
+        nox --install-only --forcecolor -e 'docs-man(compress=False, update=False, clean=True)'
 
     - name: Build Manpages
       if: github.event_name == 'push' || steps.changed-files.outputs.docs == 'true'
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
-        nox --forcecolor -e 'docs-man(compress=True, update=False, clean=True)'
+        nox --forcecolor -e 'docs-man(compress=False, update=False, clean=True)'
+
+    - name: Store Generated Documentation
+      if: github.event_name == 'push' || steps.changed-files.outputs.docs == 'true'
+      uses: actions/upload-artifact@v2
+      with:
+        name: salt-man-pages
+        path: doc/_build/man
