@@ -16,7 +16,7 @@ from tests.support.helpers import dedent
 def loader_dir(tmp_path):
     """
     Create a simple directory with a couple modules to load and run tests
-    againt.
+    against.
     """
     mod_content = dedent(
         """
