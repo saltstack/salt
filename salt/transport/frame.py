@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Helper functions for transport components to handle message framing
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import salt.utils.msgpack
-from salt.ext import six
 
 
 def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argument
@@ -35,10 +32,7 @@ def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-
 
     framed_msg["head"] = header
     framed_msg["body"] = body
-    if six.PY2:
-        return salt.utils.msgpack.dumps(framed_msg)
-    else:
-        return salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
+    return salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
 
 
 def _decode_embedded_list(src):
@@ -67,7 +61,7 @@ def _decode_embedded_dict(src):
     Dict helper.
     """
     output = {}
-    for key, val in six.iteritems(src):
+    for key, val in src.items():
         if isinstance(val, dict):
             val = _decode_embedded_dict(val)
         elif isinstance(val, list):
@@ -97,9 +91,6 @@ def decode_embedded_strs(src):
     backwards compatibility due to a change in wire protocol, so this less
     than ideal solution is used instead.
     """
-    if not six.PY3:
-        return src
-
     if isinstance(src, dict):
         return _decode_embedded_dict(src)
     elif isinstance(src, list):
