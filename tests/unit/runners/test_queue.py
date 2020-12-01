@@ -50,9 +50,9 @@ class QueueTest(TestCase, LoaderModuleMockMixin):
             with patch.object(queue_mod, "pop", queue_pop):
                 queue_mod.process_runner(queue="salt")
             queue_pop.assert_called_once_with(
-                is_runner=True, queue="salt", quantity=1, backend="pgjsonb"
+                is_runner=True, queue="salt", quantity=1, backend="pgjsonb", mode=None
             )
             test_stdout_print.assert_called_once_with()
             queue_pop.assert_called_once_with(
-                is_runner=True, queue="salt", quantity=1, backend="pgjsonb"
+                is_runner=True, queue="salt", quantity=1, backend="pgjsonb", mode=None
             )
