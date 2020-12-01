@@ -7,6 +7,15 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3001.4 (2020-12-01)
+========================
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
+
 Salt 3001.3 (2020-09-16)
 ========================
 
@@ -445,8 +454,34 @@ Added
 - Added `efi` parameter to virt module, so `uefi` firmware can be auto selected. (#57397)
 - [#56637](https://github.com/saltstack/salt/pull/56637) - Add ``win_wua.installed`` to the ``win_wua`` execution module
 
+Salt 3000.6
+===========
 
-## 3000.1
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
+
+Salt 3000.5
+===========
+
+Fixed
+-----
+
+- Properly validate eauth credentials and tokens along with their ACLs.
+  Prior to this change eauth was not properly validated when calling
+  Salt ssh via the salt-api. Any value for 'eauth' or 'token' would allow a user
+  to bypass authentication and make calls to Salt ssh. (CVE-2020-25592)
+
+Salt 3000.4
+===========
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)
+
 ### 3000.3
 
 ### Fixed

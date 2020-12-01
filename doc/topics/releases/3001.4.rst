@@ -1,0 +1,12 @@
+.. _release-3001-4:
+
+=========================
+Salt 3001.4 Release Notes
+=========================
+
+Version 3001.4 is a bugfix release for :ref:`3001 <release-3001>`.
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)

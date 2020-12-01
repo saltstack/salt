@@ -1,0 +1,12 @@
+.. _release-3000-6:
+
+=========================
+Salt 3000.6 Release Notes
+=========================
+
+Version 3000.6 is a bugfix release for :ref:`3000 <release-3000>`.
+
+Fixed
+-----
+
+- Fixes salt-ssh authentication when using tty (#58922)
