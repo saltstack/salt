@@ -1,8 +1,6 @@
 """
 Zeromq transport classes
 """
-
-
 import copy
 import errno
 import hashlib
@@ -38,7 +36,6 @@ import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
 from salt.exceptions import SaltException, SaltReqTimeoutError
-from salt.ext import six
 from salt.utils.zeromq import (
     LIBZMQ_VERSION_INFO,
     ZMQ_VERSION_INFO,
@@ -404,7 +401,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data, raw)
-            if six.PY3 and not raw:
+            if not raw:
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
 
