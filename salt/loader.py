@@ -305,7 +305,6 @@ def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
     """
-
     return LazyLoader(
         _module_dirs(opts, "metaproxy"),
         opts,
@@ -567,7 +566,7 @@ def states(
     if context is None:
         context = {}
 
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
         tag="states",
@@ -582,7 +581,6 @@ def states(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",
     )
-    return ret
 
 
 def beacons(opts, functions, context=None, proxy=None):
@@ -657,7 +655,12 @@ def render(opts, functions, states=None, proxy=None, context=None):
 
     if states:
         pack["__states__"] = states
-    pack["__proxy__"] = proxy or {}
+
+    if proxy is None:
+        pack["__proxy__"] = {}
+    else:
+        pack["proxy"] = proxy
+
     ret = LazyLoader(
         _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
         opts,
@@ -1080,7 +1083,7 @@ def executors(opts, functions=None, context=None, proxy=None):
     """
     Returns the executor modules
     """
-    executors = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
@@ -1091,7 +1094,6 @@ def executors(opts, functions=None, context=None, proxy=None):
         },
         pack_self="__executors__",
     )
-    return executors
 
 
 def cache(opts, serial):
