@@ -887,7 +887,7 @@ def push_dir(path, glob=None, upload_path=None):
         salt '*' cp.push /usr/lib/mysql upload_path='/newmysql/path'
         salt '*' cp.push_dir /etc/modprobe.d/ glob='*.conf'
     """
-    if "../" in path or not os.path.isabs(path):
+    if "../" in path or path.endswith("/..") or not os.path.isabs(path):
         return False
     tmpupload_path = upload_path
     path = os.path.realpath(path)
@@ -898,7 +898,9 @@ def push_dir(path, glob=None, upload_path=None):
         for root, _, files in salt.utils.path.os_walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
-            filelist = [fi for fi in filelist if fnmatch.fnmatch(fi, glob)]
+            filelist = [
+                fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)
+            ]
         if not filelist:
             return False
         for tmpfile in filelist:
