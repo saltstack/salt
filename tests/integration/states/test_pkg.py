@@ -525,7 +525,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
             pkgs = {
-                p for p in self.run_function("pkg.list_pkgs") if "-versionlock" in p
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
             }
             if not pkgs:
                 self.skipTest("No versionlock package found in repositories")
@@ -622,6 +624,63 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
+
+    @requires_salt_modules("pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs")
+    @requires_salt_states("pkg.installed", "pkg.removed")
+    @requires_system_grains
+    @slowTest
+    def test_pkg_017_installed_held_equals_false(self, grains=None):
+        """
+        Tests that a package installed with held set to False
+        """
+        versionlock_pkg = None
+        if grains["os_family"] == "RedHat":
+            pkgs = {
+                p
+                for p in self.run_function("pkg.list_repo_pkgs")
+                if "yum-plugin-versionlock" in p
+            }
+            if not pkgs:
+                self.skipTest("No versionlock package found in repositories")
+            for versionlock_pkg in pkgs:
+                ret = self.run_state(
+                    "pkg.installed", name=versionlock_pkg, refresh=False
+                )
+                # Exit loop if a versionlock package installed correctly
+                try:
+                    self.assertSaltTrueReturn(ret)
+                    log.debug(
+                        "Installed versionlock package: {}".format(versionlock_pkg)
+                    )
+                    break
+                except AssertionError as e:
+                    log.debug("Versionlock package not found:\n{}".format(e))
+            else:
+                self.fail("Could not install versionlock package from {}".format(pkgs))
+
+        target = self._PKG_TARGETS[0]
+
+        # First we ensure that the package is installed
+        ret = self.run_state("pkg.installed", name=target, hold=False, refresh=False,)
+        self.assertSaltTrueReturn(ret)
+
+        if versionlock_pkg and "-versionlock is not installed" in str(ret):
+            self.skipTest("{}  `{}` is installed".format(ret, versionlock_pkg))
+
+        try:
+            tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
+            self.assertSaltTrueReturn(ret)
+            self.assertIn(tag, ret)
+            self.assertIn("changes", ret[tag])
+            self.assertIn(target, ret[tag]["changes"])
+            self.assertIn("held", ret[tag]["comment"])
+        finally:
+            # Clean up, unhold package and remove
+            ret = self.run_state("pkg.removed", name=target)
+            self.assertSaltTrueReturn(ret)
+            if versionlock_pkg:
+                ret = self.run_state("pkg.removed", name=versionlock_pkg)
+                self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules("pkg.version")
     @requires_salt_states("pkg.installed", "pkg.removed")
