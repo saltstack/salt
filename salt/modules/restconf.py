@@ -7,6 +7,7 @@ Execution module for Restconf Proxy minions
 
 """
 
+
 import logging
 
 __proxyenabled__ = ["restconf"]
