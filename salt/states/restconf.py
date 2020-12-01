@@ -180,12 +180,20 @@ def config_manage(
     return ret
 
 
-def _compare_changes(old, new):
+def _compare_changes(old, new, output_style="yaml"):
     # option to switch to a json output
-    # old = json.dumps(old, sort_keys=False, indent=2).splitlines()
-    # new = json.dumps(new, sort_keys=False, indent=2).splitlines()
-    old = yaml.safe_dump(old, default_flow_style=False).splitlines()
-    new = yaml.safe_dump(new, default_flow_style=False).splitlines()
+
+    old_raw = yaml.safe_dump(old, default_flow_style=False).splitlines()
+    old = [
+        " " + x for x in old_raw
+    ]  # adding a space to start of each line to make it readable
+    new_raw = yaml.safe_dump(new, default_flow_style=False).splitlines()
+    new = [
+        " " + x for x in new_raw
+    ]  # adding a space to start of each line to make it readable
+    if output_style == "json":
+        old = json.dumps(old, sort_keys=False, indent=2).splitlines()
+        new = json.dumps(new, sort_keys=False, indent=2).splitlines()
     log.debug("_compare_changes:")
     log.debug("old:")
     log.debug(old)
