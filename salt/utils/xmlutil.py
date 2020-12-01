@@ -163,6 +163,7 @@ def clean_node(parent_map, node, ignored=None):
         len(node.attrib.keys() - (ignored or [])) == 0
         and not list(node)
         and not has_text
+        and parent
     ):
         parent.remove(node)
     # Clean parent nodes if needed
@@ -280,8 +281,17 @@ def change_xml(doc, data, mapping):
                 continue
 
             if new_value is not None:
+                # We need to increment ids from arrays since xpath starts at 1
+                converters = {
+                    p: (lambda n: n + 1)
+                    if "[${}]".format(p) in xpath
+                    else (lambda n: n)
+                    for p in placeholders
+                }
                 ctx = {
-                    placeholder: value_item.get(placeholder, "")
+                    placeholder: converters[placeholder](
+                        value_item.get(placeholder, "")
+                    )
                     for placeholder in placeholders
                 }
                 node_xpath = string.Template(xpath).substitute(ctx)

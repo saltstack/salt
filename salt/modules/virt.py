@@ -923,11 +923,11 @@ def _handle_unit(s, def_unit="m"):
     return int(value)
 
 
-def nesthash():
+def nesthash(value=None):
     """
     create default dict that allows arbitrary level of nesting
     """
-    return collections.defaultdict(nesthash)
+    return collections.defaultdict(nesthash, value or {})
 
 
 def _gen_xml(
@@ -943,6 +943,7 @@ def _gen_xml(
     graphics=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
     **kwargs
 ):
     """
@@ -951,23 +952,27 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
-        "cpu": str(cpu),
     }
+
+    context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
+    context["yesno"] = lambda v: "yes" if v else "no"
 
     context["mem"] = nesthash()
     if isinstance(mem, int):
-        mem = int(mem) * 1024  # MB
-        context["mem"]["boot"] = str(mem)
-        context["mem"]["current"] = str(mem)
+        context["mem"]["boot"] = mem
+        context["mem"]["current"] = mem
     elif isinstance(mem, dict):
-        for tag, val in mem.items():
-            if val:
-                if tag == "slots":
-                    context["mem"]["slots"] = "{}='{}'".format(tag, val)
-                else:
-                    context["mem"][tag] = str(int(_handle_unit(val) / 1024))
+        context["mem"] = nesthash(mem)
+
+    context["cpu"] = nesthash()
+    context["cputune"] = nesthash()
+    if isinstance(cpu, int):
+        context["cpu"]["maximum"] = str(cpu)
+    elif isinstance(cpu, dict):
+        context["cpu"] = nesthash(cpu)
 
     if hypervisor in ["qemu", "kvm"]:
+        context["numatune"] = numatune if numatune else {}
         context["controller_model"] = False
     elif hypervisor == "vmware":
         # TODO: make bus and model parameterized, this works for 64-bit Linux
@@ -1079,7 +1084,6 @@ def _gen_xml(
 
     context["os_type"] = os_type
     context["arch"] = arch
-
     fn_ = "libvirt_domain.jinja"
     try:
         template = JINJA.get_template(fn_)
@@ -1886,19 +1890,133 @@ def init(
     arch=None,
     boot=None,
     boot_dev=None,
+    numatune=None,
     **kwargs
 ):
     """
     Initialize a new vm
 
     :param name: name of the virtual machine to create
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        .. code-block:: yaml
+
+             cpu:
+               placement: static
+               cpuset: 0-11
+               current: 5
+               maximum: 12
+               vcpus:
+                 0:
+                   enabled: True
+                   hotpluggable: False
+                   order: 1
+                 1:
+                   enabled: False
+                   hotpluggable: True
+               match: minimum
+               mode: custom
+               check: full
+               vendor: Intel
+               model:
+                 name: core2duo
+                 fallback: allow
+                 vendor_id: GenuineIntel
+               topology:
+                 sockets: 1
+                 cores: 12
+                 threads: 1
+               cache:
+                 level: 3
+                 mode: emulate
+               features:
+                 lahf: optional
+                 pcid: require
+               numa:
+                 0:
+                    cpus: 0-3
+                    memory: 1g
+                    discard: True
+                    distances:
+                      0: 10     # sibling id : value
+                      1: 21
+                      2: 31
+                      3: 41
+                 1:
+                    cpus: 4-6
+                    memory: 1g
+                    memAccess: shared
+                    distances:
+                      0: 21
+                      1: 10
+                      2: 21
+                      3: 31
+               tuning:
+                    vcpupin:
+                      0: 1-4,^2  # vcpuid : cpuset
+                      1: 0,1
+                      2: 2,3
+                      3: 0,4
+                    emulatorpin: 1-3
+                    iothreadpin:
+                      1: 5,6    # iothread id: cpuset
+                      2: 7,8
+                    shares: 2048
+                    period: 1000000
+                    quota: -1
+                    global_period: 1000000
+                    global_quota: -1
+                    emulator_period: 1000000
+                    emulator_quota: -1
+                    iothread_period: 1000000
+                    iothread_quota: -1
+                    vcpusched:
+                      - scheduler: fifo
+                        priority: 1
+                        vcpus: 0,3-5
+                      - scheduler: rr
+                        priority: 3
+                    iothreadsched:
+                      - scheduler: idle
+                      - scheduler: batch
+                        iothreads: 2,3
+                    emulatorsched:
+                      - scheduler: batch
+                    cachetune:
+                      0-3:      # vcpus set
+                        0:      # cache id
+                          level: 3
+                          type: both
+                          size: 4
+                        1:
+                          level: 3
+                          type: both
+                          size: 6
+                        monitor:
+                          1: 3
+                          0-3: 3
+                      4-5:
+                        monitor:
+                          4: 3  # vcpus: level
+                          5: 3
+                    memorytune:
+                      0-3:      # vcpus set
+                        0: 60   # node id: bandwidth
+                      4-5:
+                        0: 60
+               iothreads: 4
+
+        .. versionadded:: Aluminium
+
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         .. code-block:: python
 
@@ -1907,10 +2025,17 @@ def init(
                 'current': 1g,
                 'max': 1g,
                 'slots': 10,
-                'hard_limit': '1024'
-                'soft_limit': '512m'
-                'swap_hard_limit': '1g'
-                'min_guarantee': '512mib'
+                'hard_limit': '1024',
+                'soft_limit': '512m',
+                'swap_hard_limit': '1g',
+                'min_guarantee': '512mib',
+                'hugepages': [{'nodeset': '0-3,^2', 'size': '1g'}, {'nodeset': '2', 'size': '2m'}],
+                'nosharepages': True,
+                'locked': True,
+                'source': 'file',
+                'access': 'shared',
+                'allocation': 'immediate',
+                'discard': True
             }
 
         .. versionchanged:: 3002
@@ -1997,6 +2122,157 @@ def init(
 
         By default, the value will ``"hd"``.
 
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: python
+
+            {
+                'memory': {'mode': 'strict', 'nodeset': '0-11'},
+                'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
+            }
+
+    .. _init-cpu-def:
+
+    .. rubric:: cpu parameters definition
+
+    The cpu parameters dictionary can contain the following properties:
+
+    cpuset
+        a comma-separated list of physical CPU numbers that domain process and virtual CPUs can be pinned to by default.
+        eg. ``1-4,^3`` cpuset 3 is excluded.
+
+    current
+        the number of virtual cpus available at startup
+
+    placement
+        indicate the CPU placement mode for domain process. the value can be either ``static`` or ``auto``
+
+    vcpus
+        specify the state of individual vcpu. Possible attribute for each individual vcpu include: ``id``, ``enabled``,
+        ``hotpluggable`` and ``order``. Valid ``ids`` are from 0 to the maximum vCPU count minus 1. ``enabled`` takes
+        boolean values which controls the state of the vcpu. ``hotpluggable`` take boolean value which controls whether
+        given vCPU can be hotplugged and hotunplugged. ``order`` takes an integer value which specifies the order to add
+        the online vCPUs.
+
+    match
+        The cpu attribute ``match`` attribute specifies how strictly the virtual CPU provided to the guest matches the CPU
+        requirements, possible values are ``minimum``, ``exact`` or ``strict``.
+
+    check
+        Optional cpu attribute ``check`` attribute can be used to request a specific way of checking whether the virtual
+        CPU matches the specification, possible values are ``none``, ``partial`` and ``full``.
+
+    mode
+        Optional cpu attribute ``mode`` attribute may be used to make it easier to configure a guest CPU to be as close
+        to host CPU as possible, possible values are ``custom``, ``host-model`` and ``host-passthrough``.
+
+    model
+        specifies CPU model requested by the guest. An optional ``fallback`` attribute can be used to forbid libvirt falls
+        back to the closest model supported by the hypervisor, possible values are ``allow`` or ``forbid``. ``vendor_id``
+        attribute can be used to set the vendor id seen by the guest, the length must be exactly 12 characters long.
+
+    vendor
+        specifies CPU vendor requested by the guest.
+
+    topology
+        specifies requested topology of virtual CPU provided to the guest. Four possible attributes , ``sockets``, ``dies``,
+        ``cores``, and ``threads``, accept non-zero positive integer values. They refer to the number of CPU sockets per
+        NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
+
+    features
+        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
+        ``optional``, ``disable`` or ``forbid``.
+
+    cache
+        describes the virtual CPU cache. Optional attribute ``level`` takes an integer value which describes cache level
+        ``mode`` attribute supported three possible values: ``emulate``, ``passthrough``, ``disable``
+
+    numa
+        specify the guest numa topology. ``cell`` element specifies a NUMA cell or a NUMA node, ``cpus`` specifies the
+        CPU or range of CPUs that are part of the node, ``memory`` specifies the size of the node memory. All cells
+        should have ``id`` attribute in case referring to some cell is necessary in the code. optional attribute
+        ``memAccess`` control whether the memory is to be mapped as ``shared`` or ``private``, ``discard`` attribute which
+        fine tunes the discard feature for given numa node, possible values are ``True`` or ``False``.  ``distances``
+        element define the distance between NUMA cells and ``sibling`` sub-element is used to specify the distance value
+        between sibling NUMA cells.
+
+    vcpupin
+        The optional vcpupin element specifies which of host's physical CPUs the domain vCPU will be pinned to.
+
+    emulatorpin
+        The optional emulatorpin element specifies which of host physical CPUs the "emulator", a subset of a domain not
+        including vCPU or iothreads will be pinned to.
+
+    iothreadpin
+        The optional iothreadpin element specifies which of host physical CPUs the IOThreads will be pinned to.
+
+    shares
+        The optional shares element specifies the proportional weighted share for the domain.
+
+    period
+        The optional period element specifies the enforcement interval (unit: microseconds).
+
+    quota
+        The optional quota element specifies the maximum allowed bandwidth (unit: microseconds).
+
+    global_period
+        The optional global_period element specifies the enforcement CFS scheduler interval (unit: microseconds) for the
+        whole domain in contrast with period which enforces the interval per vCPU.
+
+    global_quota
+        The optional global_quota element specifies the maximum allowed bandwidth (unit: microseconds) within a period
+        for the whole domain.
+
+    emulator_period
+        The optional emulator_period element specifies the enforcement interval (unit: microseconds).
+
+    emulator_quota
+        The optional emulator_quota element specifies the maximum allowed bandwidth (unit: microseconds) for domain's
+        emulator threads (those excluding vCPUs).
+
+    iothread_period
+        The optional iothread_period element specifies the enforcement interval (unit: microseconds) for IOThreads.
+
+    iothread_quota
+        The optional iothread_quota element specifies the maximum allowed bandwidth (unit: microseconds) for IOThreads.
+
+    vcpusched
+        specify the scheduler type for vCPUs.
+        The value is a list of dictionaries with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer and the
+        ``vcpus`` value is a cpu set like ``1-4,^3,6`` or simply the vcpu id.
+
+    iothreadsched
+        specify the scheduler type for IO threads.
+        The value is a list of dictionaries with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer and the
+        ``vcpus`` value is a cpu set like ``1-4,^3,6`` or simply the vcpu id.
+
+    emulatorsched
+        specify the scheduler type (values batch, idle, fifo, rr) for particular the emulator.
+        The value is a dictionary with the ``scheduler`` key (values ``batch``, ``idle``, ``fifo``, ``rr``)
+        and the optional ``priority`` and ``vcpus`` keys. The ``priority`` value usually is a positive integer.
+
+    cachetune
+        Optional cachetune element can control allocations for CPU caches using the resctrl on the host.
+
+    monitor
+        The optional element monitor creates the cache monitor(s) for current cache allocation.
+
+    memorytune
+        Optional memorytune element can control allocations for memory bandwidth using the resctrl on the host.
+
+    iothreads
+        Number of threads for supported disk devices to perform I/O requests. iothread id will be numbered from 1 to
+        the provided number (Default: None).
+
     .. _init-boot-def:
 
     .. rubric:: Boot parameters definition
@@ -2056,6 +2332,33 @@ def init(
 
     min_guarantee
         the guaranteed minimum memory allocation for the guest
+
+    hugepages
+        memory allocated using ``hugepages`` instead of the normal native page size. It takes a list of
+        dictionaries with ``nodeset`` and ``size`` keys.
+        For example ``"hugepages": [{"nodeset": "1-4,^3", "size": "2m"}, {"nodeset": "3", "size": "1g"}]``.
+
+    nosharepages
+        boolean value to instruct hypervisor to disable shared pages (memory merge, KSM) for this domain
+
+    locked
+        boolean value that allows memory pages belonging to the domain will be locked in host's memory and the host will
+        not be allowed to swap them out, which might be required for some workloads such as real-time.
+
+    source
+        possible values are ``file`` which utilizes file memorybacking, ``anonymous`` by default and ``memfd`` backing.
+        (QEMU/KVM only)
+
+    access
+        specify if the memory is to be ``shared`` or ``private``. This can be overridden per numa node by memAccess.
+
+    allocation
+        specify when to allocate the memory by supplying either ``immediate`` or ``ondemand``.
+
+    discard
+        boolean value to ensure the memory content is discarded just before guest shuts down (or when DIMM module is
+        unplugged). Please note that this is just an optimization and is not guaranteed to work in all cases
+        (e.g. when hypervisor crashes). (QEMU/KVM only)
 
     .. _init-nic-def:
 
@@ -2351,6 +2654,7 @@ def init(
             graphics,
             boot,
             boot_dev,
+            numatune,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2578,6 +2882,7 @@ def update(
     graphics=None,
     live=True,
     boot=None,
+    numatune=None,
     test=False,
     boot_dev=None,
     **kwargs
@@ -2586,13 +2891,20 @@ def update(
     Update the definition of an existing domain.
 
     :param name: Name of the domain to update
-    :param cpu: Number of virtual CPUs to assign to the virtual machine
+    :param cpu:
+        Number of virtual CPUs to assign to the virtual machine or a dictionary with detailed information to configure
+        cpu model and topology, numa node tuning, cpu tuning and iothreads allocation. The structure of the dictionary is
+        documented in :ref:`init-cpu-def`.
+
+        To update any cpu parameters specify the new values to the corresponding tag. To remove any element or attribute,
+        specify ``None`` object. Please note that ``None`` object is mapped to ``null`` in yaml, use ``null`` in sls file
+        instead.
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
-        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit`` and ``min_guarantee``. The
-        structure of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported.
-        Detail unit specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be
-        an integer.
+        ``current``, ``max``, ``slots``, ``hard_limit``, ``soft_limit``, ``swap_hard_limit``, ``min_guarantee``,
+        ``hugepages`` ,  ``nosharepages``, ``locked``, ``source``, ``access``, ``allocation`` and ``discard``. The structure
+        of the dictionary is documented in  :ref:`init-mem-def`. Both decimal and binary base are supported. Detail unit
+        specification is documented  in :ref:`virt-units`. Please note that the value for ``slots`` must be an integer.
 
         To remove any parameters, pass a None object, for instance: 'soft_limit': ``None``. Please note  that ``None``
         is mapped to ``null`` in sls file, pass ``null`` in sls file instead.
@@ -2661,6 +2973,18 @@ def update(
 
         .. versionadded:: 3002
 
+    :param numatune:
+        The optional numatune element provides details of how to tune the performance of a NUMA host via controlling NUMA
+        policy for domain process. The optional ``memory`` element specifies how to allocate memory for the domain process
+        on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
+        used in the dictionary can be found at :ref:`init-cpu-def`.
+
+        To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
+        for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
+        sls file instead.
+
+        .. versionadded:: Aluminium
+
     :param test: run in dry-run mode if set to True
 
         .. versionadded:: 3001
@@ -2710,12 +3034,11 @@ def update(
         boot = _handle_remote_boot_params(boot)
         if boot.get("efi", None) is not None:
             need_update = _handle_efi_param(boot, desc)
-
     new_desc = ElementTree.fromstring(
         _gen_xml(
             conn,
             name,
-            cpu or 0,
+            cpu,
             mem or 0,
             all_disks,
             _get_merged_nics(hypervisor, nic_profile, interfaces),
@@ -2728,12 +3051,8 @@ def update(
         )
     )
 
-    # Update the cpu
-    cpu_node = desc.find("vcpu")
-    if cpu and int(cpu_node.text) != cpu:
-        cpu_node.text = str(cpu)
-        cpu_node.set("current", str(cpu))
-        need_update = True
+    def _set_node_text(node, value):
+        node.text = str(value)
 
     def _set_loader(node, value):
         salt.utils.xmlutil.set_node_text(node, value)
@@ -2748,12 +3067,24 @@ def update(
         node.text = str(value)
         node.set("unit", "bytes")
 
+    def _set_mem_with_byte_unit(node, value):
+        node.set("memory", str(value))
+        node.set("unit", "bytes")
+
+    def _set_size_with_byte_unit(node, value):
+        node.set("size", str(value))
+        node.set("unit", "bytes")
+
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
         # _handle_unit treats bytes as invalid unit for the purpose of consistency
         unit = unit if unit != "bytes" else "b"
-        value = node.get("memory") or node.text
+        value = node.get("memory") or node.get("size") or node.text
         return _handle_unit("{}{}".format(value, unit)) if value else None
+
+    def _set_vcpu(node, value):
+        _set_node_text(node, value)
+        node.set("current", str(value))
 
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
 
@@ -2842,11 +3173,375 @@ def update(
             "set": lambda n, v: n.set("dev", v),
             "del": salt.utils.xmlutil.del_attribute("dev"),
         },
+        {
+            "path": "mem:hugepages:{id}:size",
+            "convert": _handle_unit,
+            "xpath": "memoryBacking/hugepages/page[$id]",
+            "get": _get_with_unit,
+            "set": _set_size_with_byte_unit,
+            "del": salt.utils.xmlutil.del_attribute("size", ["unit", "nodeset"]),
+        },
+        {
+            "path": "mem:hugepages:{id}:nodeset",
+            "xpath": "memoryBacking/hugepages/page[$id]",
+            "get": lambda n: n.get("nodeset"),
+            "set": lambda n, v: n.set("nodeset", v),
+            "del": salt.utils.xmlutil.del_attribute("nodeset"),
+        },
+        {"path": "mem:nosharepages", "xpath": "memoryBacking/nosharepages"},
+        {"path": "mem:locked", "xpath": "memoryBacking/locked"},
+        {
+            "path": "mem:source",
+            "xpath": "memoryBacking/source",
+            "get": lambda n: str(n.get("type")) if n.get("type") else None,
+            "set": lambda n, v: n.set("type", str(v)),
+        },
+        {
+            "path": "mem:access",
+            "xpath": "memoryBacking/access",
+            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
+            "set": lambda n, v: n.set("mode", str(v)),
+        },
+        {
+            "path": "mem:allocation",
+            "xpath": "memoryBacking/allocation",
+            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
+            "set": lambda n, v: n.set("mode", str(v)),
+        },
+        {"path": "mem:discard", "xpath": "memoryBacking/discard"},
+        {
+            "path": "cpu",
+            "xpath": "vcpu",
+            "get": lambda n: int(n.text),
+            "set": _set_vcpu,
+        },
+        {"path": "cpu:maximum", "xpath": "vcpu", "get": lambda n: int(n.text)},
+        {
+            "path": "cpu:placement",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("placement"),
+            "set": lambda n, v: n.set("placement", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("placement"),
+        },
+        {
+            "path": "cpu:cpuset",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("cpuset"),
+            "set": lambda n, v: n.set("cpuset", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpuset"),
+        },
+        {
+            "path": "cpu:current",
+            "xpath": "vcpu",
+            "get": lambda n: n.get("current"),
+            "set": lambda n, v: n.set("current", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("current"),
+        },
+        {
+            "path": "cpu:match",
+            "xpath": "cpu",
+            "get": lambda n: n.get("match"),
+            "set": lambda n, v: n.set("match", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("match"),
+        },
+        {
+            "path": "cpu:mode",
+            "xpath": "cpu",
+            "get": lambda n: n.get("mode"),
+            "set": lambda n, v: n.set("mode", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("mode"),
+        },
+        {
+            "path": "cpu:check",
+            "xpath": "cpu",
+            "get": lambda n: n.get("check"),
+            "set": lambda n, v: n.set("check", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("check"),
+        },
+        {"path": "cpu:model:name", "xpath": "cpu/model"},
+        {
+            "path": "cpu:model:fallback",
+            "xpath": "cpu/model",
+            "get": lambda n: n.get("fallback"),
+            "set": lambda n, v: n.set("fallback", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("fallback"),
+        },
+        {
+            "path": "cpu:model:vendor_id",
+            "xpath": "cpu/model",
+            "get": lambda n: n.get("vendor_id"),
+            "set": lambda n, v: n.set("vendor_id", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("vendor_id"),
+        },
+        {
+            "path": "cpu:vendor",
+            "xpath": "cpu/vendor",
+            "del": salt.utils.xmlutil.del_text,
+        },
+        {
+            "path": "cpu:topology:sockets",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("sockets"),
+            "set": lambda n, v: n.set("sockets", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("sockets"),
+        },
+        {
+            "path": "cpu:topology:cores",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("cores"),
+            "set": lambda n, v: n.set("cores", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cores"),
+        },
+        {
+            "path": "cpu:topology:threads",
+            "xpath": "cpu/topology",
+            "get": lambda n: n.get("threads"),
+            "set": lambda n, v: n.set("threads", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("threads"),
+        },
+        {
+            "path": "cpu:cache:level",
+            "xpath": "cpu/cache",
+            "get": lambda n: n.get("level"),
+            "set": lambda n, v: n.set("level", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("level"),
+        },
+        {
+            "path": "cpu:cache:mode",
+            "xpath": "cpu/cache",
+            "get": lambda n: n.get("mode"),
+            "set": lambda n, v: n.set("mode", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("mode"),
+        },
+        {
+            "path": "cpu:features:{id}",
+            "xpath": "cpu/feature[@name='$id']",
+            "get": lambda n: n.get("policy"),
+            "set": lambda n, v: n.set("policy", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("policy", ["name"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:enabled",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "convert": lambda v: "yes" if v else "no",
+            "get": lambda n: n.get("enabled"),
+            "set": lambda n, v: n.set("enabled", v),
+            "del": salt.utils.xmlutil.del_attribute("enabled", ["id"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:hotpluggable",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "convert": lambda v: "yes" if v else "no",
+            "get": lambda n: n.get("hotpluggable"),
+            "set": lambda n, v: n.set("hotpluggable", v),
+            "del": salt.utils.xmlutil.del_attribute("hotpluggable", ["id"]),
+        },
+        {
+            "path": "cpu:vcpus:{id}:order",
+            "xpath": "vcpus/vcpu[@id='$id']",
+            "get": lambda n: int(n.get("order")) if n.get("order") else None,
+            "set": lambda n, v: n.set("order", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("order", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:cpus",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("cpus")) if n.get("cpus") else None,
+            "set": lambda n, v: n.set("cpus", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpus", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:memory",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_mem_with_byte_unit,
+            "del": salt.utils.xmlutil.del_attribute("memory", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:discard",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("discard")) if n.get("discard") else None,
+            "convert": lambda v: "yes" if v else "no",
+            "set": lambda n, v: n.set("discard", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("discard", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:memAccess",
+            "xpath": "cpu/numa/cell[@id='$id']",
+            "get": lambda n: str(n.get("memAccess")) if n.get("memAccess") else None,
+            "set": lambda n, v: n.set("memAccess", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("memAccess", ["id"]),
+        },
+        {
+            "path": "cpu:numa:{id}:distances:{sid}",
+            "xpath": "cpu/numa/cell[@id='$id']/distances/sibling[@id='$sid']",
+            "get": lambda n: str(n.get("value")) if n.get("value") else None,
+            "set": lambda n, v: n.set("value", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("value", ["id"]),
+        },
+        {"path": "cpu:iothreads", "xpath": "iothreads"},
+        {"path": "cpu:tuning:shares", "xpath": "cputune/shares"},
+        {"path": "cpu:tuning:period", "xpath": "cputune/period"},
+        {"path": "cpu:tuning:quota", "xpath": "cputune/quota"},
+        {"path": "cpu:tuning:global_period", "xpath": "cputune/global_period"},
+        {"path": "cpu:tuning:global_quota", "xpath": "cputune/global_quota"},
+        {"path": "cpu:tuning:emulator_period", "xpath": "cputune/emulator_period"},
+        {"path": "cpu:tuning:emulator_quota", "xpath": "cputune/emulator_quota"},
+        {"path": "cpu:tuning:iothread_period", "xpath": "cputune/iothread_period"},
+        {"path": "cpu:tuning:iothread_quota", "xpath": "cputune/iothread_quota"},
+        {
+            "path": "cpu:tuning:vcpupin:{id}",
+            "xpath": "cputune/vcpupin[@vcpu='$id']",
+            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
+            "set": lambda n, v: n.set("cpuset", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpuset", ["vcpu"]),
+        },
+        {
+            "path": "cpu:tuning:emulatorpin",
+            "xpath": "cputune/emulatorpin",
+            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
+            "set": lambda n, v: n.set("cpuset", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpuset", []),
+        },
+        {
+            "path": "cpu:tuning:iothreadpin:{id}",
+            "xpath": "cputune/iothreadpin[@iothread='$id']",
+            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
+            "set": lambda n, v: n.set("cpuset", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("cpuset", ["iothread"]),
+        },
+        {
+            "path": "cpu:tuning:vcpusched:{id}:scheduler",
+            "xpath": "cputune/vcpusched[$id]",
+            "get": lambda n: str(n.get("scheduler")),
+            "set": lambda n, v: n.set("scheduler", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("scheduler", ["priority", "vcpus"]),
+        },
+        {
+            "path": "cpu:tuning:vcpusched:{id}:priority",
+            "xpath": "cputune/vcpusched[$id]",
+            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
+            "set": lambda n, v: n.set("priority", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("priority"),
+        },
+        {
+            "path": "cpu:tuning:vcpusched:{id}:vcpus",
+            "xpath": "cputune/vcpusched[$id]",
+            "get": lambda n: str(n.get("vcpus")) if n.get("vcpus") else None,
+            "set": lambda n, v: n.set("vcpus", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("vcpus"),
+        },
+        {
+            "path": "cpu:tuning:iothreadsched:{id}:scheduler",
+            "xpath": "cputune/iothreadsched[$id]",
+            "get": lambda n: str(n.get("scheduler")),
+            "set": lambda n, v: n.set("scheduler", str(v)),
+            "del": salt.utils.xmlutil.del_attribute(
+                "scheduler", ["priority", "iothreads"]
+            ),
+        },
+        {
+            "path": "cpu:tuning:iothreadsched:{id}:priority",
+            "xpath": "cputune/iothreadsched[$id]",
+            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
+            "set": lambda n, v: n.set("priority", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("priority"),
+        },
+        {
+            "path": "cpu:tuning:iothreadsched:{id}:iothreads",
+            "xpath": "cputune/iothreadsched[$id]",
+            "get": lambda n: str(n.get("iothreads")) if n.get("iothreads") else None,
+            "set": lambda n, v: n.set("iothreads", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("iothreads"),
+        },
+        {
+            "path": "cpu:tuning:emulatorsched:scheduler",
+            "xpath": "cputune/emulatorsched",
+            "get": lambda n: str(n.get("scheduler")),
+            "set": lambda n, v: n.set("scheduler", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("scheduler", ["priority"]),
+        },
+        {
+            "path": "cpu:tuning:emulatorsched:priority",
+            "xpath": "cputune/emulatorsched",
+            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
+            "set": lambda n, v: n.set("priority", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("priority"),
+        },
+        {
+            "path": "cpu:tuning:cachetune:{id}:{sid}:level",
+            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
+            "get": lambda n: str(n.get("level")) if n.get("level") else None,
+            "set": lambda n, v: n.set("level", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("level", ["id", "unit", "vcpus"]),
+        },
+        {
+            "path": "cpu:tuning:cachetune:{id}:{sid}:type",
+            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
+            "get": lambda n: str(n.get("type")) if n.get("type") else None,
+            "set": lambda n, v: n.set("type", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("type", ["id", "unit", "vcpus"]),
+        },
+        {
+            "path": "cpu:tuning:cachetune:{id}:{sid}:size",
+            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
+            "get": lambda n: str(n.get("size")) if n.get("size") else None,
+            "set": lambda n, v: n.set("size", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("size", ["id", "unit", "vcpus"]),
+        },
+        {
+            "path": "cpu:tuning:cachetune:{id}:monitor:{sid}",
+            "xpath": "cputune/cachetune[@vcpus='$id']/monitor[@vcpus='$sid']",
+            "get": lambda n: str(n.get("level")) if n.get("level") else None,
+            "set": lambda n, v: n.set("level", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("level", ["vcpus"]),
+        },
+        {
+            "path": "cpu:tuning:memorytune:{id}:{sid}",
+            "xpath": "cputune/memorytune[@vcpus='$id']/node[@id='$sid']",
+            "get": lambda n: str(n.get("bandwidth")) if n.get("bandwidth") else None,
+            "set": lambda n, v: n.set("bandwidth", str(v)),
+            "del": salt.utils.xmlutil.del_attribute("bandwidth", ["id", "vcpus"]),
+        },
     ]
+
+    # update NUMA host policy
+    if hypervisor in ["qemu", "kvm"]:
+        params_mapping += [
+            {
+                "path": "numatune:memory:mode",
+                "xpath": "numatune/memory",
+                "get": lambda n: n.get("mode"),
+                "set": lambda n, v: n.set("mode", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("mode"),
+            },
+            {
+                "path": "numatune:memory:nodeset",
+                "xpath": "numatune/memory",
+                "get": lambda n: n.get("nodeset"),
+                "set": lambda n, v: n.set("nodeset", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("nodeset"),
+            },
+            {
+                "path": "numatune:memnodes:{id}:mode",
+                "xpath": "numatune/memnode[@cellid='$id']",
+                "get": lambda n: n.get("mode") if n.get("mode") else None,
+                "set": lambda n, v: n.set("mode", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("mode", ["cellid"]),
+            },
+            {
+                "path": "numatune:memnodes:{id}:nodeset",
+                "xpath": "numatune/memnode[@cellid='$id']",
+                "get": lambda n: str(n.get("nodeset")) if n.get("nodeset") else None,
+                "set": lambda n, v: n.set("nodeset", str(v)),
+                "del": salt.utils.xmlutil.del_attribute("nodeset", ["cellid"]),
+            },
+        ]
 
     data = {k: v for k, v in locals().items() if bool(v)}
     if boot_dev:
-        data["boot_dev"] = {i + 1: dev for i, dev in enumerate(boot_dev.split())}
+        data["boot_dev"] = boot_dev.split()
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
@@ -2894,7 +3589,6 @@ def update(
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
                         _disk_volume_create(conn, all_disks[idx])
-
             if not test:
                 xml_desc = ElementTree.tostring(desc)
                 log.debug("Update virtual machine definition: %s", xml_desc)

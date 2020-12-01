@@ -1,21 +1,15 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
 
 import shutil
 import tempfile
 
-# Import Salt Libs
 import salt.states.virt as virt
 import salt.utils.files
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import 3rd-party libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -372,6 +366,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     hypervisor="qemu",
                     seed=False,
                     boot=None,
+                    numatune=None,
                     install=False,
                     start=False,
                     pub_key="/path/to/key.pub",
@@ -488,6 +483,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=False,
                 )
 
@@ -599,6 +595,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -634,6 +631,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -701,6 +699,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     os_type=None,
                     arch=None,
                     boot=None,
+                    numatune=None,
                     disk=None,
                     disks=[{"name": "system", "image": "/path/to/img.qcow2"}],
                     nic=None,
@@ -795,6 +794,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     hypervisor="qemu",
                     seed=False,
                     boot=None,
+                    numatune=None,
                     install=False,
                     start=False,
                     pub_key="/path/to/key.pub",
@@ -943,6 +943,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=False,
                     boot_dev=None,
                 )
@@ -1062,6 +1063,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
@@ -1099,6 +1101,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     username=None,
                     password=None,
                     boot=None,
+                    numatune=None,
                     test=True,
                     boot_dev=None,
                 )
