@@ -1,6 +1,6 @@
 {%- import 'libvirt_disks.jinja' as libvirt_disks -%}
 {%- macro opt_attribute(obj, name, conv=none) %}
-{%- if obj.get(name) is not none %}{{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
+{%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
@@ -237,6 +237,18 @@
                 <boot dev='{{ dev }}' />
                 {% endfor %}
         </os>
+{%- if clock %}
+        <clock offset="{{ clock.offset }}"{{ opt_attribute(clock, "adjustment") }}{{ opt_attribute(clock, "timezone") }}>
+    {%- for timer_name in clock.timers %}
+    {%- set timer = clock.timers[timer_name] %}
+            <timer name='{{ timer_name }}'{{ opt_attribute(timer, "track") }}{{ opt_attribute(timer, "tickpolicy") }}{{ opt_attribute(timer, "frequency") }}{{ opt_attribute(timer, "mode") }}{{ opt_attribute(timer, "present", yesno) }}>
+        {%- if "threshold" in timer or "slew" in timer or "limit" in timer %}
+                <catchup{{ opt_attribute(timer, "slew") }}{{ opt_attribute(timer, "threshold") }}{{ opt_attribute(timer, "limit") }}/>
+        {%- endif %}
+            </timer>
+    {%- endfor %}
+        </clock>
+{%- endif %}
         <devices>
                 {% for disk in disks %}
                 <disk type='{{ disk.type }}' device='{{ disk.device }}'>
@@ -255,7 +267,7 @@
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='native'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'/>
                         {% endif %}
                 </disk>
                 {% endfor %}
@@ -316,9 +328,20 @@
                 </console>
                 {% endif %}
                 {% endif %}
-
+{%- if hypervisor in ["qemu", "kvm"] %}
+        <channel type='unix'>
+            <target type='virtio' name='org.qemu.guest_agent.0'/>
+        </channel>
+{%- endif %}
         </devices>
         <features>
                 <acpi />
+                <apic />
+                <pae />
+{%- if hypervisor_features.get("kvm-hint-dedicated") %}
+                <kvm>
+                  <hint-dedicated state="on"/>
+                </kvm>
+{%- endif %}
         </features>
 </domain>

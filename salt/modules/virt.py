@@ -944,6 +944,8 @@ def _gen_xml(
     boot=None,
     boot_dev=None,
     numatune=None,
+    hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -952,6 +954,8 @@ def _gen_xml(
     context = {
         "hypervisor": hypervisor,
         "name": name,
+        "hypervisor_features": hypervisor_features or {},
+        "clock": clock or {},
     }
 
     context["to_kib"] = lambda v: int(_handle_unit(v) / 1024)
@@ -970,6 +974,12 @@ def _gen_xml(
         context["cpu"]["maximum"] = str(cpu)
     elif isinstance(cpu, dict):
         context["cpu"] = nesthash(cpu)
+
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        context["clock"]["offset"] = offset
 
     if hypervisor in ["qemu", "kvm"]:
         context["numatune"] = numatune if numatune else {}
@@ -1035,6 +1045,7 @@ def _gen_xml(
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
+            "io": "threads" if disk.get("iothreads", False) else "native",
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
@@ -1891,6 +1902,8 @@ def init(
     boot=None,
     boot_dev=None,
     numatune=None,
+    hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -2136,6 +2149,69 @@ def init(
                 'memory': {'mode': 'strict', 'nodeset': '0-11'},
                 'memnodes': {0: {'mode': 'strict', 'nodeset': 1}, 1: {'mode': 'preferred', 'nodeset': 2}}
             }
+
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
 
     .. _init-cpu-def:
 
@@ -2479,6 +2555,10 @@ def init(
                       hostname_property: virt:hostname
                       sparse_volume: True
 
+    iothreads
+        When ``True`` dedicated threads will be used for the I/O of the disk.
+        (Default: ``False``)
+
     .. _init-graphics-def:
 
     .. rubric:: Graphics Definition
@@ -2655,6 +2735,8 @@ def init(
             boot,
             boot_dev,
             numatune,
+            hypervisor_features,
+            clock,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -2677,19 +2759,15 @@ def _disks_equal(disk1, disk2):
     """
     target1 = disk1.find("target")
     target2 = disk2.find("target")
-    source1 = (
-        disk1.find("source")
-        if disk1.find("source") is not None
-        else ElementTree.Element("source")
-    )
-    source2 = (
-        disk2.find("source")
-        if disk2.find("source") is not None
-        else ElementTree.Element("source")
-    )
 
-    source1_dict = xmlutil.to_dict(source1, True)
-    source2_dict = xmlutil.to_dict(source2, True)
+    disk1_dict = xmlutil.to_dict(disk1, True)
+    disk2_dict = xmlutil.to_dict(disk2, True)
+
+    source1_dict = disk1_dict.get("source", {})
+    source2_dict = disk2_dict.get("source", {})
+
+    io1 = disk1_dict.get("driver", {}).get("io", "native")
+    io2 = disk2_dict.get("driver", {}).get("io", "native")
 
     # Remove the index added by libvirt in the source for backing chain
     if source1_dict:
@@ -2704,6 +2782,7 @@ def _disks_equal(disk1, disk2):
         and target1.get("bus") == target2.get("bus")
         and disk1.get("device", "disk") == disk2.get("device", "disk")
         and target1.get("dev") == target2.get("dev")
+        and io1 == io2
     )
 
 
@@ -2871,6 +2950,63 @@ def _diff_graphics_lists(old, new):
     return _diff_lists(old, new, _graphics_equal)
 
 
+def _expand_cpuset(cpuset):
+    """
+    Expand the libvirt cpuset and nodeset values into a list of cpu/node IDs
+    """
+    if cpuset is None:
+        return None
+
+    if isinstance(cpuset, int):
+        return str(cpuset)
+
+    result = set()
+    toremove = set()
+    for part in cpuset.split(","):
+        m = re.match("([0-9]+)-([0-9]+)", part)
+        if m:
+            result |= set(range(int(m.group(1)), int(m.group(2)) + 1))
+        elif part.startswith("^"):
+            toremove.add(int(part[1:]))
+        else:
+            result.add(int(part))
+    cpus = list(result - toremove)
+    cpus.sort()
+    cpus = [str(cpu) for cpu in cpus]
+    return ",".join(cpus)
+
+
+def _normalize_cpusets(desc, data):
+    """
+    Expand the cpusets that can't be expanded by the change_xml() function,
+    namely the ones that are used as keys and in the middle of the XPath expressions.
+    """
+    # Normalize the cpusets keys in the XML
+    xpaths = ["cputune/cachetune", "cputune/cachetune/monitor", "cputune/memorytune"]
+    for xpath in xpaths:
+        nodes = desc.findall(xpath)
+        for node in nodes:
+            node.set("vcpus", _expand_cpuset(node.get("vcpus")))
+
+    # data paths to change:
+    #  - cpu:tuning:cachetune:{id}:monitor:{sid}
+    #  - cpu:tuning:memorytune:{id}
+    if not isinstance(data.get("cpu"), dict):
+        return
+    tuning = data["cpu"].get("tuning", {})
+    for child in ["cachetune", "memorytune"]:
+        if tuning.get(child):
+            new_item = dict()
+            for cpuset, value in tuning[child].items():
+                if child == "cachetune" and value.get("monitor"):
+                    value["monitor"] = {
+                        _expand_cpuset(monitor_cpus): monitor
+                        for monitor_cpus, monitor in value["monitor"].items()
+                    }
+                new_item[_expand_cpuset(cpuset)] = value
+            tuning[child] = new_item
+
+
 def update(
     name,
     cpu=0,
@@ -2885,6 +3021,8 @@ def update(
     numatune=None,
     test=False,
     boot_dev=None,
+    hypervisor_features=None,
+    clock=None,
     **kwargs
 ):
     """
@@ -2989,6 +3127,69 @@ def update(
 
         .. versionadded:: 3001
 
+    :param hypervisor_features:
+        Enable or disable hypervisor-specific features on the virtual machine.
+
+        .. versionadded:: Aluminium
+
+        .. code-block:: yaml
+
+            hypervisor_features:
+              kvm-hint-dedicated: True
+
+    :param clock:
+        Configure the guest clock.
+        The value is a dictionary with the following keys:
+
+        adjustment
+            time adjustment in seconds or ``reset``
+
+        utc
+            set to ``False`` to use the host local time as the guest clock. Defaults to ``True``.
+
+        timezone
+            synchronize the guest to the correspding timezone
+
+        timers
+            a dictionary associating the timer name with its configuration.
+            This configuration is a dictionary with the properties ``track``, ``tickpolicy``,
+            ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
+            See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
+
+        .. versionadded:: Aluminium
+
+        Set the clock to local time using an offset in seconds
+        .. code-block:: yaml
+
+            clock:
+              adjustment: 3600
+              utc: False
+
+        Set the clock to a specific time zone:
+
+        .. code-block:: yaml
+
+            clock:
+              timezone: CEST
+
+        Tweak guest timers:
+
+        .. code-block:: yaml
+
+            clock:
+              timers:
+                tsc:
+                  frequency: 3504000000
+                  mode: native
+                rtc:
+                  track: wall
+                  tickpolicy: catchup
+                  slew: 4636
+                  threshold: 123
+                  limit: 2342
+                hpet:
+                  present: False
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in
@@ -3051,8 +3252,11 @@ def update(
         )
     )
 
-    def _set_node_text(node, value):
-        node.text = str(value)
+    if clock:
+        offset = "utc" if clock.get("utc", True) else "localtime"
+        if "timezone" in clock:
+            offset = "timezone"
+        clock["offset"] = offset
 
     def _set_loader(node, value):
         salt.utils.xmlutil.set_node_text(node, value)
@@ -3063,17 +3267,15 @@ def update(
     def _set_nvram(node, value):
         node.set("template", value)
 
-    def _set_with_byte_unit(node, value):
-        node.text = str(value)
-        node.set("unit", "bytes")
+    def _set_with_byte_unit(attr_name=None):
+        def _setter(node, value):
+            if attr_name:
+                node.set(attr_name, str(value))
+            else:
+                node.text = str(value)
+            node.set("unit", "bytes")
 
-    def _set_mem_with_byte_unit(node, value):
-        node.set("memory", str(value))
-        node.set("unit", "bytes")
-
-    def _set_size_with_byte_unit(node, value):
-        node.set("size", str(value))
-        node.set("unit", "bytes")
+        return _setter
 
     def _get_with_unit(node):
         unit = node.get("unit", "KiB")
@@ -3083,12 +3285,91 @@ def update(
         return _handle_unit("{}{}".format(value, unit)) if value else None
 
     def _set_vcpu(node, value):
-        _set_node_text(node, value)
+        node.text = str(value)
         node.set("current", str(value))
 
     old_mem = int(_get_with_unit(desc.find("memory")) / 1024)
+    old_cpu = int(desc.find("./vcpu").text)
+
+    def _almost_equal(current, new):
+        if current is None or new is None:
+            return False
+        return abs(current - new) / current < 1e-03
+
+    def _yesno_attribute(path, xpath, attr_name, ignored=None):
+        return xmlutil.attribute(
+            path, xpath, attr_name, ignored, lambda v: "yes" if v else "no"
+        )
+
+    def _memory_parameter(path, xpath, attr_name=None, ignored=None):
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _handle_unit,
+            "get": _get_with_unit,
+            "set": _set_with_byte_unit(attr_name),
+            "equals": _almost_equal,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
+
+    def _cpuset_parameter(path, xpath, attr_name=None, ignored=None):
+        def _set_cpuset(node, value):
+            if attr_name:
+                node.set(attr_name, value)
+            else:
+                node.text = value
+
+        entry = {
+            "path": path,
+            "xpath": xpath,
+            "convert": _expand_cpuset,
+            "get": lambda n: _expand_cpuset(n.get(attr_name) if attr_name else n.text),
+            "set": _set_cpuset,
+        }
+        if attr_name:
+            entry["del"] = salt.utils.xmlutil.del_attribute(attr_name, ignored)
+        return entry
 
     # Update the kernel boot parameters
+    data = {k: v for k, v in locals().items() if bool(v)}
+    if boot_dev:
+        data["boot_dev"] = boot_dev.split()
+
+    # Set the missing optional attributes and timers to None in timers to help cleaning up
+    timer_names = [
+        "platform",
+        "hpet",
+        "kvmclock",
+        "pit",
+        "rtc",
+        "tsc",
+        "hypervclock",
+        "armvtimer",
+    ]
+    if data.get("clock", {}).get("timers"):
+        attributes = [
+            "track",
+            "tickpolicy",
+            "frequency",
+            "mode",
+            "present",
+            "slew",
+            "threshold",
+            "limit",
+        ]
+        for timer in data["clock"]["timers"].values():
+            for attribute in attributes:
+                if attribute not in timer:
+                    timer[attribute] = None
+
+        for timer_name in timer_names:
+            if timer_name not in data["clock"]["timers"]:
+                data["clock"]["timers"][timer_name] = None
+
+    _normalize_cpusets(desc, data)
+
     params_mapping = [
         {"path": "boot:kernel", "xpath": "os/kernel"},
         {"path": "boot:initrd", "xpath": "os/initrd"},
@@ -3096,118 +3377,41 @@ def update(
         {"path": "boot:loader", "xpath": "os/loader", "set": _set_loader},
         {"path": "boot:nvram", "xpath": "os/nvram", "set": _set_nvram},
         # Update the memory, note that libvirt outputs all memory sizes in KiB
+        _memory_parameter("mem", "memory"),
+        _memory_parameter("mem", "currentMemory"),
+        _memory_parameter("mem:max", "maxMemory"),
+        _memory_parameter("mem:boot", "memory"),
+        _memory_parameter("mem:current", "currentMemory"),
+        xmlutil.attribute("mem:slots", "maxMemory", "slots", ["unit"]),
+        _memory_parameter("mem:hard_limit", "memtune/hard_limit"),
+        _memory_parameter("mem:soft_limit", "memtune/soft_limit"),
+        _memory_parameter("mem:swap_hard_limit", "memtune/swap_hard_limit"),
+        _memory_parameter("mem:min_guarantee", "memtune/min_guarantee"),
+        xmlutil.attribute("boot_dev:{dev}", "os/boot[$dev]", "dev"),
+        _memory_parameter(
+            "mem:hugepages:{id}:size",
+            "memoryBacking/hugepages/page[$id]",
+            "size",
+            ["unit", "nodeset"],
+        ),
+        _cpuset_parameter(
+            "mem:hugepages:{id}:nodeset", "memoryBacking/hugepages/page[$id]", "nodeset"
+        ),
         {
-            "path": "mem",
-            "xpath": "memory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
+            "path": "mem:nosharepages",
+            "xpath": "memoryBacking/nosharepages",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
         },
         {
-            "path": "mem",
-            "xpath": "currentMemory",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
+            "path": "mem:locked",
+            "xpath": "memoryBacking/locked",
+            "get": lambda n: n is not None,
+            "set": lambda n, v: None,
         },
-        {
-            "path": "mem:max",
-            "convert": _handle_unit,
-            "xpath": "maxMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:boot",
-            "convert": _handle_unit,
-            "xpath": "memory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:current",
-            "convert": _handle_unit,
-            "xpath": "currentMemory",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:slots",
-            "xpath": "maxMemory",
-            "get": lambda n: n.get("slots"),
-            "set": lambda n, v: n.set("slots", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("slots", ["unit"]),
-        },
-        {
-            "path": "mem:hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:soft_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/soft_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:swap_hard_limit",
-            "convert": _handle_unit,
-            "xpath": "memtune/swap_hard_limit",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "mem:min_guarantee",
-            "convert": _handle_unit,
-            "xpath": "memtune/min_guarantee",
-            "get": _get_with_unit,
-            "set": _set_with_byte_unit,
-        },
-        {
-            "path": "boot_dev:{dev}",
-            "xpath": "os/boot[$dev]",
-            "get": lambda n: n.get("dev"),
-            "set": lambda n, v: n.set("dev", v),
-            "del": salt.utils.xmlutil.del_attribute("dev"),
-        },
-        {
-            "path": "mem:hugepages:{id}:size",
-            "convert": _handle_unit,
-            "xpath": "memoryBacking/hugepages/page[$id]",
-            "get": _get_with_unit,
-            "set": _set_size_with_byte_unit,
-            "del": salt.utils.xmlutil.del_attribute("size", ["unit", "nodeset"]),
-        },
-        {
-            "path": "mem:hugepages:{id}:nodeset",
-            "xpath": "memoryBacking/hugepages/page[$id]",
-            "get": lambda n: n.get("nodeset"),
-            "set": lambda n, v: n.set("nodeset", v),
-            "del": salt.utils.xmlutil.del_attribute("nodeset"),
-        },
-        {"path": "mem:nosharepages", "xpath": "memoryBacking/nosharepages"},
-        {"path": "mem:locked", "xpath": "memoryBacking/locked"},
-        {
-            "path": "mem:source",
-            "xpath": "memoryBacking/source",
-            "get": lambda n: str(n.get("type")) if n.get("type") else None,
-            "set": lambda n, v: n.set("type", str(v)),
-        },
-        {
-            "path": "mem:access",
-            "xpath": "memoryBacking/access",
-            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
-            "set": lambda n, v: n.set("mode", str(v)),
-        },
-        {
-            "path": "mem:allocation",
-            "xpath": "memoryBacking/allocation",
-            "get": lambda n: str(n.get("mode")) if n.get("mode") else None,
-            "set": lambda n, v: n.set("mode", str(v)),
-        },
+        xmlutil.attribute("mem:source", "memoryBacking/source", "type"),
+        xmlutil.attribute("mem:access", "memoryBacking/access", "mode"),
+        xmlutil.attribute("mem:allocation", "memoryBacking/allocation", "mode"),
         {"path": "mem:discard", "xpath": "memoryBacking/discard"},
         {
             "path": "cpu",
@@ -3216,170 +3420,54 @@ def update(
             "set": _set_vcpu,
         },
         {"path": "cpu:maximum", "xpath": "vcpu", "get": lambda n: int(n.text)},
-        {
-            "path": "cpu:placement",
-            "xpath": "vcpu",
-            "get": lambda n: n.get("placement"),
-            "set": lambda n, v: n.set("placement", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("placement"),
-        },
-        {
-            "path": "cpu:cpuset",
-            "xpath": "vcpu",
-            "get": lambda n: n.get("cpuset"),
-            "set": lambda n, v: n.set("cpuset", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cpuset"),
-        },
-        {
-            "path": "cpu:current",
-            "xpath": "vcpu",
-            "get": lambda n: n.get("current"),
-            "set": lambda n, v: n.set("current", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("current"),
-        },
-        {
-            "path": "cpu:match",
-            "xpath": "cpu",
-            "get": lambda n: n.get("match"),
-            "set": lambda n, v: n.set("match", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("match"),
-        },
-        {
-            "path": "cpu:mode",
-            "xpath": "cpu",
-            "get": lambda n: n.get("mode"),
-            "set": lambda n, v: n.set("mode", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("mode"),
-        },
-        {
-            "path": "cpu:check",
-            "xpath": "cpu",
-            "get": lambda n: n.get("check"),
-            "set": lambda n, v: n.set("check", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("check"),
-        },
+        xmlutil.attribute("cpu:placement", "vcpu", "placement"),
+        _cpuset_parameter("cpu:cpuset", "vcpu", "cpuset"),
+        xmlutil.attribute("cpu:current", "vcpu", "current"),
+        xmlutil.attribute("cpu:match", "cpu", "match"),
+        xmlutil.attribute("cpu:mode", "cpu", "mode"),
+        xmlutil.attribute("cpu:check", "cpu", "check"),
         {"path": "cpu:model:name", "xpath": "cpu/model"},
-        {
-            "path": "cpu:model:fallback",
-            "xpath": "cpu/model",
-            "get": lambda n: n.get("fallback"),
-            "set": lambda n, v: n.set("fallback", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("fallback"),
-        },
-        {
-            "path": "cpu:model:vendor_id",
-            "xpath": "cpu/model",
-            "get": lambda n: n.get("vendor_id"),
-            "set": lambda n, v: n.set("vendor_id", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("vendor_id"),
-        },
-        {
-            "path": "cpu:vendor",
-            "xpath": "cpu/vendor",
-            "del": salt.utils.xmlutil.del_text,
-        },
-        {
-            "path": "cpu:topology:sockets",
-            "xpath": "cpu/topology",
-            "get": lambda n: n.get("sockets"),
-            "set": lambda n, v: n.set("sockets", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("sockets"),
-        },
-        {
-            "path": "cpu:topology:cores",
-            "xpath": "cpu/topology",
-            "get": lambda n: n.get("cores"),
-            "set": lambda n, v: n.set("cores", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cores"),
-        },
-        {
-            "path": "cpu:topology:threads",
-            "xpath": "cpu/topology",
-            "get": lambda n: n.get("threads"),
-            "set": lambda n, v: n.set("threads", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("threads"),
-        },
-        {
-            "path": "cpu:cache:level",
-            "xpath": "cpu/cache",
-            "get": lambda n: n.get("level"),
-            "set": lambda n, v: n.set("level", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("level"),
-        },
-        {
-            "path": "cpu:cache:mode",
-            "xpath": "cpu/cache",
-            "get": lambda n: n.get("mode"),
-            "set": lambda n, v: n.set("mode", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("mode"),
-        },
-        {
-            "path": "cpu:features:{id}",
-            "xpath": "cpu/feature[@name='$id']",
-            "get": lambda n: n.get("policy"),
-            "set": lambda n, v: n.set("policy", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("policy", ["name"]),
-        },
-        {
-            "path": "cpu:vcpus:{id}:enabled",
-            "xpath": "vcpus/vcpu[@id='$id']",
-            "convert": lambda v: "yes" if v else "no",
-            "get": lambda n: n.get("enabled"),
-            "set": lambda n, v: n.set("enabled", v),
-            "del": salt.utils.xmlutil.del_attribute("enabled", ["id"]),
-        },
-        {
-            "path": "cpu:vcpus:{id}:hotpluggable",
-            "xpath": "vcpus/vcpu[@id='$id']",
-            "convert": lambda v: "yes" if v else "no",
-            "get": lambda n: n.get("hotpluggable"),
-            "set": lambda n, v: n.set("hotpluggable", v),
-            "del": salt.utils.xmlutil.del_attribute("hotpluggable", ["id"]),
-        },
-        {
-            "path": "cpu:vcpus:{id}:order",
-            "xpath": "vcpus/vcpu[@id='$id']",
-            "get": lambda n: int(n.get("order")) if n.get("order") else None,
-            "set": lambda n, v: n.set("order", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("order", ["id"]),
-        },
-        {
-            "path": "cpu:numa:{id}:cpus",
-            "xpath": "cpu/numa/cell[@id='$id']",
-            "get": lambda n: str(n.get("cpus")) if n.get("cpus") else None,
-            "set": lambda n, v: n.set("cpus", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cpus", ["id"]),
-        },
-        {
-            "path": "cpu:numa:{id}:memory",
-            "xpath": "cpu/numa/cell[@id='$id']",
-            "convert": _handle_unit,
-            "get": _get_with_unit,
-            "set": _set_mem_with_byte_unit,
-            "del": salt.utils.xmlutil.del_attribute("memory", ["id"]),
-        },
-        {
-            "path": "cpu:numa:{id}:discard",
-            "xpath": "cpu/numa/cell[@id='$id']",
-            "get": lambda n: str(n.get("discard")) if n.get("discard") else None,
-            "convert": lambda v: "yes" if v else "no",
-            "set": lambda n, v: n.set("discard", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("discard", ["id"]),
-        },
-        {
-            "path": "cpu:numa:{id}:memAccess",
-            "xpath": "cpu/numa/cell[@id='$id']",
-            "get": lambda n: str(n.get("memAccess")) if n.get("memAccess") else None,
-            "set": lambda n, v: n.set("memAccess", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("memAccess", ["id"]),
-        },
-        {
-            "path": "cpu:numa:{id}:distances:{sid}",
-            "xpath": "cpu/numa/cell[@id='$id']/distances/sibling[@id='$sid']",
-            "get": lambda n: str(n.get("value")) if n.get("value") else None,
-            "set": lambda n, v: n.set("value", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("value", ["id"]),
-        },
+        xmlutil.attribute("cpu:model:fallback", "cpu/model", "fallback"),
+        xmlutil.attribute("cpu:model:vendor_id", "cpu/model", "vendor_id"),
+        {"path": "cpu:vendor", "xpath": "cpu/vendor"},
+        xmlutil.attribute("cpu:topology:sockets", "cpu/topology", "sockets"),
+        xmlutil.attribute("cpu:topology:cores", "cpu/topology", "cores"),
+        xmlutil.attribute("cpu:topology:threads", "cpu/topology", "threads"),
+        xmlutil.attribute("cpu:cache:level", "cpu/cache", "level"),
+        xmlutil.attribute("cpu:cache:mode", "cpu/cache", "mode"),
+        xmlutil.attribute(
+            "cpu:features:{id}", "cpu/feature[@name='$id']", "policy", ["name"]
+        ),
+        _yesno_attribute(
+            "cpu:vcpus:{id}:enabled", "vcpus/vcpu[@id='$id']", "enabled", ["id"]
+        ),
+        _yesno_attribute(
+            "cpu:vcpus:{id}:hotpluggable",
+            "vcpus/vcpu[@id='$id']",
+            "hotpluggable",
+            ["id"],
+        ),
+        xmlutil.int_attribute(
+            "cpu:vcpus:{id}:order", "vcpus/vcpu[@id='$id']", "order", ["id"]
+        ),
+        _cpuset_parameter(
+            "cpu:numa:{id}:cpus", "cpu/numa/cell[@id='$id']", "cpus", ["id"]
+        ),
+        _memory_parameter(
+            "cpu:numa:{id}:memory", "cpu/numa/cell[@id='$id']", "memory", ["id"]
+        ),
+        _yesno_attribute(
+            "cpu:numa:{id}:discard", "cpu/numa/cell[@id='$id']", "discard", ["id"]
+        ),
+        xmlutil.attribute(
+            "cpu:numa:{id}:memAccess", "cpu/numa/cell[@id='$id']", "memAccess", ["id"]
+        ),
+        xmlutil.attribute(
+            "cpu:numa:{id}:distances:{sid}",
+            "cpu/numa/cell[@id='$id']/distances/sibling[@id='$sid']",
+            "value",
+            ["id"],
+        ),
         {"path": "cpu:iothreads", "xpath": "iothreads"},
         {"path": "cpu:tuning:shares", "xpath": "cputune/shares"},
         {"path": "cpu:tuning:period", "xpath": "cputune/period"},
@@ -3390,158 +3478,150 @@ def update(
         {"path": "cpu:tuning:emulator_quota", "xpath": "cputune/emulator_quota"},
         {"path": "cpu:tuning:iothread_period", "xpath": "cputune/iothread_period"},
         {"path": "cpu:tuning:iothread_quota", "xpath": "cputune/iothread_quota"},
-        {
-            "path": "cpu:tuning:vcpupin:{id}",
-            "xpath": "cputune/vcpupin[@vcpu='$id']",
-            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
-            "set": lambda n, v: n.set("cpuset", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cpuset", ["vcpu"]),
-        },
-        {
-            "path": "cpu:tuning:emulatorpin",
-            "xpath": "cputune/emulatorpin",
-            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
-            "set": lambda n, v: n.set("cpuset", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cpuset", []),
-        },
-        {
-            "path": "cpu:tuning:iothreadpin:{id}",
-            "xpath": "cputune/iothreadpin[@iothread='$id']",
-            "get": lambda n: str(n.get("cpuset")) if n.get("cpuset") else None,
-            "set": lambda n, v: n.set("cpuset", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("cpuset", ["iothread"]),
-        },
-        {
-            "path": "cpu:tuning:vcpusched:{id}:scheduler",
-            "xpath": "cputune/vcpusched[$id]",
-            "get": lambda n: str(n.get("scheduler")),
-            "set": lambda n, v: n.set("scheduler", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("scheduler", ["priority", "vcpus"]),
-        },
-        {
-            "path": "cpu:tuning:vcpusched:{id}:priority",
-            "xpath": "cputune/vcpusched[$id]",
-            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
-            "set": lambda n, v: n.set("priority", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("priority"),
-        },
-        {
-            "path": "cpu:tuning:vcpusched:{id}:vcpus",
-            "xpath": "cputune/vcpusched[$id]",
-            "get": lambda n: str(n.get("vcpus")) if n.get("vcpus") else None,
-            "set": lambda n, v: n.set("vcpus", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("vcpus"),
-        },
-        {
-            "path": "cpu:tuning:iothreadsched:{id}:scheduler",
-            "xpath": "cputune/iothreadsched[$id]",
-            "get": lambda n: str(n.get("scheduler")),
-            "set": lambda n, v: n.set("scheduler", str(v)),
-            "del": salt.utils.xmlutil.del_attribute(
-                "scheduler", ["priority", "iothreads"]
-            ),
-        },
-        {
-            "path": "cpu:tuning:iothreadsched:{id}:priority",
-            "xpath": "cputune/iothreadsched[$id]",
-            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
-            "set": lambda n, v: n.set("priority", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("priority"),
-        },
-        {
-            "path": "cpu:tuning:iothreadsched:{id}:iothreads",
-            "xpath": "cputune/iothreadsched[$id]",
-            "get": lambda n: str(n.get("iothreads")) if n.get("iothreads") else None,
-            "set": lambda n, v: n.set("iothreads", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("iothreads"),
-        },
-        {
-            "path": "cpu:tuning:emulatorsched:scheduler",
-            "xpath": "cputune/emulatorsched",
-            "get": lambda n: str(n.get("scheduler")),
-            "set": lambda n, v: n.set("scheduler", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("scheduler", ["priority"]),
-        },
-        {
-            "path": "cpu:tuning:emulatorsched:priority",
-            "xpath": "cputune/emulatorsched",
-            "get": lambda n: str(n.get("priority")) if n.get("priority") else None,
-            "set": lambda n, v: n.set("priority", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("priority"),
-        },
-        {
-            "path": "cpu:tuning:cachetune:{id}:{sid}:level",
-            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
-            "get": lambda n: str(n.get("level")) if n.get("level") else None,
-            "set": lambda n, v: n.set("level", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("level", ["id", "unit", "vcpus"]),
-        },
-        {
-            "path": "cpu:tuning:cachetune:{id}:{sid}:type",
-            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
-            "get": lambda n: str(n.get("type")) if n.get("type") else None,
-            "set": lambda n, v: n.set("type", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("type", ["id", "unit", "vcpus"]),
-        },
-        {
-            "path": "cpu:tuning:cachetune:{id}:{sid}:size",
-            "xpath": "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
-            "get": lambda n: str(n.get("size")) if n.get("size") else None,
-            "set": lambda n, v: n.set("size", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("size", ["id", "unit", "vcpus"]),
-        },
-        {
-            "path": "cpu:tuning:cachetune:{id}:monitor:{sid}",
-            "xpath": "cputune/cachetune[@vcpus='$id']/monitor[@vcpus='$sid']",
-            "get": lambda n: str(n.get("level")) if n.get("level") else None,
-            "set": lambda n, v: n.set("level", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("level", ["vcpus"]),
-        },
-        {
-            "path": "cpu:tuning:memorytune:{id}:{sid}",
-            "xpath": "cputune/memorytune[@vcpus='$id']/node[@id='$sid']",
-            "get": lambda n: str(n.get("bandwidth")) if n.get("bandwidth") else None,
-            "set": lambda n, v: n.set("bandwidth", str(v)),
-            "del": salt.utils.xmlutil.del_attribute("bandwidth", ["id", "vcpus"]),
-        },
+        _cpuset_parameter(
+            "cpu:tuning:vcpupin:{id}",
+            "cputune/vcpupin[@vcpu='$id']",
+            "cpuset",
+            ["vcpu"],
+        ),
+        _cpuset_parameter("cpu:tuning:emulatorpin", "cputune/emulatorpin", "cpuset"),
+        _cpuset_parameter(
+            "cpu:tuning:iothreadpin:{id}",
+            "cputune/iothreadpin[@iothread='$id']",
+            "cpuset",
+            ["iothread"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:vcpusched:{id}:scheduler",
+            "cputune/vcpusched[$id]",
+            "scheduler",
+            ["priority", "vcpus"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:vcpusched:{id}:priority", "cputune/vcpusched[$id]", "priority"
+        ),
+        _cpuset_parameter(
+            "cpu:tuning:vcpusched:{id}:vcpus", "cputune/vcpusched[$id]", "vcpus"
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:iothreadsched:{id}:scheduler",
+            "cputune/iothreadsched[$id]",
+            "scheduler",
+            ["priority", "iothreads"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:iothreadsched:{id}:priority",
+            "cputune/iothreadsched[$id]",
+            "priority",
+        ),
+        _cpuset_parameter(
+            "cpu:tuning:iothreadsched:{id}:iothreads",
+            "cputune/iothreadsched[$id]",
+            "iothreads",
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:emulatorsched:scheduler",
+            "cputune/emulatorsched",
+            "scheduler",
+            ["priority"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:emulatorsched:priority", "cputune/emulatorsched", "priority"
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:cachetune:{id}:monitor:{sid}",
+            "cputune/cachetune[@vcpus='$id']/monitor[@vcpus='$sid']",
+            "level",
+            ["vcpus"],
+        ),
+        xmlutil.attribute(
+            "cpu:tuning:memorytune:{id}:{sid}",
+            "cputune/memorytune[@vcpus='$id']/node[@id='$sid']",
+            "bandwidth",
+            ["id", "vcpus"],
+        ),
+        xmlutil.attribute("clock:offset", "clock", "offset"),
+        xmlutil.attribute("clock:adjustment", "clock", "adjustment", convert=str),
+        xmlutil.attribute("clock:timezone", "clock", "timezone"),
     ]
+
+    for timer in timer_names:
+        params_mapping += [
+            xmlutil.attribute(
+                "clock:timers:{}:track".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "track",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:tickpolicy".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "tickpolicy",
+                ["name"],
+            ),
+            xmlutil.int_attribute(
+                "clock:timers:{}:frequency".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "frequency",
+                ["name"],
+            ),
+            xmlutil.attribute(
+                "clock:timers:{}:mode".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "mode",
+                ["name"],
+            ),
+            _yesno_attribute(
+                "clock:timers:{}:present".format(timer),
+                "clock/timer[@name='{}']".format(timer),
+                "present",
+                ["name"],
+            ),
+        ]
+        for attr in ["slew", "threshold", "limit"]:
+            params_mapping.append(
+                xmlutil.int_attribute(
+                    "clock:timers:{}:{}".format(timer, attr),
+                    "clock/timer[@name='{}']/catchup".format(timer),
+                    attr,
+                )
+            )
+
+    for attr in ["level", "type", "size"]:
+        params_mapping.append(
+            xmlutil.attribute(
+                "cpu:tuning:cachetune:{id}:{sid}:" + attr,
+                "cputune/cachetune[@vcpus='$id']/cache[@id='$sid']",
+                attr,
+                ["id", "unit", "vcpus"],
+            )
+        )
 
     # update NUMA host policy
     if hypervisor in ["qemu", "kvm"]:
         params_mapping += [
-            {
-                "path": "numatune:memory:mode",
-                "xpath": "numatune/memory",
-                "get": lambda n: n.get("mode"),
-                "set": lambda n, v: n.set("mode", str(v)),
-                "del": salt.utils.xmlutil.del_attribute("mode"),
-            },
-            {
-                "path": "numatune:memory:nodeset",
-                "xpath": "numatune/memory",
-                "get": lambda n: n.get("nodeset"),
-                "set": lambda n, v: n.set("nodeset", str(v)),
-                "del": salt.utils.xmlutil.del_attribute("nodeset"),
-            },
-            {
-                "path": "numatune:memnodes:{id}:mode",
-                "xpath": "numatune/memnode[@cellid='$id']",
-                "get": lambda n: n.get("mode") if n.get("mode") else None,
-                "set": lambda n, v: n.set("mode", str(v)),
-                "del": salt.utils.xmlutil.del_attribute("mode", ["cellid"]),
-            },
-            {
-                "path": "numatune:memnodes:{id}:nodeset",
-                "xpath": "numatune/memnode[@cellid='$id']",
-                "get": lambda n: str(n.get("nodeset")) if n.get("nodeset") else None,
-                "set": lambda n, v: n.set("nodeset", str(v)),
-                "del": salt.utils.xmlutil.del_attribute("nodeset", ["cellid"]),
-            },
+            xmlutil.attribute("numatune:memory:mode", "numatune/memory", "mode"),
+            _cpuset_parameter("numatune:memory:nodeset", "numatune/memory", "nodeset"),
+            xmlutil.attribute(
+                "numatune:memnodes:{id}:mode",
+                "numatune/memnode[@cellid='$id']",
+                "mode",
+                ["cellid"],
+            ),
+            _cpuset_parameter(
+                "numatune:memnodes:{id}:nodeset",
+                "numatune/memnode[@cellid='$id']",
+                "nodeset",
+                ["cellid"],
+            ),
+            xmlutil.attribute(
+                "hypervisor_features:kvm-hint-dedicated",
+                "features/kvm/hint-dedicated",
+                "state",
+                convert=lambda v: "on" if v else "off",
+            ),
         ]
 
-    data = {k: v for k, v in locals().items() if bool(v)}
-    if boot_dev:
-        data["boot_dev"] = boot_dev.split()
     need_update = (
         salt.utils.xmlutil.change_xml(desc, data, params_mapping) or need_update
     )
@@ -3604,14 +3684,18 @@ def update(
         commands = []
         removable_changes = []
         if domain.isActive() and live:
-            if cpu:
-                commands.append(
-                    {
-                        "device": "cpu",
-                        "cmd": "setVcpusFlags",
-                        "args": [cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
-                    }
-                )
+            if cpu and (
+                isinstance(cpu, int) or isinstance(cpu, dict) and cpu.get("maximum")
+            ):
+                new_cpu = cpu.get("maximum") if isinstance(cpu, dict) else cpu
+                if old_cpu != new_cpu and new_cpu is not None:
+                    commands.append(
+                        {
+                            "device": "cpu",
+                            "cmd": "setVcpusFlags",
+                            "args": [new_cpu, libvirt.VIR_DOMAIN_AFFECT_LIVE],
+                        }
+                    )
             if mem:
                 if isinstance(mem, dict):
                     # setMemoryFlags takes memory amount in KiB
@@ -3623,7 +3707,7 @@ def update(
                 elif isinstance(mem, int):
                     new_mem = int(mem * 1024)
 
-                if old_mem != new_mem and new_mem is not None:
+                if not _almost_equal(old_mem, new_mem) and new_mem is not None:
                     commands.append(
                         {
                             "device": "mem",
@@ -5250,7 +5334,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             directories.add(os.path.dirname(disks[disk]["file"]))
         else:
             # We may have a volume to delete here
-            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"],)
+            matcher = re.match("^(?P<pool>[^/]+)/(?P<volume>.*)$", disks[disk]["file"])
             if matcher:
                 pool_name = matcher.group("pool")
                 pool = None
