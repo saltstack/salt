@@ -315,3 +315,105 @@ def test_define(make_mock_network, autostart, start):
         mock_network.setAutostart.assert_not_called()
 
     assert_called(mock_network.create, autostart or start)
+
+
+def test_update_nat_nochange(make_mock_network):
+    """
+    Test updating a NAT network without changes
+    """
+    net_mock = make_mock_network(
+        """
+        <network>
+          <name>default</name>
+          <uuid>d6c95a31-16a2-473a-b8cd-7ad2fe2dd855</uuid>
+          <forward mode='nat'>
+            <nat>
+              <port start='1024' end='65535'/>
+            </nat>
+          </forward>
+          <bridge name='virbr0' stp='on' delay='0'/>
+          <mac address='52:54:00:cd:49:6b'/>
+          <domain name='my.lab' localOnly='yes'/>
+          <ip address='192.168.122.1' netmask='255.255.255.0'>
+            <dhcp>
+              <range start='192.168.122.2' end='192.168.122.254'/>
+              <host mac='52:54:00:46:4d:9e' name='mirror' ip='192.168.122.136'/>
+              <bootp file='pxelinux.0' server='192.168.122.110'/>
+            </dhcp>
+          </ip>
+        </network>
+        """
+    )
+    assert not virt.network_update(
+        "default",
+        None,
+        "nat",
+        ipv4_config={
+            "cidr": "192.168.122.0/24",
+            "dhcp_ranges": [{"start": "192.168.122.2", "end": "192.168.122.254"}],
+            "hosts": {
+                "192.168.122.136": {"mac": "52:54:00:46:4d:9e", "name": "mirror"},
+            },
+            "bootp": {"file": "pxelinux.0", "server": "192.168.122.110"},
+        },
+        domain={"name": "my.lab", "localOnly": True},
+        nat={"port": {"start": 1024, "end": "65535"}},
+    )
+    define_mock = virt.libvirt.openAuth().networkDefineXML
+    define_mock.assert_not_called()
+
+
+@pytest.mark.parametrize("test", [True, False])
+def test_update_nat_change(make_mock_network, test):
+    """
+    Test updating a NAT network with changes
+    """
+    net_mock = make_mock_network(
+        """
+        <network>
+          <name>default</name>
+          <uuid>d6c95a31-16a2-473a-b8cd-7ad2fe2dd855</uuid>
+          <forward mode='nat'/>
+          <bridge name='virbr0' stp='on' delay='0'/>
+          <mac address='52:54:00:cd:49:6b'/>
+          <domain name='my.lab' localOnly='yes'/>
+          <ip address='192.168.122.1' netmask='255.255.255.0'>
+            <dhcp>
+              <range start='192.168.122.2' end='192.168.122.254'/>
+            </dhcp>
+          </ip>
+        </network>
+        """
+    )
+    assert virt.network_update(
+        "default",
+        "test-br0",
+        "nat",
+        ipv4_config={
+            "cidr": "192.168.124.0/24",
+            "dhcp_ranges": [{"start": "192.168.124.2", "end": "192.168.124.254"}],
+        },
+        test=test,
+    )
+    define_mock = virt.libvirt.openAuth().networkDefineXML
+    assert_called(define_mock, not test)
+
+    if not test:
+        # Test the passed new XML
+        expected_xml = strip_xml(
+            """
+            <network>
+              <name>default</name>
+              <mac address='52:54:00:cd:49:6b'/>
+              <uuid>d6c95a31-16a2-473a-b8cd-7ad2fe2dd855</uuid>
+              <bridge name='test-br0'/>
+              <forward mode='nat'/>
+              <ip family='ipv4' address='192.168.124.1' prefix='24'>
+                <dhcp>
+                  <range start='192.168.124.2' end='192.168.124.254'/>
+                </dhcp>
+              </ip>
+            </network>
+            """
+        )
+        assert expected_xml == strip_xml(define_mock.call_args[0][0])
