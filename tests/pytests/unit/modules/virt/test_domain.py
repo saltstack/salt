@@ -254,3 +254,260 @@ def test_get_disk_convert_volumes(make_mock_vm, make_mock_storage_pool):
                 "virtual size": 214748364800,
             },
         } == virt.get_disks("srv01")
+
+
+def test_update_approx_mem(make_mock_vm):
+    """
+    test virt.update with memory parameter unchanged thought not exactly equals to the current value.
+    This may happen since libvirt sometimes rounds the memory value.
+    """
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>3177680</memory>
+          <currentMemory unit='KiB'>3177680</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>hvm</type>
+          </os>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+
+    ret = virt.update("my_vm", mem={"boot": "3253941043B", "current": "3253941043B"})
+    assert not ret["definition"]
+
+
+def test_gen_hypervisor_features():
+    """
+    Test the virt._gen_xml hypervisor_features handling
+    """
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        hypervisor_features={"kvm-hint-dedicated": True},
+    )
+    root = ET.fromstring(xml_data)
+    assert "on" == root.find("features/kvm/hint-dedicated").attrib["state"]
+
+
+def test_update_hypervisor_features(make_mock_vm):
+    """
+    Test changing the hypervisor features of a guest
+    """
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>linux</type>
+            <kernel>/usr/lib/grub2/x86_64-xen/grub.xen</kernel>
+          </os>
+          <features>
+            <kvm>
+              <hint-dedicated state="on"/>
+            </kvm>
+          </features>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+
+    # Update with no change to the features
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": True})
+    assert not ret["definition"]
+
+    # Alter the features
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": False})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "off" == setxml.find("features/kvm/hint-dedicated").get("state")
+
+    # Add the features
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>linux</type>
+            <kernel>/usr/lib/grub2/x86_64-xen/grub.xen</kernel>
+          </os>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+    ret = virt.update("my_vm", hypervisor_features={"kvm-hint-dedicated": True})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "on" == setxml.find("features/kvm/hint-dedicated").get("state")
+
+
+def test_gen_clock():
+    """
+    Test the virt._gen_xml clock property
+    """
+    # Localtime with adjustment
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        clock={"adjustment": 3600, "utc": False},
+    )
+    root = ET.fromstring(xml_data)
+    assert "localtime" == root.find("clock").get("offset")
+    assert "3600" == root.find("clock").get("adjustment")
+
+    # Specific timezone
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        clock={"timezone": "CEST"},
+    )
+    root = ET.fromstring(xml_data)
+    assert "timezone" == root.find("clock").get("offset")
+    assert "CEST" == root.find("clock").get("timezone")
+
+    # UTC
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        clock={"utc": True},
+    )
+    root = ET.fromstring(xml_data)
+    assert "utc" == root.find("clock").get("offset")
+
+    # Timers
+    xml_data = virt._gen_xml(
+        virt.libvirt.openAuth.return_value,
+        "hello",
+        1,
+        512,
+        {},
+        {},
+        "kvm",
+        "hvm",
+        "x86_64",
+        clock={
+            "timers": {
+                "tsc": {"frequency": 3504000000, "mode": "native"},
+                "rtc": {
+                    "tickpolicy": "catchup",
+                    "slew": 4636,
+                    "threshold": 123,
+                    "limit": 2342,
+                },
+                "hpet": {"present": False},
+            },
+        },
+    )
+    root = ET.fromstring(xml_data)
+    assert "utc" == root.find("clock").get("offset")
+    assert "3504000000" == root.find("clock/timer[@name='tsc']").get("frequency")
+    assert "native" == root.find("clock/timer[@name='tsc']").get("mode")
+    assert "catchup" == root.find("clock/timer[@name='rtc']").get("tickpolicy")
+    assert {"slew": "4636", "threshold": "123", "limit": "2342"} == root.find(
+        "clock/timer[@name='rtc']/catchup"
+    ).attrib
+    assert "no" == root.find("clock/timer[@name='hpet']").get("present")
+
+
+def test_update_clock(make_mock_vm):
+    """
+    test virt.update with clock parameter
+    """
+    xml_def = """
+        <domain type="kvm">
+          <name>my_vm</name>
+          <memory unit='KiB'>524288</memory>
+          <currentMemory unit='KiB'>524288</currentMemory>
+          <vcpu placement='static'>1</vcpu>
+          <os>
+            <type arch='x86_64'>linux</type>
+            <kernel>/usr/lib/grub2/x86_64-xen/grub.xen</kernel>
+          </os>
+          <clock offset="localtime" adjustment="-3600">
+            <timer name="tsc" frequency="3504000000" mode="native" />
+            <timer name="kvmclock" present="no" />
+          </clock>
+        </domain>
+    """
+    domain_mock = make_mock_vm(xml_def)
+
+    # Update with no change to the features
+    ret = virt.update(
+        "my_vm",
+        clock={
+            "utc": False,
+            "adjustment": -3600,
+            "timers": {
+                "tsc": {"frequency": 3504000000, "mode": "native"},
+                "kvmclock": {"present": False},
+            },
+        },
+    )
+    assert not ret["definition"]
+
+    # Update
+    ret = virt.update(
+        "my_vm",
+        clock={
+            "timezone": "CEST",
+            "timers": {
+                "rtc": {
+                    "track": "wall",
+                    "tickpolicy": "catchup",
+                    "slew": 4636,
+                    "threshold": 123,
+                    "limit": 2342,
+                },
+                "hpet": {"present": True},
+            },
+        },
+    )
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert "timezone" == setxml.find("clock").get("offset")
+    assert "CEST" == setxml.find("clock").get("timezone")
+    assert {"rtc", "hpet"} == {t.get("name") for t in setxml.findall("clock/timer")}
+    assert "catchup" == setxml.find("clock/timer[@name='rtc']").get("tickpolicy")
+    assert "wall" == setxml.find("clock/timer[@name='rtc']").get("track")
+    assert {"slew": "4636", "threshold": "123", "limit": "2342"} == setxml.find(
+        "clock/timer[@name='rtc']/catchup"
+    ).attrib
+    assert "yes" == setxml.find("clock/timer[@name='hpet']").get("present")
+
+    # Revert to UTC
+    ret = virt.update("my_vm", clock={"utc": True, "adjustment": None, "timers": None})
+    assert ret["definition"]
+    setxml = ET.fromstring(virt.libvirt.openAuth().defineXML.call_args[0][0])
+    assert {"offset": "utc"} == setxml.find("clock").attrib
+    assert setxml.find("clock/timer") is None
