@@ -78,7 +78,6 @@ def make_mock_vm():
         mocked_conn.listDefinedDomains.return_value = [name]
 
         # Configure the mocked domain
-        domain_mock = virt.libvirt.virDomain()
         if not isinstance(mocked_conn.lookupByName, MappedResultMock):
             mocked_conn.lookupByName = MappedResultMock()
         mocked_conn.lookupByName.add(name)
