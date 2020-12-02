@@ -6941,6 +6941,8 @@ def grep(path, pattern, *opts):
         This function's return value is slated for refinement in future
         versions of Salt
 
+        Windows does not support the ``grep`` functionality.
+
     path
         Path to the file to be searched
 
