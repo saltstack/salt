@@ -6818,6 +6818,18 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     return True
 
 
+def _remove_empty_xml_node(node):
+    """
+    Remove the nodes with no children, no text and no attribute
+    """
+    for child in node:
+        if not child.tail and not child.text and not child.items() and not child:
+            node.remove(child)
+        else:
+            _remove_empty_xml_node(child)
+    return node
+
+
 def list_networks(**kwargs):
     """
     List all virtual networks.
@@ -7643,20 +7655,8 @@ def pool_update(
             new_xml.insert(1, element)
 
         # Filter out spaces and empty elements like <source/> since those would mislead the comparison
-        xmlutil.strip_spaces(old_xml)
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
         xmlutil.strip_spaces(new_xml)
-
-        def empty_node_remover(node):
-            for child in node:
-                if (
-                    not child.tail
-                    and not child.text
-                    and not child.items()
-                    and not child
-                ):
-                    node.remove(child)
-
-        xmlutil.visit(old_xml, empty_node_remover)
 
         needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
         if needs_update and not test:
