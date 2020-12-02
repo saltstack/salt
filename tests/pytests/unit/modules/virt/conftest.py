@@ -312,3 +312,24 @@ def make_capabilities():
 </capabilities>"""
 
     return _make_capabilities
+
+
+@pytest.fixture
+def make_mock_network():
+    def _make_mock_net(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("name").text
+
+        if not isinstance(mocked_conn.networkLookupByName, MappedResultMock):
+            mocked_conn.networkLookupByName = MappedResultMock()
+        mocked_conn.networkLookupByName.add(name)
+        net_mock = mocked_conn.networkLookupByName(name)
+        net_mock.XMLDesc.return_value = xml_def
+
+        # libvirt defaults the autostart to unset
+        net_mock.autostart.return_value = 0
+        return net_mock
+
+    return _make_mock_net
