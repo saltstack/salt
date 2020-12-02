@@ -49,6 +49,15 @@ quit_on_error() {
 # Sign python binaries in `bin` and `lib`
 ################################################################################
 INSTALL_DIR=/opt/salt
-find ${INSTALL_DIR}/bin type f -perm -u=x -exec codesign --timestamp -s $DEV_APP_CERT {} \;
-find ${INSTALL_DIR}/lib type f -perm -u=x -exec codesign --timestamp -s $DEV_APP_CERT {} \;
-find ${INSTALL_DIR}/lib type f -name "*dylib" -exec codesign --timestamp -s $DEV_APP_CERT {} \;
+find ${INSTALL_DIR}/bin \
+    -type f \
+    -perm -u=x \
+    -exec codesign --timestamp --verbose --sign "$DEV_APP_CERT" "{}" \;
+find ${INSTALL_DIR}/lib \
+    -type f \
+    -perm -u=x \
+    -exec codesign --timestamp --verbose --sign "$DEV_APP_CERT" "{}" \;
+find ${INSTALL_DIR}/lib \
+    -type f \
+    -name "*dylib" \
+    -exec codesign --timestamp --verbose --sign "$DEV_APP_CERT" "{}" \;
