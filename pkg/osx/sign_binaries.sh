@@ -1,14 +1,23 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Binary Signing Script for macOS installer
-# Authors: CR Oldham, Shane Lee
+# Title: Binary Signing Script for the macOS installer
+# Author: Shane Lee
 # Date: December 2020
 #
-# Description: This signs all binaries built by the `build_env.sh` script
+# Description: This signs all binaries built by the `build_env.sh` script as
+#              well as those created by installing salt. It assumes a python
+#              environment in /opt/salt with salt installed
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#
+# Usage:
+#     This script ignores any parameters passed to it
+#
+#     Example:
+#
+#         sudo ./sign_binaries
 #
 # Environment Setup:
 #
@@ -16,7 +25,11 @@
 #         Import the Salt Developer Application Signing certificate using the
 #         following command:
 #
-#         security import "developerID_application.cer" -k ~/Library/Keychains/login.keychain
+#         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
+#
+#         NOTE: The .p12 certificate is required as the .cer certificate is
+#               is missing the private key. This can be created by exporting the
+#               certificate from the machine it was created on
 #
 #     Define Environment Variables:
 #         Create an environment variable with the name of the certificate to use
