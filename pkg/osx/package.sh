@@ -1,11 +1,11 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Package Script for macOS
+# Title: Build Package Script for the macOS installer
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates an macOS package for Salt from the contents of
+# Description: This creates a signed macOS package for Salt from the contents of
 #              /opt/salt
 #
 # Requirements:
@@ -22,7 +22,7 @@
 #         The following will build Salt version 2017.7.0 with Python 3 and
 #         stage all files in /tmp/salt_pkg:
 #
-#         ./build.sh 2017.7.0 3
+#         ./package.sh 2017.7.0 /tmp/salt_pkg
 #
 # Environment Setup:
 #
@@ -30,7 +30,11 @@
 #         Import the Salt Developer Installer Signing certificate using the
 #         following command:
 #
-#         security import "developerID_installer.cer" -k ~/Library/Keychains/login.keychain
+#         security import "developerID_installer.p12" -k ~/Library/Keychains/login.keychain
+#
+#         NOTE: The .p12 certificate is required as the .cer certificate is
+#               is missing the private key. This can be created by exporting the
+#               certificate from the machine it was created on
 #
 #     Define Environment Variables:
 #         Create an environment variable with the name of the certificate to use
@@ -195,4 +199,3 @@ productbuild --resources=pkg-resources \
              --version=$VERSION \
              --sign $DEV_INSTALL_CERT \
              salt-$VERSION-py3-$CPUARCH-signed.pkg
-

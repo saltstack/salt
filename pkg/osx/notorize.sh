@@ -1,8 +1,8 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Notarize Package Script for macOS
-# Authors: Shane Lee
+# Title: Notarize Package Script for the macOS installer
+# Author: Shane Lee
 # Date: December 2020
 #
 # Description: This notarizes the macOS Installer Package (.pkg)
@@ -24,7 +24,7 @@
 #         The following will notarize the 'salt-v2015.8.3-signed.pkg' file and
 #         save it as 'salt-v2015.8.3-notarized.pkg'
 #
-#         ./notarized.sh salt-v2015.8.3-signed.pkg salt-v2015.8.3-notarized.pkg
+#         ./notarize.sh salt-v2015.8.3-signed.pkg salt-v2015.8.3-notarized.pkg
 #
 # Environment Setup:
 #
