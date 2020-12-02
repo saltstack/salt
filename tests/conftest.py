@@ -732,7 +732,7 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {}
+    config_overrides = {"log_level_logfile": "quiet"}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -808,9 +808,11 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
+    config_overrides = {"log_level_logfile": "quiet"}
     factory = salt_syndic_master_factory.get_salt_syndic_daemon(
         "syndic",
         config_defaults=config_defaults,
+        config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -844,7 +846,7 @@ def salt_master_factory(
         {"salt/test/reactor": [os.path.join(RUNTIME_VARS.FILES, "reactor-test.sls")]}
     ]
 
-    config_overrides = {}
+    config_overrides = {"log_level_logfile": "quiet"}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -939,6 +941,7 @@ def salt_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
+        "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
@@ -969,6 +972,7 @@ def salt_sub_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
+        "log_level_logfile": "quiet",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
@@ -1004,9 +1008,12 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
     config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
+    config_overrides = {"log_level_logfile": "quiet"}
+
     factory = salt_master_factory.get_salt_proxy_minion_daemon(
         proxy_minion_id,
         config_defaults=config_defaults,
+        config_overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     factory.register_after_terminate_callback(

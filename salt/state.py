@@ -2701,6 +2701,14 @@ class State:
             else:
                 run_dict = running
 
+            filtered_run_dict = {}
+            for chunk in chunks:
+                tag = _gen_tag(chunk)
+                run_dict_chunk = run_dict.get(tag)
+                if run_dict_chunk:
+                    filtered_run_dict[tag] = run_dict_chunk
+            run_dict = filtered_run_dict
+
             while True:
                 if self.reconcile_procs(run_dict):
                     break

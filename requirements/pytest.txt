@@ -2,6 +2,6 @@ mock >= 3.0.0
 # PyTest
 pytest >= 6.1.0
 pytest-salt
-pytest-salt-factories >= 0.93.0
+pytest-salt-factories >= 0.98.2
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
