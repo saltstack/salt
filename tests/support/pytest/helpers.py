@@ -188,6 +188,48 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
 
 
 @pytest.helpers.register
+def temp_state_directory(name, saltenv="base"):
+    """
+    This helper creates a temporary state directory. It should be used as a context manager
+    which returns the temporary state directory path, and, once out of context, deletes it.
+
+    Can be directly imported and used, or, it can be used as a pytest helper function if
+    ``pytest-helpers-namespace`` is installed.
+
+    .. code-block:: python
+
+        import os
+        import pytest
+
+        def test_blah():
+            with pytest.helpers.temp_state_directory("blah.sls") as tpath:
+                print(tpath)
+                assert os.path.exists(tpath)
+
+            assert not os.path.exists(tpath)
+
+    Depending on the saltenv, it will be created under ``RUNTIME_VARS.TMP_STATE_TREE`` or
+    ``RUNTIME_VARS.TMP_PRODENV_STATE_TREE``.
+
+    Args:
+        name(str):
+            The temporary state directory name
+        saltenv(str):
+            The salt env to use. Either ``base`` or ``prod``
+    """
+
+    if saltenv == "base":
+        directory = "{}/{}".format(RUNTIME_VARS.TMP_BASEENV_STATE_TREE, name)
+    elif saltenv == "prod":
+        directory = "{}/{}".format(RUNTIME_VARS.TMP_PRODENV_STATE_TREE, name)
+    else:
+        raise RuntimeError(
+            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
+        )
+    return temp_directory(name=directory)
+
+
+@pytest.helpers.register
 def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     """
     This helper creates a temporary pillar file. It should be used as a context manager

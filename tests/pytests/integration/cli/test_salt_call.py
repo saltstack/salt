@@ -20,6 +20,7 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.yaml
 from tests.support.helpers import PRE_PYTEST_SKIP, PRE_PYTEST_SKIP_REASON
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -118,16 +119,22 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     for this minion, salt-call should exit non-zero if invoked with
     option --retcode-passthrough
     """
-    src = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls")
-    dst = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls.bak")
-    shutil.move(src, dst)
-    expected_comment = "No states found for this minion"
-    try:
-        ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
-    finally:
-        shutil.move(dst, src)
-    assert ret.exitcode != 0
-    assert expected_comment in ret.stdout
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    with temp_state_file("top.sls", top_sls) as src:
+        dst = "{0}.bak"
+        shutil.move(src, dst)
+        expected_comment = "No states found for this minion"
+        try:
+            ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
+        finally:
+            shutil.move(dst, src)
+        assert ret.exitcode != 0
+        assert expected_comment in ret.stdout
 
 
 @PRE_PYTEST_SKIP
@@ -256,12 +263,29 @@ def test_masterless_highstate(salt_call_cli):
     """
     test state.highstate in masterless mode
     """
-    destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
-    ret = salt_call_cli.run("--local", "state.highstate")
-    assert ret.exitcode == 0
-    state_run_dict = next(iter(ret.json.values()))
-    assert state_run_dict["result"] is True
-    assert state_run_dict["__id__"] == destpath
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    core_state = """
+    {}/testfile:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        RUNTIME_VARS.TMP
+    )
+
+    with temp_state_file("top.sls", top_sls), temp_state_file("core.sls", core_state):
+        destpath = os.path.join(RUNTIME_VARS.TMP, "testfile")
+        ret = salt_call_cli.run("--local", "state.highstate")
+        assert ret.exitcode == 0
+        state_run_dict = next(iter(ret.json.values()))
+        assert state_run_dict["result"] is True
+        assert state_run_dict["__id__"] == destpath
 
 
 @pytest.mark.skip_on_windows
