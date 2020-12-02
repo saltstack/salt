@@ -7074,6 +7074,248 @@ def _remove_empty_xml_node(node):
     return node
 
 
+def network_update(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    test=False,
+    **kwargs
+):
+    """
+    Update a virtual network if needed.
+
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+        A ``None`` value creates an isolated network with no forwarding at all.
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+    :param ipv4_config: IP v4 configuration.
+        Dictionary describing the IP v4 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv4_config: dict or None
+
+    :param ipv6_config: IP v6 configuration.
+        Dictionary describing the IP v6 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+    :type ipv6_config: dict or None
+
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+    .. versionadded:: Aluminium
+    """
+    # Get the current definition to compare the two
+    conn = __get_conn(**kwargs)
+    needs_update = False
+    try:
+        net = conn.networkLookupByName(name)
+        old_xml = ElementTree.fromstring(net.XMLDesc())
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(
+            _gen_net_xml(
+                name,
+                bridge,
+                forward,
+                vport,
+                tag=tag,
+                ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+                mtu=mtu,
+                domain=domain,
+                nat=nat,
+                interfaces=interfaces,
+                addresses=addresses,
+                physical_function=physical_function,
+                dns=dns,
+            )
+        )
+
+        elements_to_copy = ["uuid", "mac"]
+        for to_copy in elements_to_copy:
+            element = old_xml.find(to_copy)
+            new_xml.insert(1, element)
+
+        # Remove libvirt auto-added bridge attributes to compare
+        default_bridge_attribs = {"stp": "on", "delay": "0"}
+        old_bridge_node = old_xml.find("bridge")
+        if old_bridge_node is not None:
+            for key, value in default_bridge_attribs.items():
+                if old_bridge_node.get(key, None) == value:
+                    old_bridge_node.attrib.pop(key, None)
+
+            # Libvirt may also add the whole bridge network since the name can be computed
+            # If the bridge name starts with virbr in a nat, route, open or isolated network
+            # there is a good change it has been autogenerated...
+            old_forward = (
+                old_xml.find("forward").get("mode")
+                if old_xml.find("forward") is not None
+                else None
+            )
+            if (
+                old_forward == forward
+                and forward in ["nat", "route", "open", None]
+                and bridge is None
+                and old_bridge_node.get("name", "").startswith("virbr")
+            ):
+                old_bridge_node.attrib.pop("name", None)
+
+        # In the ipv4 address, we need to convert netmask to prefix in the old XML
+        ipv4_nodes = [
+            node
+            for node in old_xml.findall("ip")
+            if node.get("family", "ipv4") == "ipv4"
+        ]
+        for ip_node in ipv4_nodes:
+            netmask = ip_node.attrib.pop("netmask")
+            if netmask:
+                address = ipaddress.ip_network(
+                    "{}/{}".format(ip_node.get("address"), netmask), strict=False
+                )
+                ip_node.set("prefix", str(address.prefixlen))
+
+        # Add default ipv4 family if needed
+        for doc in [old_xml, new_xml]:
+            for node in doc.findall("ip"):
+                if "family" not in node.keys():
+                    node.set("family", "ipv4")
+
+        # Filter out spaces and empty elements since those would mislead the comparison
+        _remove_empty_xml_node(xmlutil.strip_spaces(old_xml))
+        xmlutil.strip_spaces(new_xml)
+
+        needs_update = xmlutil.to_dict(old_xml, True) != xmlutil.to_dict(new_xml, True)
+        if needs_update and not test:
+            conn.networkDefineXML(
+                salt.utils.stringutils.to_str(ElementTree.tostring(new_xml))
+            )
+    finally:
+        conn.close()
+    return needs_update
+
+
 def list_networks(**kwargs):
     """
     List all virtual networks.
