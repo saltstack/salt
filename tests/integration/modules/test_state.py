@@ -18,6 +18,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.case import ModuleCase
 from tests.support.helpers import slowTest, with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
+from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 from tests.support.unit import skipIf
@@ -2541,3 +2542,39 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         assert isinstance(result, dict), result
         result = result[next(iter(result))]
         assert result["result"], result
+
+    @slowTest
+    def test_parallel_state_with_requires(self):
+        """
+        This is a test case for https://github.com/saltstack/salt/issues/49273
+        Parallel state object has any requisites
+        """
+
+        state_file = """
+        barrier:
+          cmd.run:
+            - name: sleep 1
+  
+          {%- for x in range(1, 10) %}
+            blah-{{x}}:
+              cmd.run:
+                - name: sleep 2
+                - require:
+                  - barrier
+                  - barrier2
+                - parallel: true
+            {% endfor %}
+
+          barrier2:
+              test.nop
+         """
+
+        with temp_state_file("parallel-with-requisites.sls", state_file):
+            start_time = time.time()
+            result = self.run_function("state.sls", mods="parallel-with-requisites")
+            end_time = time.time()
+
+            # We're running 3 states that sleep for 10 seconds each
+            # they'll run in parallel so we should be below 30 seconds
+            # confirm that the total runtime is below 30s
+            self.assertTrue((time.time() - start_time) < 30)

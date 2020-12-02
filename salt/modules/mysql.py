@@ -1452,13 +1452,23 @@ def user_exists(
     """
     run_verify = False
     server_version = salt.utils.data.decode(version(**connection_args))
-    if not server_version:
-        last_err = __context__["mysql.error"]
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-            last_err
-        )
-        log.error(err)
-        return False
+    if not server_version and password:
+        # Did we fail to connect with the user we are checking
+        # Its password might have previously change with the same command/state
+
+        # Clear the previous error
+        __context__["mysql.error"] = None
+        connection_args["connection_pass"] = password
+
+        server_version = salt.utils.data.decode(version(**connection_args))
+        if not server_version:
+            last_err = __context__["mysql.error"]
+            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
+                last_err
+            )
+            log.error(err)
+            return False
+
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
     # Its password might have previously change with the same command/state
@@ -1707,13 +1717,22 @@ def user_create(
         salt '*' mysql.user_create 'username' 'hostname' allow_passwordless=True
     """
     server_version = salt.utils.data.decode(version(**connection_args))
-    if not server_version:
-        last_err = __context__["mysql.error"]
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-            last_err
-        )
-        log.error(err)
-        return False
+    if not server_version and password:
+        # Did we fail to connect with the user we are checking
+        # Its password might have previously change with the same command/state
+
+        # Clear the previous error
+        __context__["mysql.error"] = None
+        connection_args["connection_pass"] = password
+
+        server_version = salt.utils.data.decode(version(**connection_args))
+        if not server_version:
+            last_err = __context__["mysql.error"]
+            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
+                last_err
+            )
+            log.error(err)
+            return False
 
     if user_exists(user, host, **connection_args):
         log.info("User '%s'@'%s' already exists", user, host)
@@ -1978,13 +1997,22 @@ def user_chpass(
         salt '*' mysql.user_chpass frank localhost allow_passwordless=True
     """
     server_version = salt.utils.data.decode(version(**connection_args))
-    if not server_version:
-        last_err = __context__["mysql.error"]
-        err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-            last_err
-        )
-        log.error(err)
-        return False
+    if not server_version and password:
+        # Did we fail to connect with the user we are checking
+        # Its password might have previously change with the same command/state
+
+        # Clear the previous error
+        __context__["mysql.error"] = None
+        connection_args["connection_pass"] = password
+
+        server_version = salt.utils.data.decode(version(**connection_args))
+        if not server_version:
+            last_err = __context__["mysql.error"]
+            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
+                last_err
+            )
+            log.error(err)
+            return False
 
     if not user_exists(user, host, **connection_args):
         log.info("User '%s'@'%s' does not exists", user, host)

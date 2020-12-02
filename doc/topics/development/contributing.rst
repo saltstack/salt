@@ -250,6 +250,19 @@ Fork a Repo Guide_>`_ and is well worth reading.
         non-fast-forward issue, will likely add extra commits to the pull
         request which were not part of your changes.
 
+#.  Check `Github Actions`_ status on your fork
+
+    By now, and in case you haven't disabled `Github Actions`_, you should have at least 3
+    workflows running on your fork.
+
+      #. ``Pre-Commit`` - The pre-commit checks salt uses to validate several parts of its codebase
+      #. ``Docs`` - Builds Salt's Documentation
+      #. ``Lint`` - Runs lint checks agraint the salt codebase
+
+    Go to https://github.com/my-account/salt/actions to check them out.
+    These will give you an early warning in case something is not right, giving you a chance to fix
+    them even before you open a pull request against the Salt repository.
+
 #.  Find the branch on your GitHub salt fork.
 
     https://github.com/my-account/salt/branches/fix-broken-thing
@@ -468,3 +481,4 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _`#salt on freenode`: https://webchat.freenode.net/#salt
 .. _`saltstack meetup`: https://www.meetup.com/pro/saltstack/
 .. _`saltstack on serverfault`: https://serverfault.com/questions/tagged/saltstack
+.. _`Github Actions`: https://docs.github.com/actions

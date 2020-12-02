@@ -1,10 +1,10 @@
 @Library('salt@master-1.9') _
 
 runTestSuite(
-    ami_image_id: 'ami-07e12cf8c3e2dc24d',
+    ami_image_id: 'ami-0f325553c2ef49ecf',
     concurrent_builds: 1,
-    distro_name: 'freebsd',
-    distro_version: '121',
+    distro_name: 'fedora',
+    distro_version: '33',
     env: env,
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',

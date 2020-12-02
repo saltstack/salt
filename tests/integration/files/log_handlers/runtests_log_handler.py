@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2016 by the SaltStack Team, see AUTHORS for more details.
@@ -11,8 +10,6 @@
     Salt External Logging Handler
 """
 
-# Import python libs
-from __future__ import absolute_import
 
 import errno
 import logging
@@ -21,10 +18,7 @@ import threading
 from multiprocessing import Queue
 
 import salt.log.setup
-
-# Import Salt libs
 import salt.utils.msgpack
-from salt.ext import six
 from salt.utils.platform import is_darwin
 
 log = logging.getLogger(__name__)
@@ -35,12 +29,10 @@ __virtualname__ = "runtests_log_handler"
 def __virtual__():
     if "runtests_log_port" not in __opts__:
         return False, "'runtests_log_port' not in options"
-    if six.PY3:
-        return (
-            False,
-            "runtests external logging handler is temporarily disabled for Python 3 tests",
-        )
-    return True
+    return (
+        False,
+        "runtests external logging handler is temporarily disabled for Python 3 tests",
+    )
 
 
 def setup_handlers():
@@ -49,7 +41,7 @@ def setup_handlers():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.connect(("localhost", port))
-    except socket.error as exc:
+    except OSError as exc:
         if exc.errno == errno.ECONNREFUSED:
             log.warning("Failed to connect to log server")
             return
@@ -85,7 +77,7 @@ def process_queue(port, queue):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.connect(("localhost", port))
-    except socket.error as exc:
+    except OSError as exc:
         if exc.errno == errno.ECONNREFUSED:
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
@@ -100,14 +92,14 @@ def process_queue(port, queue):
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            sock.sendall(salt.utils.msgpack.dumps(record.__dict__, encoding="utf-8"))
-        except (IOError, EOFError, KeyboardInterrupt, SystemExit):
+            sock.sendall(salt.utils.msgpack.dumps(record.__dict__, use_bin_type=True))
+        except (OSError, EOFError, KeyboardInterrupt, SystemExit):
             if hasattr(exc, "errno") and exc.errno != errno.EPIPE:
                 log.exception(exc)
             try:
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-            except (OSError, socket.error):
+            except OSError:
                 pass
             break
         except Exception as exc:  # pylint: disable=broad-except
