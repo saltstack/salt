@@ -75,7 +75,7 @@ def _create_table(con, queue):
     return True
 
 
-def _process_mode(mode=None):
+def _process_mode(mode="fifo"):
     """
     return the order by statement for the mode
     """
@@ -92,7 +92,7 @@ def _process_mode(mode=None):
     return order_by
 
 
-def _list_items(queue, mode=None):
+def _list_items(queue, mode="fifo"):
     """
     Private function to list contents of a queue
     """
@@ -127,7 +127,7 @@ def list_queues():
     return queues
 
 
-def list_items(queue, mode=None):
+def list_items(queue, mode="fifo"):
     """
     List contents of a queue
     """
@@ -237,7 +237,7 @@ def delete(queue, items):
         return True
 
 
-def pop(queue, quantity=1, is_runner=False, mode=None):
+def pop(queue, quantity=1, is_runner=False, mode="fifo"):
     """
     Pop one or more or all items from the queue return them.
     """

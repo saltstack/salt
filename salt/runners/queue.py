@@ -151,7 +151,7 @@ def list_length(queue, backend="sqlite"):
     return ret
 
 
-def list_items(queue, backend="sqlite", mode=None):
+def list_items(queue, backend="sqlite", mode="fifo"):
     """
     List contents of a queue
 
@@ -179,7 +179,7 @@ def list_items(queue, backend="sqlite", mode=None):
     return ret
 
 
-def pop(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
+def pop(queue, quantity=1, backend="sqlite", is_runner=False, mode="fifo"):
     """
     Pop one or more or all items from a queue
 
@@ -218,7 +218,7 @@ def pop(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
     return ret
 
 
-def process_queue(queue, quantity=1, backend="sqlite", is_runner=False, mode=None):
+def process_queue(queue, quantity=1, backend="sqlite", is_runner=False, mode="fifo"):
     """
     Pop items off a queue and create an event on the Salt event bus to be
     processed by a Reactor.
@@ -276,7 +276,7 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False, mode=Non
     return data
 
 
-def __get_queue_opts(queue=None, backend=None, mode=None):
+def __get_queue_opts(queue=None, backend=None, mode="fifo"):
     """
     Get consistent opts for the queued runners
     """
@@ -331,7 +331,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
     return insert(**queue_kwargs)
 
 
-def process_runner(quantity=1, queue=None, backend=None, mode=None):
+def process_runner(quantity=1, queue=None, backend=None, mode="fifo"):
     """
     Process queued runners
 
