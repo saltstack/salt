@@ -197,5 +197,6 @@ productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION-py3-$CPUARCH.pkg \
              --version=$VERSION \
-             --sign $DEV_INSTALL_CERT \
+             --sign "$DEV_INSTALL_CERT" \
+             --timestamp \
              salt-$VERSION-py3-$CPUARCH-signed.pkg
