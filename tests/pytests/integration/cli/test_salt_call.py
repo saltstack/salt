@@ -119,6 +119,7 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
     for this minion, salt-call should exit non-zero if invoked with
     option --retcode-passthrough
     """
+<<<<<<< HEAD
     top_sls = """
     base:
       '*':
@@ -138,6 +139,35 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
             shutil.move(dst, src)
         assert ret.exitcode != 0
         assert expected_comment in ret.stdout
+||||||| parent of d9b99b527e (Fixing various tests that test the state system.  Adding temp_state_directory helper for when we want to add a temporary state into a directory in the Salt root.)
+    src = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls")
+    dst = os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls.bak")
+    shutil.move(src, dst)
+    expected_comment = "No states found for this minion"
+    try:
+        ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
+    finally:
+        shutil.move(dst, src)
+    assert ret.exitcode != 0
+    assert expected_comment in ret.stdout
+=======
+    top_sls = """
+    base:
+      '*':
+        - core
+        """
+
+    with temp_state_file("top.sls", top_sls) as src:
+        dst = "{0}.bak"
+        shutil.move(src, dst)
+        expected_comment = "No states found for this minion"
+        try:
+            ret = salt_call_cli.run("--retcode-passthrough", "state.highstate")
+        finally:
+            shutil.move(dst, src)
+        assert ret.exitcode != 0
+        assert expected_comment in ret.stdout
+>>>>>>> d9b99b527e (Fixing various tests that test the state system.  Adding temp_state_directory helper for when we want to add a temporary state into a directory in the Salt root.)
 
 
 @PRE_PYTEST_SKIP
