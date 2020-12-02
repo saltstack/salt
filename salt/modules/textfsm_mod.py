@@ -13,8 +13,7 @@ inside the renderer (Jinja, Mako, Genshi, etc.).
 
 .. note::
 
-    For Python 2/3 compatibility, it is more recommended to
-    install the ``textfsm`` library: ``pip install textfsm``.
+    Install  ``textfsm`` library: ``pip install textfsm``.
 """
 
 import logging
