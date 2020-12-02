@@ -805,7 +805,6 @@ def run(
         ret["comment"] = six.text_type(err)
         if "The user name or password is incorrect" in ret["comment"]:
             ret["comment"] = "`runas` user name or user password was incorrect."
-            None
         return ret
     except Exception as err:  # pylint: disable=broad-except
         ret["comment"] = six.text_type(err)
