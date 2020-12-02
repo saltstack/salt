@@ -1180,23 +1180,75 @@ def _gen_vol_xml(
     return template.render(**context)
 
 
-def _gen_net_xml(name, bridge, forward, vport, tag=None, ip_configs=None):
+def _gen_net_xml(
+    name,
+    bridge,
+    forward,
+    vport,
+    tag=None,
+    ip_configs=None,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+):
     """
     Generate the XML string to define a libvirt network
     """
+    if isinstance(vport, str):
+        vport_context = {"type": vport}
+    else:
+        vport_context = vport
+
+    if isinstance(tag, (str, int)):
+        tag_context = {"tags": [{"id": tag}]}
+    else:
+        tag_context = tag
+
+    addresses_context = []
+    if addresses:
+        matches = [
+            re.fullmatch(r"([0-9]+):([0-9A-Fa-f]+):([0-9A-Fa-f]+)\.([0-9])", addr)
+            for addr in addresses.lower().split(" ")
+        ]
+        addresses_context = [
+            {
+                "domain": m.group(1),
+                "bus": m.group(2),
+                "slot": m.group(3),
+                "function": m.group(4),
+            }
+            for m in matches
+            if m
+        ]
+
     context = {
         "name": name,
         "bridge": bridge,
+        "mtu": mtu,
+        "domain": domain,
         "forward": forward,
-        "vport": vport,
-        "tag": tag,
+        "nat": nat,
+        "interfaces": interfaces.split(" ") if interfaces else [],
+        "addresses": addresses_context,
+        "pf": physical_function,
+        "vport": vport_context,
+        "vlan": tag_context,
+        "dns": dns,
         "ip_configs": [
             {
                 "address": ipaddress.ip_network(config["cidr"]),
                 "dhcp_ranges": config.get("dhcp_ranges", []),
+                "hosts": config.get("hosts", {}),
+                "bootp": config.get("bootp", {}),
+                "tftp": config.get("tftp"),
             }
             for config in ip_configs or []
         ],
+        "yesno": lambda v: "yes" if v else "no",
     }
     fn_ = "libvirt_network.jinja"
     try:
@@ -6722,18 +6774,70 @@ def cpu_baseline(full=False, migratable=False, out="libvirt", **kwargs):
     return ElementTree.tostring(cpu)
 
 
-def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **kwargs):
+def network_define(
+    name,
+    bridge,
+    forward,
+    ipv4_config=None,
+    ipv6_config=None,
+    vport=None,
+    tag=None,
+    autostart=True,
+    start=True,
+    mtu=None,
+    domain=None,
+    nat=None,
+    interfaces=None,
+    addresses=None,
+    physical_function=None,
+    dns=None,
+    **kwargs
+):
     """
     Create libvirt network.
 
-    :param name: Network name
-    :param bridge: Bridge name
-    :param forward: Forward mode(bridge, router, nat)
-    :param vport: Virtualport type
-    :param tag: Vlan tag
-    :param autostart: Network autostart (default True)
-    :param start: Network start (default True)
-    :param ipv4_config: IP v4 configuration
+    :param name: Network name.
+    :param bridge: Bridge name.
+    :param forward: Forward mode (bridge, router, nat).
+
+        .. versionchanged:: Aluminium
+           a ``None`` value creates an isolated network with no forwarding at all
+
+    :param vport: Virtualport type.
+        The value can also be a dictionary with ``type`` and ``parameters`` keys.
+        The ``parameters`` value is a dictionary of virtual port parameters.
+
+        .. code-block:: yaml
+
+          - vport:
+              type: openvswitch
+              parameters:
+                interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param tag: Vlan tag.
+        The value can also be a dictionary with the ``tags`` and optional ``trunk`` keys.
+        ``trunk`` is a boolean value indicating whether to use VLAN trunking.
+        ``tags`` is a list of dictionaries with keys ``id`` and ``nativeMode``.
+        The ``nativeMode`` value can be one of ``tagged`` or ``untagged``.
+
+        .. code-block:: yaml
+
+          - tag:
+              trunk: True
+              tags:
+                - id: 42
+                  nativeMode: untagged
+                - id: 47
+
+        .. versionchanged:: Aluminium
+           possible dictionary value
+
+    :param autostart: Network autostart (default True).
+    :param start: Network start (default True).
+    :param ipv4_config: IP v4 configuration.
         Dictionary describing the IP v4 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -6741,7 +6845,7 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv4_config: dict or None
 
-    :param ipv6_config: IP v6 configuration
+    :param ipv6_config: IP v6 configuration.
         Dictionary describing the IP v6 setup like IP range and
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
@@ -6749,13 +6853,108 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         .. versionadded:: 3000
     :type ipv6_config: dict or None
 
-    :param connection: libvirt connection URI, overriding defaults
-    :param username: username to connect with, overriding defaults
-    :param password: password to connect with, overriding defaults
+    :param connection: libvirt connection URI, overriding defaults.
+    :param username: username to connect with, overriding defaults.
+    :param password: password to connect with, overriding defaults.
+
+    :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
+        (default ``None``)
+
+        .. versionadded:: Aluminium
+
+    :param domain: DNS domain name of the DHCP server.
+        The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - domain:
+              name: lab.acme.org
+              localOnly: True
+
+        .. versionadded:: Aluminium
+
+    :param nat: addresses and ports to route in NAT forward mode.
+        The value is a dictionary with optional keys ``address`` and ``port``.
+        Both values are a dictionary with ``start`` and ``end`` values.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: nat
+          - nat:
+              address:
+                start: 1.2.3.4
+                end: 1.2.3.10
+              port:
+                start: 500
+                end: 1000
+
+        .. versionadded:: Aluminium
+
+    :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: passthrough
+          - interfaces: "eth10 eth11 eth12"
+
+        .. versionadded:: Aluminium
+
+    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - interfaces: "0000:04:00.1 0000:e3:01.2"
+
+        .. versionadded:: Aluminium
+
+    :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - forward: hostdev
+          - physical_function: "eth0"
+
+        .. versionadded:: Aluminium
+
+    :param dns: virtual network DNS configuration.
+        The value is a dictionary described in net-define-dns_.
+        (default ``None``)
+
+        .. code-block:: yaml
+
+          - dns:
+              forwarders:
+                - domain: example.com
+                  addr: 192.168.1.1
+                - addr: 8.8.8.8
+                - domain: www.example.com
+              txt:
+                example.com: "v=spf1 a -all"
+                _http.tcp.example.com: "name=value,paper=A4"
+              hosts:
+                192.168.1.2:
+                  - mirror.acme.lab
+                  - test.acme.lab
+              srvs:
+                - name: ldap
+                  protocol: tcp
+                  domain: ldapserver.example.com
+                  target: .
+                  port: 389
+                  priority: 1
+                  weight: 10
+
+        .. versionadded:: Aluminium
 
     .. _net-define-ip:
 
-    ** IP configuration definition
+    .. rubric:: IP configuration definition
 
     Both the IPv4 and IPv6 configuration dictionaries can contain the following properties:
 
@@ -6763,7 +6962,47 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         CIDR notation for the network. For example '192.168.124.0/24'
 
     dhcp_ranges
-        A list of dictionary with ``'start'`` and ``'end'`` properties.
+        A list of dictionaries with ``'start'`` and ``'end'`` properties.
+
+    hosts
+        A list of dictionaries with ``ip`` property and optional ``name``, ``mac`` and ``id`` properties.
+
+        .. versionadded:: Aluminium
+
+    bootp
+        A dictionary with a ``file`` property and an optional ``server`` one.
+
+        .. versionadded:: Aluminium
+
+    tftp
+        The path to the TFTP root directory to serve.
+
+        .. versionadded:: Aluminium
+
+    .. _net-define-dns:
+
+    .. rubric:: DNS configuration definition
+
+    The DNS configuration dictionary contains the following optional properties:
+
+    forwarders
+        List of alternate DNS forwarders to use.
+        Each item is a dictionary with the optional ``domain`` and ``addr`` keys.
+        If both are provided, the requests to the domain are forwarded to the server at the ``addr``.
+        If only ``domain`` is provided the requests matching this domain will be resolved locally.
+        If only ``addr`` is provided all requests will be forwarded to this DNS server.
+
+    txt:
+        Dictionary of TXT fields to set.
+
+    hosts:
+        Dictionary of host DNS entries.
+        The key is the IP of the host, and the value is a list of hostnames for it.
+
+    srvs:
+        List of SRV DNS entries.
+        Each entry is a dictionary with the mandatory ``name`` and ``protocol`` keys.
+        Entries can also have ``target``, ``port``, ``priority`` and ``weight`` optional properties.
 
     CLI Example:
 
@@ -6776,8 +7015,6 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
     conn = __get_conn(**kwargs)
     vport = kwargs.get("vport", None)
     tag = kwargs.get("tag", None)
-    autostart = kwargs.get("autostart", True)
-    starting = kwargs.get("start", True)
 
     net_xml = _gen_net_xml(
         name,
@@ -6786,6 +7023,13 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         vport,
         tag=tag,
         ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
+        mtu=mtu,
+        domain=domain,
+        nat=nat,
+        interfaces=interfaces,
+        addresses=addresses,
+        physical_function=physical_function,
+        dns=dns,
     )
     try:
         conn.networkDefineXML(net_xml)
@@ -6805,12 +7049,12 @@ def network_define(name, bridge, forward, ipv4_config=None, ipv6_config=None, **
         conn.close()
         return False
 
-    if (starting is True or autostart is True) and network.isActive() != 1:
+    if (start or autostart) and network.isActive() != 1:
         network.create()
 
-    if autostart is True and network.autostart() != 1:
+    if autostart and network.autostart() != 1:
         network.setAutostart(int(autostart))
-    elif autostart is False and network.autostart() == 1:
+    elif not autostart and network.autostart() == 1:
         network.setAutostart(int(autostart))
 
     conn.close()
