@@ -28,7 +28,7 @@ def __virtual__():
 
 
 def config_manage(
-    name, uri, method, config, init_uri=None, init_method="PATCH", init_config=None
+    name, path, method, config, init_path=None, init_method="PATCH", init_config=None
 ):
     """
     Ensure a specific value exists at a given path
@@ -36,8 +36,8 @@ def config_manage(
     name:
         (str) The name for this rule
 
-    uri:
-        (str) The restconf uri to set / get config
+    path:
+        (str) The restconf path to set / get config
 
     method:
         (str) rest method to use eg GET, PUT, POST, PATCH, DELETE
@@ -45,15 +45,15 @@ def config_manage(
     config:
         (dict) The new value at the given path
 
-    init_uri: (optional)
-        (str) Alternative URI incase the URI doesnt exist on first pass
+    init_path: (optional)
+        (str) Alternative path incase the path doesnt exist on first pass
 
     init_method: (optional)
-        (str) Method to use on alternative URI when setting config, default: PATCH
+        (str) Method to use on alternative path when setting config, default: PATCH
 
     init_config: (optional)
         (dict) The new value at the given init path.
-        This is only needed if you need to supply a different style of data to an init uri.
+        This is only needed if you need to supply a different style of data to an init path.
 
     Examples:
 
@@ -62,7 +62,7 @@ def config_manage(
         do_configure_restconf_endpoint:
           restconf.config_manage:
             - name: random_name_here
-            - uri: restconf/data/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1%2F0%2F3
+            - path: restconf/data/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1%2F0%2F3
             - config:
                 Cisco-IOS-XE-native:GigabitEthernet:
                   description: interfaceDescription
@@ -71,16 +71,16 @@ def config_manage(
     """
     ret = {"result": False, "comment": ""}
 
-    uri = str(uri)
+    path = str(path)
     name = str(name)
     method = str(method)
-    if uri == "":
-        ret["comment"] = "CRITICAL: uri must not be blank"
-        log.critical("uri must not be blank")
+    if path == "":
+        ret["comment"] = "CRITICAL: path must not be blank"
+        log.critical("path must not be blank")
         return ret
     if name == "":
-        ret["comment"] = "CRITICAL: Name is required"
-        log.critical("Name is required")
+        ret["comment"] = "CRITICAL: name is required"
+        log.critical("name is required")
         return ret
     if method == "":
         ret["comment"] = "CRITICAL: method is required"
@@ -98,68 +98,65 @@ def config_manage(
 
     # TODO: add template function so that config var does not need to be passed
 
-    uri_check = __salt__["restconf.uri_check"](uri, init_uri)
-    log.debug("uri_check:")
-    log.debug(uri_check)
-    if not uri_check["result"]:
+    path_check = __salt__["restconf.path_check"](path, init_path)
+    log.debug("path_check:")
+    log.debug(path_check)
+    if not path_check["result"]:
         ret["result"] = False
-        ret["comment"] = "restconf could not find a working URI to get initial config"
+        ret["comment"] = "restconf could not find a working PATH to get initial config"
         return ret
-    # uri_check['uri_used']
-    # uri_check['request_uri']
-    # uri_check['request_restponse']
 
     use_conf = config
-    if uri_check["uri_used"] == "init":
-        # We will be creating a new endpoint as we are using the init uri so config will be blank
+    if path_check["path_used"] == "init":
+        # We will be creating a new endpoint as we are using the init path so config will be blank
         existing = {}
         if init_config is not None:
-            # some init uris need a special config layout
+            # some init paths need a special config layout
             use_conf = init_config
     request_method = method
-    if uri_check["uri_used"] == "init":
+    if path_check["path_used"] == "init":
         request_method = init_method
         # since we are using the init method we are basicly doing a net new change
-        uri_check["request_restponse"] = {}
+        path_check["request_restponse"] = {}
 
     proposed_config = json.loads(
         json.dumps(use_conf)
     )  # convert from orderedDict to Dict (which is now ordered by default in python3.8)
 
-    log.debug("existing uri config:")
-    log.debug(type(uri_check["request_restponse"]))
-    log.debug(uri_check["request_restponse"])
+    log.debug("existing path config:")
+    log.debug(type(path_check["request_restponse"]))
+    log.debug(path_check["request_restponse"])
     log.debug("proposed_config:")
     log.debug(type(proposed_config))
     log.debug(proposed_config)
 
     # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
-    if uri_check["request_restponse"] == proposed_config:
+    if path_check["request_restponse"] == proposed_config:
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
     elif __opts__["test"] is True:
         ret["result"] = None
         ret["changes"]["changed"] = _compare_changes(
-            uri_check["request_restponse"], proposed_config
+            path_check["request_restponse"], proposed_config
         )
         # ret["changes"]["rest_method"] = request_method
-        ret["changes"]["rest_method_uri"] = uri_check["uri_used"]
+        ret["changes"]["rest_method_path"] = path_check["path_used"]
         ret["comment"] = "Config will be added"
 
     else:
         resp = __salt__["restconf.set_data"](
-            uri_check["request_uri"], request_method, proposed_config
+            path_check["request_path"], request_method, proposed_config
         )
 
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
             ret["changes"]["changed"] = _compare_changes(
-                uri_check["request_restponse"], proposed_config
+                path_check["request_restponse"], proposed_config
             )
             # ret["changes"]["rest_method"] = request_method
-            ret["changes"]["rest_method_uri"] = uri_check["uri_used"]
+            ret["changes"]["rest_method_path"] = path_check["path_used"]
             ret["comment"] = "Successfully added config"
         else:
             ret["result"] = False
@@ -171,8 +168,8 @@ def config_manage(
                 why = None
             ret["comment"] = (
                 "failed to add / modify config. "
-                "API Statuscode: {s}, API Response: {w}, URI:{u}".format(
-                    w=why, s=resp["status"], u=uri_check["request_uri"]
+                "API Statuscode: {s}, API Response: {w}, PATH:{u}".format(
+                    w=why, s=resp["status"], u=path_check["request_path"]
                 )
             )
             log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))
