@@ -92,4 +92,4 @@ def uri_check(primary_uri, init_uri):
         )
         ret["result"] = False
 
-    return ret["result"], ret
+    return ret
