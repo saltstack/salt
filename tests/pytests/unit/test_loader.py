@@ -30,6 +30,7 @@ def loader_dir(tmp_path):
         return __context__[key]
     """
     )
+    tmp_path = str(tmp_path)
     with salt.utils.files.fopen(os.path.join(tmp_path, "mod_a.py"), "w") as fp:
         fp.write(mod_content)
     with salt.utils.files.fopen(os.path.join(tmp_path, "mod_b.py"), "w") as fp:
