@@ -101,7 +101,7 @@ def config_manage(
     uri_check = __salt__["restconf.uri_check"](uri, init_uri)
     log.debug("uri_check:")
     log.debug(uri_check)
-    if not uri_check[0]:
+    if not uri_check["result"]:
         ret["result"] = False
         ret["comment"] = "restconf could not find a working URI to get initial config"
         return ret
@@ -110,56 +110,56 @@ def config_manage(
     # uri_check['request_restponse']
 
     use_conf = config
-    if uri_check[1]["uri_used"] == "init":
+    if uri_check["uri_used"] == "init":
         # We will be creating a new endpoint as we are using the init uri so config will be blank
         existing = {}
         if init_config is not None:
             # some init uris need a special config layout
             use_conf = init_config
     request_method = method
-    if uri_check[1]["uri_used"] == "init":
+    if uri_check["uri_used"] == "init":
         request_method = init_method
         # since we are using the init method we are basicly doing a net new change
-        uri_check[1]["request_restponse"] = {}
+        uri_check["request_restponse"] = {}
 
     proposed_config = json.loads(
         json.dumps(use_conf)
     )  # convert from orderedDict to Dict (which is now ordered by default in python3.8)
 
     log.debug("existing uri config:")
-    log.debug(type(uri_check[1]["request_restponse"]))
-    log.debug(uri_check[1]["request_restponse"])
+    log.debug(type(uri_check["request_restponse"]))
+    log.debug(uri_check["request_restponse"])
     log.debug("proposed_config:")
     log.debug(type(proposed_config))
     log.debug(proposed_config)
 
     # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
-    if uri_check[1]["request_restponse"] == proposed_config:
+    if uri_check["request_restponse"] == proposed_config:
         ret["result"] = True
         ret["comment"] = "Config is already set"
 
     elif __opts__["test"] is True:
         ret["result"] = None
         ret["changes"]["changed"] = _compare_changes(
-            uri_check[1]["request_restponse"], proposed_config
+            uri_check["request_restponse"], proposed_config
         )
         # ret["changes"]["rest_method"] = request_method
-        ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
+        ret["changes"]["rest_method_uri"] = uri_check["uri_used"]
         ret["comment"] = "Config will be added"
 
     else:
         resp = __salt__["restconf.set_data"](
-            uri_check[1]["request_uri"], request_method, proposed_config
+            uri_check["request_uri"], request_method, proposed_config
         )
 
         # Success
         if resp["status"] in [201, 200, 204]:
             ret["result"] = True
             ret["changes"]["changed"] = _compare_changes(
-                uri_check[1]["request_restponse"], proposed_config
+                uri_check["request_restponse"], proposed_config
             )
             # ret["changes"]["rest_method"] = request_method
-            ret["changes"]["rest_method_uri"] = uri_check[1]["uri_used"]
+            ret["changes"]["rest_method_uri"] = uri_check["uri_used"]
             ret["comment"] = "Successfully added config"
         else:
             ret["result"] = False
@@ -172,7 +172,7 @@ def config_manage(
             ret["comment"] = (
                 "failed to add / modify config. "
                 "API Statuscode: {s}, API Response: {w}, URI:{u}".format(
-                    w=why, s=resp["status"], u=uri_check[1]["request_uri"]
+                    w=why, s=resp["status"], u=uri_check["request_uri"]
                 )
             )
             log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))

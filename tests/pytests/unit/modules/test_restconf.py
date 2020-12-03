@@ -28,15 +28,16 @@ def test_module_uri_check_primary_success(
 ):
     result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
 
-    assert result[0] is True
-    assert type(result[1]) is dict
-    assert "request_restponse" in result[1]
-    assert "fjord" in result[1]["request_restponse"]
-    assert "request_uri" in result[1]
-    assert "request_uri" in result[1]
-    assert "uri_used" in result[1]
-    assert result[1]["request_uri"] == "fakeprimaryuri"
-    assert result[1]["uri_used"] == "primary"
+    assert type(result) is dict
+    assert "request_restponse" in result
+    assert "fjord" in result["request_restponse"]
+    assert "request_uri" in result
+    assert "request_uri" in result
+    assert "uri_used" in result
+    assert "result" in result
+    assert result["result"] is True
+    assert result["request_uri"] == "fakeprimaryuri"
+    assert result["uri_used"] == "primary"
 
 
 @pytest.fixture
@@ -54,8 +55,8 @@ def test_module_uri_check_always_fail(
 ):
     result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
 
-    assert result[0] is False
-    assert type(result[1]) is dict
+    assert result["result"] is False
+    assert type(result) is dict
 
 
 @pytest.fixture
@@ -80,12 +81,13 @@ def test_module_uri_check_primary_init(
 ):
     result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
 
-    assert result[0] is True
-    assert type(result[1]) is dict
-    assert "request_restponse" in result[1]
-    assert "fjord" in result[1]["request_restponse"]
-    assert "request_uri" in result[1]
-    assert "request_uri" in result[1]
-    assert "uri_used" in result[1]
-    assert result[1]["request_uri"] == "fakeinituri"
-    assert result[1]["uri_used"] == "init"
+    assert type(result) is dict
+    assert "request_restponse" in result
+    assert "fjord" in result["request_restponse"]
+    assert "request_uri" in result
+    assert "request_uri" in result
+    assert "uri_used" in result
+    assert "result" in result
+    assert result["result"] is True
+    assert result["request_uri"] == "fakeinituri"
+    assert result["uri_used"] == "init"
