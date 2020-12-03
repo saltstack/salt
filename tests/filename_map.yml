@@ -177,7 +177,6 @@ salt/loader.py:
 
 salt/minion.py:
   - integration.client.test_syndic
-  - integration.minion.test_blackout
   - integration.minion.test_pillar
   - integration.minion.test_timeout
   - integration.shell.test_matcher
