@@ -1,22 +1,16 @@
-# Import Python libs
-
 import datetime
 import logging
 import random
 import string
 
-# Import Salt libs
 import salt.loader
 import salt.loader_context
 import salt.modules.boto_apigateway as boto_apigateway
 from salt.utils.versions import LooseVersion
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
