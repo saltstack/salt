@@ -657,9 +657,8 @@ def render(opts, functions, states=None, proxy=None, context=None):
         pack["__states__"] = states
 
     if proxy is None:
-        pack["__proxy__"] = {}
-    else:
-        pack["proxy"] = proxy
+        proxy = {}
+    pack["__proxy__"] = proxy
 
     ret = LazyLoader(
         _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
