@@ -937,7 +937,6 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
 
 
 @SKIP_IF_NOT_RUNNING_PYTEST
-@pytest.mark.usefixtures("salt_ssh_cli")
 @pytest.mark.requires_sshd_server
 class SSHCase(ShellCase):
     """
