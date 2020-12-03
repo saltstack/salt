@@ -6,13 +6,11 @@ import tempfile
 
 import jinja2.exceptions
 import salt.modules.debian_ip as debian_ip
-
-# Import Salt Testing Libs
 import salt.utils.files
 import salt.utils.platform
 from tests.support.helpers import slowTest
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, patch, sentinel
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -917,9 +915,12 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(debian_ip.down("eth0", "slave"), None)
 
-        mock = MagicMock(return_value="Salt")
+        mock = MagicMock(return_value=sentinel.ret)
         with patch.dict(debian_ip.__salt__, {"cmd.run": mock}):
-            self.assertEqual(debian_ip.down("eth0", "eth"), "Salt")
+            self.assertEqual(debian_ip.down("eth0", "eth"), sentinel.ret)
+            self.assertEqual(
+                mock.call_args[0], (["ip", "link", "set", "eth0", "down"],)
+            )
 
     # 'get_bond' function tests: 1
 
@@ -1031,9 +1032,10 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
         """
         self.assertEqual(debian_ip.down("eth0", "slave"), None)
 
-        mock = MagicMock(return_value="Salt")
+        mock = MagicMock(return_value=sentinel.ret)
         with patch.dict(debian_ip.__salt__, {"cmd.run": mock}):
-            self.assertEqual(debian_ip.up("eth0", "eth"), "Salt")
+            self.assertEqual(debian_ip.up("eth0", "eth"), sentinel.ret)
+            self.assertEqual(mock.call_args[0], (["ip", "link", "set", "eth0", "up"],))
 
     # 'get_network_settings' function tests: 1
 
