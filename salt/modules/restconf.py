@@ -69,7 +69,7 @@ def path_check(primary_path, init_path):
     log.debug("modules_restconf_path_check: about to attempt to get primary path")
     existing_raw = __salt__["restconf.get_data"](primary_path)
 
-    if existing_raw["status"] in [200]:
+    if existing_raw["status"] == 200:
         log.debug("modules_restconf_path_check: found a valid path at primary_path")
         existing = existing_raw["dict"]
         ret["result"] = True
