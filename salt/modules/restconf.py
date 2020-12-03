@@ -54,7 +54,7 @@ def set_data(path, method, dict_payload):
 
     .. code-block:: bash
 
-        salt '*' restconf.get_data restconf/yang-library-version method=PATCH dict_payload=""
+        salt '*' restconf.set_data restconf/yang-library-version method=PATCH dict_payload=""
     """
     return __proxy__["restconf.request"](path, method, dict_payload)
 
