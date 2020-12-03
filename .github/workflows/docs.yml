@@ -33,7 +33,7 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         token: ${{ github.token }}
-        list-files: shell
+        list-files: json
         filters: |
           docs:
             - docs/**
@@ -86,7 +86,7 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         token: ${{ github.token }}
-        list-files: shell
+        list-files: json
         filters: |
           docs:
             - docs/**
