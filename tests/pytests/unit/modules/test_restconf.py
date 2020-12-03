@@ -23,21 +23,21 @@ def mocking_dunder_salt_restconf_getdata_response_always_200():
         yield opt_dunder_mock
 
 
-def test_module_uri_check_primary_success(
+def test_module_path_check_primary_success(
     mocking_dunder_salt_restconf_getdata_response_always_200,
 ):
-    result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
+    result = restconf.path_check("fakeprimarypath", "fakeinitpath")
 
     assert type(result) is dict
     assert "request_restponse" in result
     assert "fjord" in result["request_restponse"]
-    assert "request_uri" in result
-    assert "request_uri" in result
-    assert "uri_used" in result
+    assert "request_path" in result
+    assert "request_path" in result
+    assert "path_used" in result
     assert "result" in result
     assert result["result"] is True
-    assert result["request_uri"] == "fakeprimaryuri"
-    assert result["uri_used"] == "primary"
+    assert result["request_path"] == "fakeprimarypath"
+    assert result["path_used"] == "primary"
 
 
 @pytest.fixture
@@ -50,10 +50,10 @@ def mocking_dunder_salt_restconf_getdata_response_always_404():
         yield opt_dunder_mock
 
 
-def test_module_uri_check_always_fail(
+def test_module_path_check_always_fail(
     mocking_dunder_salt_restconf_getdata_response_always_404,
 ):
-    result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
+    result = restconf.path_check("fakeprimarypath", "fakeinitpath")
 
     assert result["result"] is False
     assert type(result) is dict
@@ -76,18 +76,18 @@ def mocking_dunder_salt_restconf_getdata_response_first404_then_200():
         yield opt_dunder_mock
 
 
-def test_module_uri_check_primary_init(
+def test_module_path_check_primary_init(
     mocking_dunder_salt_restconf_getdata_response_first404_then_200,
 ):
-    result = restconf.uri_check("fakeprimaryuri", "fakeinituri")
+    result = restconf.path_check("fakeprimarypath", "fakeinitpath")
 
     assert type(result) is dict
     assert "request_restponse" in result
     assert "fjord" in result["request_restponse"]
-    assert "request_uri" in result
-    assert "request_uri" in result
-    assert "uri_used" in result
+    assert "request_path" in result
+    assert "request_path" in result
+    assert "path_used" in result
     assert "result" in result
     assert result["result"] is True
-    assert result["request_uri"] == "fakeinituri"
-    assert result["uri_used"] == "init"
+    assert result["request_path"] == "fakeinitpath"
+    assert result["path_used"] == "init"
