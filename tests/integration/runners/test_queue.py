@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt-run command
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 
 log = logging.getLogger(__name__)
@@ -72,7 +67,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"],
             expected_return,
-            msg='Item returned from queue "{0}" not the expected item "{1}"'.format(
+            msg='Item returned from queue "{}" not the expected item "{}"'.format(
                 ret["return"], expected_return
             ),
         )
@@ -83,7 +78,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"],
             expected_return,
-            msg='Item returned from queue "{0}" not the expected item "{1}"'.format(
+            msg='Item returned from queue "{}" not the expected item "{}"'.format(
                 ret["return"], expected_return
             ),
         )
@@ -107,7 +102,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"]["items"],
             ["z", "t"],
-            msg='Items returned from process queue runner not as expected (items returned "{0}")'.format(
+            msg='Items returned from process queue runner not as expected (items returned "{}")'.format(
                 ret["return"]["items"]
             ),
         )
@@ -131,7 +126,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"]["items"],
             ["e", "b"],
-            msg='Items returned from process queue runner not as expected (items returned "{0}")'.format(
+            msg='Items returned from process queue runner not as expected (items returned "{}")'.format(
                 ret["return"]["items"]
             ),
         )
@@ -155,7 +150,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"]["items"],
             ["z", "t", "a", "r", "b", "e"],
-            msg='Items returned from process queue runner not as expected (items returned "{0}")'.format(
+            msg='Items returned from process queue runner not as expected (items returned "{}")'.format(
                 ret["return"]["items"]
             ),
         )
@@ -175,7 +170,7 @@ class ManageTest(ShellCase):
         self.assertEqual(
             ret["return"]["items"],
             ["e", "b", "r", "a", "t", "z"],
-            msg='Items returned from process queue runner not as expected (items returned "{0}")'.format(
+            msg='Items returned from process queue runner not as expected (items returned "{}")'.format(
                 ret["return"]["items"]
             ),
         )

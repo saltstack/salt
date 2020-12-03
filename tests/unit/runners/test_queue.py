@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the cache runner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
