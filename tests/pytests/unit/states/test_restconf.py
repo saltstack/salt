@@ -53,14 +53,12 @@ def mocking_dunder_opts_test_mode_false():
 
 @pytest.fixture
 def fake_uri_response_primary_blank():
-    fake_uri_response_primary_blank = [
-        True,
-        {
-            "uri_used": "primary",
-            "request_uri": "restconf/fakepath",
-            "request_restponse": {},
-        },
-    ]
+    fake_uri_response_primary_blank = {
+        "result": True,
+        "uri_used": "primary",
+        "request_uri": "restconf/fakepath",
+        "request_restponse": {},
+    }
     yield fake_uri_response_primary_blank
 
 
