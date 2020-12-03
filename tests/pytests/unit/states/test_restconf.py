@@ -59,12 +59,6 @@ def fake_path_response_primary_blank():
         "request_path": "restconf/fakepath",
         "request_restponse": {},
     }
-    yield fake_path_response_primary_blank
-
-
-def test_config_manage_nochanges_testmode(
-    mocking_dunder_opts_test_mode_true, fake_path_response_primary_blank
-):
     with patch.dict(
         restconf.__salt__,
         {
@@ -72,7 +66,12 @@ def test_config_manage_nochanges_testmode(
                 return_value=fake_path_response_primary_blank
             )
         },
-    ):
+        ):
+            yield fake_path_response_primary_blank
+
+def test_config_manage_nochanges_testmode(
+    mocking_dunder_opts_test_mode_true, fake_path_response_primary_blank
+):
         result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
         assert result["result"] is True
 
@@ -80,14 +79,6 @@ def test_config_manage_nochanges_testmode(
 def test_config_manage_nochanges_realmode(
     mocking_dunder_opts_test_mode_false, fake_path_response_primary_blank
 ):
-    with patch.dict(
-        restconf.__salt__,
-        {
-            "restconf.path_check": MagicMock(
-                return_value=fake_path_response_primary_blank
-            )
-        },
-    ):
         result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
         assert result["result"] is True
 
@@ -95,14 +86,6 @@ def test_config_manage_nochanges_realmode(
 def test_config_manage_haschanges_testmode(
     mocking_dunder_opts_test_mode_true, fake_path_response_primary_blank
 ):
-    with patch.dict(
-        restconf.__salt__,
-        {
-            "restconf.path_check": MagicMock(
-                return_value=fake_path_response_primary_blank
-            )
-        },
-    ):
         fake_changes = OrderedDict()
         fake_changes["fjord"] = "meow"
         result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
@@ -127,14 +110,6 @@ def test_config_manage_haschanges_realmode_404(
     fake_path_response_primary_blank,
     mocking_dunder_salt_restconf_setdata_response_404,
 ):
-    with patch.dict(
-        restconf.__salt__,
-        {
-            "restconf.path_check": MagicMock(
-                return_value=fake_path_response_primary_blank
-            )
-        },
-    ):
         fake_changes = OrderedDict()
         fake_changes["fjord"] = "meow"
         result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
@@ -164,14 +139,6 @@ def test_config_manage_haschanges_realmode_200(
     fake_path_response_primary_blank,
     mocking_dunder_salt_restconf_setdata_response_200,
 ):
-    with patch.dict(
-        restconf.__salt__,
-        {
-            "restconf.path_check": MagicMock(
-                return_value=fake_path_response_primary_blank
-            )
-        },
-    ):
         fake_changes = OrderedDict()
         fake_changes["fjord"] = "meow"
         result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
