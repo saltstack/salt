@@ -45,7 +45,6 @@ from contextlib import contextmanager
 
 import salt.utils.json
 from salt.exceptions import SaltInvocationError, SaltMasterError
-from salt.ext import six
 
 try:
     import psycopg2
@@ -100,7 +99,7 @@ def _conn(commit=False):
         error = err.args
         sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
-        raise(*sys.exc_info())
+        raise err
     else:
         if commit:
             cursor.execute("COMMIT")
@@ -119,9 +118,7 @@ def _list_tables(cur):
 
 
 def _create_table(cur, queue):
-    cmd = "CREATE TABLE {}(id SERIAL PRIMARY KEY, " "data jsonb NOT NULL)".format(
-        queue
-    )
+    cmd = "CREATE TABLE {}(id SERIAL PRIMARY KEY, " "data jsonb NOT NULL)".format(queue)
     log.debug("SQL Query: %s", cmd)
     cur.execute(cmd)
     return True
@@ -213,9 +210,9 @@ def insert(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items)
-            cmd = str("""INSERT INTO {}(data) VALUES('{}')""").format(
+            cmd = """INSERT INTO {}(data) VALUES('{}')""".format(
                 queue, items
-            )  # future lint: disable=blacklisted-function
+            )
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
@@ -226,9 +223,9 @@ def insert(queue, items):
                 )
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]
-            cmd = str("INSERT INTO {}(data) VALUES (%s)").format(
+            cmd = "INSERT INTO {}(data) VALUES (%s)".format(
                 queue
-            )  # future lint: disable=blacklisted-function
+            )
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.executemany(cmd, items)
@@ -272,8 +269,8 @@ def pop(queue, quantity=1, is_runner=False, mode="fifo"):
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = (
-                'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(exc)
+            error_txt = 'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(
+                exc
             )
             raise SaltInvocationError(error_txt)
         cmd = "".join([cmd, " LIMIT {};".format(quantity)])

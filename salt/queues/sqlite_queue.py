@@ -21,8 +21,6 @@ import sqlite3
 import salt.utils.json
 from salt.exceptions import SaltInvocationError
 
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -96,7 +94,7 @@ def _list_items(queue, mode="fifo"):
     order_by = _process_mode(mode)
     with con:
         cur = con.cursor()
-        cmd = "SELECT name FROM {0}{1}".format(queue, order_by)
+        cmd = "SELECT name FROM {}{}".format(queue, order_by)
         log.debug("SQL Query: %s", cmd)
         cur.execute(cmd)
         contents = cur.fetchall()
@@ -186,9 +184,9 @@ def insert(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = str("""INSERT INTO {}(name) VALUES('{}')""").format(
+            cmd = """INSERT INTO {}(name) VALUES('{}')""".format(
                 queue, items
-            )  # future lint: disable=blacklisted-function
+            )
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
@@ -224,7 +222,7 @@ def delete(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = ("""DELETE FROM {} WHERE name = '{}'""").format(
+            cmd = """DELETE FROM {} WHERE name = '{}'""".format(
                 queue, items
             )  # future lint: disable=blacklisted-function
             log.debug("SQL Query: %s", cmd)
@@ -243,8 +241,8 @@ def pop(queue, quantity=1, is_runner=False, mode="fifo"):
         try:
             quantity = int(quantity)
         except ValueError as exc:
-            error_txt = (
-                'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(exc)
+            error_txt = 'Quantity must be an integer or "all".\n' 'Error: "{}".'.format(
+                exc
             )
             raise SaltInvocationError(error_txt)
         cmd = "".join([cmd, " LIMIT {}".format(quantity)])
@@ -258,9 +256,7 @@ def pop(queue, quantity=1, is_runner=False, mode="fifo"):
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
             _quote_escape(itemlist)
-            del_cmd = """DELETE FROM {} WHERE name IN ("{}")""".format(
-                queue, itemlist
-            )
+            del_cmd = """DELETE FROM {} WHERE name IN ("{}")""".format(queue, itemlist)
 
             log.debug("SQL Query: %s", del_cmd)
 
