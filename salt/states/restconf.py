@@ -1,5 +1,5 @@
-"""
-State module for restconf Proxy minions
+"""RESTCONF
+State module for  Proxy minions
 
 :codeauthor: Jamie (Bear) Murphy <jamiemurphyit@gmail.com>
 :maturity:   new
@@ -7,8 +7,8 @@ State module for restconf Proxy minions
 
 About
 =====
-This state module was designed to manage restconf states.
-This module relies on the restconf proxy module to interface with the devices.
+This state module was designed to manage RESTCONF states.
+This module relies on the RESTCONF proxy module to interface with the devices.
 """
 
 
@@ -24,7 +24,7 @@ log = logging.getLogger(__file__)
 def __virtual__():
     if "restconf.set_data" in __salt__:
         return True
-    return (False, "restconf module could not be loaded")
+    return (False, "RESTCONF module could not be loaded")
 
 
 def config_manage(
@@ -37,7 +37,7 @@ def config_manage(
         (str) The name for this rule
 
     path:
-        (str) The restconf path to set / get config
+        (str) The RESTCONF path to set / get config
 
     method:
         (str) rest method to use eg GET, PUT, POST, PATCH, DELETE
@@ -103,7 +103,7 @@ def config_manage(
     log.debug(path_check)
     if not path_check["result"]:
         ret["result"] = False
-        ret["comment"] = "restconf could not find a working PATH to get initial config"
+        ret["comment"] = "RESTCONF could not find a working PATH to get initial config"
         return ret
 
     use_conf = config

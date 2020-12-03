@@ -1,5 +1,5 @@
 """
-Execution module for Restconf Proxy minions
+Execution module for RESTCONF Proxy minions
 
 :codeauthor: Jamie (Bear) Murphy <jamiemurphyit@gmail.com>
 :maturity:   new
@@ -24,7 +24,7 @@ def __virtual__():
 
 def info():
     """
-        Returns the restconf capabilities PATH
+        Returns the RESTCONF capabilities PATH
     """
     return __proxy__["restconf.request"](
         "restconf/data/ietf-restconf-monitoring:restconf-state/capabilities/capability"

@@ -1,5 +1,5 @@
 """
-Proxy Minion to manage Restconf Devices
+Proxy Minion to manage RESTCONF Devices
 
 :codeauthor: Jamie (Bear) Murphy <jamiemurphyit@gmail.com>
 :maturity:   new
@@ -24,7 +24,7 @@ Usage
 .. note::
 
     RESTCONF requires modern OS distributions.
-    This plugin has been written specifically to use JSON Restconf endpoints
+    This plugin has been written specifically to use JSON RESTCONF endpoints
 
 Pillar
 ------
@@ -35,11 +35,11 @@ to connect to the network switch:
 transport: ``https`` (str)
     Specifies the type of connection transport to use. Valid values for the
     connection are ``https``, and  ``http``.
-    http is not part of the restconf standard but is included as an option here
+    http is not part of the RESTCONF standard but is included as an option here
     as some manufacturers have ignored this requirement.
 
 hostname: (str)
-    The IP address or DNS host name of the restconf device.
+    The IP address or DNS host name of the RESTCONF device.
 
 username: (str)
     The username for the device to authenticate the RESTCONF requests.
@@ -48,7 +48,7 @@ password: (str)
     The password for the device to authenticate the RESTCONF requests.
 
 verify: ``True`` or ``False`` (str, optional, default:true)
-    Verify the restconf SSL certificate?
+    Verify the RESTCONF SSL certificate?
 
     When there is no certificate configuration on the device and this option is
     set as ``True`` (default), the commands will fail with the following error:
@@ -117,11 +117,11 @@ def __virtual__():
 
 
 def init(opts):
-    log.debug("restconf proxy init(opts) called...")
+    log.debug("RESTCONF proxy init(opts) called...")
     # Open the connection to the RESTCONF Device.
     # As the communication is HTTP based, there is no connection to maintain,
     # however, in order to test the connectivity and make sure we are able to
-    # bring up this Minion, we are checking the standard restconf state path.
+    # bring up this Minion, we are checking the standard RESTCONF state path.
 
     conn_args = copy.deepcopy(opts.get("proxy", {}))
     opts["multiprocessing"] = conn_args.pop("multiprocessing", True)
@@ -162,7 +162,7 @@ def init(opts):
 
 
 def connection_test():
-    log.debug("restconf proxy connection_test() called...")
+    log.debug("RESTCONF proxy connection_test() called...")
     response = request("restconf/yang-library-version", method="GET", dict_payload=None)
 
     if "ietf-restconf:yang-library-version" in str(response):
@@ -172,7 +172,7 @@ def connection_test():
 
 
 def ping():
-    log.debug("restconf proxy ping() called...")
+    log.debug("RESTCONF proxy ping() called...")
     # Connection open successfully?
     return connection_test()[0]
 
@@ -188,7 +188,7 @@ def shutdown(opts):
     """
     Closes connection with the device.
     """
-    log.debug("Shutting down the restconf Proxy Minion %s", opts["id"])
+    log.debug("Shutting down the RESTCONF Proxy Minion %s", opts["id"])
 
 
 # -----------------------------------------------------------------------------
