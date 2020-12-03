@@ -24,9 +24,11 @@ def __virtual__():
 
 def info():
     """
-        Should return some quick state info of the restconf device?
+        Returns the restconf capabilities PATH
     """
-    return "Hello i am a restconf module"
+    return __proxy__["restconf.request"](
+        "restconf/data/ietf-restconf-monitoring:restconf-state/capabilities/capability"
+    )
 
 
 def get_data(path):
