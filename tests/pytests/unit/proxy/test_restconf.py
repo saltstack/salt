@@ -76,16 +76,14 @@ def test_if_dict_is_provided_as_dict_payload_then_json_text_should_be_provided(
 
 
 def test_if_proxy_def_connectiontest_passes_correctly(patch_conn_args, fake_query):
-    expected_result = """{'body': '{\n    "ietf-restconf:yang-library-version": "2016-06-21"\n}', 'status': 200, 'dict': {'ietf-restconf:yang-library-version': '2016-06-21'}}"""
-    fake_query.return_value = expected_result
+    fake_query.return_value = """{'body': '{\n    "ietf-restconf:yang-library-version": "2016-06-21"\n}', 'status': 200, 'dict': {'ietf-restconf:yang-library-version': '2016-06-21'}}"""
     result = restconf.connection_test()
     assert result[0] is True
     assert "ietf-restconf:yang-library-version" in result[1]
 
 
 def test_if_proxy_def_connectiontest_fails_correctly(patch_conn_args, fake_query):
-    expected_result = """{'body': 'fnord', 'status': 200 }"""
-    fake_query.return_value = expected_result
+    fake_query.return_value = """{'body': 'fnord', 'status': 200 }"""
     result = restconf.connection_test()
     assert result[0] is False
     assert "ietf-restconf:yang-library-version" not in result[1]
