@@ -114,7 +114,7 @@ def test_config_manage_haschanges_realmode_404(
         fake_changes["fjord"] = "meow"
         result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
 
-        assert result["result"] is False
+        assert not result["result"]
         assert len(result["changes"]) == 0
         assert type(result["changes"]) is dict
         assert "failed to add / modify config" in result["comment"]
