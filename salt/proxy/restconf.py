@@ -10,7 +10,7 @@ Usage
 
 .. note::
 
-    To be able to use this module you need to enable to RESTCONF on your device
+    To be able to use this module you need to enable RESTCONF on your device
     and have https enabled.
 
     Cisco Configuration example:
@@ -121,7 +121,7 @@ def init(opts):
     # Open the connection to the RESTCONF Device.
     # As the communication is HTTP based, there is no connection to maintain,
     # however, in order to test the connectivity and make sure we are able to
-    # bring up this Minion, we are checking the standard restconf state uri.
+    # bring up this Minion, we are checking the standard restconf state path.
 
     conn_args = copy.deepcopy(opts.get("proxy", {}))
     opts["multiprocessing"] = conn_args.pop("multiprocessing", True)
@@ -196,7 +196,7 @@ def shutdown(opts):
 # -----------------------------------------------------------------------------
 
 
-def request(uri, method="GET", dict_payload=None):
+def request(path, method="GET", dict_payload=None):
     if dict_payload is None:
         data = ""
     elif isinstance(dict_payload, str):
@@ -205,8 +205,7 @@ def request(uri, method="GET", dict_payload=None):
         data = json.dumps(dict_payload)
     response = salt.utils.http.query(
         "{transport}://{hostname}/{path}".format(
-            path=path,
-            **restconf_device["conn_args"],
+            path=path, **restconf_device["conn_args"],
         ),
         method=method,
         data=data,
