@@ -210,9 +210,7 @@ def insert(queue, items):
     with _conn(commit=True) as cur:
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items)
-            cmd = """INSERT INTO {}(data) VALUES('{}')""".format(
-                queue, items
-            )
+            cmd = """INSERT INTO {}(data) VALUES('{}')""".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)
@@ -223,9 +221,7 @@ def insert(queue, items):
                 )
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]
-            cmd = "INSERT INTO {}(data) VALUES (%s)".format(
-                queue
-            )
+            cmd = "INSERT INTO {}(data) VALUES (%s)".format(queue)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.executemany(cmd, items)

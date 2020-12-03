@@ -184,9 +184,7 @@ def insert(queue, items):
         if isinstance(items, dict):
             items = salt.utils.json.dumps(items).replace('"', "'")
             items = _quote_escape(items)
-            cmd = """INSERT INTO {}(name) VALUES('{}')""".format(
-                queue, items
-            )
+            cmd = """INSERT INTO {}(name) VALUES('{}')""".format(queue, items)
             log.debug("SQL Query: %s", cmd)
             try:
                 cur.execute(cmd)

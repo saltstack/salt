@@ -63,7 +63,6 @@ still running from the last time the process_runner task was executed.
 
 import salt.loader
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.event import get_event, tagify
 
 
