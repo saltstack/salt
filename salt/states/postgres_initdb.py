@@ -19,10 +19,8 @@ data directory.
         - encoding: UTF8
         - locale: C
         - runas: postgres
-        - allow_group_access: True
-        - data_checksums: True
-        - wal_segsize: 32
-
+        - checksums: True
+        - waldir: /var/postgresql/wal
 """
 from __future__ import absolute_import, print_function, unicode_literals
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -6,7 +5,6 @@
     tests.integration.states.virtualenv
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -80,14 +78,14 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Our state template
         template = [
-            "{0}:".format(venv_path),
+            "{}:".format(venv_path),
             "  virtualenv.managed:",
             "    - system_site_packages: False",
             "    - clear: false",
             "    - requirements: salt://issue-2594-requirements.txt",
         ]
 
-        reqs = ["pep8==1.3.3", "zope.interface==4.7.1"]
+        reqs = ["pep8==1.3.3", "zope.interface==5.0.0"]
         # Let's populate the requirements file, just pep-8 for now
         with salt.utils.files.fopen(requirements_file_path, "a") as fhw:
             fhw.write(reqs[0] + "\n")

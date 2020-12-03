@@ -14,8 +14,8 @@ of the Salt system each have a respective configuration file. The
     :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. Atomic included configuration files can be placed in 
-``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will 
+by default. Atomic included configuration files can be placed in
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will
 not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
@@ -1110,7 +1110,7 @@ See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
 ``req_server_niceness``
 -----------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1126,7 +1126,7 @@ Supported on POSIX platforms only.
 ``pub_server_niceness``
 -----------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1142,7 +1142,7 @@ Supported on POSIX platforms only.
 ``fileserver_update_niceness``
 ------------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1158,7 +1158,7 @@ Supported on POSIX platforms only.
 ``maintenance_niceness``
 ------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1174,7 +1174,7 @@ Supported on POSIX platforms only.
 ``mworker_niceness``
 --------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 Default: ``None``
 
@@ -1190,7 +1190,7 @@ Supported on POSIX platforms only.
 ``mworker_queue_niceness``
 --------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -1206,7 +1206,7 @@ supported on POSIX platforms only.
 ``event_return_niceness``
 -------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -1223,7 +1223,7 @@ supported on POSIX platforms only.
 ``event_publisher_niceness``
 ----------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``none``
 
@@ -1239,7 +1239,7 @@ supported on POSIX platforms only.
 ``reactor_niceness``
 --------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3001
 
 default: ``None``
 
@@ -2022,7 +2022,7 @@ Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
 seeing on the console(and then salt-master crashes):
 
-.. code-block:: bash
+.. code-block:: text
 
     Too many open files (tcp_listener.cpp:335)
     Aborted (core dumped)
@@ -5814,7 +5814,7 @@ authenticate is protected by a passphrase.
 .. conf_master:: winrepo_refspecs
 
 ``winrepo_refspecs``
-~~~~~~~~~~~~~~~~~~~~
+********************
 
 .. versionadded:: 2017.7.0
 
