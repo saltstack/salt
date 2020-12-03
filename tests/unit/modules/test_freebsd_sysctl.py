@@ -6,6 +6,7 @@
 import salt.modules.freebsd_sysctl as freebsd_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
+from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -125,23 +126,27 @@ class FreeBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
         # Mock just a small portion of the full "sysctl -ae" output, but be
         # sure to include a multi-line value.
         mock_cmd = MagicMock(
-            return_value="""kern.ostype=FreeBSD
-kern.osrelease=13.0-CURRENT
-kern.osrevision=199506
-kern.version=FreeBSD 13.0-CURRENT #246 r365916M: Thu Sep 24 09:17:12 MDT 2020
-    user@host.domain:/usr/obj/usr/src/head
-/amd64.amd64/sys/GENERIC
+            return_value=dedent(
+                """\
+            kern.ostype=FreeBSD
+            kern.osrelease=13.0-CURRENT
+            kern.osrevision=199506
+            kern.version=FreeBSD 13.0-CURRENT #246 r365916M: Thu Sep 24 09:17:12 MDT 2020
+                user@host.domain:/usr/obj/usr/src/head
+            /amd64.amd64/sys/GENERIC
 
-kern.maxvnodes=213989
-"""
+            kern.maxvnodes=213989
+            """
+            )
         )
         with patch.dict(freebsd_sysctl.__salt__, {"cmd.run": mock_cmd}):
             ret = freebsd_sysctl.show()
             self.assertEqual("FreeBSD", ret["kern.ostype"])
-            self.assertEqual(
-                """FreeBSD 13.0-CURRENT #246 r365916M: Thu Sep 24 09:17:12 MDT 2020
-    user@host.domain:/usr/obj/usr/src/head
-/amd64.amd64/sys/GENERIC
-""",
+            self.assertEqual(dedent(
+                    """\
+                FreeBSD 13.0-CURRENT #246 r365916M: Thu Sep 24 09:17:12 MDT 2020
+                    user@host.domain:/usr/obj/usr/src/head
+                /amd64.amd64/sys/GENERIC
+                """),
                 ret["kern.version"],
             )
