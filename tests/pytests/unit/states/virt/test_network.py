@@ -1,6 +1,8 @@
 import salt.states.virt as virt
 from tests.support.mock import MagicMock, patch
 
+from .test_helpers import network_update_call
+
 
 def test_network_defined_not_existing(test):
     """
@@ -41,6 +43,17 @@ def test_network_defined_not_existing(test):
                         {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
                     ],
                 },
+                mtu=9000,
+                domain={"name": "acme.lab"},
+                nat={"ports": {"start": 1024, "end": 2048}},
+                interfaces="eth0 eth1",
+                addresses="0000:01:02.4 0000:01:02.5",
+                physical_function="eth4",
+                dns={
+                    "hosts": {
+                        "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                    }
+                },
                 autostart=False,
                 connection="myconnection",
                 username="user",
@@ -68,6 +81,17 @@ def test_network_defined_not_existing(test):
                             {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
                         ],
                     },
+                    mtu=9000,
+                    domain={"name": "acme.lab"},
+                    nat={"ports": {"start": 1024, "end": 2048}},
+                    interfaces="eth0 eth1",
+                    addresses="0000:01:02.4 0000:01:02.5",
+                    physical_function="eth4",
+                    dns={
+                        "hosts": {
+                            "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                        }
+                    },
                     connection="myconnection",
                     username="user",
                     password="secret",
@@ -82,22 +106,142 @@ def test_network_defined_no_change(test):
     """
     with patch.dict(virt.__opts__, {"test": test}):
         define_mock = MagicMock(return_value=True)
+        update_mock = MagicMock(return_value=False)
         with patch.dict(
             virt.__salt__,
             {
                 "virt.network_info": MagicMock(
-                    return_value={"mynet": {"active": True}}
+                    return_value={"mynet": {"active": True, "autostart": True}}
                 ),
                 "virt.network_define": define_mock,
+                "virt.network_update": update_mock,
             },
         ):
             assert {
                 "name": "mynet",
                 "changes": {},
                 "result": True,
-                "comment": "Network mynet exists",
+                "comment": "Network mynet unchanged",
             } == virt.network_defined("mynet", "br2", "bridge")
             define_mock.assert_not_called()
+            assert [
+                network_update_call("mynet", "br2", "bridge", test=True)
+            ] == update_mock.call_args_list
+
+
+def test_network_defined_change(test):
+    """
+    network_defined state tests if the network needs update.
+    """
+    with patch.dict(virt.__opts__, {"test": test}):
+        define_mock = MagicMock(return_value=True)
+        update_mock = MagicMock(return_value=True)
+        autostart_mock = MagicMock(return_value=True)
+        with patch.dict(
+            virt.__salt__,
+            {
+                "virt.network_info": MagicMock(
+                    return_value={"mynet": {"active": True, "autostart": True}}
+                ),
+                "virt.network_define": define_mock,
+                "virt.network_update": update_mock,
+                "virt.network_set_autostart": autostart_mock,
+            },
+        ):
+            assert {
+                "name": "mynet",
+                "changes": {"mynet": "Network updated, autostart flag changed"},
+                "result": None if test else True,
+                "comment": "Network mynet updated, autostart flag changed",
+            } == virt.network_defined(
+                "mynet",
+                "br2",
+                "bridge",
+                vport="openvswitch",
+                tag=180,
+                ipv4_config={
+                    "cidr": "192.168.2.0/24",
+                    "dhcp_ranges": [
+                        {"start": "192.168.2.10", "end": "192.168.2.25"},
+                        {"start": "192.168.2.110", "end": "192.168.2.125"},
+                    ],
+                },
+                ipv6_config={
+                    "cidr": "2001:db8:ca2:2::1/64",
+                    "dhcp_ranges": [
+                        {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
+                    ],
+                },
+                mtu=9000,
+                domain={"name": "acme.lab"},
+                nat={"ports": {"start": 1024, "end": 2048}},
+                interfaces="eth0 eth1",
+                addresses="0000:01:02.4 0000:01:02.5",
+                physical_function="eth4",
+                dns={
+                    "hosts": {
+                        "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                    }
+                },
+                autostart=False,
+                connection="myconnection",
+                username="user",
+                password="secret",
+            )
+            define_mock.assert_not_called()
+            expected_update_kwargs = {
+                "vport": "openvswitch",
+                "tag": 180,
+                "ipv4_config": {
+                    "cidr": "192.168.2.0/24",
+                    "dhcp_ranges": [
+                        {"start": "192.168.2.10", "end": "192.168.2.25"},
+                        {"start": "192.168.2.110", "end": "192.168.2.125"},
+                    ],
+                },
+                "ipv6_config": {
+                    "cidr": "2001:db8:ca2:2::1/64",
+                    "dhcp_ranges": [
+                        {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
+                    ],
+                },
+                "mtu": 9000,
+                "domain": {"name": "acme.lab"},
+                "nat": {"ports": {"start": 1024, "end": 2048}},
+                "interfaces": "eth0 eth1",
+                "addresses": "0000:01:02.4 0000:01:02.5",
+                "physical_function": "eth4",
+                "dns": {
+                    "hosts": {
+                        "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                    }
+                },
+                "connection": "myconnection",
+                "username": "user",
+                "password": "secret",
+            }
+            calls = [
+                network_update_call(
+                    "mynet", "br2", "bridge", **expected_update_kwargs, test=True
+                )
+            ]
+            if test:
+                assert calls == update_mock.call_args_list
+                autostart_mock.assert_not_called()
+            else:
+                calls.append(
+                    network_update_call(
+                        "mynet", "br2", "bridge", **expected_update_kwargs, test=False
+                    )
+                )
+                assert calls == update_mock.call_args_list
+                autostart_mock.assert_called_with(
+                    "mynet",
+                    state="off",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
 
 
 def test_network_defined_error(test):
@@ -165,6 +309,17 @@ def test_network_running_not_existing(test):
                         {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
                     ],
                 },
+                mtu=9000,
+                domain={"name": "acme.lab"},
+                nat={"ports": {"start": 1024, "end": 2048}},
+                interfaces="eth0 eth1",
+                addresses="0000:01:02.4 0000:01:02.5",
+                physical_function="eth4",
+                dns={
+                    "hosts": {
+                        "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                    }
+                },
                 autostart=False,
                 connection="myconnection",
                 username="user",
@@ -192,6 +347,17 @@ def test_network_running_not_existing(test):
                             {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
                         ],
                     },
+                    mtu=9000,
+                    domain={"name": "acme.lab"},
+                    nat={"ports": {"start": 1024, "end": 2048}},
+                    interfaces="eth0 eth1",
+                    addresses="0000:01:02.4 0000:01:02.5",
+                    physical_function="eth4",
+                    dns={
+                        "hosts": {
+                            "192.168.2.10": {"name": "web", "mac": "de:ad:be:ef:00:00"}
+                        }
+                    },
                     connection="myconnection",
                     username="user",
                     password="secret",
@@ -213,21 +379,26 @@ def test_network_running_nochange(test):
     """
     with patch.dict(virt.__opts__, {"test": test}):
         define_mock = MagicMock(return_value=True)
+        update_mock = MagicMock(return_value=False)
         with patch.dict(
             virt.__salt__,
             {
                 "virt.network_info": MagicMock(
-                    return_value={"mynet": {"active": True}}
+                    return_value={"mynet": {"active": True, "autostart": True}}
                 ),
                 "virt.network_define": define_mock,
+                "virt.network_update": update_mock,
             },
         ):
             assert {
                 "name": "mynet",
                 "changes": {},
-                "comment": "Network mynet exists and is running",
+                "comment": "Network mynet unchanged and is running",
                 "result": None if test else True,
             } == virt.network_running("mynet", "br2", "bridge")
+            assert [
+                network_update_call("mynet", "br2", "bridge", test=True)
+            ] == update_mock.call_args_list
 
 
 def test_network_running_stopped(test):
@@ -237,20 +408,22 @@ def test_network_running_stopped(test):
     with patch.dict(virt.__opts__, {"test": test}):
         define_mock = MagicMock(return_value=True)
         start_mock = MagicMock(return_value=True)
+        update_mock = MagicMock(return_value=False)
         with patch.dict(
             virt.__salt__,
             {  # pylint: disable=no-member
                 "virt.network_info": MagicMock(
-                    return_value={"mynet": {"active": False}}
+                    return_value={"mynet": {"active": False, "autostart": True}}
                 ),
                 "virt.network_start": start_mock,
                 "virt.network_define": define_mock,
+                "virt.network_update": update_mock,
             },
         ):
             assert {
                 "name": "mynet",
                 "changes": {"mynet": "Network started"},
-                "comment": "Network mynet exists and started",
+                "comment": "Network mynet unchanged and started",
                 "result": None if test else True,
             } == virt.network_running(
                 "mynet",
@@ -260,6 +433,17 @@ def test_network_running_stopped(test):
                 username="user",
                 password="secret",
             )
+            assert [
+                network_update_call(
+                    "mynet",
+                    "br2",
+                    "bridge",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                    test=True,
+                )
+            ] == update_mock.call_args_list
             if not test:
                 start_mock.assert_called_with(
                     "mynet",
