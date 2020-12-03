@@ -47,9 +47,8 @@ username: (str)
 password: (str)
     The password for the device to authenticate the RESTCONF requests.
 
-verify: ``True`` (str, optional, default:true)
-    Either a boolean, in which case it controls whether we verify the restconf
-    SSL certificate.
+verify: ``True`` or ``False`` (str, optional, default:true)
+    Verify the restconf SSL certificate?
 
     When there is no certificate configuration on the device and this option is
     set as ``True`` (default), the commands will fail with the following error:
