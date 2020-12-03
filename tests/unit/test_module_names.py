@@ -127,7 +127,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.master.test_event_return",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
