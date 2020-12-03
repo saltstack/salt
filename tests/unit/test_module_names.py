@@ -125,7 +125,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
             "integration.master.test_event_return",
-            "integration.minion.test_blackout",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
             "integration.minion.test_pillar",
