@@ -32,6 +32,8 @@
 #         export APP_SPEC_PWD="abcd-efgh-ijkl-mnop"
 #
 ################################################################################
+echo "#########################################################################"
+echo "Notarize Salt Package"
 
 ################################################################################
 # Check input parameters
@@ -45,6 +47,7 @@ fi
 ################################################################################
 # Environment Variables
 ################################################################################
+echo "**** Setting Variables"
 BUNDLE_ID="com.saltstack.salt"
 NOTARIZE_APP_LOG=$(mktemp -t notarize-app)
 NOTARIZE_INFO_LOG=$(mktemp -t notarize-info)
@@ -60,6 +63,7 @@ trap finish EXIT
 ################################################################################
 # Submit app for notarization
 ################################################################################
+echo "**** Submitting Package for Notarization"
 if ! xcrun altool --notarize-app \
                   --primary-bundle-id "$BUNDLE_ID" \
                   --username "$APPLE_ACCT" \
@@ -73,6 +77,7 @@ fi
 cat "$NOTARIZE_APP_LOG"
 RequestUUID=$(awk -F ' = ' '/RequestUUID/ {print $2}' "$NOTARIZE_APP_LOG")
 
+echo "**** Checking Notarization Status"
 # Check status every 30 seconds
 while sleep 30 && date; do
 echo "Waiting for Apple to approve the notarization so it can be stapled.
@@ -91,8 +96,12 @@ echo "Waiting for Apple to approve the notarization so it can be stapled.
 
 	  # once notarization is complete, run stapler and exit
 	  if ! grep -q "Status: in progress" "$NOTARIZE_INFO_LOG"; then
+	      echo "**** Stapling Notarization to the Package"
     		xcrun stapler staple "$PACKAGE"
     		exit $?
 	  fi
 
 done
+
+echo "Notarize Salt Package Completed Successfully"
+echo "#########################################################################"

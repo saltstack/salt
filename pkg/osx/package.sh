@@ -44,6 +44,8 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
+echo "#########################################################################"
+echo "Building Salt Package"
 
 ################################################################################
 # Make sure the script is launched with sudo
@@ -85,7 +87,7 @@ CPUARCH=`uname -m`
 ################################################################################
 # Additional Parameters Required for the script to function properly
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Variables\007"
+echo "**** Setting Variables"
 
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
@@ -103,7 +105,7 @@ fi
 ################################################################################
 # Ensure Paths are present and clean
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Clean Staging Area\007"
+echo "**** Cleaning Staging Area"
 
 # Clean folder in the staging area
 rm -rdf $PKGDIR
@@ -112,7 +114,7 @@ mkdir -p $PKGDIR
 ################################################################################
 # Copy Start Scripts from Salt Repo to /opt/salt
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
+echo "**** Copying Start Scripts"
 
 cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
 cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
@@ -120,7 +122,7 @@ cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 ################################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Copy Service Definitions\007"
+echo "**** Copying Service Definitions"
 
 mkdir -p $PKGDIR/opt
 cp -r /opt/salt $PKGDIR/opt
@@ -134,7 +136,7 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 ################################################################################
 # Remove unnecessary files from the package
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Trim unneeded files\007"
+echo "**** Trimming Unneeded Files"
 
 rm -rdf $PKGDIR/opt/salt/bin/pkg-config
 rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
@@ -145,22 +147,22 @@ rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
 rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
 
 
-echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
+echo "**** Removing Compiled Python Files (.pyc)"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
 
 ################################################################################
 # Copy Config Files from Salt Repo to the Package Directory
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Copy Config Files\007"
+echo "**** Copying Config Files"
 
 mkdir -p $PKGDIR/etc/salt
 cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
 cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 
 ################################################################################
-# Add Version and CPU Arch to distribution.xml
+# Add Title, Description, Version and CPU Arch to distribution.xml
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
+echo "**** Modifying distribution.xml"
 
 TITLE="Salt $VERSION (Python 3)"
 DESC="Salt $VERSION with Python 3"
@@ -183,7 +185,7 @@ sed -i '' "$SEDSTR" distribution.xml
 ################################################################################
 # Build the Package
 ################################################################################
-echo -n -e "\033]0;Build_Pkg: Build Package\007"
+echo "**** Building the Source Package"
 
 # Build the src package
 pkgbuild --root=$PKGDIR \
@@ -193,6 +195,7 @@ pkgbuild --root=$PKGDIR \
          --ownership=recommended \
          salt-src-$VERSION-py3-$CPUARCH.pkg
 
+echo "**** Building and Signing the Product Package with Timestamp"
 productbuild --resources=pkg-resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION-py3-$CPUARCH.pkg \
@@ -200,3 +203,6 @@ productbuild --resources=pkg-resources \
              --sign "$DEV_INSTALL_CERT" \
              --timestamp \
              salt-$VERSION-py3-$CPUARCH-signed.pkg
+
+echo "Building Salt Package Completed Successfully"
+echo "#########################################################################"

@@ -39,6 +39,8 @@
 #         export DEV_APP_CERT="Developer ID Application: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
+echo "#########################################################################"
+echo "Signing Binaries"
 
 ################################################################################
 # Make sure the script is launched with sudo
@@ -59,9 +61,15 @@ quit_on_error() {
 }
 
 ################################################################################
+# Environment Variables
+################################################################################
+echo "**** Setting Variables"
+INSTALL_DIR=/opt/salt
+
+################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
-INSTALL_DIR=/opt/salt
+echo "**** Signing binaries that have entitlements (/opt/salt/bin)"
 find ${INSTALL_DIR}/bin \
     -type f \
     -perm -u=x \
@@ -70,6 +78,8 @@ find ${INSTALL_DIR}/bin \
                    --verbose \
                    --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
+
+echo "**** Signing binaries (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -perm -u=x \
@@ -77,6 +87,8 @@ find ${INSTALL_DIR}/lib \
                    --options=runtime \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
+
+echo "**** Signing dynamic libraries (*dylib) (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*dylib" \
@@ -84,6 +96,8 @@ find ${INSTALL_DIR}/lib \
                    --options=runtime \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
+
+echo "**** Signing shared libraries (*.so) (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*.so" \
@@ -91,3 +105,6 @@ find ${INSTALL_DIR}/lib \
                    --options=runtime \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
+
+echo "**** Signing Binaries Completed Successfully"
+echo "#########################################################################"
