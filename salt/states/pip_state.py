@@ -736,7 +736,7 @@ def installed(
     ret = {"name": ";".join(pkgs), "result": None, "comment": "", "changes": {}}
 
     try:
-        cur_version = __salt__["pip.version"](bin_env)
+        cur_version = __salt__["pip.version"](bin_env=bin_env, user=user, cwd=cwd)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = None
         ret["comment"] = "Error installing '{0}': {1}".format(name, err)
