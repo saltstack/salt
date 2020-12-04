@@ -76,7 +76,6 @@ find ${INSTALL_DIR}/lib \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
 find ${INSTALL_DIR}/lib \
     -type f \
@@ -84,7 +83,6 @@ find ${INSTALL_DIR}/lib \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
 find ${INSTALL_DIR}/lib \
     -type f \
@@ -92,5 +90,4 @@ find ${INSTALL_DIR}/lib \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
-                   --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
