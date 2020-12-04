@@ -219,16 +219,14 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=True,
+            serials=[{"type": "pty"}],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
-        self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
-    def test_gen_xml_for_serial_console(self):
+    def test_gen_xml_for_telnet_serial(self):
         """
-        Test virt._gen_xml() serial console
+        Test virt._gen_xml() telnet serial
         """
         diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
         nicp = virt._nic_profile("default", "kvm")
@@ -242,11 +240,134 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=True,
+            serials=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
+        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial/source").attrib["service"], "22223")
+        self.assertEqual(root.find("devices/serial/protocol").attrib["type"], "telnet")
+
+    def test_gen_xml_for_telnet_serial_unspecified_port(self):
+        """
+        Test virt._gen_xml() telnet serial without any specified port
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            serials=[{"type": "tcp"}],
+        )
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial/source").attrib["service"], "23023")
+        self.assertFalse("tls" in root.find("devices/serial/source").keys())
+        self.assertEqual(root.find("devices/serial/protocol").attrib["type"], "telnet")
+
+    def test_gen_xml_for_chardev_types(self):
+        """
+        Test virt._gen_xml() consoles and serials of various types
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            consoles=[
+                {"type": "pty", "path": "/dev/pts/2", "target_port": 2},
+                {"type": "pty", "target_type": "usb-serial"},
+                {"type": "stdio"},
+                {"type": "file", "path": "/path/to/serial.log"},
+            ],
+            serials=[
+                {"type": "pipe", "path": "/tmp/mypipe"},
+                {"type": "udp", "host": "127.0.0.1", "port": 1234},
+                {"type": "tcp", "port": 22223, "protocol": "raw", "tls": True},
+                {"type": "unix", "path": "/path/to/socket"},
+            ],
+        )
+        root = ET.fromstring(xml_data)
+
+        self.assertEqual(root.find("devices/console[1]").attrib["type"], "pty")
+        self.assertEqual(
+            root.find("devices/console[1]/source").attrib["path"], "/dev/pts/2"
+        )
+        self.assertEqual(root.find("devices/console[1]/target").attrib["port"], "2")
+
+        self.assertEqual(root.find("devices/console[2]").attrib["type"], "pty")
+        self.assertIsNone(root.find("devices/console[2]/source"))
+        self.assertEqual(
+            root.find("devices/console[2]/target").attrib["type"], "usb-serial"
+        )
+
+        self.assertEqual(root.find("devices/console[3]").attrib["type"], "stdio")
+        self.assertIsNone(root.find("devices/console[3]/source"))
+
+        self.assertEqual(root.find("devices/console[4]").attrib["type"], "file")
+        self.assertEqual(
+            root.find("devices/console[4]/source").attrib["path"], "/path/to/serial.log"
+        )
+
+        self.assertEqual(root.find("devices/serial[1]").attrib["type"], "pipe")
+        self.assertEqual(
+            root.find("devices/serial[1]/source").attrib["path"], "/tmp/mypipe"
+        )
+
+        self.assertEqual(root.find("devices/serial[2]").attrib["type"], "udp")
+        self.assertEqual(root.find("devices/serial[2]/source").attrib["mode"], "bind")
+        self.assertEqual(
+            root.find("devices/serial[2]/source").attrib["service"], "1234"
+        )
+        self.assertEqual(
+            root.find("devices/serial[2]/source").attrib["host"], "127.0.0.1"
+        )
+
+        self.assertEqual(root.find("devices/serial[3]").attrib["type"], "tcp")
+        self.assertEqual(root.find("devices/serial[3]/source").attrib["mode"], "bind")
+        self.assertEqual(
+            root.find("devices/serial[3]/source").attrib["service"], "22223"
+        )
+        self.assertEqual(root.find("devices/serial[3]/source").attrib["tls"], "yes")
+        self.assertEqual(root.find("devices/serial[3]/protocol").attrib["type"], "raw")
+
+        self.assertEqual(root.find("devices/serial[4]").attrib["type"], "unix")
+        self.assertEqual(
+            root.find("devices/serial[4]/source").attrib["path"], "/path/to/socket"
+        )
+
+    def test_gen_xml_no_nic_console(self):
+        """
+        Test virt._gen_xml()  console
+        """
+        diskp = virt._disk_profile(self.mock_conn, "default", "kvm", [], "hello")
+        nicp = virt._nic_profile("default", "kvm")
+        xml_data = virt._gen_xml(
+            self.mock_conn,
+            "hello",
+            1,
+            512,
+            diskp,
+            nicp,
+            "kvm",
+            "hvm",
+            "x86_64",
+            consoles=[{"type": "pty"}],
+        )
+        root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/console").attrib["type"], "pty")
 
     def test_gen_xml_for_telnet_console(self):
@@ -265,14 +386,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=True,
-            telnet_port=22223,
+            consoles=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console/source").attrib["service"], "22223")
+        self.assertEqual(root.find("devices/console/protocol").attrib["type"], "telnet")
 
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         """
@@ -290,15 +409,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=True,
+            consoles=[{"type": "tcp"}],
         )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
         self.assertEqual(root.find("devices/console").attrib["type"], "tcp")
-        self.assertIsInstance(
-            int(root.find("devices/console/source").attrib["service"]), int
-        )
+        self.assertEqual(root.find("devices/console/source").attrib["service"], "23023")
+        self.assertEqual(root.find("devices/console/protocol").attrib["type"], "telnet")
 
     def test_gen_xml_for_serial_no_console(self):
         """
@@ -316,8 +432,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="pty",
-            console=False,
+            serials=[{"type": "pty"}],
+            consoles=[],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "pty")
@@ -339,8 +455,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "kvm",
             "hvm",
             "x86_64",
-            serial_type="tcp",
-            console=False,
+            serials=[{"type": "tcp", "port": 22223, "protocol": "telnet"}],
+            consoles=[],
         )
         root = ET.fromstring(xml_data)
         self.assertEqual(root.find("devices/serial").attrib["type"], "tcp")
@@ -2223,6 +2339,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                   <alias name='video0'/>
                   <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
                 </video>
+                <serial type='pty'/>
+                <console type='pty'/>
               </devices>
             </domain>
         """.format(
@@ -3151,6 +3269,19 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         )
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual("vnc", setxml.find("devices/graphics").get("type"))
+
+        # Serial and console test case
+        self.assertEqual(
+            {
+                "definition": False,
+                "disk": {"attached": [], "detached": [], "updated": []},
+                "interface": {"attached": [], "detached": []},
+            },
+            virt.update("my_vm", serials=[{"type": "tcp"}], consoles=[{"type": "tcp"}]),
+        )
+        setxml = ET.fromstring(define_mock.call_args[0][0])
+        self.assertEqual(setxml.find("devices/serial").attrib["type"], "pty")
+        self.assertEqual(setxml.find("devices/console").attrib["type"], "pty")
 
         # Update with no diff case
         pool_mock = MagicMock()

@@ -946,6 +946,8 @@ def _gen_xml(
     numatune=None,
     hypervisor_features=None,
     clock=None,
+    serials=None,
+    consoles=None,
     **kwargs
 ):
     """
@@ -1021,18 +1023,57 @@ def _gen_xml(
                 context["boot"]["kernel"] = "/usr/lib/grub2/x86_64-xen/grub.xen"
                 context["boot_dev"] = []
 
-    if "serial_type" in kwargs:
-        context["serial_type"] = kwargs["serial_type"]
-    if "serial_type" in context and context["serial_type"] == "tcp":
-        if "telnet_port" in kwargs:
-            context["telnet_port"] = kwargs["telnet_port"]
-        else:
-            context["telnet_port"] = 23023  # FIXME: use random unused port
-    if "serial_type" in context:
-        if "console" in kwargs:
-            context["console"] = kwargs["console"]
-        else:
-            context["console"] = True
+    default_port = 23023
+    default_chardev_type = "tcp"
+
+    chardev_types = ["serial", "console"]
+    for chardev_type in chardev_types:
+        context[chardev_type + "s"] = []
+        parameter_value = locals()[chardev_type + "s"]
+        if parameter_value is not None:
+            for chardev in parameter_value:
+                chardev_context = chardev
+                chardev_context["type"] = chardev.get("type", default_chardev_type)
+
+                if chardev_context["type"] == "tcp":
+                    chardev_context["port"] = chardev.get("port", default_port)
+                    chardev_context["protocol"] = chardev.get("protocol", "telnet")
+                context[chardev_type + "s"].append(chardev_context)
+
+    # processing of deprecated parameters
+    old_port = kwargs.get("telnet_port")
+    if old_port:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
+            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_port),
+        )
+
+    old_serial_type = kwargs.get("serial_type")
+    if old_serial_type:
+        salt.utils.versions.warn_until(
+            "Phosphorus",
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
+            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
+            "It will be removed in {{version}}.".format(old_serial_type),
+        )
+        serial_context = {"type": old_serial_type}
+        if serial_context["type"] == "tcp":
+            serial_context["port"] = old_port or default_port
+            serial_context["protocol"] = "telnet"
+        context["serials"].append(serial_context)
+
+        old_console = kwargs.get("console")
+        if old_console:
+            salt.utils.versions.warn_until(
+                "Phosphorus",
+                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
+                "It will be removed in {version}.",
+            )
+            if old_console is True:
+                context["consoles"].append(serial_context)
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
@@ -1904,6 +1945,8 @@ def init(
     numatune=None,
     hypervisor_features=None,
     clock=None,
+    serials=None,
+    consoles=None,
     **kwargs
 ):
     """
@@ -2212,6 +2255,18 @@ def init(
                   limit: 2342
                 hpet:
                   present: False
+
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
 
     .. _init-cpu-def:
 
@@ -2585,6 +2640,42 @@ def init(
         By default, not setting the ``listen`` part of the dictionary will default to
         listen on all addresses.
 
+    .. _init-chardevs-def:
+
+    .. rubric:: Serials and Consoles Definitions
+
+    Serial dictionaries can contain the following properties:
+
+    type
+        Type of the serial connection, like ``'tcp'``, ``'pty'``, ``'file'``, ``'udp'``, ``'dev'``,
+        ``'pipe'``, ``'unix'``.
+
+    path
+        Path to the source device. Can be a log file, a host character device to pass through,
+        a unix socket, a named pipe path.
+
+    host
+        The serial UDP or TCP host name.
+        (Default: 23023)
+
+    port
+        The serial UDP or TCP port number.
+        (Default: 23023)
+
+    protocol
+        Name of the TCP connection protocol.
+        (Default: telnet)
+
+    tls
+        Boolean value indicating whether to use hypervisor TLS certificates environment for TCP devices.
+
+    target_port
+        The guest device port number starting from 0
+
+    target_type
+        The guest device type. Common values are ``serial``, ``virtio`` or ``usb-serial``, but more are documented in
+        `the libvirt documentation <https://libvirt.org/formatdomain.html#consoles-serial-parallel-channel-devices>`_.
+
     .. rubric:: CLI Example
 
     .. code-block:: bash
@@ -2737,6 +2828,8 @@ def init(
             numatune,
             hypervisor_features,
             clock,
+            serials,
+            consoles,
             **kwargs
         )
         log.debug("New virtual machine definition: %s", vm_xml)
@@ -3007,6 +3100,44 @@ def _normalize_cpusets(desc, data):
             tuning[child] = new_item
 
 
+def _serial_or_concole_equal(old, new):
+    def _filter_serial_or_concole(item):
+        """
+        Filter out elements to ignore when comparing items
+        """
+        return {
+            "type": item.attrib["type"],
+            "port": item.find("source").attrib["service"]
+            if item.find("source") is not None
+            else None,
+            "protocol": item.find("protocol").attrib["type"]
+            if item.find("protocol") is not None
+            else None,
+        }
+
+    return _filter_serial_or_concole(old) == _filter_serial_or_concole(new)
+
+
+def _diff_serial_list(old, new):
+    """
+    Compare serial definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old serials
+    :param new: list of ElementTree nodes representing the new serials
+    """
+    return _diff_lists(old, new, _serial_or_concole_equal)
+
+
+def _diff_console_list(old, new):
+    """
+    Compare console definitions to extract the changes
+
+    :param old: list of ElementTree nodes representing the old consoles
+    :param new: list of ElementTree nodes representing the new consoles
+    """
+    return _diff_lists(old, new, _serial_or_concole_equal)
+
+
 def update(
     name,
     cpu=0,
@@ -3023,6 +3154,8 @@ def update(
     boot_dev=None,
     hypervisor_features=None,
     clock=None,
+    serials=None,
+    consoles=None,
     **kwargs
 ):
     """
@@ -3120,6 +3253,18 @@ def update(
         To update any numatune parameters, specify the new value. To remove any ``numatune`` parameters, pass a None object,
         for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
         sls file instead.
+
+        .. versionadded:: Aluminium
+
+    :param serials:
+        Dictionary providing details on the serials connection to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
+
+        .. versionadded:: Aluminium
+
+    :param consoles:
+        Dictionary providing details on the consoles device to create. (Default: ``None``)
+        See :ref:`init-chardevs-def` for more details on the possible values.
 
         .. versionadded:: Aluminium
 
@@ -3248,6 +3393,9 @@ def update(
             desc.find(".//os/type").get("arch"),
             graphics,
             boot,
+            boot_dev,
+            serial=serials,
+            consoles=consoles,
             **kwargs
         )
     )
@@ -3632,6 +3780,8 @@ def update(
         "disk": ["disks", "disk_profile"],
         "interface": ["interfaces", "nic_profile"],
         "graphics": ["graphics"],
+        "serial": ["serial"],
+        "console": ["console"],
     }
     changes = {}
     for dev_type in parameters:
