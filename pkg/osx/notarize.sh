@@ -13,18 +13,13 @@
 # Usage:
 #     This script must be passed 2 parameters
 #
-#         $1 : <signed package>
+#         $1 : <package>
 #             The package that will be notarized (must be signed)
 #
-#         $2 : <notarized package>
-#             The name to give the notarized package (can't be the same as the
-#             signed package)
-#
 #     Example:
-#         The following will notarize the 'salt-v2015.8.3-signed.pkg' file and
-#         save it as 'salt-v2015.8.3-notarized.pkg'
+#         The following will notarize the 'salt-v2015.8.3-signed.pkg' file
 #
-#         ./notarize.sh salt-v2015.8.3-signed.pkg salt-v2015.8.3-notarized.pkg
+#         ./notarize.sh salt-v2015.8.3-signed.pkg
 #
 # Environment Setup:
 #
@@ -44,13 +39,7 @@
 if [ "$1" == "" ]; then
     echo "Must supply a package to notarize"
 else
-    SIGNED_PACKAGE=$1
-fi
-
-if [ "$2" == "" ]; then
-    echo "Must supply a notarized package name"
-else
-    NOTARIZED_PACKAGE=$1
+    PACKAGE=$1
 fi
 
 ################################################################################
@@ -75,7 +64,7 @@ if ! xcrun altool --notarize-app \
                   --primary-bundle-id "$BUNDLE_ID" \
                   --username "$APPLE_ACCT" \
                   --password "$APP_SPEC_PWD" \
-                  -f "$SIGNED_PACKAGE" > "$NOTARIZE_APP_LOG" 2>&1; then
+                  -f "$PACKAGE" > "$NOTARIZE_APP_LOG" 2>&1; then
     cat "$NOTARIZE_APP_LOG" 1>&2
     exit 1
 fi
@@ -102,7 +91,7 @@ echo "Waiting for Apple to approve the notarization so it can be stapled.
 
 	  # once notarization is complete, run stapler and exit
 	  if ! grep -q "Status: in progress" "$NOTARIZE_INFO_LOG"; then
-    		xcrun stapler staple "$NOTARIZED_PACKAGE"
+    		xcrun stapler staple "$PACKAGE"
     		exit $?
 	  fi
 
