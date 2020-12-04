@@ -72,6 +72,15 @@ def check(ctx, files, check_proper_formatting=False):
                         path.relative_to(CODE_DIR),
                         error,
                     )
+                error = _check_valid_versionchanged(docstring)
+                if error:
+                    errors += 1
+                    exitcode = 1
+                    utils.error(
+                        "The module '{}' does not provide a proper `versionchanged` version: {!r} is not valid.",
+                        path.relative_to(CODE_DIR),
+                        error,
+                    )
 
             if not str(path).startswith(SALT_INTERNAL_LOADERS_PATHS):
                 # No further docstrings checks are needed
@@ -141,6 +150,17 @@ def check(ctx, files, check_proper_formatting=False):
 
 def _check_valid_versionadded(docstring):
     versionadded_regex = re.compile("versionadded::(?P<version>.*)")
+    for match in versionadded_regex.finditer(docstring):
+        version = match.group("version")
+        try:
+            parsed = SaltStackVersion.parse(version.strip())
+        except ValueError:
+            return version.strip()
+    return False
+
+
+def _check_valid_versionchanged(docstring):
+    versionadded_regex = re.compile("versionchanged::(?P<version>.*)")
     for match in versionadded_regex.finditer(docstring):
         version = match.group("version")
         try:
