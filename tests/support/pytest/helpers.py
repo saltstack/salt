@@ -6,6 +6,7 @@
 """
 import logging
 import os
+import pathlib
 import shutil
 import tempfile
 import textwrap
@@ -14,7 +15,6 @@ import warnings
 from contextlib import contextmanager
 
 import pytest
-import salt.utils.files
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
@@ -106,15 +106,19 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
         if directory is None:
             directory = RUNTIME_VARS.TMP
 
-        if name is not None:
-            file_path = os.path.join(directory, name)
-        else:
-            handle, file_path = tempfile.mkstemp(dir=directory)
-            os.close(handle)
+        if not isinstance(directory, pathlib.Path):
+            directory = pathlib.Path(str(directory))
 
-        file_directory = os.path.dirname(file_path)
-        if not os.path.isdir(file_directory):
-            os.makedirs(file_directory)
+        if name is not None:
+            file_path = directory / name
+        else:
+            handle, file_path = tempfile.mkstemp(dir=str(directory))
+            os.close(handle)
+            file_path = pathlib.Path(file_path)
+
+        file_directory = file_path.parent
+        if not file_directory.is_dir():
+            file_directory.mkdir(parents=True)
 
         if contents is not None:
             if contents:
@@ -124,17 +128,20 @@ def temp_file(name=None, contents=None, directory=None, strip_first_newline=True
             else:
                 file_contents = contents
 
-            with salt.utils.files.fopen(file_path, "w") as wfh:
-                wfh.write(file_contents)
+            file_path.write_text(file_contents)
+            log_contents = "{0} Contents of {1}\n{2}\n{3} Contents of {1}".format(
+                ">" * 6, file_path, file_contents, "<" * 6
+            )
+            log.debug("Created temp file: %s\n%s", file_path, log_contents)
+        else:
+            log.debug("Touched temp file: %s", file_path)
 
         yield file_path
 
     finally:
-        try:
-            os.unlink(file_path)
-        except OSError:
-            # Already deleted
-            pass
+        if file_path.exists():
+            file_path.unlink()
+            log.debug("Deleted temp file: %s", file_path)
 
 
 @pytest.helpers.register

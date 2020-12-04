@@ -137,6 +137,14 @@ def is_smartos_zone():
 
 
 @real_memoize
+def is_junos():
+    """
+    Simple function to return if host is Junos or not
+    """
+    return sys.platform.startswith("freebsd") and os.uname().release.startswith("JNPR")
+
+
+@real_memoize
 def is_freebsd():
     """
     Simple function to return if host is FreeBSD or not
@@ -177,3 +185,14 @@ def is_fedora():
         x.strip('"').strip("'") for x in linux_distribution()
     ]
     return osname == "Fedora"
+
+
+@real_memoize
+def is_photonos():
+    """
+    Simple function to return if host is Photon OS or not
+    """
+    (osname, osrelease, oscodename) = [
+        x.strip('"').strip("'") for x in linux_distribution()
+    ]
+    return osname == "VMware Photon OS"

@@ -109,8 +109,8 @@ salt/cli/key.py:
 salt/cli/salt.py:
   - integration.cli.test_grains
   - integration.shell.test_enabled
-  - integration.shell.test_matcher
   - pytests.integration.cli.test_salt
+  - pytests.integration.cli.test_matcher
 
 salt/client/*:
   - integration.client.test_kwarg
@@ -146,7 +146,7 @@ salt/(utils|renderers)/jinja\.py:
   - integration.states.test_renderers
 
 salt/utils/minions.py:
-  - integration.shell.test_matcher
+  - pytests.integration.cli.test_matcher
 
 salt/utils/reactor.py:
   - integration.reactor.test_reactor
@@ -164,7 +164,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_master
   - integration.ssh.test_mine
-  - integration.ssh.test_pillar
+  - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
 
@@ -177,10 +177,11 @@ salt/loader.py:
 
 salt/minion.py:
   - integration.client.test_syndic
-  - integration.minion.test_blackout
-  - integration.minion.test_pillar
   - integration.minion.test_timeout
-  - integration.shell.test_matcher
+  - pytests.integration.cli.test_matcher
+  - pytests.functional.pillar.test_top
+  - pytests.functional.pillar.test_gpg
+  - pytests.integration.modules.test_pillar
 
 salt/modules/*_sysctl.py:
   - unit.states.test_sysctl
@@ -200,8 +201,10 @@ salt/output/*:
   - integration.output.test_output
 
 salt/pillar/__init__.py:
-  - integration.minion.test_pillar
-  - integration.pillar.test_pillar_include
+  - pytests.integration.pillar.test_pillar_include
+  - pytests.functional.pillar.test_top
+  - pytests.functional.pillar.test_gpg
+  - pytests.integration.modules.test_pillar
 
 salt/(cli/run\.py|runner\.py):
   - pytests.integration.cli.test_salt_run
@@ -244,7 +247,7 @@ salt/utils/vt.py:
   - integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_mine
-  - integration.ssh.test_pillar
+  - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
 
