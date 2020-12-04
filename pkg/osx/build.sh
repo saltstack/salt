@@ -66,8 +66,8 @@
 #         Import the Salt Developer Application and Installer Signing
 #         certificates using the following commands:
 #
-#         security import "developerID_application.cer" -k ~/Library/Keychains/login.keychain
-#         security import "developerID_installer.cer" -k ~/Library/Keychains/login.keychain
+#         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
+#         security import "developerID_installer.p12" -k ~/Library/Keychains/login.keychain
 #
 #     Define Environment Variables:
 #         Define the environment variables using the following commands (replace
