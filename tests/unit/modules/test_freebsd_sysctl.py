@@ -137,7 +137,7 @@ class FreeBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
 
             kern.maxvnodes=213989
             """,
-            "\n"
+                "\n"
             )
         )
         with patch.dict(freebsd_sysctl.__salt__, {"cmd.run": mock_cmd}):
@@ -150,7 +150,7 @@ class FreeBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
                     user@host.domain:/usr/obj/usr/src/head
                 /amd64.amd64/sys/GENERIC
                 """,
-                "\n"
+                    "\n"
                 ),
                 ret["kern.version"],
             )
