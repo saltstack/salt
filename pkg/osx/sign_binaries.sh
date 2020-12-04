@@ -65,16 +65,32 @@ INSTALL_DIR=/opt/salt
 find ${INSTALL_DIR}/bin \
     -type f \
     -perm -u=x \
-    -exec codesign --timestamp --options=runtime --verbose --sign "$DEV_APP_CERT" "{}" \;
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --entitlements ./entitlements.plist \
+                   --sign "$DEV_APP_CERT" "{}" \;
 find ${INSTALL_DIR}/lib \
     -type f \
     -perm -u=x \
-    -exec codesign --timestamp --options=runtime --verbose --sign "$DEV_APP_CERT" "{}" \;
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --entitlements ./entitlements.plist \
+                   --sign "$DEV_APP_CERT" "{}" \;
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*dylib" \
-    -exec codesign --timestamp --options=runtime --verbose --sign "$DEV_APP_CERT" "{}" \;
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --entitlements ./entitlements.plist \
+                   --sign "$DEV_APP_CERT" "{}" \;
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*.so" \
-    -exec codesign --timestamp --options=runtime --verbose --sign "$DEV_APP_CERT" "{}" \;
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --entitlements ./entitlements.plist \
+                   --sign "$DEV_APP_CERT" "{}" \;
