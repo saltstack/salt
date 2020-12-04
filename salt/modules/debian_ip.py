@@ -6,7 +6,6 @@ References:
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 """
 
-# Import python libs
 
 import functools
 import logging
@@ -15,11 +14,8 @@ import os.path
 import re
 import time
 
-# Import third party libs
 import jinja2
 import jinja2.exceptions
-
-# Import salt libs
 import salt.utils.dns
 import salt.utils.files
 import salt.utils.odict
