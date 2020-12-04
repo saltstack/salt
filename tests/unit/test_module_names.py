@@ -152,7 +152,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.shell.test_key",
             "integration.shell.test_master",
             "integration.shell.test_master_tops",
-            "integration.shell.test_matcher",
             "integration.shell.test_minion",
             "integration.shell.test_proxy",
             "integration.shell.test_runner",
