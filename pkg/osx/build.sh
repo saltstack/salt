@@ -163,5 +163,4 @@ $PKGRESOURCES/package.sh $VERSION $PKGDIR
 # Notarize Package
 ################################################################################
 echo -n -e "\033]0;Build: Notarize Salt\007"
-$PKGRESOURCES/notarize.sh salt-$VERSION-py3-$CPUARCH-signed.pkg \
-                          salt-$VERSION-py3-$CPUARCH-notarized.pkg
+$PKGRESOURCES/notarize.sh salt-$VERSION-py3-$CPUARCH-signed.pkg
