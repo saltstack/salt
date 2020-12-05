@@ -124,8 +124,8 @@ def managed(name, ppa=None, copr=None, **kwargs):
         /etc/yum.repos.d (e.g. ``/etc/yum.repos.d/foo.conf``).
 
     enabled : True
-        Whether or not the repo is enabled. Can be specified as True/False or
-        1/0.
+        Whether the repo is enabled or not. Can be specified as ``True``/``False`` or
+        ``1``/``0``.
 
     disabled : False
         Included to reduce confusion due to APT's use of the ``disabled``
@@ -140,7 +140,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
         .. versionadded:: 3002
 
     humanname
-        This is used as the "name" value in the repo file in
+        This is used as the ``name`` value in the repo file in
         ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for SUSE distros).
 
     baseurl
@@ -155,8 +155,8 @@ def managed(name, ppa=None, copr=None, **kwargs):
         in the repo configuration with a comment marker (#) in front.
 
     gpgautoimport
-        Only valid for Zypper package manager. If set to True, automatically
-        trust and import public GPG key for the repository. The key should be
+        Only valid for Zypper package manager. If set to ``True``, automatically
+        trust and import public PGP key for the repository. The key should be
         specified with ``gpgkey`` parameter. See details below.
 
     Additional configuration values seen in YUM/DNF/Zypper repo files, such as
@@ -202,8 +202,8 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     name
         On apt-based systems this must be the complete entry as it would be
-        seen in the sources.list file.  This can have a limited subset of
-        components (i.e. 'main') which can be added/modified with the
+        seen in the ``sources.list`` file. This can have a limited subset of
+        components (e.g. ``main``) which can be added/modified with the
         ``comps`` option.
 
         .. code-block:: yaml
@@ -233,34 +233,34 @@ def managed(name, ppa=None, copr=None, **kwargs):
         ``enabled=False`` will assume ``disabled=False``.
 
     architectures
-        On apt-based systems, architectures can restrict the available
-        architectures that the repository provides (e.g. only amd64).
-        architectures should be a comma-separated list.
+        On apt-based systems, ``architectures`` can restrict the available
+        architectures that the repository provides (e.g. only ``amd64``).
+        ``architectures`` should be a comma-separated list.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
-        installed from the repository (e.g. main, nonfree, ...).  For
-        purposes of this, comps should be a comma-separated list.
+        installed from the repository (e.g. ``main``, ``nonfree``, ...).  For
+        purposes of this, ``comps`` should be a comma-separated list.
 
     file
-       The filename for the .list that the repository is configured in.
+       The filename for the ``*.list`` that the repository is configured in.
        It is important to include the full-path AND make sure it is in
        a directory that APT will look in when handling packages
 
     dist
        This dictates the release of the distro the packages should be built
-       for.  (e.g. unstable). This option is rarely needed.
+       for.  (e.g. ``unstable``). This option is rarely needed.
 
     keyid
-       The KeyID or a list of KeyIDs of the GPG key to install.
+       The KeyID or a list of KeyIDs of the PGP key to install.
        This option also requires the ``keyserver`` option to be set.
 
     keyserver
-       This is the name of the keyserver to retrieve gpg keys from.  The
+       This is the name of the keyserver to retrieve PGP keys from. The
        ``keyid`` option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from. Allows the usage of ``http://``,
+       URL to retrieve a PGP key from. Allows the usage of ``http://``,
        ``https://`` as well as ``salt://``.
 
        .. note::
@@ -268,9 +268,9 @@ def managed(name, ppa=None, copr=None, **kwargs):
            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
     key_text
-        The string representation of the GPG key to install.
+       The string representation of the PGP key to install.
 
-        .. versionadded:: 2018.3.0
+       .. versionadded:: 2018.3.0
 
        .. note::
 
@@ -279,14 +279,14 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     consolidate : False
        If set to ``True``, this will consolidate all sources definitions to the
-       sources.list file, cleanup the now unused files, consolidate components
-       (e.g. main) for the same URI, type, and architecture to a single line,
-       and finally remove comments from the sources.list file.  The consolidate
+       ``sources.list`` file, cleanup the now unused files, consolidate components
+       (e.g. ``main``) for the same URI, type, and architecture to a single line,
+       and finally remove comments from the ``sources.list`` file.  The consolidation
        will run every time the state is processed. The option only needs to be
-       set on one repo managed by salt to take effect.
+       set on one repo managed by Salt to take effect.
 
     clean_file : False
-       If set to ``True``, empty the file before config repo
+       If set to ``True``, empty the file before configuring the defined repository
 
        .. note::
            Use with care. This can be dangerous if multiple sources are
@@ -296,15 +296,16 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     refresh : True
        If set to ``False`` this will skip refreshing the apt package database
-       on debian based systems.
+       on Debian based systems.
 
     refresh_db : True
        .. deprecated:: 2018.3.0
            Use ``refresh`` instead.
 
     require_in
-       Set this to a list of pkg.installed or pkg.latest to trigger the
-       running of apt-get update prior to attempting to install these
+       Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
+       :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
+       running of ``apt-get update`` prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
     """
 
@@ -545,7 +546,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
 def absent(name, **kwargs):
     """
     This function deletes the specified repo on the system, if it exists. It
-    is essentially a wrapper around pkg.del_repo.
+    is essentially a wrapper around :mod:`pkg.del_repo <salt.modules.pkg.del_repo>`.
 
     name
         The name of the package repo, as it would be referred to when running
@@ -591,11 +592,11 @@ def absent(name, **kwargs):
                 - ppa_auth: username:password
 
     keyid
-        If passed, then the GPG key corresponding to the passed KeyID will also
+        If passed, then the PGP key corresponding to the passed KeyID will also
         be removed.
 
     keyid_ppa : False
-        If set to ``True``, the GPG key's ID will be looked up from
+        If set to ``True``, the PGP key's ID will be looked up from
         ppa.launchpad.net and removed, and the ``keyid`` argument will be
         ignored.
 
