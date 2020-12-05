@@ -221,19 +221,36 @@ def test_42116_cli_pillar_override(salt_call_cli):
 
 
 @slowTest
-def test_pillar_items_masterless(salt_minion, salt_call_cli):
+def test_pillar_items_masterless(
+    salt_minion, salt_call_cli, base_env_pillar_tree_root_dir
+):
     """
     Test to ensure we get expected output
     from pillar.items with salt-call
     """
-    TOP = """
+    top_file = """
     base:
       '{}':
-        - generic
+        - basic
     """.format(
         salt_minion.id
     )
-    with pytest.helpers.temp_pillar_file("top.sls", TOP):
+    basic_pillar_file = """
+    monty: python
+    knights:
+      - Lancelot
+      - Galahad
+      - Bedevere
+      - Robin
+    """
+    top_tempfile = pytest.helpers.temp_file(
+        "top.sls", top_file, base_env_pillar_tree_root_dir
+    )
+    basic_tempfile = pytest.helpers.temp_file(
+        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    )
+
+    with top_tempfile, basic_tempfile:
         ret = salt_call_cli.run("--local", "pillar.items")
         assert ret.exitcode == 0
         assert "knights" in ret.json
