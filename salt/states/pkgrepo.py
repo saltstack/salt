@@ -64,19 +64,11 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
         - name: logstash
         - refresh: True
 
-
-.. _bug: https://bugs.launchpad.net/ubuntu/+source/software-properties/+bug/1249080
-
 .. note::
 
     On Ubuntu systems, the ``python-software-properties`` package should be
     installed for better support of PPA repositories. To check if this package
     is installed, run ``dpkg -l python-software-properties``.
-
-    Also, some Ubuntu releases have a bug_ in their
-    ``python-software-properties`` package, a missing dependency on pycurl, so
-    ``python-pycurl`` will need to be manually installed if it is not present
-    once ``python-software-properties`` is installed.
 
     On Ubuntu & Debian systems, the ``python-apt`` package is required to be
     installed. To check if this package is installed, run ``dpkg -l python-apt``.
