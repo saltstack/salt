@@ -2701,6 +2701,14 @@ class State:
             else:
                 run_dict = running
 
+            filtered_run_dict = {}
+            for chunk in chunks:
+                tag = _gen_tag(chunk)
+                run_dict_chunk = run_dict.get(tag)
+                if run_dict_chunk:
+                    filtered_run_dict[tag] = run_dict_chunk
+            run_dict = filtered_run_dict
+
             while True:
                 if self.reconcile_procs(run_dict):
                     break
@@ -4033,8 +4041,8 @@ class BaseHighState:
                             levels, include = match.groups()
                         else:
                             msg = (
-                                "Badly formatted include {0} found in include "
-                                "in SLS '{2}:{3}'".format(inc_sls, saltenv, sls)
+                                "Badly formatted include {} found in include "
+                                "in SLS '{}:{}'".format(inc_sls, saltenv, sls)
                             )
                             log.error(msg)
                             errors.append(msg)

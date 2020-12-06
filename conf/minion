@@ -530,11 +530,14 @@
 # enabled and can be disabled by changing this value to False.
 #clean_dynamic_modules: True
 #
-# Normally, the minion is not isolated to any single environment on the master
+# Renamed from ``environment`` to ``saltenv``. If ``environment`` is used,
+# ``saltenv`` will take its value. If both are used, ``environment`` will be
+# ignored and ``saltenv`` will be used.
+# Normally the minion is not isolated to any single environment on the master
 # when running states, but the environment can be isolated on the minion side
 # by statically setting it. Remember that the recommended way to manage
 # environments is to isolate via the top file.
-#environment: None
+#saltenv: None
 #
 # Isolates the pillar environment on the minion side. This functions the same
 # as the environment setting, but for pillar instead of states.

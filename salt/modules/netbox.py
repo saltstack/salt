@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NetBox
 ======
@@ -22,7 +21,6 @@ private key file:
 
 .. versionadded:: 2018.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -159,7 +157,7 @@ def filter_(app, endpoint, **kwargs):
     )
     if nb_query:
         ret = [_strip_url_field(dict(i)) for i in nb_query]
-    return sorted(ret)
+    return ret
 
 
 def get_(app, endpoint, id=None, **kwargs):
