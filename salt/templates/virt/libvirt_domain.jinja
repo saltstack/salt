@@ -269,7 +269,7 @@
                         <address type='drive' controller='0' bus='0' target='0' unit='{{ disk.index }}' />
                         {% endif %}
                         {% if disk.driver -%}
-                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'/>
+                        <driver name='qemu' type='{{ disk.format}}' cache='none' io='{{ disk.io }}'{{ opt_attribute(disk, "iothread") }}/>
                         {% endif %}
                 </disk>
                 {% endfor %}
