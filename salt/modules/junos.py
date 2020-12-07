@@ -257,7 +257,6 @@ def _restart_connection():
     log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def facts_refresh():
     """
@@ -1285,7 +1284,6 @@ def install_config(path=None, **kwargs):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def zeroize():
     """
@@ -1374,7 +1372,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentaion:
+        Please refer to below URl for PyEZ sw.install() documentation:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
@@ -1428,7 +1426,6 @@ def install_os(path=None, **kwargs):
                 ret["out"] = False
                 __proxy__["junos.reboot_clear"]()
                 return ret
-            ## DGM if salt.utils.platform.is_junos():
             if not salt.utils.platform.is_proxy():
                 # If its native minion running on Junos, pyez dont need to SCP file
                 # hence setting no_copy as True, HandleFileCopy already copied file
@@ -1496,7 +1493,6 @@ def install_os(path=None, **kwargs):
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def file_copy(src, dest):
     """
@@ -1519,7 +1515,6 @@ def file_copy(src, dest):
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     """
-    ## DGM if salt.utils.platform.is_junos():
     if not salt.utils.platform.is_proxy():
         return {
             "success": False,
@@ -1547,7 +1542,6 @@ def file_copy(src, dest):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def lock():
     """
@@ -1584,7 +1578,6 @@ def lock():
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def unlock():
     """
@@ -1766,7 +1759,6 @@ def load(path=None, **kwargs):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def commit_check():
     """
@@ -1792,7 +1784,6 @@ def commit_check():
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def get_table(
     table,
@@ -2097,7 +2088,6 @@ def file_compare(file1, file2, **kwargs):
                 True
 
     """
-    ## DGM if not salt.utils.platform.is_junos():
     if salt.utils.platform.is_proxy():
         return {
             "success": False,
@@ -2156,7 +2146,6 @@ def fsentry_exists(dir, **kwargs):
                 True
 
     """
-    ## DGM if not salt.utils.platform.is_junos():
     if salt.utils.platform.is_proxy():
         return {
             "success": False,
@@ -2306,7 +2295,6 @@ def dir_copy(source, dest, force=False, **kwargs):
     `re1:/etc/salt/pki/<files and dirs in /etc/salt/pki`.
 
     """
-    ## DGM if not salt.utils.platform.is_junos():
     if salt.utils.platform.is_proxy():
         return {
             "success": False,
