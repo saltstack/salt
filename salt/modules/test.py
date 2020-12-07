@@ -16,8 +16,6 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
 import salt.version
-from salt.ext import six
-from salt.ext.six.moves import builtins
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ["*"]
