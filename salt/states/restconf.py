@@ -16,6 +16,7 @@ import difflib
 import json
 import logging
 
+import salt.utils.odict
 import yaml
 
 log = logging.getLogger(__file__)
@@ -169,7 +170,7 @@ def config_manage(
             ret["comment"] = (
                 "failed to add / modify config. "
                 "API Statuscode: {}, API Response: {}, URI: {}".format(
-                    resp["status"], why, path_check["request_uri"]
+                    resp["status"], why, path_check["request_path"]
                 )
             )
             log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))
