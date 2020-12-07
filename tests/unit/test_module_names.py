@@ -1,23 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.test_test_module_name
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import
-
 import fnmatch
 import os
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.paths import list_test_mods
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 EXCLUDED_DIRS = [
     os.path.join("tests", "integration", "cloud", "helpers"),
@@ -42,7 +35,6 @@ EXCLUDED_FILES = [
     os.path.join("tests", "committer_parser.py"),
     os.path.join("tests", "consist.py"),
     os.path.join("tests", "eventlisten.py"),
-    os.path.join("tests", "integration", "utils", "testprogram.py"),
     os.path.join("tests", "jenkins.py"),
     os.path.join("tests", "minionswarm.py"),
     os.path.join("tests", "modparser.py"),
@@ -105,10 +97,6 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg += "If it is a tests module, then please rename as suggested."
         self.assertEqual([], bad_names, error_msg)
 
-    @skipIf(
-        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
-        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
-    )
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in
@@ -137,13 +125,12 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
             "integration.master.test_event_return",
-            "integration.minion.test_blackout",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
+            "integration.modules.test_service",
             "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
             "integration.netapi.rest_cherrypy.test_app_pam",
@@ -165,7 +152,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.shell.test_key",
             "integration.shell.test_master",
             "integration.shell.test_master_tops",
-            "integration.shell.test_matcher",
             "integration.shell.test_minion",
             "integration.shell.test_proxy",
             "integration.shell.test_runner",
@@ -194,7 +180,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
             "unit.cache.test_cache",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
@@ -221,7 +206,7 @@ class BadTestModuleNamesTestCase(TestCase):
 
         def _format_errors(errors):
             msg = (
-                "The following {0} test module(s) could not be matched to a "
+                "The following {} test module(s) could not be matched to a "
                 "source code file:\n\n".format(len(errors))
             )
             msg += "".join(errors)
@@ -244,11 +229,11 @@ class BadTestModuleNamesTestCase(TestCase):
 
             # The path from the root of the repo
             relpath = salt.utils.path.join(
-                "salt", stem.replace(".", os.sep), ".".join((flower[5:], "py"))
+                stem.replace(".", os.sep), ".".join((flower[5:], "py"))
             )
 
             # The full path to the file we expect to find
-            abspath = salt.utils.path.join(RUNTIME_VARS.CODE_DIR, relpath)
+            abspath = salt.utils.path.join(RUNTIME_VARS.SALT_CODE_DIR, relpath)
 
             if not os.path.isfile(abspath):
                 # Maybe this is in a dunder init?
@@ -258,6 +243,6 @@ class BadTestModuleNamesTestCase(TestCase):
                     # Yep, it is. Carry on!
                     continue
 
-                errors.append("{0} (expected: {1})\n".format(mod_name, relpath))
+                errors.append("{} (expected: {})\n".format(mod_name, relpath))
 
         assert not errors, _format_errors(errors)

@@ -1,5 +1,5 @@
 '*':
-  - integration.modules.test_sysmod
+  - pytests.integration.modules.test_sysmod
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
@@ -24,6 +24,7 @@ salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\
 
 salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac_service|netbsdservice|openbsdrcctl_service|openbsdservice|rh_service|runit|linux_service|smf_service|systemd_service|upstart_service|win_service)\.py:
   - unit.states.test_service
+  - integration.modules.test_service
   - integration.states.test_service
 
 salt/modules/*apache.py:
@@ -49,7 +50,7 @@ salt/modules/dockermod.py:
   - integration.states.test_docker_network
 
 salt/modules/file.py:
-  - integration.states.test_cron
+  - pytests.integration.states.test_cron
 
 salt/modules/influxdb08mod.py:
   - unit.states.test_influxdb08_database
@@ -88,7 +89,7 @@ salt/modules/ssh.py:
   - unit.states.test_ssh_known_hosts
 
 salt/auth/*:
-  - integration.shell.test_auth
+  - pytests.integration.cli.test_salt_auth
 
 salt/cache/*:
   - unit.cache.test_cache
@@ -97,19 +98,19 @@ salt/cli/*:
   - integration.shell.test_arguments
 
 salt/cli/call.py:
-  - integration.shell.test_call
+  - pytests.integration.cli.test_salt_call
 
 salt/cli/cp.py:
-  - integration.shell.test_cp
+  - pytests.integration.cli.test_salt_cp
 
 salt/cli/key.py:
-  - integration.shell.test_key
+  - pytests.integration.cli.test_salt_key
 
 salt/cli/salt.py:
   - integration.cli.test_grains
   - integration.shell.test_enabled
-  - integration.shell.test_matcher
-  - integration.shell.test_saltcli
+  - pytests.integration.cli.test_salt
+  - pytests.integration.cli.test_matcher
 
 salt/client/*:
   - integration.client.test_kwarg
@@ -126,8 +127,8 @@ salt/grains/*:
   - integration.grains.test_custom
 
 salt/proxy/*:
-  - integration.proxy.test_shell
-  - integration.proxy.test_simple
+  - pytests.integration.proxy.test_shell
+  - pytests.integration.proxy.test_simple
 
 salt/state.py:
   - integration.modules.test_state_jinja_filters
@@ -145,16 +146,16 @@ salt/(utils|renderers)/jinja\.py:
   - integration.states.test_renderers
 
 salt/utils/minions.py:
-  - integration.shell.test_matcher
+  - pytests.integration.cli.test_matcher
 
 salt/utils/reactor.py:
   - integration.reactor.test_reactor
 
 salt/cli/daemons.py:
-  - integration.shell.test_master
-  - integration.shell.test_minion
-  - integration.shell.test_proxy
-  - integration.shell.test_syndic
+  - pytests.integration.cli.test_salt_master
+  - pytests.integration.cli.test_salt_minion
+  - pytests.integration.cli.test_salt_proxy
+  - pytests.integration.cli.test_salt_syndic
 
 salt/(client/ssh/.+|cli/ssh\.py):
   - integration.cli.test_custom_module
@@ -163,7 +164,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_master
   - integration.ssh.test_mine
-  - integration.ssh.test_pillar
+  - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
 
@@ -176,10 +177,11 @@ salt/loader.py:
 
 salt/minion.py:
   - integration.client.test_syndic
-  - integration.minion.test_blackout
-  - integration.minion.test_pillar
   - integration.minion.test_timeout
-  - integration.shell.test_matcher
+  - pytests.integration.cli.test_matcher
+  - pytests.functional.pillar.test_top
+  - pytests.functional.pillar.test_gpg
+  - pytests.integration.modules.test_pillar
 
 salt/modules/*_sysctl.py:
   - unit.states.test_sysctl
@@ -199,11 +201,13 @@ salt/output/*:
   - integration.output.test_output
 
 salt/pillar/__init__.py:
-  - integration.minion.test_pillar
-  - integration.pillar.test_pillar_include
+  - pytests.integration.pillar.test_pillar_include
+  - pytests.functional.pillar.test_top
+  - pytests.functional.pillar.test_gpg
+  - pytests.integration.modules.test_pillar
 
 salt/(cli/run\.py|runner\.py):
-  - integration.shell.test_runner
+  - pytests.integration.cli.test_salt_run
   - integration.runners.test_runner_returns
 
 salt/runners/venafiapi.py:
@@ -243,7 +247,7 @@ salt/utils/vt.py:
   - integration.ssh.test_grains
   - integration.ssh.test_jinja_filters
   - integration.ssh.test_mine
-  - integration.ssh.test_pillar
+  - pytests.integration.ssh.test_pillar
   - integration.ssh.test_raw
   - integration.ssh.test_state
 

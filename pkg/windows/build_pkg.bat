@@ -134,58 +134,12 @@ If Defined ProgramFiles(x86) (
 If Exist "%PreDir%" rd /s /q "%PreDir%"
 mkdir "%PreDir%"
 
-:: For PY 3, include KB2999226
-@echo Copying KB2999226 to Prerequisites
-@echo ----------------------------------------------------------------------
-:: 64 bit binaries required for AMD64 and x86
-:: Copy down the 64 bit binaries
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.0-KB2999226-x64.msu
-set Name=Windows6.0-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows6.1-KB2999226-x64.msu
-set Name=Windows6.1-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8-RT-KB2999226-x64.msu
-set Name=Windows8-RT-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt/Windows8.1-KB2999226-x64.msu
-set Name=Windows8.1-KB2999226-x64.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
 :: 32 bit binaries only needed for x86 installer
 :: ProgramFiles(x86) is defined on AMD64 systems
 :: If it's defined, skip the x86 binaries
-If Defined ProgramFiles(x86) goto vcredist_2013_x64
+If Defined ProgramFiles(x86) goto dependencies_x64
 
-:: Copy down the 32 bit binaries
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.0-KB2999226-x86.msu
-set Name=Windows6.0-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows6.1-KB2999226-x86.msu
-set Name=Windows6.1-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8-RT-KB2999226-x86.msu
-set Name=Windows8-RT-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt/Windows8.1-KB2999226-x86.msu
-set Name=Windows8.1-KB2999226-x86.msu
-@echo - Downloading %Name%
-powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
-
-:vcredist_2013_x86
+:dependencies_x86
 @echo.
 @echo Copying VCRedist 2013 X86 to Prerequisites
 @echo ----------------------------------------------------------------------
@@ -194,14 +148,31 @@ set Name=vcredist_x86_2013.exe
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 
+@echo.
+@echo Copying Universal C Runtimes X86 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/32/ucrt_x86.zip
+set Name=ucrt_x86.zip
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
 goto prereq_end
 
-:vcredist_2013_x64
+:: These are only needed on 64bit installer
+:dependencies_x64
 @echo.
 @echo Copying VCRedist 2013 X64 to Prerequisites
 @echo ----------------------------------------------------------------------
 set Url=http://repo.saltstack.com/windows/dependencies/64/vcredist_x64_2013.exe
 set Name=vcredist_x64_2013.exe
+@echo - Downloading %Name%
+powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
+
+@echo.
+@echo Copying Universal C Runtimes X64 to Prerequisites
+@echo ----------------------------------------------------------------------
+set Url=http://repo.saltstack.com/windows/dependencies/64/ucrt_x64.zip
+set Name=ucrt_x64.zip
 @echo - Downloading %Name%
 powershell -ExecutionPolicy RemoteSigned -File download_url_file.ps1 -url %Url% -file "%PreDir%\%Name%"
 

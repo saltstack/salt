@@ -34,6 +34,7 @@ import salt.utils.data
 import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.user
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -272,6 +273,7 @@ def present(
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
+    **kwargs
 ):
     """
     Ensure that the named user is present with the specified properties
@@ -563,6 +565,28 @@ def present(
                 isected,
                 name,
             )
+
+    # Warn until Silicon release, when old gid_from_name argument is used.
+    # Since gid_from_name is the only thing that we're pulling from the kwargs,
+    # we can also remove **kwargs from the function definition once we remove
+    # the entire if block below. The following two tests will also become
+    # redundant when this block is cleaned up:
+    #
+    # integration.states.test_user.UserTest.test_user_present_gid_from_name
+    # integration.states.test_user.UserTest.test_user_present_gid_from_name_and_usergroup
+    gid_from_name = kwargs.pop("gid_from_name", None)
+    if gid_from_name is not None:
+        msg = (
+            "The 'gid_from_name' argument in the user.present state has "
+            "been replaced with 'usergroup'"
+        )
+        if usergroup is not None:
+            msg += ". Ignoring since 'usergroup' was also used."
+        else:
+            msg += ". Update your SLS file to get rid of this warning."
+            usergroup = gid_from_name
+        salt.utils.versions.warn_until("Silicon", msg)
+        ret.setdefault("warnings", []).append(msg)
 
     # If usergroup was specified, we'll also be creating a new
     # group. We should report this change without setting the gid

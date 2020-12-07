@@ -22,21 +22,28 @@ Installation from the Official SaltStack Repository
 The output of ``md5sum <salt minion exe>`` should match the contents of the
 corresponding md5 file.
 
-`Earlier builds from supported branches <https://repo.saltstack.com/windows/>`__
+There are installers available for Python 3. Starting with Salt 3001, only
+Python 3 builds of the Windows Salt Minion will be built. Python 2 builds
+exist for earlier Salt Minion versions.
 
-`Archived builds from unsupported branches <https://repo.saltstack.com/windows/archive/>`__
+.. note::
+    - `Earlier builds from supported branches
+      <https://repo.saltstack.com/windows/>`__
+
+    Archived builds from unsupported branches:
+
+    - `Archive 1 <https://archive.saltstack.com/windows/>`__
+    - `Archive 2 <https://archive.saltstack.com/windows/archive/>`__
 
 .. note::
 
     The installation executable installs dependencies that the Salt minion
     requires.
 
-The 64bit installer has been tested on Windows 7 64bit and Windows Server
-2008R2 64bit. The 32bit installer has been tested on Windows 2008 Server 32bit.
-Please file a bug report on our GitHub repo if issues for other platforms are
-found.
-
-There are installers available for Python 2 and Python 3.
+The 64bit and 32bit installers have been tested on Windows 8.1, Windows Server
+2012 R2, Windows 10, Windows Server 2016, and Windows Server 2019. 32bit
+installers have only been tested on 64bit systems. Please file a bug report on
+our GitHub repo if issues for other platforms are found.
 
 The installer will detect previous installations of Salt and ask if you would
 like to remove them. Clicking OK will remove the Salt binaries and related files
@@ -152,21 +159,21 @@ Here are some examples of using the silent installer:
     # Install the Salt Minion
     # Configure the minion and start the service
 
-    Salt-Minion-2017.7.1-Py2-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname
 
 .. code-block:: bat
 
     # Install the Salt Minion
     # Configure the minion but don't start the minion service
 
-    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-minion=0
 
 .. code-block:: bat
 
     # Install the Salt Minion
     # Configure the minion using a custom config and configuring multimaster
 
-    Salt-Minion-2017.7.1-Py3-AMD64-Setup.exe /S /custom-config=windows_minion /master=prod_master1,prod_master2
+    Salt-Minion-3001-Py3-AMD64-Setup.exe /S /custom-config=windows_minion /master=prod_master1,prod_master2
 
 
 Running the Salt Minion on Windows as an Unprivileged User

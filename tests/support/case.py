@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -10,9 +9,9 @@
     Custom reusable :class:`TestCase<python2:unittest.TestCase>`
     implementations.
 """
-from __future__ import absolute_import, unicode_literals
 
 import errno
+import io
 import json
 import logging
 import os
@@ -24,16 +23,14 @@ import textwrap
 import time
 from datetime import datetime, timedelta
 
+import pytest
 import salt.utils.files
-from salt.ext import six
-from salt.ext.six.moves import cStringIO
-from saltfactories.utils.processes.helpers import terminate_process
+from saltfactories.utils.processes import terminate_process
 from tests.support.cli_scripts import ScriptPathMixin
-from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.helpers import SKIP_IF_NOT_RUNNING_PYTEST, RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
     AdaptedConfigurationTestCaseMixin,
     SaltClientTestCaseMixin,
-    SaltMultimasterClientTestCaseMixin,
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -60,6 +57,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         catch_stderr=False,
         timeout=None,
         popen_kwargs=None,
+        config_dir=None,
     ):
         r'''
         Run the ``salt`` CLI tool with the provided arguments
@@ -78,15 +76,14 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "-c {0} -t {1} {2}".format(
-            RUNTIME_VARS.TMP_CONF_DIR, timeout, arg_str
-        )
+        arg_str = "-t {} {}".format(timeout, arg_str)
         return self.run_script(
             "salt",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
 
     def run_ssh(
@@ -100,6 +97,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         roster_file=None,
         ssh_opts="",
         log_level="error",
+        config_dir=None,
         **kwargs
     ):
         """
@@ -109,15 +107,17 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not roster_file:
             roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
-        arg_str = "{} {} -l{} -c {} -i --priv {} --roster-file {} {} localhost {} --out=json".format(
-            " -W" if wipe else "",
-            " -r" if raw else "",
-            log_level,
-            RUNTIME_VARS.TMP_CONF_DIR,
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "key_test"),
-            roster_file,
-            ssh_opts,
-            arg_str,
+        arg_str = (
+            "{wipe} {raw} -l {log_level} --ignore-host-keys --priv {client_key} --roster-file "
+            "{roster_file} {ssh_opts} localhost {arg_str} --out=json"
+        ).format(
+            wipe=" -W" if wipe else "",
+            raw=" -r" if raw else "",
+            log_level=log_level,
+            client_key=os.path.join(RUNTIME_VARS.TMP_SSH_CONF_DIR, "client_key"),
+            roster_file=roster_file,
+            ssh_opts=ssh_opts,
+            arg_str=arg_str,
         )
         ret = self.run_script(
             "salt-ssh",
@@ -126,6 +126,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             catch_stderr=catch_stderr,
             raw=True,
             timeout=timeout,
+            config_dir=config_dir,
             **kwargs
         )
         log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
@@ -147,11 +148,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
         asynchronous = kwargs.get("async", asynchronous)
-        arg_str = "-c {0}{async_flag} -t {timeout} {1}".format(
-            config_dir or RUNTIME_VARS.TMP_CONF_DIR,
-            arg_str,
-            timeout=timeout,
-            async_flag=" --async" if asynchronous else "",
+        arg_str = "{async_flag} -t {timeout} {}".format(
+            arg_str, timeout=timeout, async_flag=" --async" if asynchronous else "",
         )
         ret = self.run_script(
             "salt-run",
@@ -159,6 +157,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_run for command '%s': %s", arg_str, ret)
         return ret
@@ -168,6 +167,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         Execute the runner function and return the return data and output in a dict
         """
         output = kwargs.pop("_output", None)
+        opts_overrides = kwargs.pop("opts_overrides", None)
         ret = {"fun": fun}
 
         # Late import
@@ -176,6 +176,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         import salt.runner
 
         opts = salt.config.client_config(self.get_config_file_path("master"))
+        if opts_overrides:
+            opts.update(opts_overrides)
 
         opts_arg = list(arg)
         if kwargs:
@@ -194,7 +196,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         # Compile output
         # TODO: Support outputters other than nested
         opts["color"] = False
-        opts["output_file"] = cStringIO()
+        opts["output_file"] = io.StringIO()
         try:
             salt.output.display_output(ret["return"], opts=opts, out=output)
             out = opts["output_file"].getvalue()
@@ -210,16 +212,26 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         )
         return ret
 
-    def run_key(self, arg_str, catch_stderr=False, with_retcode=False):
+    def run_key(self, arg_str, catch_stderr=False, with_retcode=False, config_dir=None):
         """
         Execute salt-key
         """
-        arg_str = "-c {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
         return self.run_script(
-            "salt-key", arg_str, catch_stderr=catch_stderr, with_retcode=with_retcode
+            "salt-key",
+            arg_str,
+            catch_stderr=catch_stderr,
+            with_retcode=with_retcode,
+            config_dir=config_dir,
         )
 
-    def run_cp(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
+    def run_cp(
+        self,
+        arg_str,
+        with_retcode=False,
+        catch_stderr=False,
+        timeout=None,
+        config_dir=None,
+    ):
         """
         Execute salt-cp
         """
@@ -227,13 +239,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         # Note: not logging result of run_cp because it will log a bunch of
         # bytes which will not be very helpful.
-        arg_str = "--config-dir {0} {1}".format(RUNTIME_VARS.TMP_CONF_DIR, arg_str)
         return self.run_script(
             "salt-cp",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
 
     def run_call(
@@ -249,18 +261,14 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         if not config_dir:
             config_dir = RUNTIME_VARS.TMP_MINION_CONF_DIR
-        # arg_str = "{0} --config-dir {1} {2}".format(
-        #    "--local" if local else "", RUNTIME_VARS.TMP_CONF_DIR, arg_str
-        # )
-        arg_str = "{0} --config-dir {1} {2}".format(
-            "--local" if local else "", config_dir, arg_str
-        )
+        arg_str = "{} {}".format("--local" if local else "", arg_str)
         ret = self.run_script(
             "salt-call",
             arg_str,
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_call for command '%s': %s", arg_str, ret)
         return ret
@@ -281,24 +289,34 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         This function is added for compatibility with ModuleCase. This makes it possible to use
         decorators like @with_system_user.
         """
-        arg_str = "{0} {1} {2}".format(
+        arg_str = "{} {} {}".format(
             function,
-            " ".join((str(arg_) for arg_ in arg)),
-            " ".join(("{0}={1}".format(*item) for item in kwargs.items())),
+            " ".join(str(arg_) for arg_ in arg),
+            " ".join("{}={}".format(*item) for item in kwargs.items()),
         )
         return self.run_call(arg_str, with_retcode, catch_stderr, local, timeout)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None, config_dir=None):
         """
         Execute salt-cloud
         """
         if timeout is None:
             timeout = self.RUN_TIMEOUT
-        ret = self.run_script("salt-cloud", arg_str, catch_stderr, timeout=timeout)
+
+        ret = self.run_script(
+            "salt-cloud", arg_str, catch_stderr, timeout=timeout, config_dir=config_dir
+        )
         log.debug("Result of run_cloud for command '%s': %s", arg_str, ret)
         return ret
 
-    def run_spm(self, arg_str, with_retcode=False, catch_stderr=False, timeout=None):
+    def run_spm(
+        self,
+        arg_str,
+        with_retcode=False,
+        catch_stderr=False,
+        timeout=None,
+        config_dir=None,
+    ):
         """
         Execute spm
         """
@@ -310,6 +328,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             with_retcode=with_retcode,
             catch_stderr=catch_stderr,
             timeout=timeout,
+            config_dir=config_dir,
         )
         log.debug("Result of run_spm for command '%s': %s", arg_str, ret)
         return ret
@@ -326,6 +345,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         raw=False,
         popen_kwargs=None,
         log_output=None,
+        config_dir=None,
         **kwargs
     ):
         """
@@ -355,21 +375,22 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             cmd = "PYTHONPATH="
             python_path = os.environ.get("PYTHONPATH", None)
             if python_path is not None:
-                cmd += "{0}:".format(python_path)
+                cmd += "{}:".format(python_path)
 
             if sys.version_info[0] < 3:
-                cmd += "{0} ".format(":".join(sys.path[1:]))
+                cmd += "{} ".format(":".join(sys.path[1:]))
             else:
-                cmd += "{0} ".format(":".join(sys.path[0:]))
-            cmd += "python{0}.{1} ".format(*sys.version_info)
-        cmd += "{0} ".format(script_path)
-        cmd += "{0} ".format(arg_str)
+                cmd += "{} ".format(":".join(sys.path[0:]))
+            cmd += "python{}.{} ".format(*sys.version_info)
+        cmd += "{} --config-dir={} {} ".format(
+            script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
+        )
         if kwargs:
             # late import
             import salt.utils.json
 
             for key, value in kwargs.items():
-                cmd += "'{0}={1} '".format(key, salt.utils.json.dumps(value))
+                cmd += "'{}={} '".format(key, salt.utils.json.dumps(value))
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
@@ -435,6 +456,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
             return ret[0] if len(ret) == 1 else tuple(ret)
 
+        log.debug("Running Popen(%r, %r)", cmd, popen_kwargs)
         process = subprocess.Popen(cmd, **popen_kwargs)
 
         if timeout is not None:
@@ -455,14 +477,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
         tmp_file.seek(0)
 
-        if sys.version_info >= (3,):
-            try:
-                out = tmp_file.read().decode(__salt_system_encoding__)
-            except (NameError, UnicodeDecodeError):
-                # Let's cross our fingers and hope for the best
-                out = tmp_file.read().decode("utf-8")
-        else:
-            out = tmp_file.read()
+        try:
+            out = tmp_file.read().decode(__salt_system_encoding__)
+        except (NameError, UnicodeDecodeError):
+            # Let's cross our fingers and hope for the best
+            out = tmp_file.read().decode("utf-8")
 
         if catch_stderr:
             if sys.version_info < (2, 7):
@@ -494,7 +513,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             finally:
                 try:
                     if os.path.exists(tmp_file.name):
-                        if isinstance(tmp_file.name, six.string_types):
+                        if isinstance(tmp_file.name, str):
                             # tmp_file.name is an int when using SpooledTemporaryFiles
                             # int types cannot be used with os.remove() in Python 3
                             os.remove(tmp_file.name)
@@ -517,7 +536,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         finally:
             try:
                 if os.path.exists(tmp_file.name):
-                    if isinstance(tmp_file.name, six.string_types):
+                    if isinstance(tmp_file.name, str):
                         # tmp_file.name is an int when using SpooledTemporaryFiles
                         # int types cannot be used with os.remove() in Python 3
                         os.remove(tmp_file.name)
@@ -530,18 +549,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
                 pass
 
 
-class MultiMasterTestShellCase(ShellCase):
-    """
-    '''
-    Execute a test for a shell command when running multi-master tests
-    """
-
-    @property
-    def config_dir(self):
-        return RUNTIME_VARS.TMP_MM_CONF_DIR
-
-
-class SPMTestUserInterface(object):
+class SPMTestUserInterface:
     """
     Test user interface to SPMClient
     """
@@ -656,7 +664,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 textwrap.dedent(
                     """\
                      local_repo:
-                       url: file://{0}
+                       url: file://{}
                      """.format(
                         self.config["spm_build_dir"]
                     )
@@ -684,7 +692,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     """
 
-    def wait_for_all_jobs(self, minions=("minion", "sub_minion",), sleep=0.3):
+    def wait_for_all_jobs(self, minions=("minion", "sub_minion"), sleep=0.3):
         """
         Wait for all jobs currently running on the list of minions to finish
         """
@@ -752,14 +760,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         if minion_tgt not in orig:
             fail_or_skip_func(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion '{0}'. Command output: {1}".format(minion_tgt, orig)
+                "from the minion '{}'. Command output: {}".format(minion_tgt, orig)
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
             fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{0}' from "
-                "the minion '{1}'. Command output: {2}".format(
-                    function, minion_tgt, orig
-                )
+                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{}' from "
+                "the minion '{}'. Command output: {}".format(function, minion_tgt, orig)
             )
 
         # Try to match stalled state functions
@@ -783,7 +789,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, six.string_types):
+                if not isinstance(item, str):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -800,98 +806,13 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 job_kill = self.run_function("saltutil.kill_job", [jid])
                 msg = (
                     "A running state.single was found causing a state lock. "
-                    "Job details: '{0}'  Killing Job Returned: '{1}'".format(
+                    "Job details: '{}'  Killing Job Returned: '{}'".format(
                         job_data, job_kill
                     )
                 )
                 ret.append(
-                    "[TEST SUITE ENFORCED]{0}" "[/TEST SUITE ENFORCED]".format(msg)
+                    "[TEST SUITE ENFORCED]{}" "[/TEST SUITE ENFORCED]".format(msg)
                 )
-        return ret
-
-
-class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
-    """
-    Execute a module function
-    """
-
-    def run_function(
-        self,
-        function,
-        arg=(),
-        minion_tgt="mm-minion",
-        timeout=300,
-        master_tgt="mm-master",
-        **kwargs
-    ):
-        """
-        Run a single salt function and condition the return down to match the
-        behavior of the raw function call
-        """
-        known_to_return_none = (
-            "data.get",
-            "file.chown",
-            "file.chgrp",
-            "pkg.refresh_db",
-            "ssh.recv_known_host_entries",
-            "time.sleep",
-        )
-        if minion_tgt == "mm-sub-minion":
-            known_to_return_none += ("mine.update",)
-        if "f_arg" in kwargs:
-            kwargs["arg"] = kwargs.pop("f_arg")
-        if "f_timeout" in kwargs:
-            kwargs["timeout"] = kwargs.pop("f_timeout")
-        if master_tgt is None:
-            client = self.clients["mm-master"]
-        elif isinstance(master_tgt, int):
-            client = self.clients[list(self.clients)[master_tgt]]
-        else:
-            client = self.clients[master_tgt]
-        orig = client.cmd(minion_tgt, function, arg, timeout=timeout, kwarg=kwargs)
-
-        if RUNTIME_VARS.PYTEST_SESSION:
-            fail_or_skip_func = self.fail
-        else:
-            fail_or_skip_func = self.skipTest
-
-        if minion_tgt not in orig:
-            fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion '{0}'. Command output: {1}".format(minion_tgt, orig)
-            )
-        elif orig[minion_tgt] is None and function not in known_to_return_none:
-            fail_or_skip_func(
-                "WARNING(SHOULD NOT HAPPEN #1935): Failed to get '{0}' from "
-                "the minion '{1}'. Command output: {2}".format(
-                    function, minion_tgt, orig
-                )
-            )
-
-        # Try to match stalled state functions
-        orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
-
-        return orig[minion_tgt]
-
-    def run_function_all_masters(
-        self, function, arg=(), minion_tgt="mm-minion", timeout=300, **kwargs
-    ):
-        """
-        Run a single salt function from all the masters in multimaster environment
-        and condition the return down to match the behavior of the raw function call
-        """
-        ret = []
-        for master_id in self.clients:
-            ret.append(
-                self.run_function(
-                    function,
-                    arg=arg,
-                    minion_tgt=minion_tgt,
-                    timeout=timeout,
-                    master_tgt=master_id,
-                    **kwargs
-                )
-            )
         return ret
 
 
@@ -915,19 +836,20 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         if "minion" not in orig:
             fail_or_skip_func(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion. Command output: {0}".format(orig)
+                "from the minion. Command output: {}".format(orig)
             )
         return orig["minion"]
 
 
-@requires_sshd_server
+@SKIP_IF_NOT_RUNNING_PYTEST
+@pytest.mark.requires_sshd_server
 class SSHCase(ShellCase):
     """
     Execute a command via salt-ssh
     """
 
     def _arg_str(self, function, arg):
-        return "{0} {1}".format(function, " ".join(arg))
+        return "{} {}".format(function, " ".join(arg))
 
     # pylint: disable=arguments-differ
     def run_function(

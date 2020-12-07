@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     unit.loader
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import collections
 import compileall
@@ -21,21 +19,14 @@ import textwrap
 
 import salt.config
 import salt.loader
+import salt.loader_context
 import salt.utils.files
 import salt.utils.stringutils
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-
-# Import Salt Testing libs
 from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
-
-# pylint: enable=no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +83,7 @@ class LazyLoaderTest(TestCase):
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
         self.module_file = os.path.join(
-            self.module_dir, "{0}.py".format(self.module_name)
+            self.module_dir, "{}.py".format(self.module_name)
         )
         with salt.utils.files.fopen(self.module_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template))
@@ -130,7 +121,11 @@ class LazyLoaderTest(TestCase):
         """
         # Make sure depends correctly allowed a function to load. If this
         # results in a KeyError, the decorator is broken.
-        self.assertTrue(inspect.isfunction(self.loader[self.module_name + ".loaded"]))
+        self.assertTrue(
+            isinstance(
+                self.loader[self.module_name + ".loaded"], salt.loader.LoadedFunc,
+            )
+        )
         # Make sure depends correctly kept a function from loading
         self.assertTrue(self.module_name + ".not_loaded" not in self.loader)
 
@@ -212,7 +207,9 @@ class LazyLoaderUtilsTest(TestCase):
             tag="module",
             extra_module_dirs=[self.utils_dir],
         )
-        self.assertTrue(inspect.isfunction(loader[self.module_name + ".run"]))
+        self.assertTrue(
+            isinstance(loader[self.module_name + ".run"], salt.loader.LoadedFunc)
+        )
         self.assertTrue(loader[self.module_name + ".run"]())
 
     def test_utils_not_found(self):
@@ -269,10 +266,10 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         # make sure it starts empty
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
-        self.assertTrue(inspect.isfunction(self.loader["test.ping"]))
+        self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
 
         # make sure we only loaded "test" functions
-        for key, val in six.iteritems(self.loader._dict):
+        for key, val in self.loader._dict.items():
             self.assertEqual(key.split(".", 1)[0], "test")
 
         # make sure the depends thing worked (double check of the depends testing,
@@ -308,7 +305,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         """
         self.assertEqual(self.loader._dict, {})
         # force a load all
-        for key, func in six.iteritems(self.loader):
+        for key, func in self.loader.items():
             break
         self.assertNotEqual(self.loader._dict, {})
 
@@ -320,40 +317,47 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
         func = self.loader["test.ping"]
-        with patch.dict(func.__globals__["__context__"], {"foo": "bar"}):
-            self.assertEqual(
-                self.loader["test.echo"].__globals__["__context__"]["foo"], "bar"
-            )
-            self.assertEqual(
-                self.loader["grains.get"].__globals__["__context__"]["foo"], "bar"
-            )
+        with salt.loader_context.loader_context(self.loader):
+            with patch.dict(func.__globals__["__context__"], {"foo": "bar"}):
+                self.assertEqual(
+                    self.loader["test.echo"].__globals__["__context__"]["foo"], "bar"
+                )
+                self.assertEqual(
+                    self.loader["grains.get"].__globals__["__context__"]["foo"], "bar"
+                )
 
     def test_globals(self):
-        func_globals = self.loader["test.ping"].__globals__
-        self.assertEqual(func_globals["__grains__"], self.opts.get("grains", {}))
-        self.assertEqual(func_globals["__pillar__"], self.opts.get("pillar", {}))
-        # the opts passed into modules is at least a subset of the whole opts
-        for key, val in six.iteritems(func_globals["__opts__"]):
-            if (
-                key in salt.config.DEFAULT_MASTER_OPTS
-                and key not in salt.config.DEFAULT_MINION_OPTS
-            ):
-                # We loaded the minion opts, but somewhere in the code, the master options got pulled in
-                # Let's just not check for equality since the option won't even exist in the loaded
-                # minion options
-                continue
-            if (
-                key not in salt.config.DEFAULT_MASTER_OPTS
-                and key not in salt.config.DEFAULT_MINION_OPTS
-            ):
-                # This isn't even a default configuration setting, lets carry on
-                continue
-            self.assertEqual(self.opts[key], val)
+        with salt.loader_context.loader_context(self.loader):
+            func_globals = self.loader["test.ping"].__globals__
+            self.assertEqual(
+                func_globals["__grains__"].value(), self.opts.get("grains", {})
+            )
+            self.assertEqual(
+                func_globals["__pillar__"].value(), self.opts.get("pillar", {})
+            )
+            # the opts passed into modules is at least a subset of the whole opts
+            for key, val in func_globals["__opts__"].items():
+                if (
+                    key in salt.config.DEFAULT_MASTER_OPTS
+                    and key not in salt.config.DEFAULT_MINION_OPTS
+                ):
+                    # We loaded the minion opts, but somewhere in the code, the master options got pulled in
+                    # Let's just not check for equality since the option won't even exist in the loaded
+                    # minion options
+                    continue
+                if (
+                    key not in salt.config.DEFAULT_MASTER_OPTS
+                    and key not in salt.config.DEFAULT_MINION_OPTS
+                ):
+                    # This isn't even a default configuration setting, lets carry on
+                    continue
+                self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
-        self.loader.pack["__foo__"] = "bar"
-        func_globals = self.loader["test.ping"].__globals__
-        self.assertEqual(func_globals["__foo__"], "bar")
+        with salt.loader_context.loader_context(self.loader):
+            self.loader.pack["__foo__"] = "bar"
+            func_globals = self.loader["test.ping"].__globals__
+            self.assertEqual(func_globals["__foo__"].value(), "bar")
 
     @slowTest
     def test_virtual(self):
@@ -398,7 +402,9 @@ class LazyLoaderVirtualDisabledTest(TestCase):
 
     @slowTest
     def test_virtual(self):
-        self.assertTrue(inspect.isfunction(self.loader["test_virtual.ping"]))
+        self.assertTrue(
+            isinstance(self.loader["test_virtual.ping"], salt.loader.LoadedFunc,)
+        )
 
 
 class LazyLoaderWhitelistTest(TestCase):
@@ -439,8 +445,8 @@ class LazyLoaderWhitelistTest(TestCase):
 
     @slowTest
     def test_whitelist(self):
-        self.assertTrue(inspect.isfunction(self.loader["test.ping"]))
-        self.assertTrue(inspect.isfunction(self.loader["pillar.get"]))
+        self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
+        self.assertTrue(inspect.isfunction(self.loader["pillar.get"].func))
 
         self.assertNotIn("grains.get", self.loader)
 
@@ -463,7 +469,7 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
 
         grains = salt.loader.grains(opts)
         self.assertNotIn("master", grains)
-        self.assertNotIn("os", set([g[:2] for g in list(grains)]))
+        self.assertNotIn("os", {g[:2] for g in list(grains)})
         self.assertNotIn("ipv4", grains)
         self.assertNotIn("ipv6", grains)
 
@@ -508,7 +514,7 @@ class LazyLoaderSingleItem(TestCase):
         Checks that a KeyError is raised when the function key does not contain a '.'
         """
         key = "testing_no_dot"
-        expected = "The key '{0}' should contain a '.'".format(key)
+        expected = "The key '{}' should contain a '.'".format(key)
         with self.assertRaises(KeyError) as err:
             inspect.isfunction(self.loader["testing_no_dot"])
 
@@ -611,7 +617,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, "{0}.py".format(self.module_name))
+        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
     @slowTest
     def test_alias(self):
@@ -622,25 +628,35 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
-        self.assertNotIn("{0}.test_alias".format(self.module_name), self.loader)
+        self.assertNotIn("{}.test_alias".format(self.module_name), self.loader)
+        self.assertTrue(
+            isinstance(
+                self.loader["{}.working_alias".format(self.module_name)],
+                salt.loader.LoadedFunc,
+            )
+        )
         self.assertTrue(
             inspect.isfunction(
-                self.loader["{0}.working_alias".format(self.module_name)]
+                self.loader["{}.working_alias".format(self.module_name)].func
             )
         )
 
     @slowTest
     def test_clear(self):
-        self.assertTrue(inspect.isfunction(self.loader["test.ping"]))
+        self.assertTrue(isinstance(self.loader["test.ping"], salt.loader.LoadedFunc))
+        self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
         self.update_module()  # write out out custom module
         self.loader.clear()  # clear the loader dict
 
         # force a load of our module
-        self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+        self.assertTrue(
+            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+        )
+        self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
         # make sure we only loaded our custom module
         # which means that we did correctly refresh the file mapping
-        for k, v in six.iteritems(self.loader._dict):
+        for k, v in self.loader._dict.items():
             self.assertTrue(k.startswith(self.module_name))
 
     @slowTest
@@ -649,7 +665,10 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
-        self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+        self.assertTrue(
+            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+        )
+        self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
     @slowTest
     def test__load__(self):
@@ -688,10 +707,31 @@ class LazyLoaderReloadingTest(TestCase):
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
 
+    def test_wrong_bytecode(self):
+        """
+        Checks to make sure we don't even try to load .pyc files that are for a different Python
+        This should pass (the load should fail) all the time because we don't run Salt on Py 3.4 anymore
+        """
+        test_module_name = "test_module.cpython-34"
+        filemap_save = copy.deepcopy(self.loader.file_mapping)
+        self.loader.file_mapping = {
+            test_module_name: (
+                "/temp/path/does/not/matter/here/__pycache__/"
+                + test_module_name
+                + ".pyc",
+                ".pyc",
+                0,
+            )
+        }
+
+        self.assertFalse(self.loader._load_module(test_module_name))
+
+        self.loader.file_mapping = copy.deepcopy(filemap_save)
+
 
 virtual_aliases = ("loadertest2", "loadertest3")
 virtual_alias_module_template = """
-__virtual_aliases__ = {0}
+__virtual_aliases__ = {}
 
 def test():
     return True
@@ -758,7 +798,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, "{0}.py".format(self.module_name))
+        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
     @slowTest
     def test_virtual_alias(self):
@@ -1155,7 +1195,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 "__salt__": self.minion_mods,
             },
         )
-        self.assertIn("{0}.top".format(self.module_name), self.loader)
+        self.assertIn("{}.top".format(self.module_name), self.loader)
 
     def tearDown(self):
         del self.tmp_dir
@@ -1197,13 +1237,13 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     @slowTest
     def test_basic(self):
-        self.assertIn("{0}.top".format(self.module_name), self.loader)
+        self.assertIn("{}.top".format(self.module_name), self.loader)
 
     def _verify_libs(self):
         for lib in self.libs:
             self.assertEqual(
                 self.loader[
-                    "{0}.{1}".format(self.module_name, lib.replace("_lib", ""))
+                    "{}.{}".format(self.module_name, lib.replace("_lib", ""))
                 ](),
                 self.lib_count[lib],
             )
@@ -1223,6 +1263,86 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self._verify_libs()
 
 
+class LoaderMultipleGlobalTest(ModuleCase):
+    """
+    Tests when using multiple lazyloaders
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+            loaded_base_name="salt.loader1",
+        )
+        self.loader2 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+            loaded_base_name="salt.loader2",
+        )
+
+    def tearDown(self):
+        del self.loader1
+        del self.loader2
+
+    def test_loader_globals(self):
+        """
+        Test to ensure loaders do not edit
+        each others loader's namespace
+        """
+        self.loader1.pack["__foo__"] = "bar1"
+        func1 = self.loader1["test.ping"]
+
+        self.loader2.pack["__foo__"] = "bar2"
+        func2 = self.loader2["test.ping"]
+        token = salt.loader_context.loader_ctxvar.set(self.loader1)
+        try:
+            assert func1.__globals__["__foo__"].value() == "bar1"
+        finally:
+            salt.loader_context.loader_ctxvar.reset(token)
+        token = salt.loader_context.loader_ctxvar.set(self.loader2)
+        try:
+            assert func2.__globals__["__foo__"].value() == "bar2"
+        finally:
+            salt.loader_context.loader_ctxvar.reset(token)
+
+
+class LoaderCleanupTest(ModuleCase):
+    """
+    Tests the loader cleanup procedures
+    """
+
+    def setUp(self):
+        opts = salt.config.minion_config(None)
+        self.loader1 = salt.loader.LazyLoader(
+            salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
+            copy.deepcopy(opts),
+            pack={},
+            tag="module",
+            loaded_base_name="salt.test",
+        )
+
+    def tearDown(self):
+        del self.loader1
+
+    def test_loader_clean_modules(self):
+        loaded_base_name = self.loader1.loaded_base_name
+        self.loader1.clean_modules()
+
+        for name in list(sys.modules):
+            if name.startswith(loaded_base_name):
+                self.fail(
+                    "Found a real module reference in sys.modules matching {!r}".format(
+                        loaded_base_name
+                    )
+                )
+                break
+
+
 class LoaderGlobalsTest(ModuleCase):
     """
     Test all of the globals that the loader is responsible for adding to modules
@@ -1238,27 +1358,29 @@ class LoaderGlobalsTest(ModuleCase):
         Verify that the globals listed in the doc string (from the test) are in these modules
         """
         # find the globals
-        global_vars = []
-        for val in six.itervalues(mod_dict):
+        global_vars = {}
+        for val in mod_dict.values():
             # only find salty globals
             if val.__module__.startswith("salt.loaded"):
                 if hasattr(val, "__globals__"):
                     if hasattr(val, "__wrapped__") or "__wrapped__" in val.__globals__:
-                        global_vars.append(sys.modules[val.__module__].__dict__)
+                        global_vars[val.__module__] = sys.modules[
+                            val.__module__
+                        ].__dict__
                     else:
-                        global_vars.append(val.__globals__)
+                        global_vars[val.__module__] = val.__globals__
 
         # if we couldn't find any, then we have no modules -- so something is broken
-        self.assertNotEqual(global_vars, [], msg="No modules were loaded.")
+        self.assertNotEqual(global_vars, {}, msg="No modules were loaded.")
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
         names = next(
-            six.itervalues(salt.utils.yaml.safe_load(getattr(self, func_name).__doc__))
+            iter(salt.utils.yaml.safe_load(getattr(self, func_name).__doc__).values())
         )
 
         # Now, test each module!
-        for item in global_vars:
+        for item in global_vars.values():
             for name in names:
                 self.assertIn(name, list(item.keys()))
 
@@ -1370,7 +1492,7 @@ class RawModTest(TestCase):
     @slowTest
     def test_basic(self):
         testmod = salt.loader.raw_mod(self.opts, "test", None)
-        for k, v in six.iteritems(testmod):
+        for k, v in testmod.items():
             self.assertEqual(k.split(".")[0], "test")
 
     def test_bad_name(self):
@@ -1424,7 +1546,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
         self.module_file = os.path.join(
-            self.module_dir, "{0}.py".format(self.module_name)
+            self.module_dir, "{}.py".format(self.module_name)
         )
 
     def tearDown(self):
@@ -1456,14 +1578,11 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         return sys.modules[mod_fullname].__file__
 
     def _expected(self, optimize=0):
-        if six.PY3:
-            return "lazyloadertest.cpython-{0}{1}{2}.pyc".format(
-                sys.version_info[0],
-                sys.version_info[1],
-                "" if not optimize else ".opt-{0}".format(optimize),
-            )
-        else:
-            return "lazyloadertest.pyc"
+        return "lazyloadertest.cpython-{}{}{}.pyc".format(
+            sys.version_info[0],
+            sys.version_info[1],
+            "" if not optimize else ".opt-{}".format(optimize),
+        )
 
     def _write_module_file(self):
         with salt.utils.files.fopen(self.module_file, "w") as fh:
@@ -1472,17 +1591,9 @@ class LazyLoaderOptimizationOrderTest(TestCase):
             os.fsync(fh.fileno())
 
     def _byte_compile(self):
-        if salt.loader.USE_IMPORTLIB:
-            # Skip this check as "optimize" is unique to PY3's compileall
-            # module, and this will be a false error when Pylint is run on
-            # Python 2.
-            # pylint: disable=unexpected-keyword-arg
-            compileall.compile_file(self.module_file, quiet=1, optimize=0)
-            compileall.compile_file(self.module_file, quiet=1, optimize=1)
-            compileall.compile_file(self.module_file, quiet=1, optimize=2)
-            # pylint: enable=unexpected-keyword-arg
-        else:
-            compileall.compile_file(self.module_file, quiet=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=0)
+        compileall.compile_file(self.module_file, quiet=1, optimize=1)
+        compileall.compile_file(self.module_file, quiet=1, optimize=2)
 
     def _test_optimization_order(self, order):
         self._write_module_file()
@@ -1496,10 +1607,6 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
         assert basename == self._expected(order[0]), basename
-
-        if not salt.loader.USE_IMPORTLIB:
-            # We are only testing multiple optimization levels on Python 3.5+
-            return
 
         # Remove the file and make a new loader. We should now load the
         # byte-compiled file with an optimization level matching the 2nd
@@ -1525,13 +1632,10 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         """
         self._test_optimization_order([0, 1, 2])
         self._test_optimization_order([0, 2, 1])
-        if salt.loader.USE_IMPORTLIB:
-            # optimization_order only supported on Python 3.5+, earlier
-            # releases only support unoptimized .pyc files.
-            self._test_optimization_order([1, 2, 0])
-            self._test_optimization_order([1, 0, 2])
-            self._test_optimization_order([2, 0, 1])
-            self._test_optimization_order([2, 1, 0])
+        self._test_optimization_order([1, 2, 0])
+        self._test_optimization_order([1, 0, 2])
+        self._test_optimization_order([2, 0, 1])
+        self._test_optimization_order([2, 1, 0])
 
     def test_load_source_file(self):
         """
@@ -1542,7 +1646,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         self.loader = self._get_loader()
         filename = self._get_module_filename()
         basename = os.path.basename(filename)
-        expected = "lazyloadertest.py" if six.PY3 else "lazyloadertest.pyc"
+        expected = "lazyloadertest.py"
         assert basename == expected, basename
 
 
@@ -1624,3 +1728,29 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         func_mock.assert_called()
         assert len(func_mock.call_args_list) == len(lock_mock.__enter__.call_args_list)
         del loader
+
+    def test_lazyloader_zip_modules(self):
+        self.opts["enable_zip_modules"] = True
+        try:
+            loader = self.__init_loader()
+            assert ".zip" in loader.suffix_map
+            assert ".zip" in loader.suffix_order
+        finally:
+            self.opts["enable_zip_modules"] = False
+        loader = self.__init_loader()
+        assert ".zip" not in loader.suffix_map
+        assert ".zip" not in loader.suffix_order
+
+    def test_lazyloader_pyx_modules(self):
+        self.opts["cython_enable"] = True
+        try:
+            loader = self.__init_loader()
+            # Don't assert if the current environment has no pyximport
+            if salt.loader.pyximport is not None:
+                assert ".pyx" in loader.suffix_map
+                assert ".pyx" in loader.suffix_order
+        finally:
+            self.opts["cython_enable"] = False
+        loader = self.__init_loader()
+        assert ".pyx" not in loader.suffix_map
+        assert ".pyx" not in loader.suffix_order
