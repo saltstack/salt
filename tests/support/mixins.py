@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,7 +7,6 @@
 
     Some reusable class Mixins
 """
-from __future__ import absolute_import, print_function
 
 import atexit
 import copy
@@ -37,19 +35,15 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves.queue import Empty
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
+from saltfactories.utils import random_string
 from tests.support.paths import CODE_DIR
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 
-try:
-    from salt.utils.odict import OrderedDict
-except ImportError:
-    from collections import OrderedDict
-
 log = logging.getLogger(__name__)
 
 
-class CheckShellBinaryNameAndVersionMixin(object):
+class CheckShellBinaryNameAndVersionMixin:
     """
     Simple class mix-in to subclass in companion to :class:`ShellCase<tests.support.case.ShellCase>` which
     adds a test case to verify proper version report from Salt's CLI tools.
@@ -82,7 +76,7 @@ class CheckShellBinaryNameAndVersionMixin(object):
         self.assertIn(self._call_binary_expected_version_, out)
 
 
-class AdaptedConfigurationTestCaseMixin(object):
+class AdaptedConfigurationTestCaseMixin:
 
     __slots__ = ()
 
@@ -91,6 +85,8 @@ class AdaptedConfigurationTestCaseMixin(object):
         rootdir = config_overrides.get(
             "root_dir", tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         )
+        if not os.path.exists(rootdir):
+            os.makedirs(rootdir)
         conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
         for key in ("cachedir", "pki_dir", "sock_dir"):
             if key not in config_overrides:
@@ -108,7 +104,17 @@ class AdaptedConfigurationTestCaseMixin(object):
         if config_for in ("master", "client_config"):
             rdict = salt.config.apply_master_config(config_overrides, cdict)
         if config_for == "minion":
-            rdict = salt.config.apply_minion_config(config_overrides, cdict)
+            minion_id = (
+                config_overrides.get("id")
+                or config_overrides.get("minion_id")
+                or cdict.get("id")
+                or cdict.get("minion_id")
+                or random_string("temp-minion-")
+            )
+            config_overrides["minion_id"] = config_overrides["id"] = minion_id
+            rdict = salt.config.apply_minion_config(
+                config_overrides, cdict, cache_minion_id=False, minion_id=minion_id
+            )
 
         verify_env(
             [
@@ -144,7 +150,8 @@ class AdaptedConfigurationTestCaseMixin(object):
                 )
             elif config_for in ("minion", "sub_minion"):
                 return salt.config.minion_config(
-                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
+                    AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for),
+                    cache_minion_id=False,
                 )
             elif config_for in ("syndic",):
                 return salt.config.syndic_config(
@@ -243,27 +250,6 @@ class AdaptedConfigurationTestCaseMixin(object):
         """
         return self.get_config("sub_minion")
 
-    @property
-    def mm_master_opts(self):
-        """
-        Return the options used for the multimaster master
-        """
-        return self.get_config("mm_master")
-
-    @property
-    def mm_sub_master_opts(self):
-        """
-        Return the options used for the multimaster sub-master
-        """
-        return self.get_config("mm_sub_master")
-
-    @property
-    def mm_minion_opts(self):
-        """
-        Return the options used for the minion
-        """
-        return self.get_config("mm_minion")
-
 
 class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
     """
@@ -308,52 +294,6 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
         return RUNTIME_VARS.RUNTIME_CONFIGS["runtime_client"]
 
 
-class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
-    """
-    Mix-in class that provides a ``clients`` attribute which returns a list of Salt
-    :class:`LocalClient<salt:salt.client.LocalClient>`.
-
-    .. code-block:: python
-
-        class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
-
-            def test_check_pub_data(self):
-                just_minions = {'minions': ['m1', 'm2']}
-                jid_no_minions = {'jid': '1234', 'minions': []}
-                valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
-
-                for client in self.clients:
-                    self.assertRaises(EauthAuthenticationError,
-                                      client._check_pub_data, None)
-                    self.assertDictEqual({},
-                        client._check_pub_data(just_minions),
-                        'Did not handle lack of jid correctly')
-
-                    self.assertDictEqual(
-                        {},
-                        client._check_pub_data({'jid': '0'}),
-                        'Passing JID of zero is not handled gracefully')
-    """
-
-    _salt_client_config_file_name_ = "master"
-
-    @property
-    def clients(self):
-        # Late import
-        import salt.client
-
-        if "runtime_clients" not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"] = OrderedDict()
-
-        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS["runtime_clients"]
-        for master_id in ("mm-master", "mm-sub-master"):
-            if master_id in runtime_clients:
-                continue
-            mopts = self.get_config(master_id.replace("-", "_"), from_scratch=True)
-            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
-        return runtime_clients
-
-
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
 
     _call_binary_expected_version_ = salt.version.__version__
@@ -386,7 +326,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         if not out:
             self.skipTest(
                 "Failed to get the output of 'git describe'. "
-                "Error: '{0}'".format(salt.utils.stringutils.to_str(err))
+                "Error: '{}'".format(salt.utils.stringutils.to_str(err))
             )
 
         parsed_version = SaltStackVersion.parse(out)
@@ -394,7 +334,7 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
         if parsed_version.info < __version_info__:
             self.skipTest(
                 "We're likely about to release a new version. This test "
-                "would fail. Parsed('{0}') < Expected('{1}')".format(
+                "would fail. Parsed('{}') < Expected('{}')".format(
                     parsed_version.info, __version_info__
                 )
             )
@@ -419,9 +359,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
 
     def __new__(mcs, cls_name, cls_bases, cls_dict):
         if cls_name == "LoaderModuleMockMixin":
-            return super(_FixLoaderModuleMockMixinMroOrder, mcs).__new__(
-                mcs, cls_name, cls_bases, cls_dict
-            )
+            return super().__new__(mcs, cls_name, cls_bases, cls_dict)
         bases = list(cls_bases)
         for idx, base in enumerate(bases):
             if base.__name__ == "LoaderModuleMockMixin":
@@ -429,9 +367,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
                 break
 
         # Create the class instance
-        instance = super(_FixLoaderModuleMockMixinMroOrder, mcs).__new__(
-            mcs, cls_name, tuple(bases), cls_dict
-        )
+        instance = super().__new__(mcs, cls_name, tuple(bases), cls_dict)
 
         # Apply our setUp function decorator
         instance.setUp = LoaderModuleMockMixin.__setup_loader_modules_mocks__(
@@ -440,9 +376,7 @@ class _FixLoaderModuleMockMixinMroOrder(type):
         return instance
 
 
-class LoaderModuleMockMixin(
-    six.with_metaclass(_FixLoaderModuleMockMixinMroOrder, object)
-):
+class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
     """
     This class will setup salt loader dunders.
 
@@ -463,9 +397,9 @@ class LoaderModuleMockMixin(
                     "'__opts__', etc.".format(self.__class__.__name__)
                 )
 
-            mocker = LoaderModuleMock(self, loader_modules_configs)
-            mocker.__enter__()
-            self.addCleanup(mocker.__exit__)
+            mocker = LoaderModuleMock(loader_modules_configs)
+            mocker.start()
+            self.addCleanup(mocker.stop)
             return setup_func(self)
 
         return wrapper
@@ -478,15 +412,15 @@ class LoaderModuleMockMixin(
         )
 
 
-class XMLEqualityMixin(object):
+class XMLEqualityMixin:
     def assertEqualXML(self, e1, e2):
         if six.PY3 and isinstance(e1, bytes):
             e1 = e1.decode("utf-8")
         if six.PY3 and isinstance(e2, bytes):
             e2 = e2.decode("utf-8")
-        if isinstance(e1, six.string_types):
+        if isinstance(e1, str):
             e1 = etree.XML(e1)
-        if isinstance(e2, six.string_types):
+        if isinstance(e2, str):
             e2 = etree.XML(e2)
         if e1.tag != e2.tag:
             return False
@@ -501,13 +435,13 @@ class XMLEqualityMixin(object):
         return all(self.assertEqualXML(c1, c2) for c1, c2 in zip(e1, e2))
 
 
-class SaltReturnAssertsMixin(object):
+class SaltReturnAssertsMixin:
     def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
         except AssertionError:
             raise AssertionError(
-                "{0} is not dict. Salt returned: {1}".format(type(ret).__name__, ret)
+                "{} is not dict. Salt returned: {}".format(type(ret).__name__, ret)
             )
 
     def assertReturnNonEmptySaltType(self, ret):
@@ -523,7 +457,7 @@ class SaltReturnAssertsMixin(object):
         if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif isinstance(keys, six.string_types):
+        elif isinstance(keys, str):
             # If it's a string, make it a one item list
             keys = [keys]
         elif not isinstance(keys, list):
@@ -534,15 +468,15 @@ class SaltReturnAssertsMixin(object):
     def __getWithinSaltReturn(self, ret, keys):
         self.assertReturnNonEmptySaltType(ret)
         ret_data = []
-        for part in six.itervalues(ret):
+        for part in ret.values():
             keys = self.__return_valid_keys(keys)
             okeys = keys[:]
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
                 raise AssertionError(
-                    "Could not get ret{0} from salt's return: {1}".format(
-                        "".join(["['{0}']".format(k) for k in keys]), part
+                    "Could not get ret{} from salt's return: {}".format(
+                        "".join(["['{}']".format(k) for k in keys]), part
                     )
                 )
             while okeys:
@@ -550,8 +484,8 @@ class SaltReturnAssertsMixin(object):
                     ret_item = ret_item[okeys.pop(0)]
                 except (KeyError, TypeError):
                     raise AssertionError(
-                        "Could not get ret{0} from salt's return: {1}".format(
-                            "".join(["['{0}']".format(k) for k in keys]), part
+                        "Could not get ret{} from salt's return: {}".format(
+                            "".join(["['{}']".format(k) for k in keys]), part
                         )
                     )
             ret_data.append(ret_item)
@@ -562,16 +496,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertTrue(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned:\n{0}".format(
+                    "Failed to get result. Salt Returned:\n{}".format(
                         pprint.pformat(ret)
                     )
                 )
@@ -581,16 +515,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertFalse(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned: {0}".format(ret)
+                    "Failed to get result. Salt Returned: {}".format(ret)
                 )
 
     def assertSaltNoneReturn(self, ret):
@@ -598,16 +532,16 @@ class SaltReturnAssertsMixin(object):
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertIsNone(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{0}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(
-                        **(next(six.itervalues(ret)))
+                        **(next(iter(ret.values())))
                     )
                 )
             except (AttributeError, IndexError):
                 raise AssertionError(
-                    "Failed to get result. Salt Returned: {0}".format(ret)
+                    "Failed to get result. Salt Returned: {}".format(ret)
                 )
 
     def assertInSaltComment(self, in_comment, ret):
@@ -683,7 +617,7 @@ def _fetch_events(q, opts):
         q.put(events)
 
 
-class SaltMinionEventAssertsMixin(object):
+class SaltMinionEventAssertsMixin:
     """
     Asserts to verify that a given event was seen
     """
@@ -733,5 +667,5 @@ class SaltMinionEventAssertsMixin(object):
                 break
         self.fetch_proc.terminate()
         raise AssertionError(
-            "Event {0} was not received by minion".format(desired_event)
+            "Event {} was not received by minion".format(desired_event)
         )

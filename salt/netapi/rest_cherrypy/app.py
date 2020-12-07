@@ -4,6 +4,14 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
 :depends:
     - CherryPy Python module.
 
@@ -2003,7 +2011,7 @@ class Token(LowDataAdapter):
 class Run(LowDataAdapter):
     """
     Run commands bypassing the :ref:`normal session handling
-    <rest_cherrypy-auth>`
+    <rest_cherrypy-auth>`.
 
     salt-api does not enforce authorization, Salt's eauth system does that.
     Local/Runner/WheelClient all accept ``username``/``password``/``eauth``
@@ -2024,7 +2032,7 @@ class Run(LowDataAdapter):
     def POST(self, **kwargs):
         """
         Run commands bypassing the :ref:`normal session handling
-        <rest_cherrypy-auth>` Other than that this URL is identical to the
+        <rest_cherrypy-auth>`.  Otherwise, this URL is identical to the
         :py:meth:`root URL (/) <LowDataAdapter.POST>`.
 
         .. http:post:: /run
@@ -2092,14 +2100,9 @@ class Run(LowDataAdapter):
               ms-3: true
               ms-4: true
 
-        The /run enpoint can also be used to issue commands using the salt-ssh
-        subsystem.
-
-        When using salt-ssh, eauth credentials should not be supplied. Instead,
-        authentication should be handled by the SSH layer itself. The use of
-        the salt-ssh client does not require a salt master to be running.
-        Instead, only a roster file must be present in the salt configuration
-        directory.
+        The /run endpoint can also be used to issue commands using the salt-ssh
+        subsystem.  When using salt-ssh, eauth credentials must also be
+        supplied, and are subject to :ref:`eauth access-control lists <acl>`.
 
         All SSH client requests are synchronous.
 
@@ -2111,6 +2114,9 @@ class Run(LowDataAdapter):
                 -H 'Accept: application/x-yaml' \\
                 -d client='ssh' \\
                 -d tgt='*' \\
+                -d username='saltdev' \\
+                -d password='saltdev' \\
+                -d eauth='auto' \\
                 -d fun='test.ping'
 
         .. code-block:: text
@@ -2121,21 +2127,19 @@ class Run(LowDataAdapter):
             Content-Length: 75
             Content-Type: application/x-www-form-urlencoded
 
-            client=ssh&tgt=*&fun=test.ping
-
         **Example SSH response:**
 
         .. code-block:: text
 
                 return:
                 - silver:
-                  fun: test.ping
-                  fun_args: []
-                  id: silver
-                  jid: '20141203103525666185'
-                  retcode: 0
-                  return: true
-                  success: true
+                    _stamp: '2020-09-08T23:04:28.912609'
+                    fun: test.ping
+                    fun_args: []
+                    id: silver
+                    jid: '20200908230427905565'
+                    retcode: 0
+                    return: true
         """
         return {
             "return": list(self.exec_lowstate()),

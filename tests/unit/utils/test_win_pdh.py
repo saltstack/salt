@@ -1,12 +1,18 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.platform
 import salt.utils.win_pdh as win_pdh
 from tests.support.helpers import slowTest
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
+try:
+    import pywintypes
 
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
+
+@skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinPdhTestCase(TestCase):
     @slowTest
@@ -95,3 +101,19 @@ class WinPdhTestCase(TestCase):
     def test_get_counter(self):
         results = win_pdh.get_counter("Processor", "*", "% Processor Time")
         self.assertTrue("\\Processor(*)\\% Processor Time" in results)
+
+    @patch("win32pdh.CollectQueryData")
+    def test_get_counters_no_data_to_return(self, mock_query):
+        mock_query.side_effect = pywintypes.error(
+            -2147481643, "CollectQueryData", "No data to return."
+        )
+        counter_list = [
+            ("Memory", None, "Available Bytes"),
+            ("Paging File", "*", "% Usage"),
+            ("Processor", "*", "% Processor Time"),
+            ("Server", None, "Work Item Shortages"),
+            ("Server Work Queues", "*", "Queue Length"),
+            ("System", None, "Context Switches/sec"),
+        ]
+        results = win_pdh.get_counters(counter_list)
+        assert results == {}
