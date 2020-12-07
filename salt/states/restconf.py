@@ -86,7 +86,7 @@ def config_manage(
         ret["comment"] = "CRITICAL: method is required"
         log.critical("method is required")
         return ret
-    if "salt.utils.odict.OrderedDict" not in str(type(config)):
+    if not isinstance(config, salt.utils.odict.OrderedDict):
         ret["comment"] = "CRITICAL: config must be an OrderedDict type"
         log.critical(
             "config is required, config must be a salt salt.utils.odict.OrderedDict {t}".format(
