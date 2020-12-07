@@ -168,8 +168,8 @@ def config_manage(
                 why = None
             ret["comment"] = (
                 "failed to add / modify config. "
-                "API Statuscode: {s}, API Response: {w}, PATH:{u}".format(
-                    w=why, s=resp["status"], u=path_check["request_path"]
+                "API Statuscode: {}, API Response: {}, URI: {}".format(
+                    resp["status"], why, path_check["request_uri"]
                 )
             )
             log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))
