@@ -34,7 +34,7 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         token: ${{ github.token }}
-        list-files: shell
+        list-files: json
         filters: |
           repo:
             - added|modified:
@@ -48,8 +48,8 @@ jobs:
 
     - name: Check Changed Files On PR
       uses: pre-commit/action@v2.0.0
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && steps.changed-files.outputs.repo == 'true'
       with:
-        extra_args: --files ${{ steps.changed-files.outputs.repo_files }}
+        extra_args: --files ${{ join(fromJSON(steps.changed-files.outputs.repo_files), ' ') }}
       env:
         SKIP: lint-salt,lint-tests

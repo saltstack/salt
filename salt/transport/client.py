@@ -1,22 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Encapsulate the different transports available to Salt.
 
 This includes client side transport, for the ReqServer and the Publisher
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt Libs
 from salt.utils.asynchronous import SyncWrapper
 
 log = logging.getLogger(__name__)
 
 
-class ReqChannel(object):
+class ReqChannel:
     """
     Factory class to create a Sync communication channels to the ReqServer
     """
@@ -56,7 +52,7 @@ class ReqChannel(object):
         self.close()
 
 
-class PushChannel(object):
+class PushChannel:
     """
     Factory class to create Sync channel for push side of push/pull IPC
     """
@@ -74,7 +70,7 @@ class PushChannel(object):
         raise NotImplementedError()
 
 
-class PullChannel(object):
+class PullChannel:
     """
     Factory class to create Sync channel for pull side of push/pull IPC
     """
@@ -87,7 +83,7 @@ class PullChannel(object):
 
 
 # TODO: better doc strings
-class AsyncChannel(object):
+class AsyncChannel:
     """
     Parent class for Async communication channels
     """
@@ -238,7 +234,7 @@ class AsyncPubChannel(AsyncChannel):
         self.close()
 
 
-class AsyncPushChannel(object):
+class AsyncPushChannel:
     """
     Factory class to create IPC Push channels
     """
@@ -255,7 +251,7 @@ class AsyncPushChannel(object):
         return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
 
 
-class AsyncPullChannel(object):
+class AsyncPullChannel:
     """
     Factory class to create IPC pull channels
     """
