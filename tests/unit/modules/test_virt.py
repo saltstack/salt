@@ -3160,7 +3160,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             "source_file": None,
                             "model": "ide",
                         },
-                        {"name": "added", "size": 2048, "iothreads": True},
+                        {
+                            "name": "added",
+                            "size": 2048,
+                            "io": "threads",
+                            "iothread_id": 2,
+                        },
                     ],
                 )
                 added_disk_path = os.path.join(
@@ -3195,6 +3200,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 setxml = ET.fromstring(define_mock.call_args[0][0])
                 self.assertEqual(
                     "threads", setxml.find("devices/disk[3]/driver").get("io")
+                )
+                self.assertEqual(
+                    "2", setxml.find("devices/disk[3]/driver").get("iothread")
                 )
 
         # Update nics case
