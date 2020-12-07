@@ -1088,7 +1088,8 @@ def _gen_xml(
             "disk_bus": disk["model"],
             "format": disk.get("format", "raw"),
             "index": str(i),
-            "io": "threads" if disk.get("iothreads", False) else "native",
+            "io": disk.get("io", "native"),
+            "iothread": disk.get("iothread_id", None),
         }
         targets.append(disk_context["target_dev"])
         if disk.get("source_file"):
@@ -2622,9 +2623,17 @@ def init(
                       hostname_property: virt:hostname
                       sparse_volume: True
 
-    iothreads
-        When ``True`` dedicated threads will be used for the I/O of the disk.
-        (Default: ``False``)
+    io
+        I/O control policy. String value amongst ``native``, ``threads`` and ``io_uring``.
+        (Default: ``native``)
+
+        ..versionadded:: Aluminium
+
+    iothread_id
+        I/O thread id to assign the disk to.
+        (Default: none assigned)
+
+        ..versionadded:: Aluminium
 
     .. _init-graphics-def:
 
