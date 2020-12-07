@@ -66,33 +66,34 @@ def fake_path_response_primary_blank():
                 return_value=fake_path_response_primary_blank
             )
         },
-        ):
-            yield fake_path_response_primary_blank
+    ):
+        yield fake_path_response_primary_blank
+
 
 def test_config_manage_nochanges_testmode(
     mocking_dunder_opts_test_mode_true, fake_path_response_primary_blank
 ):
-        result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
-        assert result["result"] is True
+    result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
+    assert result["result"] is True
 
 
 def test_config_manage_nochanges_realmode(
     mocking_dunder_opts_test_mode_false, fake_path_response_primary_blank
 ):
-        result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
-        assert result["result"] is True
+    result = restconf.config_manage("name", "restconf/test", "POST", OrderedDict())
+    assert result["result"] is True
 
 
 def test_config_manage_haschanges_testmode(
     mocking_dunder_opts_test_mode_true, fake_path_response_primary_blank
 ):
-        fake_changes = OrderedDict()
-        fake_changes["fjord"] = "meow"
-        result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
+    fake_changes = OrderedDict()
+    fake_changes["fjord"] = "meow"
+    result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
 
-        assert result["result"] is None
-        assert "fjord" in str(result["changes"])
-        assert result["comment"] == "Config will be added"
+    assert result["result"] is None
+    assert "fjord" in str(result["changes"])
+    assert result["comment"] == "Config will be added"
 
 
 @pytest.fixture
@@ -110,16 +111,16 @@ def test_config_manage_haschanges_realmode_404(
     fake_path_response_primary_blank,
     mocking_dunder_salt_restconf_setdata_response_404,
 ):
-        fake_changes = OrderedDict()
-        fake_changes["fjord"] = "meow"
-        result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
+    fake_changes = OrderedDict()
+    fake_changes["fjord"] = "meow"
+    result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
 
-        assert not result["result"]
-        assert len(result["changes"]) == 0
-        assert type(result["changes"]) is dict
-        assert "failed to add / modify config" in result["comment"]
-        assert "404" in result["comment"]
-        assert "restconf/fakepath" in result["comment"]
+    assert not result["result"]
+    assert len(result["changes"]) == 0
+    assert type(result["changes"]) is dict
+    assert "failed to add / modify config" in result["comment"]
+    assert "404" in result["comment"]
+    assert "restconf/fakepath" in result["comment"]
 
 
 @pytest.fixture
@@ -139,11 +140,11 @@ def test_config_manage_haschanges_realmode_200(
     fake_path_response_primary_blank,
     mocking_dunder_salt_restconf_setdata_response_200,
 ):
-        fake_changes = OrderedDict()
-        fake_changes["fjord"] = "meow"
-        result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
+    fake_changes = OrderedDict()
+    fake_changes["fjord"] = "meow"
+    result = restconf.config_manage("name", "restconf/test", "POST", fake_changes)
 
-        assert result["result"] is True
-        assert type(result["changes"]) is dict
-        assert "fjord" in str(result["changes"])
-        assert "Successfully added config" in result["comment"]
+    assert result["result"] is True
+    assert type(result["changes"]) is dict
+    assert "fjord" in str(result["changes"])
+    assert "Successfully added config" in result["comment"]
