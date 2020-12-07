@@ -35,7 +35,7 @@ to connect to the network switch:
 transport: ``https`` (str)
     Specifies the type of connection transport to use. Valid values for the
     connection are ``https``, and  ``http``.
-    http is not part of the RESTCONF standard but is included as an option here
+    The RESTCONF standard explicitly requires https, but http is included as an option
     as some manufacturers have ignored this requirement.
 
 hostname: (str)
