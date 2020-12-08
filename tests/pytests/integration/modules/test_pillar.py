@@ -1,9 +1,11 @@
 import pathlib
 import textwrap
+import time
 
 import attr
 import pytest
 from tests.support.helpers import slowTest
+from tests.support.pytest.helpers import temp_pillar_file
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -366,3 +368,90 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
         val = ret.json
         assert key in val
         assert val[key] is True
+
+
+@slowTest
+def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
+    """
+    Ensure schedule jobs in pillar are only updated when values change.
+    """
+
+    top_sls = """
+        base:
+          '{}':
+            - test_schedule
+        """.format(
+        salt_minion.id
+    )
+
+    test_schedule_sls = """
+        schedule:
+          first_test_ping:
+            function: test.ping
+            run_on_start: True
+            seconds: 3600
+        """
+
+    test_schedule_sls2 = """
+        schedule:
+          first_test_ping:
+            function: test.ping
+            run_on_start: True
+            seconds: 7200
+        """
+
+    with temp_pillar_file("top.sls", top_sls):
+        with temp_pillar_file("test_schedule.sls", test_schedule_sls):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the schedule a chance to run the job
+            time.sleep(5)
+
+            # Get the status of the job
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert "_next_fire_time" in ret.json
+            _next_fire_time = ret.json["_next_fire_time"]
+
+            # Refresh pillar
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Ensure next_fire_time is the same, job was not replaced
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert ret.json["_next_fire_time"] == _next_fire_time
+
+        # Ensure job was replaced when seconds changes
+        with temp_pillar_file("test_schedule.sls", test_schedule_sls2):
+            # Calling refresh_pillar to update in-memory pillars
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            # Give the schedule a chance to run the job
+            time.sleep(5)
+
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert "_next_fire_time" in ret.json
+            _next_fire_time = ret.json["_next_fire_time"]
+
+            salt_cli.run(
+                "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
+            )
+
+            ret = salt_cli.run(
+                "schedule.job_status", name="first_test_ping", minion_tgt=salt_minion.id
+            )
+            assert ret.json["_next_fire_time"] == _next_fire_time
+
+    # Refresh pillar once we're done
+    salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
