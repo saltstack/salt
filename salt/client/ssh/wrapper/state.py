@@ -40,7 +40,11 @@ def _ssh_state(chunks, st_kwargs, kwargs, test=False):
     )
     # Create the tar containing the state pkg and relevant files.
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        __context__["fileclient"], chunks, file_refs, __pillar__, st_kwargs["id_"]
+        __context__["fileclient"],
+        chunks,
+        file_refs,
+        __pillar__.value(),
+        st_kwargs["id_"],
     )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__["hash_type"])
     cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
@@ -213,7 +217,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
         __context__["fileclient"],
         chunks,
         file_refs,
-        __pillar__,
+        __pillar__.value(),
         st_kwargs["id_"],
         roster_grains,
     )
@@ -331,10 +335,10 @@ def low(data, **kwargs):
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
     chunks = [data]
     st_ = salt.client.ssh.state.SSHHighState(
-        __opts__, __pillar__, __salt__, __context__["fileclient"]
+        __opts__, __pillar__.value(), __salt__, __context__["fileclient"]
     )
     for chunk in chunks:
         chunk["__id__"] = chunk["name"] if not chunk.get("__id__") else chunk["__id__"]
@@ -355,7 +359,7 @@ def low(data, **kwargs):
         __context__["fileclient"],
         chunks,
         file_refs,
-        __pillar__,
+        __pillar__.value(),
         st_kwargs["id_"],
         roster_grains,
     )
@@ -418,10 +422,10 @@ def high(data, **kwargs):
     """
     __pillar__.update(kwargs.get("pillar", {}))
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-        opts, __pillar__, __salt__, __context__["fileclient"]
+        opts, __pillar__.value(), __salt__, __context__["fileclient"]
     )
     st_.push_active()
     chunks = st_.state.compile_high_data(data)
@@ -441,7 +445,7 @@ def high(data, **kwargs):
         __context__["fileclient"],
         chunks,
         file_refs,
-        __pillar__,
+        __pillar__.value(),
         st_kwargs["id_"],
         roster_grains,
     )
@@ -825,10 +829,10 @@ def show_lowstate(**kwargs):
 
         salt '*' state.show_lowstate
     """
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     st_ = salt.client.ssh.state.SSHHighState(
-        opts, __pillar__, __salt__, __context__["fileclient"]
+        opts, __pillar__.value(), __salt__, __context__["fileclient"]
     )
     st_.push_active()
     chunks = st_.compile_low_chunks()
@@ -883,7 +887,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         opts["saltenv"] = "base"
 
     st_ = salt.client.ssh.state.SSHHighState(
-        __opts__, __pillar__, __salt__, __context__["fileclient"]
+        __opts__, __pillar__.value(), __salt__, __context__["fileclient"]
     )
 
     if not _check_pillar(kwargs, st_.opts["pillar"]):
@@ -934,7 +938,7 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     """
     __pillar__.update(kwargs.get("pillar", {}))
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if salt.utils.args.test_mode(test=test, **kwargs):
         opts["test"] = True
@@ -975,7 +979,7 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         salt '*' state.show_sls core,edit.vim dev
     """
     __pillar__.update(kwargs.get("pillar", {}))
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
 
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     if salt.utils.args.test_mode(test=test, **kwargs):
@@ -1048,7 +1052,7 @@ def single(fun, name, test=None, **kwargs):
 
     """
     st_kwargs = __salt__.kwargs
-    __opts__["grains"] = __grains__
+    __opts__["grains"] = __grains__.value()
 
     # state.fun -> [state, fun]
     comps = fun.split(".")
@@ -1099,7 +1103,7 @@ def single(fun, name, test=None, **kwargs):
         __context__["fileclient"],
         chunks,
         file_refs,
-        __pillar__,
+        __pillar__.value(),
         st_kwargs["id_"],
         roster_grains,
     )
