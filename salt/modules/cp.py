@@ -38,7 +38,7 @@ def _auth():
 
 def _gather_pillar(pillarenv, pillar_override):
     """
-    Whenever a state run starts, gather the pillar data fresh
+    Whenever a state run starts, gather the pillar data fresh.
     """
     pillar = salt.pillar.get_pillar(
         __opts__,
@@ -152,7 +152,7 @@ def _mk_client():
 
     Each file client needs to correspond to a unique copy
     of the opts dictionary, therefore it's hashed by the
-    id of the __opts__ dict
+    id of the __opts__ dict.
     """
     if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
         __context__[
@@ -162,7 +162,7 @@ def _mk_client():
 
 def _client():
     """
-    Return a client, hashed by the list of masters
+    Return a client, hashed by the list of masters.
     """
     _mk_client()
     return __context__["cp.fileclient_{}".format(id(__opts__))]
@@ -228,7 +228,26 @@ def get_file(
     .. versionchanged:: 2018.3.0
         ``dest`` can now be a directory
 
-    Used to get a single file from the salt master
+    Used to get a single file from the Salt Master.
+
+    Args:
+        path (str):
+            File on the salt master.
+
+        dest (str):
+            Location on the minion to put the file.
+
+        makedirs (bool):
+            Whether or not to maked parent directories leading to the dest.
+
+        template (str):
+            Type of templating language to use, such as jinja.
+
+        gzip (int):
+            Compression level, 1-9. Enables gzip compression before
+            transferring the file. 1 is the lightest compression and 9 is the
+            heaviest. 1 will use the least CPU on both master and minion, while
+            9 will use the most.
 
     CLI Example:
 
@@ -244,16 +263,13 @@ def get_file(
         salt '*' cp.get_file "salt://{{grains.os}}/vimrc" /etc/vimrc template=jinja
 
     This example would instruct all Salt minions to download the vimrc from a
-    directory with the same name as their os grain and copy it to /etc/vimrc
+    directory with the same name as their os grain and copy it to
+    ``/etc/vimrc``.
 
     For larger files, the cp.get_file module also supports gzip compression.
     Because gzip is CPU-intensive, this should only be used in scenarios where
     the compression ratio is very high (e.g. pretty-printed JSON or YAML
     files).
-
-    Use the *gzip* named argument to enable it.  Valid values are 1..9, where 1
-    is the lightest compression and 9 the heaviest.  1 uses the least CPU on
-    the master (and minion), 9 uses the most.
 
     There are two ways of defining the fileserver environment (a.k.a.
     ``saltenv``) from which to retrieve the file. One is to use the ``saltenv``
@@ -283,7 +299,7 @@ def get_file(
 
 def envs():
     """
-    List available environments for fileserver
+    List available environments for fileserver.
 
     CLI Example
 
@@ -298,9 +314,32 @@ def get_template(
     path, dest, template="jinja", saltenv="base", makedirs=False, **kwargs
 ):
     """
-    Render a file as a template before setting it down.
-    Warning, order is not the same as in fileclient.cp for
-    non breaking old API.
+    Render a file as a template before copying it down.
+
+    .. warning::
+
+        Argument order is not the same as in ``fileclient.cp`` in order to not
+        break the existing API.
+
+    Args:
+        path (str):
+            Path to the file. If the file has a ``salt://`` prefix, look on
+            the Salt Master, otherwise with a / prefix, look on the minion.
+
+        dest (str):
+            Target location for the file on the minion.
+
+        template (str):
+            Template type to use when rendering file. Defaults to ``jinja``.
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file.
+            Ignored if ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+        makedirs (bool):
+            Whether or not to create the directories up to ``dest``. Defaults
+            to False
+
 
     CLI Example:
 
@@ -321,7 +360,7 @@ def get_template(
 
 def get_dir(path, dest, saltenv="base", template=None, gzip=None, **kwargs):
     """
-    Used to recursively copy a directory from the salt master
+    Used to recursively copy a directory from the salt master.
 
     CLI Example:
 
@@ -343,39 +382,40 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
 
     Used to get a single file from a URL.
 
-    path
-        A URL to download a file from. Supported URL schemes are: ``salt://``,
-        ``http://``, ``https://``, ``ftp://``, ``s3://``, ``swift://`` and
-        ``file://`` (local filesystem). If no scheme was specified, this is
-        equivalent of using ``file://``.
-        If a ``file://`` URL is given, the function just returns absolute path
-        to that file on a local filesystem.
-        The function returns ``False`` if Salt was unable to fetch a file from
-        a ``salt://`` URL.
+    Args:
+        path (str):
+            A URL to download a file from. Supported URL schemes are: ``salt://``,
+            ``http://``, ``https://``, ``ftp://``, ``s3://``, ``swift://`` and
+            ``file://`` (local filesystem). If no scheme was specified, this is
+            equivalent of using ``file://``.
+            If a ``file://`` URL is given, the function just returns absolute path
+            to that file on a local filesystem.
+            The function returns ``False`` if Salt was unable to fetch a file from
+            a ``salt://`` URL.
 
-    dest
-        The default behaviour is to write the fetched file to the given
-        destination path. If this parameter is omitted or set as empty string
-        (``''``), the function places the remote file on the local filesystem
-        inside the Minion cache directory and returns the path to that file.
+        dest (str):
+            The default behaviour is to write the fetched file to the given
+            destination path. If this parameter is omitted or set as empty string
+            (``''``), the function places the remote file on the local filesystem
+            inside the Minion cache directory and returns the path to that file.
 
-        .. note::
+            .. note::
 
-            To simply return the file contents instead, set destination to
-            ``None``. This works with ``salt://``, ``http://``, ``https://``
-            and ``file://`` URLs. The files fetched by ``http://`` and
-            ``https://`` will not be cached.
+                To simply return the file contents instead, set destination to
+                ``None``. This works with ``salt://``, ``http://``, ``https://``
+                and ``file://`` URLs. The files fetched by ``http://`` and
+                ``https://`` will not be cached.
 
-    saltenv : base
-        Salt fileserver environment from which to retrieve the file. Ignored if
-        ``path`` is not a ``salt://`` URL.
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
-    source_hash
-        If ``path`` is an http(s) or ftp URL and the file exists in the
-        minion's file cache, this option can be passed to keep the minion from
-        re-downloading the file if the cached copy matches the specified hash.
+        source_hash (str):
+            If ``path`` is an http(s) or ftp URL and the file exists in the
+            minion's file cache, this option can be passed to keep the minion from
+            re-downloading the file if the cached copy matches the specified hash.
 
-        .. versionadded:: 2018.3.0
+            .. versionadded:: 2018.3.0
 
     CLI Example:
 
@@ -406,7 +446,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
 def get_file_str(path, saltenv="base"):
     """
     Download a file from a URL to the Minion cache directory and return the
-    contents of that file
+    contents of that file.
 
     Returns ``False`` if Salt was unable to cache a file from a URL.
 
@@ -428,22 +468,28 @@ def get_file_str(path, saltenv="base"):
 
 def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
     """
-    Used to cache a single file on the Minion
+    Used to cache a single file on the Minion.
 
-    Returns the location of the new cached file on the Minion
+    Returns the location of the new cached file on the Minion.
 
-    source_hash
-        If ``name`` is an http(s) or ftp URL and the file exists in the
-        minion's file cache, this option can be passed to keep the minion from
-        re-downloading the file if the cached copy matches the specified hash.
+    Args:
+        source_hash (str):
+            If ``name`` is an http(s) or ftp URL and the file exists in the
+            minion's file cache, this option can be passed to keep the minion from
+            re-downloading the file if the cached copy matches the specified hash.
 
-        .. versionadded:: 2018.3.0
+            .. versionadded:: 2018.3.0
 
-    verify_ssl
-        If ``False``, remote https file sources (``https://``) and source_hash
-        will not attempt to validate the servers certificate. Default is True.
+        verify_ssl (bool):
+            If ``False``, remote https file sources (``https://``) and source_hash
+            will not attempt to validate the servers certificate. Default is True.
 
-        .. versionadded:: 3002
+            .. versionadded:: 3002
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
 
     CLI Example:
 
@@ -509,15 +555,24 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
 
 def cache_dest(url, saltenv="base"):
     """
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
-    Returns the expected cache path for the file, if cached using
-    :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
+    Args:
+        url (str):
+            URL of the file to be cached.
 
-    .. note::
-        This only returns the _expected_ path, it does not tell you if the URL
-        is really cached. To check if the URL is cached, use
-        :py:func:`cp.is_cached <salt.modules.cp.is_cached>` instead.
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+    Returns:
+        The expected cache path for the file, if cached using
+        :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
+
+        .. note::
+            This only returns the _expected_ path, it does not tell you if the URL
+            is really cached. To check if the URL is cached, use
+            :py:func:`cp.is_cached <salt.modules.cp.is_cached>` instead.
 
     CLI Examples:
 
@@ -534,7 +589,16 @@ def cache_files(paths, saltenv="base"):
     """
     Used to gather many files from the Master, the gathered files will be
     saved in the minion cachedir reflective to the paths retrieved from the
-    Master
+    Master.
+
+    Args:
+        paths (str):
+            Commma separated paths of file URLs to be cached from the Salt
+            Master.
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -573,27 +637,28 @@ def cache_dir(
     path, saltenv="base", include_empty=False, include_pat=None, exclude_pat=None
 ):
     """
-    Download and cache everything under a directory from the master
+    Download and cache everything under a directory from the Master.
 
 
-    include_pat : None
-        Glob or regex to narrow down the files cached from the given path. If
-        matching with a regex, the regex must be prefixed with ``E@``,
-        otherwise the expression will be interpreted as a glob.
+    Args:
+        include_pat (str): None
+            Glob or regex to narrow down the files cached from the given path. If
+            matching with a regex, the regex must be prefixed with ``E@``,
+            otherwise the expression will be interpreted as a glob.
 
-        .. versionadded:: 2014.7.0
+            .. versionadded:: 2014.7.0
 
-    exclude_pat : None
-        Glob or regex to exclude certain files from being cached from the given
-        path. If matching with a regex, the regex must be prefixed with ``E@``,
-        otherwise the expression will be interpreted as a glob.
+        exclude_pat (str): None
+            Glob or regex to exclude certain files from being cached from the given
+            path. If matching with a regex, the regex must be prefixed with ``E@``,
+            otherwise the expression will be interpreted as a glob.
 
-        .. note::
+            .. note::
 
-            If used with ``include_pat``, files matching this pattern will be
-            excluded from the subset of files defined by ``include_pat``.
+                If used with ``include_pat``, files matching this pattern will be
+                excluded from the subset of files defined by ``include_pat``.
 
-        .. versionadded:: 2014.7.0
+            .. versionadded:: 2014.7.0
 
 
     CLI Examples:
@@ -608,7 +673,12 @@ def cache_dir(
 
 def cache_master(saltenv="base"):
     """
-    Retrieve all of the files on the master and cache them locally
+    Retrieve all of the files on the master and cache them locally.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -621,7 +691,11 @@ def cache_master(saltenv="base"):
 
 def cache_local_file(path):
     """
-    Cache a local file on the minion in the localfiles cache
+    Cache a local file on the minion in the localfiles cache.
+
+    Args:
+        path (str):
+            Path to the local file to copy to the minion's cache.
 
     CLI Example:
 
@@ -648,7 +722,12 @@ def cache_local_file(path):
 
 def list_states(saltenv="base"):
     """
-    List all of the available state modules in an environment
+    List all of the available state modules in an environment.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -661,7 +740,17 @@ def list_states(saltenv="base"):
 
 def list_master(saltenv="base", prefix=""):
     """
-    List all of the files stored on the master
+    List all of the files stored on the master.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+        prefix (str):
+            Relative prefix to limit directory traversal.
+
+
 
     CLI Example:
 
@@ -674,7 +763,15 @@ def list_master(saltenv="base", prefix=""):
 
 def list_master_dirs(saltenv="base", prefix=""):
     """
-    List all of the directories stored on the master
+    List all of the directories stored on the master.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+        prefix (str):
+            Relative prefix to limit directory traversal.
 
     CLI Example:
 
@@ -687,7 +784,15 @@ def list_master_dirs(saltenv="base", prefix=""):
 
 def list_master_symlinks(saltenv="base", prefix=""):
     """
-    List all of the symlinks stored on the master
+    List all of the symlinks stored on the master.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+        prefix (str):
+            Relative prefix to limit directory traversal.
 
     CLI Example:
 
@@ -700,7 +805,12 @@ def list_master_symlinks(saltenv="base", prefix=""):
 
 def list_minion(saltenv="base"):
     """
-    List all of the files cached on the minion
+    List all of the files cached on the minion.
+
+    Args:
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -714,7 +824,15 @@ def list_minion(saltenv="base"):
 def is_cached(path, saltenv="base"):
     """
     Returns the full path to a file if it is cached locally on the minion
-    otherwise returns a blank string
+    otherwise returns a blank string.
+
+    Args:
+        path (str):
+            URL of file on the Salt Master.
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -727,9 +845,17 @@ def is_cached(path, saltenv="base"):
 
 def hash_file(path, saltenv="base"):
     """
-    Return the hash of a file, to get the hash of a file on the
-    salt master file server prepend the path with salt://<file on server>
-    otherwise, prepend the file with / for a local file.
+    Return the hash of a file.
+
+    Args:
+        path (str):
+            Path to the file to be hashed. If the path begins with ``salt://`
+            then hash a file on the Salt Master. If the path begins with ``/``
+            then hash a local file.
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file. Ignored if
+            ``path`` is not a ``salt://`` URL. Defaults to ``base``.
 
     CLI Example:
 
@@ -746,9 +872,21 @@ def hash_file(path, saltenv="base"):
 
 def stat_file(path, saltenv="base", octal=True):
     """
-    Return the permissions of a file, to get the permissions of a file on the
-    salt master file server prepend the path with salt://<file on server>
-    otherwise, prepend the file with / for a local file.
+    Return the permissions of a file.
+
+    Args:
+        path (str):
+            Path of the file. To get the stat of a file on the Salt Master file
+            server prepend the path with ``salt://`` otherwise, prepend the
+            file with / for a local file.
+
+        saltenv (str):
+            Salt fileserver environment from which to retrieve the file.
+            Ignored if ``path`` is not a ``salt://`` URL. Defaults to ``base``.
+
+        octal (bool):
+            Defaults to ``True``. Whether or not to return output in octal or
+            integer format.
 
     CLI Example:
 
@@ -768,7 +906,9 @@ def stat_file(path, saltenv="base", octal=True):
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     """
-    WARNING Files pushed to the master will have global read permissions..
+    .. warning::
+
+        Files pushed to the master will have global read permissions.
 
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
@@ -776,17 +916,18 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
 
     Since this feature allows a minion to push a file up to the master server
     it is disabled by default for security purposes. To enable, set
-    ``file_recv`` to ``True`` in the master configuration file, and restart the
+    ``file_recv: True`` in the master configuration file, and restart the
     master.
 
-    keep_symlinks
-        Keep the path value without resolving its canonical form
+    Args:
+        keep_symlinks (bool):
+            Keep the path value without resolving its canonical form.
 
-    upload_path
-        Provide a different path inside the master's minion files cachedir
+        upload_path (str):
+            Provide a different path inside the master's minion files cachedir.
 
-    remove_source
-        Remove the source file on the minion
+        remove_source (bool):
+            Remove the source file on the minion. Defaults to ``False``.
 
         .. versionadded:: 2016.3.0
 
@@ -876,16 +1017,17 @@ def push_dir(path, glob=None, upload_path=None, glob_recurse=False):
     is disabled by default for security purposes. To enable, set ``file_recv``
     to ``True`` in the master configuration file, and restart the master.
 
-    upload_path
-        Provide a different path and directory name inside the master's minion
-        files cachedir
+    Args:
+        upload_path (str):
+            Provide a different path and directory name inside the master's minion
+            files cachedir
 
-    glob_recurse
-        .. versionadded:: aluminum
-        Use :ref:`glob.glob` for matching instead of `fnmatch.fnmatch`. This
-        allows more complex file matching, e.g.
-        ``glob="**/foo*bar/.dotfile*"``.
+        glob_recurse (bool):
+            Use :py:func:`~glob.glob` for matching instead of :py:func:`~fnmatch.fnmatch`. This
+            allows more complex file matching, e.g.
+            ``glob="**/foo*bar/.dotfile*"``.
 
+            .. versionadded:: aluminum
 
     CLI Example:
 
