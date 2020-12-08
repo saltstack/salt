@@ -5,7 +5,6 @@ import time
 import attr
 import pytest
 from tests.support.helpers import slowTest
-from tests.support.pytest.helpers import temp_pillar_file
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -400,8 +399,8 @@ def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
             seconds: 7200
         """
 
-    with temp_pillar_file("top.sls", top_sls):
-        with temp_pillar_file("test_schedule.sls", test_schedule_sls):
+    with pytest.helpers.temp_pillar_file("top.sls", top_sls):
+        with pytest.helpers.temp_pillar_file("test_schedule.sls", test_schedule_sls):
             # Calling refresh_pillar to update in-memory pillars
             salt_cli.run(
                 "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id
@@ -429,7 +428,7 @@ def test_pillar_refresh_pillar_scheduler(salt_cli, salt_minion):
             assert ret.json["_next_fire_time"] == _next_fire_time
 
         # Ensure job was replaced when seconds changes
-        with temp_pillar_file("test_schedule.sls", test_schedule_sls2):
+        with pytest.helpers.temp_pillar_file("test_schedule.sls", test_schedule_sls2):
             # Calling refresh_pillar to update in-memory pillars
             salt_cli.run(
                 "saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id

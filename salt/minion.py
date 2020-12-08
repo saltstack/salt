@@ -2414,11 +2414,11 @@ class Minion(MinionBase):
         """
         # delete any pillar schedule items not
         # in the updated pillar values.
-        for item in copy.deepcopy(current):
+        for item in list(current):
             if item not in new:
                 del current[item]
 
-        # delete any pillar schedule items not
+        # Update any entries that have changed
         pillar_schedule = {}
         for item in current:
             schedule_item = current[item]
@@ -2465,14 +2465,14 @@ class Minion(MinionBase):
                     "Pillar data could not be refreshed. "
                     "One or more masters may be down!"
                 )
-            finally:
+            else:
                 current_schedule = self.opts["pillar"].get("schedule", {})
                 new_schedule = new_pillar.get("schedule", {})
                 new_pillar["schedule"] = self.pillar_schedule_refresh(
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
-
+            finally:
                 async_pillar.destroy()
         self.matchers_refresh()
         self.beacons_refresh()
