@@ -178,7 +178,8 @@ def test_issue_50221(
         ret = salt_call_cli.run("pillar.get", "issue-50221")
         assert ret.exitcode == 0
         assert ret.json
-        assert ret.json == expected_content
+        # The type of new line, ie, `\n` vs `\r\n` is not important
+        assert ret.json.replace("\r\n", "\n") == expected_content
         ret = salt_call_cli.run(
             "state.apply", sls_name, pillar={"target-path": str(target_path)}
         )
