@@ -456,7 +456,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if opts.get("allow_undefined", False):
         jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
     else:
-        jinja_env = jinja2.sandbox.SandboxedEnvironment(undefined=jinja2.StrictUndefined, **env_args)
+        jinja_env = jinja2.sandbox.SandboxedEnvironment(
+            undefined=jinja2.StrictUndefined, **env_args
+        )
 
     tojson_filter = jinja_env.filters.get("tojson")
     indent_filter = jinja_env.filters.get("indent")
