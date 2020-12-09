@@ -290,6 +290,12 @@ the specified state to watch the state with the ``requisite_in``.
 
 .. _requisites-watch:
 
+.. note::
+
+    An ``onchanges`` requisite has no effect on SLS requisites (monitoring for
+    changes in an included SLS). Only the individual state IDs from an included
+    SLS can be monitored.
+
 watch
 ~~~~~
 
@@ -303,6 +309,12 @@ the execution module and will execute any time a watched state changes.
     otherwise do nothing, the ``onchanges`` requisite should be used instead
     of ``watch``. ``watch`` is designed to add *additional* behavior when
     there are changes, but otherwise the state executes normally.
+
+.. note::
+
+    A ``watch`` requisite has no effect on SLS requisites (watching for changes
+    in an included SLS). Only the individual state IDs from an included SLS can
+    be watched.
 
 A good example of using ``watch`` is with a :mod:`service.running
 <salt.states.service.running>` state. When a service watches a state, then
