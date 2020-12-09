@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 A test case for the SQLite3 SDB module.
 """
 
 import os
 import sqlite3
+
 from tests.support.case import ShellCase
 
 #
@@ -26,7 +26,7 @@ class Sqlite3TestCase(ShellCase):
     # Why do we think the file "sdb.sqlite3" is in the current working
     # directory of the process running the tests? Well, because that is what
     # is specified in the file "tests/integration/files/conf/master".
-    sdb_file = 'sdb.sqlite3'
+    sdb_file = "sdb.sqlite3"
 
     # Ensure a) the tests' order is of no significance, and b) that we don't
     # leave behind any unnecessary cruft.
@@ -43,9 +43,9 @@ class Sqlite3TestCase(ShellCase):
 
         try:
             # This raises sqlite3.OperationalError for a missing table.
-            q = 'SELECT {0} FROM {1} WHERE type="{2}" AND name="{3}";'.format(
-                    'name', 'sqlite_master', 'table', tablename
-                )
+            q = 'SELECT {} FROM {} WHERE type="{}" AND name="{}";'.format(
+                "name", "sqlite_master", "table", tablename
+            )
             cur.execute(q)
 
             return len(cur.fetchall()) > 0
@@ -57,24 +57,22 @@ class Sqlite3TestCase(ShellCase):
     # SQLite3 SDB driver is present and its value is True, any call to SDB
     # will create the database.
     def test_aaaa(self):
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createtrue/foo')
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
-        self.assertTrue(data['return'] is None)
-        self.assertTrue(self.table_exists(self.sdb_file, 'sdb'))
+        self.assertTrue(data["return"] is None)
+        self.assertTrue(self.table_exists(self.sdb_file, "sdb"))
 
     # What is this test for?
     # The test below tests that when the keyword argument "create" for the
     # SQLite3 SDB driver is not present, the default value True is honoured
     # and any call to SDB will create the database.
     def test_aaab(self):
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createdefault/foo')
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createdefault/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
-        self.assertTrue(data['return'] is None)
-        self.assertTrue(self.table_exists(self.sdb_file, 'sdb'))
+        self.assertTrue(data["return"] is None)
+        self.assertTrue(self.table_exists(self.sdb_file, "sdb"))
 
     # What is this test for?
     # The test below tests that when the keyword argument "create" for the
@@ -82,61 +80,53 @@ class Sqlite3TestCase(ShellCase):
     # not create the database tables; because SQLite3 creates a database file
     # with every "connection", the database table list has to be consulted.
     def test_aaac(self):
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createfalse/foo')
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createfalse/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
-        self.assertTrue(
-            'sqlite3.OperationalError: no such table' in data['return']
-        )
-        self.assertFalse(self.table_exists(self.sdb_file, 'sdb'))
+        self.assertTrue("sqlite3.OperationalError: no such table" in data["return"])
+        self.assertFalse(self.table_exists(self.sdb_file, "sdb"))
 
     # What is this test for?
     # The test below tests that when the keyword argument "table" doesn't
     # use the default value, the value given is honoured.
     def set_aaad(self):
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3funnytablename/foo')
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3funnytablename/foo")
 
         self.assertTrue(os.path.exists(self.sdb_file))
-        self.assertFalse(data['return'])
-        self.assertTrue(self.table_exists(self.sdb_file,
-                                          'sdbsqlite3funnytablename'))
+        self.assertFalse(data["return"])
+        self.assertTrue(self.table_exists(self.sdb_file, "sdbsqlite3funnytablename"))
 
     # What is this test for?
     # The test below tests that when a key-value pair is set in SDB,
     # that same key-value pair can be accessed later.
     def test_bbbb(self):
-        data = self.run_run_plus('sdb.set',
-                                 'sdb://sdbsqlite3createtrue/foo',
-                                 value = 'bar')
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/foo", value="bar"
+        )
         self.assertTrue(os.path.exists(self.sdb_file))
-        self.assertTrue(data['return'])
+        self.assertTrue(data["return"])
 
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createtrue/foo')
-        self.assertEqual(data['out'], ['bar'])
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
+        self.assertEqual(data["out"], ["bar"])
 
     # What is this test for?
     # The test below tests that when a key-value deleted from SDB is
     # not accessible later.
     def test_cccc(self):
-        data = self.run_run_plus('sdb.set',
-                                 'sdb://sdbsqlite3createtrue/foo',
-                                 value = 'bar')
-        self.assertTrue(data['return'])
+        data = self.run_run_plus(
+            "sdb.set", "sdb://sdbsqlite3createtrue/foo", value="bar"
+        )
+        self.assertTrue(data["return"])
 
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createtrue/foo')
-        self.assertTrue(data['return'])
-        self.assertEqual(data['out'], ['bar'])
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
+        self.assertTrue(data["return"])
+        self.assertEqual(data["out"], ["bar"])
 
-        data = self.run_run_plus('sdb.delete',
-                                 'sdb://sdbsqlite3createtrue/foo')
-        self.assertTrue(data['return'])
+        data = self.run_run_plus("sdb.delete", "sdb://sdbsqlite3createtrue/foo")
+        self.assertTrue(data["return"])
 
-        data = self.run_run_plus('sdb.get',
-                                 'sdb://sdbsqlite3createtrue/foo')
-        self.assertTrue(data['return'] is None)
+        data = self.run_run_plus("sdb.get", "sdb://sdbsqlite3createtrue/foo")
+        self.assertTrue(data["return"] is None)
+
 
 # end of file.
