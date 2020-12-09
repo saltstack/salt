@@ -5,14 +5,13 @@ Return/control aspects of the grains data
 
 import copy
 import math
+from collections.abc import Mapping
 
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.json
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from collections.abc import Mapping
-
 
 # Seed the grains dict so cython will build
 __grains__ = {}
