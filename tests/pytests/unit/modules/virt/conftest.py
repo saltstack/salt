@@ -332,3 +332,29 @@ def make_mock_network():
         return net_mock
 
     return _make_mock_net
+
+
+@pytest.fixture
+def make_mock_device():
+    """
+    Create a mock host device
+    """
+
+    def _make_mock_device(xml_def):
+        mocked_conn = virt.libvirt.openAuth.return_value
+        if not isinstance(mocked_conn.nodeDeviceLookupByName, MappedResultMock):
+            mocked_conn.nodeDeviceLookupByName = MappedResultMock()
+
+        doc = ET.fromstring(xml_def)
+        name = doc.find("./name").text
+
+        mocked_conn.nodeDeviceLookupByName.add(name)
+        mocked_device = mocked_conn.nodeDeviceLookupByName(name)
+        mocked_device.name.return_value = name
+        mocked_device.XMLDesc.return_value = xml_def
+        mocked_device.listCaps.return_value = [
+            cap.get("type") for cap in doc.findall("./capability")
+        ]
+        return mocked_device
+
+    return _make_mock_device
