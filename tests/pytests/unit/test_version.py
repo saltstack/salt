@@ -5,19 +5,29 @@ tests.pytests.unit.test_version
 Test salt's regex git describe version parsing
 """
 import re
+import sys
 
 import pytest
 
 import salt.version
 from salt.version import (
+    Getters,
+    Requirement,
+    RequirementNotRegistered,
+    Requirements,
     SaltStackVersion,
     SaltVersionsInfo,
+    default_module_getter,
+    default_version_getter,
     system_information,
     versions_report,
 )
 from tests.support.mock import MagicMock, patch
 
 STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
+TEST_MOD = """
+__version__ = (1, 2, 3)
+"""
 
 
 @pytest.mark.parametrize(
@@ -558,3 +568,116 @@ def test_parsed_version_name(version_str, expected_str, expected_name):
         assert ver.name == expected_name
     else:
         assert ver.name is None
+
+
+def test_default_module_getter():
+    mod = default_module_getter("socket")
+    assert mod is not None
+    assert mod.__name__ == "socket"
+
+
+def test_default_module_getter_noexist():
+    mod = default_module_getter("this_module_does_not_exist")
+    assert mod is None
+
+
+def test_default_version_getter_version():
+    class mock:
+        version = "1.2.1"
+
+    assert default_version_getter(mock) == "1.2.1"
+
+
+def test_default_version_getter___version__():
+    class mock:
+        __version__ = "1.2.1"
+
+    assert default_version_getter(mock) == "1.2.1"
+
+
+def test_default_version_getter_tuple():
+    class mock:
+        __version__ = (1, 2, 1)
+
+    assert default_version_getter(mock) == "1.2.1"
+
+
+@pytest.fixture
+def test_module(tmp_path):
+    mod_path = tmp_path / "test_module.py"
+    with salt.utils.files.fopen(mod_path, "w") as fp:
+        fp.write(TEST_MOD)
+    orig_path = sys.path[:]
+    try:
+        sys.path.append(str(tmp_path))
+        yield
+    finally:
+        sys.path = orig_path
+
+
+def test_depenency_exists(test_module):
+    dep = Requirement("test_module")
+    assert dep.has_depend is True
+    assert dep
+
+
+def test_depenency_does_not_exist(test_module):
+    dep = Requirement("test_module_does_not_exit")
+    assert dep.has_depend is False
+    assert not dep
+
+
+def test_depenency_version_eq(test_module):
+    dep = Requirement("test_module")
+    assert dep
+    assert dep == "1.2.3"
+
+
+def test_depenency_version_ne(test_module):
+    dep = Requirement("test_module")
+    assert bool(dep != "1.2.3") is False
+    assert dep != "1.2.3.1"
+
+
+def test_depenency_version_lt(test_module):
+    dep = Requirement("test_module")
+    assert dep < "1.2.3.1"
+
+
+def test_depenency_version_le(test_module):
+    dep = Requirement("test_module")
+    assert dep <= "1.2.3"
+    assert dep <= "1.2.3.1"
+
+
+def test_depenency_version_gt(test_module):
+    dep = Requirement("test_module")
+    assert bool(dep > "1.2.3") is False
+    assert dep > "1.2.2"
+    assert dep > "1.2.2.1"
+
+
+def test_depenency_version_ge(test_module):
+    dep = Requirement("test_module")
+    assert dep >= "1.2.3"
+    assert bool(dep >= "1.2.3.1") is False
+    assert bool(dep >= "1.2.4") is False
+
+
+def test_depends_custom_getters():
+    def my_module_getter(name):
+        return True
+
+    def my_version_getter(mod):
+        return "1.2.3"
+
+    deps_map = {"foobar": Getters(my_module_getter, my_version_getter)}
+    reqs = Requirements(deps_map)
+    assert reqs.foobar
+    assert reqs.foobar == "1.2.3"
+
+
+def test_depends_not_registered():
+    reqs = Requirements()
+    with pytest.raises(RequirementNotRegistered):
+        reqs.module_not_registered == "0.0.0"  # pylint: disable=pointless-statement

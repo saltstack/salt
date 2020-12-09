@@ -10,13 +10,13 @@ import copy
 import logging
 
 import salt.utils.msgpack
+import salt.version
 from salt.serializers import DeserializationError, SerializationError
 
 log = logging.getLogger(__name__)
-available = salt.utils.msgpack.HAS_MSGPACK
 
 
-if not available:
+if not salt.version.reqs.msgpack:
 
     def _fail():
         raise RuntimeError("msgpack is not available")

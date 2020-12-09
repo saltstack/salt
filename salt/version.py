@@ -10,6 +10,10 @@ import sys
 from collections import namedtuple
 from functools import total_ordering
 
+from packaging.version import Version
+
+from salt.exceptions import SaltException
+
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
@@ -933,6 +937,155 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
         info.append(" ")
 
     yield from info
+
+
+class RequirementNotRegistered(SaltException, AttributeError):
+    pass
+
+
+Getters = namedtuple("Getters", "module_getter, version_getter")
+
+
+def default_version_getter(module):
+    ver = None
+    if hasattr(module, "__version__"):
+        ver = module.__version__
+    if hasattr(module, "version"):
+        ver = module.version
+    if ver is None:
+        raise Exception("Version info not found")
+    elif isinstance(ver, tuple):
+        return ".".join([str(_) for _ in ver])
+    else:
+        return ver
+
+
+def default_module_getter(name):
+    try:
+        return __import__(name)
+    except ImportError:
+        pass
+
+
+class Requirement:
+    def __init__(
+        self,
+        name,
+        module_getter=default_module_getter,
+        version_getter=default_version_getter,
+        has_depend=None,
+        version=None,
+    ):
+        self.name = name
+        self.module_getter = module_getter
+        self.version_getter = version_getter
+        self.has_depend = has_depend
+        self.version = version
+        self.populate()
+
+    @property
+    def module(self):
+        return self.module_getter(self.name)
+
+    def populate(self):
+        if self.has_depend is None:
+            mod = self.module_getter(self.name)
+            if mod:
+                self.has_depend = True
+                self.version = self.version_getter(mod)
+            else:
+                self.has_depend = False
+
+    def __nonzero__(self):
+        return self.has_depend
+
+    def __bool__(self):
+        return self.has_depend
+
+    def __eq__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver == other_ver
+
+    def __ne__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver != other_ver
+
+    def __lt__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver < other_ver
+
+    def __le__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver <= other_ver
+
+    def __gt__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver > other_ver
+
+    def __ge__(self, other):
+        other_ver = Version(other)
+        dep_ver = Version(self.version)
+        return dep_ver >= other_ver
+
+
+def msgpack_module_getter(name):
+    msgpack = None
+    try:
+        # Attempt to import msgpack
+        import msgpack
+
+        if msgpack.version >= (0, 4, 0):
+            if (
+                msgpack.loads(
+                    msgpack.dumps([1, 2, 3], use_bin_type=False), use_list=True
+                )
+                is None
+            ):
+                raise ImportError
+        else:
+            if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
+                raise ImportError
+    except ImportError:
+        # Fall back to msgpack_pure
+        try:
+            import msgpack_pure as msgpack  # pylint: disable=import-error
+        except ImportError:
+            return
+    return msgpack
+
+
+# To use a custom module or version getter for the depenency, map them here.
+DEPS_MAP = {
+    "msgpack": Getters(msgpack_module_getter, None),
+    "gnupg": Getters(None, None),
+}
+
+
+class Requirements:
+    def __init__(self, deps_map=None):
+        if deps_map is None:
+            self.deps_map = DEPS_MAP
+        else:
+            self.deps_map = deps_map
+
+    def __getattr__(self, val):
+        if val not in self.deps_map:
+            raise RequirementNotRegistered(f"Unknown dependency: {val}")
+
+        module_getter, version_getter = self.deps_map[val]
+        return Requirement(
+            val,
+            module_getter or default_module_getter,
+            version_getter or default_version_getter,
+        )
+
+
+reqs = Requirements()
 
 
 def _parser():
