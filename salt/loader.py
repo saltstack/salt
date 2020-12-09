@@ -1090,7 +1090,7 @@ def executors(opts, functions=None, context=None, proxy=None):
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
-        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy,},
+        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
         pack_self="__executors__",
     )
 
