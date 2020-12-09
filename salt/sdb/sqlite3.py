@@ -39,6 +39,7 @@ create the table(s) and get and set values.
     create_statements:
       - "CREATE TABLE advanced (a text, b text, c blob, d blob)"
       - "CREATE INDEX myidx ON advanced (a)"
+    delete_query: "DELETE d FROM advanced WHERE a:=key"
     get_query: "SELECT d FROM advanced WHERE a=:key"
     set_query: "INSERT OR REPLACE INTO advanced (a, d) VALUES (:key, :value)"
 """
@@ -157,3 +158,22 @@ def get(key, profile=None):
     if not res:
         return None
     return salt.utils.msgpack.unpackb(res[0])
+
+
+def delete(key, profile=None):
+    """
+    Delete a key (and its corresponding value) from sqlite3.
+    """
+    if not profile:
+        return None
+    conn, cur, table = _connect(profile)
+    q = profile.get(
+        "delete_query",
+        ("DELETE FROM {0} WHERE " "key=:key".format(table))
+    )
+    res = cur.execute(q, {"key": key})
+    conn.commit()
+
+    return True
+
+# end of file.

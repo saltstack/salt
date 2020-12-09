@@ -146,5 +146,26 @@ sdbetcd:
   driver: etcd
   etcd.host: 127.0.0.1
   etcd.port: 2379
+# See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
+sdbsqlite3createtrue:
+  create_table: true
+  database: sdb.sqlite3
+  driver: sqlite3
+  table: sdb
+# See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
+sdbsqlite3createdefault:
+  database: sdb.sqlite3
+  driver: sqlite3
+# See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
+sdbsqlite3createfalse:
+  create_table: false
+  database: sdb.sqlite3
+  driver: sqlite3
+# See the file "tests/integration/sdb/test_sqlite3.py" for an explanation.
+sdbsqlite3funnytablename:
+  create_table: true
+  database: sdb.sqlite3
+  driver: sqlite3
+  table: funnytablename
 venafi:
   fake: "true"
