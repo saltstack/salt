@@ -444,6 +444,8 @@ class MinionBase:
 
             salt '*' sys.reload_modules
         """
+        if context is None:
+            context = {}
         if initial_load:
             self.opts["pillar"] = salt.pillar.get_pillar(
                 self.opts,
@@ -927,7 +929,7 @@ class SMinion(MinionBase):
             install_zmq()
             io_loop = ZMQDefaultLoop.current()
             io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
-        self.gen_modules(initial_load=True, context=context or {})
+        self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion
         if self.opts["file_client"] == "remote" and self.opts.get(
