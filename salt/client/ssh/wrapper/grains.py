@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Return/control aspects of the grains data
 """
 
-from __future__ import absolute_import, print_function
 
 import copy
 import math
@@ -33,7 +31,7 @@ def _serial_sanitizer(instr):
     """
     length = len(instr)
     index = int(math.floor(length * 0.75))
-    return "{0}{1}".format(instr[:index], "X" * (length - index))
+    return "{}{}".format(instr[:index], "X" * (length - index))
 
 
 _FQDN_SANITIZER = lambda x: "MINION.DOMAINNAME"
@@ -76,10 +74,12 @@ def get(key, default="", delimiter=DEFAULT_TARGET_DELIM, ordered=True):
         salt '*' grains.get pkg:apache
     """
     if ordered is True:
-        grains = __grains__
+        grains = __grains__.value()
     else:
-        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__))
-    return salt.utils.data.traverse_dict_and_list(__grains__, key, default, delimiter)
+        grains = salt.utils.json.loads(salt.utils.json.dumps(__grains__.value()))
+    return salt.utils.data.traverse_dict_and_list(
+        __grains__.value(), key, default, delimiter
+    )
 
 
 def has_value(key):
@@ -124,13 +124,13 @@ def items(sanitize=False):
         salt '*' grains.items sanitize=True
     """
     if salt.utils.data.is_true(sanitize):
-        out = dict(__grains__)
-        for key, func in six.iteritems(_SANITIZERS):
+        out = dict(__grains__.value())
+        for key, func in _SANITIZERS.items():
             if key in out:
                 out[key] = func(out[key])
         return out
     else:
-        return __grains__
+        return __grains__.value()
 
 
 def item(*args, **kwargs):
@@ -157,7 +157,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.data.is_true(kwargs.get("sanitize")):
-        for arg, func in six.iteritems(_SANITIZERS):
+        for arg, func in _SANITIZERS.items():
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
