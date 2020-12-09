@@ -4307,6 +4307,121 @@ def node_info(**kwargs):
     return info
 
 
+def _node_devices(conn):
+    """
+    List the host available devices, using an established connection.
+
+    :param conn: the libvirt connection handle to use.
+
+    .. versionadded:: Aluminium
+    """
+    devices = conn.listAllDevices()
+
+    devices_infos = []
+    for dev in devices:
+        root = ElementTree.fromstring(dev.XMLDesc())
+
+        # Only list PCI and USB devices that can be passed through as well as NICs
+        if not set(dev.listCaps()) & {"pci", "usb_device", "net"}:
+            continue
+
+        infos = {
+            "caps": " ".join(dev.listCaps()),
+        }
+
+        if "net" in dev.listCaps():
+            parent = root.find(".//parent").text
+            # Don't show, lo, dummies and libvirt-created NICs
+            if parent == "computer":
+                continue
+            infos.update(
+                {
+                    "name": root.find(".//interface").text,
+                    "address": root.find(".//address").text,
+                    "device name": parent,
+                    "state": root.find(".//link").get("state"),
+                }
+            )
+            devices_infos.append(infos)
+            continue
+
+        vendor_node = root.find(".//vendor")
+        vendor_id = vendor_node.get("id").lower()
+        product_node = root.find(".//product")
+        product_id = product_node.get("id").lower()
+        infos.update(
+            {"name": dev.name(), "vendor_id": vendor_id, "product_id": product_id}
+        )
+
+        # Vendor or product display name may not be set
+        if vendor_node.text:
+            infos["vendor"] = vendor_node.text
+        if product_node.text:
+            infos["product"] = product_node.text
+
+        if "pci" in dev.listCaps():
+            infos["address"] = "{:04x}:{:02x}:{:02x}.{}".format(
+                int(root.find(".//domain").text),
+                int(root.find(".//bus").text),
+                int(root.find(".//slot").text),
+                root.find(".//function").text,
+            )
+            class_node = root.find(".//class")
+            if class_node is not None:
+                infos["PCI class"] = class_node.text
+
+            # Get the list of Virtual Functions if any
+            vf_addresses = [
+                _format_pci_address(vf)
+                for vf in root.findall(
+                    "./capability[@type='pci']/capability[@type='virt_functions']/address"
+                )
+            ]
+            if vf_addresses:
+                infos["virtual functions"] = vf_addresses
+
+            # Get the Physical Function if any
+            pf = root.find(
+                "./capability[@type='pci']/capability[@type='phys_function']/address"
+            )
+            if pf is not None:
+                infos["physical function"] = _format_pci_address(pf)
+        elif "usb_device" in dev.listCaps():
+            infos["address"] = "{:03}:{:03}".format(
+                int(root.find(".//bus").text), int(root.find(".//device").text)
+            )
+
+        # Don't list the pci bridges and USB hosts from the linux foundation
+        linux_usb_host = vendor_id == "0x1d6b" and product_id in [
+            "0x0001",
+            "0x0002",
+            "0x0003",
+        ]
+        if (
+            root.find(".//capability[@type='pci-bridge']") is None
+            and not linux_usb_host
+        ):
+            devices_infos.append(infos)
+
+    return devices_infos
+
+
+def node_devices(**kwargs):
+    """
+    List the host available devices.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Aluminium
+    """
+    conn = __get_conn(**kwargs)
+    devs = _node_devices(conn)
+    conn.close()
+    return devs
+
+
 def get_nics(vm_, **kwargs):
     """
     Return info about the network interfaces of a named vm
