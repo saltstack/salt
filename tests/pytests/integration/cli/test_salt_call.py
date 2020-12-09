@@ -82,7 +82,7 @@ def test_local_salt_call(salt_call_cli):
     with pytest.helpers.temp_file() as filename:
 
         ret = salt_call_cli.run(
-            "--local", "state.single", "file.append", name=filename, text="foo"
+            "--local", "state.single", "file.append", name=str(filename), text="foo"
         )
         assert ret.exitcode == 0
 
@@ -90,8 +90,7 @@ def test_local_salt_call(salt_call_cli):
         assert state_run_dict["changes"]
 
         # 2nd sanity check: make sure that "foo" only exists once in the file
-        with salt.utils.files.fopen(filename) as fp_:
-            contents = fp_.read()
+        contents = filename.read_text()
         assert contents.count("foo") == 1, contents
 
 
@@ -140,24 +139,24 @@ def test_issue_6973_state_highstate_exit_code(salt_call_cli):
 def test_issue_15074_output_file_append(salt_call_cli):
 
     with pytest.helpers.temp_file(name="issue-15074") as output_file_append:
-        ret = salt_call_cli.run("--output-file", output_file_append, "test.versions")
+        ret = salt_call_cli.run(
+            "--output-file", str(output_file_append), "test.versions"
+        )
         assert ret.exitcode == 0
 
-        with salt.utils.files.fopen(output_file_append) as ofa:
-            first_run_output = ofa.read()
+        first_run_output = output_file_append.read_text()
 
         assert first_run_output
 
         ret = salt_call_cli.run(
             "--output-file",
-            output_file_append,
+            str(output_file_append),
             "--output-file-append",
             "test.versions",
         )
         assert ret.exitcode == 0
 
-        with salt.utils.files.fopen(output_file_append) as ofa:
-            second_run_output = ofa.read()
+        second_run_output = output_file_append.read_text()
 
         assert second_run_output
 
@@ -170,10 +169,10 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
     with pytest.helpers.temp_file(name="issue-14979") as output_file:
         with salt.utils.files.set_umask(0o077):
             # Let's create an initial output file with some data
-            ret = salt_call_cli.run("--output-file", output_file, "--grains")
+            ret = salt_call_cli.run("--output-file", str(output_file), "--grains")
             assert ret.exitcode == 0
             try:
-                stat1 = os.stat(output_file)
+                stat1 = output_file.stat()
             except OSError:
                 pytest.fail("Failed to generate output file {}".format(output_file))
 
@@ -181,22 +180,22 @@ def test_issue_14979_output_file_permissions(salt_call_cli):
             os.umask(0o777)  # pylint: disable=blacklisted-function
 
             ret = salt_call_cli.run(
-                "--output-file", output_file, "--output-file-append", "--grains"
+                "--output-file", str(output_file), "--output-file-append", "--grains"
             )
             assert ret.exitcode == 0
-            stat2 = os.stat(output_file)
+            stat2 = output_file.stat()
             assert stat1.st_mode == stat2.st_mode
             # Data was appeneded to file
             assert stat1.st_size < stat2.st_size
 
             # Let's remove the output file
-            os.unlink(output_file)
+            output_file.unlink()
 
             # Not appending data
-            ret = salt_call_cli.run("--output-file", output_file, "--grains")
+            ret = salt_call_cli.run("--output-file", str(output_file), "--grains")
             assert ret.exitcode == 0
             try:
-                stat3 = os.stat(output_file)
+                stat3 = output_file.stat()
             except OSError:
                 pytest.fail("Failed to generate output file {}".format(output_file))
             # Mode must have changed since we're creating a new log file

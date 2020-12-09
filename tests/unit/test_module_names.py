@@ -180,7 +180,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
             "unit.cache.test_cache",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
