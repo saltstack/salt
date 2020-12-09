@@ -25,7 +25,8 @@ passlib
 paramiko>=2.1.6
 pycurl
 pygit2<=0.28.2; python_version < '3.8'
-pygit2>=1.2.0; python_version >= '3.8'
+pygit2<1.1.0; python_version == '3.8'
+pygit2>=1.2.0; python_version >= '3.9'
 pyiface
 pyinotify
 python-etcd>0.4.2

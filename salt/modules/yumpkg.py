@@ -2256,8 +2256,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.data.repack_dictlist(pkgs):
-            targets.append(pkg)
+        targets.extend(pkgs)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))
