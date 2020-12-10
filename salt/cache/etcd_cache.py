@@ -1,7 +1,7 @@
 """
 Minion data cache plugin for Etcd key/value data store.
 
-.. versionadded:: develop
+.. versionadded:: 2018.3.0
 
 It is up to the system administrator to set up and configure the Etcd
 infrastructure. All is needed for this plugin is a working Etcd agent
