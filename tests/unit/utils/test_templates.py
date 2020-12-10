@@ -273,7 +273,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_init_implicit(self):
-        """ generate_sls_context - Basic one level with impliocit init.sls """
+        """ generate_sls_context - Basic one level with implicit init.sls """
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo",
@@ -389,6 +389,35 @@ class WrapRenderTestCase(TestCase):
             sls_path="foo_foo",
             slspath="foo/foo",
         )
+
+    @mock.patch(
+        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
+    )
+    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @mock.patch("salt.utils.templates.features.get", return_value=True)
+    def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
+        """ Test feature flag selection with FF on"""
+        tplpath = "tplpath"
+        sls = "sls"
+        self.assertEqual("new", salt.utils.templates.generate_sls_context(tplpath, sls))
+        new_impl.assert_called_with(tplpath, sls)
+        legacy_impl.assert_not_called()
+
+    @mock.patch(
+        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
+    )
+    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @mock.patch("salt.utils.templates.features.get", return_value=False)
+    def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
+        """ Test feature flag selection with FF on"""
+        tplpath = "tplpath"
+        sls = "sls"
+        self.assertEqual(
+            "legacy", salt.utils.templates.generate_sls_context(tplpath, sls)
+        )
+
+        new_impl.assert_not_called()
+        legacy_impl.assert_called_with(tplpath, sls)
 
     @skipIf(sys.platform == "win32", "Backslash not possible under windows")
     def test_generate_sls_context__backslash_in_path(self):

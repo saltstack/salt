@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 States for managing zfs datasets
 
@@ -43,13 +42,10 @@ States for managing zfs datasets
       zfs.snapshot_absent
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 from datetime import datetime
 
-# Import Salt libs
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -109,14 +105,14 @@ def _absent(name, dataset_type, force=False, recursive=False):
         ret["result"] = mod_res["destroyed"]
         if ret["result"]:
             ret["changes"][name] = "destroyed"
-            ret["comment"] = "{0} {1} was destroyed".format(dataset_type, name,)
+            ret["comment"] = "{} {} was destroyed".format(dataset_type, name,)
         else:
-            ret["comment"] = "failed to destroy {0} {1}".format(dataset_type, name,)
+            ret["comment"] = "failed to destroy {} {}".format(dataset_type, name,)
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     else:
         ## NOTE: no dataset found with name of the dataset_type
-        ret["comment"] = "{0} {1} is absent".format(dataset_type, name)
+        ret["comment"] = "{} {} is absent".format(dataset_type, name)
 
     return ret
 
@@ -143,7 +139,7 @@ def filesystem_absent(name, force=False, recursive=False):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "invalid dataset name: {0}".format(name),
+            "comment": "invalid dataset name: {}".format(name),
         }
     else:
         ret = _absent(name, "filesystem", force, recursive)
@@ -172,7 +168,7 @@ def volume_absent(name, force=False, recursive=False):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "invalid dataset name: {0}".format(name),
+            "comment": "invalid dataset name: {}".format(name),
         }
     else:
         ret = _absent(name, "volume", force, recursive)
@@ -196,7 +192,7 @@ def snapshot_absent(name, force=False, recursive=False):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "invalid snapshot name: {0}".format(name),
+            "comment": "invalid snapshot name: {}".format(name),
         }
     else:
         ret = _absent(name, "snapshot", force, recursive)
@@ -220,7 +216,7 @@ def bookmark_absent(name, force=False, recursive=False):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "invalid bookmark name: {0}".format(name),
+            "comment": "invalid bookmark name: {}".format(name),
         }
     else:
         ret = _absent(name, "bookmark", force, recursive)
@@ -248,7 +244,7 @@ def hold_absent(name, snapshot, recursive=False):
     ## check we have a snapshot/tag name
     if not __utils__["zfs.is_snapshot"](snapshot):
         ret["result"] = False
-        ret["comment"] = "invalid snapshot name: {0}".format(snapshot)
+        ret["comment"] = "invalid snapshot name: {}".format(snapshot)
         return ret
 
     if (
@@ -257,7 +253,7 @@ def hold_absent(name, snapshot, recursive=False):
         or name == "error"
     ):
         ret["result"] = False
-        ret["comment"] = "invalid tag name: {0}".format(name)
+        ret["comment"] = "invalid tag name: {}".format(name)
         return ret
 
     ## release hold if required
@@ -274,9 +270,9 @@ def hold_absent(name, snapshot, recursive=False):
         ret["result"] = mod_res["released"]
         if ret["result"]:
             ret["changes"] = {snapshot: {name: "released"}}
-            ret["comment"] = "hold {0} released".format(name,)
+            ret["comment"] = "hold {} released".format(name,)
         else:
-            ret["comment"] = "failed to release hold {0}".format(name,)
+            ret["comment"] = "failed to release hold {}".format(name,)
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     elif "error" in holds:
@@ -285,7 +281,7 @@ def hold_absent(name, snapshot, recursive=False):
         ret["comment"] = holds["error"]
     else:
         ## NOTE: no hold found with name for snapshot
-        ret["comment"] = "hold {0} is absent".format(name,)
+        ret["comment"] = "hold {} is absent".format(name,)
 
     return ret
 
@@ -311,7 +307,7 @@ def hold_present(name, snapshot, recursive=False):
     ## check we have a snapshot/tag name
     if not __utils__["zfs.is_snapshot"](snapshot):
         ret["result"] = False
-        ret["comment"] = "invalid snapshot name: {0}".format(snapshot)
+        ret["comment"] = "invalid snapshot name: {}".format(snapshot)
         return ret
 
     if (
@@ -320,14 +316,14 @@ def hold_present(name, snapshot, recursive=False):
         or name == "error"
     ):
         ret["result"] = False
-        ret["comment"] = "invalid tag name: {0}".format(name)
+        ret["comment"] = "invalid tag name: {}".format(name)
         return ret
 
     ## place hold if required
     holds = __salt__["zfs.holds"](snapshot)
     if name in holds:
         ## NOTE: hold with name already exists for snapshot
-        ret["comment"] = "hold {0} is present for {1}".format(name, snapshot,)
+        ret["comment"] = "hold {} is present for {}".format(name, snapshot,)
     else:
         ## NOTE: no hold found with name for snapshot
         if not __opts__["test"]:
@@ -338,9 +334,9 @@ def hold_present(name, snapshot, recursive=False):
         ret["result"] = mod_res["held"]
         if ret["result"]:
             ret["changes"] = OrderedDict([(snapshot, OrderedDict([(name, "held")]))])
-            ret["comment"] = "hold {0} added to {1}".format(name, snapshot)
+            ret["comment"] = "hold {} added to {}".format(name, snapshot)
         else:
-            ret["comment"] = "failed to add hold {0} to {1}".format(name, snapshot)
+            ret["comment"] = "failed to add hold {} to {}".format(name, snapshot)
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
 
@@ -425,12 +421,12 @@ def _dataset_present(
     ## check we have valid filesystem name/volume name/clone snapshot
     if not __utils__["zfs.is_dataset"](name):
         ret["result"] = False
-        ret["comment"] = "invalid dataset name: {0}".format(name)
+        ret["comment"] = "invalid dataset name: {}".format(name)
         return ret
 
     if cloned_from and not __utils__["zfs.is_snapshot"](cloned_from):
         ret["result"] = False
-        ret["comment"] = "{0} is not a snapshot".format(cloned_from)
+        ret["comment"] = "{} is not a snapshot".format(cloned_from)
         return ret
 
     ## ensure dataset is in correct state
@@ -477,15 +473,15 @@ def _dataset_present(
                 ret["result"] = False
                 if ret["comment"] == "":
                     ret["comment"] = "The following properties were not updated:"
-                ret["comment"] = "{0} {1}".format(ret["comment"], prop)
+                ret["comment"] = "{} {}".format(ret["comment"], prop)
 
         ## NOTE: update comment
         if ret["result"] and name in ret["changes"]:
-            ret["comment"] = "{0} {1} was updated".format(dataset_type, name)
+            ret["comment"] = "{} {} was updated".format(dataset_type, name)
         elif ret["result"]:
-            ret["comment"] = "{0} {1} is uptodate".format(dataset_type, name)
+            ret["comment"] = "{} {} is uptodate".format(dataset_type, name)
         else:
-            ret["comment"] = "{0} {1} failed to be updated".format(dataset_type, name)
+            ret["comment"] = "{} {} failed to be updated".format(dataset_type, name)
 
     ## NOTE: create or clone the dataset
     else:
@@ -521,11 +517,9 @@ def _dataset_present(
             ret["changes"][name] = mod_res_action
             if properties:
                 ret["changes"][name] = properties
-            ret["comment"] = "{0} {1} was {2}".format(
-                dataset_type, name, mod_res_action,
-            )
+            ret["comment"] = "{} {} was {}".format(dataset_type, name, mod_res_action,)
         else:
-            ret["comment"] = "failed to {0} {1} {2}".format(
+            ret["comment"] = "failed to {} {} {}".format(
                 mod_res_action[:-1], dataset_type, name,
             )
             if "error" in mod_res:
@@ -635,19 +629,19 @@ def bookmark_present(name, snapshot):
     ## check we have valid snapshot/bookmark name
     if not __utils__["zfs.is_snapshot"](snapshot):
         ret["result"] = False
-        ret["comment"] = "invalid snapshot name: {0}".format(name)
+        ret["comment"] = "invalid snapshot name: {}".format(name)
         return ret
 
     if "#" not in name and "/" not in name:
         ## NOTE: simple snapshot name
         #        take the snapshot name and replace the snapshot but with the simple name
         #        e.g. pool/fs@snap + bm --> pool/fs#bm
-        name = "{0}#{1}".format(snapshot[: snapshot.index("@")], name)
+        name = "{}#{}".format(snapshot[: snapshot.index("@")], name)
         ret["name"] = name
 
     if not __utils__["zfs.is_bookmark"](name):
         ret["result"] = False
-        ret["comment"] = "invalid bookmark name: {0}".format(name)
+        ret["comment"] = "invalid bookmark name: {}".format(name)
         return ret
 
     ## ensure bookmark exists
@@ -661,9 +655,9 @@ def bookmark_present(name, snapshot):
         ret["result"] = mod_res["bookmarked"]
         if ret["result"]:
             ret["changes"][name] = snapshot
-            ret["comment"] = "{0} bookmarked as {1}".format(snapshot, name)
+            ret["comment"] = "{} bookmarked as {}".format(snapshot, name)
         else:
-            ret["comment"] = "failed to bookmark {0}".format(snapshot)
+            ret["comment"] = "failed to bookmark {}".format(snapshot)
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     else:
@@ -701,7 +695,7 @@ def snapshot_present(name, recursive=False, properties=None):
     ## check we have valid snapshot name
     if not __utils__["zfs.is_snapshot"](name):
         ret["result"] = False
-        ret["comment"] = "invalid snapshot name: {0}".format(name)
+        ret["comment"] = "invalid snapshot name: {}".format(name)
         return ret
 
     ## ensure snapshot exits
@@ -719,9 +713,9 @@ def snapshot_present(name, recursive=False, properties=None):
             ret["changes"][name] = "snapshotted"
             if properties:
                 ret["changes"][name] = properties
-            ret["comment"] = "snapshot {0} was created".format(name)
+            ret["comment"] = "snapshot {} was created".format(name)
         else:
-            ret["comment"] = "failed to create snapshot {0}".format(name)
+            ret["comment"] = "failed to create snapshot {}".format(name)
             if "error" in mod_res:
                 ret["comment"] = mod_res["error"]
     else:
@@ -749,14 +743,14 @@ def promoted(name):
     ## check we if we have a valid dataset name
     if not __utils__["zfs.is_dataset"](name):
         ret["result"] = False
-        ret["comment"] = "invalid dataset name: {0}".format(name)
+        ret["comment"] = "invalid dataset name: {}".format(name)
         return ret
 
     ## ensure dataset is the primary instance
     if not __salt__["zfs.exists"](name, **{"type": "filesystem,volume"}):
         ## NOTE: we don't have a dataset
         ret["result"] = False
-        ret["comment"] = "dataset {0} does not exist".format(name)
+        ret["comment"] = "dataset {} does not exist".format(name)
     else:
         ## NOTE: check if we have a blank origin (-)
         if (
@@ -766,7 +760,7 @@ def promoted(name):
             == "-"
         ):
             ## NOTE: we're already promoted
-            ret["comment"] = "{0} already promoted".format(name)
+            ret["comment"] = "{} already promoted".format(name)
         else:
             ## NOTE: promote dataset
             if not __opts__["test"]:
@@ -777,9 +771,9 @@ def promoted(name):
             ret["result"] = mod_res["promoted"]
             if ret["result"]:
                 ret["changes"][name] = "promoted"
-                ret["comment"] = "{0} promoted".format(name)
+                ret["comment"] = "{} promoted".format(name)
             else:
-                ret["comment"] = "failed to promote {0}".format(name)
+                ret["comment"] = "failed to promote {}".format(name)
                 if "error" in mod_res:
                     ret["comment"] = mod_res["error"]
 
@@ -810,7 +804,7 @@ def _schedule_snapshot_retrieve(dataset, prefix, snapshots):
         snap_name = snap[snap.index("@") + 1 :]
 
         ## NOTE: we only want snapshots matching our prefix
-        if not snap_name.startswith("{0}-".format(prefix)):
+        if not snap_name.startswith("{}-".format(prefix)):
             continue
 
         ## NOTE: retrieve the holds for this snapshot
@@ -862,7 +856,7 @@ def _schedule_snapshot_prepare(dataset, prefix, snapshots):
         if snapshots[hold]:
             ## NOTE: extract datetime from snapshot name
             timestamp = datetime.strptime(
-                snapshots[hold][-1], "{0}@{1}-%Y%m%d_%H%M%S".format(dataset, prefix),
+                snapshots[hold][-1], "{}@{}-%Y%m%d_%H%M%S".format(dataset, prefix),
             ).replace(second=0, microsecond=0)
 
             ## NOTE: compare current timestamp to timestamp from snapshot
@@ -930,15 +924,15 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
     ## NOTE: we need a valid dataset
     if not __utils__["zfs.is_dataset"](name):
         ret["result"] = False
-        ret["comment"] = "invalid dataset name: {0}".format(name)
+        ret["comment"] = "invalid dataset name: {}".format(name)
 
     if not __salt__["zfs.exists"](name, **{"type": "filesystem,volume"}):
-        ret["comment"] = "dataset {0} does not exist".format(name)
+        ret["comment"] = "dataset {} does not exist".format(name)
         ret["result"] = False
 
     ## NOTE: prefix must be 4 or longer
     if not prefix or len(prefix) < 4:
-        ret["comment"] = "prefix ({0}) must be at least 4 long".format(prefix)
+        ret["comment"] = "prefix ({}) must be at least 4 long".format(prefix)
         ret["result"] = False
 
     ## NOTE: validate schedule
@@ -951,7 +945,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             snapshots["_schedule"][hold] = schedule[hold]
         else:
             ret["result"] = False
-            ret["comment"] = "schedule value for {0} is not an integer".format(hold,)
+            ret["comment"] = "schedule value for {} is not an integer".format(hold,)
             break
         total_count += snapshots["_schedule"][hold]
     if ret["result"] and total_count == 0:
@@ -989,7 +983,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
         if not mod_res["snapshotted"]:
             ret["result"] = False
-            ret["comment"] = "error creating snapshot ({0})".format(snapshot_name)
+            ret["comment"] = "error creating snapshot ({})".format(snapshot_name)
         else:
             ## NOTE: create holds (if we have a snapshot)
             for hold in snapshot_holds:
@@ -1002,7 +996,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
                 if not mod_res["held"]:
                     ret["result"] = False
-                    ret["comment"] = "error adding hold ({0}) to snapshot ({1})".format(
+                    ret["comment"] = "error adding hold ({}) to snapshot ({})".format(
                         hold, snapshot_name,
                     )
                     break
@@ -1031,7 +1025,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
             if not mod_res["released"]:
                 ret["result"] = False
-                ret["comment"] = "error adding hold ({0}) to snapshot ({1})".format(
+                ret["comment"] = "error adding hold ({}) to snapshot ({})".format(
                     hold, snapshot_name,
                 )
 

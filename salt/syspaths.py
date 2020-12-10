@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.syspaths
     ~~~~~~~~~~~~~
@@ -14,14 +13,18 @@
     paths that are set in the master/minion config files.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os.path
 import sys
 
-__PLATFORM = sys.platform.lower()
+import salt.utils.platform
+
+if salt.utils.platform.is_junos():
+    __PLATFORM = "junos"
+else:
+    __PLATFORM = sys.platform.lower()
+
 typo_warning = True
 log = logging.getLogger(__name__)
 EXPECTED_VARIABLES = (
@@ -52,7 +55,7 @@ except ImportError:
     import types
 
     __generated_syspaths = types.ModuleType(
-        str("salt._syspaths")
+        "salt._syspaths"
     )  # future lint: blacklisted-function
     for key in EXPECTED_VARIABLES:
         setattr(__generated_syspaths, key, None)
@@ -101,6 +104,8 @@ if CONFIG_DIR is None:
         CONFIG_DIR = os.path.join(ROOT_DIR, "conf")
     elif "freebsd" in __PLATFORM:
         CONFIG_DIR = os.path.join(ROOT_DIR, "usr", "local", "etc", "salt")
+    elif "junos" in __PLATFORM:
+        CONFIG_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "etc")
     elif "netbsd" in __PLATFORM:
         CONFIG_DIR = os.path.join(ROOT_DIR, "usr", "pkg", "etc", "salt")
     elif "sunos5" in __PLATFORM:
@@ -114,6 +119,8 @@ if SHARE_DIR is None:
         SHARE_DIR = os.path.join(ROOT_DIR, "share")
     elif "freebsd" in __PLATFORM:
         SHARE_DIR = os.path.join(ROOT_DIR, "usr", "local", "share", "salt")
+    elif "junos" in __PLATFORM:
+        SHARE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "share")
     elif "netbsd" in __PLATFORM:
         SHARE_DIR = os.path.join(ROOT_DIR, "usr", "share", "salt")
     elif "sunos5" in __PLATFORM:
@@ -123,11 +130,17 @@ if SHARE_DIR is None:
 
 CACHE_DIR = __generated_syspaths.CACHE_DIR
 if CACHE_DIR is None:
-    CACHE_DIR = os.path.join(ROOT_DIR, "var", "cache", "salt")
+    if "junos" in __PLATFORM:
+        CACHE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "cache")
+    else:
+        CACHE_DIR = os.path.join(ROOT_DIR, "var", "cache", "salt")
 
 SOCK_DIR = __generated_syspaths.SOCK_DIR
 if SOCK_DIR is None:
-    SOCK_DIR = os.path.join(ROOT_DIR, "var", "run", "salt")
+    if "junos" in __PLATFORM:
+        SOCK_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "run")
+    else:
+        SOCK_DIR = os.path.join(ROOT_DIR, "var", "run", "salt")
 
 SRV_ROOT_DIR = __generated_syspaths.SRV_ROOT_DIR
 if SRV_ROOT_DIR is None:
@@ -155,7 +168,10 @@ if LOGS_DIR is None:
 
 PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
 if PIDFILE_DIR is None:
-    PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "run")
+    if "junos" in __PLATFORM:
+        PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "local", "salt", "run")
+    else:
+        PIDFILE_DIR = os.path.join(ROOT_DIR, "var", "run")
 
 SPM_PARENT_PATH = __generated_syspaths.SPM_PARENT_PATH
 if SPM_PARENT_PATH is None:

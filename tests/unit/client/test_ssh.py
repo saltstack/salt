@@ -392,8 +392,8 @@ class SSHSingleTests(TestCase):
             ret = single.shim_cmd(cmd_str="echo test")
             assert ret == exp_ret
             assert [
-                call("/bin/sh '$HOME/.35d96ccac2ff.py'"),
-                call("rm '$HOME/.35d96ccac2ff.py'"),
+                call("/bin/sh '.35d96ccac2ff.py'"),
+                call("rm '.35d96ccac2ff.py'"),
             ] == mock_cmd.call_args_list
 
     def test_run_ssh_pre_flight(self):

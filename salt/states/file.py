@@ -5350,9 +5350,13 @@ def keyvalue(
                 ret, "file.keyvalue can not combine key_values with key and value"
             )
         key_values = {str(key): value}
-    elif type(key_values) is not dict:
+
+    elif not isinstance(key_values, dict) or not key_values:
+        msg = "is not a dictionary"
+        if not key_values:
+            msg = "is empty"
         return _error(
-            ret, "file.keyvalue key and value not supplied and key_values empty"
+            ret, "file.keyvalue key and value not supplied and key_values " + msg,
         )
 
     # try to open the file and only return a comment if ignore_if_missing is
@@ -6946,7 +6950,7 @@ def patch(
         try:
             orig_test = __opts__["test"]
             __opts__["test"] = False
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = False
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = False
             result = managed(
                 patch_file,
                 source=source_match,
@@ -6968,7 +6972,7 @@ def patch(
             log.debug("file.managed: %s", result)
         finally:
             __opts__["test"] = orig_test
-            sys.modules[__salt__["test.ping"].__module__].__opts__["test"] = orig_test
+            sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = orig_test
 
         if not result["result"]:
             log.debug(
