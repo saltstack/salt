@@ -995,6 +995,7 @@ def _to_blockdev_map(thing):
     YAML example:
 
     .. code-block:: yaml
+
         device-maps:
             /dev/sdb:
                 ephemeral_name: ephemeral0
