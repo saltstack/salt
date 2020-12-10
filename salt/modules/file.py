@@ -3859,7 +3859,7 @@ def access(path, mode):
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
-    .. code-block::text
+    .. code-block:: text
 
         f: Test the existence of the path
         r: Test the readability of the path

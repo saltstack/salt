@@ -935,7 +935,7 @@ def index_put_settings(body=None, hosts=None, profile=None, source=None, **kwarg
 
     The defaults settings for the above parameters depend on the API version being used.
 
-    ..note::
+    .. note::
         Elasticsearch time units can be found here:
         https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
 
