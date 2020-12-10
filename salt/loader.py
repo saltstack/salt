@@ -633,8 +633,8 @@ def ssh_wrapper(opts, functions=None, context=None):
         tag="wrapper",
         pack={
             "__salt__": functions,
-            "__grains__": opts.get("grains", {}),
-            "__pillar__": opts.get("pillar", {}),
+            #        "__grains__": opts.get("grains", {}),
+            #        "__pillar__": opts.get("pillar", {}),
             "__context__": context,
         },
     )
@@ -1082,15 +1082,15 @@ def executors(opts, functions=None, context=None, proxy=None):
     """
     Returns the executor modules
     """
+    if proxy is None:
+        proxy = {}
+    if context is None:
+        context = {}
     return LazyLoader(
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
-        pack={
-            "__salt__": functions,
-            "__context__": context or {},
-            "__proxy__": proxy or {},
-        },
+        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
         pack_self="__executors__",
     )
 
@@ -1172,8 +1172,7 @@ class LoadedFunc:
         functools.update_wrapper(self, func)
 
     def __getattr__(self, name):
-        if name == "__globals__":
-            return self.func.__globals__
+        return getattr(self.func, name)
 
     def __call__(self, *args, **kwargs):
         if self.loader.inject_globals:
@@ -1572,13 +1571,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         """
         if "__grains__" not in self.pack:
-            self.context_dict["grains"] = opts.get("grains", {})
+            grains = opts.get("grains", {})
+            if isinstance(grains, salt.loader_context.NamedLoaderContext):
+                grains = grains.value()
+            self.context_dict["grains"] = grains
             self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "grains"
             )
 
         if "__pillar__" not in self.pack:
-            self.context_dict["pillar"] = opts.get("pillar", {})
+            pillar = opts.get("pillar", {})
+            if isinstance(pillar, salt.loader_context.NamedLoaderContext):
+                pillar = pillar.value()
+            self.context_dict["pillar"] = pillar
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
             )
