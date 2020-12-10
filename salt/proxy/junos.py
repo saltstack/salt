@@ -37,9 +37,6 @@ Run the salt proxy via the following command:
 
 import logging
 
-## DGM
-log = logging.getLogger(__name__)
-
 try:
     HAS_JUNOS = True
     import jnpr.junos
@@ -59,16 +56,14 @@ try:
     from ncclient.operations.errors import TimeoutExpiredError
     from ncclient.transport.third_party.junos.ioproc import IOProc
 
-## DGM except ImportError:
-except ImportError as ex:
-    log.error("DGM proxy junos failed to import, exception {}".format(str(ex)))
+except ImportError:
     HAS_JUNOS = False
 
 __proxyenabled__ = ["junos"]
 
 thisproxy = {}
 
-## DGM log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class RebootActive:
