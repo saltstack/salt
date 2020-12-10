@@ -304,7 +304,7 @@ def targets_deregistered(
     targets
         A list of target IDs or a string of a single target registered to the target group to be removed
 
-    .. versionadded:: Unknown
+    .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 

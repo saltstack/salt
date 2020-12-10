@@ -2,7 +2,7 @@
 CenturyLink Cloud Module
 ========================
 
-.. versionadded:: Oyxgen
+.. versionadded:: 2018.3
 
 The CLC cloud module allows you to manage CLC Via the CLC SDK.
 
