@@ -37,6 +37,7 @@ Salt across all the versions of Python that we support.
 Install pyenv: 
 
     git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+    export PATH="$HOME/.pyenv/bin:$PATH"
     git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 
 ### On Mac
@@ -51,9 +52,9 @@ Install pyenv using brew:
 
 Now add pyenv to your `.bashrc`:
 
-    export PATH="/root/.pyenv/bin:$PATH" >> ~/.bashrc
-    eval "$(pyenv init -)" >> ~/.bashrc
-    eval "$(pyenv virtualenv-init -)" >> ~/.bashrc
+    export PATH="$HOME/.pyenv/bin:$PATH" >> ~/.bashrc
+    pyenv init 2>> ~/.bashrc
+    pyenv virtualenv-init 2>> ~/.bashrc
 
 For other shells, see [the pyenv instructions](https://github.com/pyenv/pyenv#basic-github-checkout).
 
@@ -99,25 +100,19 @@ can add it as a remote:
 If you use your name to refer to your fork, and `salt` to refer to the official
 Salt repo you'll never get `upstream` or `origin` confused.
 
-### Install sphinx
+### `pre-commit` and `nox` Setup
 
-In order to build the docs, you'll need to install sphinx into your virtual
-environment:
+Here at Salt we use [pre-commit](https://pre-commit.com/) and
+[nox](https://nox.thea.codes/en/stable/) to make it easier for contributors to
+get quick feedback. Nox enables us to run multiple different test
+configurations, as well as other common tasks. You can think of it as Make with
+superpowers. Pre-commit does what it sounds like - it configures some Git
+pre-commit hooks to run `black` for formatting, `isort` for keeping our imports
+sorted, and `pylint` to catch issues like unused imports, among others. You can
+easily install them in your virtualenv with:
 
-    python -m pip install sphinx
-
-We'll use this later.
-
-### `pre-commit` Setup
-
-Here at Salt we use [pre-commit](https://pre-commit.com/) to make it easier for
-contributors to get quick feedback. It configures some Git pre-commit hooks to
-run `black` for formatting, `isort` for keeping our imports sorted, and
-`pylint` to catch issues like unused imports, among others. You can easily
-install it in your virtualenv with:
-
-    python -m pip install pre-commit
-    pre-commit init
+    python -m pip install pre-commit nox
+    pre-commit install
 
 Now before each commit, it will ensure that your code at least *looks* right
 before you open a pull request. And with that step, it's time to start hacking
@@ -169,20 +164,22 @@ tests written in real time.
 ### Documentation
 
 Salt uses both docstrings, as well as normal reStructuredText files in the
-`salt/doc` folder for documentation. To build the docs and view them in your
-browser, simply run:
+`salt/doc` folder for documentation. Since we use nox, you can build your docs
+and view them in your browser with this one-liner:
 
-    cd doc; make html; cd _build/html; python -m http.server
+    python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
 
 The first time this will take a while because there are a *lot* of modules.
 Maybe you should go grab some dessert if you already finished that sandwich.
-But once Sphinx is done building the docs you can go to
-http://localhost:8000/contents.html and view the docs as they exist. If you
-make changes, you can simply run this:
+But once Sphinx is done building the docs, python should launch your default
+browser with the URL http://localhost:8000/contents.html. Now you can navigate
+to your docs and ensure your changes exist. If you make changes, you can simply
+run this:
 
-    cd -; make html; cd _build/html; python -m http.server
+    cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m http.server
 
-And get your updated docs.
+And then refresh your browser to get your updated docs. This one should be
+quite a bit faster since Sphinx won't need to rebuild everything.
 
 If your change is a doc-only change, you can go ahead and commit/push your code
 and open a PR. Otherwise you'll want to write some tests and code.
@@ -250,6 +247,16 @@ specifying the minion (`\*`), but if you're running the dev version then you
 still will need to pass in the config dir. Now that you've got Salt running,
 you can hack away on the Salt codebase!
 
+If you need to restart Salt for some reason, if you've made changes and they
+don't appear to be reflected, this is one option:
+
+    kill -INT $(pgrep salt-master)
+    kill -INT $(pgrep salt-minion)
+
+If you'd rather not use `kill`, you can have a couple of terminals open with
+your salt virtualenv activated and omit the `--daemon` argument. Salt will run
+in the foreground, so you can just use ctrl+c to quit.
+
 ### Test First? Test Last? Test Meaningfully!
 
 You can write tests first or tests last, as long as your tests are meaningful
@@ -278,20 +285,20 @@ last, ensure that your tests are meaningful.
 
 #### Running Tests
 
-We use `nox`, similar to `tox`, to run our tests. If you don't have nox
-installed:
+As previously mentioned, we use `nox`, and that's how we run our tests. You
+should have it installed by this point but if not you can install it with this:
 
     python -m pip install nox
 
 Now you can run your tests:
 
-    nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py
+    python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py
 
 It's a good idea to install [espeak](https://github.com/espeak-ng/espeak-ng) or
 use `say` on Mac if you're running some long-running tests. You can do
 something like this:
 
-    nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+    python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
 That way you don't have to keep monitoring the actual test run.
 
@@ -335,7 +342,8 @@ will run across different platforms. You will also get a reviewer assigned. If
 your PR is submitted during the week you should be able to expect some kind of
 communication within that business day. If your tests are passing and we're not
 in a code freeze, ideally your code will be merged that day. If you haven't
-heard from your assigned reviewer, ping them on GitHub, [irc][salt on freenode], or Community Slack.
+heard from your assigned reviewer, ping them on GitHub, [irc][salt on
+freenode], or Community Slack.
 
 If, as mentioned earlier, you're not interested in writing tests or docs, just
 note that in your PR. Something like, "I'm not interested in writing
@@ -386,3 +394,16 @@ If the value is less than 2047, you should increase it with:
     limit descriptors 2047
     
 [salt on freenode]: https://webchat.freenode.net/#salt
+
+
+### Pygit2 or other dependency install fails
+
+You may see some failure messages when installing requirements. You can
+directly access your nox environment and possibly install pygit (or other
+dependency) that way. When you run nox, you'll see a message like this:
+
+    nox > Re-using existing virtual environment at .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false.
+
+For this, you would be able to install with:
+
+    .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false/bin/python -m pip install pygit2
