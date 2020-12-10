@@ -138,7 +138,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = salt.utils.msgpack.Unpacker(encoding="utf-8")
+        unpacker = salt.utils.msgpack.Unpacker(raw=False)
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
@@ -1316,12 +1316,13 @@ class TestDaemon:
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
-                try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
-                except OSError as exc:
-                    if exc.errno != 3:
-                        raise
+            if os.path.exists(self.sshd_pidfile):
+                with salt.utils.files.fopen(self.sshd_pidfile) as fhr:
+                    try:
+                        os.kill(int(fhr.read()), signal.SIGKILL)
+                    except OSError as exc:
+                        if exc.errno != 3:
+                            raise
 
     def _exit_mockbin(self):
         path = os.environ.get("PATH", "")

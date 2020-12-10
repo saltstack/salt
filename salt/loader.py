@@ -4,6 +4,8 @@ directories for python loadable code and organizes the code into the
 plugin interfaces used by Salt.
 """
 
+import contextvars
+import copy
 import functools
 import importlib.machinery  # pylint: disable=no-name-in-module,import-error
 import importlib.util  # pylint: disable=no-name-in-module,import-error
@@ -17,13 +19,13 @@ import threading
 import time
 import traceback
 import types
-import weakref
 from collections.abc import MutableMapping
 from zipimport import zipimporter
 
 import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
+import salt.loader_context
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -241,9 +243,8 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__salt__",
     )
-
-    ret.pack["__salt__"] = ret
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -304,7 +305,6 @@ def metaproxy(opts, loaded_base_name=None):
     """
     Return functions used in the meta proxy
     """
-
     return LazyLoader(
         _module_dirs(opts, "metaproxy"),
         opts,
@@ -340,12 +340,18 @@ def engines(opts, functions, runners, utils, proxy=None):
 
 
 def proxy(
-    opts, functions=None, returners=None, whitelist=None, utils=None, context=None
+    opts,
+    functions=None,
+    returners=None,
+    whitelist=None,
+    utils=None,
+    context=None,
+    pack_self="__proxy__",
 ):
     """
     Returns the proxy module for this salt-proxy-minion
     """
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "proxy"),
         opts,
         tag="proxy",
@@ -356,11 +362,8 @@ def proxy(
             "__context__": context,
         },
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self=pack_self,
     )
-
-    ret.pack["__proxy__"] = ret
-
-    return ret
 
 
 def returners(opts, functions, whitelist=None, context=None, proxy=None):
@@ -376,7 +379,7 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy):
+def utils(opts, whitelist=None, context=None, proxy=proxy, pack_self=None):
     """
     Returns the utility modules
     """
@@ -386,6 +389,7 @@ def utils(opts, whitelist=None, context=None, proxy=proxy):
         tag="utils",
         whitelist=whitelist,
         pack={"__context__": context, "__proxy__": proxy or {}},
+        pack_self=pack_self,
     )
 
 
@@ -400,8 +404,8 @@ def pillars(opts, functions, context=None):
         tag="pillar",
         pack={"__salt__": functions, "__context__": context, "__utils__": _utils},
         extra_module_dirs=_utils.module_dirs,
+        pack_self="__ext_pillar__",
     )
-    ret.pack["__ext_pillar__"] = ret
     return FilterDictWrapper(ret, ".ext_pillar")
 
 
@@ -562,19 +566,21 @@ def states(
     if context is None:
         context = {}
 
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
         tag="states",
-        pack={"__salt__": functions, "__proxy__": proxy or {}},
+        pack={
+            "__salt__": functions,
+            "__proxy__": proxy or {},
+            "__utils__": utils,
+            "__serializers__": serializers,
+            "__context__": context,
+        },
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__states__",
     )
-    ret.pack["__states__"] = ret
-    ret.pack["__utils__"] = utils
-    ret.pack["__serializers__"] = serializers
-    ret.pack["__context__"] = context
-    return ret
 
 
 def beacons(opts, functions, context=None, proxy=None):
@@ -627,8 +633,8 @@ def ssh_wrapper(opts, functions=None, context=None):
         tag="wrapper",
         pack={
             "__salt__": functions,
-            "__grains__": opts.get("grains", {}),
-            "__pillar__": opts.get("pillar", {}),
+            #        "__grains__": opts.get("grains", {}),
+            #        "__pillar__": opts.get("pillar", {}),
             "__context__": context,
         },
     )
@@ -649,7 +655,11 @@ def render(opts, functions, states=None, proxy=None, context=None):
 
     if states:
         pack["__states__"] = states
-    pack["__proxy__"] = proxy or {}
+
+    if proxy is None:
+        proxy = {}
+    pack["__proxy__"] = proxy
+
     ret = LazyLoader(
         _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
         opts,
@@ -684,7 +694,6 @@ def grain_funcs(opts, proxy=None, context=None):
     """
     _utils = utils(opts, proxy=proxy)
     pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
-
     ret = LazyLoader(
         _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
         opts,
@@ -961,17 +970,16 @@ def runner(opts, utils=None, context=None, whitelist=None):
         utils = {}
     if context is None:
         context = {}
-    ret = LazyLoader(
+    return LazyLoader(
         _module_dirs(opts, "runners", "runner", ext_type_dirs="runner_dirs"),
         opts,
         tag="runners",
         pack={"__utils__": utils, "__context__": context},
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
+        # TODO: change from __salt__ to something else, we overload __salt__ too much
+        pack_self="__salt__",
     )
-    # TODO: change from __salt__ to something else, we overload __salt__ too much
-    ret.pack["__salt__"] = ret
-    return ret
 
 
 def queues(opts):
@@ -998,7 +1006,6 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
         tag="sdb",
         pack={
             "__sdb__": functions,
-            "__opts__": opts,
             "__utils__": utils,
             "__salt__": minion_mods(opts, utils=utils),
         },
@@ -1075,18 +1082,17 @@ def executors(opts, functions=None, context=None, proxy=None):
     """
     Returns the executor modules
     """
-    executors = LazyLoader(
+    if proxy is None:
+        proxy = {}
+    if context is None:
+        context = {}
+    return LazyLoader(
         _module_dirs(opts, "executors", "executor"),
         opts,
         tag="executor",
-        pack={
-            "__salt__": functions,
-            "__context__": context or {},
-            "__proxy__": proxy or {},
-        },
+        pack={"__salt__": functions, "__context__": context, "__proxy__": proxy},
+        pack_self="__executors__",
     )
-    executors.pack["__executors__"] = executors
-    return executors
 
 
 def cache(opts, serial):
@@ -1097,7 +1103,7 @@ def cache(opts, serial):
         _module_dirs(opts, "cache", "cache"),
         opts,
         tag="cache",
-        pack={"__opts__": opts, "__context__": {"serial": serial}},
+        pack={"__context__": {"serial": serial}},
     )
 
 
@@ -1116,51 +1122,6 @@ def _mod_type(module_path):
     if module_path.startswith(SALT_BASE_PATH):
         return "int"
     return "ext"
-
-
-def _cleanup_module_namespace(loaded_base_name, delete_from_sys_modules=False):
-    """
-    Clean module namespace.
-    If ``delete_from_sys_modules`` is ``False``, then the module instance in ``sys.modules``
-    will only be set to ``None``, when ``True``, it's actually ``del``elted.
-
-    The reason for this two stage cleanup procedure is because this function might
-    get called during the GC collection cycle and trigger https://bugs.python.org/issue40327
-
-    We seem to specially trigger this during the CI test runs with ``coverage.py`` tracking
-    the code usage:
-
-        Traceback (most recent call last):
-          File "/urs/lib64/python3.6/site-packages/coverage/multiproc.py", line 37, in _bootstrap
-            cov.start()
-          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 527, in start
-            self._init_for_start()
-          File "/urs/lib64/python3.6/site-packages/coverage/control.py", line 455, in _init_for_start
-            concurrency=concurrency,
-          File "/urs/lib64/python3.6/site-packages/coverage/collector.py", line 111, in __init__
-            self.origin = short_stack()
-          File "/urs/lib64/python3.6/site-packages/coverage/debug.py", line 157, in short_stack
-            stack = inspect.stack()[limit:skip:-1]
-          File "/usr/lib64/python3.6/inspect.py", line 1501, in stack
-            return getouterframes(sys._getframe(1), context)
-          File "/usr/lib64/python3.6/inspect.py", line 1478, in getouterframes
-            frameinfo = (frame,) + getframeinfo(frame, context)
-          File "/usr/lib64/python3.6/inspect.py", line 1452, in getframeinfo
-            lines, lnum = findsource(frame)
-          File "/usr/lib64/python3.6/inspect.py", line 780, in findsource
-            module = getmodule(object, file)
-          File "/usr/lib64/python3.6/inspect.py", line 732, in getmodule
-            for modname, module in list(sys.modules.items()):
-        RuntimeError: dictionary changed size during iteration
-    """
-    for name in list(sys.modules):
-        if name.startswith(loaded_base_name):
-            if delete_from_sys_modules:
-                del sys.modules[name]
-            else:
-                mod = sys.modules[name]
-                sys.modules[name] = None
-                del mod
 
 
 # TODO: move somewhere else?
@@ -1193,6 +1154,53 @@ class FilterDictWrapper(MutableMapping):
                 yield key.replace(self.suffix, "")
 
 
+class LoadedFunc:
+    """
+    The functions loaded by LazyLoader instances using subscript notation
+    'a[k]' will be wrapped with LoadedFunc.
+
+      - Makes sure functions are called with the correct loader's context.
+      - Provides access to a wrapped func's __global__ attribute
+
+    :param func callable: The callable to wrap.
+    :param dict loader: The loader to use in the context when the wrapped callable is called.
+    """
+
+    def __init__(self, func, loader):
+        self.func = func
+        self.loader = loader
+        functools.update_wrapper(self, func)
+
+    def __getattr__(self, name):
+        return getattr(self.func, name)
+
+    def __call__(self, *args, **kwargs):
+        if self.loader.inject_globals:
+            run_func = global_injector_decorator(self.loader.inject_globals)(self.func)
+        else:
+            run_func = self.func
+        return self.loader.run(run_func, *args, **kwargs)
+
+
+class LoadedMod:
+    def __init__(self, mod, loader):
+        """
+        Return the wrapped func's globals via this object's __globals__
+        attribute.
+        """
+        self.mod = mod
+        self.loader = loader
+
+    def __getattr__(self, name):
+        """
+        Run the wrapped function in the loader's context.
+        """
+        attr = getattr(self.mod, name)
+        if inspect.isfunction(attr) or inspect.ismethod(attr):
+            return LoadedFunc(attr, self.loader)
+        return attr
+
+
 class LazyLoader(salt.utils.lazy.LazyDict):
     """
     A pseduo-dictionary which has a set of keys which are the
@@ -1214,6 +1222,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     :param str virtual_funcs: The name of additional functions in the module to call to verify its functionality.
                                 If not true, the module will not load.
     :param list extra_module_dirs: A list of directories that will be able to import from
+    :param str pack_self: Pack this module into a variable by this name into modules loaded
     :returns: A LazyLoader object which functions as a dictionary. Keys are 'module.function' and values
     are function references themselves which are loaded on-demand.
     # TODO:
@@ -1237,37 +1246,31 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         proxy=None,
         virtual_funcs=None,
         extra_module_dirs=None,
+        pack_self=None,
     ):  # pylint: disable=W0231
         """
         In pack, if any of the values are None they will be replaced with an
         empty context-specific dict
         """
 
+        self.parent_loader = None
         self.inject_globals = {}
         self.pack = {} if pack is None else pack
+        for i in self.pack:
+            if isinstance(self.pack[i], salt.loader_context.NamedLoaderContext):
+                self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
         threadsafety = not opts.get("multiprocessing")
         self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
+        self.pack_self = pack_self
 
         self.module_dirs = module_dirs
         self.tag = tag
         self._gc_finalizer = None
         if loaded_base_name and loaded_base_name != LOADED_BASE_NAME:
             self.loaded_base_name = loaded_base_name
-            # Remove any modules matching self.loaded_base_name that have been set to None previously
-            self.clean_modules()
-            # Make sure that, when this module is about to be GC'ed, we at least set any modules in
-            # sys.modules which match self.loaded_base_name to None to reduce memory usage over time.
-            # ATTENTION: Do not replace the '_cleanup_module_namespace' function on the call below with
-            #            self.clean_modules as that WILL prevent this loader object from being garbage
-            #            collected and the finalizer running.
-            self._gc_finalizer = weakref.finalize(
-                self, _cleanup_module_namespace, "{}".format(self.loaded_base_name)
-            )
-            # This finalizer does not need to run when the process is exiting
-            self._gc_finalizer.atexit = False
         else:
             self.loaded_base_name = LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
@@ -1329,10 +1332,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         """
         Clean modules
         """
-        if self._gc_finalizer is not None and self._gc_finalizer.alive:
-            # Prevent the weakref.finalizer instance from running, there's no point after the next call.
-            self._gc_finalizer.detach()
-        _cleanup_module_namespace(self.loaded_base_name, delete_from_sys_modules=True)
+        for name in list(sys.modules):
+            if name.startswith(self.loaded_base_name):
+                del sys.modules[name]
 
     def __getitem__(self, item):
         """
@@ -1340,10 +1342,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         to last-minute inject globals
         """
         func = super().__getitem__(item)
-        if self.inject_globals:
-            return global_injector_decorator(self.inject_globals)(func)
-        else:
-            return func
+        return LoadedFunc(func, self)
 
     def __getattr__(self, mod_name):
         """
@@ -1368,7 +1367,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if self._load_module(name) and mod_name in self.loaded_modules:
                     break
         if mod_name in self.loaded_modules:
-            return self.loaded_modules[mod_name]
+            return LoadedMod(self.loaded_modules[mod_name], self)
         else:
             raise AttributeError(mod_name)
 
@@ -1572,13 +1571,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         """
         if "__grains__" not in self.pack:
-            self.context_dict["grains"] = opts.get("grains", {})
+            grains = opts.get("grains", {})
+            if isinstance(grains, salt.loader_context.NamedLoaderContext):
+                grains = grains.value()
+            self.context_dict["grains"] = grains
             self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "grains"
             )
 
         if "__pillar__" not in self.pack:
-            self.context_dict["pillar"] = opts.get("pillar", {})
+            pillar = opts.get("pillar", {})
+            if isinstance(pillar, salt.loader_context.NamedLoaderContext):
+                pillar = pillar.value()
+            self.context_dict["pillar"] = pillar
             self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
                 self.context_dict, "pillar"
             )
@@ -1763,7 +1768,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # loading using exec_module has been causing odd things
                     # with the magic dunders we pack into the loaded
                     # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
+                    mod = self.run(spec.loader.load_module)
                     # mod = importlib.util.module_from_spec(spec)
                     # spec.loader.exec_module(mod)
                     # pylint: enable=no-member
@@ -1814,14 +1819,56 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
-        if hasattr(mod, "__opts__"):
-            mod.__opts__.update(self.opts)
+        loader_context = salt.loader_context.LoaderContext()
+        if hasattr(mod, "__salt_loader__"):
+            if not isinstance(mod.__salt_loader__, salt.loader_context.LoaderContext):
+                log.warning("Override  __salt_loader__: %s", mod)
+                mod.__salt_loader__ = loader_context
         else:
-            mod.__opts__ = self.opts
+            mod.__salt_loader__ = loader_context
+
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader_context.NamedLoaderContext):
+                if not hasattr(mod, "__orig_opts__"):
+                    mod.__orig_opts__ = copy.deepcopy(mod.__opts__)
+                mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
+                mod.__opts__.update(self.opts)
+        else:
+            if not hasattr(mod, "__orig_opts__"):
+                mod.__orig_opts__ = {}
+            mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
+            mod.__opts__.update(self.opts)
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
-            setattr(mod, p_name, p_value)
+            mod_named_context = getattr(mod, p_name, None)
+            if hasattr(mod_named_context, "default"):
+                default = copy.deepcopy(mod_named_context.default)
+            else:
+                default = None
+            named_context = loader_context.named_context(p_name, default)
+            if mod_named_context is None:
+                setattr(mod, p_name, named_context)
+            elif named_context != mod_named_context:
+                log.debug("Override  %s: %s", p_name, mod)
+                setattr(mod, p_name, named_context)
+            else:
+                setattr(mod, p_name, named_context)
+
+        if self.pack_self is not None:
+            mod_named_context = getattr(mod, self.pack_self, None)
+            if hasattr(mod_named_context, "default"):
+                default = copy.deepcopy(mod_named_context.default)
+            else:
+                default = None
+            named_context = loader_context.named_context(self.pack_self, default)
+            if mod_named_context is None:
+                setattr(mod, self.pack_self, named_context)
+            elif named_context != mod_named_context:
+                log.debug("Override  %s: %s", self.pack_self, mod)
+                setattr(mod, self.pack_self, named_context)
+            else:
+                setattr(mod, self.pack_self, named_context)
 
         module_name = mod.__name__.rsplit(".", 1)[-1]
 
@@ -1829,7 +1876,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         module_init = getattr(mod, "__init__", None)
         if inspect.isfunction(module_init):
             try:
-                module_init(self.opts)
+                self.run(module_init, self.opts)
             except TypeError as e:
                 log.error(e)
             except Exception:  # pylint: disable=broad-except
@@ -2058,7 +2105,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if hasattr(mod, "__virtual__") and inspect.isfunction(mod.__virtual__):
                 try:
                     start = time.time()
-                    virtual = getattr(mod, virtual_func)()
+                    virtual_attr = getattr(mod, virtual_func)
+                    virtual = self.run(virtual_attr)
                     if isinstance(virtual, tuple):
                         error_reason = virtual[1]
                         virtual = virtual[0]
@@ -2147,6 +2195,45 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return (False, module_name, error_reason, virtual_aliases)
 
         return (True, module_name, None, virtual_aliases)
+
+    def run(self, method, *args, **kwargs):
+        """
+        Run the method in this loader's context
+        """
+        self._last_context = contextvars.copy_context()
+        return self._last_context.run(self._run_as, method, *args, **kwargs)
+
+    def _run_as(self, method, *args, **kwargs):
+        """
+        Handle setting up the context properly and call the method
+        """
+        self.parent_loader = None
+        try:
+            current_loader = salt.loader_context.loader_ctxvar.get()
+        except LookupError:
+            current_loader = None
+        if current_loader is not self:
+            self.parent_loader = current_loader
+        token = salt.loader_context.loader_ctxvar.set(self)
+        try:
+            return method(*args, **kwargs)
+        finally:
+            self.parent_loader = None
+            salt.loader_context.loader_ctxvar.reset(token)
+
+    def run_in_thread(self, method, *args, **kwargs):
+        """
+        Run the function in a new thread with the context of this loader
+        """
+        argslist = [self, method]
+        argslist.extend(args)
+        thread = threading.Thread(target=self.target, args=argslist, kwargs=kwargs)
+        thread.start()
+        return thread
+
+    @staticmethod
+    def target(loader, method, *args, **kwargs):
+        loader.run(method, *args, **kwargs)
 
 
 def global_injector_decorator(inject_globals):

@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 from subprocess import PIPE
 from textwrap import dedent
 
-# Import Salt libs
 import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
-
-# Import Salt Testing libs
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -51,11 +43,11 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin, AdaptedConfigurationTestCaseM
         multisecret = "password is {0} and salt is {0}".format(secret)
         multicrypted = "password is {0} and salt is {0}".format(crypted)
 
-        class GPGDecrypt(object):
+        class GPGDecrypt:
             def communicate(self, *args, **kwargs):
                 return [secret, None]
 
-        class GPGNotDecrypt(object):
+        class GPGNotDecrypt:
             def communicate(self, *args, **kwargs):
                 return [None, "decrypt error"]
 
@@ -111,6 +103,19 @@ class GPGTestCase(TestCase, LoaderModuleMockMixin, AdaptedConfigurationTestCaseM
                     "salt.renderers.gpg._decrypt_object", MagicMock(return_value=secret)
                 ):
                     self.assertEqual(gpg.render(crypted), secret)
+
+    def test_render_bytes(self):
+        """
+        test rendering bytes
+        """
+        key_dir = "/etc/salt/gpgkeys"
+        binfo = b"User more salt."
+
+        with patch("salt.renderers.gpg._get_gpg_exec", MagicMock(return_value=True)):
+            with patch(
+                "salt.renderers.gpg._get_key_dir", MagicMock(return_value=key_dir)
+            ):
+                self.assertEqual(gpg.render(binfo), binfo.decode())
 
     def test_multi_render(self):
         key_dir = "/etc/salt/gpgkeys"
