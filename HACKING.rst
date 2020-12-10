@@ -65,7 +65,7 @@ Now add pyenv to your ``.bashrc``:
 
 ::
 
-   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
+   export PATH="$HOME/.pyenv/bin:$PATH" >> ~/.bashrc
    pyenv init 2>> ~/.bashrc
    pyenv virtualenv-init 2>> ~/.bashrc
 
@@ -127,31 +127,23 @@ got that setup you can add it as a remote:
 If you use your name to refer to your fork, and ``salt`` to refer to the
 official Salt repo you’ll never get ``upstream`` or ``origin`` confused.
 
-Install sphinx
-~~~~~~~~~~~~~~
+``pre-commit`` and ``nox`` Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In order to build the docs, you’ll need to install sphinx into your
-virtual environment:
-
-::
-
-   python -m pip install sphinx
-
-We’ll use this later.
-
-``pre-commit`` Setup
-~~~~~~~~~~~~~~~~~~~~
-
-Here at Salt we use `pre-commit <https://pre-commit.com/>`__ to make it
-easier for contributors to get quick feedback. It configures some Git
-pre-commit hooks to run ``black`` for formatting, ``isort`` for keeping
-our imports sorted, and ``pylint`` to catch issues like unused imports,
-among others. You can easily install it in your virtualenv with:
+Here at Salt we use `pre-commit <https://pre-commit.com/>`__ and
+`nox <https://nox.thea.codes/en/stable/>`__ to make it easier for
+contributors to get quick feedback. Nox enables us to run multiple
+different test configurations, as well as other common tasks. You can
+think of it as Make with superpowers. Pre-commit does what it sounds
+like - it configures some Git pre-commit hooks to run ``black`` for
+formatting, ``isort`` for keeping our imports sorted, and ``pylint`` to
+catch issues like unused imports, among others. You can easily install
+them in your virtualenv with:
 
 ::
 
-   python -m pip install pre-commit
-   pre-commit init
+   python -m pip install pre-commit nox
+   pre-commit install
 
 Now before each commit, it will ensure that your code at least *looks*
 right before you open a pull request. And with that step, it’s time to
@@ -209,25 +201,27 @@ Documentation
 ~~~~~~~~~~~~~
 
 Salt uses both docstrings, as well as normal reStructuredText files in
-the ``salt/doc`` folder for documentation. To build the docs and view
-them in your browser, simply run:
+the ``salt/doc`` folder for documentation. Since we use nox, you can
+build your docs and view them in your browser with this one-liner:
 
 ::
 
-   python -m nox -e 'docs-html(compress=False, clean=False)'
-   cd _build/html; python -m http.server
+   python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
 
 The first time this will take a while because there are a *lot* of
 modules. Maybe you should go grab some dessert if you already finished
-that sandwich. But once Sphinx is done building the docs you can go to
-http://localhost:8000/contents.html and view the docs as they exist. If
-you make changes, you can simply run this:
+that sandwich. But once Sphinx is done building the docs, python should
+launch your default browser with the URL
+http://localhost:8000/contents.html. Now you can navigate to your docs
+and ensure your changes exist. If you make changes, you can simply run
+this:
 
 ::
 
-   cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd _build/html; python -m http.server
+   cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m http.server
 
-And get your updated docs.
+And then refresh your browser to get your updated docs. This one should
+be quite a bit faster since Sphinx won’t need to rebuild everything.
 
 If your change is a doc-only change, you can go ahead and commit/push
 your code and open a PR. Otherwise you’ll want to write some tests and
@@ -314,6 +308,19 @@ not specifying the minion (``\*``), but if you’re running the dev
 version then you still will need to pass in the config dir. Now that
 you’ve got Salt running, you can hack away on the Salt codebase!
 
+If you need to restart Salt for some reason, if you’ve made changes and
+they don’t appear to be reflected, this is one option:
+
+::
+
+   kill -INT $(pgrep salt-master)
+   kill -INT $(pgrep salt-minion)
+
+If you’d rather not use ``kill``, you can have a couple of terminals
+open with your salt virtualenv activated and omit the ``--daemon``
+argument. Salt will run in the foreground, so you can just use ctrl+c to
+quit.
+
 Test First? Test Last? Test Meaningfully!
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -346,8 +353,9 @@ tests last, ensure that your tests are meaningful.
 Running Tests
 ^^^^^^^^^^^^^
 
-We use ``nox``, similar to ``tox``, to run our tests. If you don’t have
-nox installed:
+As previously mentioned, we use ``nox``, and that’s how we run our
+tests. You should have it installed by this point but if not you can
+install it with this:
 
 ::
 
@@ -368,21 +376,7 @@ this:
 
    python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
 
-That way you don’t have to keep monitoring the actual test run. If the nox
-command fails, you might check out some of the other nox configs with ``python
--m nox -l``.
-
-You may also notice that it takes a long time to install dependencies for each test. You can skip this time by setting an environment variable:
-
-::
-
-   export SKIP_REQUIREMENTS_INSTALL=1
-
-That will, as expected(?), skip installing requirements. If you need to temporarily run your test suites and override this setting you can use ``env``:
-
-::
-
-   env -u SKIP_REQUIREMENTS_INSTALL python -m nox -e "pytest-3.7(coverage=False)" -- tests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+That way you don’t have to keep monitoring the actual test run.
 
 Changelog and Commit!
 ~~~~~~~~~~~~~~~~~~~~~
@@ -396,13 +390,12 @@ Don’t do this:
 
    Added frobnosticate capability
 
-That applies to your **git commit message**. But that advice is backwards for
-the **changelog**. We follow the `keepachangelog
-<https://keepachangelog.com/en/1.0.0/>`__ approach for our changelog, and use
-towncrier to generate it for each release. As a contributor, all that means is
-that you need to add a file to the ``salt/changelog`` directory, using the
-``<issue #>.<type>`` format. For instance, if you fixed issue 123, you could
-do:
+But that advice is backwards for the changelog. We follow the
+`keepachangelog <https://keepachangelog.com/en/1.0.0/>`__ approach for
+our changelog, and use towncrier to generate it for each release. As a
+contributor, all that means is that you need to add a file to the
+``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
+instanch, if you fixed issue 123, you would do:
 
 ::
 
@@ -413,8 +406,8 @@ commit message, it’s usually a good idea to add other information - what
 does a reviewer need to know about the change that you made? If someone
 isn’t an expert in this area, what will they need to know?
 
-Good commit messages will also make things easier when you go to submit your
-PR, because GitHub will add your commit message to the body of your PR.
+This will also help you out, because when you go to create the PR it
+will automatically insert the body of your commit messages.
 
 PR Time!
 --------
@@ -499,7 +492,10 @@ If the value is less than 2047, you should increase it with:
 Pygit2 or other dependency install fails
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You may see some failure messages when installing requirements. You can directly access your nox environment and possibly install pygit (or other dependency) that way. When you run nox, you'll see a message like this:
+You may see some failure messages when installing requirements. You can
+directly access your nox environment and possibly install pygit (or
+other dependency) that way. When you run nox, you’ll see a message like
+this:
 
 ::
 
