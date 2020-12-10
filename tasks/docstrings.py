@@ -51,7 +51,7 @@ def check(ctx, files, check_proper_formatting=False):
             module = ast.parse(path.read_text(), filename=str(path))
             module_docstring = ast.get_docstring(module, clean=False)
             if module_docstring:
-                new_module_docstring = _fix_directives_formatting(module_docstring)
+                new_module_docstring = _autofix_docstring(module_docstring)
                 if module_docstring != new_module_docstring:
                     contents = contents.replace(module_docstring, new_module_docstring)
                 error = _check_valid_versions_on_docstrings(module_docstring)
@@ -69,7 +69,7 @@ def check(ctx, files, check_proper_formatting=False):
             ]:
                 docstring = ast.get_docstring(funcdef, clean=False)
                 if docstring:
-                    new_docstring = _fix_directives_formatting(docstring)
+                    new_docstring = _autofix_docstring(docstring)
                     if docstring != new_docstring:
                         contents = contents.replace(docstring, new_docstring)
                     error = _check_valid_versions_on_docstrings(new_docstring)
@@ -182,6 +182,12 @@ def _check_cli_example_proper_formatting(docstring):
     return good_cli_example_regex.search(docstring) is not None
 
 
+def _autofix_docstring(docstring):
+    docstring = _fix_directives_formatting(docstring)
+    docstring = _fix_codeblocks(docstring)
+    return docstring
+
+
 def _fix_directives_formatting(docstring):
     directive_regex = re.compile(
         r"^(?P<spc1>[ ]+)?((?P<dots>[.]{2,})(?P<spc2>[ ]+)?(?P<directive>([^ ]{1}).*))::(?P<remaining>.*)\n$"
@@ -196,5 +202,27 @@ def _fix_directives_formatting(docstring):
                 match.group("remaining").strip(),
             ).rstrip()
             line += "\n"
+        output.append(line)
+    return "".join(output)
+
+
+def _fix_codeblocks(docstring):
+    directive_regex = re.compile(
+        r"^(?P<spc1>[ ]+)?(?P<dots>[.]{2}) (?P<directive>code-block)::(?P<lang>.*)\n$"
+    )
+    output = []
+    found_codeblock = False
+    for line in docstring.splitlines(True):
+        match = directive_regex.match(line)
+        if found_codeblock:
+            if line.strip() and line.strip().startswith(":"):
+                output.append(line)
+                continue
+            if line.strip():
+                # We need an empty line after the code-block
+                output.append("\n")
+            found_codeblock = False
+        if match:
+            found_codeblock = True
         output.append(line)
     return "".join(output)
