@@ -2184,7 +2184,7 @@ def pool_deleted(name, purge=False, connection=None, username=None, password=Non
     best effort idea. In any case check the result's comment property to see if any of the action
     was unsupported.
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         pool_name:
           uyuni_virt.pool_deleted:
