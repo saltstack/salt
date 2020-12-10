@@ -48,14 +48,14 @@ def check(ctx, files, check_proper_formatting=False):
         module = ast.parse(path.read_text(), filename=str(path))
         module_docstring = ast.get_docstring(module)
         if module_docstring:
-            error = _check_valid_versionadded(module_docstring)
+            error = _check_valid_versions_on_docstrings(module_docstring)
             if error:
                 errors += 1
                 exitcode = 1
                 utils.error(
-                    "The module '{}' does not provide a proper `versionadded` version: {!r} is not valid.",
+                    "The module '{}' does not provide a proper `{}` version: {!r} is not valid.",
                     path.relative_to(CODE_DIR),
-                    error,
+                    *error,
                 )
 
         for funcdef in [
@@ -63,23 +63,14 @@ def check(ctx, files, check_proper_formatting=False):
         ]:
             docstring = ast.get_docstring(funcdef)
             if docstring:
-                error = _check_valid_versionadded(docstring)
+                error = _check_valid_versions_on_docstrings(docstring)
                 if error:
                     errors += 1
                     exitcode = 1
                     utils.error(
-                        "The module '{}' does not provide a proper `versionadded` version: {!r} is not valid.",
+                        "The module '{}' does not provide a proper `{}` version: {!r} is not valid.",
                         path.relative_to(CODE_DIR),
-                        error,
-                    )
-                error = _check_valid_versionchanged(docstring)
-                if error:
-                    errors += 1
-                    exitcode = 1
-                    utils.error(
-                        "The module '{}' does not provide a proper `versionchanged` version: {!r} is not valid.",
-                        path.relative_to(CODE_DIR),
-                        error,
+                        *error,
                     )
 
             if not str(path).startswith(SALT_INTERNAL_LOADERS_PATHS):
@@ -148,25 +139,22 @@ def check(ctx, files, check_proper_formatting=False):
     utils.exit_invoke(exitcode)
 
 
-def _check_valid_versionadded(docstring):
-    versionadded_regex = re.compile("versionadded::(?P<version>.*)")
-    for match in versionadded_regex.finditer(docstring):
+def _check_valid_versions_on_docstrings(docstring):
+    directive_regex = re.compile(
+        "(?P<vtype>(versionadded|versionchanged|deprecated))::(?P<version>.*)"
+    )
+    for match in directive_regex.finditer(docstring):
+        vtype = match.group("vtype")
         version = match.group("version")
-        try:
-            parsed = SaltStackVersion.parse(version.strip())
-        except ValueError:
-            return version.strip()
-    return False
-
-
-def _check_valid_versionchanged(docstring):
-    versionadded_regex = re.compile("versionchanged::(?P<version>.*)")
-    for match in versionadded_regex.finditer(docstring):
-        version = match.group("version")
-        try:
-            parsed = SaltStackVersion.parse(version.strip())
-        except ValueError:
-            return version.strip()
+        versions = [vs.strip() for vs in version.split(",")]
+        bad_versions = []
+        for vs in versions:
+            try:
+                parsed = SaltStackVersion.parse(vs)
+            except ValueError:
+                bad_versions.append(vs)
+        if bad_versions:
+            return vtype, ", ".join(bad_versions)
     return False
 
 
