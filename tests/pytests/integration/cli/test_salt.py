@@ -118,7 +118,9 @@ def test_exit_status_unknown_argument(salt_cli):
     """
     Ensure correct exit status when an unknown argument is passed to salt CLI.
     """
-    ret = salt_cli.run("--unknown-argument")
+    ret = salt_cli.run(
+        "--unknown-argument", minion_tgt="minion-tgt-is-mandatory-by-salt-factories"
+    )
     assert ret.exitcode == salt.defaults.exitcodes.EX_USAGE, ret
     assert "Usage" in ret.stderr
     assert "no such option: --unknown-argument" in ret.stderr

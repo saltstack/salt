@@ -10,8 +10,6 @@ integration.grains.test_custom
 integration.loader.test_ext_grains
 integration.loader.test_ext_modules
 integration.master.test_clear_funcs
-integration.minion.test_blackout
-integration.minion.test_pillar
 integration.minion.test_timeout
 integration.modules.test_aliases
 integration.modules.test_archive
@@ -40,7 +38,6 @@ integration.modules.test_mine
 integration.modules.test_mysql
 integration.modules.test_network
 integration.modules.test_nilrt_ip
-integration.modules.test_pillar
 integration.modules.test_pip
 integration.modules.test_pkg
 integration.modules.test_publish
@@ -74,7 +71,6 @@ integration.shell.test_arguments
 integration.shell.test_cloud
 integration.shell.test_enabled
 integration.shell.test_master_tops
-integration.shell.test_matcher
 integration.shell.test_spm
 integration.spm.test_build
 integration.spm.test_files
