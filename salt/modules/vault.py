@@ -29,6 +29,7 @@ Functions to interact with Hashicorp Vault.
                 method: approle
                 role_id: 11111111-2222-3333-4444-1111111111111
                 secret_id: 11111111-1111-1111-1111-1111111111111
+            auth_path: auth/approle/login
             policies:
                 - saltstack/minions
                 - saltstack/minion/{minion}
@@ -114,6 +115,11 @@ Functions to interact with Hashicorp Vault.
               token_backend: disk
 
             .. versionchanged:: 3001
+
+    auth_path
+        By default, auth methods are mounted to auth/approle/login.
+        However, in Vault this path is customizable.
+        https://www.vaultproject.io/docs/auth/approle
 
     policies
         Policies that are assigned to minions when requesting a token. These can
