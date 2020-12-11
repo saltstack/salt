@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This runner makes Salt's
 execution modules available
@@ -29,20 +28,17 @@ Execution modules are also available to salt runners:
     __salt__['salt.cmd'](fun=fun, args=args, kwargs=kwargs)
 
 """
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 
-# import salt libs
 import salt.client
 import salt.loader
 import salt.pillar
 import salt.utils.args
 from salt.exceptions import SaltClientError
 
-log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+log = logging.getLogger(__name__)
 
 
 def cmd(fun, *args, **kwargs):
@@ -106,7 +102,7 @@ def cmd(fun, *args, **kwargs):
     return (
         functions[fun](*args, **kwargs)
         if fun in functions
-        else "'{0}' is not available.".format(fun)
+        else "'{}' is not available.".format(fun)
     )
 
 
