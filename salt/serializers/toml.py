@@ -12,12 +12,12 @@ from salt.serializers import DeserializationError, SerializationError
 try:
     import toml
 
-    available = True
+    HAS_TOML = True
 except ImportError:
-    available = False
+    HAS_TOML = False
 
 
-__all__ = ["deserialize", "serialize", "available"]
+__all__ = ["deserialize", "serialize", "HAS_TOML"]
 
 
 def deserialize(stream_or_string, **options):
