@@ -1,13 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.renderers.toml as toml
 import salt.serializers.toml
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
