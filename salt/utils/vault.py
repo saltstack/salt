@@ -192,6 +192,9 @@ def del_cache():
 
 
 def write_cache(connection):
+    """
+    Write the vault token to cache
+    """
     # If uses is 1 and unlimited_use_token is not true, then this is a single use token and should not be cached
     # In that case, we still want to cache the vault metadata lookup information for paths, so continue on
     if (
