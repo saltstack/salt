@@ -123,8 +123,10 @@ def get_vault_connection():
                 verify = __opts__["vault"].get("verify", None)
                 if _selftoken_expired():
                     log.debug("Vault token expired. Recreating one")
+                    auth_path = __opts__["vault"].get("auth_path", "auth/approle/login")
                     # Requesting a short ttl token
-                    url = "{}/v1/auth/approle/login".format(__opts__["vault"]["url"])
+                    url = "{}/v1/{}".format(
+                        __opts__["vault"]["url"], auth_path)
                     payload = {"role_id": __opts__["vault"]["auth"]["role_id"]}
                     if "secret_id" in __opts__["vault"]["auth"]:
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
