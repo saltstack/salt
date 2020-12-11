@@ -7,10 +7,8 @@
     It's just a wrapper around the python toml module.
 """
 
-# Import Salt libs
 from salt.serializers import DeserializationError, SerializationError
 
-# Import toml
 try:
     import toml
 
