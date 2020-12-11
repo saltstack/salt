@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Watch current connections of haproxy server backends.
 Fire an event when over a specified threshold.
@@ -6,12 +5,8 @@ Fire an event when over a specified threshold.
 .. versionadded:: 2016.11.0
 """
 
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
-
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
