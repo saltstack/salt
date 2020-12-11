@@ -413,42 +413,43 @@ def run(**kwargs):
                 or "",
             ]
         ).strip()
-        ret["result"] = not (missing or not tests)
 
-    if ret["result"] is None:
-        ret["result"] = True
+        if missing:
+            ret["result"] = False
 
-        failures = []
-        success = []
-        for func in functions:
-            _func = func.split(":")[0]
-            try:
-                func_ret = _call_function(
-                    _func, returner=kwargs.get("returner"), func_args=kwargs.get(func)
-                )
-                if not _get_result(func_ret, ret["changes"].get("ret", {})):
-                    if isinstance(func_ret, dict):
-                        failures.append(
-                            "'{}' failed: {}".format(
-                                func, func_ret.get("comment", "(error message N/A)")
-                            )
-                        )
-                    if func_ret is False:
-                        failures.append("'{}': {}".format(func, func_ret))
-                else:
-                    success.append(
-                        "{}: {}".format(
-                            func,
-                            func_ret.get("comment", "Success")
-                            if isinstance(func_ret, dict)
-                            else func_ret,
+        return ret
+
+    failures = []
+    success = []
+    for func in functions:
+        _func = func.split(":")[0]
+        try:
+            func_ret = _call_function(
+                _func, returner=kwargs.get("returner"), func_args=kwargs.get(func)
+            )
+            if not _get_result(func_ret, ret["changes"].get("ret", {})):
+                if isinstance(func_ret, dict):
+                    failures.append(
+                        "'{}' failed: {}".format(
+                            func, func_ret.get("comment", "(error message N/A)")
                         )
                     )
-                    ret["changes"][func] = func_ret
-            except (SaltInvocationError, TypeError) as ex:
-                failures.append("'{}' failed: {}".format(func, ex))
-        ret["comment"] = ", ".join(failures + success)
-        ret["result"] = not bool(failures)
+                if func_ret is False:
+                    failures.append("'{}': {}".format(func, func_ret))
+            else:
+                success.append(
+                    "{}: {}".format(
+                        func,
+                        func_ret.get("comment", "Success")
+                        if isinstance(func_ret, dict)
+                        else func_ret,
+                    )
+                )
+                ret["changes"][func] = func_ret
+        except (SaltInvocationError, TypeError) as ex:
+            failures.append("'{}' failed: {}".format(func, ex))
+    ret["comment"] = ", ".join(failures + success)
+    ret["result"] = not bool(failures)
 
     return ret
 
