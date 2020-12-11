@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Various functions to be used by windows during start up and to monkey patch
 missing functions in other modules
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ctypes
 import platform
 import re
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
 
-# Import 3rd Party Libs
 try:
     import psutil
     import pywintypes
@@ -126,7 +121,7 @@ def get_sid_from_name(name):
     try:
         sid = win32security.LookupAccountName(None, name)[0]
     except pywintypes.error as exc:
-        raise CommandExecutionError("User {0} not found: {1}".format(name, exc))
+        raise CommandExecutionError("User {} not found: {}".format(name, exc))
 
     return win32security.ConvertSidToStringSid(sid)
 
@@ -157,7 +152,7 @@ def get_current_user(with_domain=True):
         elif not with_domain:
             user_name = win32api.GetUserName()
     except pywintypes.error as exc:
-        raise CommandExecutionError("Failed to get current user: {0}".format(exc))
+        raise CommandExecutionError("Failed to get current user: {}".format(exc))
 
     if not user_name:
         return False
@@ -184,6 +179,9 @@ def get_sam_name(username):
 
 
 def enable_ctrl_logoff_handler():
+    """
+    Set the control handler on the console
+    """
     if HAS_WIN32:
         ctrl_logoff_event = 5
         win32api.SetConsoleCtrlHandler(
@@ -241,7 +239,7 @@ def escape_for_cmd_exe(arg):
     meta_re = re.compile(
         "(" + "|".join(re.escape(char) for char in list(meta_chars)) + ")"
     )
-    meta_map = {char: "^{0}".format(char) for char in meta_chars}
+    meta_map = {char: "^{}".format(char) for char in meta_chars}
 
     def escape_meta_chars(m):
         char = m.group(1)

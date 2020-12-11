@@ -20,7 +20,6 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 

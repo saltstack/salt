@@ -2,6 +2,7 @@
 Encapsulate the different transports available to Salt.
 """
 
+
 import logging
 
 log = logging.getLogger(__name__)
