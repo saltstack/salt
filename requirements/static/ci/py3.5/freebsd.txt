@@ -20,7 +20,7 @@ cached-property==1.5.1    # via pygit2
 cachetools==3.1.0         # via google-auth
 certifi==2020.6.20
 certvalidator==0.11.1     # via vcert
-cffi==1.14.3
+cffi==1.14.4
 chardet==3.0.4
 cheetah3==3.1.0
 cheroot==6.5.4
