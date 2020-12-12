@@ -1184,7 +1184,7 @@ repos:
       - id: nox
         alias: check-filemap
         name: Check Filename Map Change Matching
-        files: ^tests/filename_map\.yml$
+        files: ^tests/(filename_map\.yml|.*\.py)$
         pass_filenames: false
         args:
           - -e

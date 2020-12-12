@@ -39,6 +39,7 @@ Connection module for Amazon IAM
 
 import logging
 import time
+import urllib.parse
 
 import salt.utils.compat
 import salt.utils.json
@@ -46,8 +47,6 @@ import salt.utils.odict as odict
 import salt.utils.versions
 
 # pylint: disable=unused-import
-from salt.ext.six.moves.urllib.parse import unquote as _unquote
-
 try:
     import boto
     import boto.iam
@@ -182,7 +181,7 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
             return False
         role = info.get_role_response.get_role_result.role
         role["assume_role_policy_document"] = salt.utils.json.loads(
-            _unquote(role.assume_role_policy_document)
+            urllib.parse.unquote(role.assume_role_policy_document)
         )
         # If Sid wasn't defined by the user, boto will still return a Sid in
         # each policy. To properly check idempotently, let's remove the Sid
@@ -626,7 +625,7 @@ def get_group_policy(
         if not info:
             return False
         info = info.get_group_policy_response.get_group_policy_result.policy_document
-        info = _unquote(info)
+        info = urllib.parse.unquote(info)
         info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
@@ -1187,7 +1186,7 @@ def get_role_policy(
         # I _hate_ you for not giving me an object boto.
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
-        _policy = _unquote(_policy)
+        _policy = urllib.parse.unquote(_policy)
         _policy = salt.utils.json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
@@ -1467,7 +1466,7 @@ def get_user_policy(
         if not info:
             return False
         info = info.get_user_policy_response.get_user_policy_result.policy_document
-        info = _unquote(info)
+        info = urllib.parse.unquote(info)
         info = salt.utils.json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
@@ -1658,7 +1657,7 @@ def export_users(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         for policy_name in _policies:
             _policy = conn.get_user_policy(name, policy_name)
             _policy = salt.utils.json.loads(
-                _unquote(
+                urllib.parse.unquote(
                     _policy.get_user_policy_response.get_user_policy_result.policy_document
                 )
             )
@@ -1695,7 +1694,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         for policy_name in _policies:
             _policy = conn.get_role_policy(name, policy_name)
             _policy = salt.utils.json.loads(
-                _unquote(
+                urllib.parse.unquote(
                     _policy.get_role_policy_response.get_role_policy_result.policy_document
                 )
             )
@@ -1706,7 +1705,7 @@ def export_roles(path_prefix="/", region=None, key=None, keyid=None, profile=Non
         role_sls.append(
             {
                 "policy_document": salt.utils.json.loads(
-                    _unquote(role.assume_role_policy_document)
+                    urllib.parse.unquote(role.assume_role_policy_document)
                 )
             }
         )
@@ -1910,7 +1909,7 @@ def get_policy_version(
             .get("get_policy_version_result", {})
             .get("policy_version", {})
         )
-        retval["document"] = _unquote(retval.get("document"))
+        retval["document"] = urllib.parse.unquote(retval.get("document"))
         return {"policy_version": retval}
     except boto.exception.BotoServerError:
         return None

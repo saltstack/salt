@@ -32,6 +32,7 @@ from tests.support.helpers import (
     Webserver,
     dedent,
     destructiveTest,
+    requires_system_grains,
     skip_if_not_root,
     with_system_user_and_group,
     with_tempdir,
@@ -361,24 +362,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         match = "^minion\n"
         self.assertTrue(re.match(match, file_contents[0]))
-
-    def test_managed_file_with_pillar_sls(self):
-        """
-        Test to ensure pillar data in sls file
-        is rendered properly and file is created.
-        """
-
-        file_pillar = os.path.join(RUNTIME_VARS.TMP, "filepillar-python")
-        self.addCleanup(self._delete_file, file_pillar)
-        state_name = "file-pillarget"
-
-        log.warning("File Path: %s", file_pillar)
-        ret = self.run_function("state.sls", [state_name])
-        self.assertSaltTrueReturn(ret)
-
-        # Check to make sure the file was created
-        check_file = self.run_function("file.file_exists", [file_pillar])
-        self.assertTrue(check_file)
 
     def test_managed_file_with_pillardefault_sls(self):
         """
@@ -1077,9 +1060,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             )
         self.assertSaltTrueReturn(ret)
 
+    @requires_system_grains
     @skip_if_not_root
     @skipIf(IS_WINDOWS, "Mode not available in Windows")
-    def test_directory_max_depth(self):
+    def test_directory_max_depth(self, grains):
         """
         file.directory
         Test the max_depth option by iteratively increasing the depth and
@@ -1101,11 +1085,18 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        initial_modes = {
-            0: {sub: "0755", subsub: "0111"},
-            1: {sub: "0111", subsub: "0111"},
-            2: {sub: "0111", subsub: "0111"},
-        }
+        if grains["os_family"] in ("VMware Photon OS",):
+            initial_modes = {
+                0: {sub: "0750", subsub: "0110"},
+                1: {sub: "0110", subsub: "0110"},
+                2: {sub: "0110", subsub: "0110"},
+            }
+        else:
+            initial_modes = {
+                0: {sub: "0755", subsub: "0111"},
+                1: {sub: "0111", subsub: "0111"},
+                2: {sub: "0111", subsub: "0111"},
+            }
 
         if not os.path.isdir(subsub):
             os.makedirs(subsub, int(initial_mode, 8))
@@ -2882,16 +2873,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(user_check, user)
             self.assertEqual(salt.utils.files.normalize_mode(mode_check), mode)
 
-    def test_contents_pillar_with_pillar_list(self):
-        """
-        This tests for any regressions for this issue:
-        https://github.com/saltstack/salt/issues/30934
-        """
-        state_file = "file_contents_pillar"
-
-        ret = self.run_function("state.sls", mods=state_file)
-        self.assertSaltTrueReturn(ret)
-
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
@@ -3011,17 +2992,6 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             content,
             os.linesep.join(["test1", "test2", "test4", "test3", ""]).encode("utf-8"),
         )
-
-    @with_tempfile()
-    def test_issue_50221(self, name):
-        expected = "abc{0}{0}{0}".format(os.linesep)
-        ret = self.run_function("pillar.get", ["issue-50221"])
-        assert ret == expected
-        ret = self.run_function("state.apply", ["issue-50221"], pillar={"name": name},)
-        self.assertSaltTrueReturn(ret)
-        with salt.utils.files.fopen(name, "r") as fp:
-            contents = fp.read()
-        assert contents == expected
 
     def test_managed_file_issue_51208(self):
         """

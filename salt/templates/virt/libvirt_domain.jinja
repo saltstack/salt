@@ -2,6 +2,7 @@
 {%- macro opt_attribute(obj, name, conv=none) %}
 {%- if obj.get(name) is not none %} {{ name }}='{{ obj[name] if conv is none else conv(obj[name]) }}'{% endif -%}
 {%- endmacro %}
+{%- import 'libvirt_chardevs.jinja' as libvirt_chardevs -%}
 <domain type='{{ hypervisor }}'>
         <name>{{ name }}</name>
         {%- if cpu %}
@@ -302,32 +303,25 @@
                             address='{{ graphics.listen.address }}'
                             {% endif %}/>
                 </graphics>
-                {% endif %}
-                {% if serial_type == 'pty' %}
-                <serial type='pty'>
-                        <target port='0'/>
-                </serial>
-                {% if console %}
-                <console type='pty'>
-                        <target type='serial' port='0'/>
-                </console>
-                {% endif %}
+
+                  {% if graphics.type == "spice" -%}
+                  <channel type='spicevmc'>
+                    <target type='virtio' name='com.redhat.spice.0'/>
+                  </channel>
+                  {%- endif %}
                 {% endif %}
 
-                {% if serial_type == 'tcp' %}
-                <serial type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
-                        <target port='0'/>
+                {%- for serial in serials %}
+                <serial type='{{ serial.type }}'>
+                  {{ libvirt_chardevs.chardev(serial) }}
                 </serial>
-                {% if console %}
-                <console type='tcp'>
-                        <source mode='bind' host='' service='{{ telnet_port }}'/>
-                        <protocol type='telnet'/>
-                        <target type='serial' port='0'/>
+                {%- endfor %}
+
+                {%- for console in consoles %}
+                <console type='{{ console.type }}'>
+                  {{ libvirt_chardevs.chardev(console) }}
                 </console>
-                {% endif %}
-                {% endif %}
+                {% endfor %}
 {%- if hypervisor in ["qemu", "kvm"] %}
         <channel type='unix'>
             <target type='virtio' name='org.qemu.guest_agent.0'/>

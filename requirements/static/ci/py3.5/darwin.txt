@@ -27,6 +27,7 @@ cherrypy==17.4.1
 click==7.0                # via geomet
 clustershell==1.8.1
 contextlib2==0.6.0.post1
+contextvars==2.4 ; python_version < "3.7"
 croniter==0.3.29
 cryptography==3.2
 distlib==0.3.0            # via virtualenv
@@ -44,6 +45,7 @@ gitdb2==2.0.6
 gitpython==2.1.15
 google-auth==1.6.3        # via kubernetes
 idna==2.8
+immutables==0.14
 importlib-metadata==0.23  # via importlib-resources, pluggy, pytest, virtualenv
 importlib-resources==1.3.1  # via virtualenv
 iniconfig==1.0.1          # via pytest

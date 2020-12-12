@@ -42,7 +42,7 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         token: ${{ github.token }}
-        list-files: shell
+        list-files: json
         filters: |
           salt:
             - added|modified:
@@ -62,7 +62,7 @@ jobs:
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
-        nox --forcecolor -e lint-salt -- ${{ steps.changed-files.outputs.salt_files }}
+        nox --forcecolor -e lint-salt -- ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }}
 
     - name: Lint ALL Files
       if: steps.changed-files.outputs.salt == 'true'
@@ -110,7 +110,7 @@ jobs:
       uses: dorny/paths-filter@v2
       with:
         token: ${{ github.token }}
-        list-files: shell
+        list-files: json
         filters: |
           tests:
             - added|modified:
@@ -127,7 +127,7 @@ jobs:
       env:
         SKIP_REQUIREMENTS_INSTALL: YES
       run: |
-        nox --forcecolor -e lint-tests -- ${{ steps.changed-files.outputs.tests_files }}
+        nox --forcecolor -e lint-tests -- ${{ join(fromJSON(steps.changed-files.outputs.tests_files), ' ') }}
 
     - name: Lint ALL Files
       if: steps.changed-files.outputs.tests == 'true'

@@ -257,7 +257,6 @@ def _restart_connection():
     log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def facts_refresh():
     """
@@ -1285,7 +1284,6 @@ def install_config(path=None, **kwargs):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def zeroize():
     """
@@ -1374,7 +1372,7 @@ def install_os(path=None, **kwargs):
 
     .. note::
         Any additional keyword arguments specified are passed down to PyEZ sw.install() as is.
-        Please refer to below URl for PyEZ sw.install() documentaion:
+        Please refer to below URl for PyEZ sw.install() documentation:
         https://pyez.readthedocs.io/en/latest/jnpr.junos.utils.html#jnpr.junos.utils.sw.SW.install
 
     CLI Examples:
@@ -1495,7 +1493,6 @@ def install_os(path=None, **kwargs):
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def file_copy(src, dest):
     """
@@ -1545,7 +1542,6 @@ def file_copy(src, dest):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def lock():
     """
@@ -1582,7 +1578,6 @@ def lock():
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def unlock():
     """
@@ -1764,7 +1759,6 @@ def load(path=None, **kwargs):
         return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def commit_check():
     """
@@ -1790,7 +1784,6 @@ def commit_check():
     return ret
 
 
-## @timeoutDecorator
 @timeoutDecorator_cleankwargs
 def get_table(
     table,
