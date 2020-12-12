@@ -26,39 +26,41 @@ import logging
 
 try:
     from sense_hat import SenseHat
-
-    has_sense_hat = True
+    has_sense_hat_library = True
 except (ImportError, NameError):
-    _sensehat = None
-    has_sense_hat = False
+    has_sense_hat_library = False
+if has_sense_hat_library:
+    try:
+        _sensehat = SenseHat()
+        has_sense_hat = True
+    except OSError:
+        has_sense_hat = False
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     """
-    Only load the module if SenseHat is available
+    Only load the module if SenseHat library is available and device is installed.
     """
-    if has_sense_hat:
-        try:
-            _sensehat = SenseHat()
-        except OSError:
+    if has_sense_hat_library:
+        if has_sense_hat:
+            rotation = __salt__["pillar.get"]("sensehat:rotation", 0)
+            if rotation in [0, 90, 180, 270]:
+                _sensehat.set_rotation(rotation, False)
+            else:
+                log.error("%s is not a valid rotation. Using default rotation.", rotation)
+            return True
+        else:
             return (
                 False,
                 "This module can only be used on a Raspberry Pi with a SenseHat.",
             )
-
-        rotation = __salt__["pillar.get"]("sensehat:rotation", 0)
-        if rotation in [0, 90, 180, 270]:
-            _sensehat.set_rotation(rotation, False)
-        else:
-            log.error("%s is not a valid rotation. Using default rotation.", rotation)
-        return True
-
-    return (
-        False,
-        "The SenseHat execution module cannot be loaded: 'sense_hat' python library unavailable.",
-    )
+    else:
+        return (
+            False,
+            "The SenseHat execution module cannot be loaded: 'sense_hat' python library unavailable.",
+        )
 
 
 def set_pixels(pixels):
