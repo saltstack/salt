@@ -26,6 +26,7 @@ import logging
 
 try:
     from sense_hat import SenseHat
+
     has_sense_hat_library = True
 except (ImportError, NameError):
     has_sense_hat_library = False
@@ -49,7 +50,9 @@ def __virtual__():
             if rotation in [0, 90, 180, 270]:
                 _sensehat.set_rotation(rotation, False)
             else:
-                log.error("%s is not a valid rotation. Using default rotation.", rotation)
+                log.error(
+                    "%s is not a valid rotation. Using default rotation.", rotation
+                )
             return True
         else:
             return (
