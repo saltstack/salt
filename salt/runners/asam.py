@@ -17,9 +17,11 @@ master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``
       prov1.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
       prov2.domain.com
         username: "testuser"
         password: "verybadpass"
+        verify_ssl: true
 
 .. note::
 
@@ -84,6 +86,10 @@ def _get_asam_configuration(driver_url=""):
                 password = service_config.get("password", None)
                 protocol = service_config.get("protocol", "https")
                 port = service_config.get("port", 3451)
+                verify_ssl = service_config.get("verify_ssl")
+
+                if verify_ssl is None:
+                    verify_ssl = True
 
                 if not username or not password:
                     log.error(
@@ -108,6 +114,7 @@ def _get_asam_configuration(driver_url=""):
                     ),
                     "username": username,
                     "password": password,
+                    "verify_ssl": verify_ssl,
                 }
 
                 if (not driver_url) or (driver_url == asam_server):
@@ -206,7 +213,7 @@ def remove_platform(name, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)
@@ -222,7 +229,9 @@ def remove_platform(name, server_url):
         data["postType"] = "platformRemove"
         data["Submit"] = "Yes"
         try:
-            html_content = _make_post_request(url, data, auth, verify=False)
+            html_content = _make_post_request(
+                url, data, auth, verify=config["verify_ssl"]
+            )
         except Exception as exc:  # pylint: disable=broad-except
             err_msg = "Failed to delete platform from {}".format(server_url)
             log.error("%s:\n%s", err_msg, exc)
@@ -261,7 +270,7 @@ def list_platforms(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platforms"
         log.error("%s:\n%s", err_msg, exc)
@@ -299,7 +308,7 @@ def list_platform_sets(server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to look up existing platform sets"
         log.error("%s:\n%s", err_msg, exc)
@@ -351,7 +360,7 @@ def add_platform(name, platform_set, server_url):
     auth = (config["username"], config["password"])
 
     try:
-        html_content = _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=config["verify_ssl"])
     except Exception as exc:  # pylint: disable=broad-except
         err_msg = "Failed to add platform on {}".format(server_url)
         log.error("%s:\n%s", err_msg, exc)
