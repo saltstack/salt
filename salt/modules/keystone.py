@@ -13,6 +13,7 @@ Module for handling openstack keystone calls.
         keystone.tenant: admin
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.verify_ssl: True
 
     OR (for token based authentication)
 
@@ -32,6 +33,7 @@ Module for handling openstack keystone calls.
           keystone.tenant: admin
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+          keystone.verify_ssl: True
 
         openstack2:
           keystone.user: admin
@@ -39,6 +41,7 @@ Module for handling openstack keystone calls.
           keystone.tenant: admin
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          keystone.verify_ssl: True
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
@@ -125,6 +128,7 @@ def _get_kwargs(profile=None, **connection_args):
     endpoint = get("endpoint", "http://127.0.0.1:35357/v2.0")
     user_domain_name = get("user_domain_name", "Default")
     project_domain_name = get("project_domain_name", "Default")
+    verify_ssl = get("verify_ssl", True)
     if token:
         kwargs = {"token": token, "endpoint": endpoint}
     else:
@@ -141,6 +145,7 @@ def _get_kwargs(profile=None, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs["insecure"] = True
+    kwargs["verify_ssl"] = verify_ssl
     return kwargs
 
 
@@ -158,7 +163,7 @@ def api_version(profile=None, **connection_args):
     auth_url = kwargs.get("auth_url", kwargs.get("endpoint", None))
     try:
         return salt.utils.http.query(
-            auth_url, decode=True, decode_type="json", verify_ssl=False
+            auth_url, decode=True, decode_type="json", verify_ssl=kwargs["verify_ssl"]
         )["dict"]["version"]["id"]
     except KeyError:
         return None
