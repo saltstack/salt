@@ -53,6 +53,7 @@ the device with username and password.
       host: <ip or dns name of panos host>
       username: <panos username>
       password: <panos password>
+      verify_ssl: True
 
 proxytype
 ^^^^^^^^^
@@ -274,6 +275,7 @@ def init(opts):
 
     # Set configuration details
     DETAILS["host"] = opts["proxy"]["host"]
+    DETAILS["verify_ssl"] = opts["proxy"].get("verify_ssl", True)
     if "serial" in opts["proxy"]:
         DETAILS["serial"] = opts["proxy"].get("serial")
         if "apikey" in opts["proxy"]:
@@ -321,7 +323,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -335,7 +337,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -352,7 +354,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
@@ -368,7 +370,7 @@ def call(payload=None):
                 method="POST",
                 decode_type="plain",
                 decode=True,
-                verify_ssl=False,
+                verify_ssl=DETAILS["verify_ssl"],
                 status=True,
                 raise_error=True,
             )
