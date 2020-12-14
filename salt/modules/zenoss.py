@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for working with the Zenoss API
 
@@ -21,13 +20,11 @@ Module for working with the Zenoss API
 """
 
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import re
 
-import salt.utils.json
 import salt.utils.http
+import salt.utils.json
 
 try:
     import requests  # pylint: disable=unused-import
@@ -56,7 +53,7 @@ def __virtual__():
     else:
         return (
             False,
-            "The '{0}' module could not be loaded: "
+            "The '{}' module could not be loaded: "
             "'requests' is not installed.".format(__virtualname__),
         )
 
@@ -104,7 +101,7 @@ def _router_request(router, method, data=None):
 
     config = __salt__["config.option"]("zenoss")
     log.debug("Making request to router %s with method %s", router, method)
-    url = "{0}/zport/dmd/{1}_router".format(config.get("hostname"), ROUTERS[router])
+    url = "{}/zport/dmd/{}_router".format(config.get("hostname"), ROUTERS[router])
     response = _session().post(url, data=req_data)
 
     # The API returns a 200 response code even whe auth is bad.
@@ -217,7 +214,7 @@ def set_prod_state(prod_state, device=None):
     device_object = find_device(device)
 
     if not device_object:
-        return "Unable to find a device in Zenoss for {0}".format(device)
+        return "Unable to find a device in Zenoss for {}".format(device)
 
     log.info("Setting prodState to %d on %s device", prod_state, device)
     data = dict(
