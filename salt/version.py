@@ -58,7 +58,7 @@ class SaltStackVersion:
         r"(?:\.(?P<minor>[\d]{1,2}))?"
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
-        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?"
+        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
         r"(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
@@ -534,6 +534,7 @@ def __discover_version(saltstack_version):
                 "git",
                 "describe",
                 "--tags",
+                "--long",
                 "--first-parent",
                 "--match",
                 "v[0-9]*",
@@ -548,7 +549,15 @@ def __discover_version(saltstack_version):
             # The git version running this might not support --first-parent
             # Revert to old command
             process = subprocess.Popen(
-                ["git", "describe", "--tags", "--match", "v[0-9]*", "--always"],
+                [
+                    "git",
+                    "describe",
+                    "--tags",
+                    "--long",
+                    "--match",
+                    "v[0-9]*",
+                    "--always",
+                ],
                 **kwargs
             )
             out, err = process.communicate()
