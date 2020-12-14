@@ -1127,7 +1127,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     return packages
 
 
-def add_source(name, source_location, username=None, password=None):
+def add_source(name, source_location, username=None, password=None, allow_self_service=False):
     """
     Instructs Chocolatey to add a source.
 
@@ -1144,6 +1144,9 @@ def add_source(name, source_location, username=None, password=None):
     password
         Provide password for chocolatey sources that need authentication
         credentials.
+
+    allow_self_service
+        Enable Self-Service (C4B feature)
 
     CLI Example:
 
@@ -1166,6 +1169,8 @@ def add_source(name, source_location, username=None, password=None):
         cmd.extend(["--user", username])
     if password:
         cmd.extend(["--password", password])
+    if allow_self_service:
+        cmd.extend(["--allow_self_service"])
     result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if result["retcode"] != 0:
