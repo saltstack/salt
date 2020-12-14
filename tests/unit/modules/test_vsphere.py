@@ -2653,3 +2653,63 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
                                 self.assertEqual(
                                     ret, {'Tag attached':
                                               self.list_attached_tags_return})
+
+
+class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {vsphere: {}}
+
+    def test_upload_ssh_key(self):
+        kwargs_values = [
+            ("ssh_key", "TheSSHKeyFile"),
+            ("ssh_key_file", "TheSSHKeyFile"),
+        ]
+        certificate_verify_values = (None, True, False)
+        for kw_key, kw_value in kwargs_values:
+            kwargs = {kw_key: kw_value}
+            if kw_key == "ssh_key":
+                expected_kwargs = {"data": kw_value}
+            else:
+                expected_kwargs = {"data_file": kw_value, "data_render": False}
+            for certificate_verify_value in certificate_verify_values:
+                http_query_mock = MagicMock()
+                if certificate_verify_value is None:
+                    certificate_verify_value = True
+                with patch("salt.utils.http.query", http_query_mock):
+                    vsphere.upload_ssh_key(
+                        HOST,
+                        USER,
+                        PASSWORD,
+                        certificate_verify=certificate_verify_value,
+                        **kwargs
+                    )
+                http_query_mock.assert_called_once_with(
+                    "https://1.2.3.4:443/host/ssh_root_authorized_keys",
+                    method="PUT",
+                    password="SuperSecret!",
+                    status=True,
+                    text=True,
+                    username="root",
+                    verify_ssl=certificate_verify_value,
+                    **expected_kwargs
+                )
+
+    def test_get_ssh_key(self):
+        certificate_verify_values = (None, True, False)
+        for certificate_verify_value in certificate_verify_values:
+            http_query_mock = MagicMock()
+            if certificate_verify_value is None:
+                certificate_verify_value = True
+            with patch("salt.utils.http.query", http_query_mock):
+                vsphere.get_ssh_key(
+                    HOST, USER, PASSWORD, certificate_verify=certificate_verify_value
+                )
+            http_query_mock.assert_called_once_with(
+                "https://1.2.3.4:443/host/ssh_root_authorized_keys",
+                method="GET",
+                password="SuperSecret!",
+                status=True,
+                text=True,
+                username="root",
+                verify_ssl=certificate_verify_value,
+            )
