@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the state runner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
@@ -14,6 +12,7 @@ import textwrap
 import threading
 import time
 
+import pytest
 import salt.exceptions
 import salt.utils.event
 import salt.utils.files
@@ -21,7 +20,6 @@ import salt.utils.json
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.yaml
-from salt.ext import six
 from salt.ext.six.moves import queue
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest, flaky, slowTest
@@ -32,6 +30,7 @@ from tests.support.unit import skipIf
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.skip_on_freebsd
 @flaky
 class StateRunnerTest(ShellCase):
     """
@@ -109,7 +108,7 @@ class StateRunnerTest(ShellCase):
             except AssertionError:
                 if time.time() > fail_time:
                     self.fail(
-                        '"{0}" was not found in the orchestration call'.format(exp_ret)
+                        '"{}" was not found in the orchestration call'.format(exp_ret)
                     )
 
     @slowTest
@@ -302,7 +301,7 @@ class StateRunnerTest(ShellCase):
         while q.empty():
             self.run_salt("minion test.ping --static")
         out = q.get()
-        assert expect in six.text_type(out)
+        assert expect in str(out)
 
         server_thread.join()
 
@@ -346,6 +345,7 @@ class StateRunnerTest(ShellCase):
 
 
 @skipIf(salt.utils.platform.is_windows(), "*NIX-only test")
+@pytest.mark.skip_on_freebsd
 @flaky
 class OrchEventTest(ShellCase):
     """
@@ -376,7 +376,7 @@ class OrchEventTest(ShellCase):
         self.addCleanup(self.run_run_plus, "test.arg")
 
     def alarm_handler(self, signal, frame):
-        raise Exception("Timeout of {0} seconds reached".format(self.timeout))
+        raise Exception("Timeout of {} seconds reached".format(self.timeout))
 
     def write_conf(self, data):
         """
@@ -454,7 +454,7 @@ class OrchEventTest(ShellCase):
                 if event is None:
                     continue
 
-                if event["tag"] == "salt/run/{0}/ret".format(jid):
+                if event["tag"] == "salt/run/{}/ret".format(jid):
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
                     ret = event["data"]["return"]["data"]["master"]
@@ -529,7 +529,7 @@ class OrchEventTest(ShellCase):
                 # if we receive the ret for this job before self.timeout (60),
                 # the test is implicitly successful; if it were happening in serial it would be
                 # atleast 110 seconds.
-                if event["tag"] == "salt/run/{0}/ret".format(jid):
+                if event["tag"] == "salt/run/{}/ret".format(jid):
                     received = True
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
@@ -580,7 +580,7 @@ class OrchEventTest(ShellCase):
         )
 
         mock_jid = "20131219120000000000"
-        self.run_run("state.soft_kill {0} stage_two".format(mock_jid))
+        self.run_run("state.soft_kill {} stage_two".format(mock_jid))
         with patch("salt.utils.jid.gen_jid", MagicMock(return_value=mock_jid)):
             jid = self.run_run_plus("state.orchestrate", "two_stage_orch_kill").get(
                 "jid"
@@ -599,7 +599,7 @@ class OrchEventTest(ShellCase):
                     continue
 
                 # Ensure that stage_two of the state does not run
-                if event["tag"] == "salt/run/{0}/ret".format(jid):
+                if event["tag"] == "salt/run/{}/ret".format(jid):
                     received = True
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
@@ -697,7 +697,7 @@ class OrchEventTest(ShellCase):
                 event = listener.get_event(full=True)
                 if event is None:
                     continue
-                if event.get("tag", "") == "salt/run/{0}/ret".format(jid):
+                if event.get("tag", "") == "salt/run/{}/ret".format(jid):
                     received = True
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
@@ -775,7 +775,7 @@ class OrchEventTest(ShellCase):
         assert jid1 is not None
         assert jid2 is not None
 
-        tags = {"salt/run/{0}/ret".format(x): x for x in (jid1, jid2)}
+        tags = {"salt/run/{}/ret".format(x): x for x in (jid1, jid2)}
         ret = {}
 
         signal.signal(signal.SIGALRM, self.alarm_handler)
@@ -804,12 +804,12 @@ class OrchEventTest(ShellCase):
             # True result.
             assert (
                 ret[jid1][sls_id]["result"] is None
-            ), "result of {0} ({1}) is not None".format(
+            ), "result of {} ({}) is not None".format(
                 sls_id, ret[jid1][sls_id]["result"]
             )
             assert (
                 ret[jid2][sls_id]["result"] is True
-            ), "result of {0} ({1}) is not True".format(
+            ), "result of {} ({}) is not True".format(
                 sls_id, ret[jid2][sls_id]["result"]
             )
 

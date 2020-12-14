@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Test the grains module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -150,7 +148,7 @@ class TestModulesGrains(ModuleCase):
                 self.assertEqual(get_grain, "")
                 continue
             self.assertIsInstance(
-                get_grain, int, msg="grain: {0} is not an int or empty".format(grain)
+                get_grain, int, msg="grain: {} is not an int or empty".format(grain)
             )
 
 
@@ -189,7 +187,7 @@ class GrainsAppendTestCase(ModuleCase):
         Tests the return of a grains.append call when the value is already
         present in the grains list.
         """
-        msg = "The val {0} was already in the list " "salttesting-grain-key".format(
+        msg = "The val {} was already in the list " "salttesting-grain-key".format(
             self.GRAIN_VAL
         )
 
@@ -207,6 +205,7 @@ class GrainsAppendTestCase(ModuleCase):
 
         assert msg == ret
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     @slowTest
     def test_grains_append_val_is_list(self):

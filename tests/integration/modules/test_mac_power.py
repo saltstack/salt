@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_power
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -16,6 +14,7 @@ from tests.support.helpers import (
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
@@ -160,6 +159,7 @@ class MacPowerModuleTest(ModuleCase):
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
@@ -211,6 +211,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
@@ -261,6 +262,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
@@ -307,6 +309,7 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky(attempts=10)
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")

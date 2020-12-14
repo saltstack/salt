@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 from textwrap import dedent
 
-# Import 3rd party libs
 import jinja2
-
-# Import salt libs
+import pytest
 import salt.serializers.configparser as configparser
 import salt.serializers.json as json
 import salt.serializers.msgpack as msgpack
@@ -22,16 +15,13 @@ from salt.ext import six
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
-
-# Import test support libs
 from tests.support.helpers import flaky
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 SKIP_MESSAGE = "%s is unavailable, have prerequisites been met?"
 
 
+@pytest.mark.skip_on_freebsd
 @flaky(condition=six.PY3)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % "json")
@@ -374,14 +364,14 @@ class TestSerializers(TestCase):
         data = {"foo": "bar"}
         serialized = plist.serialize(data)
         expected = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
-            '<plist version="1.0">\n'
-            "<dict>\n"
-            "\t<key>foo</key>\n"
-            "\t<string>bar</string>\n"
-            "</dict>\n"
-            "</plist>\n".encode("utf-8")
+            b'<?xml version="1.0" encoding="UTF-8"?>\n'
+            b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+            b'<plist version="1.0">\n'
+            b"<dict>\n"
+            b"\t<key>foo</key>\n"
+            b"\t<string>bar</string>\n"
+            b"</dict>\n"
+            b"</plist>\n"
         )
         assert serialized == expected, serialized
 

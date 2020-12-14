@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import pytest
 import salt.utils.platform
 from tests.support.case import ModuleCase
@@ -9,6 +5,7 @@ from tests.support.helpers import destructiveTest, flaky, slowTest
 from tests.support.unit import skipIf
 
 
+@pytest.mark.skip_on_freebsd
 @flaky
 @skipIf(not salt.utils.platform.is_windows(), "Tests for only Windows")
 @pytest.mark.windows_whitelisted

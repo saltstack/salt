@@ -1,13 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
+import pytest
 import salt.ext.six as six
-
-# Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import TstSuiteLoggingHandler, flaky
 from tests.support.unit import skipIf
@@ -26,6 +20,7 @@ class LoggingJIDsTest(ModuleCase):
         log_format = "[%(levelname)-8s] %(jid)s %(message)s"
         self.handler = TstSuiteLoggingHandler(format=log_format, level=logging.DEBUG)
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     def test_jid_in_logs(self):
         """

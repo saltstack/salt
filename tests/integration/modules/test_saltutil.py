@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for the saltutil module.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import shutil
@@ -280,6 +278,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
         def is_complete(self):
             return self.__event_complete
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     def test_pillar_refresh(self):
         """
@@ -293,7 +292,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "add_pillar.sls"), "w"
         ) as fp:
-            fp.write(salt.utils.stringutils.to_str("{0}: itworked".format(pillar_key)))
+            fp.write(salt.utils.stringutils.to_str("{}: itworked".format(pillar_key)))
 
         with salt.utils.files.fopen(
             os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "top.sls"), "w"
@@ -338,7 +337,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
             os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, "add_pillar_sync.sls"), "w"
         ) as fp:
             fp.write(
-                salt.utils.stringutils.to_str("{0}: itworked_sync".format(pillar_key))
+                salt.utils.stringutils.to_str("{}: itworked_sync".format(pillar_key))
             )
 
         with salt.utils.files.fopen(

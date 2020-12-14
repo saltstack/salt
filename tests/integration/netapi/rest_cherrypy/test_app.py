@@ -1,8 +1,6 @@
-# coding: utf-8
-from __future__ import absolute_import
-
 import os
 
+import pytest
 import salt.utils.json
 import salt.utils.stringutils
 import tests.support.cherrypy_testclasses as cptc
@@ -339,6 +337,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         )
         self.assertEqual(response.status, "200 OK")
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     @slowTest
     def test_all_jobs(self):

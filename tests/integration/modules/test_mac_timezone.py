@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Integration tests for mac_timezone
 
@@ -9,11 +8,10 @@ Time sync do the following:
     - Select options at the top and 'More Options' on the left
     - Set time to 'Do not sync'
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 
-from salt.ext import six
+import pytest
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -27,6 +25,7 @@ from tests.support.unit import skipIf
 
 
 @skip_if_not_root
+@pytest.mark.skip_on_freebsd
 @flaky
 @runs_on(kernel="Darwin")
 @skip_if_binaries_missing("systemsetup")
@@ -144,15 +143,11 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.get_offset
         """
         self.assertTrue(self.run_function("timezone.set_zone", ["Pacific/Wake"]))
-        self.assertIsInstance(
-            self.run_function("timezone.get_offset"), six.string_types
-        )
+        self.assertIsInstance(self.run_function("timezone.get_offset"), (str,))
         self.assertEqual(self.run_function("timezone.get_offset"), "+1200")
 
         self.assertTrue(self.run_function("timezone.set_zone", ["America/Los_Angeles"]))
-        self.assertIsInstance(
-            self.run_function("timezone.get_offset"), six.string_types
-        )
+        self.assertIsInstance(self.run_function("timezone.get_offset"), (str,))
         self.assertEqual(self.run_function("timezone.get_offset"), "-0700")
 
     @skipIf(
@@ -166,15 +161,11 @@ class MacTimezoneModuleTest(ModuleCase):
         Test timezone.set_zonecode
         """
         self.assertTrue(self.run_function("timezone.set_zone", ["America/Los_Angeles"]))
-        self.assertIsInstance(
-            self.run_function("timezone.get_zonecode"), six.string_types
-        )
+        self.assertIsInstance(self.run_function("timezone.get_zonecode"), (str,))
         self.assertEqual(self.run_function("timezone.get_zonecode"), "PDT")
 
         self.assertTrue(self.run_function("timezone.set_zone", ["Pacific/Wake"]))
-        self.assertIsInstance(
-            self.run_function("timezone.get_zonecode"), six.string_types
-        )
+        self.assertIsInstance(self.run_function("timezone.get_zonecode"), (str,))
         self.assertEqual(self.run_function("timezone.get_zonecode"), "WAKT")
 
     @slowTest

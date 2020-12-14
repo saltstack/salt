@@ -69,6 +69,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, "tempdir")
         delattr(self, "inventory")
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     def test_ansible_playbook(self):
         ret = self.run_state(

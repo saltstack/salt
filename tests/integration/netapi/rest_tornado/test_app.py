@@ -431,6 +431,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         self.assertIn("tag", response_obj["return"][0])
 
 
+@pytest.mark.skip_on_freebsd
 @flaky
 @skipIf(HAS_ZMQ_IOLOOP is False, "PyZMQ version must be >= 14.0.1 to run these tests.")
 class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):

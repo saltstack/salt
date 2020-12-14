@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import glob
 import logging
 import os
@@ -8,7 +5,7 @@ import shutil
 import threading
 import time
 
-from salt.ext import six
+import pytest
 from salt.ext.six.moves import range
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky, slowTest
@@ -37,7 +34,7 @@ class SSHStateTest(SSHCase):
     def _check_request(self, empty=False):
         check = self.run_function("state.check_request", wipe=False)
         if empty:
-            self.assertFalse(bool(check), "bool({0}) is not False".format(check))
+            self.assertFalse(bool(check), "bool({}) is not False".format(check))
         else:
             self._check_dict_ret(
                 ret=check["default"]["test_run"]["local"]["return"],
@@ -137,7 +134,7 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(single, dict)
-        for key, value in six.iteritems(single):
+        for key, value in single.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
@@ -166,7 +163,7 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(high, dict)
-        for key, value in six.iteritems(high):
+        for key, value in high.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
@@ -194,7 +191,7 @@ class SSHStateTest(SSHCase):
         )
 
         self.assertIsInstance(low, dict)
-        for key, value in six.iteritems(low):
+        for key, value in low.items():
             self.assertIsInstance(value, dict)
             self.assertEqual(value["name"], ret_out["name"])
             self.assertEqual(value["result"], ret_out["result"])
@@ -228,6 +225,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function("file.file_exists", [SSH_SLS_FILE], wipe=False)
         self.assertTrue(check_file)
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     @slowTest
     def test_state_running(self):
@@ -252,7 +250,7 @@ class SSHStateTest(SSHCase):
                 break
         else:
             self.fail(
-                "Did not find '{0}' in state.running return: {1}".format(
+                "Did not find '{}' in state.running return: {}".format(
                     expected, state_ret
                 )
             )
@@ -272,7 +270,7 @@ class SSHStateTest(SSHCase):
         make sure to clean up any old ssh directories
         """
         salt_dir = self.run_function("config.get", ["thin_dir"], wipe=False)
-        self.assertIsInstance(salt_dir, six.string_types)
+        self.assertIsInstance(salt_dir, (str,))
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 

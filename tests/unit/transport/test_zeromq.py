@@ -9,6 +9,7 @@ import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
+import pytest
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
@@ -168,6 +169,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         del channel
 
 
+@pytest.mark.skip_on_freebsd
 @flaky
 @not_runs_on(
     kernel="linux",

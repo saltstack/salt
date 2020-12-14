@@ -72,6 +72,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function("service.disable", [self.service_name])
         del self.service_name
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     @slowTest
     def test_service_status_running(self):

@@ -1,9 +1,7 @@
-# coding: utf-8
 """
 Integration tests for renderer functions
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 import salt.utils.platform
@@ -28,6 +26,7 @@ class TestJinjaRenderer(ModuleCase):
         for state_ret in ret.values():
             self.assertTrue(state_ret["result"])
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     @skipIf(
         salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"

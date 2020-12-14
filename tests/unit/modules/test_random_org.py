@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
+import pytest
 import salt.modules.random_org as random_org
-
-# Import 3rd-party libs
 from salt.ext.tornado.httpclient import HTTPClient
-
-# Import Salt Testing Libs
 from tests.support.helpers import flaky
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
@@ -204,6 +196,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateDecimalFractions' function tests: 1
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     def test_generatedecimalfractions(self):
         """
@@ -261,6 +254,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateGaussians' function tests: 1
 
+    @pytest.mark.skip_on_freebsd
     @flaky
     def test_generategaussians(self):
         """
