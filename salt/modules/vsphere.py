@@ -1587,7 +1587,7 @@ def upload_ssh_key(
     ssh_key_file=None,
     protocol=None,
     port=None,
-    certificate_verify=False,
+    certificate_verify=None,
 ):
     """
     Upload an ssh key for root to an ESXi host via http PUT.
@@ -1604,7 +1604,7 @@ def upload_ssh_key(
     :param protocol: defaults to https, can be http if ssl is disabled on ESXi
     :param port: defaults to 443 for https
     :param certificate_verify: If true require that the SSL connection present
-                               a valid certificate
+                               a valid certificate. Default: True
     :return: Dictionary with a 'status' key, True if upload is successful.
              If upload is unsuccessful, 'status' key will be False and
              an 'Error' key will have an informative message.
@@ -1620,6 +1620,8 @@ def upload_ssh_key(
         protocol = "https"
     if port is None:
         port = 443
+    if certificate_verify is None:
+        certificate_verify = True
 
     url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
     ret = {}
@@ -1662,7 +1664,7 @@ def upload_ssh_key(
 
 @ignores_kwargs("credstore")
 def get_ssh_key(
-    host, username, password, protocol=None, port=None, certificate_verify=False
+    host, username, password, protocol=None, port=None, certificate_verify=None
 ):
     """
     Retrieve the authorized_keys entry for root.
@@ -1674,7 +1676,7 @@ def get_ssh_key(
     :param protocol: defaults to https, can be http if ssl is disabled on ESXi
     :param port: defaults to 443 for https
     :param certificate_verify: If true require that the SSL connection present
-                               a valid certificate
+                               a valid certificate. Default: True
     :return: True if upload is successful
 
     CLI Example:
@@ -1688,6 +1690,8 @@ def get_ssh_key(
         protocol = "https"
     if port is None:
         port = 443
+    if certificate_verify is None:
+        certificate_verify = True
 
     url = "{}://{}:{}/host/ssh_root_authorized_keys".format(protocol, host, port)
     ret = {}
