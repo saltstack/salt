@@ -672,7 +672,7 @@ def ssh_configured(name,
                    ssh_key_file=None,
                    service_policy=None,
                    service_restart=False,
-                   certificate_verify=False):
+                   certificate_verify=None):
     '''
     Manage the SSH configuration for a host including whether or not SSH is running or
     the presence of a given SSH key. Note: Only one ssh key can be uploaded for root.
@@ -712,7 +712,7 @@ def ssh_configured(name,
 
     certificate_verify
         If set to ``True``, the SSL connection must present a valid certificate.
-        Default is ``False``.
+        Default is ``True``.
 
     Example:
 
@@ -731,6 +731,10 @@ def ssh_configured(name,
            'result': False,
            'changes': {},
            'comment': ''}
+
+    if certificate_verify is None:
+        certificate_verify = True
+
     esxi_cmd = 'esxi.cmd'
     host = __pillar__['proxy']['host']
     ssh = 'ssh'

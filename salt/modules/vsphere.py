@@ -1326,7 +1326,7 @@ def reset_syslog_config(host,
 
 @ignores_kwargs('credstore')
 def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
-                   protocol=None, port=None, certificate_verify=False):
+                   protocol=None, port=None, certificate_verify=None):
     '''
     Upload an ssh key for root to an ESXi host via http PUT.
     This function only works for ESXi, not vCenter.
@@ -1342,7 +1342,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
     :param protocol: defaults to https, can be http if ssl is disabled on ESXi
     :param port: defaults to 443 for https
     :param certificate_verify: If true require that the SSL connection present
-                               a valid certificate
+                               a valid certificate. Default: True
     :return: Dictionary with a 'status' key, True if upload is successful.
              If upload is unsuccessful, 'status' key will be False and
              an 'Error' key will have an informative message.
@@ -1358,6 +1358,8 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
         protocol = 'https'
     if port is None:
         port = 443
+    if certificate_verify is None:
+        certificate_verify = True
 
     url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
                                                                host,
@@ -1402,7 +1404,7 @@ def get_ssh_key(host,
                 password,
                 protocol=None,
                 port=None,
-                certificate_verify=False):
+                certificate_verify=None):
     '''
     Retrieve the authorized_keys entry for root.
     This function only works for ESXi, not vCenter.
@@ -1413,7 +1415,7 @@ def get_ssh_key(host,
     :param protocol: defaults to https, can be http if ssl is disabled on ESXi
     :param port: defaults to 443 for https
     :param certificate_verify: If true require that the SSL connection present
-                               a valid certificate
+                               a valid certificate. Default: True
     :return: True if upload is successful
 
     CLI Example:
@@ -1427,6 +1429,8 @@ def get_ssh_key(host,
         protocol = 'https'
     if port is None:
         port = 443
+    if certificate_verify is None:
+        certificate_verify = True
 
     url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
                                                                host,
